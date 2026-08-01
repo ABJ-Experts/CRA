@@ -1,4 +1,5 @@
 import Image, { type ImageProps } from "next/image";
+import Link from "next/link";
 import { Button } from "@repo/ui/button";
 import styles from "./page.module.css";
 
@@ -63,8 +64,8 @@ export default function Home() {
             Read our docs
           </a>
         </div>
-        <Button appName="web" className={styles.secondary}>
-          Open alert
+        <Button asChild variant="outline" tone="grey">
+          <Link href="/showcase">Open the design system showcase</Link>
         </Button>
       </main>
       <footer className={styles.footer}>

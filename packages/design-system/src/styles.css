@@ -96,6 +96,18 @@
   --color-origin-orange-300: #ffc9ac;
   --color-origin-orange-100: #fdf0e9;
 
+  /* -- verified badge -------------------------------------------------------
+   * `#0167ff` is not in the exported palette, but it is the single most
+   * common colour in the .pen file (558 occurrences) and it is what the
+   * verify tick on User Avatar (`hHuuw`) is drawn in.
+   *
+   * Named for the one component that currently needs it rather than promoted
+   * to a general accent: its other uses are spread across app screens
+   * (Calendar, Mail, Messages) and it appears in ZERO button variants, so
+   * there is not yet evidence for what it means semantically. Revisit if a
+   * second component turns out to need the same blue. */
+  --color-verified: #0167ff;
+
   /* ==========================================================================
    * Typography — 17 of the 20 exported tokens.
    *
@@ -184,6 +196,13 @@
   --text-caption-2-regular: 0.625rem;
   --text-caption-2-regular--line-height: 1.5;
   --text-caption-2-regular--font-weight: 400;
+
+  /* Not in the original Figma export, but the Tabs frames (`o1gsz`) use 10px
+   * SemiBold for both the Default-size tab label and every count badge. Added
+   * rather than hardcoded in the component, per the token-drift rule. */
+  --text-caption-2-semibold: 0.625rem;
+  --text-caption-2-semibold--line-height: 1.5;
+  --text-caption-2-semibold--font-weight: 600;
 }
 
 /* ============================================================================
@@ -203,6 +222,16 @@
   --color-canvas: light-dark(#ffffff, #1b1d1f);
   --color-surface: light-dark(#f5f5f5, #26282a);
   --color-surface-muted: light-dark(#eeeeee, #2e3133);
+
+  /* -- elevated surfaces ---------------------------------------------------
+   * Popovers, dropdown panels, modals and date pickers. Note this does NOT
+   * pair like `canvas` or `surface`: the design lifts an overlay to pure
+   * white in light mode while going one step LIGHTER than the canvas in dark,
+   * which is the conventional elevation direction for each theme.
+   * Source: Forms/Select Basic dropdown (#ffffff / #26282a) and its rows
+   * (#f5f5f5 / #2e3133). */
+  --color-elevated: light-dark(#ffffff, #26282a);
+  --color-elevated-hover: light-dark(#f5f5f5, #2e3133);
 
   /* -- borders ------------------------------------------------------------- */
   --color-border: light-dark(#eeeeee, #2e3133);
@@ -396,6 +425,118 @@
 }
 
 /* ============================================================================
+ * Overlay motion
+ *
+ * Used by anything that mounts and unmounts over the page: dropdown panels,
+ * modals, tooltips, date pickers. Deliberately small and fast so it reads as
+ * responsiveness rather than decoration.
+ *
+ * `--animate-*` is a Tailwind v4 theme namespace, so these generate
+ * `animate-overlay-in` / `animate-overlay-out` utilities.
+ * ========================================================================== */
+
+@theme {
+  --animate-overlay-in: overlay-in 140ms cubic-bezier(0.16, 1, 0.3, 1);
+  --animate-overlay-out: overlay-out 100ms ease-in;
+  --animate-backdrop-in: backdrop-in 140ms ease-out;
+  --animate-backdrop-out: backdrop-out 100ms ease-in;
+
+  /* Dialogs get their own, more pronounced entrance than the dropdown
+   * overlays above. A modal interrupts the user, so it is allowed to announce
+   * itself: it springs from 88% with a slight overshoot rather than the
+   * near-invisible 98% nudge a menu uses.
+   *
+   * The easing is a back-out curve - the 1.6 control point is what carries it
+   * past 100% before settling, which is where the "pop" comes from. */
+  --animate-dialog-in: dialog-in 260ms cubic-bezier(0.34, 1.6, 0.64, 1);
+  --animate-dialog-out: dialog-out 120ms ease-in;
+
+  /* Tab panels. Short and small - the panel is already in place, this only
+   * softens the swap so content does not appear to teleport. No exit pair:
+   * the outgoing panel is unmounted synchronously, so it would never play. */
+  --animate-panel-in: panel-in 220ms ease-out;
+}
+
+@keyframes panel-in {
+  from {
+    opacity: 0;
+    translate: 0 4px;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+/* Dialog keyframes deliberately animate `scale` and NOT `translate`.
+ * Centring is done by a flex wrapper precisely so this stays true: Tailwind
+ * v4 compiles `-translate-x-1/2` to the `translate` property, so a keyframe
+ * that touched it would fight the centring offset. */
+@keyframes dialog-in {
+  from {
+    opacity: 0;
+    scale: 0.88;
+  }
+  to {
+    opacity: 1;
+    scale: 1;
+  }
+}
+
+@keyframes dialog-out {
+  from {
+    opacity: 1;
+    scale: 1;
+  }
+  to {
+    opacity: 0;
+    scale: 0.96;
+  }
+}
+
+@keyframes overlay-in {
+  from {
+    opacity: 0;
+    scale: 0.98;
+    translate: 0 -4px;
+  }
+  to {
+    opacity: 1;
+    scale: 1;
+    translate: 0 0;
+  }
+}
+
+@keyframes overlay-out {
+  from {
+    opacity: 1;
+    scale: 1;
+  }
+  to {
+    opacity: 0;
+    scale: 0.98;
+  }
+}
+
+@keyframes backdrop-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes backdrop-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+/* ============================================================================
  * Dark variant
  *
  * `light-dark()` covers colors only. `dark:` is still needed for everything
@@ -459,7 +600,24 @@
  * ========================================================================== */
 
 @layer base {
-  /* The theme switch. `light dark` follows the OS; the `data-theme` attribute
+  /* Overlay scroll-lock contract.
+   *
+   * Radix overlays (select, dropdown, modal, date picker) lock the page by
+   * setting `overflow: hidden` on <body>, and inject `margin-right: <scrollbar>`
+   * to compensate for the scrollbar disappearing.
+   *
+   * That only works while <html> keeps `overflow: visible`, because the lock
+   * relies on html inheriting body's overflow (CSS overflow propagation).
+   * Setting ANY explicit overflow on <html> breaks the propagation: the
+   * scrollbar stays, the compensation still applies, and the page jumps
+   * sideways by the scrollbar width every time a panel opens.
+   *
+   * So: do not set `overflow` or `overflow-x` on <html>, and do not size
+   * anything to `100vw` (that unit includes the scrollbar and reintroduces the
+   * same mismatch). Use `overflow-x: clip` on a wrapper if you need to contain
+   * horizontal overflow - `clip` does not create a scroll container.
+   *
+   * The theme switch. `light dark` follows the OS; the `data-theme` attribute
    * on <html> overrides it. Because these live in the same layer, the
    * attribute selectors (0-2-0) beat the bare `:root` (0-1-0) on specificity.
    *
@@ -475,5 +633,34 @@
 
   :root[data-theme="dark"] {
     color-scheme: dark;
+  }
+
+  /* Theme-flip transition suppression.
+   *
+   * Every colour token is a `light-dark()` value resolved through
+   * `color-scheme`. When `color-scheme` changes, an element that has a
+   * transition on the affected property does NOT animate to the new value -
+   * it keeps the pre-flip one, indefinitely, until something else forces the
+   * property to be recomputed (a hover, a class change, a reflow).
+   *
+   * The visible symptom is a half-switched page: buttons, select triggers and
+   * tabs stay in the old palette while everything untransitioned flips. It is
+   * not specific to any component; it hits anything with `transition-colors`,
+   * `transition-all` or a transitioned `box-shadow` / `border-color`.
+   *
+   * So the switch is made instant: set `data-theme-switching` on <html>,
+   * change `data-theme`, then drop the attribute on the next frame. See
+   * `applyTheme` in @repo/design-system/theme.
+   *
+   * `!important` and the universal selector are both load-bearing here - this
+   * has to beat every utility on every element for the duration of one frame.
+   * `transition: none` alone is not enough: an animation mid-flight would keep
+   * painting stale colours, so those are cut too. */
+  :root[data-theme-switching],
+  :root[data-theme-switching] *,
+  :root[data-theme-switching] *::before,
+  :root[data-theme-switching] *::after {
+    transition: none !important;
+    animation: none !important;
   }
 }

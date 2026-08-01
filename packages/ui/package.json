@@ -2,12 +2,35 @@
   "name": "@repo/ui",
   "version": "0.0.0",
   "private": true,
+  "sideEffects": false,
   "exports": {
-    "./*": "./src/*.tsx"
+    ".": "./src/index.ts",
+    "./cn": "./src/lib/cn.ts",
+    "./button": "./src/components/button/index.ts",
+    "./input": "./src/components/input/index.ts",
+    "./checkbox": "./src/components/checkbox/index.ts",
+    "./switch": "./src/components/switch/index.ts",
+    "./radio": "./src/components/radio/index.ts",
+    "./select": "./src/components/select/index.ts",
+    "./combobox": "./src/components/combobox/index.ts",
+    "./form": "./src/components/form/index.ts",
+    "./tag": "./src/components/tag/index.ts",
+    "./chip": "./src/components/chip/index.ts",
+    "./tabs": "./src/components/tabs/index.ts",
+    "./alert": "./src/components/alert/index.ts",
+    "./modal": "./src/components/modal/index.ts",
+    "./breadcrumbs": "./src/components/breadcrumbs/index.ts",
+    "./pagination": "./src/components/pagination/index.ts",
+    "./avatar": "./src/components/avatar/index.ts",
+    "./card": "./src/components/card/index.ts",
+    "./date-picker": "./src/components/date-picker/index.ts",
+    "./time-picker": "./src/components/time-picker/index.ts",
+    "./sort-by": "./src/components/sort-by/index.ts",
+    "./select-users": "./src/components/select-users/index.ts",
+    "./editor": "./src/components/editor/index.ts"
   },
   "scripts": {
     "lint": "eslint . --max-warnings 0",
-    "generate:component": "turbo gen react-component",
     "check-types": "tsc --noEmit"
   },
   "devDependencies": {
@@ -20,8 +43,33 @@
     "typescript": "5.9.2"
   },
   "dependencies": {
+    "@hookform/resolvers": "^5.6.0",
+    "@radix-ui/react-alert-dialog": "^1.1.23",
+    "@radix-ui/react-avatar": "^1.2.6",
+    "@radix-ui/react-checkbox": "^1.3.11",
+    "@radix-ui/react-dialog": "^1.1.23",
+    "@radix-ui/react-popover": "^1.1.23",
+    "@radix-ui/react-radio-group": "^1.4.7",
+    "@radix-ui/react-select": "^2.3.7",
+    "@radix-ui/react-slot": "^1.3.3",
+    "@radix-ui/react-switch": "^1.3.7",
+    "@radix-ui/react-tabs": "^1.1.21",
     "@repo/design-system": "workspace:*",
+    "@tiptap/extension-placeholder": "^3.29.2",
+    "@tiptap/extension-text-align": "^3.29.2",
+    "@tiptap/pm": "^3.29.2",
+    "@tiptap/react": "^3.29.2",
+    "@tiptap/starter-kit": "^3.29.2",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "cmdk": "^1.1.1",
+    "date-fns": "^4.4.0",
+    "lucide-react": "^1.28.0",
     "react": "^19.2.0",
-    "react-dom": "^19.2.0"
+    "react-day-picker": "^10.0.1",
+    "react-dom": "^19.2.0",
+    "react-hook-form": "^7.84.0",
+    "tailwind-merge": "^3.6.0",
+    "zod": "^4.4.3"
   }
 }
