@@ -65,7 +65,7 @@ export function ComboboxDemo() {
       <div className="max-w-md border-t border-border pt-4">
         <span className="mb-2 block text-caption-1-medium text-fg-subtle">size=lg</span>
         <Combobox
-          size="lg"
+          size="xl"
           options={COUNTRIES}
           placeholder="Select a country"
           emptyMessage="Nothing matches that search"

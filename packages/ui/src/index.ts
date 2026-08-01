@@ -157,6 +157,9 @@ export type { SelectUsersProps, SelectUsersOption } from "./components/select-us
 export { Editor } from "./components/editor";
 export type { EditorProps, EditorCommand } from "./components/editor";
 
+export { OtpInput } from "./components/otp-input";
+export type { OtpInputProps } from "./components/otp-input";
+
 export { Avatar, AvatarGroup, initialsFrom } from "./components/avatar";
 export type {
   AvatarProps,

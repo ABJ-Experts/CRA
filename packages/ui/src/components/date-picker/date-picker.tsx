@@ -33,8 +33,8 @@ export interface DatePickerProps {
   helperText?: ReactNode;
   error?: ReactNode;
   disabled?: boolean;
-  /** 40px or 56px trigger, matching Input. */
-  size?: "md" | "lg";
+  /** 40px (`md`), 48px (`lg`) or 56px (`xl`), matching Input. */
+  size?: "md" | "lg" | "xl";
 
   /**
    * date-fns pattern for both display and typed input. The frame shows
@@ -171,7 +171,7 @@ export function DatePicker({
               "text-fg placeholder:text-border-strong",
               "border-0 p-0 outline-none",
               "disabled:cursor-not-allowed disabled:text-fg-subtle disabled:placeholder:text-fg-subtle",
-              size === "lg" ? "text-h5" : "text-subhead-regular"
+              size === "xl" ? "text-h5" : "text-subhead-regular"
             )}
           />
 

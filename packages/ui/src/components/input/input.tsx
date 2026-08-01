@@ -27,7 +27,7 @@ export interface InputProps
    * sets `aria-invalid`, and wires the message via `aria-describedby`.
    */
   error?: ReactNode;
-  /** 40px (`md`) or 56px (`lg`). Matches Forms/Password and Forms/Title. */
+  /** 40px (`md`), 48px (`lg`) or 56px (`xl`). */
   size?: InputFieldVariantProps["size"];
   /** Class for the outer wrapper. `className` targets the field itself. */
   wrapperClassName?: string;

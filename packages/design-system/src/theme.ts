@@ -17,6 +17,41 @@ export type Theme = "light" | "dark" | "system";
 const THEME_ATTR = "data-theme";
 const SWITCHING_ATTR = "data-theme-switching";
 
+/** Where the choice is persisted. Shared with the pre-paint script below. */
+export const THEME_STORAGE_KEY = "supehub-theme";
+
+/**
+ * A blocking script for the document head, so `data-theme` is set before the
+ * first paint.
+ *
+ * Without it the server sends unthemed markup, React applies the stored
+ * preference after hydration, and a dark-mode user sees a white flash on
+ * every hard load. That is most visible on the auth screens, which are the
+ * first page anyone sees.
+ *
+ * Kept deliberately tiny and wrapped in try/catch: it runs render-blocking,
+ * and a throw here (private mode, storage disabled) would leave the page
+ * unstyled rather than merely unthemed.
+ */
+export const themeScript = `
+try {
+  var t = localStorage.getItem(${JSON.stringify(THEME_STORAGE_KEY)});
+  if (t === "light" || t === "dark") {
+    document.documentElement.setAttribute("${THEME_ATTR}", t);
+  }
+} catch (e) {}
+`.trim();
+
+/** Reads the persisted choice. Returns `"system"` when nothing is stored. */
+export function getStoredTheme(): Theme {
+  try {
+    const value = globalThis.localStorage?.getItem(THEME_STORAGE_KEY);
+    return value === "light" || value === "dark" ? value : "system";
+  } catch {
+    return "system";
+  }
+}
+
 /**
  * Set the colour theme on the document.
  *
@@ -32,6 +67,16 @@ export function applyTheme(theme: Theme, doc: Document | undefined = globalThis.
 
   if (theme === "system") root.removeAttribute(THEME_ATTR);
   else root.setAttribute(THEME_ATTR, theme);
+
+  // Persist so `themeScript` can restore it before the next first paint.
+  // Storage can throw (private mode, disabled cookies), and failing to
+  // remember a preference must never break the switch itself.
+  try {
+    if (theme === "system") globalThis.localStorage?.removeItem(THEME_STORAGE_KEY);
+    else globalThis.localStorage?.setItem(THEME_STORAGE_KEY, theme);
+  } catch {
+    /* preference simply will not persist */
+  }
 
   const view = doc.defaultView;
   if (!view) {

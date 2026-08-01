@@ -1,3 +1,4 @@
+import { themeScript } from "@repo/design-system/theme";
 import type { Metadata } from "next";
 import { Poppins } from "next/font/google";
 import "./globals.css";
@@ -27,6 +28,16 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={poppins.variable} suppressHydrationWarning>
+      <head>
+        {/*
+          Runs before first paint so `data-theme` is already on <html> when
+          the page renders. Without it the server sends unthemed markup and a
+          dark-mode user gets a white flash on every hard load.
+          `suppressHydrationWarning` above is what lets the attribute differ
+          between server and client.
+        */}
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
       <body>{children}</body>
     </html>
   );

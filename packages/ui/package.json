@@ -27,7 +27,8 @@
     "./time-picker": "./src/components/time-picker/index.ts",
     "./sort-by": "./src/components/sort-by/index.ts",
     "./select-users": "./src/components/select-users/index.ts",
-    "./editor": "./src/components/editor/index.ts"
+    "./editor": "./src/components/editor/index.ts",
+    "./otp-input": "./src/components/otp-input/index.ts"
   },
   "scripts": {
     "lint": "eslint . --max-warnings 0",

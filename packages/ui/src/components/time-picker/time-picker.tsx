@@ -39,7 +39,7 @@ export interface TimePickerProps {
   helperText?: ReactNode;
   error?: ReactNode;
   disabled?: boolean;
-  size?: "md" | "lg";
+  size?: "md" | "lg" | "xl";
 
   /** 12 shows the AM/PM column, as the frame does. 24 hides it. */
   hourCycle?: 12 | 24;

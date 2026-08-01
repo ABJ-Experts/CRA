@@ -42,8 +42,13 @@ export const inputFieldVariants = cva(
       size: {
         // Pencil: 400x40, padding [10,12,9,12], gap 12, text 14/400.
         md: "h-10 gap-3 px-3 text-subhead-regular [&_svg]:size-4",
-        // Pencil: 400x56, padding [13,16], gap 12, text 20/500.
-        lg: "h-14 gap-3 px-4 text-h5 [&_svg]:size-5",
+        // Pencil Admin Authorization (a1za5 et al): 360x48, padding
+        // [14,12,13,12], gap 12, text 14/400. Same type scale as `md`, taller
+        // box - the auth screens and the Select Users trigger both use it.
+        lg: "h-12 gap-3 px-3 text-subhead-regular [&_svg]:size-4",
+        // Pencil Forms/Title (jK37E): 400x56, padding [13,16], gap 12,
+        // text 20/500.
+        xl: "h-14 gap-3 px-4 text-h5 [&_svg]:size-5",
       },
       state: {
         // `inset-ring-*` is Tailwind v4's native inset box-shadow. It composes
@@ -79,7 +84,8 @@ export const inputControlVariants = cva(
     variants: {
       size: {
         md: "text-subhead-regular",
-        lg: "text-h5",
+        lg: "text-subhead-regular",
+        xl: "text-h5",
       },
     },
     defaultVariants: { size: "md" },

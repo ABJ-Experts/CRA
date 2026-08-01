@@ -58,7 +58,7 @@ export function SelectUsersDemo() {
         </span>
         <div className="max-w-md">
           <Input
-            size="lg"
+            size="xl"
             placeholder="Enter Title"
             aria-label="Title"
             endIcon={

@@ -37,7 +37,7 @@ export function DatePickerDemo() {
           defaultValue={new Date(2022, 6, 4)}
           data-testid="dp-bounded"
         />
-        <DatePicker label="Large" size="lg" data-testid="dp-lg" />
+        <DatePicker label="Large" size="xl" data-testid="dp-lg" />
       </div>
 
       <span className="text-caption-2-regular text-fg-subtle" data-testid="dp-value">

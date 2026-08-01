@@ -19,8 +19,8 @@ export const SelectGroup = SelectPrimitive.Group;
 
 export interface SelectTriggerProps
   extends ComponentPropsWithoutRef<typeof SelectPrimitive.Trigger> {
-  /** 40px (`md`) or 56px (`lg`), matching the Input sizes. */
-  size?: "md" | "lg";
+  /** 40px (`md`), 48px (`lg`) or 56px (`xl`), matching the Input sizes. */
+  size?: "md" | "lg" | "xl";
   /** Puts the trigger in the danger state. */
   invalid?: boolean;
   /**
@@ -192,8 +192,8 @@ export interface SelectProps
   helperText?: ReactNode;
   /** Error message. Puts the trigger in the danger state. */
   error?: ReactNode;
-  /** 40px or 56px trigger. */
-  size?: "md" | "lg";
+  /** 40px (`md`), 48px (`lg`) or 56px (`xl`). */
+  size?: "md" | "lg" | "xl";
   /** Class for the trigger. */
   className?: string;
   /** Class for the outer wrapper. */

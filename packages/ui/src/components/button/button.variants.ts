@@ -61,6 +61,10 @@ export const buttonVariants = cva(
         sm: "h-8 gap-1 px-3 py-[7px] text-caption-1-semibold [&_svg]:size-3",
         md: "h-10 gap-2 px-4 pt-[10px] pb-[9px] text-subhead-semibold [&_svg]:size-4",
         lg: "h-12 gap-3 px-6 py-3 text-headline-semibold [&_svg]:size-4",
+        // Pencil Admin Authorization (a1za5 et al): 360x56, padding [16,32],
+        // gap 12, label 16/600. Same type as `lg`, taller box - the auth
+        // screens' primary action.
+        xl: "h-14 gap-3 px-8 py-4 text-headline-semibold [&_svg]:size-4",
       },
       iconOnly: { true: "", false: "" },
       fullWidth: { true: "w-full", false: "" },
@@ -186,6 +190,8 @@ export const buttonVariants = cva(
       { iconOnly: true, size: "sm", class: "size-8 gap-0 p-1 [&_svg]:size-4" },
       { iconOnly: true, size: "md", class: "size-12 gap-0 p-3 [&_svg]:size-6" },
       { iconOnly: true, size: "lg", class: "size-16 gap-0 p-4 [&_svg]:size-8" },
+      // The frame defines no iconic `xl`; it follows the same step as `lg`.
+      { iconOnly: true, size: "xl", class: "size-16 gap-0 p-4 [&_svg]:size-8" },
     ],
 
     defaultVariants: {

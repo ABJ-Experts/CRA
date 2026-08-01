@@ -1,6 +1,6 @@
 "use client";
 
-import { applyTheme, type Theme } from "@repo/design-system/theme";
+import { applyTheme, getStoredTheme, type Theme } from "@repo/design-system/theme";
 import { Button } from "@repo/ui/button";
 import { Monitor, Moon, Sun } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -16,7 +16,14 @@ type Mode = Theme;
  * which every element carrying `transition-colors` keeps its old palette.
  */
 export function ThemeToggle() {
+  // Seeded from storage on mount rather than in `useState`, so the server and
+  // the first client render agree; the pre-paint script has already applied
+  // the visual theme by this point.
   const [mode, setMode] = useState<Mode>("system");
+
+  useEffect(() => {
+    setMode(getStoredTheme());
+  }, []);
 
   useEffect(() => {
     applyTheme(mode);

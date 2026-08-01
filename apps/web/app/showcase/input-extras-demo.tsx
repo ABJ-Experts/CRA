@@ -38,7 +38,7 @@ export function InputExtrasDemo() {
           />
           <PasswordInput
             label="Large"
-            size="lg"
+            size="xl"
             defaultVisible
             defaultValue="hunter2"
             data-testid="pw-lg"

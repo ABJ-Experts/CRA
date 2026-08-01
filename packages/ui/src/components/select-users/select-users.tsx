@@ -120,10 +120,11 @@ export function SelectUsers({
           disabled={disabled}
           aria-describedby={describedBy}
           aria-errormessage={hasError ? errorId : undefined}
+          size="lg"
           className={cn(
-            // 48 tall with the avatar's 8px inset on the left; everything else
-            // is the shared field.
-            "h-12 gap-2 py-2 pr-3 pl-2",
+            // `lg` is the shared 48px field. Only the avatar's 8px left inset
+            // and the tighter gap are specific to this trigger.
+            "gap-2 py-2 pr-3 pl-2",
             className
           )}
           startIcon={

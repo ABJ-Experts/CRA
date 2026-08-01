@@ -45,8 +45,8 @@ export interface ComboboxProps {
   helperText?: ReactNode;
   error?: ReactNode;
   disabled?: boolean;
-  /** 40px or 56px trigger, matching Input and Select. */
-  size?: "md" | "lg";
+  /** 40px (`md`), 48px (`lg`) or 56px (`xl`). */
+  size?: "md" | "lg" | "xl";
   /** Show an inline clear button once a value is chosen. */
   clearable?: boolean;
   className?: string;

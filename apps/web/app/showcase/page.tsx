@@ -254,9 +254,15 @@ export default function ShowcasePage() {
             />
           </div>
 
-          <Row label="size=lg (Forms/Title)">
+          <Row label="size=lg (48, Admin Authorization)">
             <div className="w-full max-w-md">
-              <Input size="lg" placeholder="Enter Title" data-testid="input-lg" />
+              <Input size="lg" placeholder="Placeholder" data-testid="input-lg" />
+            </div>
+          </Row>
+
+          <Row label="size=xl (56, Forms/Title)">
+            <div className="w-full max-w-md">
+              <Input size="xl" placeholder="Enter Title" data-testid="input-xl" />
             </div>
           </Row>
         </Section>
