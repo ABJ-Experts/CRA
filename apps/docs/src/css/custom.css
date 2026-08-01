@@ -1,0 +1,164 @@
+/* ============================================================================
+ * apps/docs — Tailwind v4 + @repo/design-system on top of Infima
+ * ========================================================================== */
+
+/* 1 ── LAYER ORDER. Must be the first rule in this file.
+ *
+ * `@layer` STATEMENTS are the only at-rule CSS allows before `@import`
+ * (CSS Cascade 5), and layer priority is fixed by FIRST APPEARANCE. Later
+ * layer wins. This file itself stays UNLAYERED, so §6 below out-ranks
+ * everything here — which is what makes the Infima bridge work whether or not
+ * `useCssCascadeLayers` is enabled.
+ *
+ * We must write this ourselves: only `tailwindcss/index.css` ships
+ * `@layer theme, base, components, utilities;` — the split entrypoints do not.
+ *
+ * `ds.reset` is deliberately BELOW every docusaurus layer so it can neutralise
+ * UA defaults without ever out-ranking Infima's own component styles.
+ * ========================================================================== */
+@layer ds.reset, docusaurus.infima, docusaurus.theme-common,
+  docusaurus.theme-classic, docusaurus.core, docusaurus.plugin-debug,
+  docusaurus.theme-mermaid, docusaurus.theme-live-codeblock,
+  docusaurus.theme-search-algolia.docsearch, docusaurus.theme-search-algolia,
+  theme, base, components, utilities;
+
+/* 2 ── Tailwind, split entrypoints. PREFLIGHT IS DELIBERATELY OMITTED.
+ *
+ * Infima already provides the reset (`* { box-sizing }`, `html { font }`,
+ * headings, links, lists, tables). Loading `tailwindcss/preflight.css
+ * layer(base)` would rank ABOVE `docusaurus.infima` and therefore OVERRIDE
+ * Docusaurus rather than lose to it — `h1..h6 { font-size: inherit }`,
+ * `a { color: inherit }`, `ul,ol { list-style: none }` would flatten every
+ * MDX page into unstyled prose. Do not add it.
+ * ========================================================================== */
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
+
+/* 3 ── Shared tokens: colours, typography, gradients, the dark variant, and
+ * the gradient and composite-type utilities. Its @theme blocks are hoisted
+ * into the `theme` layer opened above. */
+@import "@repo/design-system/styles.css";
+
+/* 4 ── CLASS SCANNING. Paths are relative to THIS file.
+ * `packages/ui/src` needs no entry — the design system declares its own
+ * `@source "../../ui/src"`, which resolves correctly from there. */
+@source "../";
+@source "../../docs";
+@source "../../blog";
+@source "../../docusaurus.config.ts";
+@source "../../sidebars.ts";
+
+/* Generated trees: hashed module ids in .docusaurus are happily mistaken for
+ * class candidates. Both are gitignored (Tailwind honours .gitignore) but pin
+ * them in case that file is edited. */
+@source not "../../.docusaurus";
+@source not "../../build";
+
+/* Infima owns `.container` (site-wide max-width + gutters) and the generated
+ * homepage uses `className="container"`, so Tailwind emits its identically
+ * named utility — which, from `@layer utilities`, OUT-RANKS Infima and blows
+ * out the page layout. This one line prevents that. */
+@source not inline("container");
+
+/* 5 ── Minimal normalisation.
+ *
+ * IMPORTANT: this layer ends up ABOVE docusaurus.infima, not below it, despite
+ * being listed first in §1. Docusaurus emits its own `@layer` statement (from
+ * plugin-css-cascade-layers) before this file is parsed, and layer priority is
+ * fixed by FIRST APPEARANCE — so an ordering statement here cannot retroactively
+ * demote a layer that has already been seen. Verified in the built CSS:
+ * docusaurus.infima appears at byte 0, ds.reset at ~120k.
+ *
+ * Consequence: everything in this block BEATS Infima, so it must contain only
+ * declarations that are safe to win. An earlier version reset
+ * `background-color` / `padding` / `font` on <button>, which silently stripped
+ * the background and padding from every Infima `.button` on the site.
+ *
+ * Bare <button> styling for @repo/ui components is handled the Tailwind-native
+ * way instead: `utilities` legitimately ranks above docusaurus.infima, so
+ * `font-sans`, `bg-*` and `p-*` applied to the component just work.
+ * ========================================================================== */
+@layer ds.reset {
+  /* Safe to win: Infima's own .button/.clean-btn already set cursor:pointer,
+   * so this changes nothing for them. It restores the pointer for unclassed
+   * buttons, matching apps/web/app/globals.css. */
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+}
+
+/* 6 ── BRIDGE — UNLAYERED on purpose, so it out-ranks Infima whether or not
+ * `future.v4.useCssCascadeLayers` is on and this file survives toggling it.
+ *
+ * NOTE there is no `[data-theme='dark']` block anywhere below. Every value is
+ * a single `light-dark()` driven by `color-scheme`, which @repo/design-system
+ * sets from the same `:root[data-theme="..."]` attribute Docusaurus's own
+ * theme switcher writes. One definition, both themes.
+ * ========================================================================== */
+:root {
+  /* --- fonts ---------------------------------------------------------------
+   * `--font-poppins` is what the design system's `@theme inline --font-sans`
+   * dereferences. In apps/web next/font supplies it; here nothing does, so
+   * without this line `font-sans` silently collapses to `ui-sans-serif`.
+   *
+   * Setting it is necessary but NOT sufficient: Infima owns the global font
+   * via the `font:` SHORTHAND on html, so --ifm-font-family-base must be set
+   * too or nothing on the page actually changes. */
+  --font-poppins: "Poppins";
+  --ifm-font-family-base: "Poppins", system-ui, sans-serif;
+
+  /* Poppins for monospace as well, matching apps/web. TRADE-OFF: this is more
+   * consequential in docs than elsewhere — Poppins is proportional, so code
+   * blocks lose column alignment and Prism's line-number gutter, diff markers
+   * and ASCII tables will look ragged. To reverse, replace just this line with:
+   *   --ifm-font-family-monospace: ui-monospace, SFMono-Regular, Menlo, monospace;
+   * (leave the design system's --font-mono alone). */
+  --ifm-font-family-monospace: "Poppins", system-ui, sans-serif;
+
+  --ifm-heading-font-weight: 500;
+  --ifm-code-font-size: 95%;
+
+  /* --- surfaces & text ---------------------------------------------------- */
+  --ifm-background-color: var(--color-canvas);
+  --ifm-background-surface-color: var(--color-surface);
+  --ifm-font-color-base: var(--color-fg);
+  --ifm-color-content-secondary: var(--color-fg-muted);
+  --ifm-navbar-background-color: var(--color-canvas);
+  --ifm-footer-background-color: var(--color-surface);
+  --ifm-code-background: var(--color-surface-muted);
+  --ifm-pre-background: var(--color-surface);
+
+  /* --- borders ------------------------------------------------------------ */
+  --ifm-toc-border-color: var(--color-border);
+  --ifm-color-emphasis-200: var(--color-border);
+  --ifm-color-emphasis-300: var(--color-border-strong);
+
+  /* --- links -------------------------------------------------------------- */
+  --ifm-link-color: var(--color-accent);
+  --ifm-link-hover-color: var(--color-accent);
+
+  /* --- primary: NINE variables, not one ------------------------------------
+   * Infima precomputes the six shade derivatives plus two contrast values as
+   * literal rgb(). Setting only `--ifm-color-primary` leaves eight
+   * Docusaurus-green values live in hover, active and admonition states.
+   *
+   * Light base is active-600 (#4a50d6, 6.16:1 on white). Dark base is
+   * active-300 (#adb0ed) — active-500 on a dark canvas is only 2.95:1 and
+   * would fail. Shades follow Infima's own +/-10/15/25% lightness steps. */
+  --ifm-color-primary: light-dark(#4a50d6, #adb0ed);
+  --ifm-color-primary-dark: light-dark(#2c32c1, #8388e4);
+  --ifm-color-primary-darker: light-dark(#272dac, #6e74df);
+  --ifm-color-primary-darkest: light-dark(#1e2283, #444bd6);
+  --ifm-color-primary-light: light-dark(#7478df, #d7d8f6);
+  --ifm-color-primary-lighter: light-dark(#888ce4, #ececfb);
+  --ifm-color-primary-lightest: light-dark(#b2b5ee, #ffffff);
+  /* active-100 / active-900, flipped per theme */
+  --ifm-color-primary-contrast-background: light-dark(#ebecff, #232445);
+  --ifm-color-primary-contrast-foreground: light-dark(#232445, #ebecff);
+
+  --docusaurus-highlighted-code-line-bg: light-dark(
+    rgb(0 0 0 / 0.1),
+    rgb(255 255 255 / 0.1)
+  );
+}

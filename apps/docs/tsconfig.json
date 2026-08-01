@@ -1,19 +1,25 @@
+// This file is not used by "docusaurus start/build" commands.
+// It is here to improve your IDE experience (type-checking, autocompletion...),
+// and can also run the package.json "typecheck" script manually.
 {
-  "extends": "@repo/typescript-config/nextjs.json",
+  "extends": "@docusaurus/tsconfig",
   "compilerOptions": {
-    "plugins": [
-      {
-        "name": "next"
-      }
-    ],
-    "strictNullChecks": true
+    // Required, not redundant: @docusaurus/tsconfig's own `baseUrl` resolves
+    // relative to ITS location in node_modules, so re-anchoring here is what
+    // makes the `@site/*` alias point at this app. Used by src/pages/index.tsx
+    // and src/components/HomepageFeatures/index.tsx.
+    "baseUrl": ".",
+    // The create-docusaurus template also sets `"ignoreDeprecations": "6.0"`
+    // here, to silence TS's warning that `baseUrl` goes away in TS 7. It is
+    // deliberately omitted: the template pins typescript ~6.0.2 while this
+    // repo pins 5.9.2 everywhere, and "6.0" is not a valid value on 5.9
+    // (error TS5103), which breaks `check-types`.
+    //
+    // Trade-off: editors running a newer TypeScript than the repo pin will
+    // show a deprecation notice on `baseUrl` above. That is cosmetic — the
+    // CLI typecheck is authoritative and passes. Reinstate the line when the
+    // repo moves to TypeScript 6.
+    "strict": true
   },
-  "include": [
-    "**/*.ts",
-    "**/*.tsx",
-    "next-env.d.ts",
-    "next.config.js",
-    ".next/types/**/*.ts"
-  ],
-  "exclude": ["node_modules"]
+  "exclude": [".docusaurus", "build"]
 }

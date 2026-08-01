@@ -6,11 +6,12 @@ node_modules
 .pnp.js
 
 # Local env files
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+# NOTE: `.env` alone is an EXACT-match pattern, so `.env.production` and
+# `.env.staging` were committable. `.env*` closes that, with example files
+# explicitly re-included.
+.env*
+!.env.example
+!.env*.example
 
 # Testing
 coverage
@@ -26,7 +27,24 @@ coverage
 out/
 build
 dist
+.docusaurus
+.cache-loader
+*.tsbuildinfo
 
+# Supabase (supabase/.gitignore also covers these; belt and braces)
+**/supabase/.temp/
+**/supabase/.branches/
+
+# Terraform
+# .terraform.lock.hcl is deliberately NOT ignored — it must be committed.
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+*.tfvars.json
+!*.tfvars.example
+crash.log
+crash.*.log
 
 # Debug
 npm-debug.log*

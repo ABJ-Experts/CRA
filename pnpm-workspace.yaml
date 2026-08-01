@@ -1,0 +1,19 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+
+# pnpm 10 blocks dependency lifecycle scripts by default. Only the packages
+# listed here may run install scripts — everything else is installed without
+# executing arbitrary code. Keep this list minimal and justified.
+onlyBuiltDependencies:
+  # Native/platform binaries that genuinely need a build or fetch step.
+  - "@tailwindcss/oxide" # Rust binary for the Tailwind v4 engine
+  - "esbuild" # used by Docusaurus/Next toolchains
+  - "sharp" # image pipeline (Docusaurus, next/image)
+  - "unrs-resolver" # native resolver used by eslint-plugin-import-x
+
+# supabase is deliberately NOT listed: >=2.111.0 ships its binaries as
+# os/cpu-gated optionalDependencies rather than a postinstall script, so it
+# needs no build permission. If a future version reintroduces postinstall,
+# the binary will be missing at runtime rather than silently wrong — check
+# `pnpm approve-builds` before adding it here.

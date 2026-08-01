@@ -1,0 +1,23 @@
+{
+  "name": "infrastructure",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "preflight": "docker info >/dev/null 2>&1 || (echo 'Docker daemon is not running — start Docker Desktop first.' && exit 1)",
+    "supabase": "supabase",
+    "db:start": "pnpm run preflight && supabase start",
+    "db:stop": "supabase stop",
+    "db:status": "supabase status",
+    "db:new": "supabase migration new",
+    "db:reset": "pnpm run preflight && supabase db reset",
+    "db:diff": "pnpm run preflight && supabase db diff -f",
+    "db:push": "supabase db push",
+    "db:pull": "supabase db pull",
+    "db:lint": "supabase db lint",
+    "db:types": "pnpm run preflight && mkdir -p supabase/types && supabase gen types --local --schema public > supabase/types/database.types.ts",
+    "db:link": "supabase link"
+  },
+  "devDependencies": {
+    "supabase": "^2.111.0"
+  }
+}

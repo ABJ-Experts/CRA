@@ -1,0 +1,19 @@
+/* Poppins, self-hosted.
+ *
+ * Kept out of custom.css so Tailwind's PostCSS plugin short-circuits on this
+ * file (it has no Tailwind at-rules) and webpack's css-loader resolves the
+ * bare specifiers and relative font url()s natively.
+ *
+ * `latin-*` matches apps/web's `subsets: ["latin"]`. The design system defines
+ * weights 400/500/600; 700 is included for Tailwind's `font-bold` and Infima's
+ * --ifm-font-weight-bold.
+ *
+ * NOTE: unlike next/font in apps/web, Fontsource ships no metric-matched
+ * fallback face and no preload, so cold-load CLS will differ slightly between
+ * the two apps. Upgrade to hand-written @font-face + static/fonts/ only if
+ * that shows up in measurements.
+ */
+@import "@fontsource/poppins/latin-400.css";
+@import "@fontsource/poppins/latin-500.css";
+@import "@fontsource/poppins/latin-600.css";
+@import "@fontsource/poppins/latin-700.css";
