@@ -35,13 +35,15 @@
 }
 
 .main ol {
-  font-family: var(--font-geist-mono);
   padding-left: 0;
   margin: 0;
   font-size: 14px;
   line-height: 24px;
   letter-spacing: -0.01em;
   list-style-position: inside;
+  /* Tailwind Preflight sets `ol { list-style: none }`. This rule previously
+   * relied on the UA default, so the "1. 2." markers must be restored here. */
+  list-style-type: decimal;
 }
 
 .main li:not(:last-of-type) {
@@ -66,7 +68,6 @@
   border-radius: 128px;
   height: 48px;
   padding: 0 20px;
-  font-family: var(--font-geist-sans);
   border: 1px solid transparent;
   transition: background 0.2s, color 0.2s, border-color 0.2s;
   cursor: pointer;
@@ -94,7 +95,6 @@ button.secondary {
   border-radius: 128px;
   height: 48px;
   padding: 0 20px;
-  font-family: var(--font-geist-sans);
   border: 1px solid transparent;
   transition: background 0.2s, color 0.2s, border-color 0.2s;
   cursor: pointer;
@@ -110,7 +110,6 @@ button.secondary {
 }
 
 .footer {
-  font-family: var(--font-geist-sans);
   grid-row-start: 3;
   display: flex;
   gap: 24px;

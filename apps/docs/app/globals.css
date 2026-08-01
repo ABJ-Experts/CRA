@@ -1,50 +1,65 @@
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/* `source("../")` pins the class-scan root to the app directory so detection
+ * does not depend on an implicit cwd inherited through
+ * turbo -> next -> turbopack -> postcss.
+ *
+ * `@import` must precede all other rules, and cascade-layer order is fixed by
+ * first appearance — anything above this line silently reorders it. */
+@import "tailwindcss";
 
-@media (prefers-color-scheme: dark) {
+/* Pins the class-scan root to the app directory. Written as a standalone
+ * `@source` rather than `@import "tailwindcss" source("../")` because the two
+ * are equivalent and editors' built-in CSS validators flag the inline
+ * `source()` form as a syntax error. */
+@source "../";
+
+@import "@repo/design-system/styles.css";
+
+@layer base {
+  /* Compatibility aliases. `page.module.css` still reads var(--foreground) and
+   * var(--background) in `a.primary`. Delete these two lines only when that
+   * file has been migrated to utilities. */
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: var(--color-canvas);
+    --foreground: var(--color-fg);
   }
-}
 
-html,
-body {
-  max-width: 100vw;
-  overflow-x: hidden;
-}
+  body {
+    background-color: var(--color-canvas);
+    color: var(--color-fg);
+    max-width: 100vw;
+  }
 
-body {
-  color: var(--foreground);
-  background: var(--background);
-}
-
-* {
-  box-sizing: border-box;
-  padding: 0;
-  margin: 0;
-}
-
-a {
-  color: inherit;
-  text-decoration: none;
-}
-
-.imgDark {
-  display: none;
-}
-
-@media (prefers-color-scheme: dark) {
+  /* NOTE: `overflow-x: hidden` was previously set on BOTH html and body. That
+   * makes <body> a scroll container and silently breaks `position: sticky`
+   * anywhere in the app. Keeping it on html only. */
   html {
-    color-scheme: dark;
+    overflow-x: hidden;
   }
 
-  .imgLight {
-    display: none;
-  }
-  .imgDark {
-    display: unset;
+  /* Tailwind v4 changed <button> to `cursor: default` (v3 kept the UA
+   * pointer). Restore it, or every new button in the design system is wrong. */
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
   }
 }
+
+/* ---------------------------------------------------------------------------
+ * Removed in the Preflight cutover — all superseded, none dropped silently:
+ *
+ *   * { box-sizing; padding: 0; margin: 0 }
+ *       -> Preflight covers all three and adds `border: 0 solid`.
+ *   a { color: inherit; text-decoration: none }
+ *       -> Preflight sets `text-decoration: inherit`; an <a> under <body>
+ *          inherits `none`, so rendering is identical and
+ *          `.footer a:hover { text-decoration: underline }` still works.
+ *   :root { --background: #fff; --foreground: #171717 } + dark media query
+ *       -> replaced by --color-canvas / --color-fg, aliased above.
+ *   @media (prefers-color-scheme: dark) { html { color-scheme: dark } }
+ *       -> replaced by the color-scheme + [data-theme] rules in
+ *          @repo/design-system, which also support a manual toggle.
+ *   .imgLight / .imgDark
+ *       -> replaced by `dark:` utilities in page.tsx. This was a cascade-layer
+ *          fix, not a Preflight one: unlayered `.imgDark { display: none }`
+ *          outranks `@layer utilities .block` regardless of specificity.
+ * ------------------------------------------------------------------------- */

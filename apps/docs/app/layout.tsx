@@ -1,14 +1,18 @@
 import type { Metadata } from "next";
-import localFont from "next/font/local";
+import { Poppins } from "next/font/google";
 import "./globals.css";
 
-const geistSans = localFont({
-  src: "./fonts/GeistVF.woff",
-  variable: "--font-geist-sans",
-});
-const geistMono = localFont({
-  src: "./fonts/GeistMonoVF.woff",
-  variable: "--font-geist-mono",
+/* Poppins is a STATIC font — unlike a variable font, every weight is its own
+ * file and `weight: "100 900"` is invalid here. Each weight must be listed
+ * explicitly; any weight omitted would silently fall back to the nearest
+ * available one, and `font-synthesis: none` (set in page.module.css) blocks
+ * the browser from faking it. All nine are loaded so every Tailwind
+ * `font-*` utility resolves to a real face. */
+const poppins = Poppins({
+  subsets: ["latin"],
+  weight: ["100", "200", "300", "400", "500", "600", "700", "800", "900"],
+  variable: "--font-poppins",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -22,10 +26,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className={`${geistSans.variable} ${geistMono.variable}`}>
-        {children}
-      </body>
+    <html lang="en" className={poppins.variable} suppressHydrationWarning>
+      <body>{children}</body>
     </html>
   );
 }

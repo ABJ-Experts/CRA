@@ -1,0 +1,479 @@
+/* ============================================================================
+ * @repo/design-system
+ * ----------------------------------------------------------------------------
+ * Shared Tailwind CSS v4 design tokens. Consumed by every app in this monorepo.
+ *
+ * IMPORTANT: this file deliberately does NOT contain `@import "tailwindcss"`.
+ * The consuming app owns that line, and must place it BEFORE importing this
+ * file so the `theme / base / components / utilities` layer order is already
+ * established when these blocks are merged.
+ *
+ * Source of truth: Figma export (43 colors, 20 type tokens, 12 gradients).
+ * Deviations from the raw export are marked `NOTE:` and are all deliberate.
+ * ========================================================================== */
+
+/* Register `packages/ui` with Tailwind's class scanner. `node_modules` is
+ * excluded from auto-detection, so the workspace symlink does not cover this.
+ * The path is relative to THIS file, so it stays correct for every consumer. */
+@source "../../ui/src";
+
+/* ============================================================================
+ * BLOCK A — raw ramps (plain `@theme`)
+ *
+ * Tailwind's own palette is intentionally NOT reset, so `bg-neutral-500` and
+ * `text-sm` still work alongside these.
+ * ========================================================================== */
+
+@theme {
+  /* -- overlays / scrims ----------------------------------------------------
+   * NOTE: renamed from `others-*`. The export had `others-15` as WHITE@15%
+   * while `others-30` / `others-50` were BLACK — one numeric scale, two base
+   * colors. The base color is now in the name so the trap cannot be stepped
+   * on. Float artifacts normalised (0.15000000596046448 -> 0.15,
+   * 0.30000001192092896 -> 0.3).                                            */
+  --color-scrim-black-50: rgb(0 0 0 / 0.5);
+  --color-scrim-black-30: rgb(0 0 0 / 0.3);
+  --color-scrim-white-15: rgb(255 255 255 / 0.15);
+
+  /* -- neutral, light-theme ramp -------------------------------------------
+   * NOTE: the number is a ROLE index, not a lightness index. `-500` is the
+   * strongest ink here, and it doubles as the dark theme's page background.
+   * Prefer the semantic tokens below over these.                            */
+  --color-neutral-light-500: #1b1d1f;
+  --color-neutral-light-400: #727880;
+  --color-neutral-light-300: #9da2a7;
+  --color-neutral-light-200: #c6c8cb;
+  --color-neutral-light-100: #eeeeee;
+  --color-neutral-light-50: #f5f5f5;
+
+  /* -- neutral, dark-theme ramp --------------------------------------------
+   * NOTE: no `-500` exists; the dark theme's strongest ink is plain white.  */
+  --color-neutral-dark-400: #898f96;
+  --color-neutral-dark-300: #55585a;
+  --color-neutral-dark-200: #3e4043;
+  --color-neutral-dark-100: #2e3133;
+  --color-neutral-dark-50: #26282a;
+
+  /* -- brink red ----------------------------------------------------------- */
+  --color-brink-red-900: #4a2527;
+  --color-brink-red-500: #e5646c;
+  --color-brink-red-300: #f8bec1;
+  --color-brink-red-100: #faebec;
+
+  /* -- origin green --------------------------------------------------------
+   * NOTE: hue drift. `-500` is 105deg (yellow-green) but `-300`/`-100` are
+   * ~148deg (mint) — a 43deg shift. Flagged for design review.              */
+  --color-origin-green-900: #24381e;
+  --color-origin-green-500: #7dc066;
+  --color-origin-green-300: #b0e4c8;
+  --color-origin-green-100: #e6f9ef;
+
+  /* -- active (primary) ----------------------------------------------------
+   * NOTE: `-200` is 249deg against ~237deg for the rest of the ramp.        */
+  --color-active-900: #232445;
+  --color-active-600: #4a50d6;
+  --color-active-500: #595fe5;
+  --color-active-300: #adb0ed;
+  --color-active-200: #c3b9fe;
+  --color-active-100: #ebecff;
+
+  /* -- cyan blue ----------------------------------------------------------- */
+  --color-cyan-blue-900: #1e414b;
+  --color-cyan-blue-500: #59b4d1;
+  --color-cyan-blue-300: #a9ddf5;
+  --color-cyan-blue-200: #d1f1ff;
+  --color-cyan-blue-100: #eaf6fc;
+
+  /* -- royal purple -------------------------------------------------------- */
+  --color-royal-purple-900: #371f4f;
+  --color-royal-purple-500: #9e57e5;
+  --color-royal-purple-300: #d9b7fb;
+  --color-royal-purple-100: #f5edfd;
+
+  /* -- origin orange ------------------------------------------------------- */
+  --color-origin-orange-900: #61351c;
+  --color-origin-orange-500: #f3935d;
+  --color-origin-orange-300: #ffc9ac;
+  --color-origin-orange-100: #fdf0e9;
+
+  /* ==========================================================================
+   * Typography — 17 of the 20 exported tokens.
+   *
+   * NOTE: font-weights were exported as the invalid CSS values
+   * `Regular | Medium | SemiBold` and are mapped to `400 | 500 | 600`.
+   * NOTE: line-heights are unitless. Every exported pair was exactly 1.5x,
+   * so there is zero fidelity loss and it now survives font-size overrides.
+   * NOTE: `letter-spacing: 0px` is deliberately NOT emitted. It is not a
+   * no-op — it would reset inherited tracking.
+   * NOTE: `subhead-underline`, `caption-1-uppercase` and `caption-2-uppercase`
+   * are absent here on purpose; the font-size namespace cannot express
+   * text-decoration or text-transform. They are `@utility` composites below.
+   * Defining them in both places would emit two identical class selectors.
+   * ======================================================================== */
+
+  /* Display tier — the de-facto h1/h2 (the exported scale starts at h3). */
+  --text-os-system-xl: 12.5rem; /* 200px */
+  --text-os-system-xl--line-height: normal;
+  --text-os-system-xl--font-weight: 600;
+
+  --text-os-system-md: 6.25rem; /* 100px */
+  --text-os-system-md--line-height: normal;
+  --text-os-system-md--font-weight: 600;
+
+  --text-os-system-sm: 3.75rem; /* 60px */
+  --text-os-system-sm--line-height: 1.5;
+  --text-os-system-sm--font-weight: 600;
+
+  /* Headings. NOTE: no h1/h2 in the export; 34px -> 60px gap to display. */
+  --text-h3: 2.125rem; /* 34px */
+  --text-h3--line-height: 1.5;
+  --text-h3--font-weight: 500;
+
+  --text-h4: 1.75rem; /* 28px */
+  --text-h4--line-height: 1.5;
+  --text-h4--font-weight: 500;
+
+  --text-h5: 1.25rem; /* 20px */
+  --text-h5--line-height: 1.5;
+  --text-h5--font-weight: 500;
+
+  --text-h6: 1.125rem; /* 18px */
+  --text-h6--line-height: 1.5;
+  --text-h6--font-weight: 500;
+
+  /* Body / headline — 16px */
+  --text-body: 1rem;
+  --text-body--line-height: 1.5;
+  --text-body--font-weight: 400;
+
+  --text-headline-medium: 1rem;
+  --text-headline-medium--line-height: 1.5;
+  --text-headline-medium--font-weight: 500;
+
+  --text-headline-semibold: 1rem;
+  --text-headline-semibold--line-height: 1.5;
+  --text-headline-semibold--font-weight: 600;
+
+  /* Subhead — 14px */
+  --text-subhead-regular: 0.875rem;
+  --text-subhead-regular--line-height: 1.5;
+  --text-subhead-regular--font-weight: 400;
+
+  --text-subhead-medium: 0.875rem;
+  --text-subhead-medium--line-height: 1.5;
+  --text-subhead-medium--font-weight: 500;
+
+  --text-subhead-semibold: 0.875rem;
+  --text-subhead-semibold--line-height: 1.5;
+  --text-subhead-semibold--font-weight: 600;
+
+  /* Caption 1 — 12px */
+  --text-caption-1-regular: 0.75rem;
+  --text-caption-1-regular--line-height: 1.5;
+  --text-caption-1-regular--font-weight: 400;
+
+  --text-caption-1-medium: 0.75rem;
+  --text-caption-1-medium--line-height: 1.5;
+  --text-caption-1-medium--font-weight: 500;
+
+  --text-caption-1-semibold: 0.75rem;
+  --text-caption-1-semibold--line-height: 1.5;
+  --text-caption-1-semibold--font-weight: 600;
+
+  /* Caption 2 — 10px */
+  --text-caption-2-regular: 0.625rem;
+  --text-caption-2-regular--line-height: 1.5;
+  --text-caption-2-regular--font-weight: 400;
+}
+
+/* ============================================================================
+ * BLOCK A2 — semantic role tokens (plain `@theme`)
+ *
+ * CRITICAL: this block must NOT use `@theme inline`. With `inline`, the light
+ * value is compiled directly into `.bg-canvas` and can never be re-pointed at
+ * runtime — which would silently freeze dark mode.
+ *
+ * `light-dark()` lets each token be defined exactly ONCE while supporting both
+ * the OS preference and a manual override. The switch is the `color-scheme`
+ * property, set in `@layer base` at the bottom of this file.
+ * ========================================================================== */
+
+@theme {
+  /* -- surfaces ------------------------------------------------------------ */
+  --color-canvas: light-dark(#ffffff, #1b1d1f);
+  --color-surface: light-dark(#f5f5f5, #26282a);
+  --color-surface-muted: light-dark(#eeeeee, #2e3133);
+
+  /* -- borders ------------------------------------------------------------- */
+  --color-border: light-dark(#eeeeee, #2e3133);
+  --color-border-strong: light-dark(#c6c8cb, #3e4043);
+
+  /* -- foreground ---------------------------------------------------------- */
+  --color-fg: light-dark(#1b1d1f, #ffffff);
+  /* WARNING: fails WCAG AA at normal size — 4.46:1 on light canvas, 4.42:1 on
+   * the dark elevated surface. Restrict to >=18.66px, or >=14px bold, where it
+   * clears 3:1 everywhere. There is currently no AA-passing secondary text
+   * color in the light theme; see the design escalation list. */
+  --color-fg-muted: light-dark(#727880, #898f96);
+  /* Disabled / placeholder only — never for body copy. */
+  --color-fg-subtle: light-dark(#9da2a7, #55585a);
+
+  /* -- accent --------------------------------------------------------------
+   * Light uses active-600 (6.16:1 with white). Dark flips to active-300 so
+   * `on-accent` becomes dark ink — active-500 on a dark canvas is only 2.95:1
+   * and would fail. */
+  --color-accent: light-dark(#4a50d6, #adb0ed);
+  --color-accent-subtle: light-dark(#ebecff, #232445);
+  --color-on-accent: light-dark(#ffffff, #232445);
+
+  /* -- status: danger (brink red) -----------------------------------------
+   * The `surface` + `fg` chip pairing is the accessible pattern for all five
+   * status hues (11.5:1 light / 8.3:1 dark). Solid `bg-danger` fills are
+   * decorative — see `--color-on-*` notes. */
+  --color-danger: #e5646c;
+  --color-danger-surface: light-dark(#faebec, #4a2527);
+  --color-danger-fg: light-dark(#4a2527, #f8bec1);
+  --color-danger-border: light-dark(#f8bec1, #e5646c);
+  /* WARNING: 4.05:1 — best available, still under AA. Large text only. */
+  --color-on-danger: #4a2527;
+
+  /* -- status: success (origin green) -------------------------------------- */
+  --color-success: #7dc066;
+  --color-success-surface: light-dark(#e6f9ef, #24381e);
+  --color-success-fg: light-dark(#24381e, #b0e4c8);
+  --color-success-border: light-dark(#b0e4c8, #7dc066);
+  --color-on-success: #24381e; /* 5.78:1 — passes AA */
+
+  /* -- status: info (cyan blue) -------------------------------------------- */
+  --color-info: #59b4d1;
+  --color-info-surface: light-dark(#eaf6fc, #1e414b);
+  --color-info-fg: light-dark(#1e414b, #a9ddf5);
+  --color-info-border: light-dark(#a9ddf5, #59b4d1);
+  --color-on-info: #1e414b; /* 4.65:1 — passes AA */
+
+  /* -- status: warning (origin orange) ------------------------------------- */
+  --color-warning: #f3935d;
+  --color-warning-surface: light-dark(#fdf0e9, #61351c);
+  --color-warning-fg: light-dark(#61351c, #ffc9ac);
+  --color-warning-border: light-dark(#ffc9ac, #f3935d);
+  /* WARNING: 4.43:1 — marginally under AA. Large text only. */
+  --color-on-warning: #61351c;
+
+  /* -- status: premium (royal purple) -------------------------------------- */
+  --color-premium: #9e57e5;
+  --color-premium-surface: light-dark(#f5edfd, #371f4f);
+  --color-premium-fg: light-dark(#371f4f, #d9b7fb);
+  --color-premium-border: light-dark(#d9b7fb, #9e57e5);
+  /* WARNING: 4.26:1 — marginally under AA. Large text only. */
+  --color-on-premium: #ffffff;
+}
+
+/* ============================================================================
+ * BLOCK B — gradients (`@theme static`)
+ *
+ * Tailwind v4 has NO `--gradient-*` or `--background-image-*` namespace, so
+ * these generate zero utilities on their own. One functional `@utility` below
+ * maps the whole namespace to `bg-grad-*`.
+ *
+ * NOTE: the `--ds-` prefix is deliberate. If a future Tailwind release claims
+ * `--gradient-*`, these would start emitting utilities nobody asked for.
+ * NOTE: `static` forces emission even when unused — `page.module.css` consumes
+ * some of these via `var()`, and Tailwind's scanner skips CSS files.
+ * NOTE: every value was exported wrapped in `var(--Some-Figma-GUID, <value>)`.
+ * The wrapper is stripped: the GUID changes between exports, and if anything
+ * ever defined it, every gradient would break at once.
+ * ========================================================================== */
+
+@theme static {
+  /* -- theme-aware fades ---------------------------------------------------
+   * These collapse the four exported `*-hide-*` tokens into two that follow
+   * the active theme automatically. The 8-digit `...00` hex preserves the
+   * Figma intent of fading to a TRANSPARENT COPY OF THE SURFACE rather than
+   * to transparent-black. */
+  --ds-gradient-fade-canvas: linear-gradient(
+    180deg,
+    light-dark(#ffffff00, #1b1d1f00) 0%,
+    light-dark(#ffffff, #1b1d1f) 100%
+  );
+  --ds-gradient-fade-surface: linear-gradient(
+    180deg,
+    light-dark(#f5f5f500, #26282a00) 0%,
+    light-dark(#f5f5f5, #26282a) 100%
+  );
+
+  /* -- the same four fades, theme-pinned (verbatim from the export) --------
+   * Use these when a surface is a fixed color regardless of theme. */
+  --ds-gradient-neutral-light-hide-500: linear-gradient(
+    180deg,
+    #ffffff00 0%,
+    #ffffff 100%
+  );
+  --ds-gradient-neutral-light-hide-50: linear-gradient(
+    180deg,
+    #f5f5f500 0%,
+    #f5f5f5 100%
+  );
+  --ds-gradient-neutral-dark-hide-500: linear-gradient(
+    180deg,
+    #1b1d1f00 0%,
+    #1b1d1f 100%
+  );
+  --ds-gradient-neutral-dark-hide-50: linear-gradient(
+    180deg,
+    #26282a00 0%,
+    #26282a 100%
+  );
+
+  /* -- glow washes ---------------------------------------------------------
+   * WARNING: these stop colors are NOT in the palette. #ff557e vs
+   * brink-red-500 #e5646c, #40c76e vs #7dc066, #1db2f1 vs #59b4d1,
+   * #b822ff vs #9e57e5 — systematically more saturated, suggesting a stale
+   * palette version. Kept VERBATIM: re-pointing them at the -500 tokens
+   * would be a visual change disguised as a refactor. Escalated to design.
+   * NOTE: origin-orange has no glow in the export, unlike the other four
+   * accent hues. Likely a gap in the Figma library. */
+  --ds-gradient-glow-brink-red: linear-gradient(
+    180deg,
+    rgb(255 85 126 / 0.4) 0%,
+    rgb(255 85 126 / 0) 100%
+  );
+  --ds-gradient-glow-origin-green: linear-gradient(
+    180deg,
+    rgb(64 199 110 / 0.4) 0%,
+    rgb(64 199 110 / 0) 100%
+  );
+  --ds-gradient-glow-cyan-blue: linear-gradient(
+    180deg,
+    rgb(29 178 241 / 0.4) 0%,
+    rgb(29 178 241 / 0) 100%
+  );
+  --ds-gradient-glow-royal-purple: linear-gradient(
+    180deg,
+    rgb(184 34 255 / 0.4) 0%,
+    rgb(184 34 255 / 0) 100%
+  );
+
+  /* -- decorative fills ----------------------------------------------------
+   * NOTE: the `gradients-` prefix was a Figma group name and is stripped. */
+  --ds-gradient-caramel: linear-gradient(180deg, #ffd8a0 0%, #ffc48e 100%);
+  --ds-gradient-yellow: linear-gradient(180deg, #ffd764 0%, #ffbc7d 100%);
+  --ds-gradient-angry: linear-gradient(180deg, #ff5747 0%, #ffbc7d 100%);
+  --ds-gradient-grey: radial-gradient(
+    100.03% 100.03% at 52.5% 0%,
+    #f5f5f5 0%,
+    #e1e1e1 100%
+  );
+}
+
+/* ============================================================================
+ * BLOCK C — font families (`@theme inline`)
+ *
+ * Poppins is the ONLY typeface in this system. `--font-mono` deliberately
+ * resolves to Poppins too, so `font-mono`, Preflight's `code`/`pre` rule and
+ * any `<code>` element all stay on brand.
+ * TRADE-OFF: Poppins is proportional, so monospaced column alignment is lost.
+ * Code blocks, ASCII tables and numeric columns will render ragged. If that
+ * becomes a problem, point `--font-mono` at a system mono stack instead —
+ * that is the only change required.
+ *
+ * CRITICAL: `inline` is mandatory here and ONLY here. The referent
+ * (`--font-poppins`) is declared by `next/font` on the <html> element, not on
+ * :root. Without `inline`, `.font-sans` would emit
+ * `font-family: var(--font-sans)`, which resolves at :root where
+ * `--font-poppins` is out of scope, and collapse to nothing.
+ *
+ * The inner fallback chain is a second line of defence: it makes Preflight's
+ * `html { font-family: var(--default-font-family) }` degrade to a system stack
+ * instead of becoming invalid-at-computed-value-time.
+ * ========================================================================== */
+
+@theme inline {
+  --font-sans:
+    var(--font-poppins, ui-sans-serif), system-ui, sans-serif,
+    "Apple Color Emoji", "Segoe UI Emoji";
+  --font-mono:
+    var(--font-poppins, ui-sans-serif), system-ui, sans-serif;
+}
+
+/* ============================================================================
+ * Dark variant
+ *
+ * `light-dark()` covers colors only. `dark:` is still needed for everything
+ * else (`dark:shadow-none`, `dark:invert`, `dark:hidden`, ...).
+ *
+ * CRITICAL: this must encode the IDENTICAL three-state condition as the
+ * `color-scheme` rules below, or the two theming systems desynchronize —
+ * colors would follow the toggle while `dark:` utilities followed the OS.
+ *
+ * `:where()` pins specificity at 0 so `dark:bg-x` stays 0-1-0 and does not
+ * outrank unrelated utilities.
+ * ========================================================================== */
+
+@custom-variant dark {
+  @media (prefers-color-scheme: dark) {
+    &:where(
+      :root:not([data-theme="light"]),
+      :root:not([data-theme="light"]) *
+    ) {
+      @slot;
+    }
+  }
+
+  &:where(:root[data-theme="dark"], :root[data-theme="dark"] *) {
+    @slot;
+  }
+}
+
+/* ============================================================================
+ * Utilities
+ * ========================================================================== */
+
+/* One functional utility maps the entire gradient namespace, and gets every
+ * variant for free: `bg-grad-caramel`, `hover:bg-grad-yellow`,
+ * `md:bg-grad-glow-cyan-blue`. Named `bg-grad-*` rather than `bg-gradient-*`
+ * to avoid Tailwind v4's deprecated `bg-gradient-to-*` alias. */
+@utility bg-grad-* {
+  background-image: --value(--ds-gradient-*);
+}
+
+/* The three type tokens whose semantics the font-size namespace cannot carry.
+ *
+ * `@apply` (rather than hand-written declarations) is deliberate: it inlines
+ * whatever the base token currently compiles to, including Tailwind's internal
+ * `--tw-leading` / `--tw-font-weight` fallback chain, so `leading-*` and
+ * `font-*` still compose on top of these. */
+@utility text-subhead-underline {
+  @apply text-subhead-regular underline;
+}
+
+@utility text-caption-1-uppercase {
+  @apply text-caption-1-semibold uppercase;
+}
+
+@utility text-caption-2-uppercase {
+  @apply text-caption-2-regular font-semibold uppercase;
+}
+
+/* ============================================================================
+ * Base layer
+ * ========================================================================== */
+
+@layer base {
+  /* The theme switch. `light dark` follows the OS; the `data-theme` attribute
+   * on <html> overrides it. Because these live in the same layer, the
+   * attribute selectors (0-2-0) beat the bare `:root` (0-1-0) on specificity.
+   *
+   * Setting `color-scheme` also gives correctly-themed scrollbars and native
+   * form controls for free. */
+  :root {
+    color-scheme: light dark;
+  }
+
+  :root[data-theme="light"] {
+    color-scheme: light;
+  }
+
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+  }
+}
