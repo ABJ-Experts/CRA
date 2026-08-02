@@ -16,7 +16,7 @@ import { AuthOutcome } from "../_components/auth-outcome";
 const COPY = {
   verified: {
     title: "You are all set",
-    description: "Your email is verified. Welcome to SupeHub.",
+    description: "Your email is verified. Welcome to CRA.",
     cta: "Go to dashboard",
     href: "/dashboard",
   },

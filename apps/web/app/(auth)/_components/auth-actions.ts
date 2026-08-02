@@ -116,5 +116,5 @@ export async function resendCode(): Promise<AuthResult> {
 /** Stand-in for the signed-in user the Lock Screen shows. */
 export const lockedSession = {
   name: "Leslie Alexander",
-  email: "lesliealexander@supehub.com",
+  email: "lesliealexander@cra.com",
 } as const;

@@ -61,9 +61,13 @@ export const NAV: NavSection[] = [
       {
         label: "Tables",
         icon: Table2,
+        /* The four skins the Pencil frames ship, in the order they appear
+         * there: Basic, Striped, Bordered, Splitted. */
         children: [
-          { label: "Basic", href: "/dashboard/tables" },
-          { label: "Data grid", href: "/dashboard/tables/grid" },
+          { label: "Basic", href: "/dashboard/tables/basic" },
+          { label: "Striped", href: "/dashboard/tables/striped" },
+          { label: "Bordered", href: "/dashboard/tables/bordered" },
+          { label: "Splitted", href: "/dashboard/tables/splitted" },
         ],
       },
       { label: "Messages", icon: MessageSquare, href: "/dashboard/messages", notice: 7 },

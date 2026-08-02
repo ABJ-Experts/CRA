@@ -1,4 +1,6 @@
 import { themeScript } from "@repo/design-system/theme";
+import { Providers } from "./_providers/providers";
+import { sidebarScript } from "./_components/sidebar/sidebar-collapse";
 import type { Metadata } from "next";
 import { Poppins } from "next/font/google";
 import "./globals.css";
@@ -37,8 +39,16 @@ export default function RootLayout({
           between server and client.
         */}
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+        {/*
+          Same technique for the sidebar rail. Collapsed is 66px against 270
+          expanded, so restoring it after hydration would shift the whole page
+          by 204px on every load.
+        */}
+        <script dangerouslySetInnerHTML={{ __html: sidebarScript }} />
       </head>
-      <body>{children}</body>
+      <body>
+        <Providers>{children}</Providers>
+      </body>
     </html>
   );
 }

@@ -7,6 +7,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { NAV, type NavItem } from "./nav-config";
+import { getStoredCollapsed, storeCollapsed } from "./sidebar-collapse";
 
 /**
  * Sidebar - Pencil frame `ty4xx` ("Side Bars").
@@ -38,6 +39,8 @@ import { NAV, type NavItem } from "./nav-config";
 
 const EXPANDED = "w-[270px]";
 const COLLAPSED = "w-[66px]";
+/** Matches the attribute `sidebarScript` sets on <html> before first paint. */
+const PRE_PAINT_COLLAPSED = "[html[data-sidebar=collapsed]_&]:w-[66px]";
 
 function Notice({ count, className }: { count: number; className?: string }) {
   return (
@@ -66,8 +69,23 @@ function NoticeDot() {
 
 export function Sidebar() {
   const pathname = usePathname();
-  const [collapsed, setCollapsed] = useState(false);
+  /* Seeded false to match the server render, then corrected on mount from the
+   * same value the pre-paint script already applied to <html>. Reading storage
+   * during render instead would be a hydration mismatch. */
+  const [collapsed, setCollapsedState] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  useEffect(() => {
+    setCollapsedState(getStoredCollapsed());
+  }, []);
+
+  const setCollapsed = useCallback((next: boolean | ((prev: boolean) => boolean)) => {
+    setCollapsedState((prev) => {
+      const value = typeof next === "function" ? next(prev) : next;
+      storeCollapsed(value);
+      return value;
+    });
+  }, []);
 
   const isActive = useCallback(
     (href?: string) =>
@@ -121,7 +139,12 @@ export function Sidebar() {
     const itemClasses = cn(
       "group relative flex h-14 w-full items-center gap-2 rounded-xl",
       "px-4 pt-[18px] pb-[17px]",
-      "text-subhead-medium",
+      /* `text-left` is load-bearing. Parent items render as <button> and leaf
+       * items as <a>, and a button's UA default is `text-align: center`. The
+       * label span is `flex-1`, so on a button the text centred itself in the
+       * leftover space and drifted right, leaving every expandable item
+       * visibly out of line with its siblings. */
+      "text-left text-subhead-medium",
       "transition-colors duration-150 motion-reduce:transition-none",
       "outline-none focus-visible:ring-2 focus-visible:ring-active-500",
       active
@@ -229,13 +252,13 @@ export function Sidebar() {
         {!collapsed ? (
           <Link href="/dashboard" className="flex items-center gap-2 text-headline-semibold text-fg">
             <span className="flex size-8 items-center justify-center rounded-lg bg-active-500 text-white">
-              S
+              C
             </span>
-            SupeHub
+            CRA
           </Link>
         ) : (
           <span className="flex size-8 items-center justify-center rounded-lg bg-active-500 text-white">
-            S
+            C
           </span>
         )}
         {!collapsed ? (
@@ -323,7 +346,7 @@ export function Sidebar() {
             <span className="flex min-w-0 flex-1 flex-col">
               <span className="truncate text-subhead-medium text-fg">Ada Foster</span>
               <span className="truncate text-caption-2-regular text-fg-subtle">
-                ada@supehub.com
+                ada@cra.com
               </span>
             </span>
           ) : null}
@@ -331,7 +354,7 @@ export function Sidebar() {
 
         {!collapsed ? (
           <div className="flex flex-col gap-[3px]">
-            <span className="text-caption-2-semibold text-fg">&copy; SupeHub Corp.</span>
+            <span className="text-caption-2-semibold text-fg">&copy; CRA Corp.</span>
             <span className="text-caption-2-regular text-fg-muted">
               All in One Premium UI Kits
             </span>
@@ -349,7 +372,15 @@ export function Sidebar() {
         className={cn(
           "sticky top-0 hidden h-dvh shrink-0 border-r border-border lg:block",
           "transition-[width] duration-200 ease-out motion-reduce:transition-none",
-          collapsed ? COLLAPSED : EXPANDED
+          collapsed ? COLLAPSED : EXPANDED,
+          /* Pre-hydration width. React's state starts expanded to match the
+           * server, so on a load where the rail was collapsed it would paint
+           * at 270 and snap to 66. The pre-paint script puts the attribute on
+           * <html>, and this rule (higher specificity than the plain width
+           * utility above) applies the narrow width from the first frame. It
+           * stops matching as soon as the user expands, because
+           * `storeCollapsed` removes the attribute. */
+          PRE_PAINT_COLLAPSED
         )}
       >
         {rail}

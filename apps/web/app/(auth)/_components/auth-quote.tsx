@@ -29,7 +29,7 @@ export interface AuthQuoteProps {
 }
 
 const DEFAULT_QUOTES = [
-  "SupeHub is Premium UI kits. Super a lot of layouts designed with the atomic system, to help us improve quickly our products",
+  "CRA is Premium UI kits. Super a lot of layouts designed with the atomic system, to help us improve quickly our products",
   "Every component is transcribed from the design file and verified in the browser, so what ships is what was drawn",
   "One token layer drives both themes, which is why every screen re-themes from a single attribute",
 ];

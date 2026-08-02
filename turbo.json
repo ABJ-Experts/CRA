@@ -1,6 +1,10 @@
 {
   "$schema": "https://turborepo.dev/schema.json",
   "ui": "tui",
+  "globalEnv": [
+    "NEXT_RUNTIME",
+    "NEXT_PUBLIC_ENABLE_MOCKS"
+  ],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],

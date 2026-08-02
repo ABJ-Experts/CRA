@@ -360,7 +360,15 @@
    * palette version. Kept VERBATIM: re-pointing them at the -500 tokens
    * would be a visual change disguised as a refactor. Escalated to design.
    * NOTE: origin-orange has no glow in the export, unlike the other four
-   * accent hues. Likely a gap in the Figma library. */
+   * accent hues. Likely a gap in the Figma library.
+   *
+   * The stops are ALSO exposed as flat colors below. A canvas chart cannot
+   * consume a CSS `linear-gradient` string: ECharts builds its own gradient
+   * from stop colors, so the Mixed chart's area wash (SSqGt, #40c76e at 40%
+   * fading to 0) needs the stop itself. Same values, one definition, so the
+   * gradient and the chart cannot drift apart. Only the greens are exposed
+   * because only that wash appears in a chart today. */
+  --color-glow-origin-green: #40c76e;
   --ds-gradient-glow-brink-red: linear-gradient(
     180deg,
     rgb(255 85 126 / 0.4) 0%,

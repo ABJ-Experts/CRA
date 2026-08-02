@@ -18,7 +18,7 @@ const THEME_ATTR = "data-theme";
 const SWITCHING_ATTR = "data-theme-switching";
 
 /** Where the choice is persisted. Shared with the pre-paint script below. */
-export const THEME_STORAGE_KEY = "supehub-theme";
+export const THEME_STORAGE_KEY = "cra-theme";
 
 /**
  * A blocking script for the document head, so `data-theme` is set before the

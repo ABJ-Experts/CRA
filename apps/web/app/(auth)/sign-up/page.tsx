@@ -46,7 +46,7 @@ export default function SignUpPage() {
     <div className="flex flex-col gap-10">
       <AuthTitle
         title="Join With Us"
-        description="Create the account to join SupeHub"
+        description="Create the account to join CRA"
       />
 
       <Form

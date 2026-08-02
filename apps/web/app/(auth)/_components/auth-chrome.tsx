@@ -22,9 +22,9 @@ export function AuthLogo({ className }: { className?: string }) {
       )}
     >
       <span className="flex size-10 items-center justify-center rounded-xl bg-active-500 text-headline-semibold text-white">
-        S
+        C
       </span>
-      <span className="text-h5 text-fg">SupeHub</span>
+      <span className="text-h5 text-fg">CRA</span>
     </Link>
   );
 }
