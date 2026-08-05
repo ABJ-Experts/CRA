@@ -2,13 +2,7 @@
 
 import { useId, type ReactNode } from "react";
 import { cn } from "../../lib/cn";
-import {
-  SelectContent,
-  SelectItem,
-  SelectRoot,
-  SelectTrigger,
-  SelectValue,
-} from "../select";
+import { SelectContent, SelectItem, SelectRoot, SelectTrigger, SelectValue } from "../select";
 
 /**
  * SortBy - Pencil frame `qyjm1` ("Forms/Sort by").
@@ -77,7 +71,7 @@ export function SortBy({
           id={labelId}
           className={cn(
             "flex shrink-0 items-center gap-0.5 py-0.5 text-caption-1-semibold",
-            "text-fg-subtle"
+            "text-fg-subtle",
           )}
         >
           {label}
@@ -112,7 +106,7 @@ export function SortBy({
             "transition-colors duration-150 motion-reduce:transition-none",
             !disabled && "hover:bg-surface data-[state=open]:bg-surface",
             "outline-none focus-visible:ring-2 focus-visible:ring-active-500",
-            className
+            className,
           )}
           {...rest}
         >

@@ -201,7 +201,7 @@ export const buttonVariants = cva(
       iconOnly: false,
       fullWidth: false,
     },
-  }
+  },
 );
 
 export type ButtonVariantProps = VariantProps<typeof buttonVariants>;

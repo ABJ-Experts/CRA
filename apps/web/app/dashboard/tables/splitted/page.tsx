@@ -26,17 +26,13 @@ export default function SplittedTablesPage() {
         accessorKey: "name",
         header: "Name",
         size: 317,
-        cell: ({ row }) => (
-          <Stacked value={row.original.name} caption={row.original.symbol} />
-        ),
+        cell: ({ row }) => <Stacked value={row.original.name} caption={row.original.symbol} />,
       },
       {
         accessorKey: "marketCap",
         header: "Market Cap & Price",
         size: 317,
-        cell: ({ row }) => (
-          <Stacked value={row.original.marketCap} caption={row.original.price} />
-        ),
+        cell: ({ row }) => <Stacked value={row.original.marketCap} caption={row.original.price} />,
       },
       {
         accessorKey: "h24",
@@ -68,7 +64,7 @@ export default function SplittedTablesPage() {
         cell: ({ row }) => <RowActions label={`Actions for ${row.original.name}`} />,
       },
     ],
-    []
+    [],
   );
 
   return (

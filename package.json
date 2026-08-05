@@ -1,27 +1,43 @@
 {
   "name": "CRA",
   "private": true,
-  "packageManager": "pnpm@10.33.4",
+  "packageManager": "pnpm@10.34.5",
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev",
     "lint": "turbo run lint",
+    "db:migrate": "pnpm --filter infrastructure run db:migrate",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,md}\"",
     "check-types": "turbo run check-types"
   },
   "devDependencies": {
-    "prettier": "^3.7.4",
+    "prettier": "catalog:",
     "turbo": "^2.10.8",
-    "typescript": "5.9.2"
+    "typescript": "catalog:"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=22.13.0"
   },
   "devEngines": {
     "packageManager": {
       "name": "pnpm",
-      "version": "10.33.4",
+      "version": "10.34.5",
       "onFail": "error"
+    }
+  },
+  "pnpm": {
+    "overrides": {
+      "js-yaml@>=4.0.0 <4.3.0": ">=4.3.0 <5",
+      "lodash@<4.18.0": ">=4.18.0 <5",
+      "path-to-regexp@>=8.0.0 <8.4.0": ">=8.4.0 <9",
+      "postcss@<8.5.18": ">=8.5.18 <9",
+      "sharp@<0.35.0": ">=0.35.0 <1"
+    },
+    "auditConfig": {
+      "ignoreGhsas": [
+        "GHSA-mh99-v99m-4gvg"
+      ]
     }
   }
 }

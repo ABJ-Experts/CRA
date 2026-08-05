@@ -76,20 +76,11 @@ export function AuthArt({
             offset="0"
             className="[stop-color:#ffffff] [stop-opacity:0.49] dark:[stop-color:#35383c] dark:[stop-opacity:1]"
           />
-          <stop
-            offset="1"
-            className="[stop-color:#f0f3fd] dark:[stop-color:#262940]"
-          />
+          <stop offset="1" className="[stop-color:#f0f3fd] dark:[stop-color:#262940]" />
         </linearGradient>
         <linearGradient id="auth-sheet-b" x1="0" y1="1" x2="0.55" y2="0">
-          <stop
-            offset="0"
-            className="[stop-color:#ffffff] dark:[stop-color:#35383c]"
-          />
-          <stop
-            offset="1"
-            className="[stop-color:#a7b3d7] dark:[stop-color:#262940]"
-          />
+          <stop offset="0" className="[stop-color:#ffffff] dark:[stop-color:#35383c]" />
+          <stop offset="1" className="[stop-color:#a7b3d7] dark:[stop-color:#262940]" />
         </linearGradient>
         <clipPath id="auth-product-clip">
           <rect x="120" y="365" width="859" height="659" rx="12" />
@@ -98,13 +89,7 @@ export function AuthArt({
 
       {/* Deliberately far larger than the viewBox so it fills the letterbox
           bands `meet` leaves at either side. */}
-      <rect
-        x="-3000"
-        y="-3000"
-        width="7000"
-        height="7000"
-        fill="var(--color-surface-muted)"
-      />
+      <rect x="-3000" y="-3000" width="7000" height="7000" fill="var(--color-surface-muted)" />
 
       {/*
         Pencil rotates counter-clockwise about the top-left; SVG rotates

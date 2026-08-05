@@ -2,20 +2,58 @@
   "$schema": "https://turborepo.dev/schema.json",
   "ui": "tui",
   "globalEnv": [
+    "NODE_ENV",
     "NEXT_RUNTIME",
-    "NEXT_PUBLIC_ENABLE_MOCKS"
+    "NEXT_PUBLIC_ENABLE_MOCKS",
+    "DATABASE_URL",
+    "MIGRATION_DATABASE_URL",
+    "FEED_DATABASE_URL",
+    "SCHEDULER_DATABASE_URL",
+    "DATABASE_POOL_MAX",
+    "REDIS_URL",
+    "STORAGE_DRIVER",
+    "STORAGE_ENDPOINT",
+    "STORAGE_BUCKET",
+    "STORAGE_REGION",
+    "STORAGE_ACCESS_KEY_ID",
+    "STORAGE_SECRET_ACCESS_KEY",
+    "STORAGE_SIGNED_URL_TTL",
+    "PORT",
+    "WEB_ORIGIN",
+    "MATCH_CONFIDENCE_THRESHOLD",
+    "AI_PROVIDER_MODE",
+    "SUPABASE_URL",
+    "SUPABASE_PUBLISHABLE_KEY",
+    "SUPABASE_SECRET_KEY",
+    "SUPABASE_ANON_KEY",
+    "SUPABASE_SERVICE_ROLE_KEY",
+    "SUPABASE_JWT_SECRET",
+    "API_URL",
+    "SESSION_COOKIE_SECURE",
+    "E2E_WEB_PORT",
+    "E2E_API_PORT"
   ],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
-      "outputs": [".next/**", "!.next/cache/**", "!.next/dev/**"]
+      "outputs": [
+        ".next/**",
+        "!.next/cache/**",
+        "!.next/dev/**",
+        "dist/**",
+        "build/**"
+      ]
     },
     "lint": {
       "dependsOn": ["^lint"]
     },
     "check-types": {
       "dependsOn": ["^check-types"]
+    },
+    "test": {
+      "dependsOn": ["^build"],
+      "outputs": ["coverage/**"]
     },
     "dev": {
       "cache": false,

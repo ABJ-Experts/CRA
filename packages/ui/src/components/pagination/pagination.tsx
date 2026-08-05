@@ -50,22 +50,19 @@ function usePageItems(
   page: number,
   pageCount: number,
   siblingCount: number,
-  boundaryCount: number
+  boundaryCount: number,
 ): PageItem[] {
   return useMemo(() => {
     const startPages = range(1, Math.min(boundaryCount, pageCount));
-    const endPages = range(
-      Math.max(pageCount - boundaryCount + 1, boundaryCount + 1),
-      pageCount
-    );
+    const endPages = range(Math.max(pageCount - boundaryCount + 1, boundaryCount + 1), pageCount);
 
     const siblingsStart = Math.max(
       Math.min(page - siblingCount, pageCount - boundaryCount - siblingCount * 2 - 1),
-      boundaryCount + 2
+      boundaryCount + 2,
     );
     const siblingsEnd = Math.min(
       Math.max(page + siblingCount, boundaryCount + siblingCount * 2 + 2),
-      endPages.length > 0 ? (endPages[0] as number) - 2 : pageCount - 1
+      endPages.length > 0 ? (endPages[0] as number) - 2 : pageCount - 1,
     );
 
     return [
@@ -189,7 +186,7 @@ export function Pagination({
         itemBase,
         "w-10 bg-surface text-fg-muted",
         "hover:bg-surface-muted hover:text-fg",
-        "disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-surface disabled:hover:text-fg-muted"
+        "disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-surface disabled:hover:text-fg-muted",
       )}
     >
       {dir === "prev" ? (
@@ -229,10 +226,7 @@ export function Pagination({
           </>
         ) : null}
         {rangeLabel ? (
-          <span
-            className="text-caption-1-medium text-fg-subtle"
-            data-testid="pagination-range"
-          >
+          <span className="text-caption-1-medium text-fg-subtle" data-testid="pagination-range">
             {rangeLabel}
           </span>
         ) : null}
@@ -250,7 +244,7 @@ export function Pagination({
                 itemBase,
                 "w-14 bg-surface text-fg-muted",
                 "hover:bg-surface-muted hover:text-fg",
-                "disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-surface disabled:hover:text-fg-muted"
+                "disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-surface disabled:hover:text-fg-muted",
               )}
             >
               {t.first}
@@ -273,7 +267,7 @@ export function Pagination({
                   "w-10",
                   item === current
                     ? "bg-fg text-canvas"
-                    : "bg-surface text-fg-muted hover:bg-surface-muted hover:text-fg"
+                    : "bg-surface text-fg-muted hover:bg-surface-muted hover:text-fg",
                 )}
               >
                 {/* The frame zero-pads to two digits; beyond 99 it just grows. */}
@@ -286,7 +280,7 @@ export function Pagination({
             <li key={`${item}-${i}`} aria-hidden="true">
               <span className={cn(itemBase, "w-10 bg-surface text-fg-muted")}>...</span>
             </li>
-          )
+          ),
         )}
 
         <li>{arrow("next")}</li>
@@ -301,7 +295,7 @@ export function Pagination({
                 itemBase,
                 "w-14 bg-surface text-fg-muted",
                 "hover:bg-surface-muted hover:text-fg",
-                "disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-surface disabled:hover:text-fg-muted"
+                "disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-surface disabled:hover:text-fg-muted",
               )}
             >
               {t.last}

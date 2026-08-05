@@ -92,7 +92,7 @@ export function DatePicker({
 
   const display = useMemo(
     () => (draft !== null ? draft : selected ? format(selected, formatStr) : ""),
-    [draft, selected, formatStr]
+    [draft, selected, formatStr],
   );
 
   const hasError = Boolean(error);
@@ -132,7 +132,7 @@ export function DatePicker({
           htmlFor={inputId}
           className={cn(
             "flex items-center gap-0.5 text-caption-1-semibold",
-            disabled ? "text-fg-subtle" : "text-fg-muted"
+            disabled ? "text-fg-subtle" : "text-fg-muted",
           )}
         >
           {label}
@@ -171,7 +171,7 @@ export function DatePicker({
               "text-fg placeholder:text-border-strong",
               "border-0 p-0 outline-none",
               "disabled:cursor-not-allowed disabled:text-fg-subtle disabled:placeholder:text-fg-subtle",
-              size === "xl" ? "text-h5" : "text-subhead-regular"
+              size === "xl" ? "text-h5" : "text-subhead-regular",
             )}
           />
 
@@ -188,7 +188,7 @@ export function DatePicker({
                 "text-fg transition-colors duration-150 motion-reduce:transition-none",
                 "hover:text-active-500",
                 "outline-none focus-visible:ring-2 focus-visible:ring-active-500",
-                "disabled:cursor-not-allowed disabled:hover:text-fg"
+                "disabled:cursor-not-allowed disabled:hover:text-fg",
               )}
             >
               <CalendarDays aria-hidden="true" className="size-4" strokeWidth={1.5} />
@@ -209,7 +209,7 @@ export function DatePicker({
               // No exit animation: Radix keeps the layer mounted until
               // `animationend`, and a Popover does not reliably fire it.
               "data-[state=closed]:animate-none",
-              "motion-reduce:animate-none"
+              "motion-reduce:animate-none",
             )}
             // Radix returns focus to its trigger - here the calendar glyph.
             // Redirect to the text field instead: after picking a date the

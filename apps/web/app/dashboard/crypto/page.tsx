@@ -52,7 +52,12 @@ const FEATURED = [
 ];
 
 const ACTIVITY = [
-  { kind: "in" as const, label: "Received BTC", meta: "From 1MwvM5j6J1bkvry", amount: "+0.0421 BTC" },
+  {
+    kind: "in" as const,
+    label: "Received BTC",
+    meta: "From 1MwvM5j6J1bkvry",
+    amount: "+0.0421 BTC",
+  },
   { kind: "out" as const, label: "Sent ETH", meta: "To BrQv91mWzywzmvzg", amount: "-1.204 ETH" },
   { kind: "in" as const, label: "Received SOL", meta: "Staking reward", amount: "+12.90 SOL" },
   { kind: "out" as const, label: "Sent BNB", meta: "To 3FZbgi29cpjq2Gj", amount: "-0.640 BNB" },
@@ -78,9 +83,7 @@ export default function CryptoDashboardPage() {
       {
         accessorKey: "marketCap",
         header: "Market Cap & Price",
-        cell: ({ row }) => (
-          <Stacked value={row.original.marketCap} caption={row.original.price} />
-        ),
+        cell: ({ row }) => <Stacked value={row.original.marketCap} caption={row.original.price} />,
       },
       {
         accessorKey: "h24",
@@ -100,12 +103,11 @@ export default function CryptoDashboardPage() {
         cell: ({ row }) => <RowActions label={`Actions for ${row.original.name}`} />,
       },
     ],
-    []
+    [],
   );
 
   return (
     <div className="flex flex-col gap-6 px-6 py-6 lg:px-[30px]">
-
       <Stagger className="flex flex-col gap-6">
         <StaggerItem className="grid gap-4 xl:grid-cols-3">
           <SectionCard title="Total balance">
@@ -135,7 +137,7 @@ export default function CryptoDashboardPage() {
                       "flex size-9 shrink-0 items-center justify-center rounded-xl",
                       a.kind === "in"
                         ? "bg-success-surface text-success-fg"
-                        : "bg-danger-surface text-danger-fg"
+                        : "bg-danger-surface text-danger-fg",
                     )}
                   >
                     {a.kind === "in" ? (
@@ -151,7 +153,7 @@ export default function CryptoDashboardPage() {
                   <span
                     className={cn(
                       "shrink-0 text-caption-1-semibold tabular-nums",
-                      a.kind === "in" ? "text-success-fg" : "text-danger-fg"
+                      a.kind === "in" ? "text-success-fg" : "text-danger-fg",
                     )}
                   >
                     {a.amount}
@@ -170,7 +172,9 @@ export default function CryptoDashboardPage() {
                   </span>
                   <div className="flex min-w-0 flex-1 flex-col">
                     <span className="truncate text-subhead-medium text-fg">{c.name}</span>
-                    <span className="truncate text-caption-2-regular text-fg-muted">{c.symbol}</span>
+                    <span className="truncate text-caption-2-regular text-fg-muted">
+                      {c.symbol}
+                    </span>
                   </div>
                   <div className="flex shrink-0 flex-col items-end">
                     <span className="text-subhead-medium text-fg tabular-nums">{c.price}</span>

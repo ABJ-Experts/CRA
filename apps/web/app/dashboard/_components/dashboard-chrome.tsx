@@ -50,10 +50,7 @@ export function SectionCard({
 }) {
   return (
     <section
-      className={cn(
-        "flex min-w-0 flex-col rounded-2xl border border-border bg-canvas",
-        className
-      )}
+      className={cn("flex min-w-0 flex-col rounded-2xl border border-border bg-canvas", className)}
     >
       {title ? (
         <header className="flex items-center justify-between gap-3 px-6 pt-6 pb-2">
@@ -84,13 +81,7 @@ export function Stagger({ children, className }: { children: ReactNode; classNam
   );
 }
 
-export function StaggerItem({
-  children,
-  className,
-}: {
-  children: ReactNode;
-  className?: string;
-}) {
+export function StaggerItem({ children, className }: { children: ReactNode; className?: string }) {
   const reduced = useReducedMotion();
   return (
     <motion.div

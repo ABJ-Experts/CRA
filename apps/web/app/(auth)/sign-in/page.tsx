@@ -52,7 +52,13 @@ export default function SignInPage() {
             setFormError(result.message ?? "Could not sign you in.");
             return;
           }
-          router.push("/dashboard");
+          /* The server decides where to land, because only it knows whether a
+           * session was established and where onboarding stands. Falling back
+           * to the org picker rather than a dashboard: without an active
+           * organisation every API call 401s with "No active organisation
+           * context", which reads as a broken app rather than a missing step. */
+          router.push(result.next ?? "/select-organisation");
+          router.refresh();
         }}
         data-testid="sign-in-form"
       >

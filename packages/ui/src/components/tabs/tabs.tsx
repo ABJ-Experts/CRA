@@ -66,12 +66,7 @@ export interface TabsProps extends ComponentProps<typeof TabsPrimitive.Root> {
   size?: TabsSize;
 }
 
-export function Tabs({
-  variant = "line",
-  size = "sm",
-  className,
-  ...props
-}: TabsProps) {
+export function Tabs({ variant = "line", size = "sm", className, ...props }: TabsProps) {
   return (
     <TabsStyleContext.Provider value={{ variant, size }}>
       <TabsPrimitive.Root className={cn("flex flex-col gap-4", className)} {...props} />
@@ -84,9 +79,7 @@ export type TabsListProps = ComponentProps<typeof TabsPrimitive.List>;
 export function TabsList({ className, children, ...props }: TabsListProps) {
   const { variant } = useContext(TabsStyleContext);
   const listRef = useRef<HTMLDivElement>(null);
-  const [indicator, setIndicator] = useState<{ left: number; width: number } | null>(
-    null
-  );
+  const [indicator, setIndicator] = useState<{ left: number; width: number } | null>(null);
   // Suppresses the slide on the very first paint, so the bar appears under the
   // initial tab instead of flying in from x=0.
   const [ready, setReady] = useState(false);
@@ -104,9 +97,7 @@ export function TabsList({ className, children, ...props }: TabsListProps) {
     if (!list) return;
 
     const measure = () => {
-      const active = list.querySelector<HTMLElement>(
-        '[role="tab"][data-state="active"]'
-      );
+      const active = list.querySelector<HTMLElement>('[role="tab"][data-state="active"]');
       if (!active) {
         setIndicator(null);
         return;
@@ -156,7 +147,7 @@ export function TabsList({ className, children, ...props }: TabsListProps) {
         // Segmented tabs need the outer corners rounded and the hairline
         // clipped; the triggers themselves are square so they butt together.
         variant === "fill" && "w-fit overflow-hidden rounded-lg border-l border-border",
-        className
+        className,
       )}
       {...props}
     >
@@ -167,7 +158,7 @@ export function TabsList({ className, children, ...props }: TabsListProps) {
           className={cn(
             "pointer-events-none absolute bottom-0 left-0 h-0.5 bg-fg",
             ready && "transition-[translate,width] duration-250 ease-out",
-            "motion-reduce:transition-none"
+            "motion-reduce:transition-none",
           )}
           style={{
             width: `${indicator.width}px`,
@@ -181,8 +172,7 @@ export function TabsList({ className, children, ...props }: TabsListProps) {
   );
 }
 
-export interface TabsTriggerProps
-  extends ComponentProps<typeof TabsPrimitive.Trigger> {
+export interface TabsTriggerProps extends ComponentProps<typeof TabsPrimitive.Trigger> {
   icon?: ReactNode;
   /**
    * Count pill. Numbers over `countMax` render as `${countMax}+`, matching the
@@ -202,8 +192,7 @@ export function TabsTrigger({
 }: TabsTriggerProps) {
   const { variant, size } = useContext(TabsStyleContext);
 
-  const countLabel =
-    typeof count === "number" && count > countMax ? `${countMax}+` : count;
+  const countLabel = typeof count === "number" && count > countMax ? `${countMax}+` : count;
 
   const label = <span className="min-w-0 truncate">{children}</span>;
 
@@ -251,7 +240,7 @@ export function TabsContent({ className, ...props }: TabsContentProps) {
         // animation would never be seen.
         "data-[state=active]:animate-panel-in",
         "motion-reduce:animate-none",
-        className
+        className,
       )}
       {...props}
     />

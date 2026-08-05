@@ -91,7 +91,7 @@ export function OtpInput({
       if (!isControlled) setUncontrolled(clipped);
       onChange?.(clipped);
     },
-    [isControlled, length, onChange]
+    [isControlled, length, onChange],
   );
 
   useEffect(() => {
@@ -194,10 +194,7 @@ export function OtpInput({
       {label ? (
         <span
           id={`${groupId}-label`}
-          className={cn(
-            "text-caption-1-semibold",
-            disabled ? "text-fg-subtle" : "text-fg-muted"
-          )}
+          className={cn("text-caption-1-semibold", disabled ? "text-fg-subtle" : "text-fg-muted")}
         >
           {label}
         </span>
@@ -261,7 +258,7 @@ export function OtpInput({
                       "hover:inset-ring-2 hover:inset-ring-accent-subtle",
                       "focus:inset-ring-1 focus:inset-ring-active-500",
                       "focus:hover:inset-ring-1 focus:hover:inset-ring-active-500",
-                    ].join(" ")
+                    ].join(" "),
             )}
           />
         ))}

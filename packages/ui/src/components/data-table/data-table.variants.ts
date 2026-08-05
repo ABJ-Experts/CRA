@@ -28,7 +28,11 @@ export const tableRowVariants = cva("group/row transition-colors", {
   },
   compoundVariants: [
     { variant: "basic", selected: true, class: "bg-accent-subtle hover:bg-accent-subtle" },
-    { variant: "striped", selected: true, class: "bg-accent-subtle even:bg-accent-subtle hover:bg-accent-subtle" },
+    {
+      variant: "striped",
+      selected: true,
+      class: "bg-accent-subtle even:bg-accent-subtle hover:bg-accent-subtle",
+    },
     { variant: "bordered", selected: true, class: "bg-accent-subtle hover:bg-accent-subtle" },
     { variant: "splitted", selected: true, class: "bg-accent-subtle hover:bg-accent-subtle" },
   ],
@@ -64,7 +68,7 @@ export const tableHeadVariants = cva(
       sortable: { true: "cursor-pointer select-none", false: "" },
     },
     defaultVariants: { variant: "basic", sortable: false },
-  }
+  },
 );
 
 export type TableVariantProps = VariantProps<typeof tableRowVariants>;

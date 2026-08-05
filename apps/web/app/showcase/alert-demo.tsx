@@ -103,8 +103,8 @@ export function AlertDemo() {
           <AlertContent data-testid="alert-content-parts">
             <AlertTitle>Remove three collaborators?</AlertTitle>
             <AlertDescription>
-              They will immediately lose access to every project in this
-              workspace, including drafts they created themselves.
+              They will immediately lose access to every project in this workspace, including drafts
+              they created themselves.
             </AlertDescription>
             <AlertActions>
               <AlertCancel>Keep them</AlertCancel>

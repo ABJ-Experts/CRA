@@ -19,12 +19,7 @@ export function TagDemo() {
             <Tag size={size} icon={<Hash />} data-testid={`tag-cool-${size}`}>
               Tag
             </Tag>
-            <Tag
-              size={size}
-              variant="fill"
-              icon={<Hash />}
-              data-testid={`tag-fill-${size}`}
-            >
+            <Tag size={size} variant="fill" icon={<Hash />} data-testid={`tag-fill-${size}`}>
               Tag
             </Tag>
             <Tag size={size} variant="dot" data-testid={`tag-dot-${size}`}>
@@ -35,9 +30,7 @@ export function TagDemo() {
       ))}
 
       <div className="flex flex-col gap-3 border-t border-border pt-4">
-        <span className="text-caption-1-medium text-fg-subtle">
-          tone, variant=fill
-        </span>
+        <span className="text-caption-1-medium text-fg-subtle">tone, variant=fill</span>
         <div className="flex flex-wrap items-center gap-3">
           {TAG_TONES.map((tone) => (
             <Tag key={tone} variant="fill" tone={tone} icon={<Hash />}>
@@ -46,9 +39,7 @@ export function TagDemo() {
           ))}
         </div>
 
-        <span className="mt-2 text-caption-1-medium text-fg-subtle">
-          tone, variant=dot
-        </span>
+        <span className="mt-2 text-caption-1-medium text-fg-subtle">tone, variant=dot</span>
         <div className="flex flex-wrap items-center gap-3">
           {TAG_TONES.map((tone) => (
             <Tag key={tone} variant="dot" tone={tone}>

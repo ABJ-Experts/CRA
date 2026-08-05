@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "extends": "./base.json",
+  "compilerOptions": {
+    // Source-only shared packages (@repo/schemas, @repo/sbom-core,
+    // @repo/api-client). They ship raw TypeScript: Next consumes them with
+    // Bundler resolution and the Nest app with CommonJS/Node10, so neither end
+    // needs an emit step.
+    //
+    // Deliberately NOT NodeNext, unlike base.json. These packages use
+    // extensionless relative specifiers (`export * from "./permissions"`),
+    // which NodeNext rejects in an ESM-mode file — and it does so by silently
+    // resolving the barrel to zero exports rather than by erroring where the
+    // mistake is. See the matching note in nestjs.json.
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2022"],
+    "noEmit": true,
+    "declaration": true,
+    "declarationMap": false
+  }
+}

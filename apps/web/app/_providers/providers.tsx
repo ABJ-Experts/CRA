@@ -25,7 +25,13 @@ export function useMocksReady() {
   return useContext(MocksReadyContext);
 }
 
-const MOCKS_ENABLED = process.env.NEXT_PUBLIC_ENABLE_MOCKS !== "false";
+/* Opt-OUT in development so a fresh clone with no .env.local still renders the
+ * demo screens, but hard-OFF in production regardless of the flag: shipping a
+ * service worker that answers /api/* with fixtures would silently replace the
+ * real API. The demo screens are the only consumer. */
+const MOCKS_ENABLED =
+  process.env.NODE_ENV !== "production" &&
+  process.env.NEXT_PUBLIC_ENABLE_MOCKS !== "false";
 
 function makeQueryClient() {
   return new QueryClient({
@@ -69,10 +75,24 @@ export function Providers({ children }: { children: ReactNode }) {
           quiet: true,
           serviceWorker: { url: "/mockServiceWorker.js" },
         });
-      } catch {
+      } catch (err) {
         /* If the worker cannot start (unsupported context, blocked scope) the
-         * app must not hang on a spinner forever. Opening the gate lets the
-         * queries run and fail visibly, which is a diagnosable state. */
+         * app must not hang on a spinner forever. Opening the gate below lets
+         * the queries run and fail visibly, which is a diagnosable state.
+         *
+         * But it is only diagnosable if it SAYS something. Swallowing this
+         * silently — with `quiet: true` also suppressing MSW's own logging —
+         * turns "the service worker did not start" into a bare 404 on every
+         * table, with nothing in the console to explain it. There is no real
+         * API behind /api/*; it exists only inside these handlers. */
+        console.error(
+          "[msw] worker failed to start — /api/* has no real backend and every " +
+            "request will 404. Check the Application > Service Workers panel: " +
+            "unregister a stale worker, ensure 'Bypass for network' is off, and " +
+            "confirm the origin is localhost/127.0.0.1 (service workers need a " +
+            "secure context).",
+          err,
+        );
       } finally {
         if (!cancelled) setMocksReady(true);
       }

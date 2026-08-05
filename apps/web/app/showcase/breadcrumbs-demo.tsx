@@ -3,22 +3,14 @@
 import { BreadcrumbItem, Breadcrumbs } from "@repo/ui/breadcrumbs";
 import Link from "next/link";
 
-const DEEP = [
-  "Workspace",
-  "Projects",
-  "Design system",
-  "Components",
-  "Navigation",
-  "Breadcrumbs",
-];
+const DEEP = ["Workspace", "Projects", "Design system", "Components", "Navigation", "Breadcrumbs"];
 
 export function BreadcrumbsDemo() {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-2">
         <span className="text-caption-1-medium text-fg-subtle">
-          default: 12px under sm, 14px at and above, matching the Mobile and
-          Desktop variants
+          default: 12px under sm, 14px at and above, matching the Mobile and Desktop variants
         </span>
         <Breadcrumbs data-testid="bc-basic">
           <BreadcrumbItem asChild>
@@ -62,7 +54,7 @@ export function BreadcrumbsDemo() {
               <BreadcrumbItem key={label} asChild>
                 <Link href="/showcase">{label}</Link>
               </BreadcrumbItem>
-            )
+            ),
           )}
         </Breadcrumbs>
       </div>
@@ -73,9 +65,7 @@ export function BreadcrumbsDemo() {
         </span>
         <Breadcrumbs data-testid="bc-long">
           <BreadcrumbItem asChild>
-            <Link href="/showcase">
-              A workspace with a deliberately long name
-            </Link>
+            <Link href="/showcase">A workspace with a deliberately long name</Link>
           </BreadcrumbItem>
           <BreadcrumbItem asChild>
             <Link href="/showcase">Another very long section title</Link>
@@ -85,9 +75,7 @@ export function BreadcrumbsDemo() {
       </div>
 
       <div className="flex flex-col gap-2 border-t border-border pt-4">
-        <span className="text-caption-1-medium text-fg-subtle">
-          size=sm and size=md forced
-        </span>
+        <span className="text-caption-1-medium text-fg-subtle">size=sm and size=md forced</span>
         <Breadcrumbs size="sm" data-testid="bc-sm">
           <BreadcrumbItem asChild>
             <Link href="/showcase">Breadcrumb</Link>

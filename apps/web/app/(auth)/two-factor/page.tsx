@@ -128,7 +128,7 @@ export default function TwoFactorPage() {
             "mx-auto rounded-xl px-0.5 py-px text-subhead-semibold text-active-500",
             "transition-colors duration-150 motion-reduce:transition-none",
             "hover:text-active-600",
-            "outline-none focus-visible:ring-2 focus-visible:ring-active-500"
+            "outline-none focus-visible:ring-2 focus-visible:ring-active-500",
           )}
           data-testid="tf-switch"
         >

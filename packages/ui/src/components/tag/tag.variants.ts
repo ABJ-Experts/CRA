@@ -32,14 +32,7 @@ import { cva, type VariantProps } from "class-variance-authority";
  */
 
 /** Palette families that ship both a 300 (fill) and a 500 (dot) step. */
-export const TAG_TONES = [
-  "purple",
-  "blue",
-  "green",
-  "orange",
-  "red",
-  "indigo",
-] as const;
+export const TAG_TONES = ["purple", "blue", "green", "orange", "red", "indigo"] as const;
 
 export type TagTone = (typeof TAG_TONES)[number];
 
@@ -87,7 +80,7 @@ export const tagVariants = cva(
       { variant: "fill", tone: "indigo", class: "bg-active-300" },
     ],
     defaultVariants: { variant: "cool", size: "md", tone: "purple" },
-  }
+  },
 );
 
 /**

@@ -34,20 +34,13 @@ const DEFAULT_QUOTES = [
   "One token layer drives both themes, which is why every screen re-themes from a single attribute",
 ];
 
-export function AuthQuote({
-  quotes = DEFAULT_QUOTES,
-  interval = 7000,
-  className,
-}: AuthQuoteProps) {
+export function AuthQuote({ quotes = DEFAULT_QUOTES, interval = 7000, className }: AuthQuoteProps) {
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
 
   useEffect(() => {
     if (interval <= 0 || quotes.length < 2 || paused) return;
-    const id = setInterval(
-      () => setIndex((i) => (i + 1) % quotes.length),
-      interval
-    );
+    const id = setInterval(() => setIndex((i) => (i + 1) % quotes.length), interval);
     return () => clearInterval(id);
   }, [interval, quotes.length, paused]);
 
@@ -66,7 +59,7 @@ export function AuthQuote({
         "flex max-w-[539px] flex-col justify-center gap-4",
         "rounded-3xl border border-white bg-scrim-white-15 p-6",
         "backdrop-blur-sm",
-        className
+        className,
       )}
     >
       <Quote aria-hidden="true" className="size-6 shrink-0 text-fg" />
@@ -92,7 +85,7 @@ export function AuthQuote({
                 "h-2 rounded-full transition-[width,background-color] duration-200",
                 "motion-reduce:transition-none",
                 "outline-none focus-visible:ring-2 focus-visible:ring-active-500",
-                i === index ? "w-4 bg-white" : "w-2 bg-neutral-light-500"
+                i === index ? "w-4 bg-white" : "w-2 bg-neutral-light-500",
               )}
             />
           ))}

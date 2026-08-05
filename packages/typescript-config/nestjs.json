@@ -2,11 +2,22 @@
   "$schema": "https://json.schemastore.org/tsconfig",
   "extends": "./base.json",
   "compilerOptions": {
+    // base.json is NodeNext. Under NodeNext the shared workspace packages
+    // ("type": "module", exports pointing at raw .ts) are treated as ESM, and
+    // their extensionless re-exports (`export * from "./permissions"`) are
+    // illegal ESM specifiers — so the barrel resolves to ZERO exports and the
+    // Nest app fails with ~77 "has no exported member" errors. CommonJS +
+    // Node10 resolves those specifiers the way the runtime (tsx) actually does.
+    // Do not "simplify" these two lines back to the base.
+    //
+    // resolvePackageJsonExports is deliberately absent: TypeScript rejects it
+    // outside node16/nodenext/bundler resolution.
+    "module": "CommonJS",
+    "moduleResolution": "Node10",
     "lib": ["ES2023"],
     "target": "ES2023",
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
-    "resolvePackageJsonExports": true,
     "allowSyntheticDefaultImports": true,
     "forceConsistentCasingInFileNames": true,
     "sourceMap": true,

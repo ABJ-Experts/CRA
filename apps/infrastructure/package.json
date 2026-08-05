@@ -10,6 +10,7 @@
     "db:status": "supabase status",
     "db:new": "supabase migration new",
     "db:reset": "pnpm run preflight && supabase db reset",
+    "db:migrate": "command -v psql >/dev/null || { echo 'psql not found on PATH. This is the CI path; locally use `pnpm --filter infrastructure run db:reset` (Supabase CLI applies the same ordered set).'; exit 1; }; for f in supabase/migrations/*.sql; do echo \"--> $(basename \"$f\")\"; psql \"${MIGRATION_DATABASE_URL:?set MIGRATION_DATABASE_URL}\" -v ON_ERROR_STOP=1 -q -f \"$f\" || exit 1; done",
     "db:diff": "pnpm run preflight && supabase db diff -f",
     "db:push": "supabase db push",
     "db:pull": "supabase db pull",

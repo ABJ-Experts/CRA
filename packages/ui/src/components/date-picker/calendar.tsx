@@ -74,7 +74,7 @@ export function Calendar({ className, classNames, ...props }: CalendarProps) {
           "transition-colors duration-150 motion-reduce:transition-none",
           "hover:bg-surface",
           "outline-none focus-visible:ring-2 focus-visible:ring-active-500",
-          "disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
+          "disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent",
         ),
         button_next: cn(
           "flex size-8 items-center justify-center rounded-xl p-2",
@@ -82,7 +82,7 @@ export function Calendar({ className, classNames, ...props }: CalendarProps) {
           "transition-colors duration-150 motion-reduce:transition-none",
           "hover:bg-surface",
           "outline-none focus-visible:ring-2 focus-visible:ring-active-500",
-          "disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
+          "disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent",
         ),
 
         month_grid: "w-full border-collapse",
@@ -92,7 +92,7 @@ export function Calendar({ className, classNames, ...props }: CalendarProps) {
           // 368/7 = 52.571 wide. Without it the cells shrink to their content
           // (the 40px day disc) and the row stops filling the panel.
           "flex h-8 flex-1 basis-0 items-center justify-center",
-          "text-caption-1-semibold text-fg-subtle uppercase"
+          "text-caption-1-semibold text-fg-subtle uppercase",
         ),
         weeks: "flex w-full flex-col",
         week: "flex w-full",
@@ -104,13 +104,13 @@ export function Calendar({ className, classNames, ...props }: CalendarProps) {
           "transition-colors duration-150 motion-reduce:transition-none",
           "hover:bg-surface",
           "outline-none focus-visible:ring-2 focus-visible:ring-active-500",
-          "disabled:pointer-events-none disabled:opacity-40"
+          "disabled:pointer-events-none disabled:opacity-40",
         ),
 
         // The 40x40 disc: `active-500` behind white text.
         selected: cn(
           "[&_button]:bg-active-500 [&_button]:text-white",
-          "[&_button:hover]:bg-active-600"
+          "[&_button:hover]:bg-active-600",
         ),
         today: "[&_button]:font-semibold [&_button]:text-active-500",
         outside: "[&_button]:text-border-strong",
@@ -121,7 +121,7 @@ export function Calendar({ className, classNames, ...props }: CalendarProps) {
         range_end: "[&_button]:rounded-r-full",
         range_middle: cn(
           "bg-accent-subtle",
-          "[&_button]:bg-transparent [&_button]:text-fg [&_button]:rounded-none"
+          "[&_button]:bg-transparent [&_button]:text-fg [&_button]:rounded-none",
         ),
 
         ...classNames,

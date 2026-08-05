@@ -43,7 +43,7 @@ export const avatarVariants = cva(
       },
     },
     defaultVariants: { size: "sm" },
-  }
+  },
 );
 
 /** The circle itself: image, initials or placeholder all share this box. */
@@ -58,7 +58,7 @@ export const avatarSurfaceVariants = cva(
       },
     },
     defaultVariants: { size: "sm" },
-  }
+  },
 );
 
 /**
@@ -66,25 +66,22 @@ export const avatarSurfaceVariants = cva(
  * `canvas` here so the dot still reads as detached from the avatar on a dark
  * page instead of gaining a bright halo.
  */
-export const avatarStatusVariants = cva(
-  "absolute right-0 bottom-0 rounded-full ring-canvas",
-  {
-    variants: {
-      size: {
-        sm: "size-2.5 ring-2",
-        md: "size-4 ring-2",
-        lg: "size-6 ring-[3px]",
-      },
-      status: {
-        online: "bg-origin-green-500",
-        busy: "bg-brink-red-500",
-        away: "bg-origin-orange-500",
-        offline: "bg-neutral-light-300",
-      },
+export const avatarStatusVariants = cva("absolute right-0 bottom-0 rounded-full ring-canvas", {
+  variants: {
+    size: {
+      sm: "size-2.5 ring-2",
+      md: "size-4 ring-2",
+      lg: "size-6 ring-[3px]",
     },
-    defaultVariants: { size: "sm", status: "online" },
-  }
-);
+    status: {
+      online: "bg-origin-green-500",
+      busy: "bg-brink-red-500",
+      away: "bg-origin-orange-500",
+      offline: "bg-neutral-light-300",
+    },
+  },
+  defaultVariants: { size: "sm", status: "online" },
+});
 
 /**
  * Verified tick. Only `online` is enabled in the frame, and the two badges
@@ -102,7 +99,7 @@ export const avatarVerifiedVariants = cva(
       },
     },
     defaultVariants: { size: "sm" },
-  }
+  },
 );
 
 export type AvatarVariantProps = VariantProps<typeof avatarVariants>;

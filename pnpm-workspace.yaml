@@ -2,6 +2,28 @@ packages:
   - "apps/*"
   - "packages/*"
 
+# Single source of truth for the shared toolchain. Apps and packages reference
+# these with `"typescript": "catalog:"` etc, so a version can only move in one
+# place. This exists because the two repos being merged had drifted to
+# different ESLint majors, which is exactly the class of problem a catalog
+# prevents from recurring.
+#
+# ESLint stays on 9.x for the WHOLE workspace: eslint-config-next@16 requires
+# 9.x, and a split 9/10 workspace needs a `pnpm.peerDependencyRules` block just
+# to install. typescript-eslint 8.65 supports 9, and eslint-plugin-boundaries
+# declares `eslint: ">=6.0.0"`, so nothing is lost by standardising down.
+#
+# typescript MUST stay < 6.1.0 for typescript-eslint 8.65 — do NOT set 7.0.2.
+catalog:
+  typescript: 5.9.2
+  typescript-eslint: 8.65.0
+  eslint: 9.39.5
+  "@eslint/js": 9.39.5
+  eslint-config-prettier: 10.1.8
+  prettier: 3.9.6
+  vitest: 4.1.10
+  "@vitest/coverage-v8": 4.1.10
+
 # pnpm 10 blocks dependency lifecycle scripts by default. Only the packages
 # listed here may run install scripts — everything else is installed without
 # executing arbitrary code. Keep this list minimal and justified.

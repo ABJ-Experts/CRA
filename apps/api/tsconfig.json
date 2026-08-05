@@ -1,9 +1,15 @@
 {
+  "$schema": "https://json.schemastore.org/tsconfig",
   "extends": "@repo/typescript-config/nestjs.json",
   "compilerOptions": {
     "outDir": "./dist",
-    "baseUrl": "./"
+    "baseUrl": "./",
+    "noFallthroughCasesInSwitch": true
   },
-  "include": ["src", "test"],
-  "exclude": ["node_modules", "dist"]
+  // Without an explicit `include`, drizzle.config.ts and vitest.config.ts join
+  // the program, tsc's computed rootDir becomes apps/api/ rather than
+  // apps/api/src, and `nest build` emits to dist/src/main.js — which is why
+  // the old "start:prod": "node dist/main" could never have worked.
+  "include": ["src"],
+  "exclude": ["node_modules", "dist", "coverage", "drizzle"]
 }

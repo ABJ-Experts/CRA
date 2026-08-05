@@ -107,7 +107,7 @@ export function getTheme(doc: Document | undefined = globalThis.document): Theme
 /** Resolves `"system"` to what the OS is actually asking for right now. */
 export function resolveTheme(
   theme: Theme,
-  win: Window | undefined = globalThis.window
+  win: Window | undefined = globalThis.window,
 ): "light" | "dark" {
   if (theme !== "system") return theme;
   return win?.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";

@@ -33,11 +33,7 @@ export default function LockPage() {
   return (
     <div className="flex flex-col gap-10">
       <div className="flex flex-col items-center gap-4">
-        <Avatar
-          name={lockedSession.name}
-          className="size-25"
-          data-testid="lock-avatar"
-        />
+        <Avatar name={lockedSession.name} className="size-25" data-testid="lock-avatar" />
         <div className="flex flex-col items-center gap-1 text-center">
           <h1 className="text-h4 text-fg">{lockedSession.name}</h1>
           <p className="text-subhead-regular text-fg-muted">{lockedSession.email}</p>
@@ -103,7 +99,7 @@ export default function LockPage() {
             "text-subhead-semibold text-fg-muted",
             "transition-colors duration-150 motion-reduce:transition-none",
             "hover:bg-surface hover:text-fg",
-            "outline-none focus-visible:ring-2 focus-visible:ring-active-500"
+            "outline-none focus-visible:ring-2 focus-visible:ring-active-500",
           )}
           data-testid="lock-other"
         >

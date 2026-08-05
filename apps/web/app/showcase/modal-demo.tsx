@@ -39,8 +39,8 @@ export function ModalDemo() {
           </ModalHeader>
           <ModalBody>
             <ModalDescription>
-              The header, footer and radius come from the Pencil frame. The body
-              is whatever the feature puts here.
+              The header, footer and radius come from the Pencil frame. The body is whatever the
+              feature puts here.
             </ModalDescription>
           </ModalBody>
           <ModalFooter
@@ -73,7 +73,9 @@ export function ModalDemo() {
             <ModalSteps steps={STEPS} current={step} data-testid="modal-steprail" />
           </ModalHeader>
           <ModalBody>
-            <ModalDescription>Step {step + 1} of {STEPS.length}.</ModalDescription>
+            <ModalDescription>
+              Step {step + 1} of {STEPS.length}.
+            </ModalDescription>
           </ModalBody>
           <ModalFooter>
             <Button
@@ -147,8 +149,8 @@ export function ModalDemo() {
           <ModalBody className="flex flex-col gap-3" data-testid="modal-long-body">
             {Array.from({ length: 24 }, (_, i) => (
               <p key={i} className="text-subhead-regular text-fg-muted">
-                {i + 1}. The panel is capped at the viewport height, so this
-                region scrolls while the header and footer stay put.
+                {i + 1}. The panel is capped at the viewport height, so this region scrolls while
+                the header and footer stay put.
               </p>
             ))}
           </ModalBody>

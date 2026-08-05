@@ -161,9 +161,4 @@ export { OtpInput } from "./components/otp-input";
 export type { OtpInputProps } from "./components/otp-input";
 
 export { Avatar, AvatarGroup, initialsFrom } from "./components/avatar";
-export type {
-  AvatarProps,
-  AvatarGroupProps,
-  AvatarSize,
-  AvatarStatus,
-} from "./components/avatar";
+export type { AvatarProps, AvatarGroupProps, AvatarSize, AvatarStatus } from "./components/avatar";

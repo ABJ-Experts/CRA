@@ -29,8 +29,7 @@ import {
  */
 
 export interface CardProps
-  extends Omit<ComponentProps<"div">, "title">,
-    Omit<CardVariantProps, "interactive"> {
+  extends Omit<ComponentProps<"div">, "title">, Omit<CardVariantProps, "interactive"> {
   /**
    * Render the child element instead of a `<div>` - use it to make the whole
    * card a link or button. Pair with `interactive`.
@@ -67,11 +66,7 @@ export interface CardHeaderProps extends ComponentProps<"div"> {
 export function CardHeader({ action, className, children, ...props }: CardHeaderProps) {
   return (
     <div
-      className={cn(
-        cardHeaderVariants(),
-        "[[data-card-size=sm]_&]:gap-4",
-        className
-      )}
+      className={cn(cardHeaderVariants(), "[[data-card-size=sm]_&]:gap-4", className)}
       {...props}
     >
       <div className="flex min-w-0 flex-1 flex-col gap-1">{children}</div>
@@ -92,7 +87,7 @@ export function CardTitle({ asChild = false, className, ...props }: CardTitlePro
         cardTitleVariants(),
         // 16px SemiBold at `md`, 14px at `sm`, per Summary and Coin.
         "[[data-card-size=sm]_&]:text-subhead-semibold",
-        className
+        className,
       )}
       {...props}
     />
@@ -108,7 +103,7 @@ export function CardDescription({ className, ...props }: ComponentProps<"p">) {
         // is nearly invisible. White at reduced opacity keeps the hierarchy
         // without inventing a token that only works on one surface.
         "[[data-card-variant=primary]_&]:text-white/70",
-        className
+        className,
       )}
       {...props}
     />
@@ -158,7 +153,7 @@ export function CardBody({
         aria-hidden="true"
         className={cn(
           "pointer-events-none absolute inset-x-0 bottom-0 h-10 rounded-b-xl",
-          fadeOn === "surface" ? "bg-grad-fade-surface" : "bg-grad-fade-canvas"
+          fadeOn === "surface" ? "bg-grad-fade-surface" : "bg-grad-fade-canvas",
         )}
       />
     </div>

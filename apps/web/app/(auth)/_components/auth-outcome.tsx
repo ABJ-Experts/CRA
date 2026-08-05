@@ -34,10 +34,7 @@ export function AuthOutcome({
       <div className="flex flex-col gap-4">
         <span
           aria-hidden="true"
-          className={cn(
-            "flex size-12 items-center justify-center rounded-xl",
-            tones[tone]
-          )}
+          className={cn("flex size-12 items-center justify-center rounded-xl", tones[tone])}
         >
           {icon}
         </span>

@@ -52,18 +52,15 @@ export function SelectUsersDemo() {
 
       <div className="flex flex-col gap-3 border-t border-border pt-4">
         <span className="text-caption-1-medium text-fg-subtle">
-          Forms/Title (jK37E) is Input at size=lg: 400x56, padding 13 16, 20px
-          Medium. No separate component - the trailing &quot;Note&quot; is the
-          endIcon slot.
+          Forms/Title (jK37E) is Input at size=lg: 400x56, padding 13 16, 20px Medium. No separate
+          component - the trailing &quot;Note&quot; is the endIcon slot.
         </span>
         <div className="max-w-md">
           <Input
             size="xl"
             placeholder="Enter Title"
             aria-label="Title"
-            endIcon={
-              <span className="shrink-0 text-caption-1-medium text-fg-subtle">Note</span>
-            }
+            endIcon={<span className="shrink-0 text-caption-1-medium text-fg-subtle">Note</span>}
             data-testid="title-lg"
           />
         </div>

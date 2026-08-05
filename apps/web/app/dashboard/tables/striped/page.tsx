@@ -53,7 +53,7 @@ export default function StripedTablesPage() {
         cell: ({ row }) => <RowActions label={`Actions for order ${row.original.orderNo}`} />,
       },
     ],
-    []
+    [],
   );
 
   return (

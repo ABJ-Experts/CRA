@@ -6,7 +6,7 @@ import { Bell, ChevronDown, PanelLeft, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { NAV, type NavItem } from "./nav-config";
+import { NAV, type NavItem, type NavSection } from "./nav-config";
 import { getStoredCollapsed, storeCollapsed } from "./sidebar-collapse";
 
 /**
@@ -49,7 +49,7 @@ function Notice({ count, className }: { count: number; className?: string }) {
         "inline-flex h-4 min-w-7 shrink-0 items-center justify-center",
         "rounded-[9px] px-1 pt-px",
         "bg-brink-red-500 text-caption-2-semibold text-white tabular-nums",
-        className
+        className,
       )}
     >
       {count > 99 ? "99+" : count}
@@ -67,7 +67,12 @@ function NoticeDot() {
   );
 }
 
-export function Sidebar() {
+/**
+ * `sections` is a prop so the product shell (/app) and the template's demo
+ * shell (/dashboard) can share one sidebar with different navigation. It
+ * defaults to the demo NAV, so existing callers are unchanged.
+ */
+export function Sidebar({ sections = NAV }: { sections?: NavSection[] } = {}) {
   const pathname = usePathname();
   /* Seeded false to match the server render, then corrected on mount from the
    * same value the pre-paint script already applied to <html>. Reading storage
@@ -88,9 +93,8 @@ export function Sidebar() {
   }, []);
 
   const isActive = useCallback(
-    (href?: string) =>
-      href !== undefined && (pathname === href || pathname.startsWith(`${href}/`)),
-    [pathname]
+    (href?: string) => href !== undefined && (pathname === href || pathname.startsWith(`${href}/`)),
+    [pathname],
   );
 
   /**
@@ -100,13 +104,13 @@ export function Sidebar() {
    */
   const activeParents = useMemo(() => {
     const open = new Set<string>();
-    for (const section of NAV) {
+    for (const section of sections) {
       for (const item of section.items) {
         if (item.children?.some((c) => isActive(c.href))) open.add(item.label);
       }
     }
     return open;
-  }, [isActive]);
+  }, [isActive, sections]);
 
   const [openGroups, setOpenGroups] = useState<Set<string>>(activeParents);
 
@@ -147,10 +151,8 @@ export function Sidebar() {
       "text-left text-subhead-medium",
       "transition-colors duration-150 motion-reduce:transition-none",
       "outline-none focus-visible:ring-2 focus-visible:ring-active-500",
-      active
-        ? "bg-surface-muted text-fg"
-        : "text-fg-muted hover:bg-surface hover:text-fg",
-      collapsed && "justify-center px-0"
+      active ? "bg-surface-muted text-fg" : "text-fg-muted hover:bg-surface hover:text-fg",
+      collapsed && "justify-center px-0",
     );
 
     const inner = (
@@ -167,7 +169,7 @@ export function Sidebar() {
             aria-hidden="true"
             className={cn(
               "size-4 shrink-0 transition-transform duration-200 motion-reduce:transition-none",
-              open && "rotate-180"
+              open && "rotate-180",
             )}
           />
         ) : null}
@@ -207,7 +209,7 @@ export function Sidebar() {
             className={cn(
               "grid transition-[grid-template-rows] duration-200 ease-out",
               "motion-reduce:transition-none",
-              open ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+              open ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
             )}
           >
             <ul className="overflow-hidden">
@@ -225,7 +227,7 @@ export function Sidebar() {
                       "outline-none focus-visible:ring-2 focus-visible:ring-active-500",
                       isActive(child.href)
                         ? "bg-surface-muted text-fg"
-                        : "text-fg-muted hover:bg-surface hover:text-fg"
+                        : "text-fg-muted hover:bg-surface hover:text-fg",
                     )}
                   >
                     <span className="min-w-0 flex-1 truncate">{child.label}</span>
@@ -246,11 +248,14 @@ export function Sidebar() {
       <div
         className={cn(
           "flex h-16 shrink-0 items-center justify-between gap-2.5",
-          collapsed ? "px-4" : "py-4 pr-5 pl-6"
+          collapsed ? "px-4" : "py-4 pr-5 pl-6",
         )}
       >
         {!collapsed ? (
-          <Link href="/dashboard" className="flex items-center gap-2 text-headline-semibold text-fg">
+          <Link
+            href="/dashboard"
+            className="flex items-center gap-2 text-headline-semibold text-fg"
+          >
             <span className="flex size-8 items-center justify-center rounded-lg bg-active-500 text-white">
               C
             </span>
@@ -270,7 +275,7 @@ export function Sidebar() {
               "hidden size-6 shrink-0 items-center justify-center rounded-xl p-1 lg:flex",
               "text-fg-muted transition-colors duration-150 motion-reduce:transition-none",
               "hover:bg-surface hover:text-fg",
-              "outline-none focus-visible:ring-2 focus-visible:ring-active-500"
+              "outline-none focus-visible:ring-2 focus-visible:ring-active-500",
             )}
           >
             <PanelLeft aria-hidden="true" className="size-4" />
@@ -283,7 +288,7 @@ export function Sidebar() {
           className={cn(
             "flex size-6 shrink-0 items-center justify-center rounded-xl p-1 lg:hidden",
             "text-fg-muted hover:bg-surface hover:text-fg",
-            "outline-none focus-visible:ring-2 focus-visible:ring-active-500"
+            "outline-none focus-visible:ring-2 focus-visible:ring-active-500",
           )}
         >
           <X aria-hidden="true" className="size-4" />
@@ -292,17 +297,20 @@ export function Sidebar() {
 
       {/* Nav: padding 0 8, with the frame's bottom fade over the scroll. */}
       <nav aria-label="Main" className="relative min-h-0 flex-1">
-        <div className={cn("h-full overflow-y-auto overscroll-contain pb-10", collapsed ? "px-1" : "px-2")}>
-          {NAV.map((section, i) => (
+        <div
+          className={cn(
+            "h-full overflow-y-auto overscroll-contain pb-10",
+            collapsed ? "px-1" : "px-2",
+          )}
+        >
+          {sections.map((section, i) => (
             <div key={section.label ?? i}>
               {section.label && !collapsed ? (
                 <p className="flex h-[43px] items-center px-3.5 text-caption-2-semibold text-fg-subtle">
                   {section.label}
                 </p>
               ) : null}
-              {section.label && collapsed ? (
-                <hr className="mx-2 my-2 border-border" />
-              ) : null}
+              {section.label && collapsed ? <hr className="mx-2 my-2 border-border" /> : null}
               <ul className={cn("flex flex-col", collapsed && "gap-1")}>
                 {section.items.map(renderItem)}
               </ul>
@@ -318,10 +326,7 @@ export function Sidebar() {
 
       {/* Bottom: padding 24, gap 24. */}
       <div
-        className={cn(
-          "flex shrink-0 flex-col gap-6",
-          collapsed ? "items-center px-4 pb-6" : "p-6"
-        )}
+        className={cn("flex shrink-0 flex-col gap-6", collapsed ? "items-center px-4 pb-6" : "p-6")}
       >
         <div className={cn("flex items-center gap-3", collapsed && "flex-col gap-4")}>
           <button
@@ -332,7 +337,7 @@ export function Sidebar() {
               "text-fg-muted transition-colors duration-150 motion-reduce:transition-none",
               "hover:bg-surface hover:text-fg",
               "outline-none focus-visible:ring-2 focus-visible:ring-active-500",
-              !collapsed && "order-last"
+              !collapsed && "order-last",
             )}
           >
             <Bell aria-hidden="true" className="size-4" />
@@ -345,9 +350,7 @@ export function Sidebar() {
           {!collapsed ? (
             <span className="flex min-w-0 flex-1 flex-col">
               <span className="truncate text-subhead-medium text-fg">Ada Foster</span>
-              <span className="truncate text-caption-2-regular text-fg-subtle">
-                ada@cra.com
-              </span>
+              <span className="truncate text-caption-2-regular text-fg-subtle">ada@cra.com</span>
             </span>
           ) : null}
         </div>
@@ -355,9 +358,7 @@ export function Sidebar() {
         {!collapsed ? (
           <div className="flex flex-col gap-[3px]">
             <span className="text-caption-2-semibold text-fg">&copy; CRA Corp.</span>
-            <span className="text-caption-2-regular text-fg-muted">
-              All in One Premium UI Kits
-            </span>
+            <span className="text-caption-2-regular text-fg-muted">All in One Premium UI Kits</span>
           </div>
         ) : null}
       </div>
@@ -380,7 +381,7 @@ export function Sidebar() {
            * utility above) applies the narrow width from the first frame. It
            * stops matching as soon as the user expands, because
            * `storeCollapsed` removes the attribute. */
-          PRE_PAINT_COLLAPSED
+          PRE_PAINT_COLLAPSED,
         )}
       >
         {rail}
@@ -395,7 +396,7 @@ export function Sidebar() {
               "rounded-full border border-border bg-canvas p-1 text-fg-muted",
               "transition-colors duration-150 motion-reduce:transition-none",
               "hover:bg-surface hover:text-fg",
-              "outline-none focus-visible:ring-2 focus-visible:ring-active-500"
+              "outline-none focus-visible:ring-2 focus-visible:ring-active-500",
             )}
           >
             <PanelLeft aria-hidden="true" className="size-3.5" />
@@ -412,7 +413,7 @@ export function Sidebar() {
         className={cn(
           "fixed top-4 left-4 z-30 flex size-10 items-center justify-center lg:hidden",
           "rounded-xl border border-border bg-canvas text-fg-muted",
-          "outline-none focus-visible:ring-2 focus-visible:ring-active-500"
+          "outline-none focus-visible:ring-2 focus-visible:ring-active-500",
         )}
       >
         <PanelLeft aria-hidden="true" className="size-4" />
@@ -430,7 +431,7 @@ export function Sidebar() {
           <div
             className={cn(
               "absolute inset-y-0 left-0 w-[270px] border-r border-border",
-              "animate-overlay-in motion-reduce:animate-none"
+              "animate-overlay-in motion-reduce:animate-none",
             )}
           >
             {rail}

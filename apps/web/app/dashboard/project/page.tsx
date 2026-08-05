@@ -49,7 +49,6 @@ const ACTIVITIES = [
 export default function ProjectDashboardPage() {
   return (
     <div className="flex flex-col gap-6 px-6 py-6 lg:px-[30px]">
-
       <Stagger className="grid gap-6 xl:grid-cols-[1fr_282px]">
         <div className="flex min-w-0 flex-col gap-6">
           <StaggerItem>
@@ -83,7 +82,7 @@ export default function ProjectDashboardPage() {
                     key={p.name}
                     className={cn(
                       "flex items-center gap-4 py-3",
-                      i < PROJECTS.length - 1 && "border-b border-border"
+                      i < PROJECTS.length - 1 && "border-b border-border",
                     )}
                   >
                     {/* The frame's 40px progress ring, one per project. */}

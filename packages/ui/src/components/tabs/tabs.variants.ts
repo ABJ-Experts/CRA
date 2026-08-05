@@ -128,7 +128,7 @@ export const tabsTriggerVariants = cva(
       { variant: "outline", class: "text-caption-1-medium [&_svg]:size-4" },
     ],
     defaultVariants: { variant: "line", size: "sm" },
-  }
+  },
 );
 
 /**
@@ -172,7 +172,7 @@ export const tabsCountVariants = cva(
       },
     },
     defaultVariants: { variant: "line" },
-  }
+  },
 );
 
 export type TabsVariantProps = VariantProps<typeof tabsTriggerVariants>;

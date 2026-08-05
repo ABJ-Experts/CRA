@@ -112,12 +112,16 @@ export function Breadcrumbs({
           size === "md" && "text-subhead-regular",
           // Responsive default: the design's Mobile scale below `sm`, Desktop
           // at and above it.
-          size === undefined && "text-caption-1-regular sm:text-subhead-regular"
+          size === undefined && "text-caption-1-regular sm:text-subhead-regular",
         )}
       >
         {visible.map((item, i) => (
           <Fragment key={item === "ellipsis" ? "ellipsis" : i}>
-            {i > 0 ? <li aria-hidden="true" className="flex items-center">{sep}</li> : null}
+            {i > 0 ? (
+              <li aria-hidden="true" className="flex items-center">
+                {sep}
+              </li>
+            ) : null}
             {item === "ellipsis" ? (
               <li className="flex items-center">
                 <button
@@ -128,7 +132,7 @@ export function Breadcrumbs({
                     "flex items-center rounded px-1 text-fg-muted",
                     "transition-colors duration-150 motion-reduce:transition-none",
                     "hover:text-active-500",
-                    "outline-none focus-visible:ring-2 focus-visible:ring-active-500"
+                    "outline-none focus-visible:ring-2 focus-visible:ring-active-500",
                   )}
                 >
                   <MoreHorizontal aria-hidden="true" className="size-4" />
@@ -181,7 +185,7 @@ export function BreadcrumbItem({
             ? "text-fg-subtle"
             : "cursor-pointer text-fg hover:text-active-500 active:text-active-500",
           disabled && "cursor-not-allowed",
-          className
+          className,
         )}
       >
         {children}

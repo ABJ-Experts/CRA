@@ -24,39 +24,36 @@ import { cva, type VariantProps } from "class-variance-authority";
  * left, an action or note slot on the right.
  */
 
-export const cardVariants = cva(
-  ["flex flex-col rounded-xl", "min-w-0"].join(" "),
-  {
-    variants: {
-      variant: {
-        outlined: "bg-canvas border border-border",
-        filled: "bg-surface",
-        primary: "bg-active-500 text-white",
-      },
-      size: {
-        md: "p-6 gap-6",
-        sm: "p-4 gap-4",
-      },
-      /** Lift on hover. Only for cards that are themselves a link or button. */
-      interactive: {
-        true: [
-          "cursor-pointer text-left",
-          "transition-[box-shadow,border-color,background-color] duration-200",
-          "motion-reduce:transition-none",
-          "hover:shadow-lg hover:shadow-scrim-black-30",
-          "outline-none focus-visible:ring-2 focus-visible:ring-active-500",
-        ].join(" "),
-        false: "",
-      },
+export const cardVariants = cva(["flex flex-col rounded-xl", "min-w-0"].join(" "), {
+  variants: {
+    variant: {
+      outlined: "bg-canvas border border-border",
+      filled: "bg-surface",
+      primary: "bg-active-500 text-white",
     },
-    compoundVariants: [
-      // Summary's Primary Mode tightens the gap to 12 while keeping padding 24.
-      { variant: "primary", size: "md", class: "gap-3" },
-      { variant: "outlined", interactive: true, class: "hover:border-border-strong" },
-    ],
-    defaultVariants: { variant: "outlined", size: "md", interactive: false },
-  }
-);
+    size: {
+      md: "p-6 gap-6",
+      sm: "p-4 gap-4",
+    },
+    /** Lift on hover. Only for cards that are themselves a link or button. */
+    interactive: {
+      true: [
+        "cursor-pointer text-left",
+        "transition-[box-shadow,border-color,background-color] duration-200",
+        "motion-reduce:transition-none",
+        "hover:shadow-lg hover:shadow-scrim-black-30",
+        "outline-none focus-visible:ring-2 focus-visible:ring-active-500",
+      ].join(" "),
+      false: "",
+    },
+  },
+  compoundVariants: [
+    // Summary's Primary Mode tightens the gap to 12 while keeping padding 24.
+    { variant: "primary", size: "md", class: "gap-3" },
+    { variant: "outlined", interactive: true, class: "hover:border-border-strong" },
+  ],
+  defaultVariants: { variant: "outlined", size: "md", interactive: false },
+});
 
 /**
  * The `_chart card_header` row.

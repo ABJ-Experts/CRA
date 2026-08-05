@@ -22,12 +22,7 @@ export function DatePickerDemo() {
           data-testid="dp-controlled"
         />
         <DatePicker label="Label" required data-testid="dp-empty" />
-        <DatePicker
-          label="Label"
-          required
-          error="Something Error Alert"
-          data-testid="dp-error"
-        />
+        <DatePicker label="Label" required error="Something Error Alert" data-testid="dp-error" />
         <DatePicker label="Label" required disabled data-testid="dp-disabled" />
         <DatePicker
           label="Bounded"
@@ -46,8 +41,8 @@ export function DatePickerDemo() {
 
       <div className="flex flex-col gap-3 border-t border-border pt-4">
         <span className="text-caption-1-medium text-fg-subtle">
-          Time Picker (hW0yQ&apos;s sibling CaAId): hour / minute / meridiem, with
-          the frame&apos;s bottom-aligned columns
+          Time Picker (hW0yQ&apos;s sibling CaAId): hour / minute / meridiem, with the frame&apos;s
+          bottom-aligned columns
         </span>
         <div className="grid max-w-3xl gap-4 sm:grid-cols-2">
           <TimePicker
@@ -64,12 +59,7 @@ export function DatePickerDemo() {
             helperText="15 minute steps, no AM/PM column"
             data-testid="tp-24"
           />
-          <TimePicker
-            label="Label"
-            required
-            error="Something Error Alert"
-            data-testid="tp-error"
-          />
+          <TimePicker label="Label" required error="Something Error Alert" data-testid="tp-error" />
           <TimePicker label="Label" required disabled data-testid="tp-disabled" />
         </div>
         <span className="text-caption-2-regular text-fg-subtle" data-testid="tp-value">

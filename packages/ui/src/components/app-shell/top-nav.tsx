@@ -69,7 +69,7 @@ function IconButton({
       className={cn(
         "relative flex size-8 shrink-0 items-center justify-center rounded-lg",
         "text-fg-muted transition-colors hover:bg-surface hover:text-fg",
-        "outline-none focus-visible:ring-2 focus-visible:ring-active-500"
+        "outline-none focus-visible:ring-2 focus-visible:ring-active-500",
       )}
     >
       {children}
@@ -101,7 +101,7 @@ export function TopNav({
       className={cn(
         "sticky top-0 z-20 flex h-16 shrink-0 items-center gap-4",
         "border-b border-border bg-canvas px-6 lg:px-[30px]",
-        className
+        className,
       )}
     >
       {leading}

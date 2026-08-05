@@ -53,7 +53,7 @@ export function TableToolbar({
       <div
         className={cn(
           "flex h-10 w-full max-w-[350px] items-center gap-2 rounded-3xl bg-surface px-4",
-          "transition-shadow focus-within:ring-2 focus-within:ring-active-500"
+          "transition-shadow focus-within:ring-2 focus-within:ring-active-500",
         )}
       >
         <Search aria-hidden="true" className="size-4 shrink-0 text-fg-subtle" />
@@ -68,7 +68,7 @@ export function TableToolbar({
             "placeholder:text-fg-subtle",
             /* Safari draws its own clear button on search inputs, which sits
              * badly against the custom one below. */
-            "[&::-webkit-search-cancel-button]:appearance-none"
+            "[&::-webkit-search-cancel-button]:appearance-none",
           )}
         />
         {draft ? (
@@ -96,7 +96,7 @@ export function TableToolbar({
               "flex h-10 items-center gap-2 rounded-xl border border-border px-4",
               "text-caption-1-semibold text-fg-muted transition-colors",
               "hover:bg-surface hover:text-fg",
-              "outline-none focus-visible:ring-2 focus-visible:ring-active-500"
+              "outline-none focus-visible:ring-2 focus-visible:ring-active-500",
             )}
           >
             <SlidersHorizontal aria-hidden="true" className="size-4" />

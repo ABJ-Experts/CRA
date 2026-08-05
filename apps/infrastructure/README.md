@@ -30,14 +30,14 @@ pnpm --filter infrastructure run db:types           # regenerate TS types
 
 ## Local ports
 
-| Service | Port |
-| --- | --- |
+| Service     | Port  |
+| ----------- | ----- |
 | API gateway | 54321 |
-| Postgres | 54322 |
-| Studio | 54323 |
-| Mailpit | 54324 |
-| Pooler | 54329 |
-| Analytics | 54327 |
+| Postgres    | 54322 |
+| Studio      | 54323 |
+| Mailpit     | 54324 |
+| Pooler      | 54329 |
+| Analytics   | 54327 |
 
 App ports for reference: web `3000`, docs `3001`, api `3333`.
 

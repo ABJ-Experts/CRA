@@ -1,0 +1,19 @@
+# Generated artefacts. These are produced by a tool and committed so contract
+# changes are reviewable; reformatting them makes the drift checks that guard
+# them (FR-API-001) compare formatted output against raw generator output and
+# fail for no real reason.
+packages/api-client/src/generated.ts
+packages/sbom-core/golden-metrics.json
+apps/api/openapi.json
+
+# A 162 KB generated requirement matrix. Reformatting its tables on every
+# `pnpm format` is pure diff noise.
+docs/BRD-TRACEABILITY.md
+
+# Build outputs and vendored assets.
+**/.next/
+**/dist/
+**/build/
+**/.docusaurus/
+apps/web/public/mockServiceWorker.js
+pnpm-lock.yaml

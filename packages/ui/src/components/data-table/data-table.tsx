@@ -145,9 +145,7 @@ export function DataTable<T>({
           aria-busy={isLoading || isFetching || undefined}
           className={cn(
             "w-full min-w-[720px] caption-bottom",
-            variant === "splitted"
-              ? "border-separate border-spacing-y-2"
-              : "border-collapse"
+            variant === "splitted" ? "border-separate border-spacing-y-2" : "border-collapse",
           )}
         >
           <thead>
@@ -181,7 +179,7 @@ export function DataTable<T>({
                           className={cn(
                             "flex items-center gap-1.5 text-caption-1-semibold",
                             "outline-none focus-visible:ring-2 focus-visible:ring-active-500",
-                            "rounded-sm transition-colors hover:text-fg"
+                            "rounded-sm transition-colors hover:text-fg",
                           )}
                         >
                           {flexRender(header.column.columnDef.header, header.getContext())}
@@ -248,7 +246,7 @@ export function DataTable<T>({
                           "rounded-xl border border-border px-4 py-2",
                           "text-caption-1-semibold text-fg-muted transition-colors",
                           "hover:bg-surface hover:text-fg",
-                          "outline-none focus-visible:ring-2 focus-visible:ring-active-500"
+                          "outline-none focus-visible:ring-2 focus-visible:ring-active-500",
                         )}
                       >
                         Try again

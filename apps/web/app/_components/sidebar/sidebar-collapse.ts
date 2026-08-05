@@ -38,10 +38,7 @@ export function getStoredCollapsed(): boolean {
 
 export function storeCollapsed(collapsed: boolean) {
   try {
-    globalThis.localStorage?.setItem(
-      SIDEBAR_STORAGE_KEY,
-      collapsed ? "collapsed" : "expanded"
-    );
+    globalThis.localStorage?.setItem(SIDEBAR_STORAGE_KEY, collapsed ? "collapsed" : "expanded");
   } catch {
     /* Non-fatal: the rail still works, it just will not be remembered. */
   }

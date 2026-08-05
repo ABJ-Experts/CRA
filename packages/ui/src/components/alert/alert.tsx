@@ -68,7 +68,7 @@ export function AlertOverlay({ className, ...props }: AlertOverlayProps) {
         // click-swallowing scrim. See the same note on ModalOverlay.
         "data-[state=closed]:animate-none",
         "motion-reduce:animate-none",
-        className
+        className,
       )}
       {...props}
     />
@@ -103,7 +103,7 @@ export function AlertContent({ className, children, ...props }: AlertContentProp
             "data-[state=open]:animate-dialog-in",
             "data-[state=closed]:animate-dialog-out",
             "motion-reduce:animate-none",
-            className
+            className,
           )}
           {...props}
         >
@@ -125,9 +125,7 @@ export function AlertTitle({ className, ...props }: AlertTitleProps) {
   );
 }
 
-export type AlertDescriptionProps = ComponentProps<
-  typeof AlertDialogPrimitive.Description
->;
+export type AlertDescriptionProps = ComponentProps<typeof AlertDialogPrimitive.Description>;
 
 export function AlertDescription({ className, ...props }: AlertDescriptionProps) {
   return (
@@ -146,7 +144,7 @@ export function AlertActions({ className, ...props }: ComponentProps<"div">) {
         // Stack on very narrow screens rather than letting two 40px buttons
         // squash their labels.
         "max-[380px]:flex-col max-[380px]:[&>*]:w-full",
-        className
+        className,
       )}
       {...props}
     />
@@ -156,11 +154,7 @@ export function AlertActions({ className, ...props }: ComponentProps<"div">) {
 export type AlertCancelProps = ButtonProps;
 
 /** Closes the dialog. Radix returns focus to the trigger for us. */
-export function AlertCancel({
-  variant = "outline",
-  tone = "grey",
-  ...props
-}: AlertCancelProps) {
+export function AlertCancel({ variant = "outline", tone = "grey", ...props }: AlertCancelProps) {
   return (
     <AlertDialogPrimitive.Cancel asChild>
       <Button variant={variant} tone={tone} {...props} />
@@ -171,11 +165,7 @@ export function AlertCancel({
 export type AlertActionProps = ButtonProps;
 
 /** Confirms and closes. Pass `onClick` to run the action. */
-export function AlertAction({
-  variant = "fill",
-  tone = "primary",
-  ...props
-}: AlertActionProps) {
+export function AlertAction({ variant = "fill", tone = "primary", ...props }: AlertActionProps) {
   return (
     <AlertDialogPrimitive.Action asChild>
       <Button variant={variant} tone={tone} {...props} />

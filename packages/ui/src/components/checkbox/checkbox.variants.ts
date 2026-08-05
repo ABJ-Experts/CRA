@@ -52,7 +52,7 @@ export const checkboxVariants = cva(
       },
     },
     defaultVariants: { size: "md" },
-  }
+  },
 );
 
 export type CheckboxVariantProps = VariantProps<typeof checkboxVariants>;

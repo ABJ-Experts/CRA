@@ -8,12 +8,12 @@ silently producing a second lockfile.
 
 ### Apps
 
-| App | Stack | Port | Purpose |
-| --- | --- | --- | --- |
-| `web` | Next.js 16 | 3000 | Main web application |
-| `docs` | Docusaurus 3 | 3001 | Documentation, and API docs in future |
-| `api` | NestJS 11 | 3333 | Backend API |
-| `infrastructure` | Supabase CLI | — | Local Postgres, migrations, future Terraform |
+| App              | Stack        | Port | Purpose                                      |
+| ---------------- | ------------ | ---- | -------------------------------------------- |
+| `web`            | Next.js 16   | 3000 | Main web application                         |
+| `docs`           | Docusaurus 3 | 3001 | Documentation, and API docs in future        |
+| `api`            | NestJS 11    | 3333 | Backend API                                  |
+| `infrastructure` | Supabase CLI | —    | Local Postgres, migrations, future Terraform |
 
 `infrastructure` is intentionally not wired into Turborepo — its commands are
 stateful (they start containers and mutate databases) and must never be

@@ -7,8 +7,7 @@ import { Building2 } from "lucide-react";
  * A 1x1 transparent GIF stands in for a real photo. It always loads, so the
  * image path is exercised without shipping binaries into the repo.
  */
-const PIXEL =
-  "data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==";
+const PIXEL = "data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==";
 
 export function AvatarDemo() {
   return (

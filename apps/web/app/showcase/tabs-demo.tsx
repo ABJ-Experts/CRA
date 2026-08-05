@@ -78,9 +78,7 @@ export function TabsDemo() {
       </div>
 
       <div className="flex flex-col gap-3 border-t border-border pt-6">
-        <span className="text-caption-1-medium text-fg-subtle">
-          variant=outline
-        </span>
+        <span className="text-caption-1-medium text-fg-subtle">variant=outline</span>
         <Bar variant="outline" testid="tabs-outline" />
       </div>
 

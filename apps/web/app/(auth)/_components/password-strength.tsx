@@ -39,7 +39,7 @@ export function PasswordStrength({ value }: { value: string }) {
             className={cn(
               "h-1 flex-1 rounded-full transition-colors duration-200",
               "motion-reduce:transition-none",
-              i < score ? BARS[score] : "bg-border"
+              i < score ? BARS[score] : "bg-border",
             )}
           />
         ))}

@@ -16,8 +16,7 @@ import { radioVariants, type RadioVariantProps } from "./radio.variants";
 const RadioSizeContext = createContext<RadioVariantProps["size"]>("md");
 
 export interface RadioGroupProps
-  extends ComponentPropsWithoutRef<typeof RadioGroupPrimitive.Root>,
-    RadioVariantProps {
+  extends ComponentPropsWithoutRef<typeof RadioGroupPrimitive.Root>, RadioVariantProps {
   /** Accessible name for the group. Required unless `aria-labelledby` is set. */
   label?: ReactNode;
   /** Short hint under the group. */
@@ -44,7 +43,7 @@ export const RadioGroup = forwardRef<
   RadioGroupProps
 >(function RadioGroup(
   { className, label, description, error, size = "md", children, ...props },
-  ref
+  ref,
 ) {
   const autoId = useId();
   const groupId = `radiogroup-${autoId}`;
@@ -54,8 +53,7 @@ export const RadioGroup = forwardRef<
   const hasError = Boolean(error);
 
   const describedBy =
-    [hasError ? errorId : null, description ? descId : null].filter(Boolean).join(" ") ||
-    undefined;
+    [hasError ? errorId : null, description ? descId : null].filter(Boolean).join(" ") || undefined;
 
   return (
     <div className="flex flex-col gap-2">
@@ -93,7 +91,8 @@ export const RadioGroup = forwardRef<
 });
 
 export interface RadioProps
-  extends Omit<ComponentPropsWithoutRef<typeof RadioGroupPrimitive.Item>, "children">,
+  extends
+    Omit<ComponentPropsWithoutRef<typeof RadioGroupPrimitive.Item>, "children">,
     RadioVariantProps {
   /** Label beside the control. */
   label?: ReactNode;
@@ -106,50 +105,49 @@ export interface RadioProps
 }
 
 /** A single option. Must be rendered inside a `RadioGroup`. */
-export const Radio = forwardRef<
-  React.ComponentRef<typeof RadioGroupPrimitive.Item>,
-  RadioProps
->(function Radio(
-  { id, label, link, description, size, className, wrapperClassName, disabled, ...props },
-  ref
-) {
-  const autoId = useId();
-  const radioId = id ?? `radio-${autoId}`;
-  const descId = `${radioId}-description`;
-  const inherited = useContext(RadioSizeContext);
-  const resolved = size ?? inherited;
+export const Radio = forwardRef<React.ComponentRef<typeof RadioGroupPrimitive.Item>, RadioProps>(
+  function Radio(
+    { id, label, link, description, size, className, wrapperClassName, disabled, ...props },
+    ref,
+  ) {
+    const autoId = useId();
+    const radioId = id ?? `radio-${autoId}`;
+    const descId = `${radioId}-description`;
+    const inherited = useContext(RadioSizeContext);
+    const resolved = size ?? inherited;
 
-  return (
-    <div className={cn("flex flex-col gap-1", wrapperClassName)}>
-      <div className="flex items-start gap-2">
-        <RadioGroupPrimitive.Item
-          ref={ref}
-          id={radioId}
-          disabled={disabled}
-          aria-describedby={description ? descId : undefined}
-          className={cn(radioVariants({ size: resolved }), className)}
-          {...props}
-        />
+    return (
+      <div className={cn("flex flex-col gap-1", wrapperClassName)}>
+        <div className="flex items-start gap-2">
+          <RadioGroupPrimitive.Item
+            ref={ref}
+            id={radioId}
+            disabled={disabled}
+            aria-describedby={description ? descId : undefined}
+            className={cn(radioVariants({ size: resolved }), className)}
+            {...props}
+          />
 
-        {label || link ? (
-          <label
-            htmlFor={radioId}
-            className={cn(
-              "flex flex-wrap items-center gap-1 text-subhead-regular",
-              disabled ? "cursor-not-allowed text-fg-subtle" : "cursor-pointer text-fg"
-            )}
-          >
-            {label}
-            {link ? <span className="text-active-500">{link}</span> : null}
-          </label>
+          {label || link ? (
+            <label
+              htmlFor={radioId}
+              className={cn(
+                "flex flex-wrap items-center gap-1 text-subhead-regular",
+                disabled ? "cursor-not-allowed text-fg-subtle" : "cursor-pointer text-fg",
+              )}
+            >
+              {label}
+              {link ? <span className="text-active-500">{link}</span> : null}
+            </label>
+          ) : null}
+        </div>
+
+        {description ? (
+          <p id={descId} className="pl-7 text-caption-2-regular text-fg-subtle">
+            {description}
+          </p>
         ) : null}
       </div>
-
-      {description ? (
-        <p id={descId} className="pl-7 text-caption-2-regular text-fg-subtle">
-          {description}
-        </p>
-      ) : null}
-    </div>
-  );
-});
+    );
+  },
+);

@@ -45,9 +45,7 @@ function VerifyForm() {
       <AuthTitle
         title="Check your inbox"
         description={
-          to
-            ? `Enter the 6 digit code we sent to ${to}`
-            : "Enter the 6 digit code we sent you"
+          to ? `Enter the 6 digit code we sent to ${to}` : "Enter the 6 digit code we sent you"
         }
       />
 

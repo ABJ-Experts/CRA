@@ -27,7 +27,12 @@ export function Stacked({ value, caption }: { value: string; caption?: string })
 
 export function Plain({ value, muted }: { value: string; muted?: boolean }) {
   return (
-    <span className={cn("truncate", muted ? "text-caption-1-regular text-fg-muted" : "text-subhead-regular text-fg")}>
+    <span
+      className={cn(
+        "truncate",
+        muted ? "text-caption-1-regular text-fg-muted" : "text-subhead-regular text-fg",
+      )}
+    >
       {value}
     </span>
   );
@@ -57,7 +62,7 @@ export function Change({ value }: { value: number }) {
     <span
       className={cn(
         "text-subhead-medium tabular-nums",
-        value >= 0 ? "text-success-fg" : "text-danger-fg"
+        value >= 0 ? "text-success-fg" : "text-danger-fg",
       )}
     >
       {value >= 0 ? "+" : ""}
@@ -74,7 +79,7 @@ export function RowActions({ label }: { label: string }) {
       className={cn(
         "flex size-8 items-center justify-center rounded-lg text-fg-subtle",
         "transition-colors hover:bg-surface-muted hover:text-fg",
-        "outline-none focus-visible:ring-2 focus-visible:ring-active-500"
+        "outline-none focus-visible:ring-2 focus-visible:ring-active-500",
       )}
     >
       <MoreHorizontal aria-hidden="true" className="size-4" />

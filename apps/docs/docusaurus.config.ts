@@ -1,7 +1,7 @@
-import { themes as prismThemes } from 'prism-react-renderer';
-import type { Config, LoadContext, Plugin } from '@docusaurus/types';
-import type * as Preset from '@docusaurus/preset-classic';
-import tailwindPostcss from '@tailwindcss/postcss';
+import { themes as prismThemes } from "prism-react-renderer";
+import type { Config, LoadContext, Plugin } from "@docusaurus/types";
+import type * as Preset from "@docusaurus/preset-classic";
+import tailwindPostcss from "@tailwindcss/postcss";
 
 // This runs in Node.js - Don't use client-side code here (browser APIs, JSX...)
 
@@ -18,7 +18,7 @@ import tailwindPostcss from '@tailwindcss/postcss';
  */
 function tailwindPlugin(context: LoadContext): Plugin {
   return {
-    name: 'docusaurus-plugin-tailwindcss',
+    name: "docusaurus-plugin-tailwindcss",
     configurePostCss(postcssOptions) {
       postcssOptions.plugins.push(tailwindPostcss({ base: context.siteDir }));
       return postcssOptions;
@@ -27,9 +27,9 @@ function tailwindPlugin(context: LoadContext): Plugin {
 }
 
 const config: Config = {
-  title: 'CRA Docs',
-  tagline: 'API documentation',
-  favicon: 'img/favicon.ico',
+  title: "CRA Docs",
+  tagline: "API documentation",
+  favicon: "img/favicon.ico",
 
   future: {
     // Wraps Infima, theme-classic and core CSS in `@layer docusaurus.*`,
@@ -52,50 +52,50 @@ const config: Config = {
     },
   },
 
-  url: 'https://your-docusaurus-site.example.com',
-  baseUrl: '/',
+  url: "https://your-docusaurus-site.example.com",
+  baseUrl: "/",
 
-  organizationName: 'ABJ-Experts',
-  projectName: 'CRA',
+  organizationName: "ABJ-Experts",
+  projectName: "CRA",
 
-  onBrokenLinks: 'throw',
+  onBrokenLinks: "throw",
 
   i18n: {
-    defaultLocale: 'en',
-    locales: ['en'],
+    defaultLocale: "en",
+    locales: ["en"],
   },
 
   plugins: [tailwindPlugin],
 
   presets: [
     [
-      'classic',
+      "classic",
       {
         docs: {
-          sidebarPath: './sidebars.ts',
+          sidebarPath: "./sidebars.ts",
         },
         blog: {
           showReadingTime: true,
           feedOptions: {
-            type: ['rss', 'atom'],
+            type: ["rss", "atom"],
             xslt: true,
           },
-          onInlineTags: 'warn',
-          onInlineAuthors: 'warn',
-          onUntruncatedBlogPosts: 'warn',
+          onInlineTags: "warn",
+          onInlineAuthors: "warn",
+          onUntruncatedBlogPosts: "warn",
         },
         theme: {
           // fonts.css is kept separate and listed FIRST so Tailwind's PostCSS
           // plugin short-circuits on it (no Tailwind at-rules present) and
           // webpack resolves the bare specifiers and font url()s natively.
-          customCss: ['./src/css/fonts.css', './src/css/custom.css'],
+          customCss: ["./src/css/fonts.css", "./src/css/custom.css"],
         },
       } satisfies Preset.Options,
     ],
   ],
 
   themeConfig: {
-    image: 'img/docusaurus-social-card.jpg',
+    image: "img/docusaurus-social-card.jpg",
     colorMode: {
       // Matches @repo/design-system's default (`:root { color-scheme: light dark }`).
       // With this false, an OS-dark visitor would see design-system colours in
@@ -103,48 +103,48 @@ const config: Config = {
       respectPrefersColorScheme: true,
     },
     navbar: {
-      title: 'CRA Docs',
+      title: "CRA Docs",
       logo: {
-        alt: 'CRA Logo',
-        src: 'img/logo.svg',
+        alt: "CRA Logo",
+        src: "img/logo.svg",
       },
       items: [
         {
-          type: 'docSidebar',
-          sidebarId: 'tutorialSidebar',
-          position: 'left',
-          label: 'Docs',
+          type: "docSidebar",
+          sidebarId: "tutorialSidebar",
+          position: "left",
+          label: "Docs",
         },
-        { to: '/blog', label: 'Blog', position: 'left' },
+        { to: "/blog", label: "Blog", position: "left" },
         {
-          href: 'https://github.com/ABJ-Experts/CRA',
-          label: 'GitHub',
-          position: 'right',
+          href: "https://github.com/ABJ-Experts/CRA",
+          label: "GitHub",
+          position: "right",
         },
       ],
     },
     footer: {
-      style: 'dark',
+      style: "dark",
       links: [
         {
-          title: 'Docs',
+          title: "Docs",
           items: [
             {
-              label: 'Introduction',
-              to: '/docs/intro',
+              label: "Introduction",
+              to: "/docs/intro",
             },
           ],
         },
         {
-          title: 'More',
+          title: "More",
           items: [
             {
-              label: 'Blog',
-              to: '/blog',
+              label: "Blog",
+              to: "/blog",
             },
             {
-              label: 'GitHub',
-              href: 'https://github.com/ABJ-Experts/CRA',
+              label: "GitHub",
+              href: "https://github.com/ABJ-Experts/CRA",
             },
           ],
         },

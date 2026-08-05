@@ -39,16 +39,13 @@ export default function ForgotPasswordPage() {
             "bg-surface text-fg-muted",
             "transition-colors duration-150 motion-reduce:transition-none",
             "hover:bg-surface-muted hover:text-fg",
-            "outline-none focus-visible:ring-2 focus-visible:ring-active-500"
+            "outline-none focus-visible:ring-2 focus-visible:ring-active-500",
           )}
           data-testid="fp-back"
         >
           <ArrowLeft aria-hidden="true" className="size-4" strokeWidth={1.5} />
         </Link>
-        <AuthTitle
-          title="Reset Password"
-          description="The new password will send to your email."
-        />
+        <AuthTitle title="Reset Password" description="The new password will send to your email." />
       </div>
 
       <Form

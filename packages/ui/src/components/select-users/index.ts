@@ -1,5 +1,1 @@
-export {
-  SelectUsers,
-  type SelectUsersProps,
-  type SelectUsersOption,
-} from "./select-users";
+export { SelectUsers, type SelectUsersProps, type SelectUsersOption } from "./select-users";

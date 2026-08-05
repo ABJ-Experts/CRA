@@ -15,6 +15,11 @@ node_modules
 
 # Testing
 coverage
+playwright-report/
+test-results/
+.playwright-mcp/
+e2e-*.png
+ui-*.png
 
 # Turbo
 .turbo
@@ -30,6 +35,11 @@ dist
 .docusaurus
 .cache-loader
 *.tsbuildinfo
+
+# drizzle-kit scratch output. SQL under apps/infrastructure/supabase/migrations
+# is the source of truth (ADR-003); drizzle.config.ts is kept for introspection
+# only, and anything it emits here is a local artefact.
+apps/api/drizzle/
 
 # Supabase (supabase/.gitignore also covers these; belt and braces)
 **/supabase/.temp/

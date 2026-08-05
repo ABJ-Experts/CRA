@@ -26,8 +26,7 @@ import { Input, type InputProps } from "./input";
  * ```
  */
 
-export interface PasswordInputProps
-  extends Omit<InputProps, "type" | "startIcon" | "endIcon"> {
+export interface PasswordInputProps extends Omit<InputProps, "type" | "startIcon" | "endIcon"> {
   /** Replace the leading lock, or pass `null` to drop it. */
   startIcon?: ReactNode;
   /** Hide the reveal toggle, for fields that must never be shown. */
@@ -61,7 +60,7 @@ export const PasswordInput = forwardRef<HTMLInputElement, PasswordInputProps>(
       id,
       ...props
     },
-    ref
+    ref,
   ) {
     const [uncontrolled, setUncontrolled] = useState(defaultVisible);
     const isControlled = controlledVisible !== undefined;
@@ -106,7 +105,7 @@ export const PasswordInput = forwardRef<HTMLInputElement, PasswordInputProps>(
                 "text-fg-muted transition-colors duration-150 motion-reduce:transition-none",
                 "hover:text-fg",
                 "outline-none focus-visible:ring-2 focus-visible:ring-active-500",
-                "disabled:cursor-not-allowed disabled:hover:text-fg-muted"
+                "disabled:cursor-not-allowed disabled:hover:text-fg-muted",
               )}
             >
               {visible ? (
@@ -121,5 +120,5 @@ export const PasswordInput = forwardRef<HTMLInputElement, PasswordInputProps>(
         {...props}
       />
     );
-  }
+  },
 );

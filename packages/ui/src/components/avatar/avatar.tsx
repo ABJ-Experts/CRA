@@ -72,10 +72,20 @@ export interface AvatarProps extends Omit<ComponentProps<"span">, "children"> {
  * two; 28px children at (0,0), (10,20) and (20,0) for three.
  */
 const CLUSTER = {
-  2: { scale: 32 / 48, at: [[0, 0], [16 / 48, 16 / 48]] },
+  2: {
+    scale: 32 / 48,
+    at: [
+      [0, 0],
+      [16 / 48, 16 / 48],
+    ],
+  },
   3: {
     scale: 28 / 48,
-    at: [[0, 0], [10 / 48, 20 / 48], [20 / 48, 0]],
+    at: [
+      [0, 0],
+      [10 / 48, 20 / 48],
+      [20 / 48, 0],
+    ],
   },
 } as const;
 
@@ -104,7 +114,7 @@ export function Avatar({
         // changing the layout box - the frame's ring shares the avatar's
         // diameter rather than growing it.
         ring && "outline-2 outline-brink-red-500",
-        className
+        className,
       )}
       {...props}
     >
@@ -119,7 +129,7 @@ export function Avatar({
                   "absolute overflow-hidden rounded-full bg-origin-orange-300",
                   // The white separator in the frame becomes `canvas`, so
                   // overlapping circles stay separated on a dark page too.
-                  i > 0 && "outline-2 outline-canvas"
+                  i > 0 && "outline-2 outline-canvas",
                 )}
                 style={{
                   width: `${cluster.scale * 100}%`,
@@ -128,11 +138,7 @@ export function Avatar({
                   top: `${y * 100}%`,
                 }}
               >
-                <AvatarPrimitive.Image
-                  src={imgSrc}
-                  alt=""
-                  className="size-full object-cover"
-                />
+                <AvatarPrimitive.Image src={imgSrc} alt="" className="size-full object-cover" />
                 <AvatarPrimitive.Fallback className="flex size-full items-center justify-center">
                   <User aria-hidden="true" className="size-1/2 text-neutral-light-500" />
                 </AvatarPrimitive.Fallback>
@@ -156,11 +162,7 @@ export function Avatar({
             delayMs={src ? 200 : 0}
             className="flex size-full items-center justify-center text-neutral-light-500"
           >
-            {text ? (
-              text
-            ) : (
-              (fallback ?? <User aria-hidden="true" className="size-1/2" />)
-            )}
+            {text ? text : (fallback ?? <User aria-hidden="true" className="size-1/2" />)}
           </AvatarPrimitive.Fallback>
         </AvatarPrimitive.Root>
       )}
@@ -224,7 +226,7 @@ export function AvatarGroup({
         // frame uses white; `canvas` is the same in light mode and avoids a
         // bright halo on a dark page.
         "[&>*]:outline-2 [&>*]:outline-canvas",
-        className
+        className,
       )}
       {...props}
     >
@@ -243,7 +245,7 @@ export function AvatarGroup({
             "bg-fg text-canvas",
             size === "sm" && "text-subhead-medium",
             size === "md" && "text-h5",
-            size === "lg" && "text-h3"
+            size === "lg" && "text-h3",
           )}
           aria-label={`${hidden} more`}
           role="img"

@@ -17,8 +17,9 @@ export const SelectRoot = SelectPrimitive.Root;
 export const SelectValue = SelectPrimitive.Value;
 export const SelectGroup = SelectPrimitive.Group;
 
-export interface SelectTriggerProps
-  extends ComponentPropsWithoutRef<typeof SelectPrimitive.Trigger> {
+export interface SelectTriggerProps extends ComponentPropsWithoutRef<
+  typeof SelectPrimitive.Trigger
+> {
   /** 40px (`md`), 48px (`lg`) or 56px (`xl`), matching the Input sizes. */
   size?: "md" | "lg" | "xl";
   /** Puts the trigger in the danger state. */
@@ -36,7 +37,7 @@ export const SelectTrigger = forwardRef<
   SelectTriggerProps
 >(function SelectTrigger(
   { className, children, size = "md", invalid, disabled, startIcon, ...props },
-  ref
+  ref,
 ) {
   const state = disabled ? "disabled" : invalid ? "error" : "default";
   return (
@@ -51,7 +52,7 @@ export const SelectTrigger = forwardRef<
         "data-[placeholder]:text-border-strong",
         "outline-none focus-visible:inset-ring-1 focus-visible:inset-ring-active-500",
         disabled ? "cursor-not-allowed text-fg-subtle" : "cursor-pointer text-fg",
-        className
+        className,
       )}
       {...props}
     >
@@ -68,15 +69,14 @@ export const SelectTrigger = forwardRef<
 });
 
 export interface SelectContentProps
-  extends ComponentPropsWithoutRef<typeof SelectPrimitive.Content>,
-    SelectContentVariantProps {}
+  extends ComponentPropsWithoutRef<typeof SelectPrimitive.Content>, SelectContentVariantProps {}
 
 export const SelectContent = forwardRef<
   React.ComponentRef<typeof SelectPrimitive.Content>,
   SelectContentProps
 >(function SelectContent(
   { className, children, matchTrigger, position = "popper", sideOffset = 4, ...props },
-  ref
+  ref,
 ) {
   return (
     <SelectPrimitive.Portal>
@@ -105,8 +105,7 @@ export const SelectContent = forwardRef<
 });
 
 export interface SelectItemProps
-  extends ComponentPropsWithoutRef<typeof SelectPrimitive.Item>,
-    SelectItemVariantProps {
+  extends ComponentPropsWithoutRef<typeof SelectPrimitive.Item>, SelectItemVariantProps {
   /** Icon or avatar before the label, as the Droplist design shows. */
   startIcon?: ReactNode;
   /**
@@ -122,10 +121,7 @@ export interface SelectItemProps
 export const SelectItem = forwardRef<
   React.ComponentRef<typeof SelectPrimitive.Item>,
   SelectItemProps
->(function SelectItem(
-  { className, children, size, startIcon, description, ...props },
-  ref
-) {
+>(function SelectItem({ className, children, size, startIcon, description, ...props }, ref) {
   return (
     <SelectPrimitive.Item
       ref={ref}
@@ -140,9 +136,7 @@ export const SelectItem = forwardRef<
       {description ? (
         <span className="flex min-w-0 flex-col">
           <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
-          <span className="truncate text-caption-2-regular text-fg-subtle">
-            {description}
-          </span>
+          <span className="truncate text-caption-2-regular text-fg-subtle">{description}</span>
         </span>
       ) : (
         <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
@@ -180,8 +174,7 @@ export const SelectLabel = forwardRef<
   );
 });
 
-export interface SelectProps
-  extends ComponentPropsWithoutRef<typeof SelectPrimitive.Root> {
+export interface SelectProps extends ComponentPropsWithoutRef<typeof SelectPrimitive.Root> {
   /** Visible label above the trigger. */
   label?: ReactNode;
   /** Marks required and renders the danger asterisk. */
@@ -253,7 +246,7 @@ export function Select({
           htmlFor={triggerId}
           className={cn(
             "flex items-center gap-0.5 text-caption-1-semibold",
-            disabled ? "text-fg-subtle" : "text-fg-muted"
+            disabled ? "text-fg-subtle" : "text-fg-muted",
           )}
         >
           {label}

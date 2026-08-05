@@ -1,0 +1,33 @@
+name: cra-dev
+
+# Redis only — Supabase runs its own Postgres/Storage/Auth stack via the
+# Supabase CLI (`pnpm --filter infrastructure run db:start`), so it is NOT
+# duplicated here.
+#
+# A Homebrew Redis listening on the same port will shadow this container and
+# `redis-cli ping` answers from either, so it proves nothing. To confirm you
+# are talking to THIS container:
+#
+#   diff <(docker exec cra-redis redis-cli info server | grep run_id) \
+#        <(redis-cli -u redis://localhost:6379 info server | grep run_id)
+#
+# If those differ, run `brew services stop redis` first.
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: cra-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+
+volumes:
+  redis-data:

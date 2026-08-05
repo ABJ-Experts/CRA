@@ -35,9 +35,7 @@ export function ResendButton({
 
   return (
     <div className={cn("flex items-center justify-center gap-1", className)}>
-      <span className="text-subhead-regular text-fg-muted">
-        Did not get the code?
-      </span>
+      <span className="text-subhead-regular text-fg-muted">Did not get the code?</span>
       <button
         type="button"
         disabled={!ready}
@@ -54,9 +52,7 @@ export function ResendButton({
           "rounded-xl px-0.5 py-px text-subhead-semibold",
           "transition-colors duration-150 motion-reduce:transition-none",
           "outline-none focus-visible:ring-2 focus-visible:ring-active-500",
-          ready
-            ? "text-active-500 hover:text-active-600"
-            : "cursor-not-allowed text-fg-subtle"
+          ready ? "text-active-500 hover:text-active-600" : "cursor-not-allowed text-fg-subtle",
         )}
         data-testid="resend"
       >

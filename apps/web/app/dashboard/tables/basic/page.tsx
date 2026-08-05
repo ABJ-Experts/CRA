@@ -62,7 +62,7 @@ export default function BasicTablesPage() {
         cell: ({ row }) => <RowActions label={`Actions for ${row.original.name}`} />,
       },
     ],
-    []
+    [],
   );
 
   return (

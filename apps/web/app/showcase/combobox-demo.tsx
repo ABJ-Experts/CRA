@@ -5,11 +5,23 @@ import { Globe, MapPin } from "lucide-react";
 import { useState } from "react";
 
 const COUNTRIES: ComboboxOption[] = [
-  { value: "gb", label: "United Kingdom", keywords: ["uk", "britain", "england"], group: "Europe", icon: <MapPin /> },
+  {
+    value: "gb",
+    label: "United Kingdom",
+    keywords: ["uk", "britain", "england"],
+    group: "Europe",
+    icon: <MapPin />,
+  },
   { value: "de", label: "Germany", keywords: ["deutschland"], group: "Europe", icon: <MapPin /> },
   { value: "fr", label: "France", group: "Europe", icon: <MapPin /> },
   { value: "es", label: "Spain", keywords: ["espana"], group: "Europe", icon: <MapPin /> },
-  { value: "us", label: "United States", keywords: ["usa", "america"], group: "Americas", icon: <Globe /> },
+  {
+    value: "us",
+    label: "United States",
+    keywords: ["usa", "america"],
+    group: "Americas",
+    icon: <Globe />,
+  },
   { value: "ca", label: "Canada", group: "Americas", icon: <Globe /> },
   { value: "br", label: "Brazil", group: "Americas", icon: <Globe /> },
   { value: "in", label: "India", group: "Asia Pacific", icon: <Globe /> },

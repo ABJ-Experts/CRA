@@ -23,7 +23,12 @@ const ORDERS = [28, 39, 31, 48, 44, 59, 51, 63, 55, 68, 61, 79];
 
 /* Values transcribed from the frame's Total row. */
 const TOTALS = [
-  { label: "Total revenue", value: 902.008, format: (n: number) => `$${n.toFixed(3)}K`, delta: 8.24 },
+  {
+    label: "Total revenue",
+    value: 902.008,
+    format: (n: number) => `$${n.toFixed(3)}K`,
+    delta: 8.24,
+  },
   { label: "Total profit", value: 61.108, format: (n: number) => `$${n.toFixed(3)}K`, delta: 3.11 },
   { label: "Total orders", value: 12029, delta: 5.4 },
   { label: "Total customers", value: 8292, delta: 2.18 },
@@ -52,9 +57,7 @@ export default function EcommerceDashboardPage() {
       {
         accessorKey: "createdAt",
         header: "Created & Source",
-        cell: ({ row }) => (
-          <Stacked value={row.original.createdAt} caption={row.original.source} />
-        ),
+        cell: ({ row }) => <Stacked value={row.original.createdAt} caption={row.original.source} />,
       },
       {
         accessorKey: "status",
@@ -76,12 +79,11 @@ export default function EcommerceDashboardPage() {
         cell: ({ row }) => <RowActions label={`Actions for order ${row.original.orderNo}`} />,
       },
     ],
-    []
+    [],
   );
 
   return (
     <div className="flex flex-col gap-6 px-6 py-6 lg:px-[30px]">
-
       <Stagger className="flex flex-col gap-6">
         <StaggerItem className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
           {TOTALS.map((s) => (

@@ -40,7 +40,7 @@ function SocialButton({
         "transition-colors duration-150 motion-reduce:transition-none",
         "hover:bg-surface hover:text-fg",
         "outline-none focus-visible:ring-2 focus-visible:ring-active-500",
-        "disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-canvas"
+        "disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-canvas",
       )}
       {...rest}
     >

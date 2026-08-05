@@ -15,10 +15,7 @@ import { AuthFooter } from "./auth-chrome";
  * Forgot Password has no footer in the design, which is why its panel is 904
  * tall rather than 832. Routes absent from the table render nothing.
  */
-const FOOTERS: Record<
-  string,
-  { prompt: string; href: string; action: string } | undefined
-> = {
+const FOOTERS: Record<string, { prompt: string; href: string; action: string } | undefined> = {
   "/sign-in": {
     prompt: "Don’t have an account?",
     href: "/sign-up",
@@ -60,7 +57,5 @@ export function AuthFooterSlot() {
   const pathname = usePathname();
   const footer = FOOTERS[pathname];
   if (!footer) return null;
-  return (
-    <AuthFooter prompt={footer.prompt} href={footer.href} action={footer.action} />
-  );
+  return <AuthFooter prompt={footer.prompt} href={footer.href} action={footer.action} />;
 }

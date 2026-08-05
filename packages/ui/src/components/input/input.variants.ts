@@ -70,7 +70,7 @@ export const inputFieldVariants = cva(
       },
     },
     defaultVariants: { size: "md", state: "default" },
-  }
+  },
 );
 
 export const inputControlVariants = cva(
@@ -89,7 +89,7 @@ export const inputControlVariants = cva(
       },
     },
     defaultVariants: { size: "md" },
-  }
+  },
 );
 
 export type InputFieldVariantProps = VariantProps<typeof inputFieldVariants>;

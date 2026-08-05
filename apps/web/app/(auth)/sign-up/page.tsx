@@ -44,10 +44,7 @@ export default function SignUpPage() {
 
   return (
     <div className="flex flex-col gap-10">
-      <AuthTitle
-        title="Join With Us"
-        description="Create the account to join CRA"
-      />
+      <AuthTitle title="Join With Us" description="Create the account to join CRA" />
 
       <Form
         form={form}
@@ -161,17 +158,11 @@ export default function SignUpPage() {
           </Button>
           <p className="text-caption-2-regular text-fg-muted">
             By click Sign Up, you agree to our{" "}
-            <Link
-              href="/terms"
-              className="text-active-500 underline underline-offset-2"
-            >
+            <Link href="/terms" className="text-active-500 underline underline-offset-2">
               Terms of Use
             </Link>{" "}
             and that you have read our{" "}
-            <Link
-              href="/privacy"
-              className="text-active-500 underline underline-offset-2"
-            >
+            <Link href="/privacy" className="text-active-500 underline underline-offset-2">
               Privacy Policy
             </Link>
           </p>

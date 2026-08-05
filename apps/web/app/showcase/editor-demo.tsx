@@ -20,9 +20,8 @@ export function EditorDemo() {
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-2">
         <span className="text-caption-1-medium text-fg-subtle">
-          #1 &mdash; toolbar plus a bare send glyph. Every button is a real
-          TipTap command, and lights up while the caret is inside matching
-          content.
+          #1 &mdash; toolbar plus a bare send glyph. Every button is a real TipTap command, and
+          lights up while the caret is inside matching content.
         </span>
         <Editor
           label="Label"
@@ -69,12 +68,7 @@ export function EditorDemo() {
 
       <div className="flex flex-col gap-2 border-t border-border pt-4">
         <span className="text-caption-1-medium text-fg-subtle">error and disabled</span>
-        <Editor
-          label="Label"
-          required
-          error="Something Error Alert"
-          data-testid="ed-error"
-        />
+        <Editor label="Label" required error="Something Error Alert" data-testid="ed-error" />
         <Editor label="Label" disabled data-testid="ed-disabled" />
       </div>
 

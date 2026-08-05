@@ -3,14 +3,7 @@
 import * as PopoverPrimitive from "@radix-ui/react-popover";
 import { Command as CommandPrimitive } from "cmdk";
 import { Check, ChevronDown, Search, X } from "lucide-react";
-import {
-  useCallback,
-  useId,
-  useMemo,
-  useRef,
-  useState,
-  type ReactNode,
-} from "react";
+import { useCallback, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import { cn } from "../../lib/cn";
 import { inputFieldVariants } from "../input/input.variants";
 import { selectContentVariants, selectItemVariants } from "../select/select.variants";
@@ -101,10 +94,7 @@ export function Combobox({
   const value = isControlled ? controlledValue : uncontrolled;
   const hasError = Boolean(error);
 
-  const selected = useMemo(
-    () => options.find((o) => o.value === value),
-    [options, value]
-  );
+  const selected = useMemo(() => options.find((o) => o.value === value), [options, value]);
 
   const commit = useCallback(
     (next: string) => {
@@ -116,7 +106,7 @@ export function Combobox({
       // top of the document after the popover unmounts.
       triggerRef.current?.focus();
     },
-    [isControlled, onValueChange]
+    [isControlled, onValueChange],
   );
 
   const groups = useMemo(() => {
@@ -144,7 +134,7 @@ export function Combobox({
           htmlFor={triggerId}
           className={cn(
             "flex items-center gap-0.5 text-caption-1-semibold",
-            disabled ? "text-fg-subtle" : "text-fg-muted"
+            disabled ? "text-fg-subtle" : "text-fg-muted",
           )}
         >
           {label}
@@ -175,15 +165,12 @@ export function Combobox({
               "justify-between text-left",
               "outline-none focus-visible:inset-ring-1 focus-visible:inset-ring-active-500",
               disabled ? "cursor-not-allowed" : "cursor-pointer",
-              className
+              className,
             )}
             {...rest}
           >
             <span
-              className={cn(
-                "min-w-0 flex-1 truncate",
-                selected ? "text-fg" : "text-border-strong"
-              )}
+              className={cn("min-w-0 flex-1 truncate", selected ? "text-fg" : "text-border-strong")}
             >
               {selected?.label ?? placeholder}
             </span>
@@ -209,7 +196,7 @@ export function Combobox({
               aria-hidden="true"
               className={cn(
                 "shrink-0 text-fg-muted transition-transform duration-150 motion-reduce:transition-none",
-                open && "rotate-180"
+                open && "rotate-180",
               )}
             />
           </button>
@@ -228,7 +215,7 @@ export function Combobox({
               // `pointer-events: auto` on every open. Dropping the exit
               // animation makes the unmount synchronous. The enter animation
               // is kept, which is the one users actually perceive.
-              "data-[state=closed]:animate-none"
+              "data-[state=closed]:animate-none",
             )}
             // Radix would focus the panel itself. Redirect to the search box
             // so the user can type immediately, which is the whole point of a
@@ -258,7 +245,7 @@ export function Combobox({
                   className={cn(
                     "h-10 min-w-0 flex-1 bg-transparent",
                     "text-subhead-regular text-fg placeholder:text-border-strong",
-                    "border-0 outline-none"
+                    "border-0 outline-none",
                   )}
                 />
               </div>
@@ -278,7 +265,7 @@ export function Combobox({
                     className={cn(
                       "[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5",
                       "[&_[cmdk-group-heading]]:text-caption-1-semibold",
-                      "[&_[cmdk-group-heading]]:text-fg-muted"
+                      "[&_[cmdk-group-heading]]:text-fg-muted",
                     )}
                   >
                     {items.map((o) => (
@@ -290,7 +277,7 @@ export function Combobox({
                         onSelect={() => commit(o.value)}
                         className={cn(
                           selectItemVariants({ size: "md" }),
-                          "aria-selected:bg-elevated-hover"
+                          "aria-selected:bg-elevated-hover",
                         )}
                       >
                         {o.icon ? (

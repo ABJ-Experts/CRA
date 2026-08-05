@@ -45,7 +45,11 @@ function paginate<T extends object>(rows: T[], url: URL, searchable: (keyof T)[]
 
   if (q) {
     out = out.filter((row) =>
-      searchable.some((key) => String(row[key] ?? "").toLowerCase().includes(q))
+      searchable.some((key) =>
+        String(row[key] ?? "")
+          .toLowerCase()
+          .includes(q),
+      ),
     );
   }
 
@@ -118,7 +122,7 @@ export const handlers = [
     await delay(LATENCY);
     if (maybeFail(url)) return new HttpResponse(null, { status: 500 });
     return HttpResponse.json(
-      paginate(CUSTOMERS, url, ["firstName", "lastName", "email", "phone", "status"])
+      paginate(CUSTOMERS, url, ["firstName", "lastName", "email", "phone", "status"]),
     );
   }),
 

@@ -8,8 +8,7 @@ import {
   type InputFieldVariantProps,
 } from "./input.variants";
 
-export interface InputProps
-  extends Omit<InputHTMLAttributes<HTMLInputElement>, "size"> {
+export interface InputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, "size"> {
   /** Visible label. Omit for a bare field, but then pass `aria-label`. */
   label?: ReactNode;
   /** Marks the field required and renders the design's danger asterisk. */
@@ -59,7 +58,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
     wrapperClassName,
     ...props
   },
-  ref
+  ref,
 ) {
   const autoId = useId();
   const inputId = id ?? `input-${autoId}`;
@@ -84,7 +83,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
           className={cn(
             "flex items-center gap-0.5 text-caption-1-semibold",
             disabled ? "text-fg-subtle" : "text-fg-muted",
-            hideLabel && "sr-only"
+            hideLabel && "sr-only",
           )}
         >
           {label}

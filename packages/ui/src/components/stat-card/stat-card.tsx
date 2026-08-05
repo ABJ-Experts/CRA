@@ -58,15 +58,7 @@ function useCountUp(target: number, active: boolean, durationMs = 900) {
   return n;
 }
 
-export function StatCard({
-  label,
-  value,
-  format,
-  display,
-  delta,
-  icon,
-  className,
-}: StatCardProps) {
+export function StatCard({ label, value, format, display, delta, icon, className }: StatCardProps) {
   const ref = useRef<HTMLDivElement | null>(null);
   const inView = useInView(ref, { once: true, margin: "-40px" });
   const n = useCountUp(value ?? 0, inView && value != null);
@@ -80,7 +72,7 @@ export function StatCard({
       className={cn(
         "flex min-w-0 flex-col justify-center gap-2 rounded-2xl p-6",
         "border border-border bg-canvas",
-        className
+        className,
       )}
     >
       <div className="flex items-center justify-between gap-3">
@@ -104,7 +96,7 @@ export function DeltaBadge({ value, suffix = "%" }: { value: number; suffix?: st
     <span
       className={cn(
         "shrink-0 rounded-full px-1.5 py-0.5 text-caption-2-semibold tabular-nums",
-        up ? "bg-success-surface text-success-fg" : "bg-danger-surface text-danger-fg"
+        up ? "bg-success-surface text-success-fg" : "bg-danger-surface text-danger-fg",
       )}
     >
       {up ? "+" : ""}

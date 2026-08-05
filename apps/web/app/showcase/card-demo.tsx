@@ -1,13 +1,6 @@
 import { Avatar } from "@repo/ui/avatar";
 import { Button } from "@repo/ui/button";
-import {
-  Card,
-  CardBody,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@repo/ui/card";
+import { Card, CardBody, CardDescription, CardFooter, CardHeader, CardTitle } from "@repo/ui/card";
 import { Tag } from "@repo/ui/tag";
 import { ArrowUpRight, Bitcoin, MoreHorizontal } from "lucide-react";
 
@@ -113,9 +106,7 @@ export function CardDemo() {
                   <span className="min-w-0 flex-1 truncate text-subhead-regular text-fg">
                     <span className="text-subhead-medium">{who}</span> {what}
                   </span>
-                  <span className="shrink-0 text-caption-2-regular text-fg-subtle">
-                    {when}
-                  </span>
+                  <span className="shrink-0 text-caption-2-regular text-fg-subtle">{when}</span>
                 </li>
               ))}
             </ul>
@@ -129,8 +120,8 @@ export function CardDemo() {
             >
               <CardTitle>Whole card is a link</CardTitle>
               <CardDescription>
-                asChild plus interactive: hover lifts it, and it takes a focus ring
-                from the keyboard.
+                asChild plus interactive: hover lifts it, and it takes a focus ring from the
+                keyboard.
               </CardDescription>
             </CardHeader>
             <CardBody>

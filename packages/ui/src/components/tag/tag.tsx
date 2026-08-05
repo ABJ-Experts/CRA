@@ -1,15 +1,9 @@
 import type { ComponentProps, ReactNode } from "react";
 import { cn } from "../../lib/cn";
-import {
-  tagDotVariants,
-  tagVariants,
-  type TagTone,
-  type TagVariantProps,
-} from "./tag.variants";
+import { tagDotVariants, tagVariants, type TagTone, type TagVariantProps } from "./tag.variants";
 
 export interface TagProps
-  extends Omit<ComponentProps<"span">, "color">,
-    Omit<TagVariantProps, "tone"> {
+  extends Omit<ComponentProps<"span">, "color">, Omit<TagVariantProps, "tone"> {
   /**
    * Palette family. Applies to `fill` (300-step background) and `dot`
    * (500-step marker); `cool` is monochrome and ignores it.
@@ -52,15 +46,9 @@ export function Tag({
   const resolvedTone: TagTone = tone ?? (variant === "dot" ? "blue" : "purple");
 
   return (
-    <span
-      className={cn(tagVariants({ variant, size, tone: resolvedTone }), className)}
-      {...props}
-    >
+    <span className={cn(tagVariants({ variant, size, tone: resolvedTone }), className)} {...props}>
       {variant === "dot" ? (
-        <span
-          aria-hidden="true"
-          className={tagDotVariants({ size, tone: resolvedTone })}
-        />
+        <span aria-hidden="true" className={tagDotVariants({ size, tone: resolvedTone })} />
       ) : (
         icon
       )}

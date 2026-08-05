@@ -51,7 +51,7 @@ export const selectContentVariants = cva(
       },
     },
     defaultVariants: { matchTrigger: true },
-  }
+  },
 );
 
 export const selectItemVariants = cva(
@@ -78,7 +78,7 @@ export const selectItemVariants = cva(
       },
     },
     defaultVariants: { size: "md" },
-  }
+  },
 );
 
 export type SelectContentVariantProps = VariantProps<typeof selectContentVariants>;

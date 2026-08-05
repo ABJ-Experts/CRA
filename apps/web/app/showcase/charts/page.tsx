@@ -40,15 +40,27 @@ const SCATTER = [
   {
     name: "Organic",
     points: [
-      [12, 42, 120], [22, 58, 180], [31, 35, 90], [44, 71, 240],
-      [52, 55, 140], [61, 82, 200], [72, 64, 160], [84, 91, 260],
+      [12, 42, 120],
+      [22, 58, 180],
+      [31, 35, 90],
+      [44, 71, 240],
+      [52, 55, 140],
+      [61, 82, 200],
+      [72, 64, 160],
+      [84, 91, 260],
     ] as [number, number, number][],
   },
   {
     name: "Paid",
     points: [
-      [16, 28, 100], [27, 44, 150], [38, 22, 80], [49, 52, 190],
-      [58, 38, 110], [67, 61, 170], [78, 46, 130], [89, 72, 210],
+      [16, 28, 100],
+      [27, 44, 150],
+      [38, 22, 80],
+      [49, 52, 190],
+      [58, 38, 110],
+      [67, 61, 170],
+      [78, 46, 130],
+      [89, 72, 210],
     ] as [number, number, number][],
   },
 ];
@@ -56,7 +68,14 @@ const SCATTER = [
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const SLOTS = ["00", "04", "08", "12", "16", "20"];
 const HEAT: [number, number, number][] = DAYS.flatMap((_, x) =>
-  SLOTS.map((_, y) => [x, y, Math.round(20 + 70 * Math.abs(Math.sin(x * 1.7 + y * 0.9)))] as [number, number, number])
+  SLOTS.map(
+    (_, y) =>
+      [x, y, Math.round(20 + 70 * Math.abs(Math.sin(x * 1.7 + y * 0.9)))] as [
+        number,
+        number,
+        number,
+      ],
+  ),
 );
 
 /** [open, close, low, high] */
@@ -93,8 +112,8 @@ export default function ChartsShowcasePage() {
         <div className="flex flex-col gap-1">
           <h1 className="text-h4 text-fg">Charts</h1>
           <p className="text-subhead-regular text-fg-muted">
-            Every series in <code>@repo/ui/chart</code>. Flip the theme and the
-            palette is re-read from the tokens, with no remount.
+            Every series in <code>@repo/ui/chart</code>. Flip the theme and the palette is re-read
+            from the tokens, with no remount.
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -135,7 +154,11 @@ export default function ChartsShowcasePage() {
         </Panel>
 
         <Panel title="Scatter">
-          <ScatterChart ariaLabel="Sessions against conversion by channel" series={SCATTER} height={320} />
+          <ScatterChart
+            ariaLabel="Sessions against conversion by channel"
+            series={SCATTER}
+            height={320}
+          />
         </Panel>
 
         <Panel title="Heat map">
@@ -149,7 +172,12 @@ export default function ChartsShowcasePage() {
         </Panel>
 
         <Panel title="Gauge">
-          <GaugeChart ariaLabel="Team performance this week" value={72} label="Performance" height={320} />
+          <GaugeChart
+            ariaLabel="Team performance this week"
+            value={72}
+            label="Performance"
+            height={320}
+          />
         </Panel>
 
         <Panel title="Donut">
@@ -198,7 +226,12 @@ export default function ChartsShowcasePage() {
                 { v: 23, c: "danger" as const },
               ].map(({ v, c }) => (
                 <div key={c} className="flex items-center gap-2">
-                  <RadialBar ariaLabel={`${v} percent complete`} value={v} color={c} className="w-10" />
+                  <RadialBar
+                    ariaLabel={`${v} percent complete`}
+                    value={v}
+                    color={c}
+                    className="w-10"
+                  />
                   <span className="text-caption-1-semibold text-fg-muted">{v}%</span>
                 </div>
               ))}

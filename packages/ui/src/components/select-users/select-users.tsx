@@ -3,13 +3,7 @@
 import { useId, type ReactNode } from "react";
 import { Avatar, type AvatarStatus } from "../avatar";
 import { cn } from "../../lib/cn";
-import {
-  SelectContent,
-  SelectItem,
-  SelectRoot,
-  SelectTrigger,
-  SelectValue,
-} from "../select";
+import { SelectContent, SelectItem, SelectRoot, SelectTrigger, SelectValue } from "../select";
 
 /**
  * SelectUsers - Pencil frame `js7Em` ("Forms / Select Users").
@@ -96,7 +90,7 @@ export function SelectUsers({
           htmlFor={triggerId}
           className={cn(
             "flex items-center gap-0.5 text-caption-1-semibold",
-            disabled ? "text-fg-subtle" : "text-fg-muted"
+            disabled ? "text-fg-subtle" : "text-fg-muted",
           )}
         >
           {label}
@@ -125,7 +119,7 @@ export function SelectUsers({
             // `lg` is the shared 48px field. Only the avatar's 8px left inset
             // and the tighter gap are specific to this trigger.
             "gap-2 py-2 pr-3 pl-2",
-            className
+            className,
           )}
           startIcon={
             selected ? (
@@ -154,12 +148,7 @@ export function SelectUsers({
               textValue={u.name}
               description={u.description}
               startIcon={
-                <Avatar
-                  name={u.name}
-                  src={u.src}
-                  status={u.status}
-                  className="size-8 shrink-0"
-                />
+                <Avatar name={u.name} src={u.src} status={u.status} className="size-8 shrink-0" />
               }
             >
               {u.name}

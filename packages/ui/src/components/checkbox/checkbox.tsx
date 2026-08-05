@@ -7,7 +7,8 @@ import { cn } from "../../lib/cn";
 import { checkboxVariants, type CheckboxVariantProps } from "./checkbox.variants";
 
 export interface CheckboxProps
-  extends Omit<ComponentPropsWithoutRef<typeof CheckboxPrimitive.Root>, "children">,
+  extends
+    Omit<ComponentPropsWithoutRef<typeof CheckboxPrimitive.Root>, "children">,
     CheckboxVariantProps {
   /** Label beside the box. Omit for a bare box, then pass `aria-label`. */
   label?: ReactNode;
@@ -35,19 +36,8 @@ export const Checkbox = forwardRef<
   React.ComponentRef<typeof CheckboxPrimitive.Root>,
   CheckboxProps
 >(function Checkbox(
-  {
-    id,
-    label,
-    link,
-    description,
-    error,
-    size,
-    className,
-    wrapperClassName,
-    disabled,
-    ...props
-  },
-  ref
+  { id, label, link, description, error, size, className, wrapperClassName, disabled, ...props },
+  ref,
 ) {
   const autoId = useId();
   const boxId = id ?? `checkbox-${autoId}`;
@@ -56,8 +46,7 @@ export const Checkbox = forwardRef<
   const hasError = Boolean(error);
 
   const describedBy =
-    [hasError ? errorId : null, description ? descId : null].filter(Boolean).join(" ") ||
-    undefined;
+    [hasError ? errorId : null, description ? descId : null].filter(Boolean).join(" ") || undefined;
 
   return (
     <div className={cn("flex flex-col gap-1", wrapperClassName)}>
@@ -91,7 +80,7 @@ export const Checkbox = forwardRef<
             htmlFor={boxId}
             className={cn(
               "flex flex-wrap items-center gap-1 text-subhead-regular",
-              disabled ? "cursor-not-allowed text-fg-subtle" : "cursor-pointer text-fg"
+              disabled ? "cursor-not-allowed text-fg-subtle" : "cursor-pointer text-fg",
             )}
           >
             {label}

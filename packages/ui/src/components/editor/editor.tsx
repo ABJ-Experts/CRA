@@ -192,7 +192,7 @@ function IconButton({
         active ? "text-active-500" : "text-fg hover:text-active-500",
         "outline-none focus-visible:ring-2 focus-visible:ring-active-500",
         "disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:text-fg",
-        "[&_svg]:size-4"
+        "[&_svg]:size-4",
       )}
     >
       <Icon aria-hidden="true" strokeWidth={1.5} />
@@ -315,7 +315,7 @@ export function Editor({
           "[&_p.is-editor-empty:first-child::before]:float-left",
           "[&_p.is-editor-empty:first-child::before]:h-0",
           "[&_p.is-editor-empty:first-child::before]:text-fg-subtle",
-          "[&_p.is-editor-empty:first-child::before]:content-[attr(data-placeholder)]"
+          "[&_p.is-editor-empty:first-child::before]:content-[attr(data-placeholder)]",
         ),
       },
     },
@@ -349,7 +349,7 @@ export function Editor({
           htmlFor={fieldId}
           className={cn(
             "flex items-center gap-0.5 text-caption-1-semibold",
-            disabled ? "text-fg-subtle" : "text-fg-muted"
+            disabled ? "text-fg-subtle" : "text-fg-muted",
           )}
         >
           {label}
@@ -379,7 +379,7 @@ export function Editor({
                   "focus-within:inset-ring-1 focus-within:inset-ring-active-500",
                   "focus-within:hover:inset-ring-1 focus-within:hover:inset-ring-active-500",
                 ].join(" "),
-          className
+          className,
         )}
       >
         {toolbar ? (
@@ -424,12 +424,7 @@ export function Editor({
             <div className="flex items-center gap-3">
               {tools
                 ? TOOLS.map((t) => (
-                    <IconButton
-                      key={t.key}
-                      icon={t.icon}
-                      label={t.label}
-                      disabled={disabled}
-                    />
+                    <IconButton key={t.key} icon={t.icon} label={t.label} disabled={disabled} />
                   ))
                 : null}
             </div>
@@ -456,7 +451,7 @@ export function Editor({
                     "transition-colors duration-150 motion-reduce:transition-none",
                     "hover:bg-active-600",
                     "outline-none focus-visible:ring-2 focus-visible:ring-active-500",
-                    "disabled:cursor-not-allowed disabled:opacity-60"
+                    "disabled:cursor-not-allowed disabled:opacity-60",
                   )}
                 >
                   {submitLabel}

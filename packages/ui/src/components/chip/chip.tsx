@@ -57,7 +57,7 @@ export function Chip({
         "rounded-xl bg-surface px-2 py-1",
         "text-subhead-medium text-fg-muted",
         disabled && "opacity-50",
-        className
+        className,
       )}
       {...props}
     >
@@ -80,7 +80,7 @@ export function Chip({
             "text-fg-muted transition-colors duration-150 motion-reduce:transition-none",
             "hover:bg-elevated-hover hover:text-fg",
             "outline-none focus-visible:ring-2 focus-visible:ring-active-500",
-            "disabled:cursor-not-allowed disabled:hover:bg-transparent"
+            "disabled:cursor-not-allowed disabled:hover:bg-transparent",
           )}
         >
           <X aria-hidden="true" className="size-3" strokeWidth={2.5} />

@@ -1,9 +1,11 @@
-import { Controller, Get } from "@nestjs/common";
-import { AppService } from "./app.service";
+import { Controller, Get, Inject } from '@nestjs/common';
+import { AppService } from './app.service';
 
 @Controller()
 export class AppController {
-  constructor(private readonly appService: AppService) {}
+  // Explicit @Inject so the class survives as a runtime value under esbuild/tsx
+  // (which elides value imports used only in a type position).
+  constructor(@Inject(AppService) private readonly appService: AppService) {}
 
   @Get()
   getHello(): string {

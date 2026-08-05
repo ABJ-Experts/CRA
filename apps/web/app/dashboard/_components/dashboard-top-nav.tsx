@@ -70,11 +70,7 @@ export function DashboardTopNav() {
   }
 
   return (
-    <TopNav
-      user={{ name: "Ada Foster" }}
-      notificationCount={7}
-      className="max-lg:pl-20"
-    >
+    <TopNav user={{ name: "Ada Foster" }} notificationCount={7} className="max-lg:pl-20">
       {left}
     </TopNav>
   );

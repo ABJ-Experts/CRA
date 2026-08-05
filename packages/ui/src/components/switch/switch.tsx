@@ -10,7 +10,8 @@ import {
 } from "./switch.variants";
 
 export interface SwitchProps
-  extends Omit<ComponentPropsWithoutRef<typeof SwitchPrimitive.Root>, "children">,
+  extends
+    Omit<ComponentPropsWithoutRef<typeof SwitchPrimitive.Root>, "children">,
     SwitchVariantProps {
   /** Label beside the track. Omit for a bare switch, then pass `aria-label`. */
   label?: ReactNode;
@@ -35,68 +36,67 @@ export interface SwitchProps
  * Animates only the knob's transform and the track colour, both of which are
  * suppressed under `prefers-reduced-motion`.
  */
-export const Switch = forwardRef<
-  React.ComponentRef<typeof SwitchPrimitive.Root>,
-  SwitchProps
->(function Switch(
-  {
-    id,
-    label,
-    link,
-    description,
-    labelPosition = "end",
-    size,
-    className,
-    wrapperClassName,
-    disabled,
-    ...props
-  },
-  ref
-) {
-  const autoId = useId();
-  const switchId = id ?? `switch-${autoId}`;
-  const descId = `${switchId}-description`;
+export const Switch = forwardRef<React.ComponentRef<typeof SwitchPrimitive.Root>, SwitchProps>(
+  function Switch(
+    {
+      id,
+      label,
+      link,
+      description,
+      labelPosition = "end",
+      size,
+      className,
+      wrapperClassName,
+      disabled,
+      ...props
+    },
+    ref,
+  ) {
+    const autoId = useId();
+    const switchId = id ?? `switch-${autoId}`;
+    const descId = `${switchId}-description`;
 
-  const labelNode =
-    label || link ? (
-      <label
-        htmlFor={switchId}
-        className={cn(
-          "flex flex-wrap items-center gap-1 text-subhead-regular",
-          disabled ? "cursor-not-allowed text-fg-subtle" : "cursor-pointer text-fg"
-        )}
-      >
-        {label}
-        {link ? <span className="text-active-500">{link}</span> : null}
-      </label>
-    ) : null;
-
-  return (
-    <div className={cn("flex flex-col gap-1", wrapperClassName)}>
-      <div
-        className={cn(
-          "flex items-center gap-2",
-          labelPosition === "start" && "flex-row-reverse justify-between"
-        )}
-      >
-        <SwitchPrimitive.Root
-          ref={ref}
-          id={switchId}
-          disabled={disabled}
-          aria-describedby={description ? descId : undefined}
-          className={cn(switchTrackVariants({ size }), className)}
-          {...props}
+    const labelNode =
+      label || link ? (
+        <label
+          htmlFor={switchId}
+          className={cn(
+            "flex flex-wrap items-center gap-1 text-subhead-regular",
+            disabled ? "cursor-not-allowed text-fg-subtle" : "cursor-pointer text-fg",
+          )}
         >
-          <SwitchPrimitive.Thumb className={cn(switchThumbVariants({ size }))} />
-        </SwitchPrimitive.Root>
-        {labelNode}
-      </div>
+          {label}
+          {link ? <span className="text-active-500">{link}</span> : null}
+        </label>
+      ) : null;
 
-      {description ? (
-        <p id={descId} className="text-caption-2-regular text-fg-subtle">
-          {description}
-        </p>
-      ) : null}
-    </div>
-  );
-});
+    return (
+      <div className={cn("flex flex-col gap-1", wrapperClassName)}>
+        <div
+          className={cn(
+            "flex items-center gap-2",
+            labelPosition === "start" && "flex-row-reverse justify-between",
+          )}
+        >
+          <SwitchPrimitive.Root
+            ref={ref}
+            id={switchId}
+            disabled={disabled}
+            aria-describedby={description ? descId : undefined}
+            className={cn(switchTrackVariants({ size }), className)}
+            {...props}
+          >
+            <SwitchPrimitive.Thumb className={cn(switchThumbVariants({ size }))} />
+          </SwitchPrimitive.Root>
+          {labelNode}
+        </div>
+
+        {description ? (
+          <p id={descId} className="text-caption-2-regular text-fg-subtle">
+            {description}
+          </p>
+        ) : null}
+      </div>
+    );
+  },
+);

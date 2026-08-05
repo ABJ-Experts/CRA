@@ -152,7 +152,7 @@ export function Chart({
       /* No `lazyUpdate`. It defers the render to a later frame for a saving
        * that does not matter at this chart count, and it makes "did the theme
        * actually apply" untestable without knowing when ECharts flushed. */
-      { notMerge }
+      { notMerge },
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [themeTick, notMerge, ...deps]);

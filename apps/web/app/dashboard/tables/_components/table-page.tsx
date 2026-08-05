@@ -1,6 +1,11 @@
 "use client";
 
-import { DataTable, type ColumnDef, type DataTableVariant, type RowSelectionState } from "@repo/ui/data-table";
+import {
+  DataTable,
+  type ColumnDef,
+  type DataTableVariant,
+  type RowSelectionState,
+} from "@repo/ui/data-table";
 import { useState, type ReactNode } from "react";
 import { useTableQuery } from "../../_lib/use-table-query";
 import { TableToolbar } from "./table-toolbar";
@@ -41,7 +46,6 @@ export function TablePage<T>({
 
   return (
     <div className="flex flex-col px-6 pb-8 lg:px-[30px]">
-
       <TableToolbar
         value={t.search}
         onChange={t.setSearch}

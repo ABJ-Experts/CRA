@@ -1,9 +1,15 @@
 /**
  * The single seam between the auth screens and a real backend.
  *
- * Every screen submits through one of these. They currently simulate latency
- * and can fail, so loading and error paths are exercised for real; swapping in
- * `fetch` calls to `apps/api` means editing this file and nothing else.
+ * Every screen submits through one of these.
+ *
+ * WIRED to the real GoTrue handshake via /api/auth/*: signIn, signUp,
+ * requestPasswordReset, signOut.
+ *
+ * STILL STUBBED (simulated latency, fixed demo codes): resetPassword,
+ * verifyCode, verifyTwoFactor, unlock, resendCode. These need the GoTrue OTP
+ * and MFA-challenge endpoints, which is a larger piece of work than the
+ * password grant — see MIGRATION-NOTES.md.
  *
  * Each returns `AuthResult` rather than throwing, so screens handle the
  * failure path explicitly instead of relying on a try/catch that is easy to
@@ -22,47 +28,66 @@ const LATENCY = 700;
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+/** Where the screen should go on success, when the server picks the target. */
+export interface AuthOk extends AuthResult {
+  next?: string;
+}
+
 /**
- * Demo rule so the error path is reachable without a backend: any address at
- * `@taken.com` is treated as already registered, and the password `wrong`
- * fails sign in. Delete these with the stubs.
+ * All real calls go to /api/auth/*, never to GoTrue directly. Those route
+ * handlers run on the server, which is what lets the session land in an
+ * httpOnly cookie the browser cannot read.
  */
+async function post(action: string, body?: unknown): Promise<AuthOk> {
+  try {
+    const res = await fetch(`/api/auth/${action}`, {
+      method: "POST",
+      headers: body ? { "content-type": "application/json" } : undefined,
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    return (await res.json()) as AuthOk;
+  } catch {
+    /* Network-level failure only — the handler returns 200 with ok:false for
+     * ordinary credential failures, so this really is "could not reach it". */
+    return { ok: false, message: "Could not reach the server. Try again." };
+  }
+}
+
 export async function signIn(input: {
   identifier: string;
   password: string;
   remember: boolean;
-}): Promise<AuthResult> {
-  await wait(LATENCY);
-  if (input.password === "wrong") {
-    return { ok: false, message: "That email and password do not match." };
-  }
-  return { ok: true };
+}): Promise<AuthOk> {
+  return post("sign-in", { email: input.identifier, password: input.password });
 }
 
 export async function signUp(input: {
   email: string;
   username: string;
   password: string;
-}): Promise<AuthResult> {
-  await wait(LATENCY);
-  if (input.email.endsWith("@taken.com")) {
-    return {
-      ok: false,
-      fieldErrors: { email: "That email is already registered." },
-    };
+}): Promise<AuthOk> {
+  const result = await post("sign-up", {
+    email: input.email,
+    password: input.password,
+  });
+  /* GoTrue reports a duplicate address as a form-level message; the screen
+   * shows it against the email field, which is where the user can act on it. */
+  if (!result.ok && result.message && /registered|already/i.test(result.message)) {
+    return { ok: false, fieldErrors: { email: result.message } };
   }
-  return { ok: true };
+  return result;
 }
 
-export async function requestPasswordReset(input: {
-  email: string;
-}): Promise<AuthResult> {
-  await wait(LATENCY);
-  // Deliberately always ok: telling a caller whether an address exists is an
-  // account-enumeration leak, so the UI says "if it exists, we sent a link"
-  // either way.
-  void input;
-  return { ok: true };
+export async function requestPasswordReset(input: { email: string }): Promise<AuthResult> {
+  // Always ok, by design on both sides: telling a caller whether an address
+  // exists is an account-enumeration leak, so the UI says "if it exists, we
+  // sent a link" either way.
+  return post("reset", { email: input.email });
+}
+
+/** Ends the GoTrue session and clears the cookie. */
+export async function signOut(): Promise<AuthOk> {
+  return post("sign-out");
 }
 
 export async function resetPassword(input: {
@@ -76,9 +101,7 @@ export async function resetPassword(input: {
   return { ok: true };
 }
 
-export async function verifyCode(input: {
-  code: string;
-}): Promise<AuthResult> {
+export async function verifyCode(input: { code: string }): Promise<AuthResult> {
   await wait(LATENCY);
   if (input.code !== "123456") {
     return { ok: false, message: "That code is not right. Check it and try again." };
@@ -103,9 +126,7 @@ export async function verifyTwoFactor(input: {
 
 export async function unlock(input: { password: string }): Promise<AuthResult> {
   await wait(LATENCY);
-  return input.password === "wrong"
-    ? { ok: false, message: "Wrong password." }
-    : { ok: true };
+  return input.password === "wrong" ? { ok: false, message: "Wrong password." } : { ok: true };
 }
 
 export async function resendCode(): Promise<AuthResult> {

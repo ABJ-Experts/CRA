@@ -16,8 +16,8 @@ export function PaginationDemo() {
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-2">
         <span className="text-caption-1-medium text-fg-subtle">
-          full: rows-per-page, range caption, First / End. Resize below 640px to
-          see the mobile layout swap in.
+          full: rows-per-page, range caption, First / End. Resize below 640px to see the mobile
+          layout swap in.
         </span>
         <Pagination
           page={page}
@@ -41,24 +41,14 @@ export function PaginationDemo() {
         <span className="text-caption-1-medium text-fg-subtle">
           mid-trail: an ellipsis appears on both sides
         </span>
-        <Pagination
-          page={far}
-          pageCount={24}
-          onPageChange={setFar}
-          data-testid="pg-mid"
-        />
+        <Pagination page={far} pageCount={24} onPageChange={setFar} data-testid="pg-mid" />
       </div>
 
       <div className="flex flex-col gap-2 border-t border-border pt-4">
         <span className="text-caption-1-medium text-fg-subtle">
           three pages: no ellipsis, and both arrows disable at the ends
         </span>
-        <Pagination
-          page={few}
-          pageCount={3}
-          onPageChange={setFew}
-          data-testid="pg-few"
-        />
+        <Pagination page={few} pageCount={3} onPageChange={setFew} data-testid="pg-few" />
       </div>
 
       <div className="flex flex-col gap-2 border-t border-border pt-4">

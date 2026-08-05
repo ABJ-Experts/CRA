@@ -51,7 +51,7 @@ export const radioVariants = cva(
       },
     },
     defaultVariants: { size: "md" },
-  }
+  },
 );
 
 export type RadioVariantProps = VariantProps<typeof radioVariants>;

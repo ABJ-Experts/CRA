@@ -126,10 +126,7 @@ export function TimePicker({
     hourCycle === 12
       ? Array.from({ length: 12 }, (_, i) => i + 1)
       : Array.from({ length: 24 }, (_, i) => i);
-  const minutes = Array.from(
-    { length: Math.ceil(60 / minuteStep) },
-    (_, i) => i * minuteStep
-  );
+  const minutes = Array.from({ length: Math.ceil(60 / minuteStep) }, (_, i) => i * minuteStep);
 
   const displayHour =
     hour === null ? "" : hourCycle === 12 ? String(((hour + 11) % 12) + 1) : String(hour);
@@ -160,7 +157,7 @@ export function TimePicker({
           htmlFor={triggerId}
           className={cn(
             "flex items-center gap-0.5 text-caption-1-semibold",
-            disabled ? "text-fg-subtle" : "text-fg-muted"
+            disabled ? "text-fg-subtle" : "text-fg-muted",
           )}
         >
           {label}
@@ -186,11 +183,13 @@ export function TimePicker({
               "justify-between text-left",
               "outline-none focus-visible:inset-ring-1 focus-visible:inset-ring-active-500",
               disabled ? "cursor-not-allowed" : "cursor-pointer",
-              className
+              className,
             )}
             {...rest}
           >
-            <span className={cn("min-w-0 flex-1 truncate", display ? "text-fg" : "text-border-strong")}>
+            <span
+              className={cn("min-w-0 flex-1 truncate", display ? "text-fg" : "text-border-strong")}
+            >
               {display || placeholder}
             </span>
             <Clock aria-hidden="true" className="shrink-0 text-fg" strokeWidth={1.5} />
@@ -210,7 +209,7 @@ export function TimePicker({
               // Radix keeps a Popover layer mounted until `animationend`,
               // which does not reliably fire; unmount synchronously instead.
               "data-[state=closed]:animate-none",
-              "motion-reduce:animate-none"
+              "motion-reduce:animate-none",
             )}
           >
             <Select

@@ -1,15 +1,6 @@
 export { Chart, type ChartProps } from "./chart";
-export {
-  readChartPalette,
-  withAlpha,
-  type ChartPalette,
-} from "./chart-palette";
-export {
-  echarts,
-  ensureECharts,
-  type EChartsInstance,
-  type EChartsOption,
-} from "./echarts";
+export { readChartPalette, withAlpha, type ChartPalette } from "./chart-palette";
+export { echarts, ensureECharts, type EChartsInstance, type EChartsOption } from "./echarts";
 export {
   CandlestickChart,
   DonutChart,

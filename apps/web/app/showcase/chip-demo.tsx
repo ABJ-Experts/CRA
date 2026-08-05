@@ -12,9 +12,7 @@ export function ChipDemo() {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-3">
-        <span className="text-caption-1-medium text-fg-subtle">
-          removable, with avatar slot
-        </span>
+        <span className="text-caption-1-medium text-fg-subtle">removable, with avatar slot</span>
         <div className="flex flex-wrap items-center gap-2" data-testid="chip-list">
           {people.map((name) => (
             <Chip

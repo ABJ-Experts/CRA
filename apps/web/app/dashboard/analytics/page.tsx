@@ -18,8 +18,13 @@ const SLOTS = ["00", "04", "08", "12", "16", "20"];
 /* Deterministic so the screen is identical on every load. */
 const HEAT: [number, number, number][] = DAYS.flatMap((_, x) =>
   SLOTS.map(
-    (_, y) => [x, y, Math.round(18 + 74 * Math.abs(Math.sin(x * 1.7 + y * 0.9)))] as [number, number, number]
-  )
+    (_, y) =>
+      [x, y, Math.round(18 + 74 * Math.abs(Math.sin(x * 1.7 + y * 0.9)))] as [
+        number,
+        number,
+        number,
+      ],
+  ),
 );
 
 const SCATTER = [
@@ -27,14 +32,22 @@ const SCATTER = [
     name: "Organic",
     points: Array.from({ length: 14 }, (_, i) => {
       const x = 6 + i * 6.4;
-      return [x, 24 + 58 * Math.abs(Math.sin(i * 0.8)), 80 + 160 * Math.abs(Math.cos(i * 0.5))] as [number, number, number];
+      return [x, 24 + 58 * Math.abs(Math.sin(i * 0.8)), 80 + 160 * Math.abs(Math.cos(i * 0.5))] as [
+        number,
+        number,
+        number,
+      ];
     }),
   },
   {
     name: "Paid",
     points: Array.from({ length: 14 }, (_, i) => {
       const x = 9 + i * 6.1;
-      return [x, 16 + 50 * Math.abs(Math.cos(i * 0.7)), 60 + 140 * Math.abs(Math.sin(i * 0.6))] as [number, number, number];
+      return [x, 16 + 50 * Math.abs(Math.cos(i * 0.7)), 60 + 140 * Math.abs(Math.sin(i * 0.6))] as [
+        number,
+        number,
+        number,
+      ];
     }),
   },
 ];
@@ -50,7 +63,6 @@ const TOP_PAGES = [
 export default function AnalyticsDashboardPage() {
   return (
     <div className="flex flex-col gap-6 px-6 py-6 lg:px-[30px]">
-
       <Stagger className="flex flex-col gap-6">
         {/* Hero. The frame uses a supplied banner image; this is the same
             composition built from tokens so it re-themes and needs no asset. */}
@@ -60,12 +72,15 @@ export default function AnalyticsDashboardPage() {
               aria-hidden="true"
               className="absolute inset-0 bg-gradient-to-br from-active-500 via-royal-purple-500 to-cyan-blue-500"
             />
-            <div aria-hidden="true" className="absolute -top-16 -right-10 size-64 rounded-full bg-white/15 blur-2xl" />
+            <div
+              aria-hidden="true"
+              className="absolute -top-16 -right-10 size-64 rounded-full bg-white/15 blur-2xl"
+            />
             <div className="relative flex max-w-[422px] flex-col gap-3">
               <h2 className="text-h4 text-white">Analytics with AI &amp; Big Data</h2>
               <p className="text-subhead-regular text-white/80">
-                Every number on this page is served by the mocked API and paged
-                on the server, so the loading and error states are real.
+                Every number on this page is served by the mocked API and paged on the server, so
+                the loading and error states are real.
               </p>
             </div>
           </div>
@@ -90,7 +105,11 @@ export default function AnalyticsDashboardPage() {
 
         <StaggerItem className="grid gap-4 xl:grid-cols-2">
           <SectionCard title="Visitors by channel">
-            <ScatterChart ariaLabel="Sessions against conversion by channel" series={SCATTER} height={224} />
+            <ScatterChart
+              ariaLabel="Sessions against conversion by channel"
+              series={SCATTER}
+              height={224}
+            />
           </SectionCard>
           <SectionCard title="Traffic by day and hour">
             <HeatmapChart

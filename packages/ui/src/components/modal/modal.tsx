@@ -2,12 +2,7 @@
 
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
-import {
-  createContext,
-  useContext,
-  type ComponentProps,
-  type ReactNode,
-} from "react";
+import { createContext, useContext, type ComponentProps, type ReactNode } from "react";
 import { cn } from "../../lib/cn";
 
 /**
@@ -97,24 +92,18 @@ export function ModalOverlay({ className, ...props }: ModalOverlayProps) {
         // backdrop simply leaves with it.
         "data-[state=closed]:animate-none",
         "motion-reduce:animate-none",
-        className
+        className,
       )}
       {...props}
     />
   );
 }
 
-export interface ModalContentProps
-  extends ComponentProps<typeof DialogPrimitive.Content> {
+export interface ModalContentProps extends ComponentProps<typeof DialogPrimitive.Content> {
   size?: ModalSize;
 }
 
-export function ModalContent({
-  size = "md",
-  className,
-  children,
-  ...props
-}: ModalContentProps) {
+export function ModalContent({ size = "md", className, children, ...props }: ModalContentProps) {
   return (
     <ModalPortal>
       <ModalOverlay />
@@ -138,7 +127,7 @@ export function ModalContent({
             "data-[state=open]:animate-dialog-in",
             "data-[state=closed]:animate-dialog-out",
             "motion-reduce:animate-none",
-            className
+            className,
           )}
           {...props}
         >
@@ -177,7 +166,7 @@ export function ModalHeader({
           className={cn(
             "flex shrink-0 items-center gap-3 py-3 pr-3 pl-4",
             "rounded-t-xl bg-canvas",
-            className
+            className,
           )}
           {...props}
         >
@@ -197,42 +186,42 @@ export function ModalHeader({
 
   return (
     <ModalHeaderContext.Provider value="default">
-    <div
-      data-variant="default"
-      className={cn(
-        // `relative` anchors the close button, which the design pins
-        // absolutely at 8/8 rather than placing it in the flow.
-        "relative flex shrink-0 flex-col items-center gap-3 p-6",
-        "rounded-t-xl bg-canvas",
-        className
-      )}
-      {...props}
-    >
-      {children}
-      {showClose ? (
-        <DialogPrimitive.Close
-          aria-label={closeLabel}
-          className={cn(
-            "absolute top-2 right-2 flex size-8 items-center justify-center",
-            "rounded-xl bg-surface text-fg",
-            "transition-colors duration-150 motion-reduce:transition-none",
-            "hover:bg-surface-muted",
-            "outline-none focus-visible:ring-2 focus-visible:ring-active-500"
-          )}
-        >
-          {/*
+      <div
+        data-variant="default"
+        className={cn(
+          // `relative` anchors the close button, which the design pins
+          // absolutely at 8/8 rather than placing it in the flow.
+          "relative flex shrink-0 flex-col items-center gap-3 p-6",
+          "rounded-t-xl bg-canvas",
+          className,
+        )}
+        {...props}
+      >
+        {children}
+        {showClose ? (
+          <DialogPrimitive.Close
+            aria-label={closeLabel}
+            className={cn(
+              "absolute top-2 right-2 flex size-8 items-center justify-center",
+              "rounded-xl bg-surface text-fg",
+              "transition-colors duration-150 motion-reduce:transition-none",
+              "hover:bg-surface-muted",
+              "outline-none focus-visible:ring-2 focus-visible:ring-active-500",
+            )}
+          >
+            {/*
             The design draws a SOLID close-circle here, not an outline glyph,
             so it is composed rather than taken from Lucide (whose CircleX is
             stroked). Its fill is hardcoded `#1b1d1f` in the frame, which is
             invisible on the dark `#26282a` button, so it follows `fg` /
             `canvas` instead - the same call made for the Tag and Chip icons.
           */}
-          <span className="flex size-4 items-center justify-center rounded-full bg-fg">
-            <X aria-hidden="true" className="size-2.5 text-canvas" strokeWidth={3.5} />
-          </span>
-        </DialogPrimitive.Close>
-      ) : null}
-    </div>
+            <span className="flex size-4 items-center justify-center rounded-full bg-fg">
+              <X aria-hidden="true" className="size-2.5 text-canvas" strokeWidth={3.5} />
+            </span>
+          </DialogPrimitive.Close>
+        ) : null}
+      </div>
     </ModalHeaderContext.Provider>
   );
 }
@@ -253,17 +242,13 @@ export function ModalIconButton({
         "hover:bg-surface hover:text-fg",
         "outline-none focus-visible:ring-2 focus-visible:ring-active-500",
         "[&_svg]:size-4",
-        className
+        className,
       )}
       {...props}
     />
   );
 
-  return asClose ? (
-    <DialogPrimitive.Close asChild>{button}</DialogPrimitive.Close>
-  ) : (
-    button
-  );
+  return asClose ? <DialogPrimitive.Close asChild>{button}</DialogPrimitive.Close> : button;
 }
 
 export type ModalTitleProps = ComponentProps<typeof DialogPrimitive.Title>;
@@ -276,16 +261,14 @@ export function ModalTitle({ className, ...props }: ModalTitleProps) {
       className={cn(
         "w-full truncate text-fg",
         variant === "mailbox" ? "text-subhead-medium" : "text-h5",
-        className
+        className,
       )}
       {...props}
     />
   );
 }
 
-export type ModalDescriptionProps = ComponentProps<
-  typeof DialogPrimitive.Description
->;
+export type ModalDescriptionProps = ComponentProps<typeof DialogPrimitive.Description>;
 
 export function ModalDescription({ className, ...props }: ModalDescriptionProps) {
   return (
@@ -307,7 +290,7 @@ export function ModalBody({ className, ...props }: ComponentProps<"div">) {
       className={cn(
         "min-h-0 flex-1 overflow-y-auto overscroll-contain px-6",
         "last:pb-6",
-        className
+        className,
       )}
       {...props}
     />
@@ -331,7 +314,7 @@ export function ModalFooter({ left, className, children, ...props }: ModalFooter
         "rounded-b-xl bg-canvas",
         // Stack on narrow screens so two 40px buttons never squash.
         "max-sm:flex-col-reverse max-sm:items-stretch max-sm:gap-3",
-        className
+        className,
       )}
       {...props}
     >
@@ -356,12 +339,7 @@ export interface ModalStepsProps extends ComponentProps<"ol"> {
  * Renders an ordered list with `aria-current="step"` rather than a row of
  * divs, so the sequence and the current position are conveyed without sight.
  */
-export function ModalSteps({
-  steps,
-  current = 0,
-  className,
-  ...props
-}: ModalStepsProps) {
+export function ModalSteps({ steps, current = 0, className, ...props }: ModalStepsProps) {
   return (
     <ol className={cn("flex w-full items-center gap-2", className)} {...props}>
       {steps.map((label, i) => {
@@ -381,7 +359,7 @@ export function ModalSteps({
                 "flex size-8 shrink-0 items-center justify-center rounded-full bg-surface",
                 "text-caption-1-semibold",
                 "transition-colors duration-300 ease-out motion-reduce:transition-none",
-                active ? "text-fg" : "text-fg-subtle"
+                active ? "text-fg" : "text-fg-subtle",
               )}
             >
               {String(i + 1).padStart(2, "0")}
@@ -390,7 +368,7 @@ export function ModalSteps({
               className={cn(
                 "shrink-0 text-caption-2-semibold",
                 "transition-colors duration-300 ease-out motion-reduce:transition-none",
-                active ? "text-fg" : "text-fg-subtle"
+                active ? "text-fg" : "text-fg-subtle",
               )}
             >
               {label}
@@ -408,7 +386,7 @@ export function ModalSteps({
                   className={cn(
                     "block h-full w-full origin-left bg-fg",
                     "transition-transform duration-500 ease-out motion-reduce:transition-none",
-                    i < current ? "scale-x-100" : "scale-x-0"
+                    i < current ? "scale-x-100" : "scale-x-0",
                   )}
                 />
               </span>

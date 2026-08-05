@@ -47,7 +47,7 @@ export const switchTrackVariants = cva(
       },
     },
     defaultVariants: { size: "sm" },
-  }
+  },
 );
 
 export const switchThumbVariants = cva(
@@ -70,7 +70,7 @@ export const switchThumbVariants = cva(
       },
     },
     defaultVariants: { size: "sm" },
-  }
+  },
 );
 
 export type SwitchVariantProps = VariantProps<typeof switchTrackVariants>;

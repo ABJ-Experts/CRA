@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  Select,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectSeparator,
-} from "@repo/ui/select";
+import { Select, SelectGroup, SelectItem, SelectLabel, SelectSeparator } from "@repo/ui/select";
 import { Globe, MapPin } from "lucide-react";
 import { useState } from "react";
 

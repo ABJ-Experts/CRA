@@ -48,7 +48,7 @@ export function useZodForm<TSchema extends z.ZodType<FieldValues>>(
   schema: TSchema,
   options?: Omit<UseFormProps<z.infer<TSchema>>, "resolver"> & {
     defaultValues?: DefaultValues<z.infer<TSchema>>;
-  }
+  },
 ): UseFormReturn<z.infer<TSchema>> {
   return useReactHookForm<z.infer<TSchema>>({
     resolver: zodResolver(schema as never),
@@ -58,8 +58,10 @@ export function useZodForm<TSchema extends z.ZodType<FieldValues>>(
   });
 }
 
-export interface FormProps<TValues extends FieldValues>
-  extends Omit<ComponentProps<"form">, "onSubmit"> {
+export interface FormProps<TValues extends FieldValues> extends Omit<
+  ComponentProps<"form">,
+  "onSubmit"
+> {
   form: UseFormReturn<TValues>;
   /** Called with parsed, type-safe values only when validation passes. */
   onSubmit: SubmitHandler<TValues>;
@@ -104,10 +106,7 @@ export interface FormFieldRenderArgs<
   isSubmitting: boolean;
 }
 
-export interface FormFieldProps<
-  TValues extends FieldValues,
-  TName extends FieldPath<TValues>,
-> {
+export interface FormFieldProps<TValues extends FieldValues, TName extends FieldPath<TValues>> {
   name: TName;
   render: (args: FormFieldRenderArgs<TValues, TName>) => ReactNode;
 }
@@ -169,7 +168,7 @@ export function FormErrorSummary<TValues extends FieldValues>({
       className={cn(
         "flex flex-col gap-1 rounded-xl bg-danger-surface p-3",
         "text-caption-1-regular text-danger-fg",
-        className
+        className,
       )}
     >
       <p className="text-caption-1-semibold">{title}</p>
