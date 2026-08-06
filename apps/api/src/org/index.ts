@@ -4,6 +4,7 @@ export {
   getOrganisation,
   listMemberships,
   updateOnboardingState,
+  advanceOnboardingStateInTx,
   coordinatingCsirtForCountry,
   type CreateOrganisationInput,
   type MembershipView,

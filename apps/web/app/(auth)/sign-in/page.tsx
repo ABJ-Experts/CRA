@@ -6,8 +6,8 @@ import { Form, FormErrorSummary, FormField, useZodForm } from "@repo/ui/form";
 import { Input, PasswordInput } from "@repo/ui/input";
 import { AtSign } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useState } from "react";
 import { z } from "zod";
 import { signIn } from "../_components/auth-actions";
 import { AuthDivider, AuthTitle } from "../_components/auth-chrome";
@@ -30,9 +30,15 @@ const schema = z.object({
 
 type Values = z.infer<typeof schema>;
 
-export default function SignInPage() {
+function SignInForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [formError, setFormError] = useState<string | null>(null);
+  const nativeFormError =
+    searchParams.get("error") === "invalid_credentials"
+      ? "That email and password do not match."
+      : null;
+  const visibleError = formError ?? nativeFormError;
 
   const form = useZodForm(schema, {
     defaultValues: { identifier: "", password: "", remember: true },
@@ -45,6 +51,8 @@ export default function SignInPage() {
       <Form
         form={form}
         className="gap-6"
+        method="post"
+        action="/api/auth/sign-in"
         onSubmit={async (values) => {
           setFormError(null);
           const result = await signIn(values);
@@ -62,13 +70,13 @@ export default function SignInPage() {
         }}
         data-testid="sign-in-form"
       >
-        {formError ? (
+        {visibleError ? (
           <p
             role="alert"
             className="rounded-xl bg-danger-surface p-3 text-caption-1-regular text-danger-fg"
             data-testid="sign-in-error"
           >
-            {formError}
+            {visibleError}
           </p>
         ) : null}
 
@@ -148,5 +156,13 @@ export default function SignInPage() {
         <SocialButtons action="Sign In" disabled={form.formState.isSubmitting} />
       </Form>
     </div>
+  );
+}
+
+export default function SignInPage() {
+  return (
+    <Suspense fallback={null}>
+      <SignInForm />
+    </Suspense>
   );
 }

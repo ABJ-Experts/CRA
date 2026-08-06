@@ -57,6 +57,10 @@ describe('FR-PROD-001/002 — product registry', () => {
     });
     expect(p.lifecycleState).toBe('development');
     expect(p.version).toBe(1);
+    const organisation = await getOrganisation(orgId);
+    expect(organisation?.onboardingState).toMatchObject({
+      step: 'product_created',
+    });
   });
 
   it('rejects a duplicate internal code within the org (conflict)', async () => {

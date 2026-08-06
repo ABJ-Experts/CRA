@@ -41,7 +41,7 @@ type CreateReleaseDto = z.infer<typeof createReleaseSchema>;
 const ingestSchema = z.object({
   // Raw SBOM document as a string (CycloneDX/SPDX JSON). Stored byte-exact.
   document: z.string().min(1),
-  source: z.string().optional(),
+  source: z.string().min(1).max(100).optional(),
 });
 type IngestDto = z.infer<typeof ingestSchema>;
 
@@ -94,11 +94,13 @@ export class SbomController {
       this.storage,
       dto.source,
     );
-    const match = await matchRelease(
-      p.organisationId,
-      p.userAccountId,
-      releaseId,
-    );
+    // Invalid originals are retained and reported (FR-SBOM-004), but there is
+    // no valid component set to match. Returning zero findings keeps the one
+    // canonical pipeline useful to browser/API/CI callers alike.
+    const match =
+      ingest.validationStatus === 'invalid'
+        ? { findingsCreated: 0, kevFindings: 0 }
+        : await matchRelease(p.organisationId, p.userAccountId, releaseId);
     return { ingest, match };
   }
 }

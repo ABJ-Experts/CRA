@@ -7,6 +7,7 @@ import {
   userAccount,
   withTenant,
   withUserLookup,
+  type Tx,
 } from '../db';
 import { recordAuditInTx } from '../audit';
 
@@ -30,6 +31,44 @@ export interface CreateOrganisationInput {
   legalName: string;
   countryMainEstablishment: string;
   registeredAddress?: string;
+}
+
+type OnboardingStep =
+  'organisation_created' | 'product_created' | 'sbom_uploaded';
+
+const ONBOARDING_ORDER: Record<OnboardingStep, number> = {
+  organisation_created: 1,
+  product_created: 2,
+  sbom_uploaded: 3,
+};
+
+/** Advances the wizard only inside the command transaction that earned the step. */
+export async function advanceOnboardingStateInTx(
+  tx: Tx,
+  organisationId: string,
+  userAccountId: string,
+  next: OnboardingStep,
+  metadata: Record<string, string>,
+): Promise<void> {
+  const [current] = await tx
+    .select({ onboardingState: organisation.onboardingState })
+    .from(organisation)
+    .where(eq(organisation.id, organisationId))
+    .limit(1);
+  const currentStep = (
+    current?.onboardingState as { step?: OnboardingStep } | undefined
+  )?.step;
+  if (currentStep && ONBOARDING_ORDER[currentStep] >= ONBOARDING_ORDER[next])
+    return;
+
+  await tx
+    .update(organisation)
+    .set({
+      onboardingState: { step: next, ...metadata },
+      updatedBy: userAccountId,
+      updatedAt: new Date(),
+    })
+    .where(eq(organisation.id, organisationId));
 }
 
 /**

@@ -20,6 +20,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/health/live": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["HealthController_live"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/health/ready": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["HealthController_ready"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/identity/current": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["IdentityController_current"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/obligations": {
         parameters: {
             query?: never;
@@ -375,6 +423,13 @@ export interface components {
             roleKey: string;
             roleName: string;
         }[];
+        Principal: {
+            /** Format: uuid */
+            organisationId: string;
+            roleKey: string;
+            permissions: string[];
+            mfaSatisfied: boolean;
+        };
         CreatedResource: {
             /** Format: uuid */
             id: string;
@@ -483,6 +538,11 @@ export interface components {
             findingId: string | null;
             /** Format: uuid */
             productReleaseId: string | null;
+            /** @enum {string|null} */
+            nextStage: "early_warning" | "notification" | "final_report" | null;
+            /** Format: date-time */
+            nextDueAt: string | null;
+            overdue: boolean;
             /** Format: date-time */
             createdAt: string;
         };
@@ -558,6 +618,10 @@ export interface components {
             /** Format: date-time */
             generatedAt: string;
         };
+        Health: {
+            /** @enum {string} */
+            status: "ok";
+        };
         ProblemDetails: {
             type: string;
             title: string;
@@ -588,6 +652,63 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    HealthController_live: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Health"];
+                };
+            };
+        };
+    };
+    HealthController_ready: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Health"];
+                };
+            };
+        };
+    };
+    IdentityController_current: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Principal"];
+                };
             };
         };
     };
@@ -961,6 +1082,7 @@ export interface operations {
             content: {
                 "application/json": {
                     document: string;
+                    source?: string;
                 };
             };
         };

@@ -32,6 +32,8 @@ import { AnalyticsModule } from './analytics/analytics.module';
 import { AnalyticsController } from './analytics/analytics.controller';
 import { IntegrationModule } from './integration/integration.module';
 import { AiModule } from './ai/ai.module';
+import { IdentityController } from './identity/identity.controller';
+import { HealthController, HealthService } from './health';
 
 @Module({
   imports: [
@@ -50,9 +52,10 @@ import { AiModule } from './ai/ai.module';
     IntegrationModule,
     AiModule,
   ],
-  controllers: [AppController],
+  controllers: [AppController, HealthController, IdentityController],
   providers: [
     AppService,
+    HealthService,
     // FR-IAM-002: authorisation enforced globally on every request.
     { provide: APP_GUARD, useClass: PermissionGuard },
     // RFC 9457 Problem Details for every error (SEC-015: no internal leaks).
@@ -72,6 +75,7 @@ export class AppModule implements NestModule {
         ObligationController,
         AnalyticsController,
         EvidenceController,
+        IdentityController,
       );
   }
 }

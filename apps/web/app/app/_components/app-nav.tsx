@@ -1,4 +1,4 @@
-import { LayoutGrid, Package, ShieldAlert } from "lucide-react";
+import { LayoutGrid, Package, ShieldAlert, Clock3 } from "lucide-react";
 import type { NavSection } from "../../_components/sidebar/nav-config";
 
 /**
@@ -17,6 +17,7 @@ export const APP_NAV: NavSection[] = [
       { label: "Dashboard", icon: LayoutGrid, href: "/app/dashboard" },
       { label: "Products", icon: Package, href: "/app/products" },
       { label: "Findings", icon: ShieldAlert, href: "/app/findings" },
+      { label: "Obligations", icon: Clock3, href: "/app/obligations" },
     ],
   },
 ];

@@ -75,19 +75,67 @@ export interface ProductRow {
   version: number;
 }
 
+export interface ReleaseRow {
+  id: string;
+  productId: string;
+  versionLabel: string;
+  lifecycleState: string;
+  sbomCount: number;
+  createdAt: string;
+}
+
+export interface PrincipalData {
+  organisationId: string;
+  roleKey: string;
+  permissions: string[];
+  mfaSatisfied: boolean;
+}
+
+export interface OrganisationData {
+  id: string;
+  legalName: string;
+  countryMainEstablishment: string;
+  coordinatingCsirt: string | null;
+  onboardingState: { step?: string; productId?: string; productReleaseId?: string };
+}
+
 export interface FindingRow {
   id: string;
-  severity?: string | null;
-  state?: string | null;
-  vexStatus?: string | null;
-  advisoryId?: string | null;
-  kev?: boolean | null;
-  matchReason?: string | null;
-  matchConfidence?: number | null;
+  advisoryId: string;
+  matchMethod: string;
+  matchConfidence: number;
+  cvssBase: number | null;
+  kevListed: boolean;
+  vexStatus: string;
+  vexJustification: string | null;
+  state: string;
+  lowConfidence: boolean;
+  falsePositiveReason: string | null;
+  version: number;
 }
 
 export interface FindingPageData {
   items: FindingRow[];
   nextCursor: string | null;
   hasMore: boolean;
+}
+
+export interface ObligationRow {
+  id: string;
+  obligationType: string;
+  state: string;
+  awarenessAt: string;
+  findingId: string | null;
+  productReleaseId: string | null;
+  nextStage: string | null;
+  nextDueAt: string | null;
+  overdue: boolean;
+  createdAt: string;
+}
+
+export interface ObligationStageRow {
+  stage: string;
+  anchorEvent: string;
+  dueAt: string | null;
+  state: string;
 }

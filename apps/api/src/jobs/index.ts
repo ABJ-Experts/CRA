@@ -21,6 +21,7 @@ export {
   assertEnvelope,
   enqueue,
   enqueueOnce,
+  redis,
   queue,
   queueMetrics,
   replayDeadLettered,

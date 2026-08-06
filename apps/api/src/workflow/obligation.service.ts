@@ -146,6 +146,9 @@ export interface ObligationView {
   awarenessAt: string;
   findingId: string | null;
   productReleaseId: string | null;
+  nextStage: string | null;
+  nextDueAt: string | null;
+  overdue: boolean;
   createdAt: string;
 }
 
@@ -157,7 +160,9 @@ export async function listObligations(
       .select()
       .from(reportingObligation)
       .orderBy(desc(reportingObligation.createdAt));
+    const stages = await tx.select().from(obligationStage);
     return rows.map((r) => ({
+      ...nearestStage(stages.filter((stage) => stage.obligationId === r.id)),
       id: r.id,
       obligationType: r.obligationType,
       state: r.state,
@@ -167,6 +172,27 @@ export async function listObligations(
       createdAt: r.createdAt.toISOString(),
     }));
   });
+}
+
+function nearestStage(
+  stages: Array<typeof obligationStage.$inferSelect>,
+): Pick<ObligationView, 'nextStage' | 'nextDueAt' | 'overdue'> {
+  const dueStages = stages
+    .filter(
+      (stage) =>
+        stage.dueAt !== null &&
+        (stage.state === 'running' || stage.state === 'overdue'),
+    )
+    .sort((a, b) => a.dueAt!.getTime() - b.dueAt!.getTime());
+  const nearest = dueStages[0];
+  if (!nearest?.dueAt) {
+    return { nextStage: null, nextDueAt: null, overdue: false };
+  }
+  return {
+    nextStage: nearest.stage,
+    nextDueAt: nearest.dueAt.toISOString(),
+    overdue: nearest.state === 'overdue',
+  };
 }
 
 export interface StageView {

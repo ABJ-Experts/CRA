@@ -2,6 +2,7 @@ import { and, eq, ilike, isNull, type SQL } from 'drizzle-orm';
 import { uuidv7 } from 'uuidv7';
 import { product, withTenant } from '../db';
 import { recordAuditInTx } from '../audit';
+import { advanceOnboardingStateInTx } from '../org';
 
 export type LifecycleState =
   | 'development'
@@ -119,6 +120,15 @@ export async function createProduct(
       resourceId: id,
       afterState: { name: input.name, internalCode: input.internalCode },
     });
+    await advanceOnboardingStateInTx(
+      tx,
+      organisationId,
+      userAccountId,
+      'product_created',
+      {
+        productId: id,
+      },
+    );
     // A single-row INSERT ... RETURNING always yields a row; anything else means
     // the audit event above describes a product that was never written.
     if (!row) throw new Error('product insert returned no row');

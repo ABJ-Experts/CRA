@@ -16,6 +16,8 @@ import { TriageController } from '../triage/triage.controller';
 import { ObligationController } from '../workflow/obligation.controller';
 import { AnalyticsController } from '../analytics/analytics.controller';
 import { EvidenceController } from '../evidence/evidence.controller';
+import { IdentityController } from '../identity/identity.controller';
+import { HealthController } from '../health';
 import { PERMISSIONS_KEY, PUBLIC_KEY, AUTH_ONLY_KEY } from '../common';
 import { closeDb } from '../db';
 
@@ -78,6 +80,8 @@ describe('FR-IAM-001 — every route declares a permission (or @Public/@RequireA
     ObligationController,
     AnalyticsController,
     EvidenceController,
+    IdentityController,
+    HealthController,
   ];
 
   it('no controller has an undeclared route', () => {
@@ -89,6 +93,17 @@ describe('FR-IAM-001 — every route declares a permission (or @Public/@RequireA
 });
 
 describe('product HTTP pipeline', () => {
+  it('exposes public liveness and dependency-aware readiness', async () => {
+    await request(app.getHttpServer())
+      .get('/health/live')
+      .expect(200)
+      .expect({ status: 'ok' });
+    await request(app.getHttpServer())
+      .get('/health/ready')
+      .expect(200)
+      .expect({ status: 'ok' });
+  });
+
   it('401 without a token', async () => {
     await request(app.getHttpServer())
       .get('/products')
@@ -104,6 +119,14 @@ describe('product HTTP pipeline', () => {
       .expect(201);
     orgId = (res.body as { id: string }).id;
     expect(orgId).toBeTruthy();
+    const current = await request(app.getHttpServer())
+      .get('/organisations/current')
+      .set('authorization', bearer(OWNER, 'owner@http.test'))
+      .set('x-organisation-id', orgId)
+      .expect(200);
+    expect(current.body).toMatchObject({
+      onboardingState: { step: 'organisation_created' },
+    });
   });
 
   it('owner can create and list products', async () => {
@@ -122,6 +145,27 @@ describe('product HTTP pipeline', () => {
     expect(
       (list.body as { internalCode: string }[]).map((p) => p.internalCode),
     ).toContain('R1');
+  });
+
+  it('returns active-principal capabilities for permission-gated UI', async () => {
+    const res = await request(app.getHttpServer())
+      .get('/identity/current')
+      .set('authorization', bearer(OWNER, 'owner@http.test'))
+      .set('x-organisation-id', orgId)
+      .expect(200);
+
+    const capabilities = res.body as {
+      organisationId: string;
+      roleKey: string;
+      mfaSatisfied: boolean;
+      permissions: string[];
+    };
+    expect(capabilities).toMatchObject({
+      organisationId: orgId,
+      roleKey: 'owner',
+      mfaSatisfied: true,
+    });
+    expect(capabilities.permissions).toContain('product:create');
   });
 
   it('an exec member is forbidden from creating a product (403)', async () => {

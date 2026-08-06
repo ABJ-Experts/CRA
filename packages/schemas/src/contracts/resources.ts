@@ -54,6 +54,14 @@ export const membershipResponse = z.object({
 
 export const membershipListResponse = z.array(membershipResponse);
 
+/** The active tenant principal, used by the UI only to present permitted actions. */
+export const principalResponse = z.object({
+  organisationId: uuid,
+  roleKey: z.string(),
+  permissions: z.array(z.string()),
+  mfaSatisfied: z.boolean(),
+});
+
 /**
  * A create endpoint that returns only the new id.
  *
@@ -120,6 +128,8 @@ export const releaseListQuery = z.object({
 export const uploadSbomRequest = z.object({
   /** The raw CycloneDX or SPDX document. Persisted byte-exact (FR-SBOM-003). */
   document: z.string().min(1),
+  /** Caller provenance (browser upload, CI, or integration); persisted with the evidence. */
+  source: z.string().min(1).max(100).optional(),
 });
 
 export const sbomIngestResponse = z.object({
@@ -204,16 +214,16 @@ export const obligationResponse = z.object({
   awarenessAt: isoDateTime,
   findingId: uuid.nullable(),
   productReleaseId: uuid.nullable(),
+  /** Nearest running stage, computed server-side to avoid an N+1 UI query. */
+  nextStage: obligationStage.nullable(),
+  nextDueAt: isoDateTime.nullable(),
+  overdue: z.boolean(),
   createdAt: isoDateTime,
 });
 
 export const obligationStageResponse = z.object({
   stage: obligationStage,
-  anchorEvent: z.enum([
-    "awareness",
-    "remediation_available",
-    "notification_submitted",
-  ]),
+  anchorEvent: z.enum(["awareness", "remediation_available", "notification_submitted"]),
   /** Null while the stage is pending_anchor — the anchor has not happened yet. */
   dueAt: isoDateTime.nullable(),
   state: obligationStageState,
@@ -227,11 +237,7 @@ export const openObligationRequest = z.object({
 });
 
 export const recordAnchorRequest = z.object({
-  anchor: z.enum([
-    "awareness",
-    "remediation_available",
-    "notification_submitted",
-  ]),
+  anchor: z.enum(["awareness", "remediation_available", "notification_submitted"]),
   at: isoDateTime,
   /** FR-RPT-003: changing awareness_at requires a reason and re-anchors everything. */
   reason: z.string().optional(),
@@ -310,10 +316,13 @@ export const dashboardResponse = z.object({
   generatedAt: isoDateTime,
 });
 
+export const healthResponse = z.object({ status: z.literal("ok") });
+
 // Inferred types, so a consumer that already has the package does not need to
 // round-trip through the generated client for a simple prop type.
 export type OrganisationResponse = z.infer<typeof organisationResponse>;
 export type MembershipResponse = z.infer<typeof membershipResponse>;
+export type PrincipalResponse = z.infer<typeof principalResponse>;
 export type ProductResponse = z.infer<typeof productResponse>;
 export type ReleaseResponse = z.infer<typeof releaseResponse>;
 export type SbomIngestResponse = z.infer<typeof sbomIngestResponse>;
@@ -322,6 +331,5 @@ export type ObligationResponse = z.infer<typeof obligationResponse>;
 export type ObligationStageResponse = z.infer<typeof obligationStageResponse>;
 export type EvidenceResponse = z.infer<typeof evidenceResponse>;
 export type DashboardResponse = z.infer<typeof dashboardResponse>;
-export type FalsePositiveRateResponse = z.infer<
-  typeof falsePositiveRateResponse
->;
+export type FalsePositiveRateResponse = z.infer<typeof falsePositiveRateResponse>;
+export type HealthResponse = z.infer<typeof healthResponse>;

@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { readSession } from "../../lib/session";
 import { OrgPicker, type Membership } from "./org-picker";
+import { CreateOrganisationForm } from "./create-organisation-form";
 
 /**
  * Post-sign-in organisation picker.
@@ -17,13 +18,10 @@ import { OrgPicker, type Membership } from "./org-picker";
 export const dynamic = "force-dynamic";
 
 async function fetchMemberships(accessToken: string): Promise<Membership[]> {
-  const res = await fetch(
-    `${process.env.API_URL ?? "http://127.0.0.1:3333"}/organisations`,
-    {
-      headers: { authorization: `Bearer ${accessToken}` },
-      cache: "no-store",
-    },
-  );
+  const res = await fetch(`${process.env.API_URL ?? "http://127.0.0.1:3333"}/organisations`, {
+    headers: { authorization: `Bearer ${accessToken}` },
+    cache: "no-store",
+  });
   if (!res.ok) return [];
   return (await res.json()) as Membership[];
 }
@@ -46,27 +44,18 @@ export default async function SelectOrganisationPage() {
         <div className="mt-6 rounded-md border p-4 text-sm">
           <p className="font-medium">You are not a member of any organisation.</p>
           <p className="mt-2 opacity-70">
-            Create one to get started — whoever creates an organisation becomes
-            its owner. There is no self-serve invite flow yet, so additional
-            members are added directly in the database.
+            Create one to get started — whoever creates an organisation becomes its owner.
           </p>
         </div>
       ) : (
         <>
           <p className="mt-1 text-sm opacity-70">
-            Your role differs per organisation, so this also decides what you can
-            do.
+            Your role differs per organisation, so this also decides what you can do.
           </p>
           <OrgPicker memberships={memberships} />
         </>
       )}
-      {memberships.length === 0 && (
-        <p className="mt-4 text-sm">
-          <a className="underline" href="/sign-in">
-            Back to sign in
-          </a>
-        </p>
-      )}
+      {memberships.length === 0 && <CreateOrganisationForm />}
     </main>
   );
 }

@@ -5,7 +5,7 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { eq } from 'drizzle-orm';
 import { uuidv7 } from 'uuidv7';
 import { ensureUserAccount } from '../identity';
-import { createOrganisation } from '../org';
+import { createOrganisation, getOrganisation } from '../org';
 import { createProduct } from '../product';
 import { createRelease, ingestSbom, rawSbomKey } from './sbom.service';
 import { InMemoryStorageProvider } from '../storage';
@@ -95,6 +95,10 @@ describe('FR-SBOM-002/007 — ingest + normalise', () => {
     expect(result.componentCount).toBe(3);
     expect(result.deduplicated).toBe(false);
     docId = result.sbomDocumentId;
+    const organisation = await getOrganisation(orgId);
+    expect(organisation?.onboardingState).toMatchObject({
+      step: 'sbom_uploaded',
+    });
 
     const components = await withTenant({ organisationId: orgId }, (tx) =>
       tx

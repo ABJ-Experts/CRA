@@ -16,6 +16,7 @@ import {
   openObligation,
   recordAnchor,
   listStages,
+  listObligations,
   tickObligations,
 } from './obligation.service';
 import { verifyAuditChain } from '../audit';
@@ -100,6 +101,13 @@ describe('FR-VULN-011 — open obligation from a KEV finding', () => {
     // FR-RPT-006: final report waits for remediation, no date yet.
     expect(final?.state).toBe('pending_anchor');
     expect(final?.dueAt).toBeNull();
+    const [summary] = await listObligations(orgId);
+    expect(summary).toMatchObject({
+      id: obligationId,
+      nextStage: 'early_warning',
+      nextDueAt: '2026-04-15T09:20:00.000Z',
+      overdue: false,
+    });
   });
 
   it('§11.1 — recording remediation recomputes the final report to remediation+14d', async () => {

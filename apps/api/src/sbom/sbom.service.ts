@@ -5,6 +5,7 @@ import { detectFormat, parseSbom, type ParsedSbom } from '@repo/sbom-core';
 import { productRelease, sbomComponent, sbomDocument, withTenant } from '../db';
 import { recordAuditInTx } from '../audit';
 import { DomainError } from '../product';
+import { advanceOnboardingStateInTx } from '../org';
 import type { StorageProvider } from '../storage';
 
 /**
@@ -129,7 +130,12 @@ export async function ingestSbom(
   // Write bytes first: an orphaned object is harmless, an orphaned row is not.
   // This runs for invalid documents too — FR-SBOM-004 stores and reports them,
   // never quietly drops them, and the original is what an authority would ask for.
-  await storage.put(rawObjectKey, Buffer.from(raw, 'utf8'), 'application/json');
+  const contentType = raw.trimStart().startsWith('<')
+    ? 'application/xml'
+    : raw.trimStart().startsWith('SPDXVersion:')
+      ? 'text/plain'
+      : 'application/json';
+  await storage.put(rawObjectKey, Buffer.from(raw, 'utf8'), contentType);
 
   return withTenant({ organisationId, userId: userAccountId }, async (tx) => {
     const [rel] = await tx
@@ -154,6 +160,18 @@ export async function ingestSbom(
       )
       .limit(1);
     if (existing) {
+      if (existing.validationStatus !== 'invalid') {
+        await advanceOnboardingStateInTx(
+          tx,
+          organisationId,
+          userAccountId,
+          'sbom_uploaded',
+          {
+            productReleaseId,
+            sbomDocumentId: existing.id,
+          },
+        );
+      }
       return {
         sbomDocumentId: existing.id,
         validationStatus:
@@ -225,6 +243,18 @@ export async function ingestSbom(
         validationStatus,
       },
     });
+    if (validationStatus !== 'invalid') {
+      await advanceOnboardingStateInTx(
+        tx,
+        organisationId,
+        userAccountId,
+        'sbom_uploaded',
+        {
+          productReleaseId,
+          sbomDocumentId: docId,
+        },
+      );
+    }
 
     return {
       sbomDocumentId: docId,
