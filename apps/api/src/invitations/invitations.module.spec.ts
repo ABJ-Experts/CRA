@@ -70,9 +70,9 @@ describe("InvitationsModule composition", () => {
     const audit = {} as AuditService;
     const provider = factoryFor(InvitationsService);
 
-    expect(provider.useFactory(create, accept, revoke, list, audit)).toBeInstanceOf(
-      InvitationsService,
-    );
+    expect(
+      provider.useFactory(create, accept, revoke, list, audit),
+    ).toBeInstanceOf(InvitationsService);
     expect(provider.inject).toEqual([
       CreateInvitationUseCase,
       AcceptInvitationUseCase,
