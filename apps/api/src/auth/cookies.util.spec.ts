@@ -7,6 +7,7 @@ import {
   REMEMBER_ME_COOKIE_PATH,
   REFRESH_COOKIE,
   REFRESH_COOKIE_PATH,
+  SESSION_MARKER_COOKIE,
   clearSessionCookies,
   readRememberMeCookie,
   setSessionCookies,
@@ -131,6 +132,36 @@ describe("cookie contract", () => {
     ).toBe(false);
   });
 
+  it("sets a root-path routing marker for the refresh-session lifetime", () => {
+    const persistent = fakeResponse();
+    setSessionCookies(
+      persistent as never,
+      { access_token: "a", refresh_token: "r" },
+      cfg,
+      { rememberMe: true },
+    );
+    const marker = persistent.set.find(
+      (cookie) => cookie.name === SESSION_MARKER_COOKIE,
+    );
+    expect(marker?.options).toMatchObject({
+      httpOnly: true,
+      path: "/",
+      maxAge: cfg.refreshMaxAge * 1000,
+    });
+    expect(marker?.value).not.toContain("r");
+
+    const sessionOnly = fakeResponse();
+    setSessionCookies(
+      sessionOnly as never,
+      { access_token: "a", refresh_token: "r" },
+      cfg,
+    );
+    expect(
+      sessionOnly.set.find((cookie) => cookie.name === SESSION_MARKER_COOKIE)
+        ?.options,
+    ).not.toHaveProperty("maxAge");
+  });
+
   it("omits domain entirely when blank", () => {
     // `domain: 'localhost'` is rejected by some browsers and the cookie is
     // dropped with no error, so blank must mean absent, not empty-string.
@@ -178,6 +209,7 @@ describe("cookie contract", () => {
     expect(byName[ACCESS_COOKIE]).toBe("/");
     expect(byName[REFRESH_COOKIE]).toBe(REFRESH_COOKIE_PATH);
     expect(byName[REMEMBER_ME_COOKIE]).toBe(REMEMBER_ME_COOKIE_PATH);
+    expect(byName[SESSION_MARKER_COOKIE]).toBe("/");
     expect(byName[PENDING_COOKIE]).toBe("/");
     expect(byName[MFA_COOKIE]).toBe("/");
   });

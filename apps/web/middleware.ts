@@ -35,6 +35,7 @@ const AUTH_PAGES = [
 const AUTH_FLOW_EXCEPTIONS = ["/verify", "/two-factor", "/lock", "/success"];
 
 const ACCESS_COOKIE = "cra_at";
+const SESSION_MARKER_COOKIE = "cra_session";
 const PENDING_COOKIE = "cra_pending";
 const MFA_COOKIE = "cra_mfa";
 
@@ -79,7 +80,7 @@ const jwks = createRemoteJWKSet(
   new URL(`${SUPABASE_URL}/auth/v1/.well-known/jwks.json`),
 );
 
-type TokenState = "valid" | "expired" | "invalid" | "absent";
+export type TokenState = "valid" | "expired" | "invalid" | "absent";
 
 async function inspect(token: string | undefined): Promise<TokenState> {
   if (!token) return "absent";
@@ -165,6 +166,17 @@ export function createRefreshTarget(request: NextRequest): URL {
   return target;
 }
 
+export function shouldAttemptRefresh(
+  isProtected: boolean,
+  state: TokenState,
+  hasSessionMarker: boolean,
+): boolean {
+  return (
+    isProtected &&
+    (state === "expired" || (state === "absent" && hasSessionMarker))
+  );
+}
+
 export async function middleware(request: NextRequest): Promise<NextResponse> {
   const { pathname, search } = request.nextUrl;
 
@@ -174,13 +186,15 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
   const isAuthPage = startsWithAny(pathname, AUTH_PAGES);
   const token = request.cookies.get(ACCESS_COOKIE)?.value;
   const state = await inspect(token);
+  const hasSessionMarker = request.cookies.has(SESSION_MARKER_COOKIE);
 
-  // 1. Expired on a protected page -> let the backend rotate the pair.
+  // 1. Expired access, or an expired-away access cookie with a refresh-session
+  //    marker, on a protected page -> let the backend rotate the pair.
   //    ONLY navigations are bounced. Redirecting an XHR to another origin
   //    surfaces in the browser as an opaque CORS TypeError rather than a 401,
   //    so the caller never learns it needs to refresh and the request is simply
   //    lost. `/api/v1` is excluded by the matcher below for the same reason.
-  if (isProtected && (state === "expired" || state === "absent") && token) {
+  if (shouldAttemptRefresh(isProtected, state, hasSessionMarker)) {
     return NextResponse.redirect(createRefreshTarget(request));
   }
 
