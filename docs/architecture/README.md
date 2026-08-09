@@ -87,6 +87,23 @@ Developers and coding agents must also follow the
 rules live in the root `AGENTS.md`; the detailed documents explain their
 rationale and must not weaken them.
 
+## Evolution and rollback
+
+Architecture changes use expand/deploy/contract sequencing. Add compatible
+ports, adapters, RPCs, tables, and columns first; prove both the current and new
+application versions against that expanded surface; deploy the new path; then
+remove compatibility code in a later release. A schema being additive does not
+make it disposable: keep it while any supported instance can call it.
+
+Security state moves forward only. Rollback may restore an earlier application
+adapter, but it must never unconsume a one-time credential, move
+`session_epoch_at` backward, or erase a failed saga to hide an incomplete
+effect. Cross-system work must expose a durable state and a retry or
+reconciliation path before it is considered complete. The infrastructure
+[deployment runbook](../../apps/infrastructure/README.md#atomic-identity-workflow-deployment)
+defines the exact release order and validation matrix for the identity
+workflows.
+
 ## Verification
 
 Architecture documents are executable policy:
