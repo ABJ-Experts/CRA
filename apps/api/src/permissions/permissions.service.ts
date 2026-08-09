@@ -12,28 +12,40 @@ import type {
 } from "@repo/contracts/permissions";
 import { hasAllPermissions, hasPermission } from "@repo/contracts/permissions";
 
+import type { SupabaseService } from "../supabase/supabase.service";
 import { BasePermissionResolver } from "./application/base-permission-resolver";
 import { PermissionDataUnavailableError } from "./application/permission-data.port";
 import { VersionedPermissionResolver } from "./application/versioned-permission-resolver.proxy";
 import { SupabasePermissionDataAdapter } from "./infrastructure/supabase-permission-data.adapter";
 
+export type PermissionResolverDependency = Pick<
+  VersionedPermissionResolver,
+  "resolve" | "effectivePermissions"
+>;
+
+export type PermissionsServiceDependency =
+  PermissionResolverDependency | SupabaseService;
+
+export function isPermissionResolverDependency(
+  dependency: PermissionsServiceDependency,
+): dependency is PermissionResolverDependency {
+  const candidate = dependency as Partial<PermissionResolverDependency>;
+  return (
+    typeof candidate.resolve === "function" &&
+    typeof candidate.effectivePermissions === "function"
+  );
+}
+
 /** Stable compatibility facade for controllers and guards. */
 @Injectable()
 export class PermissionsService {
-  private readonly resolver: VersionedPermissionResolver;
+  private readonly resolver: PermissionResolverDependency;
 
   constructor(
     @Inject(VersionedPermissionResolver)
-    dependency:
-      | VersionedPermissionResolver
-      | ConstructorParameters<typeof SupabasePermissionDataAdapter>[0],
+    dependency: PermissionsServiceDependency,
   ) {
-    if (
-      "resolve" in dependency &&
-      typeof dependency.resolve === "function" &&
-      "effectivePermissions" in dependency &&
-      typeof dependency.effectivePermissions === "function"
-    ) {
+    if (isPermissionResolverDependency(dependency)) {
       this.resolver = dependency;
       return;
     }
