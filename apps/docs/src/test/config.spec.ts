@@ -1,4 +1,13 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+const { postcssPlugin, tailwindPostcss } = vi.hoisted(() => ({
+  postcssPlugin: { postcssPlugin: "@tailwindcss/postcss" },
+  tailwindPostcss: vi.fn(),
+}));
+
+vi.mock("@tailwindcss/postcss", () => ({
+  default: tailwindPostcss.mockReturnValue(postcssPlugin),
+}));
 
 import config from "../../docusaurus.config";
 import sidebars from "../../sidebars";
@@ -16,8 +25,67 @@ describe("documentation configuration", () => {
     ]);
   });
 
-  it("registers the Tailwind PostCSS integration", () => {
+  it("registers the Tailwind PostCSS integration", async () => {
     expect(config.plugins).toHaveLength(1);
-    expect(config.plugins?.[0]).toBeTypeOf("function");
+    const pluginFactory = config.plugins?.[0];
+    expect(pluginFactory).toBeTypeOf("function");
+    if (typeof pluginFactory !== "function") {
+      throw new TypeError("Expected the Tailwind plugin factory");
+    }
+
+    const plugin = await pluginFactory(
+      { siteDir: "/workspace/apps/docs" } as never,
+      {} as never,
+    );
+    expect(plugin).not.toBeNull();
+    if (!plugin) {
+      throw new TypeError("Expected the Tailwind plugin");
+    }
+    const postcssOptions = { plugins: [] as unknown[] };
+    const configuredOptions = plugin.configurePostCss?.(
+      postcssOptions as never,
+    );
+
+    expect(plugin.name).toBe("docusaurus-plugin-tailwindcss");
+    expect(tailwindPostcss).toHaveBeenCalledWith({
+      base: "/workspace/apps/docs",
+    });
+    expect(configuredOptions).toBe(postcssOptions);
+    expect(postcssOptions.plugins).toEqual([postcssPlugin]);
+  });
+
+  it("keeps the navigation and footer routes aligned", () => {
+    const themeConfig = config.themeConfig as {
+      navbar?: {
+        items?: Array<{ label?: string; to?: string; href?: string }>;
+      };
+      footer?: {
+        links?: Array<{
+          items: Array<{ label?: string; to?: string; href?: string }>;
+        }>;
+      };
+    };
+    const navbarItems = themeConfig.navbar?.items ?? [];
+    const footerItems =
+      themeConfig.footer?.links?.flatMap(({ items }) => items) ?? [];
+
+    expect(navbarItems).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ label: "Blog", to: "/blog" }),
+        expect.objectContaining({
+          label: "GitHub",
+          href: "https://github.com/ABJ-Experts/CRA",
+        }),
+      ]),
+    );
+    expect(footerItems).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ label: "Blog", to: "/blog" }),
+        expect.objectContaining({
+          label: "GitHub",
+          href: "https://github.com/ABJ-Experts/CRA",
+        }),
+      ]),
+    );
   });
 });

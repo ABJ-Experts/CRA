@@ -18,6 +18,7 @@ describe("theme", () => {
     localStorage.clear();
     vi.useRealTimers();
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
   });
 
   it("publishes a pre-paint script using the shared storage key", () => {
@@ -30,6 +31,14 @@ describe("theme", () => {
     localStorage.setItem(THEME_STORAGE_KEY, "dark");
     expect(getStoredTheme()).toBe("dark");
     localStorage.setItem(THEME_STORAGE_KEY, "sepia");
+    expect(getStoredTheme()).toBe("system");
+  });
+
+  it("falls back to system mode when storage access is denied", () => {
+    vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
+      throw new DOMException("Storage is disabled", "SecurityError");
+    });
+
     expect(getStoredTheme()).toBe("system");
   });
 
@@ -59,6 +68,36 @@ describe("theme", () => {
     expect(localStorage.getItem(THEME_STORAGE_KEY)).toBeNull();
   });
 
+  it("still switches the document when storage writes fail", () => {
+    vi.useFakeTimers();
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new DOMException("Storage is disabled", "SecurityError");
+    });
+
+    applyTheme("light", document);
+
+    expect(getTheme(document)).toBe("light");
+    expect(document.documentElement.hasAttribute("data-theme-switching")).toBe(
+      true,
+    );
+    vi.runAllTimers();
+    expect(document.documentElement.hasAttribute("data-theme-switching")).toBe(
+      false,
+    );
+  });
+
+  it("is safe without a browser document or attached window", () => {
+    const detachedDocument = document.implementation.createHTMLDocument();
+
+    expect(() => applyTheme("dark", undefined)).not.toThrow();
+    applyTheme("dark", detachedDocument);
+
+    expect(getTheme(detachedDocument)).toBe("dark");
+    expect(
+      detachedDocument.documentElement.hasAttribute("data-theme-switching"),
+    ).toBe(false);
+  });
+
   it("resolves system mode from the media query and preserves explicit themes", () => {
     const matchMedia = vi.fn(() => ({
       matches: true,
@@ -68,5 +107,11 @@ describe("theme", () => {
     expect(resolveTheme("system", win)).toBe("dark");
     expect(resolveTheme("light", win)).toBe("light");
     expect(matchMedia).toHaveBeenCalledOnce();
+  });
+
+  it("uses light as the server-side system fallback", () => {
+    vi.stubGlobal("window", undefined);
+
+    expect(resolveTheme("system")).toBe("light");
   });
 });
