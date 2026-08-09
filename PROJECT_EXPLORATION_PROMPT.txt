@@ -1,0 +1,28 @@
+Perform a read-only onboarding exploration of this repository so you understand everything already implemented before I assign a new task.
+
+Start at the repository root. Read every applicable AGENTS.md, inspect Git status and worktrees, identify the current branch and merge base, and review recent commits plus the complete branch diff. Determine what was added, changed, intentionally preserved, or remains uncommitted; do not trust commit messages alone.
+
+Map the current codebase from evidence: workspace manifests, architecture/AI documents, applications, shared packages, entry points, dependency boundaries, configuration, tests, CI, and operational scripts. Trace representative critical flows end to end:
+
+functional React UI -> logic/gateway class -> web transport -> shared Zod input/output contracts -> Nest controller -> application use case/port -> infrastructure adapter -> Supabase.
+
+Pay special attention to authentication/session refresh, RBAC and tenant isolation, error handling, runtime schema parsing, compatibility constraints, and automated architecture gates. Use rg/rg --files and inspect real symbols; never infer behavior from filenames alone.
+
+Use all relevant read-only Supabase MCP capabilities. First confirm the selected project, reference, and environment match the repository. Inspect project metadata, tables, relationships, constraints, indexes, RLS policies, grants, functions/RPCs, triggers, migrations, extensions, advisors, and relevant logs. Compare the live database with local migrations, seeds, config, generated types, Zod contracts, and repository queries. Use read-only SQL only when necessary. Never expose secrets or unnecessary user data. If MCP access or project identity is unavailable, state the limitation and continue locally.
+
+Do not edit or fix anything, mutate Supabase, generate migrations, reset data, commit, push, redesign the system, or begin the next task. Preserve all existing work. Separate verified facts from inferences and cite concrete paths, symbols, and commit hashes.
+
+Finish with a compact session context pack covering:
+
+1. Branch, recent work, diff, and uncommitted state.
+2. Architecture/module map and dependency direction.
+3. What each major feature currently implements.
+4. Critical request, auth, authorization, and data flows.
+5. Zod request/response parsing boundaries.
+6. Supabase live/local alignment and confirmed drift.
+7. Security, tenant, compatibility, and scalability invariants.
+8. Test, architecture-gate, build, and operational commands.
+9. Evidence-backed incomplete work, risks, and uncertainties.
+10. Most relevant files for assigning the next task.
+
+Then stop and wait for my task. Do not propose or start implementation until explicitly asked.
