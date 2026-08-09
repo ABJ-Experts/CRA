@@ -4,9 +4,11 @@ import {
   DEFAULT_PAGE_SIZE,
   MAX_PAGE_SIZE,
   paged,
+  pagedSchema,
   parsePageParams,
   resolvePage,
 } from "./pagination.js";
+import { z } from "zod";
 
 describe("parsePageParams", () => {
   it("defaults sanely", () => {
@@ -93,5 +95,45 @@ describe("paged", () => {
       "rows",
       "total",
     ]);
+  });
+});
+
+describe("pagedSchema", () => {
+  const rowSchema = z.object({ id: z.uuid() }).strict();
+  const emptyPage = {
+    rows: [],
+    total: 0,
+    page: 1,
+    pageSize: 15,
+    pageCount: 1,
+  };
+
+  it("accepts empty and full pages", () => {
+    expect(pagedSchema(rowSchema).parse(emptyPage)).toEqual(emptyPage);
+
+    const fullPage = {
+      rows: [
+        { id: "2ad67e3b-6e5e-4cde-870f-2225e7da1202" },
+        { id: "2ad67e3b-6e5e-4cde-870f-2225e7da1203" },
+      ],
+      total: 2,
+      page: 1,
+      pageSize: 2,
+      pageCount: 1,
+    };
+    expect(pagedSchema(rowSchema).parse(fullPage)).toEqual(fullPage);
+  });
+
+  it.each([
+    { ...emptyPage, rows: [{ id: "not-a-uuid" }] },
+    { ...emptyPage, total: -1 },
+    { ...emptyPage, total: 0.5 },
+    { ...emptyPage, page: 0 },
+    { ...emptyPage, pageCount: 0 },
+    { ...emptyPage, pageSize: 0 },
+    { ...emptyPage, pageSize: 101 },
+    { ...emptyPage, unrecognized: true },
+  ])("rejects a malformed page", (value) => {
+    expect(pagedSchema(rowSchema).safeParse(value).success).toBe(false);
   });
 });

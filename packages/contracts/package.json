@@ -26,9 +26,27 @@
     "./pagination": {
       "types": "./dist/pagination.d.ts",
       "default": "./dist/pagination.js"
+    },
+    "./http": {
+      "types": "./dist/http.d.ts",
+      "default": "./dist/http.js"
+    },
+    "./users": {
+      "types": "./dist/users.d.ts",
+      "default": "./dist/users.js"
+    },
+    "./invitations": {
+      "types": "./dist/invitations.d.ts",
+      "default": "./dist/invitations.js"
+    },
+    "./roles": {
+      "types": "./dist/roles.d.ts",
+      "default": "./dist/roles.js"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "sideEffects": false,
   "scripts": {
     "build": "tsc",

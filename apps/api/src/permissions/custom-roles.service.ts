@@ -7,21 +7,13 @@ import {
 } from "@nestjs/common";
 import type { BaseRole, PermissionSet } from "@repo/contracts/permissions";
 import { sanitizePermissions } from "@repo/contracts/permissions";
+import type { CustomRole } from "@repo/contracts/roles";
 
 import { AuditService } from "../audit/audit.service";
 import { SupabaseService } from "../supabase/supabase.service";
 
-export interface CustomRoleRow {
-  id: string;
-  name: string;
-  description: string | null;
-  color: string;
-  baseRole: string;
-  permissions: PermissionSet;
-  isSystem: boolean;
-  isActive: boolean;
-  memberCount: number;
-}
+/** @deprecated Import `CustomRole` from `@repo/contracts/roles` directly. */
+export type CustomRoleRow = CustomRole;
 
 /**
  * Custom roles and the organization's base-role overrides.
@@ -64,7 +56,7 @@ export class CustomRolesService {
       name: r.name,
       description: r.description,
       color: r.color,
-      baseRole: r.base_role,
+      baseRole: r.base_role as CustomRole["baseRole"],
       permissions: sanitizePermissions(r.permissions),
       isSystem: r.is_system,
       isActive: r.is_active,

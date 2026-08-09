@@ -8,23 +8,13 @@ import {
 import type { BaseRole } from "@repo/contracts/permissions";
 import type { PageParams, Paged } from "@repo/contracts/pagination";
 import { paged, resolvePage } from "@repo/contracts/pagination";
+import type { Member } from "@repo/contracts/users";
 
 import { AuditService } from "../audit/audit.service";
 import { SupabaseService } from "../supabase/supabase.service";
 
-export interface MemberRow {
-  id: string;
-  email: string;
-  username: string | null;
-  firstName: string | null;
-  lastName: string | null;
-  avatarUrl: string | null;
-  jobTitle: string | null;
-  isActive: boolean;
-  role: string;
-  joinedAt: string;
-  roles: { id: string; name: string; color: string }[];
-}
+/** @deprecated Import `Member` from `@repo/contracts/users` directly. */
+export type MemberRow = Member;
 
 /**
  * Members of an organization.
@@ -103,7 +93,7 @@ export class UsersService {
         avatarUrl: r.users.avatar_url,
         jobTitle: r.users.job_title,
         isActive: r.users.is_active,
-        role: r.role,
+        role: r.role as Member["role"],
         joinedAt: r.created_at,
         roles: [] as { id: string; name: string; color: string }[],
       }));

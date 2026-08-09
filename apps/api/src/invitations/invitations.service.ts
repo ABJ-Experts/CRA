@@ -10,6 +10,10 @@ import {
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { normalizeEmail } from "@repo/contracts/auth";
+import type {
+  AcceptInvitationResponse,
+  Invitation,
+} from "@repo/contracts/invitations";
 import type { BaseRole } from "@repo/contracts/permissions";
 
 import { AuditService } from "../audit/audit.service";
@@ -19,12 +23,8 @@ import { SupabaseService } from "../supabase/supabase.service";
 const sha256 = (v: string): string =>
   createHash("sha256").update(v).digest("hex");
 
-export interface AcceptResult {
-  ok: true;
-  /** True when the invitation had already been accepted. Not an error. */
-  alreadyAccepted: boolean;
-  organization: { id: string; name: string; slug: string };
-}
+/** @deprecated Import `AcceptInvitationResponse` from the contracts package. */
+export type AcceptResult = AcceptInvitationResponse;
 
 /**
  * Invitations.
@@ -318,15 +318,7 @@ export class InvitationsService {
     });
   }
 
-  async list(orgId: string): Promise<
-    {
-      id: string;
-      email: string;
-      role: string;
-      status: string;
-      expiresAt: string;
-    }[]
-  > {
+  async list(orgId: string): Promise<Invitation[]> {
     // Refresh stale statuses first, so the list is honest rather than showing
     // long-dead invitations as "pending".
     await this.supabase.admin().rpc("expire_stale_invitations");
@@ -346,7 +338,7 @@ export class InvitationsService {
     return (data ?? []).map((r) => ({
       id: r.id,
       email: r.email,
-      role: r.role,
+      role: r.role as Invitation["role"],
       status: r.status,
       expiresAt: r.expires_at,
     }));
