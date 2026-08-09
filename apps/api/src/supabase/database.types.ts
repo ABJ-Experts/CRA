@@ -695,6 +695,16 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_invitation_atomic: {
+        Args: { p_email: string; p_token_hash: string; p_user_id: string }
+        Returns: {
+          invitation_id: string | null
+          organization_id: string | null
+          organization_name: string | null
+          organization_slug: string | null
+          outcome: string
+        }[]
+      }
       bump_session_epoch: { Args: { p_user_id: string }; Returns: undefined }
       clear_login_attempts: { Args: { p_email: string }; Returns: undefined }
       expire_stale_invitations: { Args: never; Returns: number }
@@ -706,6 +716,15 @@ export type Database = {
           p_lock_duration?: string
           p_max_attempts?: number
           p_window?: string
+        }
+        Returns: string
+      }
+      revoke_invitation_atomic: {
+        Args: {
+          p_actor_email: string
+          p_actor_user_id: string
+          p_invitation_id: string
+          p_organization_id: string
         }
         Returns: string
       }

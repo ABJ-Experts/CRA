@@ -313,7 +313,286 @@ $$;
 rollback;
 
 -- ---------------------------------------------------------------------------
--- 8. menu_permissions exclusive arc.
+-- 8. Atomic invitation acceptance.
+-- ---------------------------------------------------------------------------
+select pg_temp.check(
+  'atomic invitation RPC exists',
+  to_regprocedure('public.accept_invitation_atomic(text,uuid,text)') is not null
+);
+
+select pg_temp.check(
+  'atomic invitation RPC is service-role only',
+  has_function_privilege(
+    'service_role',
+    'public.accept_invitation_atomic(text,uuid,text)',
+    'EXECUTE'
+  )
+  and not has_function_privilege(
+    'anon',
+    'public.accept_invitation_atomic(text,uuid,text)',
+    'EXECUTE'
+  )
+  and not has_function_privilege(
+    'authenticated',
+    'public.accept_invitation_atomic(text,uuid,text)',
+    'EXECUTE'
+  )
+);
+
+select pg_temp.check(
+  'atomic invitation revoke RPC exists',
+  to_regprocedure(
+    'public.revoke_invitation_atomic(uuid,uuid,uuid,text)'
+  ) is not null
+);
+
+select pg_temp.check(
+  'atomic invitation revoke RPC is service-role only',
+  has_function_privilege(
+    'service_role',
+    'public.revoke_invitation_atomic(uuid,uuid,uuid,text)',
+    'EXECUTE'
+  )
+  and not has_function_privilege(
+    'anon',
+    'public.revoke_invitation_atomic(uuid,uuid,uuid,text)',
+    'EXECUTE'
+  )
+  and not has_function_privilege(
+    'authenticated',
+    'public.revoke_invitation_atomic(uuid,uuid,uuid,text)',
+    'EXECUTE'
+  )
+);
+
+begin;
+do $$
+declare
+  v_org uuid;
+  v_user uuid;
+  v_corrupt_user uuid;
+  v_owner uuid;
+  v_seeded_member uuid;
+  v_invitation uuid;
+  v_accepted_invitation uuid;
+  v_revoke_invitation uuid;
+  v_result record;
+  v_outcome text;
+begin
+  select id into v_org from public.organizations where slug = 'cra';
+  select id into v_owner from public.users where email = 'owner@cra.test';
+  select id into v_seeded_member from public.users where email = 'member@cra.test';
+  insert into public.users (email)
+  values ('atomic-invitee@cra.test')
+  returning id into v_user;
+  insert into public.users (email)
+  values ('corrupt-accepted@cra.test')
+  returning id into v_corrupt_user;
+
+  insert into public.invitations (
+    organization_id, email, role, token_hash, expires_at
+  ) values (
+    v_org, 'atomic-invitee@cra.test', 'member', repeat('a', 64),
+    now() - interval '1 minute'
+  );
+  select * into v_result
+    from public.accept_invitation_atomic(
+      repeat('a', 64), v_user, 'atomic-invitee@cra.test'
+    );
+  perform pg_temp.check('expired invitation is rejected', v_result.outcome = 'expired');
+  perform pg_temp.check(
+    'expired invitation is durably marked expired',
+    (select status = 'expired' from public.invitations where token_hash = repeat('a', 64))
+  );
+
+  insert into public.invitations (
+    organization_id, email, role, token_hash, status, expires_at, revoked_at
+  ) values (
+    v_org, 'atomic-invitee@cra.test', 'member', repeat('b', 64), 'revoked',
+    now() + interval '1 day', now()
+  );
+  select * into v_result
+    from public.accept_invitation_atomic(
+      repeat('b', 64), v_user, 'atomic-invitee@cra.test'
+    );
+  perform pg_temp.check('revoked invitation is not pending', v_result.outcome = 'not_pending');
+
+  insert into public.invitations (
+    organization_id, email, role, token_hash, expires_at
+  ) values (
+    v_org, 'atomic-invitee@cra.test', 'admin', repeat('c', 64),
+    now() + interval '1 day'
+  ) returning id into v_invitation;
+  v_accepted_invitation := v_invitation;
+
+  select * into v_result
+    from public.accept_invitation_atomic(
+      repeat('f', 64), v_user, 'atomic-invitee@cra.test'
+    );
+  perform pg_temp.check('unknown invitation hash is not found', v_result.outcome = 'not_found');
+
+  select * into v_result
+    from public.accept_invitation_atomic(
+      'not-a-sha256', v_user, 'atomic-invitee@cra.test'
+    );
+  perform pg_temp.check('malformed invitation hash is not found', v_result.outcome = 'not_found');
+
+  select * into v_result
+    from public.accept_invitation_atomic(
+      repeat('c', 64), gen_random_uuid(), 'atomic-invitee@cra.test'
+    );
+  perform pg_temp.check('missing invitation user is rejected', v_result.outcome = 'user_not_found');
+
+  select * into v_result
+    from public.accept_invitation_atomic(
+      repeat('c', 64), v_user, 'wrong@cra.test'
+    );
+  perform pg_temp.check('invitation email mismatch is rejected', v_result.outcome = 'email_mismatch');
+
+  select * into v_result
+    from public.accept_invitation_atomic(
+      repeat('c', 64), v_user, '  Atomic-Invitee@CRA.test  '
+    );
+  perform pg_temp.check('pending invitation is accepted', v_result.outcome = 'accepted');
+  perform pg_temp.check(
+    'accepted invitation returns its organization',
+    v_result.invitation_id = v_invitation
+    and v_result.organization_id = v_org
+    and v_result.organization_name = 'CRA'
+    and v_result.organization_slug = 'cra'
+  );
+  perform pg_temp.check(
+    'acceptance creates exactly one membership with the invited role',
+    (select count(*) = 1 and max(role) = 'admin'
+       from public.organization_members
+      where organization_id = v_org and user_id = v_user)
+  );
+  perform pg_temp.check(
+    'acceptance records its timestamp',
+    (select status = 'accepted' and accepted_at is not null
+       from public.invitations where id = v_invitation)
+  );
+  perform pg_temp.check(
+    'acceptance writes exactly one audit row',
+    (select count(*) = 1
+       from public.audit_logs
+      where action = 'invitation.accepted'
+        and entity_id = v_invitation::text
+        and organization_id = v_org
+        and user_id = v_user)
+  );
+
+  select * into v_result
+    from public.accept_invitation_atomic(
+      repeat('c', 64), v_user, 'atomic-invitee@cra.test'
+    );
+  perform pg_temp.check('second acceptance is idempotent', v_result.outcome = 'already_accepted');
+  perform pg_temp.check(
+    'idempotent acceptance does not duplicate effects',
+    (select count(*) = 1 from public.organization_members
+      where organization_id = v_org and user_id = v_user)
+    and
+    (select count(*) = 1 from public.audit_logs
+      where action = 'invitation.accepted' and entity_id = v_invitation::text)
+  );
+
+  insert into public.invitations (
+    organization_id, email, token_hash, status, expires_at, accepted_at
+  ) values (
+    v_org, 'corrupt-accepted@cra.test', repeat('d', 64), 'accepted',
+    now() + interval '1 day', now()
+  );
+  select * into v_result
+    from public.accept_invitation_atomic(
+      repeat('d', 64), v_corrupt_user, 'corrupt-accepted@cra.test'
+    );
+  perform pg_temp.check(
+    'accepted invitation without membership fails closed',
+    v_result.outcome = 'not_pending'
+  );
+
+  insert into public.invitations (
+    organization_id, email, role, token_hash, expires_at
+  ) values (
+    v_org, 'member@cra.test', 'viewer', repeat('e', 64),
+    now() + interval '1 day'
+  ) returning id into v_invitation;
+  select * into v_result
+    from public.accept_invitation_atomic(
+      repeat('e', 64), v_seeded_member, 'member@cra.test'
+    );
+  perform pg_temp.check(
+    'accepting as an existing member does not duplicate membership',
+    v_result.outcome = 'accepted'
+    and (select count(*) = 1 from public.organization_members
+          where organization_id = v_org and user_id = v_seeded_member)
+    and (select count(*) = 1 from public.audit_logs
+          where action = 'invitation.accepted' and entity_id = v_invitation::text)
+  );
+
+  insert into public.invitations (
+    organization_id, email, role, token_hash, expires_at
+  ) values (
+    v_org, 'revoke-me@cra.test', 'member', repeat('9', 64),
+    now() + interval '1 day'
+  ) returning id into v_revoke_invitation;
+
+  select public.revoke_invitation_atomic(
+    v_org, gen_random_uuid(), v_owner, 'owner@cra.test'
+  ) into v_outcome;
+  perform pg_temp.check('missing invitation cannot be revoked', v_outcome = 'not_found');
+
+  select public.revoke_invitation_atomic(
+    gen_random_uuid(), v_revoke_invitation, v_owner, 'owner@cra.test'
+  ) into v_outcome;
+  perform pg_temp.check('cross-organization revoke is rejected', v_outcome = 'wrong_organization');
+
+  select public.revoke_invitation_atomic(
+    v_org, v_revoke_invitation, gen_random_uuid(), 'owner@cra.test'
+  ) into v_outcome;
+  perform pg_temp.check('missing revoke actor is rejected', v_outcome = 'actor_not_found');
+
+  select public.revoke_invitation_atomic(
+    v_org, v_revoke_invitation, v_owner, 'not-owner@cra.test'
+  ) into v_outcome;
+  perform pg_temp.check('revoke actor email mismatch is rejected', v_outcome = 'actor_email_mismatch');
+
+  select public.revoke_invitation_atomic(
+    v_org, v_accepted_invitation, v_owner, 'owner@cra.test'
+  ) into v_outcome;
+  perform pg_temp.check('accepted invitation cannot be revoked', v_outcome = 'already_accepted');
+
+  select public.revoke_invitation_atomic(
+    v_org, v_revoke_invitation, v_owner, '  Owner@CRA.test  '
+  ) into v_outcome;
+  perform pg_temp.check('pending invitation is revoked', v_outcome = 'revoked');
+  perform pg_temp.check(
+    'revocation records status and one audit row atomically',
+    (select status = 'revoked' and revoked_at is not null
+       from public.invitations where id = v_revoke_invitation)
+    and
+    (select count(*) = 1 from public.audit_logs
+      where action = 'invitation.revoked'
+        and entity_id = v_revoke_invitation::text
+        and user_id = v_owner)
+  );
+
+  select public.revoke_invitation_atomic(
+    v_org, v_revoke_invitation, v_owner, 'owner@cra.test'
+  ) into v_outcome;
+  perform pg_temp.check('second revocation is not replayed', v_outcome = 'not_pending');
+  perform pg_temp.check(
+    'second revocation does not duplicate its audit row',
+    (select count(*) = 1 from public.audit_logs
+      where action = 'invitation.revoked'
+        and entity_id = v_revoke_invitation::text)
+  );
+end
+$$;
+rollback;
+
+-- ---------------------------------------------------------------------------
+-- 9. menu_permissions exclusive arc.
 -- ---------------------------------------------------------------------------
 begin;
 do $$
@@ -339,7 +618,7 @@ $$;
 rollback;
 
 -- ---------------------------------------------------------------------------
--- 9. Login lockout, including the sliding window.
+-- 10. Login lockout, including the sliding window.
 -- ---------------------------------------------------------------------------
 begin;
 do $$
@@ -383,7 +662,7 @@ $$;
 rollback;
 
 -- ---------------------------------------------------------------------------
--- 10. The suite must leave NOTHING behind. Anything it granted or inserted
+-- 11. The suite must leave NOTHING behind. Anything it granted or inserted
 --     above has been rolled back; re-assert the lockdown invariants to prove it.
 -- ---------------------------------------------------------------------------
 do $$
