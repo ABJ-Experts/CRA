@@ -8,6 +8,11 @@ import Image from "next/image";
 import { useState } from "react";
 
 import { SectionCard } from "../_components/dashboard-chrome";
+import {
+  securityApi,
+  securityQueryKeys,
+} from "../../_features/security/security.api";
+import { ApiClientError } from "../../_lib/http/api-client";
 
 /**
  * Two-factor authentication.
@@ -35,44 +40,29 @@ export default function SecurityPage() {
   const [busy, setBusy] = useState(false);
 
   const { data, isLoading } = useQuery({
-    queryKey: ["mfa", "factors"],
+    queryKey: securityQueryKeys.factors,
     retry: false,
-    queryFn: async () => {
-      const res = await fetch("/api/v1/auth/mfa/factors", {
-        credentials: "same-origin",
-        cache: "no-store",
-      });
-      if (!res.ok) throw new Error(`Request failed with ${res.status}`);
-      return (await res.json()) as { enrolled: boolean };
-    },
+    queryFn: ({ signal }) => securityApi.listFactors(signal),
   });
 
   async function startEnrollment() {
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch("/api/v1/auth/mfa/enroll", {
-        method: "POST",
-        credentials: "same-origin",
-      });
-      const body = (await res.json().catch(() => ({}))) as {
-        factorId?: string;
-        qrCode?: string;
-        secret?: string;
-        message?: string;
-      };
-
-      if (!res.ok || !body.factorId) {
-        setError(body.message ?? "We could not start two-factor setup.");
-        return;
-      }
+      const body = await securityApi.enroll();
 
       setStep({
         kind: "enrolling",
         factorId: body.factorId,
-        qrCode: body.qrCode ?? "",
-        secret: body.secret ?? "",
+        qrCode: body.qrCode,
+        secret: body.secret,
       });
+    } catch (requestError) {
+      setError(
+        requestError instanceof ApiClientError && requestError.kind === "api"
+          ? requestError.message
+          : "We could not start two-factor setup.",
+      );
     } finally {
       setBusy(false);
     }
@@ -85,25 +75,17 @@ export default function SecurityPage() {
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch("/api/v1/auth/mfa/enroll/confirm", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        credentials: "same-origin",
-        body: JSON.stringify({ factorId: step.factorId, code }),
-      });
-      const body = (await res.json().catch(() => ({}))) as {
-        recoveryCodes?: string[];
-        message?: string;
-      };
-
-      if (!res.ok || !body.recoveryCodes) {
-        setError(body.message ?? "That code is not right.");
-        return;
-      }
+      const body = await securityApi.confirmEnrollment(step.factorId, code);
 
       setStep({ kind: "codes", codes: body.recoveryCodes });
       setCode("");
-      await queryClient.invalidateQueries({ queryKey: ["mfa"] });
+      await queryClient.invalidateQueries({ queryKey: securityQueryKeys.all });
+    } catch (requestError) {
+      setError(
+        requestError instanceof ApiClientError && requestError.kind === "api"
+          ? requestError.message
+          : "That code is not right.",
+      );
     } finally {
       setBusy(false);
     }

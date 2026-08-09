@@ -3,7 +3,6 @@
 import { Button } from "@repo/ui/button";
 import { Card, CardBody, CardHeader, CardTitle } from "@repo/ui/card";
 import { Tag } from "@repo/ui/tag";
-import type { PermissionSet } from "@repo/contracts/permissions";
 import { useQuery } from "@tanstack/react-query";
 
 import {
@@ -11,6 +10,7 @@ import {
   Stagger,
   StaggerItem,
 } from "../_components/dashboard-chrome";
+import { rolesApi, rolesQueryKeys } from "../../_features/roles/roles.api";
 import { useHasPermission } from "../../_providers/session-provider";
 
 /**
@@ -24,19 +24,7 @@ import { useHasPermission } from "../../_providers/session-provider";
  * Reader" ends up conferring full ownership.
  */
 
-interface RoleRow {
-  id: string;
-  name: string;
-  description: string | null;
-  color: string;
-  baseRole: string;
-  permissions: PermissionSet;
-  isSystem: boolean;
-  isActive: boolean;
-  memberCount: number;
-}
-
-function grantedCount(permissions: PermissionSet): number {
+function grantedCount(permissions: Readonly<Record<string, boolean>>): number {
   return Object.values(permissions).filter((v) => v === true).length;
 }
 
@@ -44,16 +32,9 @@ export default function RolesPage() {
   const canCreate = useHasPermission("can_create_roles");
 
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ["roles"],
+    queryKey: rolesQueryKeys.list,
     retry: false,
-    queryFn: async () => {
-      const res = await fetch("/api/v1/roles", {
-        credentials: "same-origin",
-        cache: "no-store",
-      });
-      if (!res.ok) throw new Error(`Request failed with ${res.status}`);
-      return (await res.json()) as { rows: RoleRow[] };
-    },
+    queryFn: ({ signal }) => rolesApi.list(signal),
   });
 
   return (

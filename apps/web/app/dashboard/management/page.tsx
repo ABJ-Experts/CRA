@@ -1,5 +1,6 @@
 "use client";
 
+import { memberSchema, type Member } from "@repo/contracts/users";
 import { Avatar } from "@repo/ui/avatar";
 import { Select, SelectItem } from "@repo/ui/select";
 import { Tag } from "@repo/ui/tag";
@@ -9,6 +10,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useMemo, useState } from "react";
 
 import { useHasPermission } from "../../_providers/session-provider";
+import { membersApi } from "../../_features/members/members.api";
+import { ApiClientError } from "../../_lib/http/api-client";
 import { Stacked } from "../tables/_components/cells";
 import { TablePage } from "../tables/_components/table-page";
 
@@ -26,18 +29,7 @@ import { TablePage } from "../tables/_components/table-page";
  * changes nothing for the other placeholder routes.
  */
 
-interface MemberRow {
-  id: string;
-  email: string;
-  username: string | null;
-  firstName: string | null;
-  lastName: string | null;
-  avatarUrl: string | null;
-  jobTitle: string | null;
-  isActive: boolean;
-  role: string;
-  joinedAt: string;
-}
+type MemberRow = Member;
 
 const ROLE_TONE: Record<string, "purple" | "blue" | "green" | "orange"> = {
   owner: "purple",
@@ -65,24 +57,16 @@ export default function ManagementPage() {
     async (userId: string, role: BaseRole) => {
       setBusy(userId);
       try {
-        const res = await fetch(`/api/v1/users/${userId}/role`, {
-          method: "PATCH",
-          headers: { "content-type": "application/json" },
-          credentials: "same-origin",
-          body: JSON.stringify({ role }),
-        });
-
-        if (!res.ok) {
-          const body = (await res.json().catch(() => ({}))) as {
-            message?: string;
-          };
-          // Surfaces the server's own wording — including the last-owner rule,
-          // which is enforced by a database trigger and phrased as an action.
-          window.alert(body.message ?? "We could not change that role.");
-          return;
-        }
-
+        await membersApi.changeRole(userId, role);
         await queryClient.invalidateQueries();
+      } catch (error) {
+        // Surfaces the server's own wording — including the last-owner rule,
+        // which is enforced by a database trigger and phrased as an action.
+        window.alert(
+          error instanceof ApiClientError && error.kind === "api"
+            ? error.message
+            : "We could not change that role.",
+        );
       } finally {
         setBusy(null);
       }
@@ -159,6 +143,7 @@ export default function ManagementPage() {
   return (
     <TablePage<MemberRow>
       endpoint="/api/v1/users"
+      rowSchema={memberSchema}
       variant="basic"
       ariaLabel="Organization members"
       searchPlaceholder="Search members"
