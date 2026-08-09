@@ -545,7 +545,10 @@ begin
   select public.revoke_invitation_atomic(
     gen_random_uuid(), v_revoke_invitation, v_owner, 'owner@cra.test'
   ) into v_outcome;
-  perform pg_temp.check('cross-organization revoke is rejected', v_outcome = 'wrong_organization');
+  perform pg_temp.check(
+    'cross-organization revoke does not reveal invitation existence',
+    v_outcome = 'not_found'
+  );
 
   select public.revoke_invitation_atomic(
     v_org, v_revoke_invitation, gen_random_uuid(), 'owner@cra.test'

@@ -166,19 +166,19 @@ begin
     into v_invitation
     from public.invitations invitations
    where invitations.id = p_invitation_id
+     and invitations.organization_id = p_organization_id
    for update;
 
   if not found then
     return 'not_found';
   end if;
 
-  if v_invitation.organization_id is distinct from p_organization_id then
-    return 'wrong_organization';
-  end if;
-
   select users.*
     into v_actor
     from public.users users
+    join public.organization_members actor_members
+      on actor_members.user_id = users.id
+     and actor_members.organization_id = p_organization_id
    where users.id = p_actor_user_id;
 
   if not found then
