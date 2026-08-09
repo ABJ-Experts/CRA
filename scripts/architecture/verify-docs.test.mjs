@@ -162,6 +162,30 @@ test("requires real pattern blocks and template headings", async (t) => {
   );
 });
 
+test("rejects duplicate pattern decisions", async (t) => {
+  const root = await temporaryRoot(t);
+  await copyRepositoryPolicy(root);
+  const matrixPath = join(
+    root,
+    "docs",
+    "architecture",
+    "pattern-selection-matrix.md",
+  );
+  const matrix = await readFile(matrixPath, "utf8");
+  await writeFile(
+    matrixPath,
+    `${matrix}\n### Prototype\n- Decision: duplicate.\n`,
+  );
+
+  const errors = await verifyArchitectureDocs(root);
+
+  assert.ok(
+    errors.includes(
+      "Pattern matrix must contain exactly one ### Prototype decision",
+    ),
+  );
+});
+
 test("requires the detailed coding workflow and completion gates", async (t) => {
   const root = await temporaryRoot(t);
   await mkdir(join(root, "docs", "ai"), { recursive: true });

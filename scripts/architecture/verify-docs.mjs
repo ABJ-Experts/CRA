@@ -140,6 +140,12 @@ export async function verifyArchitectureDocs(rootDir) {
   const matrixLines = matrix.split(/\r?\n/);
   for (const pattern of PATTERNS) {
     const heading = `### ${pattern}`;
+    const decisionCount = matrixLines.filter((line) => line === heading).length;
+    if (decisionCount !== 1) {
+      errors.push(
+        `Pattern matrix must contain exactly one ${heading} decision`,
+      );
+    }
     const block = section(matrixLines, heading);
     if (block === null) {
       errors.push(`Pattern matrix is missing section heading ${heading}`);
