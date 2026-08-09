@@ -9,9 +9,12 @@
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "check-types": "turbo run check-types",
     "test": "turbo run test",
-    "test:e2e": "turbo run test:e2e"
+    "test:e2e": "turbo run test:e2e",
+    "test:architecture": "node --test scripts/architecture/*.test.mjs && node scripts/architecture/verify-docs.mjs && depcruise --config dependency-cruiser.cjs apps packages",
+    "verify": "pnpm lint && pnpm check-types && pnpm test:architecture && pnpm test && pnpm build"
   },
   "devDependencies": {
+    "dependency-cruiser": "^16.10.4",
     "prettier": "^3.7.4",
     "turbo": "^2.10.8",
     "typescript": "5.9.2"
