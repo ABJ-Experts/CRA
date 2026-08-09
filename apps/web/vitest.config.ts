@@ -13,16 +13,27 @@ export default defineConfig({
     environment: "node",
     coverage: {
       provider: "v8",
-      include: [
-        "app/_features/session/**/*.{ts,tsx}",
-        "app/_providers/session-provider.tsx",
+      reporter: ["text", "json-summary", "lcov"],
+      include: ["app/**/*.{ts,tsx}", "middleware.ts", "mocks/**/*.ts"],
+      exclude: [
+        "**/*.d.ts",
+        "**/*.{spec,test}.{ts,tsx}",
+        ".next/**",
+        "app/**/test/**",
       ],
-      exclude: ["**/*.spec.{ts,tsx}"],
       thresholds: {
-        branches: 80,
-        functions: 80,
-        lines: 80,
-        statements: 80,
+        "app/_features/session/**/*.{ts,tsx}": {
+          branches: 80,
+          functions: 80,
+          lines: 80,
+          statements: 80,
+        },
+        "app/_providers/session-provider.tsx": {
+          branches: 80,
+          functions: 80,
+          lines: 80,
+          statements: 80,
+        },
       },
     },
   },

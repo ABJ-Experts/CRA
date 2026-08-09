@@ -9,6 +9,7 @@
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "check-types": "turbo run check-types",
     "test": "turbo run test",
+    "coverage": "turbo run test:coverage test:cov",
     "test:e2e": "turbo run test:e2e",
     "test:live": "pnpm --filter infrastructure run test && pnpm --filter api run test:e2e && bash apps/api/test/auth-flow.e2e.sh",
     "test:architecture": "node --test scripts/architecture/*.test.mjs && node scripts/architecture/verify-docs.mjs && depcruise --config dependency-cruiser.cjs apps packages",
