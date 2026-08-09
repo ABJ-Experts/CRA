@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common";
 
 import { AuditModule } from "../audit/audit.module";
 import { AuditService } from "../audit/audit.service";
+import { SupabaseModule } from "../supabase/supabase.module";
 import {
   MEMBER_REPOSITORY,
   type MemberRepository,
@@ -12,7 +13,7 @@ import { UsersController } from "./users.controller";
 import { UsersService } from "./users.service";
 
 @Module({
-  imports: [AuditModule],
+  imports: [AuditModule, SupabaseModule],
   controllers: [UsersController],
   providers: [
     SupabaseMemberRepository,

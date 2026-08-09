@@ -21,6 +21,10 @@ import { normalizeEmail } from "@repo/contracts/auth";
 import { TooManyRequestsException } from "../common/exceptions/too-many-requests.exception";
 import { MailService } from "../mail/mail.service";
 import { SupabaseService } from "../supabase/supabase.service";
+import {
+  ManageEmailVerificationUseCase,
+  ManagePasswordRecoveryUseCase,
+} from "./application/auth-use-cases";
 
 interface Tokens {
   access_token: string;
@@ -37,15 +41,6 @@ interface UserRow {
   avatar_url: string | null;
   is_active: boolean;
   email_verified_at: string | null;
-}
-
-type PasswordResetOutcome =
-  "consumed" | "invalid" | "expired" | "profile_missing";
-
-interface PasswordResetConsumption {
-  outcome: PasswordResetOutcome;
-  userId: string | null;
-  authUserId: string | null;
 }
 
 const sha256 = (value: string): string =>
@@ -87,6 +82,8 @@ export class AuthService {
     private readonly supabase: SupabaseService,
     private readonly config: ConfigService,
     private readonly mail: MailService,
+    private readonly emailVerification: ManageEmailVerificationUseCase,
+    private readonly passwordRecovery: ManagePasswordRecoveryUseCase,
   ) {}
 
   // -------------------------------------------------------------------------
@@ -322,81 +319,37 @@ export class AuthService {
   }
 
   async verifyEmailCode(userId: string, code: string): Promise<void> {
-    const { data } = await this.supabase
-      .admin()
-      .from("auth_email_verifications")
-      .select("id, code_hash, attempts, expires_at")
-      .eq("user_id", userId)
-      .eq("purpose", "signup")
-      .is("consumed_at", null)
-      .maybeSingle();
+    const result = await this.emailVerification.execute({ userId, code });
+    if (result.ok) return;
 
-    if (!data) {
-      throw new BadRequestException({
-        message: "That code is not right. Request a new one.",
-        code: "otp_missing",
-      });
-    }
-
-    if (new Date(data.expires_at).getTime() < Date.now()) {
-      throw new BadRequestException({
-        message: "That code has expired. Request a new one.",
-        code: "otp_expired",
-      });
-    }
-
-    // A 6-digit code is only 10^6 values, so an unbounded guess budget is a
-    // brute-force invitation.
-    if (data.attempts >= 5) {
-      throw new TooManyRequestsException({
-        message: "Too many attempts. Request a new code.",
-        code: "otp_attempts_exhausted",
-      });
-    }
-
-    if (data.code_hash !== sha256(code)) {
-      await this.supabase
-        .admin()
-        .from("auth_email_verifications")
-        .update({ attempts: data.attempts + 1 })
-        .eq("id", data.id);
-
-      throw new BadRequestException({
-        message: "That code is not right. Check it and try again.",
-        code: "otp_invalid",
-      });
-    }
-
-    const { error: profileError } = await this.supabase
-      .admin()
-      .from("users")
-      .update({ email_verified_at: new Date().toISOString() })
-      .eq("id", userId);
-
-    if (profileError) {
-      this.logger.error(
-        `Could not mark email as verified: ${profileError.message}`,
-      );
-      throw new ServiceUnavailableException({
-        message: "We could not finish verifying your email. Please try again.",
-        code: "email_verification_failed",
-      });
-    }
-
-    const { error: consumeError } = await this.supabase
-      .admin()
-      .from("auth_email_verifications")
-      .update({ consumed_at: new Date().toISOString() })
-      .eq("id", data.id);
-
-    if (consumeError) {
-      this.logger.error(
-        `Could not consume verification code: ${consumeError.message}`,
-      );
-      throw new ServiceUnavailableException({
-        message: "We could not finish verifying your email. Please try again.",
-        code: "email_verification_failed",
-      });
+    switch (result.error.code) {
+      case "otp_missing":
+        throw new BadRequestException({
+          message: "That code is not right. Request a new one.",
+          code: result.error.code,
+        });
+      case "otp_expired":
+        throw new BadRequestException({
+          message: "That code has expired. Request a new one.",
+          code: result.error.code,
+        });
+      case "otp_attempts_exhausted":
+        throw new TooManyRequestsException({
+          message: "Too many attempts. Request a new code.",
+          code: result.error.code,
+        });
+      case "otp_invalid":
+        throw new BadRequestException({
+          message: "That code is not right. Check it and try again.",
+          code: result.error.code,
+        });
+      case "email_verification_failed":
+        this.logger.error("Atomic email verification failed");
+        throw new ServiceUnavailableException({
+          message:
+            "We could not finish verifying your email. Please try again.",
+          code: result.error.code,
+        });
     }
   }
 
@@ -450,84 +403,31 @@ export class AuthService {
   }
 
   async resetPassword(input: ResetPasswordInput): Promise<void> {
-    const consumption = await this.consumePasswordReset(input.token);
+    const result = await this.passwordRecovery.execute(input);
+    if (result.ok) return;
 
-    if (consumption.outcome !== "consumed") {
-      this.throwDeadResetToken(consumption.outcome);
-    }
-    if (!consumption.userId || !consumption.authUserId) {
-      this.throwPasswordResetUnavailable();
-    }
-
-    try {
-      // The database has already consumed the reset token and advanced the
-      // session epoch. In the pinned GoTrue version, changing a password also
-      // revokes that user's refresh tokens, so old access and refresh sessions
-      // are both dead before this method can report success.
-      const { error } = await this.supabase
-        .admin()
-        .auth.admin.updateUserById(consumption.authUserId, {
-          password: input.password,
-        });
-
-      if (error) throw error;
-    } catch (error) {
-      this.logger.error(
-        `Password update failed for user ${consumption.userId}: ${error instanceof Error ? error.message : String(error)}`,
-      );
+    if (
+      result.error.code === "reset_token_invalid" ||
+      result.error.code === "reset_token_expired"
+    ) {
       throw new BadRequestException({
+        message: "That reset link has expired.",
+        code: result.error.code,
+      });
+    }
+
+    if (result.error.code === "password_reset_unavailable") {
+      this.logger.error(
+        "Password reset consumption failed before provider update",
+      );
+      throw new ServiceUnavailableException({
         message: "We could not update that password.",
         code: "password_update_failed",
       });
     }
-  }
 
-  private async consumePasswordReset(
-    token: string,
-  ): Promise<PasswordResetConsumption> {
-    try {
-      const { data, error } = await this.supabase
-        .admin()
-        .rpc("consume_password_reset", { p_token_hash: sha256(token) });
-
-      if (error || !Array.isArray(data) || data.length !== 1) {
-        this.throwPasswordResetUnavailable();
-      }
-
-      const [row] = data;
-      if (
-        !row ||
-        !["consumed", "invalid", "expired", "profile_missing"].includes(
-          row.outcome,
-        )
-      ) {
-        this.throwPasswordResetUnavailable();
-      }
-
-      return {
-        outcome: row.outcome as PasswordResetOutcome,
-        userId: row.user_id,
-        authUserId: row.auth_user_id,
-      };
-    } catch (error) {
-      if (error instanceof ServiceUnavailableException) throw error;
-      this.throwPasswordResetUnavailable();
-    }
-  }
-
-  private throwDeadResetToken(outcome: PasswordResetOutcome): never {
+    this.logger.error("Password update failed after reset token consumption");
     throw new BadRequestException({
-      message: "That reset link has expired.",
-      code:
-        outcome === "expired" ? "reset_token_expired" : "reset_token_invalid",
-    });
-  }
-
-  private throwPasswordResetUnavailable(): never {
-    this.logger.error(
-      "Password reset consumption failed before provider update",
-    );
-    throw new ServiceUnavailableException({
       message: "We could not update that password.",
       code: "password_update_failed",
     });

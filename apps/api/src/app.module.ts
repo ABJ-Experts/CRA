@@ -3,6 +3,7 @@ import { ConfigModule } from "@nestjs/config";
 import { ThrottlerModule } from "@nestjs/throttler";
 
 import { AuthModule } from "./auth/auth.module";
+import { SecurityModule } from "./common/security/security.module";
 import { validateEnv } from "./config/env.validation";
 import { HealthController } from "./health/health.controller";
 import { MailModule } from "./mail/mail.module";
@@ -38,6 +39,7 @@ import { UsersModule } from "./users/users.module";
     MailModule,
     AuthModule,
     PermissionsModule,
+    SecurityModule,
     UsersModule,
     InvitationsModule,
   ],

@@ -27,6 +27,8 @@ describe("AuthService.verifyPassword lockout", () => {
         getOrThrow: (key: string) => (key === "LOGIN_MAX_ATTEMPTS" ? 5 : 15),
       } as never,
       {} as never,
+      {} as never,
+      {} as never,
     );
 
     return { service, rpc, signInWithPassword };

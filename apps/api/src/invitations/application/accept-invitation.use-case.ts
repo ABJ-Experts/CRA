@@ -1,8 +1,8 @@
 import { normalizeEmail } from "@repo/contracts/auth";
 import type { AcceptInvitationResponse } from "@repo/contracts/invitations";
 
-import type { Result } from "../../common/application/result";
-import { failure, success } from "../../common/application/result";
+import type { Result } from "../../common/domain/result";
+import { failure, success } from "../../common/domain/result";
 import type {
   AcceptInvitationAtomicOutcome,
   InvitationActor,

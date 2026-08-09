@@ -1,5 +1,5 @@
-import type { Result } from "../../common/application/result";
-import { failure, success } from "../../common/application/result";
+import type { Result } from "../../common/domain/result";
+import { failure, success } from "../../common/domain/result";
 
 export type InvitationState =
   "pending" | "accepted" | "revoked" | "declined" | "expired";

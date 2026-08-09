@@ -8,7 +8,7 @@ import {
 import type { BaseRole, PermissionSet } from "@repo/contracts/permissions";
 import type { CustomRole } from "@repo/contracts/roles";
 
-import type { Result } from "../common/application/result";
+import type { Result } from "../common/domain/result";
 import {
   RoleUseCases,
   type CreateRoleInput,

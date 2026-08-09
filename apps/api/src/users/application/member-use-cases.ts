@@ -2,8 +2,8 @@ import type { PageParams, Paged } from "@repo/contracts/pagination";
 import type { BaseRole } from "@repo/contracts/permissions";
 import type { Member } from "@repo/contracts/users";
 
-import type { Result } from "../../common/application/result";
-import { failure, success } from "../../common/application/result";
+import type { Result } from "../../common/domain/result";
+import { failure, success } from "../../common/domain/result";
 import type { MemberRepository, ProfilePatch } from "./member-repository.port";
 import { MemberRepositoryError } from "./member-repository.port";
 

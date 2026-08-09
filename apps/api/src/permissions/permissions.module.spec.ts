@@ -10,10 +10,10 @@ import { SupabaseRoleRepository } from "./infrastructure/supabase-role.repositor
 import { PermissionsModule } from "./permissions.module";
 
 describe("PermissionsModule role composition", () => {
-  it("keeps permission visibility while wiring role ports explicitly", () => {
-    expect(Reflect.getMetadata(GLOBAL_MODULE_METADATA, PermissionsModule)).toBe(
-      true,
-    );
+  it("keeps permission visibility explicit while wiring role ports", () => {
+    expect(
+      Reflect.getMetadata(GLOBAL_MODULE_METADATA, PermissionsModule),
+    ).not.toBe(true);
     expect(
       Reflect.getMetadata(MODULE_METADATA.IMPORTS, PermissionsModule),
     ).toContain(AuditModule);

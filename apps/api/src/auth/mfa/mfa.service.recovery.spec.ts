@@ -7,6 +7,13 @@ import {
 } from "@nestjs/common";
 
 import { MfaService } from "./mfa.service";
+import { RecoverMfaUseCase } from "../application/auth-use-cases";
+import {
+  NodeSecretHashAdapter,
+  SystemDelayAdapter,
+} from "../infrastructure/node-auth-runtime.adapter";
+import { SupabaseAuthIdentityAdapter } from "../infrastructure/supabase-auth-identity.adapter";
+import { SupabaseMfaRecoveryRepository } from "../infrastructure/supabase-mfa-recovery.repository";
 
 const USER_ID = "11111111-1111-4111-8111-111111111111";
 const AUTH_USER_ID = "22222222-2222-4222-8222-222222222222";
@@ -82,9 +89,17 @@ function createService(input?: {
     rpc,
     auth: { admin: { mfa: { listFactors, deleteFactor } } },
   };
+  const supabase = { admin: () => adminClient } as never;
+  const recoverMfa = new RecoverMfaUseCase(
+    new SupabaseMfaRecoveryRepository(supabase),
+    new SupabaseAuthIdentityAdapter(supabase),
+    new NodeSecretHashAdapter(),
+    new SystemDelayAdapter(),
+  );
   const service = new MfaService(
-    { admin: () => adminClient } as never,
+    supabase,
     { log: auditLog } as never,
+    recoverMfa,
   );
 
   return { service, rpc, listFactors, deleteFactor, auditLog };

@@ -6,8 +6,8 @@ import {
 } from "@repo/contracts/permissions";
 import type { CustomRole } from "@repo/contracts/roles";
 
-import type { Result } from "../../common/application/result";
-import { failure, success } from "../../common/application/result";
+import type { Result } from "../../common/domain/result";
+import { failure, success } from "../../common/domain/result";
 import type {
   CreateRoleRecord,
   RoleRepository,

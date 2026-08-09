@@ -1,7 +1,7 @@
 import { normalizeEmail } from "@repo/contracts/auth";
 
-import type { Result } from "../../common/application/result";
-import { failure, success } from "../../common/application/result";
+import type { Result } from "../../common/domain/result";
+import { failure, success } from "../../common/domain/result";
 import type {
   InvitationActor,
   InvitationRepository,

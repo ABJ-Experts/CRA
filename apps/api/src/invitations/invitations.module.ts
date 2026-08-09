@@ -3,6 +3,8 @@ import { ConfigService } from "@nestjs/config";
 
 import { AuditModule } from "../audit/audit.module";
 import { AuditService } from "../audit/audit.service";
+import { MailModule } from "../mail/mail.module";
+import { SupabaseModule } from "../supabase/supabase.module";
 import { InvitationsController } from "./invitations.controller";
 import { AcceptInvitationUseCase } from "./application/accept-invitation.use-case";
 import { CreateInvitationUseCase } from "./application/create-invitation.use-case";
@@ -14,7 +16,7 @@ import { SupabaseInvitationRepository } from "./infrastructure/supabase-invitati
 import { InvitationsService } from "./invitations.service";
 
 @Module({
-  imports: [AuditModule],
+  imports: [AuditModule, SupabaseModule, MailModule],
   controllers: [InvitationsController],
   providers: [
     SupabaseInvitationRepository,

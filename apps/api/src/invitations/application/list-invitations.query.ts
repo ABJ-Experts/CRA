@@ -1,7 +1,7 @@
 import type { Invitation } from "@repo/contracts/invitations";
 
-import type { Result } from "../../common/application/result";
-import { failure, success } from "../../common/application/result";
+import type { Result } from "../../common/domain/result";
+import { failure, success } from "../../common/domain/result";
 import type { InvitationRepository } from "./invitation-repository.port";
 
 export type ListInvitationsError = Readonly<{

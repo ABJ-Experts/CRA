@@ -1,4 +1,4 @@
-import type { Result } from "../../common/application/result";
+import type { Result } from "../../common/domain/result";
 
 export type AuthFlowState =
   | Readonly<{ kind: "anonymous" }>

@@ -7,6 +7,10 @@ import {
 } from "@nestjs/common";
 
 import { AuthService } from "./auth.service";
+import { ManagePasswordRecoveryUseCase } from "./application/auth-use-cases";
+import { NodeSecretHashAdapter } from "./infrastructure/node-auth-runtime.adapter";
+import { SupabaseAuthIdentityAdapter } from "./infrastructure/supabase-auth-identity.adapter";
+import { SupabaseAuthProfileRepository } from "./infrastructure/supabase-auth-profile.repository";
 
 const USER_ID = "11111111-1111-4111-8111-111111111111";
 const AUTH_USER_ID = "22222222-2222-4222-8222-222222222222";
@@ -41,10 +45,18 @@ function createService(
     rpc,
     auth: { admin: { updateUserById } },
   };
+  const supabase = { admin: () => adminClient } as never;
+  const passwordRecovery = new ManagePasswordRecoveryUseCase(
+    new SupabaseAuthProfileRepository(supabase),
+    new SupabaseAuthIdentityAdapter(supabase),
+    new NodeSecretHashAdapter(),
+  );
   const service = new AuthService(
-    { admin: () => adminClient } as never,
+    supabase,
     {} as never,
     {} as never,
+    {} as never,
+    passwordRecovery,
   );
 
   return { service, rpc, updateUserById };

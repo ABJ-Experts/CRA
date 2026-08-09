@@ -10,7 +10,7 @@ import type { PageParams, Paged } from "@repo/contracts/pagination";
 import type { BaseRole } from "@repo/contracts/permissions";
 import type { Member } from "@repo/contracts/users";
 
-import type { Result } from "../common/application/result";
+import type { Result } from "../common/domain/result";
 import {
   MemberUseCases,
   type MemberActor,

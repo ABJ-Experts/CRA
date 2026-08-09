@@ -1,8 +1,8 @@
 import { normalizeEmail } from "@repo/contracts/auth";
 import type { BaseRole } from "@repo/contracts/permissions";
 
-import type { Result } from "../../common/application/result";
-import { failure, success } from "../../common/application/result";
+import type { Result } from "../../common/domain/result";
+import { failure, success } from "../../common/domain/result";
 import type { InvitationNotifierPort } from "./invitation-notifier.port";
 import type {
   InvitationActor,
