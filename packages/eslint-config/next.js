@@ -41,6 +41,35 @@ export const nextJsConfig = [
     rules: {
       ...pluginNext.configs.recommended.rules,
       ...pluginNext.configs["core-web-vitals"].rules,
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "@repo/ui",
+              message:
+                "Import shared UI through @repo/ui/<component> subpaths.",
+            },
+          ],
+        },
+      ],
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "ImportExpression[source.value='@repo/ui']",
+          message: "Import shared UI through @repo/ui/<component> subpaths.",
+        },
+        {
+          selector:
+            "ImportExpression > TemplateLiteral[expressions.length=0] > TemplateElement[value.raw='@repo/ui']",
+          message: "Import shared UI through @repo/ui/<component> subpaths.",
+        },
+        {
+          selector:
+            "CallExpression[callee.name='require'][arguments.0.value='@repo/ui']",
+          message: "Import shared UI through @repo/ui/<component> subpaths.",
+        },
+      ],
     },
   },
   {
