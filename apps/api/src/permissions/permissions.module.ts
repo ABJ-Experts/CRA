@@ -3,11 +3,18 @@ import { APP_GUARD } from "@nestjs/core";
 
 import { PermissionsGuard } from "../auth/permissions.guard";
 import { AuditModule } from "../audit/audit.module";
+import { AuditService } from "../audit/audit.service";
 import { BasePermissionResolver } from "./application/base-permission-resolver";
+import {
+  ROLE_REPOSITORY,
+  type RoleRepository,
+} from "./application/role-repository.port";
+import { RoleUseCases } from "./application/role-use-cases";
 import { VersionedPermissionResolver } from "./application/versioned-permission-resolver.proxy";
 import { CustomRolesController } from "./custom-roles.controller";
 import { CustomRolesService } from "./custom-roles.service";
 import { SupabasePermissionDataAdapter } from "./infrastructure/supabase-permission-data.adapter";
+import { SupabaseRoleRepository } from "./infrastructure/supabase-role.repository";
 import { PermissionsController } from "./permissions.controller";
 import { PermissionsService } from "./permissions.service";
 
@@ -23,6 +30,17 @@ import { PermissionsService } from "./permissions.service";
   controllers: [PermissionsController, CustomRolesController],
   providers: [
     SupabasePermissionDataAdapter,
+    SupabaseRoleRepository,
+    {
+      provide: ROLE_REPOSITORY,
+      useExisting: SupabaseRoleRepository,
+    },
+    {
+      provide: RoleUseCases,
+      useFactory: (repository: RoleRepository, audit: AuditService) =>
+        new RoleUseCases(repository, audit),
+      inject: [ROLE_REPOSITORY, AuditService],
+    },
     {
       provide: BasePermissionResolver,
       useFactory: (data: SupabasePermissionDataAdapter) =>
