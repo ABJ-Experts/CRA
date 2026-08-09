@@ -4,7 +4,7 @@ import { selectionColumn, type ColumnDef } from "@repo/ui/data-table";
 import { useMemo } from "react";
 import { TablePage } from "../_components/table-page";
 import { Plain, RowActions, Stacked, StatusTag } from "../_components/cells";
-import type { Order } from "../../../../mocks/data/tables";
+import { orderSchema, type Order } from "../../../../mocks/data/table-schemas";
 
 /** Tables / Striped Tables - Pencil `CTm6w` (light), `h6fSD2` (dark). */
 export default function StripedTablesPage() {
@@ -73,6 +73,7 @@ export default function StripedTablesPage() {
   return (
     <TablePage<Order>
       endpoint="/api/orders"
+      rowSchema={orderSchema}
       variant="striped"
       ariaLabel="Orders"
       searchPlaceholder="Search orders"

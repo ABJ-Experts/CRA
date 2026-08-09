@@ -7,6 +7,8 @@ import { Suspense, useCallback, useEffect, useState } from "react";
 
 import { AuthOutcome } from "../_components/auth-outcome";
 import { AuthTitle } from "../_components/auth-chrome";
+import { invitationsApi } from "../../_features/invitations/invitations.api";
+import { ApiClientError } from "../../_lib/http/api-client";
 
 /**
  * Accept an organization invitation.
@@ -51,49 +53,26 @@ function AcceptInvitation() {
     setState({ kind: "working" });
 
     try {
-      const res = await fetch("/api/v1/invitations/accept", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        credentials: "same-origin",
-        cache: "no-store",
-        body: JSON.stringify({ token }),
-      });
-
-      const body = (await res.json().catch(() => ({}))) as {
-        message?: string;
-        alreadyAccepted?: boolean;
-        organization?: { name: string };
-      };
-
-      if (res.status === 401) {
-        // No session yet. Come back here after signing in, token intact.
-        setState({
-          kind: "error",
-          message: "Sign in to accept this invitation.",
-          needsSignIn: true,
-        });
-        return;
-      }
-
-      if (!res.ok) {
-        setState({
-          kind: "error",
-          message: body.message ?? "We could not accept that invitation.",
-          needsSignIn: false,
-        });
-        return;
-      }
+      const body = await invitationsApi.accept(token);
 
       setState({
         kind: "done",
-        organization: body.organization?.name ?? "your organization",
-        already: body.alreadyAccepted === true,
+        organization: body.organization.name,
+        already: body.alreadyAccepted,
       });
-    } catch {
+    } catch (error) {
+      const needsSignIn =
+        error instanceof ApiClientError && error.status === 401;
       setState({
         kind: "error",
-        message: "We could not reach the server. Check your connection.",
-        needsSignIn: false,
+        message: needsSignIn
+          ? "Sign in to accept this invitation."
+          : error instanceof ApiClientError && error.kind === "api"
+            ? error.message
+            : error instanceof ApiClientError && error.kind === "network"
+              ? "We could not reach the server. Check your connection."
+              : "We could not accept that invitation.",
+        needsSignIn,
       });
     }
   }, [token]);

@@ -45,3 +45,20 @@ Do not alter the eight frozen `auth-actions.ts` signatures—three carry no iden
 ## Commits and Pull Requests
 
 Use short, imperative subjects (for example, `Add dashboard navigation`) and focused commits. Enable the committed hook once per clone with `git config core.hooksPath .githooks`; this checkout is already configured. It runs only during commits, blocks em dashes and AI attribution/tool/provider terms, limits subjects to 72 characters, and permits standard trailers. Never use `--no-verify` to bypass it. PRs must describe the change and validation, link issues, include screenshots for visible changes, and call out migrations, generated types, or configuration steps.
+
+## Design Pattern Architecture
+
+Patterns solve demonstrated problems; they are not a quota. Before a feature
+introduces a new abstraction, provider, state machine, cross-feature dependency,
+or persistent workflow, complete `docs/architecture/feature-design-template.md`
+and use the selection matrix in
+`docs/architecture/pattern-selection-matrix.md`.
+
+- Dependency direction inside a layered feature is presentation -> application -> domain; adapters implement inward-owned ports.
+- Controllers and pages stay thin. No direct Supabase access from controllers, React pages, or shared UI.
+- Every service-role operation is self-scoped from verified identity or takes `orgId` as its first argument and applies the organization filter.
+- Prefer immutable functions and composition. A new class hierarchy, global singleton, command bus, event bus, abstract factory, template base class, memento store, or visitor requires a concrete trigger and ADR.
+- Security-critical effects are synchronous or transactionally durable. Browser state is never an authorization source.
+- Write the failing test first and maintain at least 80% coverage for every new or materially refactored module.
+- Preserve the API, cookies, auth-action signatures, permission merge order, mock namespace, and menu behavior documented above.
+- Follow the execution checklist in `docs/ai/coding-rules.md` before considering a feature complete.

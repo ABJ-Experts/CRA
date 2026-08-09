@@ -10,6 +10,7 @@ import {
 
 import { AuditService } from "../../audit/audit.service";
 import { SupabaseService } from "../../supabase/supabase.service";
+import { RecoverMfaUseCase } from "../application/auth-use-cases";
 
 const sha256 = (v: string): string =>
   createHash("sha256").update(v).digest("hex");
@@ -39,6 +40,7 @@ export class MfaService {
   constructor(
     private readonly supabase: SupabaseService,
     private readonly audit: AuditService,
+    private readonly recoverMfa: RecoverMfaUseCase,
   ) {}
 
   /** Begin enrolment. Returns the QR payload the user scans. */
@@ -218,104 +220,23 @@ export class MfaService {
     authUserId: string,
     code: string,
   ): Promise<void> {
-    const normalized = code.trim().toLowerCase().replace(/-/g, "");
+    const result = await this.recoverMfa.execute({ userId, authUserId, code });
+    if (result.ok) return;
 
-    const { data, error } = await this.supabase
-      .admin()
-      .from("auth_mfa_recovery_codes")
-      .select("id")
-      .eq("user_id", userId)
-      .eq("code_hash", sha256(normalized))
-      .is("consumed_at", null)
-      .maybeSingle();
-
-    if (error) {
-      this.logger.error(`Recovery lookup failed: ${error.message}`);
-      throw new BadRequestException({
-        message: "We could not verify that code.",
-        code: "mfa_recovery_failed",
-      });
-    }
-
-    if (!data) {
+    if (result.error.code === "mfa_recovery_invalid") {
       throw new UnauthorizedException({
         message: "That recovery code is not valid.",
-        code: "mfa_recovery_invalid",
+        code: result.error.code,
       });
     }
 
-    // Consume BEFORE returning success, so a replay of the same request cannot
-    // spend the code twice.
-    await this.supabase
-      .admin()
-      .from("auth_mfa_recovery_codes")
-      .update({ consumed_at: new Date().toISOString() })
-      .eq("id", data.id);
-
-    await this.removeAllFactors(userId, authUserId);
-
-    this.audit.log({
-      organizationId: null,
-      userId,
-      action: "mfa.recovery_code_used",
-      entityType: "user",
-      entityId: userId,
-      changes: { factorsRemoved: true },
+    this.logger.error(
+      `MFA recovery failed for user ${userId} with sanitized code auth_unavailable`,
+    );
+    throw new ServiceUnavailableException({
+      message: "Sign-in is temporarily unavailable. Please try again.",
+      code: "auth_unavailable",
     });
-  }
-
-  /**
-   * Delete every TOTP factor for a user, via the admin API.
-   *
-   * Used by the recovery path, where the caller cannot reach aal2 and therefore
-   * cannot delete the factor themselves. The remaining recovery codes go too:
-   * they exist to bypass a factor that no longer exists.
-   */
-  private async removeAllFactors(
-    userId: string,
-    authUserId: string,
-  ): Promise<void> {
-    try {
-      /*
-       * `authUserId`, NOT `userId`. GoTrue's admin API keys on auth.users.id,
-       * while every FK in our schema uses public.users.id — passing the wrong
-       * one returns "User not found" and silently leaves the factor in place,
-       * which is the exact id-confusion `RequestUser` warns about.
-       */
-      const { data, error } = await this.supabase
-        .admin()
-        .auth.admin.mfa.listFactors({ userId: authUserId });
-
-      if (error) {
-        this.logger.error(`Admin listFactors failed: ${error.message}`);
-        return;
-      }
-
-      for (const factor of data?.factors ?? []) {
-        const { error: deleteError } = await this.supabase
-          .admin()
-          .auth.admin.mfa.deleteFactor({ id: factor.id, userId: authUserId });
-
-        if (deleteError) {
-          this.logger.error(
-            `Admin deleteFactor failed for ${factor.id}: ${deleteError.message}`,
-          );
-        }
-      }
-
-      await this.supabase
-        .admin()
-        .from("auth_mfa_recovery_codes")
-        .delete()
-        .eq("user_id", userId);
-    } catch (error) {
-      // Never fail the sign-in over cleanup: the user has already proved the
-      // recovery code. A stranded factor is logged and fixable; a failed
-      // recovery is a locked-out account.
-      this.logger.error(
-        `Factor cleanup threw: ${error instanceof Error ? error.message : String(error)}`,
-      );
-    }
   }
 
   /** Whether this account owes a TOTP challenge at sign-in. */

@@ -47,6 +47,13 @@ begin
      and column_name = 'email_verified_at';
   perform pg_temp.check('users has a server-side email verification state', n = 1);
 
+  select count(*) into n
+    from public.organizations organizations
+    left join public.organization_permissions_version versions
+      on versions.organization_id = organizations.id
+   where versions.organization_id is null;
+  perform pg_temp.check('every organization has a permissions version', n = 0);
+
   select count(*) into n from pg_proc p
     join pg_namespace ns on ns.oid = p.pronamespace
    where ns.nspname = 'public' and p.proconfig is null;
@@ -306,7 +313,520 @@ $$;
 rollback;
 
 -- ---------------------------------------------------------------------------
--- 8. menu_permissions exclusive arc.
+-- 8. Atomic invitation acceptance.
+-- ---------------------------------------------------------------------------
+select pg_temp.check(
+  'atomic invitation RPC exists',
+  to_regprocedure('public.accept_invitation_atomic(text,uuid,text)') is not null
+);
+
+select pg_temp.check(
+  'atomic invitation RPC is service-role only',
+  has_function_privilege(
+    'service_role',
+    'public.accept_invitation_atomic(text,uuid,text)',
+    'EXECUTE'
+  )
+  and not has_function_privilege(
+    'anon',
+    'public.accept_invitation_atomic(text,uuid,text)',
+    'EXECUTE'
+  )
+  and not has_function_privilege(
+    'authenticated',
+    'public.accept_invitation_atomic(text,uuid,text)',
+    'EXECUTE'
+  )
+);
+
+select pg_temp.check(
+  'atomic invitation revoke RPC exists',
+  to_regprocedure(
+    'public.revoke_invitation_atomic(uuid,uuid,uuid,text)'
+  ) is not null
+);
+
+select pg_temp.check(
+  'atomic invitation revoke RPC is service-role only',
+  has_function_privilege(
+    'service_role',
+    'public.revoke_invitation_atomic(uuid,uuid,uuid,text)',
+    'EXECUTE'
+  )
+  and not has_function_privilege(
+    'anon',
+    'public.revoke_invitation_atomic(uuid,uuid,uuid,text)',
+    'EXECUTE'
+  )
+  and not has_function_privilege(
+    'authenticated',
+    'public.revoke_invitation_atomic(uuid,uuid,uuid,text)',
+    'EXECUTE'
+  )
+);
+
+begin;
+do $$
+declare
+  v_org uuid;
+  v_user uuid;
+  v_corrupt_user uuid;
+  v_owner uuid;
+  v_seeded_member uuid;
+  v_invitation uuid;
+  v_accepted_invitation uuid;
+  v_revoke_invitation uuid;
+  v_result record;
+  v_outcome text;
+begin
+  select id into v_org from public.organizations where slug = 'cra';
+  select id into v_owner from public.users where email = 'owner@cra.test';
+  select id into v_seeded_member from public.users where email = 'member@cra.test';
+  insert into public.users (email)
+  values ('atomic-invitee@cra.test')
+  returning id into v_user;
+  insert into public.users (email)
+  values ('corrupt-accepted@cra.test')
+  returning id into v_corrupt_user;
+
+  insert into public.invitations (
+    organization_id, email, role, token_hash, expires_at
+  ) values (
+    v_org, 'atomic-invitee@cra.test', 'member', repeat('a', 64),
+    now() - interval '1 minute'
+  );
+  select * into v_result
+    from public.accept_invitation_atomic(
+      repeat('a', 64), v_user, 'atomic-invitee@cra.test'
+    );
+  perform pg_temp.check('expired invitation is rejected', v_result.outcome = 'expired');
+  perform pg_temp.check(
+    'expired invitation is durably marked expired',
+    (select status = 'expired' from public.invitations where token_hash = repeat('a', 64))
+  );
+
+  insert into public.invitations (
+    organization_id, email, role, token_hash, status, expires_at, revoked_at
+  ) values (
+    v_org, 'atomic-invitee@cra.test', 'member', repeat('b', 64), 'revoked',
+    now() + interval '1 day', now()
+  );
+  select * into v_result
+    from public.accept_invitation_atomic(
+      repeat('b', 64), v_user, 'atomic-invitee@cra.test'
+    );
+  perform pg_temp.check('revoked invitation is not pending', v_result.outcome = 'not_pending');
+
+  insert into public.invitations (
+    organization_id, email, role, token_hash, expires_at
+  ) values (
+    v_org, 'atomic-invitee@cra.test', 'admin', repeat('c', 64),
+    now() + interval '1 day'
+  ) returning id into v_invitation;
+  v_accepted_invitation := v_invitation;
+
+  select * into v_result
+    from public.accept_invitation_atomic(
+      repeat('f', 64), v_user, 'atomic-invitee@cra.test'
+    );
+  perform pg_temp.check('unknown invitation hash is not found', v_result.outcome = 'not_found');
+
+  select * into v_result
+    from public.accept_invitation_atomic(
+      'not-a-sha256', v_user, 'atomic-invitee@cra.test'
+    );
+  perform pg_temp.check('malformed invitation hash is not found', v_result.outcome = 'not_found');
+
+  select * into v_result
+    from public.accept_invitation_atomic(
+      repeat('c', 64), gen_random_uuid(), 'atomic-invitee@cra.test'
+    );
+  perform pg_temp.check('missing invitation user is rejected', v_result.outcome = 'user_not_found');
+
+  select * into v_result
+    from public.accept_invitation_atomic(
+      repeat('c', 64), v_user, 'wrong@cra.test'
+    );
+  perform pg_temp.check('invitation email mismatch is rejected', v_result.outcome = 'email_mismatch');
+
+  select * into v_result
+    from public.accept_invitation_atomic(
+      repeat('c', 64), v_user, '  Atomic-Invitee@CRA.test  '
+    );
+  perform pg_temp.check('pending invitation is accepted', v_result.outcome = 'accepted');
+  perform pg_temp.check(
+    'accepted invitation returns its organization',
+    v_result.invitation_id = v_invitation
+    and v_result.organization_id = v_org
+    and v_result.organization_name = 'CRA'
+    and v_result.organization_slug = 'cra'
+  );
+  perform pg_temp.check(
+    'acceptance creates exactly one membership with the invited role',
+    (select count(*) = 1 and max(role) = 'admin'
+       from public.organization_members
+      where organization_id = v_org and user_id = v_user)
+  );
+  perform pg_temp.check(
+    'acceptance records its timestamp',
+    (select status = 'accepted' and accepted_at is not null
+       from public.invitations where id = v_invitation)
+  );
+  perform pg_temp.check(
+    'acceptance writes exactly one audit row',
+    (select count(*) = 1
+       from public.audit_logs
+      where action = 'invitation.accepted'
+        and entity_id = v_invitation::text
+        and organization_id = v_org
+        and user_id = v_user)
+  );
+
+  select * into v_result
+    from public.accept_invitation_atomic(
+      repeat('c', 64), v_user, 'atomic-invitee@cra.test'
+    );
+  perform pg_temp.check('second acceptance is idempotent', v_result.outcome = 'already_accepted');
+  perform pg_temp.check(
+    'idempotent acceptance does not duplicate effects',
+    (select count(*) = 1 from public.organization_members
+      where organization_id = v_org and user_id = v_user)
+    and
+    (select count(*) = 1 from public.audit_logs
+      where action = 'invitation.accepted' and entity_id = v_invitation::text)
+  );
+
+  insert into public.invitations (
+    organization_id, email, token_hash, status, expires_at, accepted_at
+  ) values (
+    v_org, 'corrupt-accepted@cra.test', repeat('d', 64), 'accepted',
+    now() + interval '1 day', now()
+  );
+  select * into v_result
+    from public.accept_invitation_atomic(
+      repeat('d', 64), v_corrupt_user, 'corrupt-accepted@cra.test'
+    );
+  perform pg_temp.check(
+    'accepted invitation without membership fails closed',
+    v_result.outcome = 'not_pending'
+  );
+
+  insert into public.invitations (
+    organization_id, email, role, token_hash, expires_at
+  ) values (
+    v_org, 'member@cra.test', 'viewer', repeat('e', 64),
+    now() + interval '1 day'
+  ) returning id into v_invitation;
+  select * into v_result
+    from public.accept_invitation_atomic(
+      repeat('e', 64), v_seeded_member, 'member@cra.test'
+    );
+  perform pg_temp.check(
+    'accepting as an existing member does not duplicate membership',
+    v_result.outcome = 'accepted'
+    and (select count(*) = 1 from public.organization_members
+          where organization_id = v_org and user_id = v_seeded_member)
+    and (select count(*) = 1 from public.audit_logs
+          where action = 'invitation.accepted' and entity_id = v_invitation::text)
+  );
+
+  insert into public.invitations (
+    organization_id, email, role, token_hash, expires_at
+  ) values (
+    v_org, 'revoke-me@cra.test', 'member', repeat('9', 64),
+    now() + interval '1 day'
+  ) returning id into v_revoke_invitation;
+
+  select public.revoke_invitation_atomic(
+    v_org, gen_random_uuid(), v_owner, 'owner@cra.test'
+  ) into v_outcome;
+  perform pg_temp.check('missing invitation cannot be revoked', v_outcome = 'not_found');
+
+  select public.revoke_invitation_atomic(
+    gen_random_uuid(), v_revoke_invitation, v_owner, 'owner@cra.test'
+  ) into v_outcome;
+  perform pg_temp.check(
+    'cross-organization revoke does not reveal invitation existence',
+    v_outcome = 'not_found'
+  );
+
+  select public.revoke_invitation_atomic(
+    v_org, v_revoke_invitation, gen_random_uuid(), 'owner@cra.test'
+  ) into v_outcome;
+  perform pg_temp.check('missing revoke actor is rejected', v_outcome = 'actor_not_found');
+
+  select public.revoke_invitation_atomic(
+    v_org, v_revoke_invitation, v_owner, 'not-owner@cra.test'
+  ) into v_outcome;
+  perform pg_temp.check('revoke actor email mismatch is rejected', v_outcome = 'actor_email_mismatch');
+
+  select public.revoke_invitation_atomic(
+    v_org, v_accepted_invitation, v_owner, 'owner@cra.test'
+  ) into v_outcome;
+  perform pg_temp.check('accepted invitation cannot be revoked', v_outcome = 'already_accepted');
+
+  select public.revoke_invitation_atomic(
+    v_org, v_revoke_invitation, v_owner, '  Owner@CRA.test  '
+  ) into v_outcome;
+  perform pg_temp.check('pending invitation is revoked', v_outcome = 'revoked');
+  perform pg_temp.check(
+    'revocation records status and one audit row atomically',
+    (select status = 'revoked' and revoked_at is not null
+       from public.invitations where id = v_revoke_invitation)
+    and
+    (select count(*) = 1 from public.audit_logs
+      where action = 'invitation.revoked'
+        and entity_id = v_revoke_invitation::text
+        and user_id = v_owner)
+  );
+
+  select public.revoke_invitation_atomic(
+    v_org, v_revoke_invitation, v_owner, 'owner@cra.test'
+  ) into v_outcome;
+  perform pg_temp.check('second revocation is not replayed', v_outcome = 'not_pending');
+  perform pg_temp.check(
+    'second revocation does not duplicate its audit row',
+    (select count(*) = 1 from public.audit_logs
+      where action = 'invitation.revoked'
+        and entity_id = v_revoke_invitation::text)
+  );
+end
+$$;
+rollback;
+
+-- ---------------------------------------------------------------------------
+-- 9. Atomic email verification.
+-- ---------------------------------------------------------------------------
+select pg_temp.check(
+  'atomic email verification RPC exists',
+  to_regprocedure(
+    'public.verify_email_code_atomic(uuid,text,integer)'
+  ) is not null
+);
+
+select pg_temp.check(
+  'atomic email verification RPC is service-role only',
+  has_function_privilege(
+    'service_role',
+    'public.verify_email_code_atomic(uuid,text,integer)',
+    'EXECUTE'
+  )
+  and not has_function_privilege(
+    'anon',
+    'public.verify_email_code_atomic(uuid,text,integer)',
+    'EXECUTE'
+  )
+  and not has_function_privilege(
+    'authenticated',
+    'public.verify_email_code_atomic(uuid,text,integer)',
+    'EXECUTE'
+  )
+);
+
+begin;
+do $$
+declare
+  v_attempt_user uuid;
+  v_expired_user uuid;
+  v_verified_user uuid;
+  v_other_user uuid;
+  v_changed_email_user uuid;
+  v_malformed_user uuid;
+  v_outcome text;
+begin
+  insert into public.users (email)
+  values ('verify-attempts@cra.test')
+  returning id into v_attempt_user;
+  insert into public.users (email)
+  values ('verify-expired@cra.test')
+  returning id into v_expired_user;
+  insert into public.users (email)
+  values ('verify-success@cra.test')
+  returning id into v_verified_user;
+  insert into public.users (email)
+  values ('verify-other@cra.test')
+  returning id into v_other_user;
+  insert into public.users (email)
+  values ('verify-changed@cra.test')
+  returning id into v_changed_email_user;
+  insert into public.users (email)
+  values ('verify-malformed@cra.test')
+  returning id into v_malformed_user;
+
+  insert into public.auth_email_verifications (
+    user_id, email, code_hash, purpose, expires_at
+  ) values (
+    v_attempt_user, 'verify-attempts@cra.test', repeat('1', 64),
+    'signup', now() + interval '10 minutes'
+  );
+
+  select public.verify_email_code_atomic(
+    v_attempt_user, repeat('2', 64), 5
+  ) into v_outcome;
+  perform pg_temp.check('first wrong email code is invalid', v_outcome = 'invalid');
+  select public.verify_email_code_atomic(
+    v_attempt_user, repeat('2', 64), 5
+  ) into v_outcome;
+  perform pg_temp.check(
+    'two wrong email codes increment exactly twice',
+    v_outcome = 'invalid'
+    and (select attempts = 2 from public.auth_email_verifications
+          where user_id = v_attempt_user and purpose = 'signup')
+  );
+
+  perform public.verify_email_code_atomic(v_attempt_user, repeat('2', 64), 5);
+  perform public.verify_email_code_atomic(v_attempt_user, repeat('2', 64), 5);
+  select public.verify_email_code_atomic(
+    v_attempt_user, repeat('2', 64), 5
+  ) into v_outcome;
+  perform pg_temp.check(
+    'fifth wrong email code consumes the final attempt',
+    v_outcome = 'invalid'
+    and (select attempts = 5 from public.auth_email_verifications
+          where user_id = v_attempt_user and purpose = 'signup')
+  );
+  select public.verify_email_code_atomic(
+    v_attempt_user, repeat('1', 64), 5
+  ) into v_outcome;
+  perform pg_temp.check(
+    'sixth email-code attempt is exhausted without increment',
+    v_outcome = 'attempts_exhausted'
+    and (select attempts = 5 from public.auth_email_verifications
+          where user_id = v_attempt_user and purpose = 'signup')
+  );
+  select public.verify_email_code_atomic(
+    v_attempt_user, repeat('1', 64), 999
+  ) into v_outcome;
+  perform pg_temp.check(
+    'caller cannot raise the email-code guessing budget',
+    v_outcome = 'attempts_exhausted'
+    and (select attempts = 5 from public.auth_email_verifications
+          where user_id = v_attempt_user and purpose = 'signup')
+    and (select email_verified_at is null from public.users
+          where id = v_attempt_user)
+  );
+
+  insert into public.auth_email_verifications (
+    user_id, email, code_hash, purpose, expires_at
+  ) values (
+    v_expired_user, 'verify-expired@cra.test', repeat('3', 64),
+    'signup', now() - interval '1 second'
+  );
+  select public.verify_email_code_atomic(
+    v_expired_user, repeat('3', 64), 5
+  ) into v_outcome;
+  perform pg_temp.check(
+    'expired email code cannot verify the user',
+    v_outcome = 'expired'
+    and (select email_verified_at is null from public.users
+          where id = v_expired_user)
+    and (select consumed_at is null from public.auth_email_verifications
+          where user_id = v_expired_user and purpose = 'signup')
+  );
+
+  insert into public.auth_email_verifications (
+    user_id, email, code_hash, purpose, expires_at
+  ) values (
+    v_verified_user, 'verify-success@cra.test', repeat('4', 64),
+    'signup', now() + interval '10 minutes'
+  );
+
+  select public.verify_email_code_atomic(
+    v_other_user, repeat('4', 64), 5
+  ) into v_outcome;
+  perform pg_temp.check(
+    'email code cannot verify another user',
+    v_outcome = 'missing'
+    and (select email_verified_at is null from public.users
+          where id = v_other_user)
+    and (select consumed_at is null from public.auth_email_verifications
+          where user_id = v_verified_user and purpose = 'signup')
+  );
+
+  select public.verify_email_code_atomic(
+    v_verified_user, repeat('4', 64), 5
+  ) into v_outcome;
+  perform pg_temp.check(
+    'correct email code verifies and consumes atomically',
+    v_outcome = 'verified'
+    and (select users.email_verified_at is not null
+           and verifications.consumed_at = users.email_verified_at
+           from public.users users
+           join public.auth_email_verifications verifications
+             on verifications.user_id = users.id
+          where users.id = v_verified_user
+            and verifications.purpose = 'signup')
+  );
+
+  select public.verify_email_code_atomic(
+    v_verified_user, repeat('4', 64), 5
+  ) into v_outcome;
+  perform pg_temp.check(
+    'consumed email code cannot be replayed',
+    v_outcome = 'missing'
+  );
+
+  insert into public.auth_email_verifications (
+    user_id, email, code_hash, purpose, expires_at
+  ) values (
+    v_changed_email_user, 'verify-original@cra.test', repeat('5', 64),
+    'signup', now() + interval '10 minutes'
+  );
+  select public.verify_email_code_atomic(
+    v_changed_email_user, repeat('5', 64), 5
+  ) into v_outcome;
+  perform pg_temp.check(
+    'signup code cannot verify a changed email address',
+    v_outcome = 'missing'
+    and (select email_verified_at is null from public.users
+          where id = v_changed_email_user)
+    and (select consumed_at is null and attempts = 0
+           from public.auth_email_verifications
+          where user_id = v_changed_email_user and purpose = 'signup')
+  );
+
+  insert into public.auth_email_verifications (
+    user_id, email, code_hash, purpose, expires_at
+  ) values (
+    v_malformed_user, 'verify-malformed@cra.test', repeat('6', 64),
+    'signup', now() + interval '10 minutes'
+  );
+  select public.verify_email_code_atomic(
+    v_malformed_user, 'raw-code', 5
+  ) into v_outcome;
+  perform pg_temp.check(
+    'malformed email-code hash leaves a live code untouched',
+    v_outcome = 'missing'
+    and (select attempts = 0 and consumed_at is null
+           from public.auth_email_verifications
+          where user_id = v_malformed_user and purpose = 'signup')
+  );
+  select public.verify_email_code_atomic(
+    v_malformed_user, repeat('6', 64), 0
+  ) into v_outcome;
+  perform pg_temp.check(
+    'invalid email-code attempt limit leaves a live code untouched',
+    v_outcome = 'missing'
+    and (select attempts = 0 and consumed_at is null
+           from public.auth_email_verifications
+          where user_id = v_malformed_user and purpose = 'signup')
+  );
+  select public.verify_email_code_atomic(
+    v_malformed_user, repeat('6', 64), null
+  ) into v_outcome;
+  perform pg_temp.check(
+    'null email-code attempt limit leaves a live code untouched',
+    v_outcome = 'missing'
+    and (select attempts = 0 and consumed_at is null
+           from public.auth_email_verifications
+          where user_id = v_malformed_user and purpose = 'signup')
+  );
+end
+$$;
+rollback;
+
+-- ---------------------------------------------------------------------------
+-- 10. menu_permissions exclusive arc.
 -- ---------------------------------------------------------------------------
 begin;
 do $$
@@ -332,7 +852,7 @@ $$;
 rollback;
 
 -- ---------------------------------------------------------------------------
--- 9. Login lockout, including the sliding window.
+-- 11. Login lockout, including the sliding window.
 -- ---------------------------------------------------------------------------
 begin;
 do $$
@@ -376,7 +896,7 @@ $$;
 rollback;
 
 -- ---------------------------------------------------------------------------
--- 10. The suite must leave NOTHING behind. Anything it granted or inserted
+-- 12. The suite must leave NOTHING behind. Anything it granted or inserted
 --     above has been rolled back; re-assert the lockdown invariants to prove it.
 -- ---------------------------------------------------------------------------
 do $$

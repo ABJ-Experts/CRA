@@ -107,6 +107,17 @@ check "sign-in routes to dashboard" "$(body "$R")" '{"next":"dashboard"}'
 R=$(post /auth/sign-in "{\"email\":\"$USERNAME\",\"password\":\"Password123\",\"remember\":false}")
 check "sign-in by username works" "$(status "$R")" "200"
 
+echo "lock-screen lockout"
+for attempt in 1 2 3 4 5; do
+  R=$(post /auth/unlock '{"password":"definitely-wrong"}')
+  check "wrong unlock attempt $attempt rejected" "$(status "$R")" "401"
+done
+R=$(post /auth/unlock '{"password":"Password123"}')
+check "locked account cannot unlock with correct password" "$(status "$R")" "429"
+grep -q '"code":"account_locked"' <<<"$(body "$R")" \
+  && check "unlock reports account_locked" yes yes \
+  || check "unlock reports account_locked" "$(body "$R")" "account_locked"
+
 echo "enumeration resistance"
 R=$(post /auth/forgot-password '{"email":"definitely-not-a-user@cra.test"}')
 check "forgot-password hides unknown address" "$(status "$R")" "200"

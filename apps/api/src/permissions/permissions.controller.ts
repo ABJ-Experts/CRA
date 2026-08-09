@@ -60,7 +60,11 @@ export class PermissionsController {
       return { organizationId: null, role: null, permissions: {} };
     }
 
-    const { permissions } = await this.permissions.resolve(orgId, userId, role);
+    const permissions = await this.permissions.effectivePermissions(
+      orgId,
+      userId,
+      role,
+    );
     return { organizationId: orgId, role, permissions };
   }
 
@@ -95,7 +99,11 @@ export class PermissionsController {
     // Unknown keys resolve to false rather than erroring: a client asking about
     // a permission that has since been deleted should be told "no", not 400.
     const known = dto.permissions.filter(isPermissionKey);
-    const { permissions } = await this.permissions.resolve(orgId, userId, role);
+    const permissions = await this.permissions.effectivePermissions(
+      orgId,
+      userId,
+      role,
+    );
 
     const results: Record<string, boolean> = {};
     for (const key of dto.permissions) {

@@ -9,6 +9,8 @@
  * MSW to the real API is a URL change and nothing else.
  */
 
+import { z } from "zod";
+
 export interface Paged<T> {
   rows: T[];
   total: number;
@@ -19,6 +21,18 @@ export interface Paged<T> {
 
 export const DEFAULT_PAGE_SIZE = 15;
 export const MAX_PAGE_SIZE = 100;
+
+/** Runtime validator for the same bare list-response contract. */
+export const pagedSchema = <T>(rowSchema: z.ZodType<T>) =>
+  z
+    .object({
+      rows: z.array(rowSchema),
+      total: z.number().int().nonnegative(),
+      page: z.number().int().positive(),
+      pageSize: z.number().int().min(1).max(MAX_PAGE_SIZE),
+      pageCount: z.number().int().positive(),
+    })
+    .strict();
 
 export interface PageParams {
   page: number;

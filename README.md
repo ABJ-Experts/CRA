@@ -8,12 +8,12 @@ silently producing a second lockfile.
 
 ### Apps
 
-| App | Stack | Port | Purpose |
-| --- | --- | --- | --- |
-| `web` | Next.js 16 | 3000 | Main web application |
-| `docs` | Docusaurus 3 | 3001 | Documentation, and API docs in future |
-| `api` | NestJS 11 | 3333 | Backend API |
-| `infrastructure` | Supabase CLI | — | Local Postgres, migrations, future Terraform |
+| App              | Stack        | Port | Purpose                                      |
+| ---------------- | ------------ | ---- | -------------------------------------------- |
+| `web`            | Next.js 16   | 3000 | Main web application                         |
+| `docs`           | Docusaurus 3 | 3001 | Documentation, and API docs in future        |
+| `api`            | NestJS 11    | 3333 | Backend API                                  |
+| `infrastructure` | Supabase CLI | —    | Local Postgres, migrations, future Terraform |
 
 `infrastructure` is intentionally not wired into Turborepo — its commands are
 stateful (they start containers and mutate databases) and must never be
@@ -56,7 +56,48 @@ pnpm exec turbo dev --filter=api
 pnpm build          # build every app
 pnpm lint           # lint every package
 pnpm check-types    # typecheck every package
+pnpm test           # run unit and integration tests
+pnpm test:architecture # verify docs and dependency/design boundaries
+pnpm verify         # run the complete fast CI gate
 pnpm format         # prettier across the repo
+```
+
+## Architecture rules
+
+CRA uses a feature-oriented modular monolith with inward dependencies:
+presentation to application to domain, with infrastructure adapters
+implementing application-owned ports. Patterns are selected for demonstrated
+problems rather than applied as a quota. Start with the
+[architecture guide](docs/architecture/README.md), the complete
+[22-pattern decision catalogue](docs/architecture/pattern-selection-matrix.md),
+and the [feature design template](docs/architecture/feature-design-template.md).
+Release and rollback signals are defined in the
+[architecture rollout runbook](docs/architecture/rollout-runbook.md).
+
+### Live verification
+
+`pnpm test:live` runs the RLS suite, API end-to-end suite, and the real auth
+flow against local Supabase, Postgres, and Mailpit. Docker must be running,
+Supabase must be started, and a built API must remain running on port 3333.
+The auth flow creates timestamped test users in the local database.
+
+Start the prerequisites in one terminal:
+
+```sh
+pnpm --filter infrastructure run db:start
+pnpm --filter infrastructure run db:reset
+pnpm --filter api run build
+pnpm --filter api run start
+```
+
+`db:reset` discards local database data, reapplies every migration, and restores
+the seed accounts required by the live invariants. Do not run it against data
+you need to keep.
+
+Then run the live gate from another terminal:
+
+```sh
+pnpm test:live
 ```
 
 ## Commit-message hook

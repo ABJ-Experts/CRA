@@ -1,6 +1,14 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createRemoteJWKSet, decodeProtectedHeader, jwtVerify } from "jose";
 
+import {
+  decideRoute,
+  type RouteDecision,
+  type TokenState,
+} from "./app/_features/session/route-session-state";
+
+export type { TokenState } from "./app/_features/session/route-session-state";
+
 /**
  * Route protection.
  *
@@ -35,6 +43,7 @@ const AUTH_PAGES = [
 const AUTH_FLOW_EXCEPTIONS = ["/verify", "/two-factor", "/lock", "/success"];
 
 const ACCESS_COOKIE = "cra_at";
+const SESSION_MARKER_COOKIE = "cra_session";
 const PENDING_COOKIE = "cra_pending";
 const MFA_COOKIE = "cra_mfa";
 
@@ -79,9 +88,9 @@ const jwks = createRemoteJWKSet(
   new URL(`${SUPABASE_URL}/auth/v1/.well-known/jwks.json`),
 );
 
-type TokenState = "valid" | "expired" | "invalid" | "absent";
-
-async function inspect(token: string | undefined): Promise<TokenState> {
+export async function inspectToken(
+  token: string | undefined,
+): Promise<TokenState> {
   if (!token) return "absent";
 
   let alg: string | undefined;
@@ -91,7 +100,14 @@ async function inspect(token: string | undefined): Promise<TokenState> {
     return "invalid";
   }
 
-  const useJwks = alg !== undefined && alg !== "HS256";
+  // Reject before selecting a verifier or an outage fallback. Otherwise an
+  // unsupported algorithm could be mistaken for an asymmetric Supabase token
+  // and accepted from its unsigned expiry when JWKS lookup fails.
+  if (alg !== "HS256" && alg !== "ES256" && alg !== "RS256") {
+    return "invalid";
+  }
+
+  const useJwks = alg !== "HS256";
 
   /*
    * HS256 with no secret configured: fall back to reading `exp` only. That is
@@ -165,6 +181,65 @@ export function createRefreshTarget(request: NextRequest): URL {
   return target;
 }
 
+export function shouldAttemptRefresh(
+  isProtected: boolean,
+  state: TokenState,
+  hasSessionMarker: boolean,
+): boolean {
+  return (
+    decideRoute({
+      protected: isProtected,
+      authPage: false,
+      flowException: false,
+      verificationPage: false,
+      mfaPage: false,
+      token: state,
+      marker: hasSessionMarker,
+      pending: false,
+      mfa: false,
+    }).kind === "refresh"
+  );
+}
+
+function redirectTo(request: NextRequest, pathname: string): NextResponse {
+  const url = request.nextUrl.clone();
+  url.pathname = pathname;
+  url.search = "";
+  return NextResponse.redirect(url);
+}
+
+function respondToDecision(
+  request: NextRequest,
+  decision: RouteDecision,
+  returnUrl: string,
+): NextResponse {
+  switch (decision.kind) {
+    case "refresh":
+      // Only navigations are bounced. `/api/v1` is excluded by the matcher.
+      return NextResponse.redirect(createRefreshTarget(request));
+    case "sign_in": {
+      const url = request.nextUrl.clone();
+      url.pathname = "/sign-in";
+      url.search = "";
+      url.searchParams.set("returnUrl", returnUrl);
+      return NextResponse.redirect(url);
+    }
+    case "clear_and_sign_in": {
+      const response = redirectTo(request, "/sign-in");
+      response.cookies.delete(ACCESS_COOKIE);
+      return response;
+    }
+    case "verify_email":
+      return redirectTo(request, "/verify");
+    case "verify_mfa":
+      return redirectTo(request, "/two-factor");
+    case "dashboard":
+      return redirectTo(request, "/dashboard");
+    case "next":
+      return NextResponse.next();
+  }
+}
+
 export async function middleware(request: NextRequest): Promise<NextResponse> {
   const { pathname, search } = request.nextUrl;
 
@@ -173,73 +248,22 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
   const isProtected = startsWithAny(pathname, PROTECTED);
   const isAuthPage = startsWithAny(pathname, AUTH_PAGES);
   const token = request.cookies.get(ACCESS_COOKIE)?.value;
-  const state = await inspect(token);
-
-  // 1. Expired on a protected page -> let the backend rotate the pair.
-  //    ONLY navigations are bounced. Redirecting an XHR to another origin
-  //    surfaces in the browser as an opaque CORS TypeError rather than a 401,
-  //    so the caller never learns it needs to refresh and the request is simply
-  //    lost. `/api/v1` is excluded by the matcher below for the same reason.
-  if (isProtected && (state === "expired" || state === "absent") && token) {
-    return NextResponse.redirect(createRefreshTarget(request));
-  }
-
-  // 2. No token at all on a protected page -> sign in.
-  if (isProtected && state === "absent") {
-    const url = request.nextUrl.clone();
-    url.pathname = "/sign-in";
-    url.search = "";
-    url.searchParams.set("returnUrl", `${pathname}${search}`);
-    return NextResponse.redirect(url);
-  }
-
-  // 3. A token that is present but not merely expired is not trustworthy.
-  if (isProtected && state === "invalid") {
-    const url = request.nextUrl.clone();
-    url.pathname = "/sign-in";
-    url.search = "";
-    const response = NextResponse.redirect(url);
-    response.cookies.delete(ACCESS_COOKIE);
-    return response;
-  }
-
-  // 4. Sign-up not finished: hold the user on /verify wherever they try to go.
+  const state = await inspectToken(token);
+  const hasSessionMarker = request.cookies.has(SESSION_MARKER_COOKIE);
   const pending = request.cookies.get(PENDING_COOKIE)?.value;
-  if (
-    pending &&
-    !pathname.startsWith("/verify") &&
-    (isProtected || isAuthPage)
-  ) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/verify";
-    url.search = "";
-    return NextResponse.redirect(url);
-  }
-
-  // 5. MFA owed: nothing but /two-factor.
   const mfa = request.cookies.get(MFA_COOKIE)?.value;
-  if (mfa && !pathname.startsWith("/two-factor")) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/two-factor";
-    url.search = "";
-    return NextResponse.redirect(url);
-  }
-
-  // 6. Already signed in, sitting on an auth page -> dashboard. The mid-flow
-  //    pages are excepted, or a user completing verification would be bounced
-  //    off the very screen they need.
-  if (
-    isAuthPage &&
-    state === "valid" &&
-    !startsWithAny(pathname, AUTH_FLOW_EXCEPTIONS)
-  ) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/dashboard";
-    url.search = "";
-    return NextResponse.redirect(url);
-  }
-
-  return NextResponse.next();
+  const decision = decideRoute({
+    protected: isProtected,
+    authPage: isAuthPage,
+    flowException: startsWithAny(pathname, AUTH_FLOW_EXCEPTIONS),
+    verificationPage: pathname.startsWith("/verify"),
+    mfaPage: pathname.startsWith("/two-factor"),
+    token: state,
+    marker: hasSessionMarker,
+    pending: Boolean(pending),
+    mfa: Boolean(mfa),
+  });
+  return respondToDecision(request, decision, `${pathname}${search}`);
 }
 
 export const config = {

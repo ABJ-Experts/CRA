@@ -13,9 +13,11 @@ import {
   type PermissionSet,
 } from "@repo/contracts/permissions";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { Fragment, useState } from "react";
 
 import { SectionCard } from "../_components/dashboard-chrome";
+import { rolesApi, rolesQueryKeys } from "../../_features/roles/roles.api";
+import { ApiClientError } from "../../_lib/http/api-client";
 import { useHasPermission } from "../../_providers/session-provider";
 
 /**
@@ -49,16 +51,9 @@ export default function PermissionsMatrixPage() {
   const [saving, setSaving] = useState<BaseRole | null>(null);
 
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ["roles", "overrides"],
+    queryKey: rolesQueryKeys.overrides,
     retry: false,
-    queryFn: async () => {
-      const res = await fetch("/api/v1/roles/overrides", {
-        credentials: "same-origin",
-        cache: "no-store",
-      });
-      if (!res.ok) throw new Error(`Request failed with ${res.status}`);
-      return (await res.json()) as { overrides: Record<string, PermissionSet> };
-    },
+    queryFn: ({ signal }) => rolesApi.getOverrides(signal),
   });
 
   async function toggle(role: BaseRole, key: PermissionKey, next: boolean) {
@@ -72,24 +67,17 @@ export default function PermissionsMatrixPage() {
        */
       const permissions = { ...current, [key]: next };
 
-      const res = await fetch("/api/v1/roles/overrides", {
-        method: "PUT",
-        headers: { "content-type": "application/json" },
-        credentials: "same-origin",
-        body: JSON.stringify({ baseRole: role, permissions }),
-      });
-
-      if (!res.ok) {
-        const body = (await res.json().catch(() => ({}))) as {
-          message?: string;
-        };
-        window.alert(body.message ?? "We could not save that change.");
-        return;
-      }
+      await rolesApi.setOverride(role, permissions);
 
       // Invalidate broadly: an override changes the caller's own effective
       // permissions and therefore the sidebar.
       await queryClient.invalidateQueries();
+    } catch (error) {
+      window.alert(
+        error instanceof ApiClientError && error.kind === "api"
+          ? error.message
+          : "We could not save that change.",
+      );
     } finally {
       setSaving(null);
     }
@@ -154,8 +142,8 @@ export default function PermissionsMatrixPage() {
               </thead>
               <tbody>
                 {PERMISSION_MODULES.map((module) => (
-                  <>
-                    <tr key={`${module}-head`} className="bg-surface-muted">
+                  <Fragment key={module}>
+                    <tr className="bg-surface-muted">
                       <th
                         scope="colgroup"
                         colSpan={BASE_ROLES.length + 1}
@@ -192,7 +180,7 @@ export default function PermissionsMatrixPage() {
                         );
                       },
                     )}
-                  </>
+                  </Fragment>
                 ))}
               </tbody>
             </table>

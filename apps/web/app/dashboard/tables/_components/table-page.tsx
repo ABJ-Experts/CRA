@@ -7,6 +7,7 @@ import {
   type RowSelectionState,
 } from "@repo/ui/data-table";
 import { useState, type ReactNode } from "react";
+import type { z } from "zod";
 import { useTableQuery } from "../../_lib/use-table-query";
 import { TableToolbar } from "./table-toolbar";
 
@@ -23,7 +24,8 @@ import { TableToolbar } from "./table-toolbar";
  */
 
 export interface TablePageProps<T> {
-  endpoint: string;
+  endpoint: `/${string}`;
+  rowSchema: z.ZodType<T>;
   variant: DataTableVariant;
   columns: ColumnDef<T, unknown>[];
   ariaLabel: string;
@@ -34,6 +36,7 @@ export interface TablePageProps<T> {
 
 export function TablePage<T>({
   endpoint,
+  rowSchema,
   variant,
   columns,
   ariaLabel,
@@ -42,7 +45,7 @@ export function TablePage<T>({
   toolbarActions,
 }: TablePageProps<T>) {
   const [selection, setSelection] = useState<RowSelectionState>({});
-  const t = useTableQuery<T>({ endpoint });
+  const t = useTableQuery<T>({ endpoint, rowSchema });
 
   return (
     <div className="flex flex-col px-6 pb-8 lg:px-[30px]">

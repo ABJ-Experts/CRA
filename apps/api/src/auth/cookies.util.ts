@@ -29,6 +29,8 @@ export const API_PREFIX = "api/v1";
 
 export const ACCESS_COOKIE = "cra_at";
 export const REFRESH_COOKIE = "cra_rt";
+/** Non-authoritative root-path hint that a refresh session may still exist. */
+export const SESSION_MARKER_COOKIE = "cra_session";
 /** Signed remember-me preference, available only to auth endpoints. */
 export const REMEMBER_ME_COOKIE = "cra_rm";
 /** Set between sign-up and email verification; identifies the pending user. */
@@ -105,6 +107,19 @@ export function setSessionCookies(
   });
 
   /*
+   * Middleware cannot see the narrowly path-scoped refresh token when the
+   * root-path access cookie expires. This signed, credential-free marker lets
+   * it route a protected navigation through the refresh endpoint. Presence is
+   * only a hint; the refresh token remains the sole credential and the API
+   * still verifies it authoritatively.
+   */
+  res.cookie(SESSION_MARKER_COOKIE, sign("1", cfg.signingSecret), {
+    ...base(cfg),
+    path: "/",
+    ...(opts.rememberMe ? { maxAge: cfg.refreshMaxAge * 1000 } : {}),
+  });
+
+  /*
    * A cookie's expiry is never sent back in Cookie headers, so the refresh
    * endpoint cannot otherwise distinguish a persistent login from a
    * session-only login. The MFA endpoints also need it when they replace an
@@ -135,6 +150,7 @@ export function clearSessionCookies(res: Response, cfg: CookieConfig): void {
   // cookie and the user stays signed in after clicking sign out.
   res.clearCookie(ACCESS_COOKIE, { ...base(cfg), path: "/" });
   res.clearCookie(REFRESH_COOKIE, { ...base(cfg), path: REFRESH_COOKIE_PATH });
+  res.clearCookie(SESSION_MARKER_COOKIE, { ...base(cfg), path: "/" });
   res.clearCookie(REMEMBER_ME_COOKIE, {
     ...base(cfg),
     path: REMEMBER_ME_COOKIE_PATH,

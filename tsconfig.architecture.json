@@ -1,0 +1,17 @@
+{
+  "extends": "./packages/typescript-config/base.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@repo/contracts": ["packages/contracts/src/index.ts"],
+      "@repo/contracts/*": ["packages/contracts/src/*.ts"],
+      "@repo/design-system/theme": ["packages/design-system/src/theme.ts"],
+      "@repo/eslint-config/next-js": ["packages/eslint-config/next.js"],
+      "@repo/eslint-config/*": ["packages/eslint-config/*.js"],
+      "@repo/typescript-config/*": ["packages/typescript-config/*.json"],
+      "@repo/ui": ["packages/ui/src/index.ts"],
+      "@repo/ui/cn": ["packages/ui/src/lib/cn.ts"],
+      "@repo/ui/*": ["packages/ui/src/components/*/index.ts"]
+    }
+  }
+}

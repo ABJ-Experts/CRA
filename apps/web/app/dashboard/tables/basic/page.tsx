@@ -4,7 +4,10 @@ import { selectionColumn, type ColumnDef } from "@repo/ui/data-table";
 import { useMemo } from "react";
 import { TablePage } from "../_components/table-page";
 import { Plain, RowActions, Stacked, StatusTag } from "../_components/cells";
-import type { Product } from "../../../../mocks/data/tables";
+import {
+  productSchema,
+  type Product,
+} from "../../../../mocks/data/table-schemas";
 
 /**
  * Tables / Basic Tables - Pencil `EaMnQ` (light), `P1lJO` (dark).
@@ -76,6 +79,7 @@ export default function BasicTablesPage() {
   return (
     <TablePage<Product>
       endpoint="/api/products"
+      rowSchema={productSchema}
       variant="basic"
       ariaLabel="Products"
       searchPlaceholder="Search products"

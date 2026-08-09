@@ -2,7 +2,12 @@
 
 import * as SelectPrimitive from "@radix-ui/react-select";
 import { Check, ChevronDown, ChevronUp } from "lucide-react";
-import { forwardRef, useId, type ComponentPropsWithoutRef, type ReactNode } from "react";
+import {
+  forwardRef,
+  useId,
+  type ComponentPropsWithoutRef,
+  type ReactNode,
+} from "react";
 import { cn } from "../../lib/cn";
 import { inputFieldVariants } from "../input/input.variants";
 import {
@@ -17,8 +22,9 @@ export const SelectRoot = SelectPrimitive.Root;
 export const SelectValue = SelectPrimitive.Value;
 export const SelectGroup = SelectPrimitive.Group;
 
-export interface SelectTriggerProps
-  extends ComponentPropsWithoutRef<typeof SelectPrimitive.Trigger> {
+export interface SelectTriggerProps extends ComponentPropsWithoutRef<
+  typeof SelectPrimitive.Trigger
+> {
   /** 40px (`md`), 48px (`lg`) or 56px (`xl`), matching the Input sizes. */
   size?: "md" | "lg" | "xl";
   /** Puts the trigger in the danger state. */
@@ -36,7 +42,7 @@ export const SelectTrigger = forwardRef<
   SelectTriggerProps
 >(function SelectTrigger(
   { className, children, size = "md", invalid, disabled, startIcon, ...props },
-  ref
+  ref,
 ) {
   const state = disabled ? "disabled" : invalid ? "error" : "default";
   return (
@@ -50,8 +56,10 @@ export const SelectTrigger = forwardRef<
         "justify-between text-left",
         "data-[placeholder]:text-border-strong",
         "outline-none focus-visible:inset-ring-1 focus-visible:inset-ring-active-500",
-        disabled ? "cursor-not-allowed text-fg-subtle" : "cursor-pointer text-fg",
-        className
+        disabled
+          ? "cursor-not-allowed text-fg-subtle"
+          : "cursor-pointer text-fg",
+        className,
       )}
       {...props}
     >
@@ -68,15 +76,23 @@ export const SelectTrigger = forwardRef<
 });
 
 export interface SelectContentProps
-  extends ComponentPropsWithoutRef<typeof SelectPrimitive.Content>,
+  extends
+    ComponentPropsWithoutRef<typeof SelectPrimitive.Content>,
     SelectContentVariantProps {}
 
 export const SelectContent = forwardRef<
   React.ComponentRef<typeof SelectPrimitive.Content>,
   SelectContentProps
 >(function SelectContent(
-  { className, children, matchTrigger, position = "popper", sideOffset = 4, ...props },
-  ref
+  {
+    className,
+    children,
+    matchTrigger,
+    position = "popper",
+    sideOffset = 4,
+    ...props
+  },
+  ref,
 ) {
   return (
     <SelectPrimitive.Portal>
@@ -105,7 +121,8 @@ export const SelectContent = forwardRef<
 });
 
 export interface SelectItemProps
-  extends ComponentPropsWithoutRef<typeof SelectPrimitive.Item>,
+  extends
+    ComponentPropsWithoutRef<typeof SelectPrimitive.Item>,
     SelectItemVariantProps {
   /** Icon or avatar before the label, as the Droplist design shows. */
   startIcon?: ReactNode;
@@ -124,7 +141,7 @@ export const SelectItem = forwardRef<
   SelectItemProps
 >(function SelectItem(
   { className, children, size, startIcon, description, ...props },
-  ref
+  ref,
 ) {
   return (
     <SelectPrimitive.Item
@@ -174,14 +191,18 @@ export const SelectLabel = forwardRef<
   return (
     <SelectPrimitive.Label
       ref={ref}
-      className={cn("px-2 py-1.5 text-caption-1-semibold text-fg-muted", className)}
+      className={cn(
+        "px-2 py-1.5 text-caption-1-semibold text-fg-muted",
+        className,
+      )}
       {...props}
     />
   );
 });
 
-export interface SelectProps
-  extends ComponentPropsWithoutRef<typeof SelectPrimitive.Root> {
+export interface SelectProps extends ComponentPropsWithoutRef<
+  typeof SelectPrimitive.Root
+> {
   /** Visible label above the trigger. */
   label?: ReactNode;
   /** Marks required and renders the danger asterisk. */
@@ -231,20 +252,35 @@ export function Select({
   const helperId = `${triggerId}-helper`;
   const hasError = Boolean(error);
 
-  const describedBy =
-    [hasError ? errorId : null, helperText && !hasError ? helperId : null]
-      .filter(Boolean)
-      .join(" ") || undefined;
-
-  // Radix's Root renders no DOM, so `data-*` attributes passed here would be
-  // silently dropped. Route them to the trigger, which is the element callers
-  // actually mean when they add a test id or an analytics hook.
+  // Radix's Root renders no DOM, so `data-*` and `aria-*` attributes passed here
+  // would be silently dropped. Only accessible naming/description attributes
+  // are safe to route to the trigger: state attributes remain Radix-owned.
   const rootProps: Record<string, unknown> = {};
-  const dataProps: Record<string, unknown> = {};
+  const triggerProps: Record<string, unknown> = {};
+  let callerDescribedBy: string | undefined;
   for (const [key, val] of Object.entries(props)) {
-    if (key.startsWith("data-")) dataProps[key] = val;
-    else rootProps[key] = val;
+    if (
+      key.startsWith("data-") ||
+      key === "aria-label" ||
+      key === "aria-labelledby"
+    ) {
+      triggerProps[key] = val;
+    } else if (key === "aria-describedby") {
+      callerDescribedBy = typeof val === "string" ? val : undefined;
+    } else if (!key.startsWith("aria-")) {
+      rootProps[key] = val;
+    }
   }
+  const describedBy =
+    [
+      callerDescribedBy,
+      hasError ? errorId : null,
+      helperText && !hasError ? helperId : null,
+    ]
+      .flatMap((value) => (typeof value === "string" ? value.split(/\s+/) : []))
+      .filter(Boolean)
+      .filter((value, index, values) => values.indexOf(value) === index)
+      .join(" ") || undefined;
 
   return (
     <div className={cn("flex w-full flex-col gap-1", wrapperClassName)}>
@@ -253,20 +289,28 @@ export function Select({
           htmlFor={triggerId}
           className={cn(
             "flex items-center gap-0.5 text-caption-1-semibold",
-            disabled ? "text-fg-subtle" : "text-fg-muted"
+            disabled ? "text-fg-subtle" : "text-fg-muted",
           )}
         >
           {label}
           {required ? (
-            <span aria-hidden="true" className={disabled ? "text-fg-subtle" : "text-danger"}>
+            <span
+              aria-hidden="true"
+              className={disabled ? "text-fg-subtle" : "text-danger"}
+            >
               *
             </span>
           ) : null}
         </label>
       ) : null}
 
-      <SelectPrimitive.Root disabled={disabled} required={required} {...rootProps}>
+      <SelectPrimitive.Root
+        disabled={disabled}
+        required={required}
+        {...rootProps}
+      >
         <SelectTrigger
+          {...triggerProps}
           id={triggerId}
           size={size}
           invalid={hasError}
@@ -274,7 +318,6 @@ export function Select({
           aria-describedby={describedBy}
           aria-errormessage={hasError ? errorId : undefined}
           className={className}
-          {...dataProps}
         >
           <SelectPrimitive.Value placeholder={placeholder} />
         </SelectTrigger>
@@ -282,7 +325,11 @@ export function Select({
       </SelectPrimitive.Root>
 
       {hasError ? (
-        <p id={errorId} role="alert" className="text-caption-2-regular text-danger">
+        <p
+          id={errorId}
+          role="alert"
+          className="text-caption-2-regular text-danger"
+        >
           {error}
         </p>
       ) : helperText ? (

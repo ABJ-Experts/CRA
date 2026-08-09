@@ -4,7 +4,7 @@ import type { ColumnDef } from "@repo/ui/data-table";
 import { useMemo } from "react";
 import { TablePage } from "../_components/table-page";
 import { Change, Plain, RowActions, Stacked } from "../_components/cells";
-import type { Coin } from "../../../../mocks/data/tables";
+import { coinSchema, type Coin } from "../../../../mocks/data/table-schemas";
 
 /**
  * Tables / Splitted Tables - Pencil `A6MS4` (light), `dPVHC` (dark).
@@ -81,6 +81,7 @@ export default function SplittedTablesPage() {
   return (
     <TablePage<Coin>
       endpoint="/api/coins"
+      rowSchema={coinSchema}
       variant="splitted"
       ariaLabel="Coins"
       searchPlaceholder="Search coins"

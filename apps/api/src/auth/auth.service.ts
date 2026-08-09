@@ -21,6 +21,10 @@ import { normalizeEmail } from "@repo/contracts/auth";
 import { TooManyRequestsException } from "../common/exceptions/too-many-requests.exception";
 import { MailService } from "../mail/mail.service";
 import { SupabaseService } from "../supabase/supabase.service";
+import {
+  ManageEmailVerificationUseCase,
+  ManagePasswordRecoveryUseCase,
+} from "./application/auth-use-cases";
 
 interface Tokens {
   access_token: string;
@@ -78,6 +82,8 @@ export class AuthService {
     private readonly supabase: SupabaseService,
     private readonly config: ConfigService,
     private readonly mail: MailService,
+    private readonly emailVerification: ManageEmailVerificationUseCase,
+    private readonly passwordRecovery: ManagePasswordRecoveryUseCase,
   ) {}
 
   // -------------------------------------------------------------------------
@@ -313,81 +319,37 @@ export class AuthService {
   }
 
   async verifyEmailCode(userId: string, code: string): Promise<void> {
-    const { data } = await this.supabase
-      .admin()
-      .from("auth_email_verifications")
-      .select("id, code_hash, attempts, expires_at")
-      .eq("user_id", userId)
-      .eq("purpose", "signup")
-      .is("consumed_at", null)
-      .maybeSingle();
+    const result = await this.emailVerification.execute({ userId, code });
+    if (result.ok) return;
 
-    if (!data) {
-      throw new BadRequestException({
-        message: "That code is not right. Request a new one.",
-        code: "otp_missing",
-      });
-    }
-
-    if (new Date(data.expires_at).getTime() < Date.now()) {
-      throw new BadRequestException({
-        message: "That code has expired. Request a new one.",
-        code: "otp_expired",
-      });
-    }
-
-    // A 6-digit code is only 10^6 values, so an unbounded guess budget is a
-    // brute-force invitation.
-    if (data.attempts >= 5) {
-      throw new TooManyRequestsException({
-        message: "Too many attempts. Request a new code.",
-        code: "otp_attempts_exhausted",
-      });
-    }
-
-    if (data.code_hash !== sha256(code)) {
-      await this.supabase
-        .admin()
-        .from("auth_email_verifications")
-        .update({ attempts: data.attempts + 1 })
-        .eq("id", data.id);
-
-      throw new BadRequestException({
-        message: "That code is not right. Check it and try again.",
-        code: "otp_invalid",
-      });
-    }
-
-    const { error: profileError } = await this.supabase
-      .admin()
-      .from("users")
-      .update({ email_verified_at: new Date().toISOString() })
-      .eq("id", userId);
-
-    if (profileError) {
-      this.logger.error(
-        `Could not mark email as verified: ${profileError.message}`,
-      );
-      throw new ServiceUnavailableException({
-        message: "We could not finish verifying your email. Please try again.",
-        code: "email_verification_failed",
-      });
-    }
-
-    const { error: consumeError } = await this.supabase
-      .admin()
-      .from("auth_email_verifications")
-      .update({ consumed_at: new Date().toISOString() })
-      .eq("id", data.id);
-
-    if (consumeError) {
-      this.logger.error(
-        `Could not consume verification code: ${consumeError.message}`,
-      );
-      throw new ServiceUnavailableException({
-        message: "We could not finish verifying your email. Please try again.",
-        code: "email_verification_failed",
-      });
+    switch (result.error.code) {
+      case "otp_missing":
+        throw new BadRequestException({
+          message: "That code is not right. Request a new one.",
+          code: result.error.code,
+        });
+      case "otp_expired":
+        throw new BadRequestException({
+          message: "That code has expired. Request a new one.",
+          code: result.error.code,
+        });
+      case "otp_attempts_exhausted":
+        throw new TooManyRequestsException({
+          message: "Too many attempts. Request a new code.",
+          code: result.error.code,
+        });
+      case "otp_invalid":
+        throw new BadRequestException({
+          message: "That code is not right. Check it and try again.",
+          code: result.error.code,
+        });
+      case "email_verification_failed":
+        this.logger.error("Atomic email verification failed");
+        throw new ServiceUnavailableException({
+          message:
+            "We could not finish verifying your email. Please try again.",
+          code: result.error.code,
+        });
     }
   }
 
@@ -441,62 +403,34 @@ export class AuthService {
   }
 
   async resetPassword(input: ResetPasswordInput): Promise<void> {
-    const { data } = await this.supabase
-      .admin()
-      .from("auth_recovery_tokens")
-      .select("id, user_id, expires_at, consumed_at")
-      .eq("token_hash", sha256(input.token))
-      .maybeSingle();
+    const result = await this.passwordRecovery.execute(input);
+    if (result.ok) return;
 
-    // "expired" is the word `reset-password/page.tsx` looks for to route the
-    // user to /expired, so every dead-token case says it.
-    if (!data || data.consumed_at) {
+    if (
+      result.error.code === "reset_token_invalid" ||
+      result.error.code === "reset_token_expired"
+    ) {
       throw new BadRequestException({
         message: "That reset link has expired.",
-        code: "reset_token_invalid",
+        code: result.error.code,
       });
     }
 
-    if (new Date(data.expires_at).getTime() < Date.now()) {
-      throw new BadRequestException({
-        message: "That reset link has expired.",
-        code: "reset_token_expired",
-      });
-    }
-
-    const profile = await this.profileById(data.user_id);
-    if (!profile?.auth_user_id) {
-      throw new BadRequestException({
-        message: "That reset link has expired.",
-        code: "reset_token_invalid",
-      });
-    }
-
-    const { error } = await this.supabase
-      .admin()
-      .auth.admin.updateUserById(profile.auth_user_id, {
-        password: input.password,
-      });
-
-    if (error) {
-      this.logger.error(`Password update failed: ${error.message}`);
-      throw new BadRequestException({
+    if (result.error.code === "password_reset_unavailable") {
+      this.logger.error(
+        "Password reset consumption failed before provider update",
+      );
+      throw new ServiceUnavailableException({
         message: "We could not update that password.",
         code: "password_update_failed",
       });
     }
 
-    // Single-use: consume BEFORE returning, so a replayed link is dead even if
-    // the caller retries.
-    await this.supabase
-      .admin()
-      .from("auth_recovery_tokens")
-      .update({ consumed_at: new Date().toISOString() })
-      .eq("id", data.id);
-
-    // Everything else this account had open is now invalid — the whole point of
-    // resetting a password you believe was compromised.
-    await this.bumpEpoch(profile.id);
+    this.logger.error("Password update failed after reset token consumption");
+    throw new BadRequestException({
+      message: "We could not update that password.",
+      code: "password_update_failed",
+    });
   }
 
   // -------------------------------------------------------------------------
@@ -550,12 +484,27 @@ export class AuthService {
   }
 
   /** Re-authenticate an existing session — the Lock Screen. */
-  async verifyPassword(email: string, password: string): Promise<boolean> {
+  async verifyPassword(emailInput: string, password: string): Promise<boolean> {
+    const email = normalizeEmail(emailInput);
+    const lockedUntil = await this.lockedUntil(email);
+    if (lockedUntil) {
+      throw new TooManyRequestsException({
+        message: "Too many attempts. Please try again later.",
+        code: "account_locked",
+      });
+    }
+
     const { data, error } = await withMinimumDuration(
       300,
       this.supabase.anon().auth.signInWithPassword({ email, password }),
     );
-    return !error && Boolean(data.session);
+    if (error || !data.session) {
+      await this.recordFailure(email);
+      return false;
+    }
+
+    await this.clearFailures(email);
+    return true;
   }
 
   // -------------------------------------------------------------------------

@@ -21,6 +21,8 @@
 
 import { z } from "zod";
 
+export type { ApiErrorBody } from "./http.js";
+
 /** The one place an email is canonicalized. GoTrue lowercases too, so the tiers agree. */
 export function normalizeEmail(input: string): string {
   return input.trim().toLowerCase();
@@ -109,22 +111,6 @@ export type UnlockInput = z.infer<typeof unlockSchema>;
 // ---------------------------------------------------------------------------
 // Response contracts
 // ---------------------------------------------------------------------------
-
-/**
- * The error body every failed request returns.
- *
- * Shaped to drop straight into the screens' existing `AuthResult` without a
- * mapping layer: `message` renders in the form-level alert, `fieldErrors` keys
- * match the screens' Zod field names. There is no success envelope — success
- * bodies are plain DTOs.
- */
-export interface ApiErrorBody {
-  statusCode: number;
-  message: string;
-  /** Stable machine-readable discriminator, e.g. `session_revoked`. */
-  code?: string;
-  fieldErrors?: Record<string, string>;
-}
 
 /** Where the server wants the client to go after a successful auth step. */
 export type AuthNext = "dashboard" | "two-factor" | "verify" | "sign-in";

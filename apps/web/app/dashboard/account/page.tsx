@@ -7,6 +7,9 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 
 import { SectionCard } from "../_components/dashboard-chrome";
+import { accountApi } from "../../_features/account/account.api";
+import { sessionKeys } from "../../_features/session/session.keys";
+import { ApiClientError } from "../../_lib/http/api-client";
 import { useSession } from "../../_providers/session-provider";
 
 /**
@@ -46,28 +49,24 @@ export default function AccountPage() {
     setMessage(null);
 
     try {
-      const res = await fetch("/api/v1/users/me", {
-        method: "PATCH",
-        headers: { "content-type": "application/json" },
-        credentials: "same-origin",
-        body: JSON.stringify({ firstName, lastName, jobTitle }),
+      await accountApi.updateProfile({
+        firstName,
+        lastName,
+        jobTitle,
       });
 
-      if (!res.ok) {
-        const body = (await res.json().catch(() => ({}))) as {
-          message?: string;
-        };
-        setStatus("error");
-        setMessage(body.message ?? "We could not save those changes.");
-        return;
-      }
-
-      await queryClient.invalidateQueries({ queryKey: ["session"] });
+      await queryClient.invalidateQueries({ queryKey: sessionKeys.all });
       setStatus("saved");
       setMessage("Saved.");
-    } catch {
+    } catch (error) {
       setStatus("error");
-      setMessage("We could not reach the server.");
+      setMessage(
+        error instanceof ApiClientError && error.kind === "api"
+          ? error.message
+          : error instanceof ApiClientError && error.kind === "network"
+            ? "We could not reach the server."
+            : "We could not save those changes.",
+      );
     }
   }
 

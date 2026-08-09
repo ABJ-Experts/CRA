@@ -1,0 +1,86 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  fast:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm verify
+
+  live:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter infrastructure run db:start
+      - run: pnpm --filter infrastructure run db:reset
+      - run: pnpm --filter infrastructure run db:lint
+      - run: pnpm --filter infrastructure run test
+      - name: Export local Supabase environment
+        shell: bash
+        run: |
+          source apps/infrastructure/scripts/local-supabase-env.sh
+          load_local_supabase_env
+          {
+            echo "NODE_ENV=test"
+            echo "SUPABASE_URL=$API_URL"
+            echo "NEXT_PUBLIC_SUPABASE_URL=$API_URL"
+            echo "SUPABASE_ANON_KEY=$ANON_KEY"
+            echo "SUPABASE_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY"
+            echo "SUPABASE_JWT_SECRET=$JWT_SECRET"
+            echo "COOKIE_SIGNING_SECRET=$(openssl rand -hex 32)"
+            echo "SMTP_HOST=127.0.0.1"
+            echo "SMTP_PORT=54325"
+            echo "SMTP_FROM=CRA <no-reply@cra.test>"
+          } >> "$GITHUB_ENV"
+      - run: pnpm --filter api run build
+      - name: Start API and wait for readiness
+        shell: bash
+        run: |
+          pnpm --filter api run start > "$RUNNER_TEMP/cra-api.log" 2>&1 &
+          echo "$!" > "$RUNNER_TEMP/cra-api.pid"
+          for attempt in {1..30}; do
+            if curl -fsS http://127.0.0.1:3333/api/v1/health/ready; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat "$RUNNER_TEMP/cra-api.log"
+          exit 1
+      - run: pnpm --filter api run test:e2e
+      - run: bash apps/api/test/auth-flow.e2e.sh
+      - name: Print API log on failure
+        if: failure()
+        run: cat "$RUNNER_TEMP/cra-api.log"
+      - name: Stop API
+        if: always()
+        shell: bash
+        run: |
+          if [[ -f "$RUNNER_TEMP/cra-api.pid" ]]; then
+            kill "$(cat "$RUNNER_TEMP/cra-api.pid")" 2>/dev/null || true
+          fi

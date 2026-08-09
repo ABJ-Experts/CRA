@@ -1,8 +1,11 @@
 "use client";
 
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { pagedSchema, type Paged } from "@repo/contracts/pagination";
 import type { SortingState } from "@repo/ui/data-table";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import type { z } from "zod";
+import { authenticatedRequestJson } from "../../_lib/http/authenticated-request";
 import { useMocksReady } from "../../_providers/providers";
 
 /**
@@ -21,17 +24,10 @@ import { useMocksReady } from "../../_providers/providers";
  *    whole page height on every click.
  */
 
-export interface Paged<T> {
-  rows: T[];
-  total: number;
-  page: number;
-  pageSize: number;
-  pageCount: number;
-}
-
-export interface UseTableQueryOptions {
+export interface UseTableQueryOptions<T> {
   /** Resource path, e.g. `/api/orders`. */
-  endpoint: string;
+  endpoint: `/${string}`;
+  rowSchema: z.ZodType<T>;
   initialPageSize?: number;
   initialSorting?: SortingState;
   /** Force the endpoint to fail, for exercising the error path. */
@@ -40,10 +36,11 @@ export interface UseTableQueryOptions {
 
 export function useTableQuery<T>({
   endpoint,
+  rowSchema,
   initialPageSize = 15,
   initialSorting = [],
   simulateError = false,
-}: UseTableQueryOptions) {
+}: UseTableQueryOptions<T>) {
   const ready = useMocksReady();
 
   const [page, setPage] = useState(1);
@@ -66,17 +63,31 @@ export function useTableQuery<T>({
     if (simulateError) p.set("fail", "1");
     return p;
   }, [page, pageSize, sort, search, simulateError]);
+  const queryString = params.toString();
+  const responseSchema = useMemo(() => pagedSchema(rowSchema), [rowSchema]);
 
   const query = useQuery<Paged<T>>({
-    queryKey: [endpoint, params.toString()],
+    queryKey: [endpoint, queryString],
     enabled: ready,
     placeholderData: keepPreviousData,
-    queryFn: async ({ signal }) => {
-      const res = await fetch(`${endpoint}?${params.toString()}`, { signal });
-      if (!res.ok) throw new Error(`Request failed with ${res.status}`);
-      return (await res.json()) as Paged<T>;
-    },
+    queryFn: ({ signal }) =>
+      authenticatedRequestJson({
+        path: `${endpoint}?${queryString}`,
+        schema: responseSchema,
+        signal,
+      }),
   });
+
+  useEffect(() => {
+    const serverPage = query.data?.page;
+    if (
+      serverPage !== undefined &&
+      !query.isPlaceholderData &&
+      serverPage !== page
+    ) {
+      setPage(serverPage);
+    }
+  }, [page, query.data?.page, query.isPlaceholderData]);
 
   const setSorting = useCallback(
     (updater: React.SetStateAction<SortingState>) => {

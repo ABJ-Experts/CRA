@@ -8,5 +8,14 @@
   "exports": {
     "./styles.css": "./src/styles.css",
     "./theme": "./src/theme.ts"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage"
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "3.2.7",
+    "jsdom": "^26.1.0",
+    "vitest": "3.2.7"
   }
 }
