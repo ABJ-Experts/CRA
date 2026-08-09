@@ -69,6 +69,17 @@ describe("AcceptInvitationPage", () => {
     );
   });
 
+  it("preserves the invalid-link message when local parsing rejects the token", async () => {
+    vi.mocked(invitationsApi.accept).mockRejectedValue(
+      new ApiClientError("invalid_request", "Invalid request data."),
+    );
+    render(<AcceptInvitationPage />);
+
+    expect(
+      await screen.findByText("That invitation link is not valid."),
+    ).toBeVisible();
+  });
+
   it("can retry a server rejection and finish idempotently", async () => {
     vi.mocked(invitationsApi.accept)
       .mockRejectedValueOnce(new ApiClientError("api", "Try again.", 503))

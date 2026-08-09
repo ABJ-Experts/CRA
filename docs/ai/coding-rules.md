@@ -20,18 +20,29 @@ existing behavior.
 5. Keep controllers and pages free of provider calls and domain decisions.
    Presentation invokes an application entry point; infrastructure implements
    an inward-owned port.
-6. Validate boundary input and external responses with `@repo/contracts` Zod
-   schemas when the contract crosses applications. Server-only domain rules
-   stay in the owning API feature.
-7. Inject failures for the database, JWKS, SMTP, network, duplicate request,
+6. Define every cross-application request, query, parameter, success response,
+   and error body in the owning feature under `@repo/contracts/<feature>/schemas`.
+   Keep the corresponding trusted types under `<feature>/types`, derived with
+   `z.output<typeof schema>`. Use `z.input` only before parsing; never hand-copy
+   a wire shape into a controller, gateway, or component.
+7. Parse every consumed Nest body, query, and path parameter before controller
+   logic and declare `@ZodResponse` for every JSON route (or an explicit
+   `@NonJsonResponse` kind). Browser callers parse outgoing bodies with
+   `inputSchema` and incoming payloads with `schema` at the central transport.
+8. Keep JSX in functional components. Use a plain `.ts` class for logic only
+   when it owns injected dependencies, stateful coordination, an adapter, or a
+   real lifecycle. Keep deterministic policies as immutable functions. A React
+   class component is limited to an error boundary or documented third-party
+   lifecycle requirement.
+9. Inject failures for the database, JWKS, SMTP, network, duplicate request,
    stale state, concurrency, invalid transition, and authorization paths that
    are relevant to the feature. Prove partial work cannot broaden access or
    leave an impossible persisted state.
-8. Run focused tests and coverage for touched modules. Run live tests whenever
-   cookies, database functions/triggers, RLS, transactions, session state, or
-   mail changes. Then run the full repository verification gate.
-9. Review the diff for secret leakage, explicit tenant filters, error semantics,
-   backward compatibility, observability, and rollback before committing.
+10. Run focused tests and coverage for touched modules. Run live tests whenever
+    cookies, database functions/triggers, RLS, transactions, session state, or
+    mail changes. Then run the full repository verification gate.
+11. Review the diff for secret leakage, explicit tenant filters, error semantics,
+    backward compatibility, observability, and rollback before committing.
 
 ## Pattern acceptance checks
 

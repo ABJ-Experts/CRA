@@ -46,6 +46,21 @@ state, or operational risk.
 - Idempotency and concurrency behavior:
 - Additive migration, generated types, deploy order, and rollback compatibility:
 
+## API boundary contracts
+
+- Feature contract folder and request/query/parameter schemas:
+- Success response schema and parsed `z.output` type:
+- Nest input pipes and `@ZodResponse` / `@NonJsonResponse` declaration:
+- Browser `inputSchema` and response `schema` call sites:
+- Compatibility behavior for transforms, defaults, unknown keys, and errors:
+
+## Frontend logic and rendering
+
+- Functional rendering components:
+- Plain `.ts` logic classes and the concrete dependency/lifecycle they own:
+- Pure policies kept as immutable functions:
+- Composition root and test seam for every class instance:
+
 ## Failure modes
 
 List database, provider, network, JWKS, SMTP, duplicate request, stale state,
@@ -74,6 +89,9 @@ the additive migration.
 - [ ] Controllers/pages contain no provider query or domain decision.
 - [ ] Domain/application layers do not import frameworks or concrete adapters.
 - [ ] Boundary input and external responses are schema-validated.
+- [ ] Wire schemas and parsed `z.output` types live in separate feature folders.
+- [ ] Every JSON route and browser request parses both applicable directions.
+- [ ] JSX is functional; any logic class has a real dependency or lifecycle trigger.
 - [ ] Security-critical effects are synchronous or transactionally durable.
 - [ ] Focused coverage for new/materially changed modules is at least 80%.
 - [ ] Compatibility and live-stack gates are listed.

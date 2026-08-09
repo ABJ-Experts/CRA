@@ -54,6 +54,8 @@ jobs:
             echo "SUPABASE_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY"
             echo "SUPABASE_JWT_SECRET=$JWT_SECRET"
             echo "COOKIE_SIGNING_SECRET=$(openssl rand -hex 32)"
+            echo "APP_URL=http://127.0.0.1:3000"
+            echo "WEB_ORIGIN=http://127.0.0.1:3000"
             echo "SMTP_HOST=127.0.0.1"
             echo "SMTP_PORT=54325"
             echo "SMTP_FROM=CRA <no-reply@cra.test>"
@@ -74,9 +76,60 @@ jobs:
           exit 1
       - run: pnpm --filter api run test:e2e
       - run: bash apps/api/test/auth-flow.e2e.sh
+      - name: Restart API for the browser throttle window
+        shell: bash
+        run: |
+          kill "$(cat "$RUNNER_TEMP/cra-api.pid")" 2>/dev/null || true
+          wait "$(cat "$RUNNER_TEMP/cra-api.pid")" 2>/dev/null || true
+          pnpm --filter api run start > "$RUNNER_TEMP/cra-api.log" 2>&1 &
+          echo "$!" > "$RUNNER_TEMP/cra-api.pid"
+          for attempt in {1..30}; do
+            if curl -fsS http://127.0.0.1:3333/api/v1/health/ready; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat "$RUNNER_TEMP/cra-api.log"
+          exit 1
+      - run: pnpm --filter web exec playwright install --with-deps chromium
+      - name: Build web with the real API transport
+        run: pnpm --filter web run build
+        env:
+          API_ORIGIN: http://127.0.0.1:3333
+          NEXT_PUBLIC_ENABLE_MOCKS: "false"
+      - name: Start web and wait for readiness
+        shell: bash
+        run: |
+          pnpm --filter web run start --hostname 127.0.0.1 --port 3000 > "$RUNNER_TEMP/cra-web.log" 2>&1 &
+          echo "$!" > "$RUNNER_TEMP/cra-web.pid"
+          for attempt in {1..30}; do
+            if curl -fsS http://127.0.0.1:3000/sign-in >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat "$RUNNER_TEMP/cra-web.log"
+          exit 1
+      - name: Run critical browser journeys
+        run: pnpm --filter web run test:e2e
+        env:
+          E2E_RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}
+          E2E_API_ORIGIN: http://127.0.0.1:3333
+          E2E_MAILPIT_ORIGIN: http://127.0.0.1:54324
+          NEXT_PUBLIC_ENABLE_MOCKS: "false"
+      - name: Print web log on failure
+        if: failure()
+        run: cat "$RUNNER_TEMP/cra-web.log"
       - name: Print API log on failure
         if: failure()
         run: cat "$RUNNER_TEMP/cra-api.log"
+      - name: Stop web
+        if: always()
+        shell: bash
+        run: |
+          if [[ -f "$RUNNER_TEMP/cra-web.pid" ]]; then
+            kill "$(cat "$RUNNER_TEMP/cra-web.pid")" 2>/dev/null || true
+          fi
       - name: Stop API
         if: always()
         shell: bash

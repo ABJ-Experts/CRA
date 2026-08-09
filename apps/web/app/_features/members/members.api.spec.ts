@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { membersApi } from "./members.api";
 
 describe("membersApi", () => {
+  const userId = "a05570d6-aa75-4b6a-9688-b5a82eb3a774";
   afterEach(() => vi.unstubAllGlobals());
 
   it("changes a member role with the exact request and signal", async () => {
@@ -44,12 +45,22 @@ describe("membersApi", () => {
       );
     vi.stubGlobal("fetch", fetcher);
 
-    await expect(
-      membersApi.changeRole("user-1", "viewer"),
-    ).rejects.toMatchObject({ kind: "invalid_response" });
-    await expect(
-      membersApi.changeRole("user-1", "viewer"),
-    ).rejects.toMatchObject({ kind: "api", status: 401 });
+    await expect(membersApi.changeRole(userId, "viewer")).rejects.toMatchObject(
+      { kind: "invalid_response" },
+    );
+    await expect(membersApi.changeRole(userId, "viewer")).rejects.toMatchObject(
+      { kind: "api", status: 401 },
+    );
     expect(fetcher).toHaveBeenCalledTimes(2);
+  });
+
+  it("rejects a malformed member id before sending a request", async () => {
+    const fetcher = vi.fn();
+    vi.stubGlobal("fetch", fetcher);
+
+    await expect(
+      membersApi.changeRole("not-a-uuid", "viewer"),
+    ).rejects.toMatchObject({ kind: "invalid_request" });
+    expect(fetcher).not.toHaveBeenCalled();
   });
 });

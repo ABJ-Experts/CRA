@@ -23,9 +23,25 @@
       "types": "./dist/auth.d.ts",
       "default": "./dist/auth.js"
     },
+    "./auth/schemas": {
+      "types": "./dist/auth/schemas/index.d.ts",
+      "default": "./dist/auth/schemas/index.js"
+    },
+    "./auth/types": {
+      "types": "./dist/auth/types/index.d.ts",
+      "default": "./dist/auth/types/index.js"
+    },
     "./pagination": {
       "types": "./dist/pagination.d.ts",
       "default": "./dist/pagination.js"
+    },
+    "./pagination/schemas": {
+      "types": "./dist/pagination/schemas/index.d.ts",
+      "default": "./dist/pagination/schemas/index.js"
+    },
+    "./pagination/types": {
+      "types": "./dist/pagination/types/index.d.ts",
+      "default": "./dist/pagination/types/index.js"
     },
     "./http": {
       "types": "./dist/http.d.ts",
@@ -35,13 +51,61 @@
       "types": "./dist/users.d.ts",
       "default": "./dist/users.js"
     },
+    "./users/schemas": {
+      "types": "./dist/users/schemas/index.d.ts",
+      "default": "./dist/users/schemas/index.js"
+    },
+    "./users/types": {
+      "types": "./dist/users/types/index.d.ts",
+      "default": "./dist/users/types/index.js"
+    },
     "./invitations": {
       "types": "./dist/invitations.d.ts",
       "default": "./dist/invitations.js"
     },
+    "./invitations/schemas": {
+      "types": "./dist/invitations/schemas/index.d.ts",
+      "default": "./dist/invitations/schemas/index.js"
+    },
+    "./invitations/types": {
+      "types": "./dist/invitations/types/index.d.ts",
+      "default": "./dist/invitations/types/index.js"
+    },
     "./roles": {
       "types": "./dist/roles.d.ts",
       "default": "./dist/roles.js"
+    },
+    "./roles/schemas": {
+      "types": "./dist/roles/schemas/index.d.ts",
+      "default": "./dist/roles/schemas/index.js"
+    },
+    "./roles/types": {
+      "types": "./dist/roles/types/index.d.ts",
+      "default": "./dist/roles/types/index.js"
+    },
+    "./permissions/schemas": {
+      "types": "./dist/permissions/schemas/index.d.ts",
+      "default": "./dist/permissions/schemas/index.js"
+    },
+    "./permissions/types": {
+      "types": "./dist/permissions/types/index.d.ts",
+      "default": "./dist/permissions/types/index.js"
+    },
+    "./shared/schemas": {
+      "types": "./dist/shared/schemas/index.d.ts",
+      "default": "./dist/shared/schemas/index.js"
+    },
+    "./shared/types": {
+      "types": "./dist/shared/types/index.d.ts",
+      "default": "./dist/shared/types/index.js"
+    },
+    "./system/schemas": {
+      "types": "./dist/system/schemas/index.d.ts",
+      "default": "./dist/system/schemas/index.js"
+    },
+    "./system/types": {
+      "types": "./dist/system/types/index.d.ts",
+      "default": "./dist/system/types/index.js"
     }
   },
   "files": [

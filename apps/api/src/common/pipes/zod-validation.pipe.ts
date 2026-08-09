@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, PipeTransform } from "@nestjs/common";
-import { ZodError, type ZodType } from "zod";
+import { ZodError, type z } from "zod";
 
 /**
  * Validates a request body against a Zod schema from `@repo/contracts`.
@@ -14,10 +14,12 @@ import { ZodError, type ZodType } from "zod";
  * the screens' `AuthResult.fieldErrors` expects, so no mapping layer is needed.
  */
 @Injectable()
-export class ZodValidationPipe<T> implements PipeTransform<unknown, T> {
-  constructor(private readonly schema: ZodType<T>) {}
+export class ZodValidationPipe<
+  TSchema extends z.ZodTypeAny,
+> implements PipeTransform<unknown, z.output<TSchema>> {
+  constructor(private readonly schema: TSchema) {}
 
-  transform(value: unknown): T {
+  transform(value: unknown): z.output<TSchema> {
     const result = this.schema.safeParse(value);
     if (result.success) return result.data;
     throw new BadRequestException(toBadRequest(result.error));
@@ -46,6 +48,12 @@ export function toBadRequest(error: ZodError): {
 }
 
 /** Factory so controllers read as `@Body(zodBody(signInSchema)) dto: SignInInput`. */
-export function zodBody<T>(schema: ZodType<T>): ZodValidationPipe<T> {
+export function zodBody<TSchema extends z.ZodTypeAny>(
+  schema: TSchema,
+): ZodValidationPipe<TSchema> {
   return new ZodValidationPipe(schema);
 }
+
+/** Same parser for complete query objects and parameter objects. */
+export const zodQuery = zodBody;
+export const zodParams = zodBody;

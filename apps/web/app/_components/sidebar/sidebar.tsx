@@ -304,7 +304,10 @@ export function Sidebar() {
             href="/dashboard"
             className="flex items-center gap-2 text-headline-semibold text-fg"
           >
-            <span className="flex size-8 items-center justify-center rounded-lg bg-active-500 text-white">
+            <span
+              aria-hidden="true"
+              className="flex size-8 items-center justify-center rounded-lg bg-active-500 text-white"
+            >
               C
             </span>
             CRA

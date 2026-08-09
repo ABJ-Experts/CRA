@@ -21,7 +21,10 @@ export function AuthLogo({ className }: { className?: string }) {
         className,
       )}
     >
-      <span className="flex size-10 items-center justify-center rounded-xl bg-active-500 text-headline-semibold text-white">
+      <span
+        aria-hidden="true"
+        className="flex size-10 items-center justify-center rounded-xl bg-active-500 text-headline-semibold text-white"
+      >
         C
       </span>
       <span className="text-h5 text-fg">CRA</span>

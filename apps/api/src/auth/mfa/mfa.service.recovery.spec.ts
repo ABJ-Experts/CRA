@@ -97,9 +97,12 @@ function createService(input?: {
     new SystemDelayAdapter(),
   );
   const service = new MfaService(
-    supabase,
-    { log: auditLog } as never,
+    {} as never,
+    {} as never,
+    {} as never,
     recoverMfa,
+    {} as never,
+    {} as never,
   );
 
   return { service, rpc, listFactors, deleteFactor, auditLog };

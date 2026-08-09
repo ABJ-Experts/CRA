@@ -1,5 +1,7 @@
 "use client";
 
+import { unlockInputSchema } from "@repo/contracts/auth/schemas";
+import type { UnlockInput } from "@repo/contracts/auth/types";
 import { Avatar } from "@repo/ui/avatar";
 import { Button } from "@repo/ui/button";
 import { cn } from "@repo/ui/cn";
@@ -9,7 +11,6 @@ import { LogIn } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { z } from "zod";
 import { lockedSession, unlock } from "../_components/auth-actions";
 
 /**
@@ -19,11 +20,9 @@ import { lockedSession, unlock } from "../_components/auth-actions";
  * email 14/400 -> `subhead-regular` + `fg-muted`, gap 16 above a 24-gap form.
  * The trailing "Sign in with another accounts" is a 40-tall ghost button.
  */
-const schema = z.object({
-  password: z.string().min(1, "Enter your password"),
-});
+const schema = unlockInputSchema;
 
-type Values = z.infer<typeof schema>;
+type Values = UnlockInput;
 
 export default function LockPage() {
   const router = useRouter();

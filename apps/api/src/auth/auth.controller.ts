@@ -14,22 +14,36 @@ import {
 import { ConfigService } from "@nestjs/config";
 import { Throttle } from "@nestjs/throttler";
 import type { Response } from "express";
+import {
+  authNextResponseSchema,
+  forgotPasswordInputSchema,
+  refreshRedirectQuerySchema,
+  resetPasswordInputSchema,
+  sessionResponseSchema,
+  signInInputSchema,
+  signUpInputSchema,
+  unlockInputSchema,
+  verifyEmailInputSchema,
+} from "@repo/contracts/auth/schemas";
 import type {
-  AuthNext,
+  AuthNextResponse,
+  ForgotPasswordInput,
+  RefreshRedirectQuery,
+  ResetPasswordInput,
   SessionResponse,
   SignInInput,
   SignUpInput,
-} from "@repo/contracts/auth";
-import {
-  forgotPasswordSchema,
-  resetPasswordSchema,
-  signInSchema,
-  signUpSchema,
-  unlockSchema,
-  verifyEmailSchema,
-} from "@repo/contracts/auth";
+  UnlockInput,
+  VerifyEmailInput,
+} from "@repo/contracts/auth/types";
+import { okResponseSchema } from "@repo/contracts/shared/schemas";
+import type { OkResponse } from "@repo/contracts/shared/types";
 
-import { zodBody } from "../common/pipes/zod-validation.pipe";
+import {
+  NonJsonResponse,
+  ZodResponse,
+} from "../common/http/zod-response.interceptor";
+import { zodBody, zodQuery } from "../common/pipes/zod-validation.pipe";
 import { AuthService } from "./auth.service";
 import { MfaService } from "./mfa/mfa.service";
 import { CurrentUser, Public, type AuthedRequest } from "./auth.types";
@@ -87,10 +101,11 @@ export class AuthController {
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @Post("sign-up")
   @HttpCode(HttpStatus.CREATED)
+  @ZodResponse(authNextResponseSchema)
   async signUp(
-    @Body(zodBody(signUpSchema)) dto: SignUpInput,
+    @Body(zodBody(signUpInputSchema)) dto: SignUpInput,
     @Res({ passthrough: true }) res: Response,
-  ): Promise<{ next: AuthNext }> {
+  ): Promise<AuthNextResponse> {
     const { tokens, userId } = await this.auth.signUp(dto);
 
     /*
@@ -111,10 +126,11 @@ export class AuthController {
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @Post("sign-in")
   @HttpCode(HttpStatus.OK)
+  @ZodResponse(authNextResponseSchema)
   async signIn(
-    @Body(zodBody(signInSchema)) dto: SignInInput,
+    @Body(zodBody(signInInputSchema)) dto: SignInInput,
     @Res({ passthrough: true }) res: Response,
-  ): Promise<{ next: AuthNext }> {
+  ): Promise<AuthNextResponse> {
     const { tokens, userId, emailVerified } = await this.auth.signIn(dto);
 
     setSessionCookies(res, tokens, this.cookieConfig, {
@@ -151,21 +167,18 @@ export class AuthController {
    */
   @Public()
   @Get("refresh")
+  @NonJsonResponse("redirect")
   async refresh(
     @Req() req: AuthedRequest,
     @Res() res: Response,
-    @Query("redirectTo") redirectTo?: string,
+    @Query(zodQuery(refreshRedirectQuerySchema))
+    query: RefreshRedirectQuery,
   ): Promise<void> {
     const cookies = req.cookies as Record<string, string> | undefined;
     const refreshToken = cookies?.[REFRESH_COOKIE];
     const appUrl = this.config
       .getOrThrow<string>("APP_URL")
       .replace(/\/+$/, "");
-
-    const safePath =
-      redirectTo && redirectTo.startsWith("/") && !redirectTo.startsWith("//")
-        ? redirectTo
-        : "/dashboard";
 
     if (!refreshToken) {
       clearSessionCookies(res, this.cookieConfig);
@@ -178,7 +191,7 @@ export class AuthController {
       setSessionCookies(res, tokens, this.cookieConfig, {
         rememberMe: readRememberMeCookie(cookies, this.cookieConfig),
       });
-      res.redirect(`${appUrl}${safePath}`);
+      res.redirect(`${appUrl}${query.redirectTo}`);
     } catch {
       clearSessionCookies(res, this.cookieConfig);
       res.redirect(`${appUrl}/sign-in`);
@@ -189,10 +202,11 @@ export class AuthController {
   @Public()
   @Post("refresh")
   @HttpCode(HttpStatus.OK)
+  @ZodResponse(okResponseSchema)
   async refreshJson(
     @Req() req: AuthedRequest,
     @Res({ passthrough: true }) res: Response,
-  ): Promise<{ ok: true }> {
+  ): Promise<OkResponse> {
     const cookies = req.cookies as Record<string, string> | undefined;
     const refreshToken = cookies?.[REFRESH_COOKIE];
 
@@ -212,11 +226,12 @@ export class AuthController {
 
   @Post("sign-out")
   @HttpCode(HttpStatus.OK)
+  @ZodResponse(okResponseSchema)
   async signOut(
     @CurrentUser("id") userId: string,
     @CurrentUser("accessToken") accessToken: string,
     @Res({ passthrough: true }) res: Response,
-  ): Promise<{ ok: true }> {
+  ): Promise<OkResponse> {
     await this.auth.signOutEverywhere(userId, accessToken);
     clearSessionCookies(res, this.cookieConfig);
     return { ok: true };
@@ -230,11 +245,12 @@ export class AuthController {
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @Post("verify-email")
   @HttpCode(HttpStatus.OK)
+  @ZodResponse(authNextResponseSchema)
   async verifyEmail(
-    @Body(zodBody(verifyEmailSchema)) dto: { code: string },
+    @Body(zodBody(verifyEmailInputSchema)) dto: VerifyEmailInput,
     @Req() req: AuthedRequest,
     @Res({ passthrough: true }) res: Response,
-  ): Promise<{ next: AuthNext }> {
+  ): Promise<AuthNextResponse> {
     const userId = this.pendingUserId(req);
     await this.auth.verifyEmailCode(userId, dto.code);
     clearPendingCookie(res, this.cookieConfig);
@@ -247,7 +263,8 @@ export class AuthController {
   @Throttle({ default: { limit: 3, ttl: 60_000 } })
   @Post("resend-code")
   @HttpCode(HttpStatus.OK)
-  async resendCode(@Req() req: AuthedRequest): Promise<{ ok: true }> {
+  @ZodResponse(okResponseSchema)
+  async resendCode(@Req() req: AuthedRequest): Promise<OkResponse> {
     const userId = this.pendingUserId(req);
     const session = await this.auth.session(userId, null);
     await this.auth.issueVerificationCode(userId, session.user.email);
@@ -262,9 +279,10 @@ export class AuthController {
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @Post("forgot-password")
   @HttpCode(HttpStatus.OK)
+  @ZodResponse(okResponseSchema)
   async forgotPassword(
-    @Body(zodBody(forgotPasswordSchema)) dto: { email: string },
-  ): Promise<{ ok: true }> {
+    @Body(zodBody(forgotPasswordInputSchema)) dto: ForgotPasswordInput,
+  ): Promise<OkResponse> {
     // Always succeeds. Reporting whether the address exists — by status, body,
     // or response time — is an account-enumeration oracle, which is exactly
     // what the frozen stub's comment said when it always returned ok.
@@ -276,11 +294,11 @@ export class AuthController {
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @Post("reset-password")
   @HttpCode(HttpStatus.OK)
+  @ZodResponse(authNextResponseSchema)
   async resetPassword(
-    @Body(zodBody(resetPasswordSchema))
-    dto: { token: string; password: string },
+    @Body(zodBody(resetPasswordInputSchema)) dto: ResetPasswordInput,
     @Res({ passthrough: true }) res: Response,
-  ): Promise<{ next: AuthNext }> {
+  ): Promise<AuthNextResponse> {
     await this.auth.resetPassword(dto);
     // Every session is now invalid, including any this browser held.
     clearSessionCookies(res, this.cookieConfig);
@@ -291,10 +309,11 @@ export class AuthController {
   @Post("unlock")
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @HttpCode(HttpStatus.OK)
+  @ZodResponse(authNextResponseSchema)
   async unlock(
-    @Body(zodBody(unlockSchema)) dto: { password: string },
+    @Body(zodBody(unlockInputSchema)) dto: UnlockInput,
     @CurrentUser("email") email: string,
-  ): Promise<{ next: AuthNext }> {
+  ): Promise<AuthNextResponse> {
     const ok = await this.auth.verifyPassword(email, dto.password);
     if (!ok) {
       throw new UnauthorizedException({
@@ -310,6 +329,7 @@ export class AuthController {
   // -------------------------------------------------------------------------
 
   @Get("session")
+  @ZodResponse(sessionResponseSchema)
   async session(
     @CurrentUser("id") userId: string,
     @CurrentUser("organizationId") organizationId: string | null,

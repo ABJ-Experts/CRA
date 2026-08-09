@@ -1,5 +1,7 @@
 "use client";
 
+import { forgotPasswordInputSchema } from "@repo/contracts/auth/schemas";
+import type { ForgotPasswordInput } from "@repo/contracts/auth/types";
 import { Button } from "@repo/ui/button";
 import { cn } from "@repo/ui/cn";
 import { Form, FormField, useZodForm } from "@repo/ui/form";
@@ -7,7 +9,6 @@ import { Input } from "@repo/ui/input";
 import { ArrowLeft, AtSign } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { z } from "zod";
 import { requestPasswordReset } from "../_components/auth-actions";
 import { AuthTitle } from "../_components/auth-chrome";
 
@@ -18,11 +19,9 @@ import { AuthTitle } from "../_components/auth-chrome";
  * tall rather than 832. It gains a Back control above the title instead:
  * 64x40, radius 12, `surface`, from the frame.
  */
-const schema = z.object({
-  email: z.email({ message: "Enter a valid email address" }),
-});
+const schema = forgotPasswordInputSchema;
 
-type Values = z.infer<typeof schema>;
+type Values = ForgotPasswordInput;
 
 export default function ForgotPasswordPage() {
   const router = useRouter();

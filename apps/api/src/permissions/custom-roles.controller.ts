@@ -11,41 +11,36 @@ import {
   Post,
   Put,
 } from "@nestjs/common";
-import { BASE_ROLES, type PermissionSet } from "@repo/contracts/permissions";
-import { z } from "zod";
+import {
+  createRoleInputSchema,
+  roleListResponseSchema,
+  roleIdParamSchema,
+  roleOverridesResponseSchema,
+  setRoleOverrideInputSchema,
+  updateRoleInputSchema,
+} from "@repo/contracts/roles/schemas";
+import type {
+  CreateRoleInput,
+  RoleIdParam,
+  RoleListResponse,
+  RoleOverridesResponse,
+  SetRoleOverrideInput,
+  UpdateRoleInput,
+} from "@repo/contracts/roles/types";
+import {
+  idResponseSchema,
+  okResponseSchema,
+} from "@repo/contracts/shared/schemas";
+import type { IdResponse, OkResponse } from "@repo/contracts/shared/types";
 
-import { zodBody } from "../common/pipes/zod-validation.pipe";
+import { ZodResponse } from "../common/http/zod-response.interceptor";
+import { zodBody, zodParams } from "../common/pipes/zod-validation.pipe";
 import {
   CurrentUser,
   RequirePermissions,
   type RequestUser,
 } from "../auth/auth.types";
-import { CustomRolesService, type CustomRoleRow } from "./custom-roles.service";
-
-// `record(string, boolean)` rather than an enum of every key: unknown keys are
-// dropped by sanitizePermissions server-side, so rejecting them here would only
-// turn a harmless stale key into a 400 for the whole request.
-const permissionsSchema = z.record(z.string(), z.boolean());
-
-const createSchema = z.object({
-  name: z.string().trim().min(1).max(100),
-  description: z.string().trim().max(500).optional(),
-  color: z
-    .string()
-    .regex(/^#[0-9A-Fa-f]{6}$/, "Use a hex colour like #4A50D6")
-    .optional(),
-  baseRole: z.enum(BASE_ROLES).default("member"),
-  permissions: permissionsSchema.default({}),
-});
-
-const updateSchema = createSchema.partial().extend({
-  isActive: z.boolean().optional(),
-});
-
-const overrideSchema = z.object({
-  baseRole: z.enum(BASE_ROLES),
-  permissions: permissionsSchema,
-});
+import { CustomRolesService } from "./custom-roles.service";
 
 @Controller("roles")
 export class CustomRolesController {
@@ -63,19 +58,19 @@ export class CustomRolesController {
 
   @RequirePermissions("can_view_roles")
   @Get()
-  async list(
-    @CurrentUser() user: RequestUser,
-  ): Promise<{ rows: CustomRoleRow[] }> {
+  @ZodResponse(roleListResponseSchema)
+  async list(@CurrentUser() user: RequestUser): Promise<RoleListResponse> {
     return { rows: await this.roles.list(this.orgOf(user)) };
   }
 
   @RequirePermissions("can_create_roles")
   @Post()
   @HttpCode(HttpStatus.CREATED)
+  @ZodResponse(idResponseSchema)
   async create(
-    @Body(zodBody(createSchema)) dto: z.infer<typeof createSchema>,
+    @Body(zodBody(createRoleInputSchema)) dto: CreateRoleInput,
     @CurrentUser() user: RequestUser,
-  ): Promise<{ id: string }> {
+  ): Promise<IdResponse> {
     return this.roles.create(
       this.orgOf(user),
       { id: user.id, email: user.email },
@@ -92,11 +87,12 @@ export class CustomRolesController {
   @RequirePermissions("can_edit_roles")
   @Patch(":id")
   @HttpCode(HttpStatus.OK)
+  @ZodResponse(okResponseSchema)
   async update(
-    @Param("id") id: string,
-    @Body(zodBody(updateSchema)) dto: z.infer<typeof updateSchema>,
+    @Param(zodParams(roleIdParamSchema)) { id }: RoleIdParam,
+    @Body(zodBody(updateRoleInputSchema)) dto: UpdateRoleInput,
     @CurrentUser() user: RequestUser,
-  ): Promise<{ ok: true }> {
+  ): Promise<OkResponse> {
     await this.roles.update(
       this.orgOf(user),
       { id: user.id, email: user.email },
@@ -109,10 +105,11 @@ export class CustomRolesController {
   @RequirePermissions("can_delete_roles")
   @Delete(":id")
   @HttpCode(HttpStatus.OK)
+  @ZodResponse(okResponseSchema)
   async remove(
-    @Param("id") id: string,
+    @Param(zodParams(roleIdParamSchema)) { id }: RoleIdParam,
     @CurrentUser() user: RequestUser,
-  ): Promise<{ ok: true }> {
+  ): Promise<OkResponse> {
     await this.roles.remove(
       this.orgOf(user),
       { id: user.id, email: user.email },
@@ -124,10 +121,13 @@ export class CustomRolesController {
   /** The permission-matrix screen reads this. */
   @RequirePermissions("can_view_roles")
   @Get("overrides")
+  @ZodResponse(roleOverridesResponseSchema)
   async overrides(
     @CurrentUser() user: RequestUser,
-  ): Promise<{ overrides: Record<string, PermissionSet> }> {
-    return { overrides: await this.roles.overrides(this.orgOf(user)) };
+  ): Promise<RoleOverridesResponse> {
+    return roleOverridesResponseSchema.parse({
+      overrides: await this.roles.overrides(this.orgOf(user)),
+    });
   }
 
   /**
@@ -140,10 +140,11 @@ export class CustomRolesController {
   @RequirePermissions("can_edit_organization")
   @Put("overrides")
   @HttpCode(HttpStatus.OK)
+  @ZodResponse(okResponseSchema)
   async setOverride(
-    @Body(zodBody(overrideSchema)) dto: z.infer<typeof overrideSchema>,
+    @Body(zodBody(setRoleOverrideInputSchema)) dto: SetRoleOverrideInput,
     @CurrentUser() user: RequestUser,
-  ): Promise<{ ok: true }> {
+  ): Promise<OkResponse> {
     await this.roles.setOverride(
       this.orgOf(user),
       { id: user.id, email: user.email },

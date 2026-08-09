@@ -187,7 +187,7 @@ describe("SupabaseAuthIdentityAdapter", () => {
     });
   });
 
-  it.each(["update", "list", "delete"] as const)(
+  it.each(["list", "delete"] as const)(
     "sanitizes a returned %s provider error",
     async (operation) => {
       const failed = jest.fn().mockResolvedValue({
@@ -206,11 +206,9 @@ describe("SupabaseAuthIdentityAdapter", () => {
       } as never);
 
       const work =
-        operation === "update"
-          ? adapter.updatePassword(AUTH_USER_ID, "Password123!")
-          : operation === "list"
-            ? adapter.listMfaFactors(AUTH_USER_ID)
-            : adapter.deleteMfaFactor(AUTH_USER_ID, "factor-1");
+        operation === "list"
+          ? adapter.listMfaFactors(AUTH_USER_ID)
+          : adapter.deleteMfaFactor(AUTH_USER_ID, "factor-1");
       const error = await work.catch((cause: unknown) => cause);
 
       expect(error).toBeInstanceOf(Error);

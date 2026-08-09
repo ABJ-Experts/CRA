@@ -1,7 +1,8 @@
-import { apiErrorSchema } from "@repo/contracts/http";
+import { apiErrorSchema } from "@repo/contracts/shared/schemas";
 import type { z } from "zod";
 
 const GENERIC_API_ERROR = "Something went wrong. Please try again.";
+const INVALID_REQUEST_ERROR = "The request contains invalid data.";
 const INVALID_RESPONSE_ERROR = "The server returned an unexpected response.";
 const NETWORK_ERROR = "We could not reach the server.";
 
@@ -9,7 +10,7 @@ export type HttpMethod = "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
 
 export class ApiClientError extends Error {
   constructor(
-    readonly kind: "api" | "network" | "invalid_response",
+    readonly kind: "api" | "network" | "invalid_request" | "invalid_response",
     message: string,
     readonly status?: number,
     readonly code?: string,
@@ -20,11 +21,15 @@ export class ApiClientError extends Error {
   }
 }
 
-export interface RequestJsonOptions<T> {
+export interface RequestJsonOptions<
+  TResponseSchema extends z.ZodTypeAny,
+  TInputSchema extends z.ZodTypeAny = z.ZodNever,
+> {
   readonly path: `/${string}`;
-  readonly schema: z.ZodType<T>;
+  readonly schema: TResponseSchema;
+  readonly inputSchema?: TInputSchema;
   readonly method?: HttpMethod;
-  readonly body?: unknown;
+  readonly body?: z.input<TInputSchema>;
   readonly signal?: AbortSignal;
   readonly fetcher?: typeof fetch;
 }
@@ -74,46 +79,86 @@ function parsePayload(text: string): unknown {
   }
 }
 
-export async function requestJson<T>({
-  path,
-  schema,
-  method = "GET",
-  body,
-  signal,
-  fetcher = fetch,
-}: RequestJsonOptions<T>): Promise<T> {
-  assertLocalPath(path);
-
-  const response = await fetchResponse(fetcher, path, {
-    method,
-    credentials: "same-origin",
-    cache: "no-store",
+/** Stateful transport boundary; rendering code depends on this class via facades. */
+export class ApiClient {
+  async request<
+    TResponseSchema extends z.ZodTypeAny,
+    TInputSchema extends z.ZodTypeAny = z.ZodNever,
+  >({
+    path,
+    schema,
+    inputSchema,
+    method = "GET",
+    body,
     signal,
-    headers:
-      body === undefined ? undefined : { "content-type": "application/json" },
-    body: body === undefined ? undefined : JSON.stringify(body),
-  });
-  const payload = parsePayload(await readResponseText(response));
+    fetcher = fetch,
+  }: RequestJsonOptions<TResponseSchema, TInputSchema>): Promise<
+    z.output<TResponseSchema>
+  > {
+    assertLocalPath(path);
+    if (body !== undefined && !inputSchema) {
+      throw new ApiClientError("invalid_request", INVALID_REQUEST_ERROR);
+    }
+    const parsedBody = inputSchema
+      ? this.parseInput(inputSchema, body)
+      : undefined;
 
-  if (!response.ok) {
-    const parsed = apiErrorSchema.safeParse(payload);
-    throw new ApiClientError(
-      "api",
-      parsed.success ? parsed.data.message : GENERIC_API_ERROR,
-      response.status,
-      parsed.success ? parsed.data.code : undefined,
-      parsed.success ? parsed.data.fieldErrors : undefined,
-    );
+    const response = await fetchResponse(fetcher, path, {
+      method,
+      credentials: "same-origin",
+      cache: "no-store",
+      signal,
+      headers:
+        parsedBody === undefined
+          ? undefined
+          : { "content-type": "application/json" },
+      body: parsedBody === undefined ? undefined : JSON.stringify(parsedBody),
+    });
+    const payload = parsePayload(await readResponseText(response));
+
+    if (!response.ok) {
+      const parsed = apiErrorSchema.safeParse(payload);
+      throw new ApiClientError(
+        "api",
+        parsed.success ? parsed.data.message : GENERIC_API_ERROR,
+        response.status,
+        parsed.success ? parsed.data.code : undefined,
+        parsed.success ? parsed.data.fieldErrors : undefined,
+      );
+    }
+
+    const parsed = schema.safeParse(payload);
+    if (!parsed.success) {
+      throw new ApiClientError(
+        "invalid_response",
+        INVALID_RESPONSE_ERROR,
+        response.status,
+      );
+    }
+
+    return parsed.data;
   }
 
-  const parsed = schema.safeParse(payload);
-  if (!parsed.success) {
-    throw new ApiClientError(
-      "invalid_response",
-      INVALID_RESPONSE_ERROR,
-      response.status,
-    );
+  parseInput<TSchema extends z.ZodTypeAny>(
+    schema: TSchema,
+    value: unknown,
+  ): z.output<TSchema> {
+    const parsed = schema.safeParse(value);
+    if (!parsed.success) {
+      throw new ApiClientError("invalid_request", INVALID_REQUEST_ERROR);
+    }
+    return parsed.data;
   }
+}
 
-  return parsed.data;
+export const apiClient = Object.freeze(new ApiClient());
+
+/** Compatibility facade retained for existing feature callers. */
+export function requestJson<
+  TResponseSchema extends z.ZodTypeAny,
+  TInputSchema extends z.ZodTypeAny = z.ZodNever,
+>(
+  options: RequestJsonOptions<TResponseSchema, TInputSchema>,
+): Promise<z.output<TResponseSchema>> {
+  return apiClient.request(options);
 }

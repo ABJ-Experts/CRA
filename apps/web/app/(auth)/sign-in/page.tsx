@@ -1,5 +1,6 @@
 "use client";
 
+import { signInInputSchema } from "@repo/contracts/auth/schemas";
 import { Button } from "@repo/ui/button";
 import { Checkbox } from "@repo/ui/checkbox";
 import { Form, FormErrorSummary, FormField, useZodForm } from "@repo/ui/form";
@@ -20,15 +21,12 @@ import { SocialButtons } from "../_components/social-buttons";
  * a visible spelling mistake is a defect, not a design decision.
  */
 const schema = z.object({
-  identifier: z
-    .string()
-    .min(1, "Enter your email or user name")
-    .max(254, "That is too long to be an email address"),
-  password: z.string().min(1, "Enter your password"),
-  remember: z.boolean(),
+  identifier: signInInputSchema.shape.email,
+  password: signInInputSchema.shape.password,
+  remember: signInInputSchema.shape.remember,
 });
 
-type Values = z.infer<typeof schema>;
+type Values = z.output<typeof schema>;
 
 export default function SignInPage() {
   const router = useRouter();
