@@ -1,5 +1,3 @@
-import { createHash } from "node:crypto";
-
 import {
   BadRequestException,
   ConflictException,
@@ -9,35 +7,34 @@ import {
 
 import { InvitationsService } from "./invitations.service";
 
-type RpcResult = Readonly<{ data: unknown; error: { message: string } | null }>;
+const organization = Object.freeze({ id: "org-1", name: "CRA", slug: "cra" });
 
-function serviceWithRpc(result: RpcResult) {
-  const rpc = jest.fn<Promise<RpcResult>, []>().mockResolvedValue(result);
+function fixture() {
+  const create = { execute: jest.fn() };
+  const accept = {
+    execute: jest.fn().mockResolvedValue({
+      ok: true,
+      value: { ok: true, alreadyAccepted: false, organization },
+    }),
+  };
+  const revoke = {
+    execute: jest.fn().mockResolvedValue({ ok: true, value: undefined }),
+  };
+  const list = { execute: jest.fn() };
   const auditLog = jest.fn();
   const service = new InvitationsService(
-    { admin: () => ({ rpc }) } as never,
-    {} as never,
-    {} as never,
+    create as never,
+    accept as never,
+    revoke as never,
+    list as never,
     { log: auditLog } as never,
   );
-
-  return { auditLog, rpc, service };
+  return { accept, auditLog, create, list, revoke, service };
 }
 
-const acceptedRow = Object.freeze({
-  outcome: "accepted",
-  invitation_id: "invitation-1",
-  organization_id: "organization-1",
-  organization_name: "CRA",
-  organization_slug: "cra",
-});
-
-describe("InvitationsService atomic transitions", () => {
-  it("accepts through the atomic RPC and returns its organization", async () => {
-    const { auditLog, rpc, service } = serviceWithRpc({
-      data: [acceptedRow],
-      error: null,
-    });
+describe("InvitationsService acceptance facade", () => {
+  it("delegates acceptance and returns the existing response", async () => {
+    const { accept, auditLog, service } = fixture();
 
     await expect(
       service.accept("raw-token", {
@@ -47,20 +44,20 @@ describe("InvitationsService atomic transitions", () => {
     ).resolves.toEqual({
       ok: true,
       alreadyAccepted: false,
-      organization: { id: "organization-1", name: "CRA", slug: "cra" },
+      organization,
     });
-    expect(rpc).toHaveBeenCalledWith("accept_invitation_atomic", {
-      p_token_hash: createHash("sha256").update("raw-token").digest("hex"),
-      p_user_id: "user-1",
-      p_email: "member@cra.test",
+    expect(accept.execute).toHaveBeenCalledWith({
+      token: "raw-token",
+      user: { id: "user-1", email: "  MEMBER@CRA.TEST  " },
     });
     expect(auditLog).not.toHaveBeenCalled();
   });
 
-  it("keeps repeated acceptance idempotent", async () => {
-    const { service } = serviceWithRpc({
-      data: [{ ...acceptedRow, outcome: "already_accepted" }],
-      error: null,
+  it("preserves idempotent already-accepted success", async () => {
+    const { accept, service } = fixture();
+    accept.execute.mockResolvedValueOnce({
+      ok: true,
+      value: { ok: true, alreadyAccepted: true, organization },
     });
 
     await expect(
@@ -73,143 +70,95 @@ describe("InvitationsService atomic transitions", () => {
 
   it.each([
     [
-      "not_found",
-      NotFoundException,
       "invitation_not_found",
+      NotFoundException,
       "That invitation link is not valid.",
     ],
+    ["invitation_expired", BadRequestException, "That invitation has expired."],
     [
-      "expired",
-      BadRequestException,
-      "invitation_expired",
-      "That invitation has expired.",
-    ],
-    [
-      "email_mismatch",
-      ForbiddenException,
       "invitation_email_mismatch",
+      ForbiddenException,
       "That invitation was sent to a different email address.",
     ],
     [
-      "not_pending",
-      BadRequestException,
       "invitation_not_pending",
+      BadRequestException,
       "That invitation is no longer valid.",
     ],
     [
       "organization_not_found",
       NotFoundException,
-      "organization_not_found",
       "That organization no longer exists.",
     ],
-  ] as const)(
-    "maps the %s acceptance outcome",
-    async (outcome, ErrorType, code, message) => {
-      const { service } = serviceWithRpc({
-        data: [{ ...acceptedRow, outcome }],
-        error: null,
-      });
+    [
+      "membership_failed",
+      BadRequestException,
+      "We could not add you to that organization.",
+    ],
+  ] as const)("maps the %s error", async (code, ErrorType, message) => {
+    const { accept, service } = fixture();
+    accept.execute.mockResolvedValueOnce({ ok: false, error: { code } });
 
-      const promise = service.accept("raw-token", {
-        id: "user-1",
-        email: "member@cra.test",
-      });
-      await expect(promise).rejects.toBeInstanceOf(ErrorType);
-      await expect(promise).rejects.toMatchObject({
-        response: { code, message },
-      });
-    },
-  );
-
-  it.each([
-    { data: null, error: { message: "database offline" } },
-    { data: [], error: null },
-    {
-      data: [{ ...acceptedRow, organization_id: null }],
-      error: null,
-    },
-    { data: [acceptedRow, acceptedRow], error: null },
-    { data: [{ ...acceptedRow, outcome: "future_outcome" }], error: null },
-  ] as const)(
-    "fails closed on invalid acceptance result %#",
-    async (result) => {
-      const { service } = serviceWithRpc(result);
-
-      await expect(
-        service.accept("raw-token", {
-          id: "user-1",
-          email: "member@cra.test",
-        }),
-      ).rejects.toMatchObject({
-        response: {
-          code: "membership_failed",
-          message: "We could not add you to that organization.",
-        },
-      });
-    },
-  );
-
-  it("revokes through the atomic RPC without duplicating audit", async () => {
-    const { auditLog, rpc, service } = serviceWithRpc({
-      data: "revoked",
-      error: null,
+    const promise = service.accept("raw-token", {
+      id: "user-1",
+      email: "member@cra.test",
     });
+    await expect(promise).rejects.toBeInstanceOf(ErrorType);
+    await expect(promise).rejects.toMatchObject({
+      response: { code, message },
+    });
+  });
+});
+
+describe("InvitationsService revocation facade", () => {
+  it("delegates revocation without duplicating database audit", async () => {
+    const { auditLog, revoke, service } = fixture();
+    const actor = { id: "owner-1", email: " OWNER@CRA.TEST " };
 
     await expect(
-      service.revoke(
-        "organization-1",
-        { id: "owner-1", email: " OWNER@CRA.TEST " },
-        "invitation-1",
-      ),
+      service.revoke("organization-1", actor, "invitation-1"),
     ).resolves.toBeUndefined();
-    expect(rpc).toHaveBeenCalledWith("revoke_invitation_atomic", {
-      p_organization_id: "organization-1",
-      p_invitation_id: "invitation-1",
-      p_actor_user_id: "owner-1",
-      p_actor_email: "owner@cra.test",
+    expect(revoke.execute).toHaveBeenCalledWith({
+      orgId: "organization-1",
+      actor,
+      invitationId: "invitation-1",
     });
     expect(auditLog).not.toHaveBeenCalled();
   });
 
   it.each([
-    ["not_found", NotFoundException, "invitation_not_found"],
-    ["already_accepted", ConflictException, "invitation_already_accepted"],
-    ["not_pending", BadRequestException, "invitation_not_pending"],
-  ] as const)(
-    "maps the %s revocation outcome",
-    async (outcome, ErrorType, code) => {
-      const { service } = serviceWithRpc({ data: outcome, error: null });
+    [
+      "invitation_not_found",
+      NotFoundException,
+      "That invitation no longer exists.",
+    ],
+    [
+      "invitation_already_accepted",
+      ConflictException,
+      "That invitation has already been accepted.",
+    ],
+    [
+      "invitation_not_pending",
+      BadRequestException,
+      "That invitation is no longer valid.",
+    ],
+    [
+      "invitation_failed",
+      BadRequestException,
+      "We could not revoke that invitation.",
+    ],
+  ] as const)("maps the %s error", async (code, ErrorType, message) => {
+    const { revoke, service } = fixture();
+    revoke.execute.mockResolvedValueOnce({ ok: false, error: { code } });
 
-      const promise = service.revoke(
-        "organization-1",
-        { id: "owner-1", email: "owner@cra.test" },
-        "invitation-1",
-      );
-      await expect(promise).rejects.toBeInstanceOf(ErrorType);
-      await expect(promise).rejects.toMatchObject({ response: { code } });
-    },
-  );
-
-  it.each([
-    { data: null, error: { message: "database offline" } },
-    { data: "wrong_organization", error: null },
-    { data: "actor_not_found", error: null },
-    { data: "actor_email_mismatch", error: null },
-    { data: "future_outcome", error: null },
-  ] as const)("fails closed on an invalid revoke result", async (result) => {
-    const { service } = serviceWithRpc(result);
-
-    await expect(
-      service.revoke(
-        "organization-1",
-        { id: "owner-1", email: "owner@cra.test" },
-        "invitation-1",
-      ),
-    ).rejects.toMatchObject({
-      response: {
-        code: "invitation_failed",
-        message: "We could not revoke that invitation.",
-      },
+    const promise = service.revoke(
+      "organization-1",
+      { id: "owner-1", email: "owner@cra.test" },
+      "invitation-1",
+    );
+    await expect(promise).rejects.toBeInstanceOf(ErrorType);
+    await expect(promise).rejects.toMatchObject({
+      response: { code, message },
     });
   });
 });

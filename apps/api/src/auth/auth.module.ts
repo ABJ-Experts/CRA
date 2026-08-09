@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common";
 import { APP_GUARD } from "@nestjs/core";
 import { ThrottlerGuard } from "@nestjs/throttler";
 
+import { AuditModule } from "../audit/audit.module";
 import { AuthController } from "./auth.controller";
 import { AuthService } from "./auth.service";
 import { MfaController } from "./mfa/mfa.controller";
@@ -20,6 +21,7 @@ import { TokenVerifierService } from "./token-verifier.service";
  * authenticate.
  */
 @Module({
+  imports: [AuditModule],
   controllers: [AuthController, MfaController],
   providers: [
     AuthService,

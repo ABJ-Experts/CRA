@@ -2,6 +2,7 @@ import { Global, Module } from "@nestjs/common";
 import { APP_GUARD } from "@nestjs/core";
 
 import { PermissionsGuard } from "../auth/permissions.guard";
+import { AuditModule } from "../audit/audit.module";
 import { BasePermissionResolver } from "./application/base-permission-resolver";
 import { VersionedPermissionResolver } from "./application/versioned-permission-resolver.proxy";
 import { CustomRolesController } from "./custom-roles.controller";
@@ -18,6 +19,7 @@ import { PermissionsService } from "./permissions.service";
  */
 @Global()
 @Module({
+  imports: [AuditModule],
   controllers: [PermissionsController, CustomRolesController],
   providers: [
     SupabasePermissionDataAdapter,
