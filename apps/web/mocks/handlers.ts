@@ -117,9 +117,9 @@ export const handlers = [
    * Note the `/api/v1` prefix: none of the dashboard mocks below can collide
    * with it, which is exactly why the API uses that prefix.
    */
-  http.all("/api/v1/*", () => passthrough()),
+  http.all("*/api/v1/*", () => passthrough()),
 
-  http.get("/api/products", async ({ request }) => {
+  http.get("*/api/products", async ({ request }) => {
     const url = new URL(request.url);
     await delay(LATENCY);
     if (maybeFail(url)) return new HttpResponse(null, { status: 500 });
@@ -128,7 +128,7 @@ export const handlers = [
     );
   }),
 
-  http.get("/api/orders", async ({ request }) => {
+  http.get("*/api/orders", async ({ request }) => {
     const url = new URL(request.url);
     await delay(LATENCY);
     if (maybeFail(url)) return new HttpResponse(null, { status: 500 });
@@ -137,7 +137,7 @@ export const handlers = [
     );
   }),
 
-  http.get("/api/customers", async ({ request }) => {
+  http.get("*/api/customers", async ({ request }) => {
     const url = new URL(request.url);
     await delay(LATENCY);
     if (maybeFail(url)) return new HttpResponse(null, { status: 500 });
@@ -152,7 +152,7 @@ export const handlers = [
     );
   }),
 
-  http.get("/api/coins", async ({ request }) => {
+  http.get("*/api/coins", async ({ request }) => {
     const url = new URL(request.url);
     await delay(LATENCY);
     if (maybeFail(url)) return new HttpResponse(null, { status: 500 });
