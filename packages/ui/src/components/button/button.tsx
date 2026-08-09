@@ -2,12 +2,18 @@
 
 import { Slot, Slottable } from "@radix-ui/react-slot";
 import { Loader2 } from "lucide-react";
-import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from "react";
+import {
+  forwardRef,
+  type ButtonHTMLAttributes,
+  type MouseEventHandler,
+  type ReactNode,
+} from "react";
 import { cn } from "../../lib/cn";
 import { buttonVariants, type ButtonVariantProps } from "./button.variants";
 
 export interface ButtonProps
-  extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, "color">,
+  extends
+    Omit<ButtonHTMLAttributes<HTMLButtonElement>, "color">,
     ButtonVariantProps {
   /** Render the child element instead of a `<button>`, keeping all styling. */
   asChild?: boolean;
@@ -52,14 +58,22 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       loading = false,
       loadingLabel = "Loading",
       disabled,
+      onClick,
+      tabIndex,
       children,
       type,
       ...props
     },
-    ref
+    ref,
   ) {
     const Comp = asChild ? Slot : "button";
     const isDisabled = disabled === true || loading;
+    const preventDisabledActivation: MouseEventHandler<HTMLButtonElement> = (
+      event,
+    ) => {
+      event.preventDefault();
+      event.stopPropagation();
+    };
 
     return (
       <Comp
@@ -69,12 +83,14 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         disabled={asChild ? undefined : isDisabled}
         aria-disabled={isDisabled || undefined}
         aria-busy={loading || undefined}
+        tabIndex={isDisabled && asChild ? -1 : tabIndex}
+        onClick={isDisabled && asChild ? preventDisabledActivation : onClick}
         data-loading={loading ? "" : undefined}
         className={cn(
           buttonVariants({ variant, tone, size, iconOnly, fullWidth }),
           // Mirrors the disabled: styles for asChild, where :disabled cannot match.
           isDisabled && asChild && "pointer-events-none opacity-60",
-          className
+          className,
         )}
         {...props}
       >
@@ -85,7 +101,10 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
           render unstyled.
         */}
         {loading ? (
-          <Loader2 aria-hidden="true" className="animate-spin motion-reduce:animate-none" />
+          <Loader2
+            aria-hidden="true"
+            className="animate-spin motion-reduce:animate-none"
+          />
         ) : (
           startIcon
         )}
@@ -99,7 +118,10 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
           button's right edge. Gating on the icon makes that unrepresentable.
         */}
         {withDivider && !iconOnly && endIcon ? (
-          <span aria-hidden="true" className="h-4 w-px shrink-0 bg-scrim-white-15" />
+          <span
+            aria-hidden="true"
+            className="h-4 w-px shrink-0 bg-scrim-white-15"
+          />
         ) : null}
 
         {iconOnly ? null : endIcon}
@@ -107,5 +129,5 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         {loading ? <span className="sr-only">{loadingLabel}</span> : null}
       </Comp>
     );
-  }
+  },
 );
