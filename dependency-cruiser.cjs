@@ -67,7 +67,8 @@ module.exports = {
   ],
   options: {
     doNotFollow: { path: "node_modules" },
-    exclude: "(^|/)(dist|build|coverage|\\.next|node_modules)/",
+    exclude:
+      "(^|/)(dist|build|coverage|\\.docusaurus|\\.next|\\.turbo|node_modules)/",
     tsConfig: { fileName: join(__dirname, "tsconfig.architecture.json") },
     tsPreCompilationDeps: true,
   },

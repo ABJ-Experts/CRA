@@ -212,3 +212,42 @@ test("cross-app workspace aliases cannot bypass dependency boundaries", async (t
     "Expected unresolved workspace aliases to fail closed",
   );
 });
+
+test("generated build directories do not enter the dependency graph", async (t) => {
+  const root = await mkdtemp(join(tmpdir(), "cra-generated-dependencies-"));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  await symlink(join(projectRoot, "node_modules"), join(root, "node_modules"));
+
+  await Promise.all([
+    write(
+      root,
+      "apps/docs/.docusaurus/generated.ts",
+      "export const generated = true;\n",
+    ),
+    write(
+      root,
+      "apps/web/.turbo/generated.ts",
+      "export const generated = true;\n",
+    ),
+    write(root, "apps/web/source.ts", "export const source = true;\n"),
+  ]);
+
+  const result = spawnSync(
+    process.execPath,
+    [cli, "--config", config, "--output-type", "json", "apps"],
+    { cwd: root, encoding: "utf8" },
+  );
+
+  assert.equal(result.status, 0, result.stderr);
+  const sources = JSON.parse(result.stdout).modules.map((module) =>
+    module.source.replaceAll("\\", "/"),
+  );
+  assert.ok(sources.includes("apps/web/source.ts"), JSON.stringify(sources));
+  assert.ok(
+    sources.every(
+      (source) =>
+        !source.includes("/.docusaurus/") && !source.includes("/.turbo/"),
+    ),
+    JSON.stringify(sources),
+  );
+});
