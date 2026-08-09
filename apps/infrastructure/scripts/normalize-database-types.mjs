@@ -19,6 +19,11 @@ const FUNCTION_NULLABILITY = Object.freeze([
     nextName: "expire_stale_invitations",
     fields: Object.freeze(["auth_user_id", "user_id"]),
   }),
+  Object.freeze({
+    name: "claim_mfa_recovery",
+    nextName: "clear_login_attempts",
+    fields: Object.freeze(["auth_user_id", "operation_id", "status"]),
+  }),
 ]);
 const API_HEADER =
   "/* eslint-disable */\n" +

@@ -29,6 +29,16 @@ const generatedFixture = `export type Database = {
         }[]
       }
       bump_session_epoch: { Args: { p_user_id: string }; Returns: undefined }
+      claim_mfa_recovery: {
+        Args: { p_code_hash: string; p_user_id: string }
+        Returns: {
+          auth_user_id: string
+          operation_id: string
+          outcome: string
+          status: string
+        }[]
+      }
+      clear_login_attempts: { Args: { p_email: string }; Returns: undefined }
       consume_password_reset: {
         Args: { p_token_hash: string }
         Returns: {
@@ -46,7 +56,7 @@ const generatedFixture = `export type Database = {
 }
 `;
 
-test("normalizes only nullable invitation result columns", () => {
+test("normalizes declared nullable RPC result columns", () => {
   const normalized = normalizeDatabaseTypes(generatedFixture);
 
   for (const field of [
@@ -67,6 +77,8 @@ test("normalizes only nullable invitation result columns", () => {
   assert.equal(normalizeDatabaseTypes(normalized), normalized);
   assert.match(normalized, /          auth_user_id: string \| null/);
   assert.match(normalized, /          user_id: string \| null/);
+  assert.match(normalized, /          operation_id: string \| null/);
+  assert.match(normalized, /          status: string \| null/);
 });
 
 test("fails closed when the generated function shape changes", () => {
@@ -84,9 +96,16 @@ test("fails closed when the generated function shape changes", () => {
   assert.throws(
     () =>
       normalizeDatabaseTypes(
-        generatedFixture.replace("          auth_user_id: string\n", ""),
+        generatedFixture.replace("          user_id: string\n", ""),
       ),
-    /auth_user_id/,
+    /user_id/,
+  );
+  assert.throws(
+    () =>
+      normalizeDatabaseTypes(
+        generatedFixture.replace("          operation_id: string\n", ""),
+      ),
+    /operation_id/,
   );
 });
 
@@ -121,11 +140,19 @@ test("keeps both generated database type copies synchronized", async () => {
       "consume_password_reset",
       "expire_stale_invitations",
     );
+    const mfaRecovery = functionBlock(
+      generatedTypes,
+      "claim_mfa_recovery",
+      "clear_login_attempts",
+    );
     assert.match(invitation, /invitation_id: string \| null/);
     assert.match(invitation, /organization_id: string \| null/);
     assert.match(invitation, /organization_name: string \| null/);
     assert.match(invitation, /organization_slug: string \| null/);
     assert.match(passwordReset, /auth_user_id: string \| null/);
     assert.match(passwordReset, /user_id: string \| null/);
+    assert.match(mfaRecovery, /auth_user_id: string \| null/);
+    assert.match(mfaRecovery, /operation_id: string \| null/);
+    assert.match(mfaRecovery, /status: string \| null/);
   }
 });

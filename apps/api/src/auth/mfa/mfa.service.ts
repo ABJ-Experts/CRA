@@ -16,6 +16,23 @@ const sha256 = (v: string): string =>
 
 /** Ten single-use codes, shown once at enrolment and never again. */
 const RECOVERY_CODE_COUNT = 10;
+// Keep an overlapping HTTP request attached long enough for ordinary provider
+// latency (list + N deletes) without holding it for the full five-minute crash
+// lease. At 15 seconds, an upstream timeout still fails conservatively while
+// normal double-submits converge on the first request's result.
+const RECOVERY_STATUS_POLL_ATTEMPTS = 60;
+const RECOVERY_STATUS_POLL_DELAY_MS = 250;
+
+type MfaRecoveryStatus = "claimed" | "failed" | "factors_removed" | "completed";
+
+type MfaRecoveryClaim =
+  | Readonly<{ outcome: "invalid" }>
+  | Readonly<{
+      outcome: "claimed" | "resumed" | "in_progress";
+      operationId: string;
+      authUserId: string;
+      status: MfaRecoveryStatus;
+    }>;
 
 /**
  * Time-based one-time passwords, via Supabase Auth factors.
@@ -219,103 +236,251 @@ export class MfaService {
     code: string,
   ): Promise<void> {
     const normalized = code.trim().toLowerCase().replace(/-/g, "");
+    const claim = await this.claimRecoveryOperation(userId, sha256(normalized));
 
-    const { data, error } = await this.supabase
-      .admin()
-      .from("auth_mfa_recovery_codes")
-      .select("id")
-      .eq("user_id", userId)
-      .eq("code_hash", sha256(normalized))
-      .is("consumed_at", null)
-      .maybeSingle();
-
-    if (error) {
-      this.logger.error(`Recovery lookup failed: ${error.message}`);
-      throw new BadRequestException({
-        message: "We could not verify that code.",
-        code: "mfa_recovery_failed",
-      });
-    }
-
-    if (!data) {
+    if (claim.outcome === "invalid") {
       throw new UnauthorizedException({
         message: "That recovery code is not valid.",
         code: "mfa_recovery_invalid",
       });
     }
+    if (claim.authUserId !== authUserId || claim.status === "completed") {
+      this.throwRecoveryUnavailable();
+    }
+    if (claim.outcome === "in_progress") {
+      await this.waitForRecoveryCompletion(claim.operationId, userId);
+      return;
+    }
 
-    // Consume BEFORE returning success, so a replay of the same request cannot
-    // spend the code twice.
-    await this.supabase
-      .admin()
-      .from("auth_mfa_recovery_codes")
-      .update({ consumed_at: new Date().toISOString() })
-      .eq("id", data.id);
+    if (claim.status !== "factors_removed") {
+      await this.removeRecoveryFactors(claim, userId);
+      await this.markRecoveryFactorsRemoved(claim.operationId, userId);
+    }
 
-    await this.removeAllFactors(userId, authUserId);
-
-    this.audit.log({
-      organizationId: null,
-      userId,
-      action: "mfa.recovery_code_used",
-      entityType: "user",
-      entityId: userId,
-      changes: { factorsRemoved: true },
-    });
+    await this.completeRecoveryOperation(claim.operationId, userId);
   }
 
-  /**
-   * Delete every TOTP factor for a user, via the admin API.
-   *
-   * Used by the recovery path, where the caller cannot reach aal2 and therefore
-   * cannot delete the factor themselves. The remaining recovery codes go too:
-   * they exist to bypass a factor that no longer exists.
-   */
-  private async removeAllFactors(
+  private async claimRecoveryOperation(
     userId: string,
-    authUserId: string,
-  ): Promise<void> {
+    codeHash: string,
+  ): Promise<MfaRecoveryClaim> {
     try {
-      /*
-       * `authUserId`, NOT `userId`. GoTrue's admin API keys on auth.users.id,
-       * while every FK in our schema uses public.users.id — passing the wrong
-       * one returns "User not found" and silently leaves the factor in place,
-       * which is the exact id-confusion `RequestUser` warns about.
-       */
       const { data, error } = await this.supabase
         .admin()
-        .auth.admin.mfa.listFactors({ userId: authUserId });
-
-      if (error) {
-        this.logger.error(`Admin listFactors failed: ${error.message}`);
-        return;
+        .rpc("claim_mfa_recovery", {
+          p_user_id: userId,
+          p_code_hash: codeHash,
+        });
+      if (error || !Array.isArray(data) || data.length !== 1) {
+        this.throwRecoveryUnavailable();
       }
 
-      for (const factor of data?.factors ?? []) {
-        const { error: deleteError } = await this.supabase
-          .admin()
-          .auth.admin.mfa.deleteFactor({ id: factor.id, userId: authUserId });
-
-        if (deleteError) {
-          this.logger.error(
-            `Admin deleteFactor failed for ${factor.id}: ${deleteError.message}`,
-          );
+      const [row] = data;
+      if (
+        !row ||
+        !["claimed", "resumed", "in_progress", "invalid"].includes(row.outcome)
+      ) {
+        this.throwRecoveryUnavailable();
+      }
+      const outcome = row.outcome as
+        "claimed" | "resumed" | "in_progress" | "invalid";
+      if (outcome === "invalid") {
+        if (row.operation_id || row.auth_user_id || row.status) {
+          this.throwRecoveryUnavailable();
         }
+        return { outcome: "invalid" };
+      }
+      if (
+        !row.operation_id ||
+        !row.auth_user_id ||
+        !["claimed", "failed", "factors_removed", "completed"].includes(
+          row.status ?? "",
+        ) ||
+        (outcome === "claimed" && row.status !== "claimed") ||
+        (outcome === "in_progress" &&
+          !["claimed", "failed"].includes(row.status ?? ""))
+      ) {
+        this.throwRecoveryUnavailable();
       }
 
-      await this.supabase
-        .admin()
-        .from("auth_mfa_recovery_codes")
-        .delete()
-        .eq("user_id", userId);
+      return {
+        outcome,
+        operationId: row.operation_id,
+        authUserId: row.auth_user_id,
+        status: row.status as MfaRecoveryStatus,
+      };
     } catch (error) {
-      // Never fail the sign-in over cleanup: the user has already proved the
-      // recovery code. A stranded factor is logged and fixable; a failed
-      // recovery is a locked-out account.
-      this.logger.error(
-        `Factor cleanup threw: ${error instanceof Error ? error.message : String(error)}`,
+      if (error instanceof ServiceUnavailableException) throw error;
+      this.throwRecoveryUnavailable();
+    }
+  }
+
+  private async waitForRecoveryCompletion(
+    operationId: string,
+    userId: string,
+  ): Promise<void> {
+    for (
+      let attempt = 0;
+      attempt < RECOVERY_STATUS_POLL_ATTEMPTS;
+      attempt += 1
+    ) {
+      try {
+        const { data, error } = await this.supabase
+          .admin()
+          .rpc("get_mfa_recovery_status", {
+            p_operation_id: operationId,
+            p_user_id: userId,
+          });
+        if (
+          error ||
+          !["claimed", "failed", "factors_removed", "completed"].includes(data)
+        ) {
+          this.throwRecoveryUnavailable();
+        }
+        if (data === "completed") return;
+        if (data === "failed") this.throwRecoveryUnavailable();
+      } catch (error) {
+        if (error instanceof ServiceUnavailableException) throw error;
+        this.throwRecoveryUnavailable();
+      }
+
+      await new Promise((resolve) =>
+        setTimeout(resolve, RECOVERY_STATUS_POLL_DELAY_MS),
       );
     }
+    this.throwRecoveryUnavailable();
+  }
+
+  private async removeRecoveryFactors(
+    claim: Exclude<MfaRecoveryClaim, { outcome: "invalid" }>,
+    userId: string,
+  ): Promise<void> {
+    const factors = await this.listRecoveryFactors(claim, userId);
+
+    for (const factor of factors) {
+      if (!factor?.id) {
+        await this.failRecoveryProviderStep(
+          claim.operationId,
+          userId,
+          "list_factors_failed",
+        );
+      }
+      try {
+        const { error } = await this.supabase
+          .admin()
+          .auth.admin.mfa.deleteFactor({
+            id: factor.id,
+            userId: claim.authUserId,
+          });
+        if (error) throw error;
+      } catch {
+        await this.failRecoveryProviderStep(
+          claim.operationId,
+          userId,
+          "delete_factor_failed",
+        );
+      }
+    }
+  }
+
+  private async listRecoveryFactors(
+    claim: Exclude<MfaRecoveryClaim, { outcome: "invalid" }>,
+    userId: string,
+  ): Promise<readonly Readonly<{ id: string }>[]> {
+    try {
+      const { data, error } = await this.supabase
+        .admin()
+        .auth.admin.mfa.listFactors({ userId: claim.authUserId });
+      if (error || !data || !Array.isArray(data.factors)) {
+        return this.failRecoveryProviderStep(
+          claim.operationId,
+          userId,
+          "list_factors_failed",
+        );
+      }
+      return data.factors;
+    } catch (error) {
+      if (error instanceof ServiceUnavailableException) throw error;
+      return this.failRecoveryProviderStep(
+        claim.operationId,
+        userId,
+        "list_factors_failed",
+      );
+    }
+  }
+
+  private async failRecoveryProviderStep(
+    operationId: string,
+    userId: string,
+    errorCode: "list_factors_failed" | "delete_factor_failed",
+  ): Promise<never> {
+    this.logger.error(
+      `MFA recovery provider step failed for user ${userId}, operation ${operationId}, step ${errorCode}`,
+    );
+    try {
+      const { data, error } = await this.supabase
+        .admin()
+        .rpc("fail_mfa_recovery", {
+          p_operation_id: operationId,
+          p_user_id: userId,
+          p_error_code: errorCode,
+        });
+      if (error || data !== "failed") {
+        this.logger.error(
+          `Could not persist MFA recovery failure for operation ${operationId}`,
+        );
+      }
+    } catch {
+      this.logger.error(
+        `Could not persist MFA recovery failure for operation ${operationId}`,
+      );
+    }
+    this.throwRecoveryUnavailable();
+  }
+
+  private async markRecoveryFactorsRemoved(
+    operationId: string,
+    userId: string,
+  ): Promise<void> {
+    try {
+      const { data, error } = await this.supabase
+        .admin()
+        .rpc("mark_mfa_factors_removed", {
+          p_operation_id: operationId,
+          p_user_id: userId,
+        });
+      if (error || data !== "factors_removed") {
+        this.throwRecoveryUnavailable();
+      }
+    } catch (error) {
+      if (error instanceof ServiceUnavailableException) throw error;
+      this.throwRecoveryUnavailable();
+    }
+  }
+
+  private async completeRecoveryOperation(
+    operationId: string,
+    userId: string,
+  ): Promise<void> {
+    try {
+      const { data, error } = await this.supabase
+        .admin()
+        .rpc("complete_mfa_recovery", {
+          p_operation_id: operationId,
+          p_user_id: userId,
+        });
+      if (error || data !== "completed") this.throwRecoveryUnavailable();
+    } catch (error) {
+      if (error instanceof ServiceUnavailableException) throw error;
+      this.throwRecoveryUnavailable();
+    }
+  }
+
+  private throwRecoveryUnavailable(): never {
+    throw new ServiceUnavailableException({
+      message: "Sign-in is temporarily unavailable. Please try again.",
+      code: "auth_unavailable",
+    });
   }
 
   /** Whether this account owes a TOTP challenge at sign-in. */

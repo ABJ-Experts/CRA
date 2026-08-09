@@ -445,6 +445,56 @@ export type Database = {
           },
         ]
       }
+      mfa_recovery_operations: {
+        Row: {
+          attempts: number
+          auth_user_id: string
+          completed_at: string | null
+          created_at: string
+          id: string
+          last_error: string | null
+          lease_expires_at: string | null
+          recovery_code_id: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          attempts?: number
+          auth_user_id: string
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          last_error?: string | null
+          lease_expires_at?: string | null
+          recovery_code_id: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          attempts?: number
+          auth_user_id?: string
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          last_error?: string | null
+          lease_expires_at?: string | null
+          recovery_code_id?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mfa_recovery_operations_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organization_members: {
         Row: {
           created_at: string
@@ -704,7 +754,20 @@ export type Database = {
         }[]
       }
       bump_session_epoch: { Args: { p_user_id: string }; Returns: undefined }
+      claim_mfa_recovery: {
+        Args: { p_code_hash: string; p_user_id: string }
+        Returns: {
+          auth_user_id: string | null
+          operation_id: string | null
+          outcome: string
+          status: string | null
+        }[]
+      }
       clear_login_attempts: { Args: { p_email: string }; Returns: undefined }
+      complete_mfa_recovery: {
+        Args: { p_operation_id: string; p_user_id: string }
+        Returns: string
+      }
       consume_password_reset: {
         Args: { p_token_hash: string }
         Returns: {
@@ -714,8 +777,24 @@ export type Database = {
         }[]
       }
       expire_stale_invitations: { Args: never; Returns: number }
+      fail_mfa_recovery: {
+        Args: {
+          p_error_code: string
+          p_operation_id: string
+          p_user_id: string
+        }
+        Returns: string
+      }
       get_current_user_id: { Args: never; Returns: string }
+      get_mfa_recovery_status: {
+        Args: { p_operation_id: string; p_user_id: string }
+        Returns: string
+      }
       is_login_locked: { Args: { p_email: string }; Returns: string }
+      mark_mfa_factors_removed: {
+        Args: { p_operation_id: string; p_user_id: string }
+        Returns: string
+      }
       record_login_failure: {
         Args: {
           p_email: string
