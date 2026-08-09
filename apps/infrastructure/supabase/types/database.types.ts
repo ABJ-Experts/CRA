@@ -730,6 +730,14 @@ export type Database = {
       user_is_org_admin: { Args: { p_org_id: string }; Returns: boolean }
       user_org_role: { Args: { p_org_id: string }; Returns: string }
       user_shares_org_with: { Args: { p_user_id: string }; Returns: boolean }
+      verify_email_code_atomic: {
+        Args: {
+          p_code_hash: string
+          p_max_attempts?: number
+          p_user_id: string
+        }
+        Returns: string
+      }
     }
     Enums: {
       invitation_status:

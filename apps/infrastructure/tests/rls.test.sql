@@ -595,7 +595,238 @@ $$;
 rollback;
 
 -- ---------------------------------------------------------------------------
--- 9. menu_permissions exclusive arc.
+-- 9. Atomic email verification.
+-- ---------------------------------------------------------------------------
+select pg_temp.check(
+  'atomic email verification RPC exists',
+  to_regprocedure(
+    'public.verify_email_code_atomic(uuid,text,integer)'
+  ) is not null
+);
+
+select pg_temp.check(
+  'atomic email verification RPC is service-role only',
+  has_function_privilege(
+    'service_role',
+    'public.verify_email_code_atomic(uuid,text,integer)',
+    'EXECUTE'
+  )
+  and not has_function_privilege(
+    'anon',
+    'public.verify_email_code_atomic(uuid,text,integer)',
+    'EXECUTE'
+  )
+  and not has_function_privilege(
+    'authenticated',
+    'public.verify_email_code_atomic(uuid,text,integer)',
+    'EXECUTE'
+  )
+);
+
+begin;
+do $$
+declare
+  v_attempt_user uuid;
+  v_expired_user uuid;
+  v_verified_user uuid;
+  v_other_user uuid;
+  v_changed_email_user uuid;
+  v_malformed_user uuid;
+  v_outcome text;
+begin
+  insert into public.users (email)
+  values ('verify-attempts@cra.test')
+  returning id into v_attempt_user;
+  insert into public.users (email)
+  values ('verify-expired@cra.test')
+  returning id into v_expired_user;
+  insert into public.users (email)
+  values ('verify-success@cra.test')
+  returning id into v_verified_user;
+  insert into public.users (email)
+  values ('verify-other@cra.test')
+  returning id into v_other_user;
+  insert into public.users (email)
+  values ('verify-changed@cra.test')
+  returning id into v_changed_email_user;
+  insert into public.users (email)
+  values ('verify-malformed@cra.test')
+  returning id into v_malformed_user;
+
+  insert into public.auth_email_verifications (
+    user_id, email, code_hash, purpose, expires_at
+  ) values (
+    v_attempt_user, 'verify-attempts@cra.test', repeat('1', 64),
+    'signup', now() + interval '10 minutes'
+  );
+
+  select public.verify_email_code_atomic(
+    v_attempt_user, repeat('2', 64), 5
+  ) into v_outcome;
+  perform pg_temp.check('first wrong email code is invalid', v_outcome = 'invalid');
+  select public.verify_email_code_atomic(
+    v_attempt_user, repeat('2', 64), 5
+  ) into v_outcome;
+  perform pg_temp.check(
+    'two wrong email codes increment exactly twice',
+    v_outcome = 'invalid'
+    and (select attempts = 2 from public.auth_email_verifications
+          where user_id = v_attempt_user and purpose = 'signup')
+  );
+
+  perform public.verify_email_code_atomic(v_attempt_user, repeat('2', 64), 5);
+  perform public.verify_email_code_atomic(v_attempt_user, repeat('2', 64), 5);
+  select public.verify_email_code_atomic(
+    v_attempt_user, repeat('2', 64), 5
+  ) into v_outcome;
+  perform pg_temp.check(
+    'fifth wrong email code consumes the final attempt',
+    v_outcome = 'invalid'
+    and (select attempts = 5 from public.auth_email_verifications
+          where user_id = v_attempt_user and purpose = 'signup')
+  );
+  select public.verify_email_code_atomic(
+    v_attempt_user, repeat('1', 64), 5
+  ) into v_outcome;
+  perform pg_temp.check(
+    'sixth email-code attempt is exhausted without increment',
+    v_outcome = 'attempts_exhausted'
+    and (select attempts = 5 from public.auth_email_verifications
+          where user_id = v_attempt_user and purpose = 'signup')
+  );
+  select public.verify_email_code_atomic(
+    v_attempt_user, repeat('1', 64), 999
+  ) into v_outcome;
+  perform pg_temp.check(
+    'caller cannot raise the email-code guessing budget',
+    v_outcome = 'attempts_exhausted'
+    and (select attempts = 5 from public.auth_email_verifications
+          where user_id = v_attempt_user and purpose = 'signup')
+    and (select email_verified_at is null from public.users
+          where id = v_attempt_user)
+  );
+
+  insert into public.auth_email_verifications (
+    user_id, email, code_hash, purpose, expires_at
+  ) values (
+    v_expired_user, 'verify-expired@cra.test', repeat('3', 64),
+    'signup', now() - interval '1 second'
+  );
+  select public.verify_email_code_atomic(
+    v_expired_user, repeat('3', 64), 5
+  ) into v_outcome;
+  perform pg_temp.check(
+    'expired email code cannot verify the user',
+    v_outcome = 'expired'
+    and (select email_verified_at is null from public.users
+          where id = v_expired_user)
+    and (select consumed_at is null from public.auth_email_verifications
+          where user_id = v_expired_user and purpose = 'signup')
+  );
+
+  insert into public.auth_email_verifications (
+    user_id, email, code_hash, purpose, expires_at
+  ) values (
+    v_verified_user, 'verify-success@cra.test', repeat('4', 64),
+    'signup', now() + interval '10 minutes'
+  );
+
+  select public.verify_email_code_atomic(
+    v_other_user, repeat('4', 64), 5
+  ) into v_outcome;
+  perform pg_temp.check(
+    'email code cannot verify another user',
+    v_outcome = 'missing'
+    and (select email_verified_at is null from public.users
+          where id = v_other_user)
+    and (select consumed_at is null from public.auth_email_verifications
+          where user_id = v_verified_user and purpose = 'signup')
+  );
+
+  select public.verify_email_code_atomic(
+    v_verified_user, repeat('4', 64), 5
+  ) into v_outcome;
+  perform pg_temp.check(
+    'correct email code verifies and consumes atomically',
+    v_outcome = 'verified'
+    and (select users.email_verified_at is not null
+           and verifications.consumed_at = users.email_verified_at
+           from public.users users
+           join public.auth_email_verifications verifications
+             on verifications.user_id = users.id
+          where users.id = v_verified_user
+            and verifications.purpose = 'signup')
+  );
+
+  select public.verify_email_code_atomic(
+    v_verified_user, repeat('4', 64), 5
+  ) into v_outcome;
+  perform pg_temp.check(
+    'consumed email code cannot be replayed',
+    v_outcome = 'missing'
+  );
+
+  insert into public.auth_email_verifications (
+    user_id, email, code_hash, purpose, expires_at
+  ) values (
+    v_changed_email_user, 'verify-original@cra.test', repeat('5', 64),
+    'signup', now() + interval '10 minutes'
+  );
+  select public.verify_email_code_atomic(
+    v_changed_email_user, repeat('5', 64), 5
+  ) into v_outcome;
+  perform pg_temp.check(
+    'signup code cannot verify a changed email address',
+    v_outcome = 'missing'
+    and (select email_verified_at is null from public.users
+          where id = v_changed_email_user)
+    and (select consumed_at is null and attempts = 0
+           from public.auth_email_verifications
+          where user_id = v_changed_email_user and purpose = 'signup')
+  );
+
+  insert into public.auth_email_verifications (
+    user_id, email, code_hash, purpose, expires_at
+  ) values (
+    v_malformed_user, 'verify-malformed@cra.test', repeat('6', 64),
+    'signup', now() + interval '10 minutes'
+  );
+  select public.verify_email_code_atomic(
+    v_malformed_user, 'raw-code', 5
+  ) into v_outcome;
+  perform pg_temp.check(
+    'malformed email-code hash leaves a live code untouched',
+    v_outcome = 'missing'
+    and (select attempts = 0 and consumed_at is null
+           from public.auth_email_verifications
+          where user_id = v_malformed_user and purpose = 'signup')
+  );
+  select public.verify_email_code_atomic(
+    v_malformed_user, repeat('6', 64), 0
+  ) into v_outcome;
+  perform pg_temp.check(
+    'invalid email-code attempt limit leaves a live code untouched',
+    v_outcome = 'missing'
+    and (select attempts = 0 and consumed_at is null
+           from public.auth_email_verifications
+          where user_id = v_malformed_user and purpose = 'signup')
+  );
+  select public.verify_email_code_atomic(
+    v_malformed_user, repeat('6', 64), null
+  ) into v_outcome;
+  perform pg_temp.check(
+    'null email-code attempt limit leaves a live code untouched',
+    v_outcome = 'missing'
+    and (select attempts = 0 and consumed_at is null
+           from public.auth_email_verifications
+          where user_id = v_malformed_user and purpose = 'signup')
+  );
+end
+$$;
+rollback;
+
+-- ---------------------------------------------------------------------------
+-- 10. menu_permissions exclusive arc.
 -- ---------------------------------------------------------------------------
 begin;
 do $$
@@ -621,7 +852,7 @@ $$;
 rollback;
 
 -- ---------------------------------------------------------------------------
--- 10. Login lockout, including the sliding window.
+-- 11. Login lockout, including the sliding window.
 -- ---------------------------------------------------------------------------
 begin;
 do $$
@@ -665,7 +896,7 @@ $$;
 rollback;
 
 -- ---------------------------------------------------------------------------
--- 11. The suite must leave NOTHING behind. Anything it granted or inserted
+-- 12. The suite must leave NOTHING behind. Anything it granted or inserted
 --     above has been rolled back; re-assert the lockdown invariants to prove it.
 -- ---------------------------------------------------------------------------
 do $$
