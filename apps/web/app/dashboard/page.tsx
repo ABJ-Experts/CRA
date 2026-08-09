@@ -16,7 +16,7 @@ import {
   Stacked,
   StatusTag,
 } from "./tables/_components/cells";
-import type { Order } from "../../mocks/data/tables";
+import { orderSchema, type Order } from "../../mocks/data/table-schemas";
 
 /**
  * Dashboard / E-commerce - Pencil `SSqGt` (light), `qe2KR` (dark).
@@ -65,6 +65,7 @@ const TOTALS = [
 export default function EcommerceDashboardPage() {
   const t = useTableQuery<Order>({
     endpoint: "/api/orders",
+    rowSchema: orderSchema,
     initialPageSize: 5,
   });
 

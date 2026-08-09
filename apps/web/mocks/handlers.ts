@@ -1,4 +1,5 @@
 import { HttpResponse, http, delay, passthrough } from "msw";
+import type { Paged } from "@repo/contracts/pagination";
 import { COINS, CUSTOMERS, ORDERS, PRODUCTS } from "./data/tables";
 
 /**
@@ -13,14 +14,6 @@ import { COINS, CUSTOMERS, ORDERS, PRODUCTS } from "./data/tables";
  * Swapping to a real backend means changing the base URL; the response shape
  * is the contract.
  */
-
-export interface Paged<T> {
-  rows: T[];
-  total: number;
-  page: number;
-  pageSize: number;
-  pageCount: number;
-}
 
 /** Small, fixed latency so loading states are visible but not annoying. */
 const LATENCY = 260;

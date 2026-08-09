@@ -5,7 +5,10 @@ import { selectionColumn, type ColumnDef } from "@repo/ui/data-table";
 import { useMemo } from "react";
 import { TablePage } from "../_components/table-page";
 import { Plain, RowActions, Stacked, StatusTag } from "../_components/cells";
-import type { Customer } from "../../../../mocks/data/tables";
+import {
+  customerSchema,
+  type Customer,
+} from "../../../../mocks/data/table-schemas";
 
 /** Tables / Bordered Tables - Pencil `O5lpFJ` (light), `SsGnE` (dark). */
 export default function BorderedTablesPage() {
@@ -71,6 +74,7 @@ export default function BorderedTablesPage() {
   return (
     <TablePage<Customer>
       endpoint="/api/customers"
+      rowSchema={customerSchema}
       variant="bordered"
       ariaLabel="Customers"
       searchPlaceholder="Search customers"

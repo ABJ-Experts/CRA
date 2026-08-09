@@ -19,7 +19,7 @@ import {
   RowActions,
   Stacked,
 } from "../tables/_components/cells";
-import type { Coin } from "../../../mocks/data/tables";
+import { coinSchema, type Coin } from "../../../mocks/data/table-schemas";
 
 /**
  * Dashboard / Crypto - Pencil `h1KQRJ` (light), `bE9bL` (dark).
@@ -94,7 +94,11 @@ const ACTIVITY = [
 ];
 
 export default function CryptoDashboardPage() {
-  const t = useTableQuery<Coin>({ endpoint: "/api/coins", initialPageSize: 8 });
+  const t = useTableQuery<Coin>({
+    endpoint: "/api/coins",
+    rowSchema: coinSchema,
+    initialPageSize: 8,
+  });
 
   const columns = useMemo<ColumnDef<Coin, unknown>[]>(
     () => [
