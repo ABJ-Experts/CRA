@@ -550,12 +550,27 @@ export class AuthService {
   }
 
   /** Re-authenticate an existing session — the Lock Screen. */
-  async verifyPassword(email: string, password: string): Promise<boolean> {
+  async verifyPassword(emailInput: string, password: string): Promise<boolean> {
+    const email = normalizeEmail(emailInput);
+    const lockedUntil = await this.lockedUntil(email);
+    if (lockedUntil) {
+      throw new TooManyRequestsException({
+        message: "Too many attempts. Please try again later.",
+        code: "account_locked",
+      });
+    }
+
     const { data, error } = await withMinimumDuration(
       300,
       this.supabase.anon().auth.signInWithPassword({ email, password }),
     );
-    return !error && Boolean(data.session);
+    if (error || !data.session) {
+      await this.recordFailure(email);
+      return false;
+    }
+
+    await this.clearFailures(email);
+    return true;
   }
 
   // -------------------------------------------------------------------------
