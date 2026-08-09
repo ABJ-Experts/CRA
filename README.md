@@ -62,6 +62,18 @@ pnpm verify         # run the complete fast CI gate
 pnpm format         # prettier across the repo
 ```
 
+## Architecture rules
+
+CRA uses a feature-oriented modular monolith with inward dependencies:
+presentation to application to domain, with infrastructure adapters
+implementing application-owned ports. Patterns are selected for demonstrated
+problems rather than applied as a quota. Start with the
+[architecture guide](docs/architecture/README.md), the complete
+[22-pattern decision catalogue](docs/architecture/pattern-selection-matrix.md),
+and the [feature design template](docs/architecture/feature-design-template.md).
+Release and rollback signals are defined in the
+[architecture rollout runbook](docs/architecture/rollout-runbook.md).
+
 ### Live verification
 
 `pnpm test:live` runs the RLS suite, API end-to-end suite, and the real auth
