@@ -136,6 +136,45 @@ describe("VersionedPermissionResolver", () => {
     );
   });
 
+  it("does not reuse a full resolution across base roles at one version", async () => {
+    const data = permissionData();
+    const target = {
+      resolve: jest.fn((_orgId: string, _userId: string, baseRole: string) =>
+        Promise.resolve(mutableResolution(baseRole === "owner")),
+      ),
+    };
+    const resolver = new VersionedPermissionResolver(data, target);
+
+    await expect(
+      resolver.resolve("org-a", "user-a", "owner"),
+    ).resolves.toMatchObject({ permissions: { can_view_users: true } });
+    await expect(
+      resolver.resolve("org-a", "user-a", "viewer"),
+    ).resolves.toMatchObject({ permissions: { can_view_users: false } });
+    expect(target.resolve).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not reuse effective permissions across base roles at one version", async () => {
+    const data = permissionData();
+    const effectivePermissions = jest.fn(
+      (_orgId: string, _userId: string, baseRole: string) =>
+        Promise.resolve({ can_view_users: baseRole === "owner" }),
+    );
+    const target = {
+      resolve: jest.fn().mockResolvedValue(mutableResolution(false)),
+      effectivePermissions,
+    };
+    const resolver = new VersionedPermissionResolver(data, target);
+
+    await expect(
+      resolver.effectivePermissions("org-a", "user-a", "owner"),
+    ).resolves.toMatchObject({ can_view_users: true });
+    await expect(
+      resolver.effectivePermissions("org-a", "user-a", "viewer"),
+    ).resolves.toMatchObject({ can_view_users: false });
+    expect(effectivePermissions).toHaveBeenCalledTimes(2);
+  });
+
   it("copies and freezes mutable target results before caching them", async () => {
     const data = permissionData();
     const source = mutableResolution(true);

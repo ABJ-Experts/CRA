@@ -30,7 +30,7 @@ export class VersionedPermissionResolver
     baseRole: BaseRole,
   ): Promise<PermissionResolution> {
     const version = await this.validVersion(orgId);
-    const key = this.key(orgId, userId);
+    const key = this.key(orgId, userId, baseRole);
     const cached = this.cache.get(key);
     if (cached?.version === version && cached.value) return cached.value;
 
@@ -50,7 +50,7 @@ export class VersionedPermissionResolver
     baseRole: BaseRole,
   ): Promise<Readonly<PermissionSet>> {
     const version = await this.validVersion(orgId);
-    const key = this.key(orgId, userId);
+    const key = this.key(orgId, userId, baseRole);
     const cached = this.cache.get(key);
     if (cached?.version === version) return cached.permissions;
 
@@ -72,8 +72,8 @@ export class VersionedPermissionResolver
     return version;
   }
 
-  private key(orgId: string, userId: string): string {
-    return `${orgId}:${userId}`;
+  private key(orgId: string, userId: string, baseRole: BaseRole): string {
+    return `${orgId}:${userId}:${baseRole}`;
   }
 
   private snapshot(value: PermissionResolution): PermissionResolution {
