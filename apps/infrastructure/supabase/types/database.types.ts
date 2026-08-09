@@ -705,6 +705,14 @@ export type Database = {
       }
       bump_session_epoch: { Args: { p_user_id: string }; Returns: undefined }
       clear_login_attempts: { Args: { p_email: string }; Returns: undefined }
+      consume_password_reset: {
+        Args: { p_token_hash: string }
+        Returns: {
+          auth_user_id: string | null
+          outcome: string
+          user_id: string | null
+        }[]
+      }
       expire_stale_invitations: { Args: never; Returns: number }
       get_current_user_id: { Args: never; Returns: string }
       is_login_locked: { Args: { p_email: string }; Returns: string }

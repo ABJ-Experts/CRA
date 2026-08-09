@@ -7,6 +7,14 @@ import { normalizeDatabaseTypes } from "../../apps/infrastructure/scripts/normal
 
 const root = process.cwd();
 
+function functionBlock(source, name, nextName) {
+  const start = source.indexOf(`      ${name}:`);
+  const end = source.indexOf(`      ${nextName}:`, start);
+  assert.notEqual(start, -1, `Missing generated ${name} function`);
+  assert.notEqual(end, -1, `Missing generated function after ${name}`);
+  return source.slice(start, end);
+}
+
 const generatedFixture = `export type Database = {
   public: {
     Functions: {
@@ -21,6 +29,15 @@ const generatedFixture = `export type Database = {
         }[]
       }
       bump_session_epoch: { Args: { p_user_id: string }; Returns: undefined }
+      consume_password_reset: {
+        Args: { p_token_hash: string }
+        Returns: {
+          auth_user_id: string
+          outcome: string
+          user_id: string
+        }[]
+      }
+      expire_stale_invitations: { Args: never; Returns: number }
     }
     Tables: {
       organizations: { Row: { organization_id: string } }
@@ -48,6 +65,8 @@ test("normalizes only nullable invitation result columns", () => {
   assert.equal(normalized.at(-1), "\n");
   assert.notEqual(normalized.at(-2), "\n");
   assert.equal(normalizeDatabaseTypes(normalized), normalized);
+  assert.match(normalized, /          auth_user_id: string \| null/);
+  assert.match(normalized, /          user_id: string \| null/);
 });
 
 test("fails closed when the generated function shape changes", () => {
@@ -61,6 +80,13 @@ test("fails closed when the generated function shape changes", () => {
         generatedFixture.replace("          invitation_id: string\n", ""),
       ),
     /invitation_id/,
+  );
+  assert.throws(
+    () =>
+      normalizeDatabaseTypes(
+        generatedFixture.replace("          auth_user_id: string\n", ""),
+      ),
+    /auth_user_id/,
   );
 });
 
@@ -85,9 +111,21 @@ test("keeps both generated database type copies synchronized", async () => {
     infrastructureTypes,
   );
   for (const generatedTypes of [infrastructureTypes, apiTypes]) {
-    assert.match(generatedTypes, /invitation_id: string \| null/);
-    assert.match(generatedTypes, /organization_id: string \| null/);
-    assert.match(generatedTypes, /organization_name: string \| null/);
-    assert.match(generatedTypes, /organization_slug: string \| null/);
+    const invitation = functionBlock(
+      generatedTypes,
+      "accept_invitation_atomic",
+      "bump_session_epoch",
+    );
+    const passwordReset = functionBlock(
+      generatedTypes,
+      "consume_password_reset",
+      "expire_stale_invitations",
+    );
+    assert.match(invitation, /invitation_id: string \| null/);
+    assert.match(invitation, /organization_id: string \| null/);
+    assert.match(invitation, /organization_name: string \| null/);
+    assert.match(invitation, /organization_slug: string \| null/);
+    assert.match(passwordReset, /auth_user_id: string \| null/);
+    assert.match(passwordReset, /user_id: string \| null/);
   }
 });

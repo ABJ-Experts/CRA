@@ -39,6 +39,15 @@ interface UserRow {
   email_verified_at: string | null;
 }
 
+type PasswordResetOutcome =
+  "consumed" | "invalid" | "expired" | "profile_missing";
+
+interface PasswordResetConsumption {
+  outcome: PasswordResetOutcome;
+  userId: string | null;
+  authUserId: string | null;
+}
+
 const sha256 = (value: string): string =>
   createHash("sha256").update(value).digest("hex");
 
@@ -441,62 +450,87 @@ export class AuthService {
   }
 
   async resetPassword(input: ResetPasswordInput): Promise<void> {
-    const { data } = await this.supabase
-      .admin()
-      .from("auth_recovery_tokens")
-      .select("id, user_id, expires_at, consumed_at")
-      .eq("token_hash", sha256(input.token))
-      .maybeSingle();
+    const consumption = await this.consumePasswordReset(input.token);
 
-    // "expired" is the word `reset-password/page.tsx` looks for to route the
-    // user to /expired, so every dead-token case says it.
-    if (!data || data.consumed_at) {
-      throw new BadRequestException({
-        message: "That reset link has expired.",
-        code: "reset_token_invalid",
-      });
+    if (consumption.outcome !== "consumed") {
+      this.throwDeadResetToken(consumption.outcome);
+    }
+    if (!consumption.userId || !consumption.authUserId) {
+      this.throwPasswordResetUnavailable();
     }
 
-    if (new Date(data.expires_at).getTime() < Date.now()) {
-      throw new BadRequestException({
-        message: "That reset link has expired.",
-        code: "reset_token_expired",
-      });
-    }
+    try {
+      // The database has already consumed the reset token and advanced the
+      // session epoch. In the pinned GoTrue version, changing a password also
+      // revokes that user's refresh tokens, so old access and refresh sessions
+      // are both dead before this method can report success.
+      const { error } = await this.supabase
+        .admin()
+        .auth.admin.updateUserById(consumption.authUserId, {
+          password: input.password,
+        });
 
-    const profile = await this.profileById(data.user_id);
-    if (!profile?.auth_user_id) {
-      throw new BadRequestException({
-        message: "That reset link has expired.",
-        code: "reset_token_invalid",
-      });
-    }
-
-    const { error } = await this.supabase
-      .admin()
-      .auth.admin.updateUserById(profile.auth_user_id, {
-        password: input.password,
-      });
-
-    if (error) {
-      this.logger.error(`Password update failed: ${error.message}`);
+      if (error) throw error;
+    } catch (error) {
+      this.logger.error(
+        `Password update failed for user ${consumption.userId}: ${error instanceof Error ? error.message : String(error)}`,
+      );
       throw new BadRequestException({
         message: "We could not update that password.",
         code: "password_update_failed",
       });
     }
+  }
 
-    // Single-use: consume BEFORE returning, so a replayed link is dead even if
-    // the caller retries.
-    await this.supabase
-      .admin()
-      .from("auth_recovery_tokens")
-      .update({ consumed_at: new Date().toISOString() })
-      .eq("id", data.id);
+  private async consumePasswordReset(
+    token: string,
+  ): Promise<PasswordResetConsumption> {
+    try {
+      const { data, error } = await this.supabase
+        .admin()
+        .rpc("consume_password_reset", { p_token_hash: sha256(token) });
 
-    // Everything else this account had open is now invalid — the whole point of
-    // resetting a password you believe was compromised.
-    await this.bumpEpoch(profile.id);
+      if (error || !Array.isArray(data) || data.length !== 1) {
+        this.throwPasswordResetUnavailable();
+      }
+
+      const [row] = data;
+      if (
+        !row ||
+        !["consumed", "invalid", "expired", "profile_missing"].includes(
+          row.outcome,
+        )
+      ) {
+        this.throwPasswordResetUnavailable();
+      }
+
+      return {
+        outcome: row.outcome as PasswordResetOutcome,
+        userId: row.user_id,
+        authUserId: row.auth_user_id,
+      };
+    } catch (error) {
+      if (error instanceof ServiceUnavailableException) throw error;
+      this.throwPasswordResetUnavailable();
+    }
+  }
+
+  private throwDeadResetToken(outcome: PasswordResetOutcome): never {
+    throw new BadRequestException({
+      message: "That reset link has expired.",
+      code:
+        outcome === "expired" ? "reset_token_expired" : "reset_token_invalid",
+    });
+  }
+
+  private throwPasswordResetUnavailable(): never {
+    this.logger.error(
+      "Password reset consumption failed before provider update",
+    );
+    throw new ServiceUnavailableException({
+      message: "We could not update that password.",
+      code: "password_update_failed",
+    });
   }
 
   // -------------------------------------------------------------------------
