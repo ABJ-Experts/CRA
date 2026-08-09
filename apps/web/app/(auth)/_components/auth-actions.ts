@@ -21,6 +21,10 @@
  * path explicitly instead of relying on a try/catch that is easy to forget.
  */
 
+import { z } from "zod";
+
+import { ApiClientError, requestJson } from "../../_lib/http/api-client";
+
 export interface AuthResult {
   ok: boolean;
   /** Form-level message, shown above the fields. */
@@ -40,51 +44,33 @@ export interface AuthResult {
  */
 const API = "/api/v1";
 
-interface ApiError {
-  message?: string;
-  fieldErrors?: Record<string, string>;
-}
+const authSuccessSchema = z
+  .object({
+    next: z.enum(["dashboard", "two-factor", "verify", "sign-in"]).optional(),
+  })
+  .passthrough();
 
-interface ApiSuccess {
-  next?: AuthResult["next"];
-}
-
-async function post(path: string, body?: unknown): Promise<AuthResult> {
-  let res: Response;
-
+async function post(path: `/${string}`, body?: unknown): Promise<AuthResult> {
   try {
-    res = await fetch(`${API}${path}`, {
+    const requestPath = `${API}${path}` as const;
+    const data = await requestJson({
+      path: requestPath,
       method: "POST",
-      headers: { "content-type": "application/json" },
-      // Same-origin thanks to the proxy, so `same-origin` is sufficient and
-      // avoids opting into cross-site cookie semantics we do not need.
-      credentials: "same-origin",
-      cache: "no-store",
-      body: body === undefined ? undefined : JSON.stringify(body),
+      body,
+      schema: authSuccessSchema,
     });
-  } catch {
-    // A network failure is not a validation failure. Say so plainly rather than
-    // rendering "undefined" under a field.
-    return {
-      ok: false,
-      message:
-        "We could not reach the server. Check your connection and try again.",
-    };
+    return { ok: true, next: data.next };
+  } catch (error) {
+    return error instanceof ApiClientError
+      ? {
+          ok: false,
+          message: error.message,
+          ...(error.fieldErrors
+            ? { fieldErrors: { ...error.fieldErrors } }
+            : {}),
+        }
+      : { ok: false, message: "Something went wrong. Please try again." };
   }
-
-  // A 204, or an HTML error page from a proxy, would both break `.json()`.
-  const data: unknown = await res.json().catch(() => ({}));
-
-  if (!res.ok) {
-    const err = data as ApiError;
-    return {
-      ok: false,
-      message: err.message ?? "Something went wrong. Please try again.",
-      ...(err.fieldErrors ? { fieldErrors: err.fieldErrors } : {}),
-    };
-  }
-
-  return { ok: true, next: (data as ApiSuccess).next };
 }
 
 export async function signIn(input: {

@@ -1,4 +1,4 @@
-import { describe, expect, expectTypeOf, it } from "vitest";
+import { afterEach, describe, expect, expectTypeOf, it, vi } from "vitest";
 
 import {
   lockedSession,
@@ -91,5 +91,99 @@ describe("frozen auth-actions signatures", () => {
   it("still exports the lock-screen fallback the screen renders before /session answers", () => {
     expect(lockedSession.email).toBeTruthy();
     expect(lockedSession.name).toBeTruthy();
+  });
+});
+
+describe("auth action HTTP facade", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("maps a validated success and keeps the sign-in request shape", async () => {
+    const fetcher = vi.fn(
+      async () =>
+        new Response(JSON.stringify({ next: "two-factor" }), { status: 200 }),
+    );
+    vi.stubGlobal("fetch", fetcher);
+
+    await expect(
+      signIn({
+        identifier: "person@example.com",
+        password: "correct horse battery staple",
+        remember: true,
+      }),
+    ).resolves.toEqual({ ok: true, next: "two-factor" });
+    expect(fetcher).toHaveBeenCalledWith("/api/v1/auth/sign-in", {
+      method: "POST",
+      credentials: "same-origin",
+      cache: "no-store",
+      signal: undefined,
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        email: "person@example.com",
+        password: "correct horse battery staple",
+        remember: true,
+      }),
+    });
+  });
+
+  it("maps API field errors into the existing result without mutating them", async () => {
+    const serverFieldErrors = Object.freeze({
+      email: "Enter a valid email address.",
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(
+            JSON.stringify({
+              statusCode: 422,
+              message: "Please correct the form.",
+              code: "validation_failed",
+              fieldErrors: serverFieldErrors,
+            }),
+            { status: 422 },
+          ),
+      ),
+    );
+
+    await expect(
+      requestPasswordReset({ email: "not-an-email" }),
+    ).resolves.toEqual({
+      ok: false,
+      message: "Please correct the form.",
+      fieldErrors: { email: "Enter a valid email address." },
+    });
+  });
+
+  it("returns the safe network message when fetch fails", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        throw new Error("private network details");
+      }),
+    );
+
+    await expect(resendCode()).resolves.toEqual({
+      ok: false,
+      message: "We could not reach the server.",
+    });
+  });
+
+  it("fails closed when a successful response has an invalid next value", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(JSON.stringify({ next: "admin-console" }), {
+            status: 200,
+          }),
+      ),
+    );
+
+    await expect(verifyCode({ code: "123456" })).resolves.toEqual({
+      ok: false,
+      message: "The server returned an unexpected response.",
+    });
   });
 });
