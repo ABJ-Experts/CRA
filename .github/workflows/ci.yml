@@ -44,7 +44,8 @@ jobs:
       - name: Export local Supabase environment
         shell: bash
         run: |
-          source <(pnpm --filter infrastructure exec supabase status -o env)
+          source apps/infrastructure/scripts/local-supabase-env.sh
+          load_local_supabase_env
           {
             echo "NODE_ENV=test"
             echo "SUPABASE_URL=$API_URL"
