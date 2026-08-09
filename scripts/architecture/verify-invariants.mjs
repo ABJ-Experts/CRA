@@ -771,11 +771,45 @@ async function verifySessionEpochSkew(rootDir, errors) {
       ts.isPropertyAssignment(node) &&
       propertyNameText(node.name) === "SESSION_EPOCH_SKEW_SECONDS",
   );
+
+  const isZeroLiteral = (expression) => {
+    const node = expression && unwrapExpression(expression);
+    return Boolean(
+      node && ts.isNumericLiteral(node) && Number(node.text) === 0,
+    );
+  };
+  const isStrictZeroComparison = (node) =>
+    ts.isBinaryExpression(node) &&
+    node.operatorToken.kind === ts.SyntaxKind.EqualsEqualsEqualsToken &&
+    ((ts.isIdentifier(unwrapExpression(node.left)) &&
+      isZeroLiteral(node.right)) ||
+      (isZeroLiteral(node.left) &&
+        ts.isIdentifier(unwrapExpression(node.right))));
+  const isFixedZeroSchema = (name) => {
+    const initializer = findVariableInitializer(sourceFile, name);
+    if (!initializer) return false;
+    const calls = nodesWithin(initializer, (node) => ts.isCallExpression(node));
+    const hasZeroDefault = calls.some(
+      (call) =>
+        callName(call) === "default" && isZeroLiteral(call.arguments[0]),
+    );
+    const hasStrictZeroRefinement = calls.some(
+      (call) =>
+        callName(call) === "refine" &&
+        call.arguments[0] &&
+        nodesWithin(call.arguments[0], isStrictZeroComparison).length > 0,
+    );
+    return hasZeroDefault && hasStrictZeroRefinement;
+  };
   const valid = assignments.some((assignment) => {
     const initializer = unwrapExpression(assignment.initializer);
-    if (!ts.isCallExpression(initializer)) return false;
-    const fallback = unwrapExpression(initializer.arguments[0]);
-    return ts.isNumericLiteral(fallback) && Number(fallback.text) === 0;
+    if (ts.isIdentifier(initializer)) {
+      return isFixedZeroSchema(initializer.text);
+    }
+    return (
+      ts.isCallExpression(initializer) &&
+      isZeroLiteral(initializer.arguments[0])
+    );
   });
   if (assignments.length !== 1 || !valid) {
     errors.push(
@@ -793,12 +827,13 @@ function arrayInitializer(expression) {
 function isApiPassthroughHandler(expression) {
   const node = unwrapExpression(expression);
   if (!ts.isCallExpression(node)) return false;
+  const route = stringLiteralValue(node.arguments[0]);
   if (
     !ts.isPropertyAccessExpression(node.expression) ||
     !ts.isIdentifier(node.expression.expression) ||
     node.expression.expression.text !== "http" ||
     node.expression.name.text !== "all" ||
-    stringLiteralValue(node.arguments[0]) !== "/api/v1/*"
+    (route !== "/api/v1/*" && route !== "*/api/v1/*")
   ) {
     return false;
   }

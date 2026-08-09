@@ -22,7 +22,7 @@
 
 do $$
 declare
-  v_org_id  uuid := '00000000-0000-0000-0000-0000000000ca';
+  v_org_id  uuid := '00000000-0000-4000-8000-0000000000ca';
   v_inst    uuid := '00000000-0000-0000-0000-000000000000';
   v_pw      text := extensions.crypt('Password123', extensions.gen_salt('bf'));
   v_role    text;

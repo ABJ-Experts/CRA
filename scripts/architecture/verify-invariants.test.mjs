@@ -151,8 +151,9 @@ async function writePassingFixture(root) {
       root,
       "apps/api/src/config/env.validation.ts",
       [
+        "const fixedZero = z.coerce.number().default(0).refine((value) => value === 0);",
         "const envSchema = z.object({",
-        "  SESSION_EPOCH_SKEW_SECONDS: intZeroOk(0),",
+        "  SESSION_EPOCH_SKEW_SECONDS: fixedZero,",
         "});",
       ].join("\n"),
     ),
@@ -184,8 +185,8 @@ async function writePassingFixture(root) {
       "apps/web/mocks/handlers.ts",
       [
         "export const handlers = [",
-        '  http.all("/api/v1/*", () => passthrough()),',
-        '  http.get("/api/products", () => HttpResponse.json([])),',
+        '  http.all("*/api/v1/*", () => passthrough()),',
+        '  http.get("*/api/products", () => HttpResponse.json([])),',
         "];",
       ].join("\n"),
     ),
@@ -494,6 +495,23 @@ test("rejects nonzero session epoch skew", async (t) => {
     root,
     "apps/api/src/config/env.validation.ts",
     "const envSchema = z.object({ SESSION_EPOCH_SKEW_SECONDS: intZeroOk(30) });\n",
+  );
+
+  const errors = await verifyInvariants(root);
+
+  assert.ok(hasRule(errors, RULE.sessionEpochSkew), errors.join("\n"));
+});
+
+test("rejects a zero default that can still accept positive skew", async (t) => {
+  const root = await temporaryRoot(t);
+  await writePassingFixture(root);
+  await write(
+    root,
+    "apps/api/src/config/env.validation.ts",
+    [
+      "const configurableSkew = z.coerce.number().default(0);",
+      "const envSchema = z.object({ SESSION_EPOCH_SKEW_SECONDS: configurableSkew });",
+    ].join("\n"),
   );
 
   const errors = await verifyInvariants(root);

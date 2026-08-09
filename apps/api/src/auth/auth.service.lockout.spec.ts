@@ -1,5 +1,11 @@
+import { ServiceUnavailableException } from "@nestjs/common";
+
 import { TooManyRequestsException } from "../common/exceptions/too-many-requests.exception";
 import { AuthService } from "./auth.service";
+import { ReauthenticateUserUseCase } from "./application/auth-use-cases";
+import { SystemDelayAdapter } from "./infrastructure/node-auth-runtime.adapter";
+import { SupabaseAuthIdentityAdapter } from "./infrastructure/supabase-auth-identity.adapter";
+import { SupabaseAuthProfileRepository } from "./infrastructure/supabase-auth-profile.repository";
 
 describe("AuthService.verifyPassword lockout", () => {
   afterEach(() => jest.useRealTimers());
@@ -18,17 +24,29 @@ describe("AuthService.verifyPassword lockout", () => {
       }
       return Promise.resolve({ data: null, error: null });
     });
+    const supabase = {
+      admin: () => ({ rpc }),
+      anon: () => ({ auth: { signInWithPassword } }),
+    } as never;
+    const reauthenticate = new ReauthenticateUserUseCase(
+      new SupabaseAuthProfileRepository(supabase),
+      new SupabaseAuthIdentityAdapter(supabase),
+      new SystemDelayAdapter(),
+      300,
+      5,
+      15,
+    );
     const service = new AuthService(
-      {
-        admin: () => ({ rpc }),
-        anon: () => ({ auth: { signInWithPassword } }),
-      } as never,
-      {
-        getOrThrow: (key: string) => (key === "LOGIN_MAX_ATTEMPTS" ? 5 : 15),
-      } as never,
       {} as never,
       {} as never,
       {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      reauthenticate,
     );
 
     return { service, rpc, signInWithPassword };
@@ -88,6 +106,59 @@ describe("AuthService.verifyPassword lockout", () => {
     });
     expect(rpc).not.toHaveBeenCalledWith(
       "record_login_failure",
+      expect.anything(),
+    );
+  });
+
+  it("returns 503 and avoids lockout writes during an identity-provider outage", async () => {
+    jest.useFakeTimers();
+    const signInWithPassword = jest
+      .fn()
+      .mockRejectedValue(new Error("provider offline"));
+    const rpc = jest.fn((name: string) => {
+      if (name === "is_login_locked") {
+        return Promise.resolve({ data: null, error: null });
+      }
+      return Promise.resolve({ data: null, error: null });
+    });
+    const supabase = {
+      admin: () => ({ rpc }),
+      anon: () => ({ auth: { signInWithPassword } }),
+    } as never;
+    const reauthenticate = new ReauthenticateUserUseCase(
+      new SupabaseAuthProfileRepository(supabase),
+      new SupabaseAuthIdentityAdapter(supabase),
+      new SystemDelayAdapter(),
+      300,
+      5,
+      15,
+    );
+    const service = new AuthService(
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      reauthenticate,
+    );
+
+    const pending = service.verifyPassword("USER@CRA.TEST", "password");
+    const rejection = expect(pending).rejects.toBeInstanceOf(
+      ServiceUnavailableException,
+    );
+    await jest.advanceTimersByTimeAsync(300);
+
+    await rejection;
+    expect(rpc).not.toHaveBeenCalledWith(
+      "record_login_failure",
+      expect.anything(),
+    );
+    expect(rpc).not.toHaveBeenCalledWith(
+      "clear_login_attempts",
       expect.anything(),
     );
   });

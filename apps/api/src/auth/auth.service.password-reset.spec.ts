@@ -52,11 +52,16 @@ function createService(
     new NodeSecretHashAdapter(),
   );
   const service = new AuthService(
-    supabase,
+    {} as never,
+    {} as never,
+    {} as never,
+    {} as never,
     {} as never,
     {} as never,
     {} as never,
     passwordRecovery,
+    {} as never,
+    {} as never,
   );
 
   return { service, rpc, updateUserById };

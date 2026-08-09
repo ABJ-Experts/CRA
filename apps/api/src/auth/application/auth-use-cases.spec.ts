@@ -20,6 +20,21 @@ function profileRepository(
   overrides: Partial<AuthProfileRepository> = {},
 ): AuthProfileRepository {
   return {
+    isUsernameTaken: jest.fn().mockResolvedValue(false),
+    findByAuthUserId: jest.fn().mockResolvedValue(null),
+    findById: jest.fn().mockResolvedValue(null),
+    findByEmail: jest.fn().mockResolvedValue(null),
+    resolveUsername: jest.fn().mockResolvedValue(null),
+    listMemberships: jest.fn().mockResolvedValue([]),
+    lockedUntil: jest.fn().mockResolvedValue(null),
+    recordLoginFailure: jest.fn().mockResolvedValue(undefined),
+    clearLoginFailures: jest.fn().mockResolvedValue(undefined),
+    bumpSessionEpoch: jest.fn().mockResolvedValue(undefined),
+    supersedeVerification: jest.fn().mockResolvedValue(undefined),
+    storeVerification: jest.fn().mockResolvedValue(undefined),
+    storePasswordReset: jest.fn().mockResolvedValue(undefined),
+    replaceRecoveryCodes: jest.fn().mockResolvedValue(undefined),
+    clearRecoveryCodes: jest.fn().mockResolvedValue(undefined),
     verifyEmailCode: jest.fn().mockResolvedValue("verified"),
     consumePasswordReset: jest.fn().mockResolvedValue({
       outcome: "consumed",
@@ -34,9 +49,17 @@ function identityProvider(
   overrides: Partial<AuthIdentityProvider> = {},
 ): AuthIdentityProvider {
   return {
-    updatePassword: jest.fn().mockResolvedValue(undefined),
+    register: jest.fn().mockResolvedValue({ outcome: "failed" }),
+    authenticate: jest.fn().mockResolvedValue(null),
+    refresh: jest.fn().mockResolvedValue(null),
+    signOutGlobally: jest.fn().mockResolvedValue(undefined),
+    updatePassword: jest.fn().mockResolvedValue(true),
     listMfaFactors: jest.fn().mockResolvedValue([]),
     deleteMfaFactor: jest.fn().mockResolvedValue(undefined),
+    enrollMfa: jest.fn().mockRejectedValue(new Error("unused")),
+    verifyMfa: jest.fn().mockResolvedValue({ outcome: "invalid" }),
+    listUserMfaFactors: jest.fn().mockResolvedValue([]),
+    unenrollMfa: jest.fn().mockResolvedValue(true),
     ...overrides,
   };
 }
@@ -171,7 +194,7 @@ describe("ManagePasswordRecoveryUseCase", () => {
   it("keeps a claim consumed when the provider update fails", async () => {
     const repository = profileRepository();
     const identity = identityProvider({
-      updatePassword: jest.fn().mockRejectedValue(new Error("provider body")),
+      updatePassword: jest.fn().mockResolvedValue(false) as never,
     });
 
     await expect(
@@ -184,6 +207,28 @@ describe("ManagePasswordRecoveryUseCase", () => {
       error: { code: "password_update_failed" },
     });
     expect(repository.consumePasswordReset).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps a consumed claim generic when the password provider rejects", async () => {
+    const identity = identityProvider({
+      updatePassword: jest
+        .fn()
+        .mockRejectedValue(new Error("auth identity provider unavailable")),
+    });
+
+    await expect(
+      new ManagePasswordRecoveryUseCase(
+        profileRepository(),
+        identity,
+        hasher,
+      ).execute({
+        token: "raw-token",
+        password: "NewPassword123!",
+      }),
+    ).resolves.toEqual({
+      ok: false,
+      error: { code: "password_update_failed" },
+    });
   });
 
   it("distinguishes repository outage from post-consumption provider failure", async () => {

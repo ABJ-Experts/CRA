@@ -293,6 +293,49 @@ describe("SupabaseInvitationRepository create reads", () => {
       );
     },
   );
+
+  it.each([
+    ["existing user", { users: [{ data: [], error: null }] }, "find"],
+    [
+      "membership",
+      { organization_members: [{ data: [], error: null }] },
+      "member",
+    ],
+    [
+      "pending invitation",
+      { invitations: [{ data: [], error: null }] },
+      "pending",
+    ],
+    [
+      "inserted invitation",
+      { invitations: [{ data: [], error: null }] },
+      "insert",
+    ],
+  ] as const)(
+    "rejects a non-record %s provider row",
+    async (_label, tables, operation) => {
+      const { repository } = fixture(tables);
+      const action = {
+        find: () => repository.findExistingUser("member@cra.test"),
+        member: () => repository.isMember(organizationId, userId),
+        pending: () => repository.hasPending(organizationId, "member@cra.test"),
+        insert: () =>
+          repository.insert(organizationId, {
+            invitedBy: userId,
+            email: "member@cra.test",
+            role: "member",
+            firstName: null,
+            lastName: null,
+            tokenHash: "hashed-token",
+            expiresAt: "2026-08-16T00:00:00.000Z",
+          }),
+      }[operation];
+
+      await expect(action()).rejects.toThrow(
+        "Invitation repository returned malformed data",
+      );
+    },
+  );
 });
 
 describe("SupabaseInvitationRepository atomic acceptance", () => {
@@ -382,6 +425,27 @@ describe("SupabaseInvitationRepository atomic acceptance", () => {
       ).rejects.toThrow();
     },
   );
+
+  it("rejects accepted results with a malformed organization", async () => {
+    const { repository } = fixture(
+      {},
+      {
+        accept_invitation_atomic: [
+          {
+            data: [{ ...acceptedRow, organization_name: null }],
+            error: null,
+          },
+        ],
+      },
+    );
+
+    await expect(
+      repository.acceptAtomic("hashed-token", {
+        id: userId,
+        email: "member@cra.test",
+      }),
+    ).rejects.toThrow("Invitation repository returned malformed data");
+  });
 });
 
 describe("SupabaseInvitationRepository atomic revocation", () => {
@@ -472,6 +536,17 @@ describe("SupabaseInvitationRepository list", () => {
     );
 
     await expect(repository.list(organizationId)).resolves.toEqual([]);
+  });
+
+  it("rejects a non-array invitation collection", async () => {
+    const { repository } = fixture(
+      { invitations: [{ data: { ...invitationRow }, error: null }] },
+      { expire_stale_invitations: [{ data: 0, error: null }] },
+    );
+
+    await expect(repository.list(organizationId)).rejects.toThrow(
+      "Invitation repository returned malformed data",
+    );
   });
 
   it.each([

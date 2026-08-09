@@ -17,7 +17,12 @@ function createService(result: unknown) {
       {} as never,
       {} as never,
       {} as never,
+      {} as never,
+      {} as never,
       { execute } as never,
+      {} as never,
+      {} as never,
+      {} as never,
       {} as never,
     ),
   };

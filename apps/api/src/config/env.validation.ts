@@ -26,18 +26,10 @@ const int = (fallback: number) =>
     )
     .refine((n) => Number.isFinite(n) && n > 0, "must be a positive integer");
 
-/** Same, but 0 is legal — used where zero is a meaningful setting, not a typo. */
-const intZeroOk = (fallback: number) =>
-  z
-    .string()
-    .optional()
-    .transform((v) =>
-      v === undefined || v === "" ? fallback : Number.parseInt(v, 10),
-    )
-    .refine(
-      (n) => Number.isFinite(n) && n >= 0,
-      "must be a non-negative integer",
-    );
+const fixedZero = z.coerce
+  .number()
+  .default(0)
+  .refine((value) => value === 0, "must be exactly 0");
 
 export const envSchema = z.object({
   NODE_ENV: z
@@ -109,11 +101,9 @@ export const envSchema = z.object({
    * The drift it was meant to absorb (GoTrue's clock vs Postgres's) only
    * matters for a session that should CONTINUE across an epoch bump, and the
    * only such flow is changing your password while signed in — which re-issues
-   * cookies anyway. Raise this only if the two clocks genuinely disagree, and
-   * understand that you are widening the window in which a revoked token still
-   * works.
+   * cookies anyway. This is a fixed invariant rather than a tunable value.
    */
-  SESSION_EPOCH_SKEW_SECONDS: intZeroOk(0),
+  SESSION_EPOCH_SKEW_SECONDS: fixedZero,
 });
 
 export type Env = z.infer<typeof envSchema>;

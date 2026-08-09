@@ -39,9 +39,10 @@ export class MailService {
       this.transporter = null;
       this.logger.warn("SMTP_HOST is not set — email is disabled.");
     } else {
+      const effectivePort = port ?? 587;
       this.transporter = createTransport({
         host,
-        port: port ?? 587,
+        port: effectivePort,
         // Mailpit speaks plain SMTP on 54325. `secure: true` would attempt TLS
         // on connect and hang.
         secure: false,
@@ -51,7 +52,7 @@ export class MailService {
         // Mailpit presents a self-signed certificate if STARTTLS is negotiated.
         tls: { rejectUnauthorized: false },
       });
-      this.logger.log(`Mail transport ready: ${host}:${String(port)}`);
+      this.logger.log(`Mail transport ready: ${host}:${effectivePort}`);
     }
   }
 
