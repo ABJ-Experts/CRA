@@ -1,4 +1,8 @@
-import { Injectable, Logger } from "@nestjs/common";
+import {
+  Injectable,
+  Logger,
+  ServiceUnavailableException,
+} from "@nestjs/common";
 import type {
   AssignedCustomRole,
   BaseRole,
@@ -19,6 +23,7 @@ interface CacheEntry {
   version: number;
   permissions: PermissionSet;
   menuOverrides: Partial<Record<MenuKey, boolean>>;
+  menuLoaded: boolean;
 }
 
 /**
@@ -46,7 +51,18 @@ export class PermissionsService {
     return `${orgId}:${userId}`;
   }
 
-  /** Current RBAC version for an organization; 0 when it cannot be read. */
+  private unavailable(
+    source: string,
+    message: string,
+  ): ServiceUnavailableException {
+    this.logger.error(`${source} failed: ${message}`);
+    return new ServiceUnavailableException({
+      message: "Permissions are temporarily unavailable. Please try again.",
+      code: "permissions_unavailable",
+    });
+  }
+
+  /** Current RBAC version for an organization. */
   private async version(orgId: string): Promise<number> {
     const { data, error } = await this.supabase
       .admin()
@@ -55,13 +71,13 @@ export class PermissionsService {
       .eq("organization_id", orgId)
       .maybeSingle();
 
-    if (error) {
-      this.logger.error(`Permission version lookup failed: ${error.message}`);
-      // 0 never matches a cached entry, so an unreadable version degrades to
-      // "always re-resolve" rather than to "serve something stale".
-      return 0;
+    if (error || !data) {
+      throw this.unavailable(
+        "Permission version lookup",
+        error?.message ?? "version row missing",
+      );
     }
-    return data?.version ?? 0;
+    return data.version;
   }
 
   async resolve(
@@ -72,22 +88,48 @@ export class PermissionsService {
     permissions: PermissionSet;
     menuOverrides: Partial<Record<MenuKey, boolean>>;
   }> {
-    const version = await this.version(orgId);
+    const { version, permissions } = await this.resolvePermissions(
+      orgId,
+      userId,
+      baseRole,
+    );
     const cacheKey = this.key(orgId, userId);
     const cached = this.cache.get(cacheKey);
-
-    if (cached && cached.version === version && version !== 0) {
+    if (cached?.version === version && cached.menuLoaded) {
       return {
-        permissions: cached.permissions,
+        permissions,
         menuOverrides: cached.menuOverrides,
       };
     }
 
-    // Independent reads, so they go together rather than in sequence.
-    const [roles, overrides, menu] = await Promise.all([
+    const menu = await this.menuRules(orgId, userId, baseRole);
+
+    this.cache.set(cacheKey, {
+      version,
+      permissions,
+      menuOverrides: menu,
+      menuLoaded: true,
+    });
+
+    return { permissions, menuOverrides: menu };
+  }
+
+  private async resolvePermissions(
+    orgId: string,
+    userId: string,
+    baseRole: BaseRole,
+  ): Promise<{ version: number; permissions: PermissionSet }> {
+    const version = await this.version(orgId);
+    const cacheKey = this.key(orgId, userId);
+    const cached = this.cache.get(cacheKey);
+
+    if (cached && cached.version === version) {
+      return { version, permissions: cached.permissions };
+    }
+
+    const [roles, overrides] = await Promise.all([
       this.assignedRoles(orgId, userId),
       this.baseRoleOverrides(orgId, baseRole),
-      this.menuRules(orgId, userId, baseRole),
     ]);
 
     const permissions = resolveEffectivePermissions({
@@ -96,10 +138,27 @@ export class PermissionsService {
       baseRoleOverrides: overrides,
     });
 
-    const entry: CacheEntry = { version, permissions, menuOverrides: menu };
-    if (version !== 0) this.cache.set(cacheKey, entry);
+    this.cache.set(cacheKey, {
+      version,
+      permissions,
+      menuOverrides: {},
+      menuLoaded: false,
+    });
 
-    return { permissions, menuOverrides: menu };
+    return { version, permissions };
+  }
+
+  async effectivePermissions(
+    orgId: string,
+    userId: string,
+    baseRole: BaseRole,
+  ): Promise<PermissionSet> {
+    const { permissions } = await this.resolvePermissions(
+      orgId,
+      userId,
+      baseRole,
+    );
+    return permissions;
   }
 
   async can(
@@ -108,7 +167,11 @@ export class PermissionsService {
     baseRole: BaseRole,
     keys: readonly PermissionKey[],
   ): Promise<boolean> {
-    const { permissions } = await this.resolve(orgId, userId, baseRole);
+    const permissions = await this.effectivePermissions(
+      orgId,
+      userId,
+      baseRole,
+    );
     return hasAllPermissions(permissions, keys);
   }
 
@@ -161,10 +224,7 @@ export class PermissionsService {
       .eq("user_id", userId);
 
     if (error) {
-      this.logger.error(`Role assignment lookup failed: ${error.message}`);
-      // Fail CLOSED: an unreadable role list must not silently grant the
-      // permissions those roles would have added.
-      return [];
+      throw this.unavailable("Role assignment lookup", error.message);
     }
 
     return (data ?? [])
@@ -193,15 +253,7 @@ export class PermissionsService {
       .maybeSingle();
 
     if (error) {
-      this.logger.error(`Override lookup failed: ${error.message}`);
-      /*
-       * Fail closed here too, but note the asymmetry with the roles above:
-       * overrides can REVOKE, so dropping them on error would GRANT. Returning
-       * an empty object means the base-role defaults apply unmodified, which is
-       * the conservative choice only because overrides are additive-or-
-       * restrictive per key — a wrong answer either way, so it is logged loudly.
-       */
-      return {};
+      throw this.unavailable("Override lookup", error.message);
     }
 
     return data?.permissions ?? {};
@@ -219,8 +271,7 @@ export class PermissionsService {
       .eq("organization_id", orgId);
 
     if (error) {
-      this.logger.error(`Menu rule lookup failed: ${error.message}`);
-      return {};
+      throw this.unavailable("Menu rule lookup", error.message);
     }
 
     const out: Partial<Record<MenuKey, boolean>> = {};

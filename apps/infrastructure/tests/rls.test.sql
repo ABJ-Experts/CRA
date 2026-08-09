@@ -47,6 +47,13 @@ begin
      and column_name = 'email_verified_at';
   perform pg_temp.check('users has a server-side email verification state', n = 1);
 
+  select count(*) into n
+    from public.organizations organizations
+    left join public.organization_permissions_version versions
+      on versions.organization_id = organizations.id
+   where versions.organization_id is null;
+  perform pg_temp.check('every organization has a permissions version', n = 0);
+
   select count(*) into n from pg_proc p
     join pg_namespace ns on ns.oid = p.pronamespace
    where ns.nspname = 'public' and p.proconfig is null;
