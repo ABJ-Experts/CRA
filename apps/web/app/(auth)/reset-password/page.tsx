@@ -55,7 +55,10 @@ function ResetForm() {
         className="gap-6"
         onSubmit={async (values) => {
           setFormError(null);
-          const result = await resetPassword({ token, password: values.password });
+          const result = await resetPassword({
+            token,
+            password: values.password,
+          });
           if (!result.ok) {
             // An expired token is not something the user can fix on this
             // screen, so send them somewhere that offers a fresh link.

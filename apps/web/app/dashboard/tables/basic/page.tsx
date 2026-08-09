@@ -40,7 +40,10 @@ export default function BasicTablesPage() {
         header: "Last Update & Category",
         size: 279,
         cell: ({ row }) => (
-          <Stacked value={row.original.updatedAt} caption={row.original.category} />
+          <Stacked
+            value={row.original.updatedAt}
+            caption={row.original.category}
+          />
         ),
       },
       {
@@ -49,7 +52,10 @@ export default function BasicTablesPage() {
         size: 279,
         cell: ({ row }) => (
           <div className="flex items-center gap-3">
-            <Stacked value={String(row.original.quantity)} caption={row.original.price} />
+            <Stacked
+              value={String(row.original.quantity)}
+              caption={row.original.price}
+            />
             <StatusTag value={row.original.status} />
           </div>
         ),
@@ -59,10 +65,12 @@ export default function BasicTablesPage() {
         header: "",
         size: 64,
         enableSorting: false,
-        cell: ({ row }) => <RowActions label={`Actions for ${row.original.name}`} />,
+        cell: ({ row }) => (
+          <RowActions label={`Actions for ${row.original.name}`} />
+        ),
       },
     ],
-    []
+    [],
   );
 
   return (

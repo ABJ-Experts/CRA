@@ -54,7 +54,10 @@ export function useTableQuery<T>({
   const sort = sorting[0];
 
   const params = useMemo(() => {
-    const p = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
+    const p = new URLSearchParams({
+      page: String(page),
+      pageSize: String(pageSize),
+    });
     if (sort) {
       p.set("sort", sort.id);
       p.set("order", sort.desc ? "desc" : "asc");
@@ -75,10 +78,13 @@ export function useTableQuery<T>({
     },
   });
 
-  const setSorting = useCallback((updater: React.SetStateAction<SortingState>) => {
-    setSortingRaw(updater);
-    setPage(1);
-  }, []);
+  const setSorting = useCallback(
+    (updater: React.SetStateAction<SortingState>) => {
+      setSortingRaw(updater);
+      setPage(1);
+    },
+    [],
+  );
 
   const setSearch = useCallback((value: string) => {
     setSearchRaw(value);

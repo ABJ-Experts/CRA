@@ -36,7 +36,7 @@ export function AuthOutcome({
           aria-hidden="true"
           className={cn(
             "flex size-12 items-center justify-center rounded-xl",
-            tones[tone]
+            tones[tone],
           )}
         >
           {icon}
@@ -44,7 +44,9 @@ export function AuthOutcome({
         <div className="flex flex-col gap-2">
           <h1 className="text-h4 text-fg">{title}</h1>
           {description ? (
-            <p className="text-caption-1-regular text-fg-muted">{description}</p>
+            <p className="text-caption-1-regular text-fg-muted">
+              {description}
+            </p>
           ) : null}
         </div>
       </div>

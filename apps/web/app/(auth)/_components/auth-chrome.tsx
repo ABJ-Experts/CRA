@@ -18,7 +18,7 @@ export function AuthLogo({ className }: { className?: string }) {
       className={cn(
         "inline-flex items-center gap-3 rounded-lg",
         "outline-none focus-visible:ring-2 focus-visible:ring-active-500",
-        className
+        className,
       )}
     >
       <span className="flex size-10 items-center justify-center rounded-xl bg-active-500 text-headline-semibold text-white">
@@ -66,7 +66,7 @@ export function AuthFooter({
           "rounded-xl px-0.5 py-px text-subhead-semibold text-active-500",
           "transition-colors duration-150 motion-reduce:transition-none",
           "hover:text-active-600",
-          "outline-none focus-visible:ring-2 focus-visible:ring-active-500"
+          "outline-none focus-visible:ring-2 focus-visible:ring-active-500",
         )}
       >
         {action}

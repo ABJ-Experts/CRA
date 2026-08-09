@@ -58,7 +58,11 @@ export function EditorDemo() {
           submitBefore={
             <div className="flex items-center gap-4">
               <SortBy label="from" options={SENDERS} defaultValue="ronald" />
-              <Button endIcon={<Send />} withDivider onClick={() => setSent("(#3)")}>
+              <Button
+                endIcon={<Send />}
+                withDivider
+                onClick={() => setSent("(#3)")}
+              >
                 Send
               </Button>
             </div>
@@ -68,7 +72,9 @@ export function EditorDemo() {
       </div>
 
       <div className="flex flex-col gap-2 border-t border-border pt-4">
-        <span className="text-caption-1-medium text-fg-subtle">error and disabled</span>
+        <span className="text-caption-1-medium text-fg-subtle">
+          error and disabled
+        </span>
         <Editor
           label="Label"
           required

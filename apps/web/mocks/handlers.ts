@@ -1,4 +1,4 @@
-import { HttpResponse, http, delay } from "msw";
+import { HttpResponse, http, delay, passthrough } from "msw";
 import { COINS, CUSTOMERS, ORDERS, PRODUCTS } from "./data/tables";
 
 /**
@@ -34,9 +34,16 @@ const toNumber = (v: string) => Number(v.replace(/[^0-9.-]/g, ""));
 /* `object` rather than `Record<string, unknown>`: an interface with declared
  * keys has no index signature, so the stricter constraint rejects every one of
  * the row types. Indexed reads below are narrowed at each use instead. */
-function paginate<T extends object>(rows: T[], url: URL, searchable: (keyof T)[]): Paged<T> {
+function paginate<T extends object>(
+  rows: T[],
+  url: URL,
+  searchable: (keyof T)[],
+): Paged<T> {
   const page = Math.max(1, Number(url.searchParams.get("page") ?? 1));
-  const pageSize = Math.min(100, Math.max(1, Number(url.searchParams.get("pageSize") ?? 15)));
+  const pageSize = Math.min(
+    100,
+    Math.max(1, Number(url.searchParams.get("pageSize") ?? 15)),
+  );
   const sort = url.searchParams.get("sort");
   const order = url.searchParams.get("order") === "desc" ? -1 : 1;
   const q = (url.searchParams.get("q") ?? "").trim().toLowerCase();
@@ -45,7 +52,11 @@ function paginate<T extends object>(rows: T[], url: URL, searchable: (keyof T)[]
 
   if (q) {
     out = out.filter((row) =>
-      searchable.some((key) => String(row[key] ?? "").toLowerCase().includes(q))
+      searchable.some((key) =>
+        String(row[key] ?? "")
+          .toLowerCase()
+          .includes(q),
+      ),
     );
   }
 
@@ -55,7 +66,8 @@ function paginate<T extends object>(rows: T[], url: URL, searchable: (keyof T)[]
     out = [...out].sort((a, b) => {
       const av = a[sort as keyof T];
       const bv = b[sort as keyof T];
-      if (typeof av === "number" && typeof bv === "number") return (av - bv) * order;
+      if (typeof av === "number" && typeof bv === "number")
+        return (av - bv) * order;
 
       const as = String(av).trim();
       const bs = String(bv).trim();
@@ -99,18 +111,37 @@ function maybeFail(url: URL) {
 }
 
 export const handlers = [
+  /*
+   * The real API passes straight through.
+   *
+   * MSW matches in ARRAY ORDER and the first match wins, so this must stay
+   * first. It is also deliberately explicit rather than relying on
+   * `onUnhandledRequest: "bypass"` in providers.tsx — that setting makes
+   * passthrough a fallback behaviour nobody declared, and a future change to it
+   * would silently start intercepting real auth calls. Here the intent is
+   * written down and asserted by `handlers.spec.ts`.
+   *
+   * Note the `/api/v1` prefix: none of the dashboard mocks below can collide
+   * with it, which is exactly why the API uses that prefix.
+   */
+  http.all("/api/v1/*", () => passthrough()),
+
   http.get("/api/products", async ({ request }) => {
     const url = new URL(request.url);
     await delay(LATENCY);
     if (maybeFail(url)) return new HttpResponse(null, { status: 500 });
-    return HttpResponse.json(paginate(PRODUCTS, url, ["name", "sku", "category", "status"]));
+    return HttpResponse.json(
+      paginate(PRODUCTS, url, ["name", "sku", "category", "status"]),
+    );
   }),
 
   http.get("/api/orders", async ({ request }) => {
     const url = new URL(request.url);
     await delay(LATENCY);
     if (maybeFail(url)) return new HttpResponse(null, { status: 500 });
-    return HttpResponse.json(paginate(ORDERS, url, ["orderNo", "trackingId", "source", "status"]));
+    return HttpResponse.json(
+      paginate(ORDERS, url, ["orderNo", "trackingId", "source", "status"]),
+    );
   }),
 
   http.get("/api/customers", async ({ request }) => {
@@ -118,7 +149,13 @@ export const handlers = [
     await delay(LATENCY);
     if (maybeFail(url)) return new HttpResponse(null, { status: 500 });
     return HttpResponse.json(
-      paginate(CUSTOMERS, url, ["firstName", "lastName", "email", "phone", "status"])
+      paginate(CUSTOMERS, url, [
+        "firstName",
+        "lastName",
+        "email",
+        "phone",
+        "status",
+      ]),
     );
   }),
 

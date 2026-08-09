@@ -11,8 +11,8 @@ export function InputExtrasDemo() {
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-3">
         <span className="text-caption-1-medium text-fg-subtle">
-          Password: the frame&apos;s Active Hide / Active Show are the two toggle
-          positions
+          Password: the frame&apos;s Active Hide / Active Show are the two
+          toggle positions
         </span>
         <div className="grid max-w-3xl gap-4 sm:grid-cols-2">
           <PasswordInput label="Label" required data-testid="pw-default" />
@@ -30,7 +30,12 @@ export function InputExtrasDemo() {
             error="Something Error Alert"
             data-testid="pw-error"
           />
-          <PasswordInput label="Label" required disabled data-testid="pw-disabled" />
+          <PasswordInput
+            label="Label"
+            required
+            disabled
+            data-testid="pw-disabled"
+          />
           <PasswordInput
             label="No toggle"
             revealable={false}

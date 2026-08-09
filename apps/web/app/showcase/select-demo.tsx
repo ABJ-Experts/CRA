@@ -29,7 +29,12 @@ export function SelectDemo() {
   return (
     <div className="flex flex-col gap-6">
       <div className="grid gap-6 sm:grid-cols-2">
-        <Select label="Label" required placeholder="Select" data-testid="sel-default">
+        <Select
+          label="Label"
+          required
+          placeholder="Select"
+          data-testid="sel-default"
+        >
           {COUNTRIES.slice(0, 5).map((c) => (
             <SelectItem key={c} value={c.toLowerCase().replace(/\s+/g, "-")}>
               {c}
@@ -51,7 +56,13 @@ export function SelectDemo() {
           ))}
         </Select>
 
-        <Select label="Label" required placeholder="Select" disabled data-testid="sel-disabled">
+        <Select
+          label="Label"
+          required
+          placeholder="Select"
+          disabled
+          data-testid="sel-disabled"
+        >
           <SelectItem value="a">A</SelectItem>
         </Select>
 

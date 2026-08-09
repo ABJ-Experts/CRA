@@ -25,7 +25,20 @@ import { ThemeToggle } from "../theme-toggle";
  * reference for what the template ships.
  */
 
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const MONTHS = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
 
 const REVENUE = [42, 58, 47, 71, 65, 88, 76, 94, 82, 101, 92, 118];
 const ORDERS = [28, 39, 31, 48, 44, 59, 51, 63, 55, 68, 61, 79];
@@ -40,15 +53,27 @@ const SCATTER = [
   {
     name: "Organic",
     points: [
-      [12, 42, 120], [22, 58, 180], [31, 35, 90], [44, 71, 240],
-      [52, 55, 140], [61, 82, 200], [72, 64, 160], [84, 91, 260],
+      [12, 42, 120],
+      [22, 58, 180],
+      [31, 35, 90],
+      [44, 71, 240],
+      [52, 55, 140],
+      [61, 82, 200],
+      [72, 64, 160],
+      [84, 91, 260],
     ] as [number, number, number][],
   },
   {
     name: "Paid",
     points: [
-      [16, 28, 100], [27, 44, 150], [38, 22, 80], [49, 52, 190],
-      [58, 38, 110], [67, 61, 170], [78, 46, 130], [89, 72, 210],
+      [16, 28, 100],
+      [27, 44, 150],
+      [38, 22, 80],
+      [49, 52, 190],
+      [58, 38, 110],
+      [67, 61, 170],
+      [78, 46, 130],
+      [89, 72, 210],
     ] as [number, number, number][],
   },
 ];
@@ -56,26 +81,46 @@ const SCATTER = [
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const SLOTS = ["00", "04", "08", "12", "16", "20"];
 const HEAT: [number, number, number][] = DAYS.flatMap((_, x) =>
-  SLOTS.map((_, y) => [x, y, Math.round(20 + 70 * Math.abs(Math.sin(x * 1.7 + y * 0.9)))] as [number, number, number])
+  SLOTS.map(
+    (_, y) =>
+      [x, y, Math.round(20 + 70 * Math.abs(Math.sin(x * 1.7 + y * 0.9)))] as [
+        number,
+        number,
+        number,
+      ],
+  ),
 );
 
 /** [open, close, low, high] */
-const CANDLES: [number, number, number, number][] = Array.from({ length: 40 }, (_, i) => {
-  const base = 240 + Math.sin(i / 3) * 26 + i * 1.1;
-  const open = base + Math.sin(i * 2.3) * 5;
-  const close = base + Math.cos(i * 1.7) * 6;
-  return [
-    Number(open.toFixed(2)),
-    Number(close.toFixed(2)),
-    Number((Math.min(open, close) - 4 - Math.abs(Math.sin(i)) * 3).toFixed(2)),
-    Number((Math.max(open, close) + 4 + Math.abs(Math.cos(i)) * 3).toFixed(2)),
-  ];
-});
+const CANDLES: [number, number, number, number][] = Array.from(
+  { length: 40 },
+  (_, i) => {
+    const base = 240 + Math.sin(i / 3) * 26 + i * 1.1;
+    const open = base + Math.sin(i * 2.3) * 5;
+    const close = base + Math.cos(i * 1.7) * 6;
+    return [
+      Number(open.toFixed(2)),
+      Number(close.toFixed(2)),
+      Number(
+        (Math.min(open, close) - 4 - Math.abs(Math.sin(i)) * 3).toFixed(2),
+      ),
+      Number(
+        (Math.max(open, close) + 4 + Math.abs(Math.cos(i)) * 3).toFixed(2),
+      ),
+    ];
+  },
+);
 const CANDLE_DAYS = CANDLES.map((_, i) => `D${i + 1}`);
 
 const SPARK = [12, 18, 14, 22, 19, 26, 21, 30, 27, 35, 31, 42];
 
-function Panel({ title, children }: { title: string; children: React.ReactNode }) {
+function Panel({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
   return (
     <Card>
       <CardHeader>
@@ -135,7 +180,11 @@ export default function ChartsShowcasePage() {
         </Panel>
 
         <Panel title="Scatter">
-          <ScatterChart ariaLabel="Sessions against conversion by channel" series={SCATTER} height={320} />
+          <ScatterChart
+            ariaLabel="Sessions against conversion by channel"
+            series={SCATTER}
+            height={320}
+          />
         </Panel>
 
         <Panel title="Heat map">
@@ -149,7 +198,12 @@ export default function ChartsShowcasePage() {
         </Panel>
 
         <Panel title="Gauge">
-          <GaugeChart ariaLabel="Team performance this week" value={72} label="Performance" height={320} />
+          <GaugeChart
+            ariaLabel="Team performance this week"
+            value={72}
+            label="Performance"
+            height={320}
+          />
         </Panel>
 
         <Panel title="Donut">
@@ -185,8 +239,14 @@ export default function ChartsShowcasePage() {
             <div className="grid grid-cols-3 gap-4">
               {(["fg", "success", "danger"] as const).map((tone) => (
                 <div key={tone} className="flex flex-col gap-1">
-                  <span className="text-caption-2-regular text-fg-subtle">{tone}</span>
-                  <Sparkline ariaLabel={`Trend, ${tone}`} data={SPARK} tone={tone} />
+                  <span className="text-caption-2-regular text-fg-subtle">
+                    {tone}
+                  </span>
+                  <Sparkline
+                    ariaLabel={`Trend, ${tone}`}
+                    data={SPARK}
+                    tone={tone}
+                  />
                 </div>
               ))}
             </div>
@@ -198,8 +258,15 @@ export default function ChartsShowcasePage() {
                 { v: 23, c: "danger" as const },
               ].map(({ v, c }) => (
                 <div key={c} className="flex items-center gap-2">
-                  <RadialBar ariaLabel={`${v} percent complete`} value={v} color={c} className="w-10" />
-                  <span className="text-caption-1-semibold text-fg-muted">{v}%</span>
+                  <RadialBar
+                    ariaLabel={`${v} percent complete`}
+                    value={v}
+                    color={c}
+                    className="w-10"
+                  />
+                  <span className="text-caption-1-semibold text-fg-muted">
+                    {v}%
+                  </span>
                 </div>
               ))}
             </div>

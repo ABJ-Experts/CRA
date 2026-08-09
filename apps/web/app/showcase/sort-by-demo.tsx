@@ -25,7 +25,12 @@ export function SortByDemo() {
           onValueChange={setSort}
           data-testid="sb-controlled"
         />
-        <SortBy label="Label" required options={OPTIONS} data-testid="sb-empty" />
+        <SortBy
+          label="Label"
+          required
+          options={OPTIONS}
+          data-testid="sb-empty"
+        />
         <SortBy
           label="Label"
           options={OPTIONS}
@@ -33,9 +38,16 @@ export function SortByDemo() {
           disabled
           data-testid="sb-disabled"
         />
-        <SortBy options={OPTIONS} defaultValue="popular" data-testid="sb-nolabel" />
+        <SortBy
+          options={OPTIONS}
+          defaultValue="popular"
+          data-testid="sb-nolabel"
+        />
       </div>
-      <span className="text-caption-2-regular text-fg-subtle" data-testid="sb-value">
+      <span
+        className="text-caption-2-regular text-fg-subtle"
+        data-testid="sb-value"
+      >
         sort: {sort}
       </span>
     </div>

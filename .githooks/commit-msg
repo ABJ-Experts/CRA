@@ -1,0 +1,106 @@
+#!/usr/bin/env bash
+# Enforce concise, human-authored commit messages for this repository.
+set -euo pipefail
+
+readonly MAX_SUBJECT_LENGTH=72
+
+fail() {
+  printf '[commit-msg] %s\n' "$1" >&2
+  exit 1
+}
+
+if [[ $# -ne 1 || ! -f "$1" ]]; then
+  fail 'Expected the commit message file as the only argument.'
+fi
+
+message_file="$1"
+
+# A configured hooks path hides the legacy per-repository hook directory. Run
+# an executable legacy hook first, then validate any message it rewrites.
+legacy_hook="$(git rev-parse --git-dir)/hooks/commit-msg"
+if [[ -x "$legacy_hook" && "$legacy_hook" != "$0" ]]; then
+  "$legacy_hook" "$message_file"
+fi
+
+comment_char="$(git config --get core.commentChar 2>/dev/null || true)"
+case "$comment_char" in
+  '' | auto) comment_char='#' ;;
+  ?) ;;
+  *) comment_char='#' ;;
+esac
+
+declare -a content_lines=()
+while IFS= read -r line || [[ -n "$line" ]]; do
+  # Ignore Git's template comments and anything below a scissors line.
+  if [[ "$line" == *'------------------------ >8 ------------------------'* ]]; then
+    break
+  fi
+  if [[ "${line:0:1}" == "$comment_char" ]]; then
+    continue
+  fi
+  if [[ "$line" =~ ^[[:space:]]*$ ]]; then
+    continue
+  fi
+  content_lines+=("$line")
+done < "$message_file"
+
+if [[ ${#content_lines[@]} -eq 0 ]]; then
+  fail 'A commit subject is required.'
+fi
+
+subject="${content_lines[0]}"
+if (( ${#subject} > MAX_SUBJECT_LENGTH )); then
+  fail "Keep the subject to ${MAX_SUBJECT_LENGTH} characters or fewer."
+fi
+
+# Permit standard Git trailers such as Signed-off-by and Fixes, but not prose
+# bodies. This keeps commit messages short without breaking DCO-based projects.
+for ((index = 1; index < ${#content_lines[@]}; index++)); do
+  trailer="${content_lines[index]}"
+  if [[ ! "$trailer" =~ ^([[:alnum:]][[:alnum:]-]*|BREAKING[[:space:]]CHANGE):[[:space:]].+ ]]; then
+    fail 'Use one short subject; only standard trailers may follow it.'
+  fi
+done
+
+message="$(printf '%s\n' "${content_lines[@]}")"
+
+# Normalize compatibility characters and remove invisible format characters so
+# case, punctuation, or zero-width characters cannot conceal a prohibited term.
+if blocked_reason="$(
+  printf '%s' "$message" | /usr/bin/perl -CSDA -MUnicode::Normalize=NFKC -e '
+    use strict;
+    use warnings;
+
+    local $/;
+    my $text = NFKC(<STDIN> // q{});
+    $text =~ s/[\x{00AD}\x{200B}-\x{200D}\x{2060}\x{FE00}-\x{FE0F}]//g;
+
+    if ($text =~ /\x{2014}/) {
+      print "an em dash";
+      exit 0;
+    }
+
+    my @blocked_patterns = (
+      [qr/\b(?:claude|codex)\b/i, "an AI tool name"],
+      [qr/\b(?:chat[\s_-]*gpt|gpt[\s_-]*\d*)\b/i, "an AI tool name"],
+      [qr/\b(?:open[\s_-]*ai|anthropic|github[\s_-]*copilot|copilot|cursor|windsurf|codeium|tabnine|aider|gemini|grok|mistral|deepseek|perplexity|llama|qwen)\b/i, "an AI provider or tool name"],
+      [qr/\b(?:a[.\s_-]*i|artificial[\s_-]*intelligence|machine[\s_-]*learning|large[\s_-]*language[\s_-]*model|language[\s_-]*model|llm)\b/i, "an AI attribution term"],
+    );
+
+    for my $entry (@blocked_patterns) {
+      if ($text =~ $entry->[0]) {
+        print $entry->[1];
+        exit 0;
+      }
+    }
+
+    exit 1;
+  '
+)"; then
+  fail "Commit messages cannot include ${blocked_reason}."
+else
+  scanner_status=$?
+  if [[ $scanner_status -ne 1 ]]; then
+    fail 'Could not validate the commit message.'
+  fi
+fi

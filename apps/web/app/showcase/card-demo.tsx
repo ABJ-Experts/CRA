@@ -32,7 +32,12 @@ export function CardDemo() {
         <Card data-testid="card-outlined">
           <CardHeader
             action={
-              <Button variant="invisible" tone="grey" iconOnly aria-label="More">
+              <Button
+                variant="invisible"
+                tone="grey"
+                iconOnly
+                aria-label="More"
+              >
                 <MoreHorizontal />
               </Button>
             }
@@ -98,7 +103,11 @@ export function CardDemo() {
         <Card className="h-72" data-testid="card-scroll">
           <CardHeader
             action={
-              <Button variant="invisible" tone="grey" endIcon={<ArrowUpRight />}>
+              <Button
+                variant="invisible"
+                tone="grey"
+                endIcon={<ArrowUpRight />}
+              >
                 All
               </Button>
             }
@@ -125,12 +134,17 @@ export function CardDemo() {
         <Card interactive asChild data-testid="card-interactive">
           <a href="/showcase">
             <CardHeader
-              action={<ArrowUpRight aria-hidden="true" className="size-4 text-fg-muted" />}
+              action={
+                <ArrowUpRight
+                  aria-hidden="true"
+                  className="size-4 text-fg-muted"
+                />
+              }
             >
               <CardTitle>Whole card is a link</CardTitle>
               <CardDescription>
-                asChild plus interactive: hover lifts it, and it takes a focus ring
-                from the keyboard.
+                asChild plus interactive: hover lifts it, and it takes a focus
+                ring from the keyboard.
               </CardDescription>
             </CardHeader>
             <CardBody>

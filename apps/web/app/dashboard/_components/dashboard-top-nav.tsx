@@ -16,10 +16,22 @@ import { usePathname } from "next/navigation";
  */
 
 const DASHBOARDS: Record<string, { title: string; subtitle: string }> = {
-  "/dashboard": { title: "Welcome, Robert Fox", subtitle: "Overview your store" },
-  "/dashboard/analytics": { title: "Analytics", subtitle: "Traffic, sources and engagement" },
-  "/dashboard/crypto": { title: "Crypto", subtitle: "Markets, portfolio and activity" },
-  "/dashboard/project": { title: "Project Manager", subtitle: "Delivery across every workstream" },
+  "/dashboard": {
+    title: "Welcome, Robert Fox",
+    subtitle: "Overview your store",
+  },
+  "/dashboard/analytics": {
+    title: "Analytics",
+    subtitle: "Traffic, sources and engagement",
+  },
+  "/dashboard/crypto": {
+    title: "Crypto",
+    subtitle: "Markets, portfolio and activity",
+  },
+  "/dashboard/project": {
+    title: "Project Manager",
+    subtitle: "Delivery across every workstream",
+  },
 };
 
 const TABLES: Record<string, string> = {
@@ -45,7 +57,9 @@ export function DashboardTopNav() {
 
   let left = null;
   if (dashboard) {
-    left = <TopNavTitle title={dashboard.title} subtitle={dashboard.subtitle} />;
+    left = (
+      <TopNavTitle title={dashboard.title} subtitle={dashboard.subtitle} />
+    );
   } else if (table) {
     left = (
       <Breadcrumbs>

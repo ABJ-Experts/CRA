@@ -1,6 +1,10 @@
 "use client";
 
-import { applyTheme, getStoredTheme, type Theme } from "@repo/design-system/theme";
+import {
+  applyTheme,
+  getStoredTheme,
+  type Theme,
+} from "@repo/design-system/theme";
 import { Button } from "@repo/ui/button";
 import { Monitor, Moon, Sun } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -36,7 +40,11 @@ export function ThemeToggle() {
   ];
 
   return (
-    <div className="flex items-center gap-2" role="group" aria-label="Colour theme">
+    <div
+      className="flex items-center gap-2"
+      role="group"
+      aria-label="Colour theme"
+    >
       {options.map(({ value, label, icon: Icon }) => (
         <Button
           key={value}

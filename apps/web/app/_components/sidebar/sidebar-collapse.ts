@@ -27,7 +27,9 @@ try {
 
 export function getStoredCollapsed(): boolean {
   try {
-    return globalThis.localStorage?.getItem(SIDEBAR_STORAGE_KEY) === "collapsed";
+    return (
+      globalThis.localStorage?.getItem(SIDEBAR_STORAGE_KEY) === "collapsed"
+    );
   } catch {
     /* Storage can throw in private modes and sandboxed frames. Defaulting to
      * expanded is the safer miss: a too-wide rail is usable, a rail stuck
@@ -40,7 +42,7 @@ export function storeCollapsed(collapsed: boolean) {
   try {
     globalThis.localStorage?.setItem(
       SIDEBAR_STORAGE_KEY,
-      collapsed ? "collapsed" : "expanded"
+      collapsed ? "collapsed" : "expanded",
     );
   } catch {
     /* Non-fatal: the rail still works, it just will not be remembered. */

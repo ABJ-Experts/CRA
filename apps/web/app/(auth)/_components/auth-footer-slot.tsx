@@ -61,6 +61,10 @@ export function AuthFooterSlot() {
   const footer = FOOTERS[pathname];
   if (!footer) return null;
   return (
-    <AuthFooter prompt={footer.prompt} href={footer.href} action={footer.action} />
+    <AuthFooter
+      prompt={footer.prompt}
+      href={footer.href}
+      action={footer.action}
+    />
   );
 }

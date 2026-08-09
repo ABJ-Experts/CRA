@@ -12,7 +12,10 @@ import { cn } from "@repo/ui/cn";
 const RULES: { label: string; test: (v: string) => boolean }[] = [
   { label: "at least 8 characters", test: (v) => v.length >= 8 },
   { label: "a number", test: (v) => /[0-9]/.test(v) },
-  { label: "an upper and lower case letter", test: (v) => /[a-z]/.test(v) && /[A-Z]/.test(v) },
+  {
+    label: "an upper and lower case letter",
+    test: (v) => /[a-z]/.test(v) && /[A-Z]/.test(v),
+  },
   { label: "12 characters or more", test: (v) => v.length >= 12 },
 ];
 
@@ -39,7 +42,7 @@ export function PasswordStrength({ value }: { value: string }) {
             className={cn(
               "h-1 flex-1 rounded-full transition-colors duration-200",
               "motion-reduce:transition-none",
-              i < score ? BARS[score] : "bg-border"
+              i < score ? BARS[score] : "bg-border",
             )}
           />
         ))}
@@ -48,7 +51,10 @@ export function PasswordStrength({ value }: { value: string }) {
         The meter itself is aria-hidden and the reading is given as text, so a
         screen reader gets the verdict rather than four unlabelled bars.
       */}
-      <p className="text-caption-2-regular text-fg-subtle" data-testid="pw-strength-label">
+      <p
+        className="text-caption-2-regular text-fg-subtle"
+        data-testid="pw-strength-label"
+      >
         <span className="text-fg-muted">{LABELS[score]}</span>
         {unmet.length > 0 && value.length > 0
           ? ` — add ${unmet.map((r) => r.label).join(", ")}`

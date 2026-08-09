@@ -44,7 +44,9 @@ function SuccessBody() {
   return (
     <AuthOutcome
       tone="success"
-      icon={<CircleCheck aria-hidden="true" className="size-6" strokeWidth={1.5} />}
+      icon={
+        <CircleCheck aria-hidden="true" className="size-6" strokeWidth={1.5} />
+      }
       title={copy.title}
       description={copy.description}
     >

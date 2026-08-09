@@ -10,15 +10,35 @@ export function SwitchDemo() {
     <div className="flex flex-col gap-5">
       <div className="flex flex-wrap items-center gap-8">
         <Switch label="Toggle Text" link="Text Link" data-testid="sw-off" />
-        <Switch label="Toggle Text" link="Text Link" defaultChecked data-testid="sw-on" />
-        <Switch label="Toggle Text" link="Text Link" disabled data-testid="sw-disabled" />
-        <Switch label="Toggle Text" disabled defaultChecked data-testid="sw-disabled-on" />
+        <Switch
+          label="Toggle Text"
+          link="Text Link"
+          defaultChecked
+          data-testid="sw-on"
+        />
+        <Switch
+          label="Toggle Text"
+          link="Text Link"
+          disabled
+          data-testid="sw-disabled"
+        />
+        <Switch
+          label="Toggle Text"
+          disabled
+          defaultChecked
+          data-testid="sw-disabled-on"
+        />
       </div>
 
       <div className="flex flex-wrap items-center gap-8 border-t border-border pt-4">
         <span className="text-caption-1-medium text-fg-subtle">size=md</span>
         <Switch size="md" label="Larger target" data-testid="sw-md" />
-        <Switch size="md" label="Checked" defaultChecked data-testid="sw-md-on" />
+        <Switch
+          size="md"
+          label="Checked"
+          defaultChecked
+          data-testid="sw-md-on"
+        />
       </div>
 
       <div className="flex max-w-sm flex-col gap-3 border-t border-border pt-4">

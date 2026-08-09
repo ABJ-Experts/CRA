@@ -10,7 +10,10 @@ import type { Order } from "../../../../mocks/data/tables";
 export default function StripedTablesPage() {
   const columns = useMemo<ColumnDef<Order, unknown>[]>(
     () => [
-      selectionColumn<Order>({ size: 44, rowLabel: (o) => `order ${o.orderNo}` }),
+      selectionColumn<Order>({
+        size: 44,
+        rowLabel: (o) => `order ${o.orderNo}`,
+      }),
       {
         accessorKey: "no",
         header: "No.",
@@ -23,7 +26,10 @@ export default function StripedTablesPage() {
         header: "Order No & Tracking ID",
         size: 331,
         cell: ({ row }) => (
-          <Stacked value={row.original.orderNo} caption={row.original.trackingId} />
+          <Stacked
+            value={row.original.orderNo}
+            caption={row.original.trackingId}
+          />
         ),
       },
       {
@@ -32,7 +38,10 @@ export default function StripedTablesPage() {
         size: 331,
         cell: ({ row }) => (
           <div className="flex items-center gap-3">
-            <Stacked value={row.original.createdAt} caption={row.original.source} />
+            <Stacked
+              value={row.original.createdAt}
+              caption={row.original.source}
+            />
             <StatusTag value={row.original.status} />
           </div>
         ),
@@ -42,7 +51,10 @@ export default function StripedTablesPage() {
         header: "Quantity & Price",
         size: 331,
         cell: ({ row }) => (
-          <Stacked value={String(row.original.quantity)} caption={row.original.price} />
+          <Stacked
+            value={String(row.original.quantity)}
+            caption={row.original.price}
+          />
         ),
       },
       {
@@ -50,10 +62,12 @@ export default function StripedTablesPage() {
         header: "",
         size: 24,
         enableSorting: false,
-        cell: ({ row }) => <RowActions label={`Actions for order ${row.original.orderNo}`} />,
+        cell: ({ row }) => (
+          <RowActions label={`Actions for order ${row.original.orderNo}`} />
+        ),
       },
     ],
-    []
+    [],
   );
 
   return (

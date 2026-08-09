@@ -39,7 +39,11 @@ export function AlertDemo() {
 
         <Alert
           trigger={
-            <Button variant="outline" tone="grey" data-testid="alert-open-nodesc">
+            <Button
+              variant="outline"
+              tone="grey"
+              data-testid="alert-open-nodesc"
+            >
               Title only
             </Button>
           }
@@ -96,7 +100,11 @@ export function AlertDemo() {
         </span>
         <AlertRoot>
           <AlertTrigger asChild>
-            <Button variant="outline" tone="grey" data-testid="alert-open-parts">
+            <Button
+              variant="outline"
+              tone="grey"
+              data-testid="alert-open-parts"
+            >
               Composed
             </Button>
           </AlertTrigger>

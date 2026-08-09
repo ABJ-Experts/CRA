@@ -29,7 +29,11 @@ export function ModalDemo() {
       {/* Default header, footer with both slots. */}
       <ModalRoot>
         <ModalTrigger asChild>
-          <Button variant="outline" tone="grey" data-testid="modal-open-default">
+          <Button
+            variant="outline"
+            tone="grey"
+            data-testid="modal-open-default"
+          >
             Default
           </Button>
         </ModalTrigger>
@@ -70,10 +74,16 @@ export function ModalDemo() {
         <ModalContent size="lg" data-testid="modal-steps">
           <ModalHeader>
             <ModalTitle>Title</ModalTitle>
-            <ModalSteps steps={STEPS} current={step} data-testid="modal-steprail" />
+            <ModalSteps
+              steps={STEPS}
+              current={step}
+              data-testid="modal-steprail"
+            />
           </ModalHeader>
           <ModalBody>
-            <ModalDescription>Step {step + 1} of {STEPS.length}.</ModalDescription>
+            <ModalDescription>
+              Step {step + 1} of {STEPS.length}.
+            </ModalDescription>
           </ModalBody>
           <ModalFooter>
             <Button
@@ -98,7 +108,11 @@ export function ModalDemo() {
       {/* Mailbox header: 48px bar with its own icon actions. */}
       <ModalRoot>
         <ModalTrigger asChild>
-          <Button variant="outline" tone="grey" data-testid="modal-open-mailbox">
+          <Button
+            variant="outline"
+            tone="grey"
+            data-testid="modal-open-mailbox"
+          >
             Mailbox
           </Button>
         </ModalTrigger>
@@ -144,7 +158,10 @@ export function ModalDemo() {
           <ModalHeader>
             <ModalTitle>Terms</ModalTitle>
           </ModalHeader>
-          <ModalBody className="flex flex-col gap-3" data-testid="modal-long-body">
+          <ModalBody
+            className="flex flex-col gap-3"
+            data-testid="modal-long-body"
+          >
             {Array.from({ length: 24 }, (_, i) => (
               <p key={i} className="text-subhead-regular text-fg-muted">
                 {i + 1}. The panel is capped at the viewport height, so this

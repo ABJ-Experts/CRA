@@ -129,7 +129,12 @@ export function AuthArt({
         transform="rotate(45 919.53 -33)"
       />
 
-      <circle cx="164.5" cy="338.5" r="119.5" fill="var(--color-brink-red-500)" />
+      <circle
+        cx="164.5"
+        cy="338.5"
+        r="119.5"
+        fill="var(--color-brink-red-500)"
+      />
       <circle cx="-0.5" cy="881.5" r="31.5" fill="var(--color-brink-red-500)" />
       <circle cx="685.5" cy="190.5" r="50.5" fill="var(--color-active-500)" />
 

@@ -20,7 +20,10 @@ const schema = z
       .string()
       .min(3, "User name must be at least 3 characters")
       .max(32, "User name must be 32 characters or fewer")
-      .regex(/^[a-zA-Z0-9_.-]+$/, "Letters, numbers, dot, dash and underscore only"),
+      .regex(
+        /^[a-zA-Z0-9_.-]+$/,
+        "Letters, numbers, dot, dash and underscore only",
+      ),
     password: z
       .string()
       .min(8, "Password must be at least 8 characters")
@@ -57,7 +60,9 @@ export default function SignUpPage() {
           const result = await signUp(values);
           if (!result.ok) {
             if (result.fieldErrors) {
-              for (const [name, message] of Object.entries(result.fieldErrors)) {
+              for (const [name, message] of Object.entries(
+                result.fieldErrors,
+              )) {
                 form.setError(name as keyof Values, { message });
               }
             }
@@ -179,7 +184,10 @@ export default function SignUpPage() {
 
         <AuthDivider>or sign Up with</AuthDivider>
 
-        <SocialButtons action="Sign Up" disabled={form.formState.isSubmitting} />
+        <SocialButtons
+          action="Sign Up"
+          disabled={form.formState.isSubmitting}
+        />
       </Form>
     </div>
   );

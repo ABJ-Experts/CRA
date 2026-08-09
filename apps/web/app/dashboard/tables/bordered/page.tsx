@@ -43,7 +43,9 @@ export default function BorderedTablesPage() {
         accessorKey: "email",
         header: "Email & Phone",
         size: 297,
-        cell: ({ row }) => <Stacked value={row.original.email} caption={row.original.phone} />,
+        cell: ({ row }) => (
+          <Stacked value={row.original.email} caption={row.original.phone} />
+        ),
       },
       {
         accessorKey: "status",
@@ -57,11 +59,13 @@ export default function BorderedTablesPage() {
         size: 128,
         enableSorting: false,
         cell: ({ row }) => (
-          <RowActions label={`Actions for ${row.original.firstName} ${row.original.lastName}`} />
+          <RowActions
+            label={`Actions for ${row.original.firstName} ${row.original.lastName}`}
+          />
         ),
       },
     ],
-    []
+    [],
   );
 
   return (

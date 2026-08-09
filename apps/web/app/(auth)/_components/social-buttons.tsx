@@ -40,11 +40,14 @@ function SocialButton({
         "transition-colors duration-150 motion-reduce:transition-none",
         "hover:bg-surface hover:text-fg",
         "outline-none focus-visible:ring-2 focus-visible:ring-active-500",
-        "disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-canvas"
+        "disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-canvas",
       )}
       {...rest}
     >
-      <span aria-hidden="true" className="flex size-4 shrink-0 items-center justify-center">
+      <span
+        aria-hidden="true"
+        className="flex size-4 shrink-0 items-center justify-center"
+      >
         {icon}
       </span>
       <span className="min-w-0 flex-1 truncate text-center">{children}</span>

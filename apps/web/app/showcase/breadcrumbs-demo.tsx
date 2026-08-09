@@ -62,7 +62,7 @@ export function BreadcrumbsDemo() {
               <BreadcrumbItem key={label} asChild>
                 <Link href="/showcase">{label}</Link>
               </BreadcrumbItem>
-            )
+            ),
           )}
         </Breadcrumbs>
       </div>

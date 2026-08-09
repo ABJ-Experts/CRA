@@ -17,7 +17,9 @@ export default function ExpiredPage() {
   return (
     <AuthOutcome
       tone="warning"
-      icon={<LinkIcon aria-hidden="true" className="size-6" strokeWidth={1.5} />}
+      icon={
+        <LinkIcon aria-hidden="true" className="size-6" strokeWidth={1.5} />
+      }
       title="This link has expired"
       description="Reset links last one hour and can only be used once. Request a new one and we will email it straight away."
     >

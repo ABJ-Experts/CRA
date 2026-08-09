@@ -27,10 +27,14 @@ export function PageHeading({
       <div className="flex min-w-0 flex-col">
         <h1 className="truncate text-h5 text-fg">{title}</h1>
         {subtitle ? (
-          <p className="truncate text-caption-1-regular text-fg-muted">{subtitle}</p>
+          <p className="truncate text-caption-1-regular text-fg-muted">
+            {subtitle}
+          </p>
         ) : null}
       </div>
-      {actions ? <div className="flex items-center gap-3">{actions}</div> : null}
+      {actions ? (
+        <div className="flex items-center gap-3">{actions}</div>
+      ) : null}
     </div>
   );
 }
@@ -52,7 +56,7 @@ export function SectionCard({
     <section
       className={cn(
         "flex min-w-0 flex-col rounded-2xl border border-border bg-canvas",
-        className
+        className,
       )}
     >
       {title ? (
@@ -61,13 +65,21 @@ export function SectionCard({
           {action}
         </header>
       ) : null}
-      <div className={cn("min-w-0 flex-1 p-6", title && "pt-2", bodyClassName)}>{children}</div>
+      <div className={cn("min-w-0 flex-1 p-6", title && "pt-2", bodyClassName)}>
+        {children}
+      </div>
     </section>
   );
 }
 
 /** Wraps a dashboard's top-level children so they fade in one after another. */
-export function Stagger({ children, className }: { children: ReactNode; className?: string }) {
+export function Stagger({
+  children,
+  className,
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
   const reduced = useReducedMotion();
   return (
     <motion.div
@@ -97,7 +109,11 @@ export function StaggerItem({
       className={className}
       variants={{
         hidden: reduced ? { opacity: 1 } : { opacity: 0, y: 8 },
-        shown: { opacity: 1, y: 0, transition: { duration: 0.32, ease: "easeOut" } },
+        shown: {
+          opacity: 1,
+          y: 0,
+          transition: { duration: 0.32, ease: "easeOut" },
+        },
       }}
     >
       {children}

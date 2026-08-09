@@ -59,6 +59,19 @@ pnpm check-types    # typecheck every package
 pnpm format         # prettier across the repo
 ```
 
+## Commit-message hook
+
+Enable the versioned hook once in each clone:
+
+```sh
+git config core.hooksPath .githooks
+```
+
+It runs only when creating a commit. Keep the subject to 72 characters or
+fewer; standard trailers such as `Signed-off-by:` are allowed. The hook rejects
+em dashes and AI attribution, provider, model, or tool names. Do not bypass it
+with `--no-verify`.
+
 ## Local database
 
 Requires Docker to be running.

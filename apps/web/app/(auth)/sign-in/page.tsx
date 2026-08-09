@@ -40,7 +40,10 @@ export default function SignInPage() {
 
   return (
     <div className="flex flex-col gap-10">
-      <AuthTitle title="Welcome Back" description="Please, sign in to continue" />
+      <AuthTitle
+        title="Welcome Back"
+        description="Please, sign in to continue"
+      />
 
       <Form
         form={form}
@@ -52,7 +55,9 @@ export default function SignInPage() {
             setFormError(result.message ?? "Could not sign you in.");
             return;
           }
-          router.push("/dashboard");
+          router.push(
+            result.next === "two-factor" ? "/two-factor" : "/dashboard",
+          );
         }}
         data-testid="sign-in-form"
       >
@@ -139,7 +144,10 @@ export default function SignInPage() {
 
         <AuthDivider>or sign in with</AuthDivider>
 
-        <SocialButtons action="Sign In" disabled={form.formState.isSubmitting} />
+        <SocialButtons
+          action="Sign In"
+          disabled={form.formState.isSubmitting}
+        />
       </Form>
     </div>
   );

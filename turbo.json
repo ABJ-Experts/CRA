@@ -2,20 +2,34 @@
   "$schema": "https://turborepo.dev/schema.json",
   "ui": "tui",
   "globalEnv": [
+    "NODE_ENV",
     "NEXT_RUNTIME",
-    "NEXT_PUBLIC_ENABLE_MOCKS"
+    "NEXT_PUBLIC_ENABLE_MOCKS",
+    "NEXT_PUBLIC_MOCK_AUTH",
+    "NEXT_PUBLIC_API_ORIGIN",
+    "API_ORIGIN",
+    "SUPABASE_JWT_SECRET",
+    "SUPABASE_URL",
+    "NEXT_PUBLIC_SUPABASE_URL"
   ],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
-      "outputs": [".next/**", "!.next/cache/**", "!.next/dev/**"]
+      "outputs": [".next/**", "!.next/cache/**", "!.next/dev/**", "dist/**"]
     },
     "lint": {
       "dependsOn": ["^lint"]
     },
     "check-types": {
       "dependsOn": ["^check-types"]
+    },
+    "test": {
+      "dependsOn": ["^build"]
+    },
+    "test:e2e": {
+      "dependsOn": ["^build"],
+      "cache": false
     },
     "dev": {
       "cache": false,

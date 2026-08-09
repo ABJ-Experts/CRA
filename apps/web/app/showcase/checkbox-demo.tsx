@@ -15,7 +15,11 @@ export function CheckboxDemo() {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-start gap-8">
-        <Checkbox label="Checkbox Text" link="Text Link" data-testid="cb-default" />
+        <Checkbox
+          label="Checkbox Text"
+          link="Text Link"
+          data-testid="cb-default"
+        />
         <Checkbox
           label="Checkbox Text"
           link="Text Link"
@@ -28,7 +32,12 @@ export function CheckboxDemo() {
           checked="indeterminate"
           data-testid="cb-indeterminate"
         />
-        <Checkbox label="Checkbox Text" link="Text Link" disabled data-testid="cb-disabled" />
+        <Checkbox
+          label="Checkbox Text"
+          link="Text Link"
+          disabled
+          data-testid="cb-disabled"
+        />
         <Checkbox
           label="Checkbox Text"
           disabled

@@ -8,17 +8,20 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint --max-warnings 0",
-    "check-types": "next typegen && tsc --noEmit"
+    "check-types": "next typegen && tsc --noEmit",
+    "test": "vitest run"
   },
   "dependencies": {
+    "@repo/contracts": "workspace:*",
     "@repo/design-system": "workspace:*",
     "@repo/ui": "workspace:*",
     "@tailwindcss/postcss": "^4.3.3",
     "@tanstack/react-query": "^5.101.4",
     "@tanstack/react-query-devtools": "^5.101.4",
+    "jose": "^5.10.0",
     "lucide-react": "^1.28.0",
     "motion": "^12.43.0",
-    "next": "16.2.0",
+    "next": "16.3.0",
     "postcss": "^8.5.25",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
@@ -33,7 +36,8 @@
     "@types/react-dom": "19.2.2",
     "eslint": "^9.39.1",
     "msw": "^2.15.0",
-    "typescript": "5.9.2"
+    "typescript": "5.9.2",
+    "vitest": "^3.2.4"
   },
   "msw": {
     "workerDirectory": [

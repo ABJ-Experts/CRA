@@ -1,0 +1,17 @@
+{
+  "extends": "@repo/typescript-config/base.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": "src",
+    // No `composite` here: @repo/typescript-config/base.json sets
+    // `incremental: false`, and a composite project may not disable incremental
+    // (TS6379). Nothing references this project via project references, so a
+    // plain `tsc` build is both sufficient and one less thing to keep in sync.
+    // No "type": "module" in package.json, so module: NodeNext (inherited from
+    // base) emits CommonJS. That is deliberate: apps/api is CJS under Nest and
+    // `require`s this package, while Next handles a CJS dependency fine.
+    "lib": ["es2022"]
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["dist", "node_modules", "src/**/*.spec.ts"]
+}

@@ -15,7 +15,9 @@ function CheckEmailBody() {
 
   return (
     <AuthOutcome
-      icon={<MailCheck aria-hidden="true" className="size-6" strokeWidth={1.5} />}
+      icon={
+        <MailCheck aria-hidden="true" className="size-6" strokeWidth={1.5} />
+      }
       title="Check your email"
       // Phrased conditionally on purpose: confirming that an address is
       // registered would let anyone enumerate accounts from this screen.
@@ -26,7 +28,11 @@ function CheckEmailBody() {
       }
     >
       <Button asChild size="xl" fullWidth data-testid="ce-open-mail">
-        <a href="https://mail.google.com" target="_blank" rel="noreferrer noopener">
+        <a
+          href="https://mail.google.com"
+          target="_blank"
+          rel="noreferrer noopener"
+        >
           Open Gmail
         </a>
       </Button>

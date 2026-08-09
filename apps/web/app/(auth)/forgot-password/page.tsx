@@ -39,7 +39,7 @@ export default function ForgotPasswordPage() {
             "bg-surface text-fg-muted",
             "transition-colors duration-150 motion-reduce:transition-none",
             "hover:bg-surface-muted hover:text-fg",
-            "outline-none focus-visible:ring-2 focus-visible:ring-active-500"
+            "outline-none focus-visible:ring-2 focus-visible:ring-active-500",
           )}
           data-testid="fp-back"
         >

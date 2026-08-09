@@ -65,8 +65,18 @@ export function PaginationDemo() {
         <span className="text-caption-1-medium text-fg-subtle">
           single page, and pageCount=0 (renders nothing)
         </span>
-        <Pagination page={1} pageCount={1} onPageChange={() => {}} data-testid="pg-one" />
-        <Pagination page={1} pageCount={0} onPageChange={() => {}} data-testid="pg-zero" />
+        <Pagination
+          page={1}
+          pageCount={1}
+          onPageChange={() => {}}
+          data-testid="pg-one"
+        />
+        <Pagination
+          page={1}
+          pageCount={0}
+          onPageChange={() => {}}
+          data-testid="pg-zero"
+        />
       </div>
 
       <div className="flex flex-col gap-2 border-t border-border pt-4">

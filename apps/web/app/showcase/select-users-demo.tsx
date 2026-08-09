@@ -5,15 +5,35 @@ import { SelectUsers, type SelectUsersOption } from "@repo/ui/select-users";
 import { useState } from "react";
 
 const USERS: SelectUsersOption[] = [
-  { value: "wade", name: "Wade Warren", status: "online", description: "Engineering" },
-  { value: "ronald", name: "Ronald Richards", status: "busy", description: "Design" },
+  {
+    value: "wade",
+    name: "Wade Warren",
+    status: "online",
+    description: "Engineering",
+  },
+  {
+    value: "ronald",
+    name: "Ronald Richards",
+    status: "busy",
+    description: "Design",
+  },
   // No description: the frame's own single-line row, which measures 55.
   { value: "jenny", name: "Jenny Wilson" },
-  { value: "jane", name: "Jane Cooper", status: "away", description: "Support" },
+  {
+    value: "jane",
+    name: "Jane Cooper",
+    status: "away",
+    description: "Support",
+  },
   { value: "jacob", name: "Jacob Jones", description: "Finance" },
   { value: "esther", name: "Esther Howard", description: "Marketing" },
   { value: "cameron", name: "Cameron Williamson", description: "Operations" },
-  { value: "eleanor", name: "Eleanor Pena", disabled: true, description: "On leave" },
+  {
+    value: "eleanor",
+    name: "Eleanor Pena",
+    disabled: true,
+    description: "On leave",
+  },
 ];
 
 export function SelectUsersDemo() {
@@ -30,7 +50,12 @@ export function SelectUsersDemo() {
           onValueChange={setUser}
           data-testid="su-controlled"
         />
-        <SelectUsers label="Label" required users={USERS} data-testid="su-empty" />
+        <SelectUsers
+          label="Label"
+          required
+          users={USERS}
+          data-testid="su-empty"
+        />
         <SelectUsers
           label="Label"
           required
@@ -46,7 +71,10 @@ export function SelectUsersDemo() {
           data-testid="su-disabled"
         />
       </div>
-      <span className="text-caption-2-regular text-fg-subtle" data-testid="su-value">
+      <span
+        className="text-caption-2-regular text-fg-subtle"
+        data-testid="su-value"
+      >
         assignee: {user}
       </span>
 
@@ -62,7 +90,9 @@ export function SelectUsersDemo() {
             placeholder="Enter Title"
             aria-label="Title"
             endIcon={
-              <span className="shrink-0 text-caption-1-medium text-fg-subtle">Note</span>
+              <span className="shrink-0 text-caption-1-medium text-fg-subtle">
+                Note
+              </span>
             }
             data-testid="title-lg"
           />

@@ -35,7 +35,10 @@ export default function SplittedTablesPage() {
         header: "Market Cap & Price",
         size: 317,
         cell: ({ row }) => (
-          <Stacked value={row.original.marketCap} caption={row.original.price} />
+          <Stacked
+            value={row.original.marketCap}
+            caption={row.original.price}
+          />
         ),
       },
       {
@@ -53,7 +56,9 @@ export default function SplittedTablesPage() {
               ] as const
             ).map(([label, value]) => (
               <div key={label} className="flex min-w-0 flex-col">
-                <span className="text-caption-2-regular text-fg-subtle">{label}</span>
+                <span className="text-caption-2-regular text-fg-subtle">
+                  {label}
+                </span>
                 <Change value={value} />
               </div>
             ))}
@@ -65,10 +70,12 @@ export default function SplittedTablesPage() {
         header: "",
         size: 64,
         enableSorting: false,
-        cell: ({ row }) => <RowActions label={`Actions for ${row.original.name}`} />,
+        cell: ({ row }) => (
+          <RowActions label={`Actions for ${row.original.name}`} />
+        ),
       },
     ],
-    []
+    [],
   );
 
   return (

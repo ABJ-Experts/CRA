@@ -45,7 +45,9 @@ export function AvatarDemo() {
         </span>
         <div className="flex items-end gap-4">
           <Avatar data-testid="av-empty" />
-          <Avatar fallback={<Building2 aria-hidden="true" className="size-1/2" />} />
+          <Avatar
+            fallback={<Building2 aria-hidden="true" className="size-1/2" />}
+          />
           <Avatar
             name="Ada Foster"
             src="/definitely-not-a-real-image.png"

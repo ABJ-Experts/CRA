@@ -1,7 +1,15 @@
 "use client";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  type ReactNode,
+} from "react";
+
+import { SessionProvider } from "./session-provider";
 
 /**
  * App-wide client providers: TanStack Query, plus the MSW readiness gate.
@@ -85,7 +93,11 @@ export function Providers({ children }: { children: ReactNode }) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <MocksReadyContext.Provider value={mocksReady}>{children}</MocksReadyContext.Provider>
+      <MocksReadyContext.Provider value={mocksReady}>
+        {/* Inside the query client, and inside the mocks gate, so the session
+            request is subject to the same readiness rule as everything else. */}
+        <SessionProvider>{children}</SessionProvider>
+      </MocksReadyContext.Provider>
     </QueryClientProvider>
   );
 }

@@ -4,9 +4,18 @@ import { MixedChart } from "@repo/ui/chart";
 import { DataTable, type ColumnDef } from "@repo/ui/data-table";
 import { DeltaBadge, StatCard } from "@repo/ui/stat-card";
 import { useMemo } from "react";
-import { SectionCard, Stagger, StaggerItem } from "./_components/dashboard-chrome";
+import {
+  SectionCard,
+  Stagger,
+  StaggerItem,
+} from "./_components/dashboard-chrome";
 import { useTableQuery } from "./_lib/use-table-query";
-import { Plain, RowActions, Stacked, StatusTag } from "./tables/_components/cells";
+import {
+  Plain,
+  RowActions,
+  Stacked,
+  StatusTag,
+} from "./tables/_components/cells";
 import type { Order } from "../../mocks/data/tables";
 
 /**
@@ -17,21 +26,47 @@ import type { Order } from "../../mocks/data/tables";
  * (1110x384).
  */
 
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const MONTHS = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
 const REVENUE = [42, 58, 47, 71, 65, 88, 76, 94, 82, 101, 92, 118];
 const ORDERS = [28, 39, 31, 48, 44, 59, 51, 63, 55, 68, 61, 79];
 
 /* Values transcribed from the frame's Total row. */
 const TOTALS = [
-  { label: "Total revenue", value: 902.008, format: (n: number) => `$${n.toFixed(3)}K`, delta: 8.24 },
-  { label: "Total profit", value: 61.108, format: (n: number) => `$${n.toFixed(3)}K`, delta: 3.11 },
+  {
+    label: "Total revenue",
+    value: 902.008,
+    format: (n: number) => `$${n.toFixed(3)}K`,
+    delta: 8.24,
+  },
+  {
+    label: "Total profit",
+    value: 61.108,
+    format: (n: number) => `$${n.toFixed(3)}K`,
+    delta: 3.11,
+  },
   { label: "Total orders", value: 12029, delta: 5.4 },
   { label: "Total customers", value: 8292, delta: 2.18 },
   { label: "Total products", value: 1209, delta: -1.2 },
 ];
 
 export default function EcommerceDashboardPage() {
-  const t = useTableQuery<Order>({ endpoint: "/api/orders", initialPageSize: 5 });
+  const t = useTableQuery<Order>({
+    endpoint: "/api/orders",
+    initialPageSize: 5,
+  });
 
   const columns = useMemo<ColumnDef<Order, unknown>[]>(
     () => [
@@ -46,14 +81,20 @@ export default function EcommerceDashboardPage() {
         accessorKey: "orderNo",
         header: "Order No & Tracking ID",
         cell: ({ row }) => (
-          <Stacked value={row.original.orderNo} caption={row.original.trackingId} />
+          <Stacked
+            value={row.original.orderNo}
+            caption={row.original.trackingId}
+          />
         ),
       },
       {
         accessorKey: "createdAt",
         header: "Created & Source",
         cell: ({ row }) => (
-          <Stacked value={row.original.createdAt} caption={row.original.source} />
+          <Stacked
+            value={row.original.createdAt}
+            caption={row.original.source}
+          />
         ),
       },
       {
@@ -65,7 +106,10 @@ export default function EcommerceDashboardPage() {
         accessorKey: "quantity",
         header: "Quantity & Price",
         cell: ({ row }) => (
-          <Stacked value={String(row.original.quantity)} caption={row.original.price} />
+          <Stacked
+            value={String(row.original.quantity)}
+            caption={row.original.price}
+          />
         ),
       },
       {
@@ -73,15 +117,16 @@ export default function EcommerceDashboardPage() {
         header: "",
         size: 64,
         enableSorting: false,
-        cell: ({ row }) => <RowActions label={`Actions for order ${row.original.orderNo}`} />,
+        cell: ({ row }) => (
+          <RowActions label={`Actions for order ${row.original.orderNo}`} />
+        ),
       },
     ],
-    []
+    [],
   );
 
   return (
     <div className="flex flex-col gap-6 px-6 py-6 lg:px-[30px]">
-
       <Stagger className="flex flex-col gap-6">
         <StaggerItem className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
           {TOTALS.map((s) => (

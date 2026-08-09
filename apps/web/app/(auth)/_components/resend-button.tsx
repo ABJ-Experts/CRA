@@ -25,7 +25,10 @@ export function ResendButton({
 
   useEffect(() => {
     if (remaining <= 0) return;
-    timer.current = setInterval(() => setRemaining((s) => Math.max(0, s - 1)), 1000);
+    timer.current = setInterval(
+      () => setRemaining((s) => Math.max(0, s - 1)),
+      1000,
+    );
     return () => {
       if (timer.current) clearInterval(timer.current);
     };
@@ -56,7 +59,7 @@ export function ResendButton({
           "outline-none focus-visible:ring-2 focus-visible:ring-active-500",
           ready
             ? "text-active-500 hover:text-active-600"
-            : "cursor-not-allowed text-fg-subtle"
+            : "cursor-not-allowed text-fg-subtle",
         )}
         data-testid="resend"
       >

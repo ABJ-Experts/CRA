@@ -201,7 +201,11 @@ export function FormDemo() {
         />
 
         <div className="flex gap-3">
-          <Button type="submit" loading={form.formState.isSubmitting} data-testid="f-submit">
+          <Button
+            type="submit"
+            loading={form.formState.isSubmitting}
+            data-testid="f-submit"
+          >
             Create account
           </Button>
           <Button
@@ -219,12 +223,16 @@ export function FormDemo() {
       </Form>
 
       <aside className="flex flex-col gap-2">
-        <span className="text-caption-1-semibold text-fg-muted">Parsed output</span>
+        <span className="text-caption-1-semibold text-fg-muted">
+          Parsed output
+        </span>
         <pre
           data-testid="f-output"
           className="overflow-x-auto rounded-xl bg-surface p-3 text-caption-2-regular text-fg"
         >
-          {submitted ? JSON.stringify(submitted, null, 2) : "Submit to see typed values"}
+          {submitted
+            ? JSON.stringify(submitted, null, 2)
+            : "Submit to see typed values"}
         </pre>
       </aside>
     </div>

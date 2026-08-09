@@ -4,7 +4,12 @@ import { Chip } from "@repo/ui/chip";
 import { User } from "lucide-react";
 import { useState } from "react";
 
-const INITIAL = ["Ada Lovelace", "Grace Hopper", "Alan Turing", "Katherine Johnson"];
+const INITIAL = [
+  "Ada Lovelace",
+  "Grace Hopper",
+  "Alan Turing",
+  "Katherine Johnson",
+];
 
 export function ChipDemo() {
   const [people, setPeople] = useState(INITIAL);
@@ -15,7 +20,10 @@ export function ChipDemo() {
         <span className="text-caption-1-medium text-fg-subtle">
           removable, with avatar slot
         </span>
-        <div className="flex flex-wrap items-center gap-2" data-testid="chip-list">
+        <div
+          className="flex flex-wrap items-center gap-2"
+          data-testid="chip-list"
+        >
           {people.map((name) => (
             <Chip
               key={name}

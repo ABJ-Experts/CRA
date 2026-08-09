@@ -90,10 +90,20 @@ export function TabsDemo() {
         </span>
         <Tabs defaultValue="a" variant="outline" data-testid="tabs-edge">
           <TabsList>
-            <TabsTrigger value="a" icon={<Menu />} count={4821} data-testid="tabs-edge-a">
+            <TabsTrigger
+              value="a"
+              icon={<Menu />}
+              count={4821}
+              data-testid="tabs-edge-a"
+            >
               Overflow
             </TabsTrigger>
-            <TabsTrigger value="b" disabled icon={<Star />} data-testid="tabs-edge-b">
+            <TabsTrigger
+              value="b"
+              disabled
+              icon={<Star />}
+              data-testid="tabs-edge-b"
+            >
               Disabled
             </TabsTrigger>
             <TabsTrigger value="c" data-testid="tabs-edge-c">
@@ -101,13 +111,17 @@ export function TabsDemo() {
             </TabsTrigger>
           </TabsList>
           <TabsContent value="a">
-            <p className="text-subhead-regular text-fg-muted">4821 renders as 99+.</p>
+            <p className="text-subhead-regular text-fg-muted">
+              4821 renders as 99+.
+            </p>
           </TabsContent>
           <TabsContent value="b">
             <p className="text-subhead-regular text-fg-muted">Unreachable.</p>
           </TabsContent>
           <TabsContent value="c">
-            <p className="text-subhead-regular text-fg-muted">Icon is optional.</p>
+            <p className="text-subhead-regular text-fg-muted">
+              Icon is optional.
+            </p>
           </TabsContent>
         </Tabs>
       </div>

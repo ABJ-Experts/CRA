@@ -57,7 +57,11 @@ export default function TwoFactorPage() {
     <div className="flex flex-col gap-10">
       <div className="flex flex-col gap-4">
         <span className="flex size-12 items-center justify-center rounded-xl bg-accent-subtle text-active-500">
-          <ShieldCheck aria-hidden="true" className="size-6" strokeWidth={1.5} />
+          <ShieldCheck
+            aria-hidden="true"
+            className="size-6"
+            strokeWidth={1.5}
+          />
         </span>
         <AuthTitle
           title="Two step verification"
@@ -128,11 +132,13 @@ export default function TwoFactorPage() {
             "mx-auto rounded-xl px-0.5 py-px text-subhead-semibold text-active-500",
             "transition-colors duration-150 motion-reduce:transition-none",
             "hover:text-active-600",
-            "outline-none focus-visible:ring-2 focus-visible:ring-active-500"
+            "outline-none focus-visible:ring-2 focus-visible:ring-active-500",
           )}
           data-testid="tf-switch"
         >
-          {recovery ? "Use your authenticator app" : "Use a recovery code instead"}
+          {recovery
+            ? "Use your authenticator app"
+            : "Use a recovery code instead"}
         </button>
       </form>
     </div>

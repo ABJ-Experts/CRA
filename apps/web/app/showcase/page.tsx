@@ -46,19 +46,35 @@ export const metadata: Metadata = {
 const TONES = ["primary", "subPrimary", "grey", "white"] as const;
 const SIZES = ["sm", "md", "lg"] as const;
 
-function Section({ title, note, children }: { title: string; note?: string; children: React.ReactNode }) {
+function Section({
+  title,
+  note,
+  children,
+}: {
+  title: string;
+  note?: string;
+  children: React.ReactNode;
+}) {
   return (
     <section className="flex flex-col gap-4 border-t border-border pt-8">
       <div className="flex flex-col gap-1">
         <h2 className="text-h5 text-fg">{title}</h2>
-        {note ? <p className="text-subhead-regular text-fg-muted">{note}</p> : null}
+        {note ? (
+          <p className="text-subhead-regular text-fg-muted">{note}</p>
+        ) : null}
       </div>
       {children}
     </section>
   );
 }
 
-function Row({ label, children }: { label: string; children: React.ReactNode }) {
+function Row({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
   return (
     <div className="flex flex-col gap-2">
       <span className="text-caption-1-medium text-fg-subtle">{label}</span>
@@ -74,8 +90,9 @@ export default function ShowcasePage() {
         <header className="flex flex-col gap-4">
           <h1 className="text-h3 text-fg">Design system</h1>
           <p className="text-body text-fg-muted">
-            Transcribed from the Pencil file. Every colour resolves to a design-system
-            token, so the whole page re-themes from a single attribute.
+            Transcribed from the Pencil file. Every colour resolves to a
+            design-system token, so the whole page re-themes from a single
+            attribute.
           </p>
           <ThemeToggle />
         </header>
@@ -87,7 +104,13 @@ export default function ShowcasePage() {
           {SIZES.map((size) => (
             <Row key={size} label={`size=${size}`}>
               {TONES.map((tone) => (
-                <Button key={tone} variant="fill" tone={tone} size={size} data-testid={`fill-${tone}-${size}`}>
+                <Button
+                  key={tone}
+                  variant="fill"
+                  tone={tone}
+                  size={size}
+                  data-testid={`fill-${tone}-${size}`}
+                >
                   Button
                 </Button>
               ))}
@@ -98,7 +121,10 @@ export default function ShowcasePage() {
           ))}
         </Section>
 
-        <Section title="Button / Outline and Gap" note="They differ only in border colour: border vs border-strong.">
+        <Section
+          title="Button / Outline and Gap"
+          note="They differ only in border colour: border vs border-strong."
+        >
           {SIZES.map((size) => (
             <Row key={size} label={`size=${size}`}>
               <Button variant="outline" tone="grey" size={size}>
@@ -117,7 +143,10 @@ export default function ShowcasePage() {
           ))}
         </Section>
 
-        <Section title="Button / Invisible" note="Collapsed padding and reduced height, per the design.">
+        <Section
+          title="Button / Invisible"
+          note="Collapsed padding and reduced height, per the design."
+        >
           {SIZES.map((size) => (
             <Row key={size} label={`size=${size}`}>
               <Button variant="invisible" tone="primary" size={size}>
@@ -133,11 +162,18 @@ export default function ShowcasePage() {
           ))}
         </Section>
 
-        <Section title="Button / Icons and divider" note="The divider is a 1px scrim-white-15 hairline, used on fill variants.">
+        <Section
+          title="Button / Icons and divider"
+          note="The divider is a 1px scrim-white-15 hairline, used on fill variants."
+        >
           <Row label="start and end icons">
             <Button startIcon={<ArrowLeft />}>Back</Button>
             <Button endIcon={<ArrowRight />}>Next</Button>
-            <Button startIcon={<ArrowLeft />} endIcon={<ArrowRight />} withDivider>
+            <Button
+              startIcon={<ArrowLeft />}
+              endIcon={<ArrowRight />}
+              withDivider
+            >
               Both
             </Button>
             <Button variant="outline" tone="grey" startIcon={<Plus />}>
@@ -152,26 +188,56 @@ export default function ShowcasePage() {
           </Row>
         </Section>
 
-        <Section title="Button / Iconic" note="Square. Pencil: 32 / 48 / 64 with padding 4 / 12 / 16.">
+        <Section
+          title="Button / Iconic"
+          note="Square. Pencil: 32 / 48 / 64 with padding 4 / 12 / 16."
+        >
           <Row label="invisible">
-            <Button iconOnly variant="invisible" tone="grey" size="sm" aria-label="Close">
+            <Button
+              iconOnly
+              variant="invisible"
+              tone="grey"
+              size="sm"
+              aria-label="Close"
+            >
               <X />
             </Button>
-            <Button iconOnly variant="outline" tone="primary" size="md" aria-label="Confirm">
+            <Button
+              iconOnly
+              variant="outline"
+              tone="primary"
+              size="md"
+              aria-label="Confirm"
+            >
               <Check />
             </Button>
             <Button iconOnly variant="balloon" size="lg" aria-label="New item">
               <Plus />
             </Button>
-            <Button iconOnly variant="fill" tone="grey" size="sm" aria-label="Delete" disabled>
+            <Button
+              iconOnly
+              variant="fill"
+              tone="grey"
+              size="sm"
+              aria-label="Delete"
+              disabled
+            >
               <Trash2 />
             </Button>
           </Row>
         </Section>
 
-        <Section title="Button / Composition" note="asChild renders a link with button styling. fullWidth stretches.">
+        <Section
+          title="Button / Composition"
+          note="asChild renders a link with button styling. fullWidth stretches."
+        >
           <Row label="asChild">
-            <Button asChild variant="outline" tone="grey" endIcon={<ArrowRight />}>
+            <Button
+              asChild
+              variant="outline"
+              tone="grey"
+              endIcon={<ArrowRight />}
+            >
               <Link href="/">Back to home</Link>
             </Button>
           </Row>
@@ -181,13 +247,19 @@ export default function ShowcasePage() {
             </div>
           </Row>
           <Row label="className override wins via tailwind-merge">
-            <Button className="bg-origin-green-500 text-on-success" data-testid="override">
+            <Button
+              className="bg-origin-green-500 text-on-success"
+              data-testid="override"
+            >
               Overridden background
             </Button>
           </Row>
         </Section>
 
-        <Section title="Surfaces" note="Fixed-colour tones sit on a dark surface in the design.">
+        <Section
+          title="Surfaces"
+          note="Fixed-colour tones sit on a dark surface in the design."
+        >
           <div className="flex flex-wrap items-center gap-4 rounded-xl bg-neutral-light-500 p-6">
             <Button variant="fill" tone="white">
               Fill white
@@ -256,13 +328,21 @@ export default function ShowcasePage() {
 
           <Row label="size=lg (48, Admin Authorization)">
             <div className="w-full max-w-md">
-              <Input size="lg" placeholder="Placeholder" data-testid="input-lg" />
+              <Input
+                size="lg"
+                placeholder="Placeholder"
+                data-testid="input-lg"
+              />
             </div>
           </Row>
 
           <Row label="size=xl (56, Forms/Title)">
             <div className="w-full max-w-md">
-              <Input size="xl" placeholder="Enter Title" data-testid="input-xl" />
+              <Input
+                size="xl"
+                placeholder="Enter Title"
+                data-testid="input-xl"
+              />
             </div>
           </Row>
         </Section>
