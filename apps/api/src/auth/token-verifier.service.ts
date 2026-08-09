@@ -2,12 +2,17 @@ import { createHash } from "node:crypto";
 
 import { Injectable, Logger, OnModuleInit } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
-import {
-  createRemoteJWKSet,
-  decodeProtectedHeader,
-  jwtVerify,
-  type JWTPayload,
-} from "jose";
+import { createRemoteJWKSet, decodeProtectedHeader } from "jose";
+
+import { Hs256TokenVerifierStrategy } from "./token-verification/hs256.strategy";
+import { JwksTokenVerifierStrategy } from "./token-verification/jwks.strategy";
+import { TokenStrategySelector } from "./token-verification/token-strategy-selector";
+import type { VerifyResult } from "./token-verification/token-verifier.strategy";
+
+export type {
+  SupabaseJwtClaims,
+  VerifyResult,
+} from "./token-verification/token-verifier.strategy";
 
 /**
  * Verifies a Supabase access token locally.
@@ -31,26 +36,13 @@ import {
  * ERR_REQUIRE_ESM — after a build that reported zero errors.
  */
 
-export interface SupabaseJwtClaims extends JWTPayload {
-  sub?: string;
-  email?: string;
-  role?: string;
-  /** Authenticator assurance level: 'aal1' | 'aal2'. */
-  aal?: string;
-  session_id?: string;
-}
-
-export type VerifyResult =
-  | { ok: true; claims: SupabaseJwtClaims }
-  | { ok: false; reason: "expired" | "invalid" | "unavailable" };
-
 @Injectable()
 export class TokenVerifierService implements OnModuleInit {
   private readonly logger = new Logger(TokenVerifierService.name);
 
   private readonly secret: Uint8Array;
-  private readonly jwks: ReturnType<typeof createRemoteJWKSet>;
   private readonly issuer: string;
+  private readonly selector: TokenStrategySelector;
 
   private resolvedStrategy?: "HS256" | "JWKS";
   /** Counted so a silent degradation to the slower path is visible in logs. */
@@ -64,9 +56,15 @@ export class TokenVerifierService implements OnModuleInit {
     this.secret = new TextEncoder().encode(
       this.config.getOrThrow<string>("SUPABASE_JWT_SECRET"),
     );
-    this.jwks = createRemoteJWKSet(
+    const jwks = createRemoteJWKSet(
       new URL(`${this.issuer}/.well-known/jwks.json`),
     );
+    this.selector = new TokenStrategySelector([
+      new Hs256TokenVerifierStrategy(this.secret, this.issuer),
+      new JwksTokenVerifierStrategy(jwks, this.issuer, (code) => {
+        this.logger.error(`[jwt] JWKS unavailable: ${code}`);
+      }),
+    ]);
   }
 
   onModuleInit(): void {
@@ -86,53 +84,30 @@ export class TokenVerifierService implements OnModuleInit {
   }
 
   async verify(token: string): Promise<VerifyResult> {
-    let alg: string | undefined;
+    let algorithm: string | undefined;
     try {
-      alg = decodeProtectedHeader(token).alg;
+      algorithm = decodeProtectedHeader(token).alg;
     } catch {
       return { ok: false, reason: "invalid" };
     }
 
-    const useJwks = alg !== undefined && alg !== "HS256";
+    if (!algorithm) return { ok: false, reason: "invalid" };
 
-    try {
-      const { payload } = useJwks
-        ? await jwtVerify(token, this.jwks, { issuer: this.issuer })
-        : await jwtVerify(token, this.secret, { issuer: this.issuer });
+    const strategy = this.selector.select(algorithm);
+    if (!strategy) return { ok: false, reason: "invalid" };
 
-      if (!this.resolvedStrategy) {
-        this.resolvedStrategy = useJwks ? "JWKS" : "HS256";
-        this.logger.log(
-          `[jwt] verification strategy resolved: ${this.resolvedStrategy}`,
-        );
-      }
-      if (useJwks) this.jwksVerifications += 1;
+    const result = await strategy.verify(token);
+    if (!result.ok) return result;
 
-      // No assertion needed: JWTPayload carries an index signature, so it is
-      // already assignable to SupabaseJwtClaims (whose extra fields are optional).
-      return { ok: true, claims: payload };
-    } catch (error) {
-      const code = (error as { code?: string }).code;
-
-      if (code === "ERR_JWT_EXPIRED") return { ok: false, reason: "expired" };
-
-      /*
-       * A JWKS fetch failure is NOT the caller's fault, and must not be reported
-       * as a bad token — that would sign every user out of a healthy system
-       * because one network call failed. It becomes a 503 upstream instead.
-       */
-      if (
-        useJwks &&
-        (code === "ERR_JWKS_TIMEOUT" ||
-          code === "ERR_JWKS_NO_MATCHING_KEY" ||
-          code === "ERR_JOSE_GENERIC")
-      ) {
-        this.logger.error(`[jwt] JWKS unavailable: ${String(code)}`);
-        return { ok: false, reason: "unavailable" };
-      }
-
-      return { ok: false, reason: "invalid" };
+    if (!this.resolvedStrategy) {
+      this.resolvedStrategy = strategy.name;
+      this.logger.log(
+        `[jwt] verification strategy resolved: ${this.resolvedStrategy}`,
+      );
     }
+    if (strategy.name === "JWKS") this.jwksVerifications += 1;
+
+    return { ok: true, claims: result.claims };
   }
 
   stats(): { strategy?: string; jwksVerifications: number } {
