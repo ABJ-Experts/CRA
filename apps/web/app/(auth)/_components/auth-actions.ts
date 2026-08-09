@@ -21,7 +21,18 @@
  * path explicitly instead of relying on a try/catch that is easy to forget.
  */
 
-import { z } from "zod";
+import {
+  authNextResponseSchema,
+  forgotPasswordInputSchema,
+  resetPasswordInputSchema,
+  signInInputSchema,
+  signUpInputSchema,
+  twoFactorInputSchema,
+  unlockInputSchema,
+  verifyEmailInputSchema,
+} from "@repo/contracts/auth/schemas";
+import { okResponseSchema } from "@repo/contracts/shared/schemas";
+import type { z } from "zod";
 
 import { ApiClientError, requestJson } from "../../_lib/http/api-client";
 
@@ -44,34 +55,56 @@ export interface AuthResult {
  */
 const API = "/api/v1";
 
-const authSuccessSchema = z
-  .object({
-    next: z.enum(["dashboard", "two-factor", "verify", "sign-in"]).optional(),
-  })
-  .passthrough();
+interface AuthRequest<TSchema extends z.ZodTypeAny> {
+  readonly schema: TSchema;
+  readonly body: z.input<TSchema>;
+}
 
-async function post(path: `/${string}`, body?: unknown): Promise<AuthResult> {
-  try {
-    const requestPath = `${API}${path}` as const;
-    const data = await requestJson({
-      path: requestPath,
-      method: "POST",
-      body,
-      schema: authSuccessSchema,
-    });
-    return { ok: true, next: data.next };
-  } catch (error) {
-    return error instanceof ApiClientError
-      ? {
-          ok: false,
-          message: error.message,
-          ...(error.fieldErrors
-            ? { fieldErrors: { ...error.fieldErrors } }
-            : {}),
-        }
-      : { ok: false, message: "Something went wrong. Please try again." };
+/** Stateful auth gateway behind the eight frozen functional action exports. */
+class AuthActionsApi {
+  async post<
+    TResponseSchema extends z.ZodTypeAny,
+    TInputSchema extends z.ZodTypeAny,
+  >(
+    path: `/${string}`,
+    responseSchema: TResponseSchema,
+    request?: AuthRequest<TInputSchema>,
+  ): Promise<AuthResult> {
+    try {
+      const requestPath = `${API}${path}` as const;
+      const data = request
+        ? await requestJson({
+            path: requestPath,
+            method: "POST",
+            body: request.body,
+            inputSchema: request.schema,
+            schema: responseSchema,
+          })
+        : await requestJson({
+            path: requestPath,
+            method: "POST",
+            schema: responseSchema,
+          });
+      const nextResponse = authNextResponseSchema.safeParse(data);
+      return {
+        ok: true,
+        next: nextResponse.success ? nextResponse.data.next : undefined,
+      };
+    } catch (error) {
+      return error instanceof ApiClientError
+        ? {
+            ok: false,
+            message: error.message,
+            ...(error.fieldErrors
+              ? { fieldErrors: { ...error.fieldErrors } }
+              : {}),
+          }
+        : { ok: false, message: "Something went wrong. Please try again." };
+    }
   }
 }
+
+const authActionsApi = Object.freeze(new AuthActionsApi());
 
 export async function signIn(input: {
   identifier: string;
@@ -80,10 +113,13 @@ export async function signIn(input: {
 }): Promise<AuthResult> {
   // The screen calls the field `identifier` because it accepts an email OR a
   // user name; the API resolves either.
-  return post("/auth/sign-in", {
-    email: input.identifier,
-    password: input.password,
-    remember: input.remember,
+  return authActionsApi.post("/auth/sign-in", authNextResponseSchema, {
+    schema: signInInputSchema,
+    body: {
+      email: input.identifier,
+      password: input.password,
+      remember: input.remember,
+    },
   });
 }
 
@@ -92,7 +128,10 @@ export async function signUp(input: {
   username: string;
   password: string;
 }): Promise<AuthResult> {
-  return post("/auth/sign-up", input);
+  return authActionsApi.post("/auth/sign-up", authNextResponseSchema, {
+    schema: signUpInputSchema,
+    body: input,
+  });
 }
 
 export async function requestPasswordReset(input: {
@@ -104,14 +143,20 @@ export async function requestPasswordReset(input: {
    * we sent a link" either way. The API enforces the same property server-side,
    * including a minimum response time so the TIMING does not leak it either.
    */
-  return post("/auth/forgot-password", input);
+  return authActionsApi.post("/auth/forgot-password", okResponseSchema, {
+    schema: forgotPasswordInputSchema,
+    body: input,
+  });
 }
 
 export async function resetPassword(input: {
   token: string;
   password: string;
 }): Promise<AuthResult> {
-  return post("/auth/reset-password", input);
+  return authActionsApi.post("/auth/reset-password", authNextResponseSchema, {
+    schema: resetPasswordInputSchema,
+    body: input,
+  });
 }
 
 /**
@@ -119,24 +164,34 @@ export async function resetPassword(input: {
  * comes from the `cra_pending` cookie set at sign-up.
  */
 export async function verifyCode(input: { code: string }): Promise<AuthResult> {
-  return post("/auth/verify-email", input);
+  return authActionsApi.post("/auth/verify-email", authNextResponseSchema, {
+    schema: verifyEmailInputSchema,
+    body: input,
+  });
 }
 
 export async function verifyTwoFactor(input: {
   code: string;
   recovery?: boolean;
 }): Promise<AuthResult> {
-  return post("/auth/two-factor/verify", input);
+  return authActionsApi.post(
+    "/auth/two-factor/verify",
+    authNextResponseSchema,
+    { schema: twoFactorInputSchema, body: input },
+  );
 }
 
 /** Lock Screen re-authentication. Identity comes from the live session. */
 export async function unlock(input: { password: string }): Promise<AuthResult> {
-  return post("/auth/unlock", input);
+  return authActionsApi.post("/auth/unlock", authNextResponseSchema, {
+    schema: unlockInputSchema,
+    body: input,
+  });
 }
 
 /** No arguments at all. Resolved from the pending cookie. */
 export async function resendCode(): Promise<AuthResult> {
-  return post("/auth/resend-code");
+  return authActionsApi.post("/auth/resend-code", okResponseSchema);
 }
 
 /**

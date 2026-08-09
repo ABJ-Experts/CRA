@@ -9,30 +9,35 @@ import {
   Param,
   Post,
 } from "@nestjs/common";
-import { BASE_ROLES } from "@repo/contracts/permissions";
-import { z } from "zod";
+import {
+  acceptInvitationInputSchema,
+  acceptInvitationResponseSchema,
+  createInvitationInputSchema,
+  invitationIdParamSchema,
+  invitationListResponseSchema,
+} from "@repo/contracts/invitations/schemas";
+import type {
+  AcceptInvitationInput,
+  AcceptInvitationResponse,
+  CreateInvitationInput,
+  InvitationIdParam,
+  InvitationListResponse,
+} from "@repo/contracts/invitations/types";
+import {
+  idResponseSchema,
+  okResponseSchema,
+} from "@repo/contracts/shared/schemas";
+import type { IdResponse, OkResponse } from "@repo/contracts/shared/types";
 
-import { zodBody } from "../common/pipes/zod-validation.pipe";
+import { ZodResponse } from "../common/http/zod-response.interceptor";
+import { zodBody, zodParams } from "../common/pipes/zod-validation.pipe";
 import {
   CurrentUser,
   RequirePermissions,
   SelfScoped,
   type RequestUser,
 } from "../auth/auth.types";
-import { InvitationsService, type AcceptResult } from "./invitations.service";
-
-const createSchema = z.object({
-  email: z
-    .string()
-    .trim()
-    .max(254)
-    .pipe(z.email({ message: "Enter a valid email address" })),
-  role: z.enum(BASE_ROLES).default("member"),
-  firstName: z.string().trim().max(80).optional(),
-  lastName: z.string().trim().max(80).optional(),
-});
-
-const acceptSchema = z.object({ token: z.string().min(32).max(128) });
+import { InvitationsService } from "./invitations.service";
 
 @Controller("invitations")
 export class InvitationsController {
@@ -50,17 +55,21 @@ export class InvitationsController {
 
   @RequirePermissions("can_view_invitations")
   @Get()
-  async list(@CurrentUser() user: RequestUser) {
+  @ZodResponse(invitationListResponseSchema)
+  async list(
+    @CurrentUser() user: RequestUser,
+  ): Promise<InvitationListResponse> {
     return { rows: await this.invitations.list(this.orgOf(user)) };
   }
 
   @RequirePermissions("can_create_invitations")
   @Post()
   @HttpCode(HttpStatus.CREATED)
+  @ZodResponse(idResponseSchema)
   async create(
-    @Body(zodBody(createSchema)) dto: z.infer<typeof createSchema>,
+    @Body(zodBody(createInvitationInputSchema)) dto: CreateInvitationInput,
     @CurrentUser() user: RequestUser,
-  ): Promise<{ id: string }> {
+  ): Promise<IdResponse> {
     return this.invitations.create(
       this.orgOf(user),
       { id: user.id, email: user.email },
@@ -83,10 +92,11 @@ export class InvitationsController {
   )
   @Post("accept")
   @HttpCode(HttpStatus.OK)
+  @ZodResponse(acceptInvitationResponseSchema)
   async accept(
-    @Body(zodBody(acceptSchema)) dto: { token: string },
+    @Body(zodBody(acceptInvitationInputSchema)) dto: AcceptInvitationInput,
     @CurrentUser() user: RequestUser,
-  ): Promise<AcceptResult> {
+  ): Promise<AcceptInvitationResponse> {
     return this.invitations.accept(dto.token, {
       id: user.id,
       email: user.email,
@@ -96,10 +106,11 @@ export class InvitationsController {
   @RequirePermissions("can_delete_invitations")
   @Delete(":id")
   @HttpCode(HttpStatus.OK)
+  @ZodResponse(okResponseSchema)
   async revoke(
-    @Param("id") id: string,
+    @Param(zodParams(invitationIdParamSchema)) { id }: InvitationIdParam,
     @CurrentUser() user: RequestUser,
-  ): Promise<{ ok: true }> {
+  ): Promise<OkResponse> {
     await this.invitations.revoke(
       this.orgOf(user),
       { id: user.id, email: user.email },

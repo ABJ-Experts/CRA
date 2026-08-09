@@ -1,5 +1,6 @@
 "use client";
 
+import { resetPasswordInputSchema } from "@repo/contracts/auth/schemas";
 import { Button } from "@repo/ui/button";
 import { Form, FormErrorSummary, FormField, useZodForm } from "@repo/ui/form";
 import { PasswordInput } from "@repo/ui/input";
@@ -16,12 +17,9 @@ import { PasswordStrength } from "../_components/password-strength";
  *
  * The stub treats the token `expired` as expired, which routes to /expired.
  */
-const schema = z
-  .object({
-    password: z
-      .string()
-      .min(8, "Password must be at least 8 characters")
-      .regex(/[0-9]/, "Password must contain a number"),
+const schema = resetPasswordInputSchema
+  .pick({ password: true })
+  .extend({
     confirm: z.string().min(1, "Re-enter your password"),
   })
   .refine((v) => v.password === v.confirm, {
@@ -29,7 +27,7 @@ const schema = z
     path: ["confirm"],
   });
 
-type Values = z.infer<typeof schema>;
+type Values = z.output<typeof schema>;
 
 function ResetForm() {
   const router = useRouter();

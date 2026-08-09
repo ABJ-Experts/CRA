@@ -1,5 +1,6 @@
 import type { INestApplication } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
+import type { NextFunction, Request, Response } from "express";
 import request from "supertest";
 import type { App } from "supertest/types";
 
@@ -11,12 +12,24 @@ import { PermissionsController } from "../../permissions/permissions.controller"
 import { PermissionsService } from "../../permissions/permissions.service";
 import { UsersController } from "../../users/users.controller";
 import { UsersService } from "../../users/users.service";
+import type { RequestUser } from "../../auth/auth.types";
+
+const requestUser: RequestUser = Object.freeze({
+  id: "11111111-1111-4111-8111-111111111111",
+  authUserId: "22222222-2222-4222-8222-222222222222",
+  email: "owner@cra.test",
+  isActive: true,
+  organizationId: "33333333-3333-4333-8333-333333333333",
+  role: "owner",
+  accessToken: "access-token",
+  aal: "aal2",
+});
 
 describe("controller request validation", () => {
   const invitations = { create: jest.fn() };
   const roles = { create: jest.fn() };
   const permissions = { effectivePermissions: jest.fn() };
-  const users = { changeRole: jest.fn() };
+  const users = { changeRole: jest.fn(), listMembers: jest.fn() };
   let app: INestApplication<App>;
 
   beforeAll(async () => {
@@ -35,6 +48,16 @@ describe("controller request validation", () => {
       ],
     }).compile();
     app = moduleRef.createNestApplication();
+    app.use(
+      (
+        req: Request & { user?: RequestUser },
+        _res: Response,
+        next: NextFunction,
+      ) => {
+        req.user = requestUser;
+        next();
+      },
+    );
     await app.init();
   });
 
@@ -88,4 +111,34 @@ describe("controller request validation", () => {
       expect(service).not.toHaveBeenCalled();
     },
   );
+
+  it("rejects malformed UUID parameters before invoking the service", async () => {
+    await request(app.getHttpServer())
+      .patch("/users/not-a-uuid/role")
+      .send({ role: "admin" })
+      .expect(400);
+
+    expect(users.changeRole).not.toHaveBeenCalled();
+  });
+
+  it("parses and normalizes query values before invoking the service", async () => {
+    users.listMembers.mockResolvedValueOnce({
+      rows: [],
+      total: 0,
+      page: 1,
+      pageSize: 100,
+      pageCount: 1,
+    });
+
+    await request(app.getHttpServer())
+      .get("/users?page=0&pageSize=1000&order=sideways&q=%20ada%20")
+      .expect(200);
+
+    expect(users.listMembers).toHaveBeenCalledWith(requestUser.organizationId, {
+      page: 1,
+      pageSize: 100,
+      order: "asc",
+      q: "ada",
+    });
+  });
 });

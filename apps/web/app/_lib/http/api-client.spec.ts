@@ -145,6 +145,7 @@ describe("requestJson", () => {
       path: "/api/v1/test",
       method: "POST",
       body,
+      inputSchema: z.object({ email: z.email(), enabled: z.boolean() }),
       signal: controller.signal,
       schema: successSchema,
       fetcher,
@@ -158,6 +159,61 @@ describe("requestJson", () => {
       headers: { "content-type": "application/json" },
       body: JSON.stringify(body),
     });
+  });
+
+  it("serializes the parsed request output and rejects invalid input before fetch", async () => {
+    const inputSchema = z
+      .object({
+        email: z.string().trim().toLowerCase().pipe(z.email()),
+        remember: z.boolean().optional().default(false),
+      })
+      .strict();
+    const fetcher = vi.fn(
+      async () => new Response(JSON.stringify({ ok: true }), { status: 200 }),
+    );
+
+    await requestJson({
+      path: "/api/v1/test",
+      method: "POST",
+      body: { email: " ADA@EXAMPLE.COM " },
+      inputSchema,
+      schema: successSchema,
+      fetcher,
+    });
+    expect(fetcher).toHaveBeenCalledWith(
+      "/api/v1/test",
+      expect.objectContaining({
+        body: JSON.stringify({ email: "ada@example.com", remember: false }),
+      }),
+    );
+
+    await expect(
+      requestJson({
+        path: "/api/v1/test",
+        method: "POST",
+        body: { email: "not-an-email" },
+        inputSchema,
+        schema: successSchema,
+        fetcher,
+      }),
+    ).rejects.toMatchObject({ kind: "invalid_request" });
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  });
+
+  it("fails closed when an untyped caller supplies a body without a schema", async () => {
+    const fetcher = vi.fn();
+    const options = {
+      path: "/api/v1/test",
+      method: "POST",
+      body: { untrusted: true },
+      schema: successSchema,
+      fetcher,
+    } as unknown as Parameters<typeof requestJson>[0];
+
+    await expect(requestJson(options)).rejects.toMatchObject({
+      kind: "invalid_request",
+    });
+    expect(fetcher).not.toHaveBeenCalled();
   });
 
   it.each([

@@ -20,6 +20,8 @@ const RULE = Object.freeze({
   mswPassthrough: "[msw-passthrough]",
   menuNavParity: "[menu-nav-parity]",
   patternCatalog: "[pattern-catalog]",
+  zodBoundaries: "[zod-boundaries]",
+  frontendRendering: "[frontend-rendering]",
 });
 
 async function temporaryRoot(t) {
@@ -76,10 +78,12 @@ async function writePassingFixture(root) {
       root,
       "apps/api/src/orders/orders.controller.ts",
       [
+        'import { orderListResponseSchema } from "@repo/contracts/orders/schemas";',
         '@Controller("orders")',
         "export class OrdersController {",
         '  @RequirePermissions("can_view_orders")',
         "  @Get()",
+        "  @ZodResponse(orderListResponseSchema)",
         "  list() { return []; }",
         "}",
       ].join("\n"),
@@ -272,6 +276,315 @@ test("rejects direct web fetch outside the central transport", async (t) => {
   const errors = await verifyInvariants(root);
 
   assert.ok(hasRule(errors, RULE.webFetch), errors.join("\n"));
+});
+
+test("rejects controller-local and web API-local Zod wire schemas", async (t) => {
+  const root = await temporaryRoot(t);
+  await writePassingFixture(root);
+  await write(
+    root,
+    "apps/api/src/orders/orders.controller.ts",
+    [
+      "const localSchema = z.object({ id: z.string() });",
+      '@Controller("orders")',
+      "export class OrdersController {",
+      '  @RequirePermissions("can_view_orders")',
+      "  @Get()",
+      "  @ZodResponse(orderListResponseSchema)",
+      "  list() { return []; }",
+      "}",
+    ].join("\n"),
+  );
+
+  const errors = await verifyInvariants(root);
+
+  assert.ok(hasRule(errors, RULE.zodBoundaries), errors.join("\n"));
+  assert.ok(
+    errors.some((error) => error.includes("outside @repo/contracts")),
+    errors.join("\n"),
+  );
+});
+
+test("requires boundary schema references to come from shared contracts", async (t) => {
+  const root = await temporaryRoot(t);
+  await writePassingFixture(root);
+  await write(
+    root,
+    "apps/api/src/orders/orders.controller.ts",
+    [
+      'import { localOrderSchema } from "./local-order.schema";',
+      '@Controller("orders")',
+      "export class OrdersController {",
+      '  @RequirePermissions("can_view_orders")',
+      "  @Post()",
+      "  @ZodResponse(localOrderSchema)",
+      "  create(@Body(zodBody(localOrderSchema)) body: unknown) { return body; }",
+      "}",
+    ].join("\n"),
+  );
+  await write(
+    root,
+    "apps/api/src/orders/local-order.schema.ts",
+    "export const localOrderSchema = schemaFactory();\n",
+  );
+  await write(
+    root,
+    "apps/web/app/_features/orders/orders.api.ts",
+    [
+      'import { localOrderSchema } from "./local-order.schema";',
+      "export const save = (input: unknown) => requestJson({",
+      '  path: "/api/v1/orders",',
+      '  method: "POST",',
+      "  body: input,",
+      "  inputSchema: localOrderSchema,",
+      "  schema: localOrderSchema,",
+      "});",
+    ].join("\n"),
+  );
+  await write(
+    root,
+    "apps/web/app/dashboard/orders.loader.ts",
+    [
+      'import { localOrderSchema } from "./local-order.schema";',
+      "export const load = () => authenticatedRequestJson({",
+      '  path: "/api/v1/orders",',
+      "  schema: localOrderSchema,",
+      "});",
+    ].join("\n"),
+  );
+
+  const errors = await verifyInvariants(root);
+
+  for (const path of [
+    "orders.controller.ts",
+    "orders.api.ts",
+    "orders.loader.ts",
+  ]) {
+    assert.ok(
+      errors.some(
+        (error) =>
+          error.includes(path) &&
+          error.includes("must import its schema from @repo/contracts"),
+      ),
+      errors.join("\n"),
+    );
+  }
+});
+
+test("requires paired schema/type folders and parsed wire types", async (t) => {
+  const root = await temporaryRoot(t);
+  await writePassingFixture(root);
+  await write(
+    root,
+    "packages/contracts/src/orders/schemas/order.schema.ts",
+    "export const orderResponseSchema = z.object({ id: z.string() });\n",
+  );
+  await write(
+    root,
+    "packages/contracts/src/customers/types/customer.type.ts",
+    "export interface CustomerResponse { readonly id: string }\n",
+  );
+  await write(
+    root,
+    "packages/contracts/src/customers/schemas/customer.schema.ts",
+    "export const customerResponseSchema = z.object({ id: z.string() });\n",
+  );
+
+  const errors = await verifyInvariants(root);
+
+  assert.ok(hasRule(errors, RULE.zodBoundaries), errors.join("\n"));
+  assert.ok(errors.some((error) => error.includes("schemas/ and types/")));
+  assert.ok(errors.some((error) => error.includes("CustomerResponse")));
+});
+
+test("requires parsed controller inputs and declared response kinds", async (t) => {
+  const root = await temporaryRoot(t);
+  await writePassingFixture(root);
+  await write(
+    root,
+    "apps/api/src/orders/orders.controller.ts",
+    [
+      '@Controller("orders")',
+      "export class OrdersController {",
+      '  @RequirePermissions("can_view_orders")',
+      "  @Post()",
+      "  create(@Body() body: unknown) { return body; }",
+      "}",
+    ].join("\n"),
+  );
+
+  const errors = await verifyInvariants(root);
+
+  assert.ok(errors.some((error) => error.includes("lacks ZodResponse")));
+  assert.ok(errors.some((error) => error.includes("Body lacks zodBody")));
+});
+
+test("requires an input schema for every web request body", async (t) => {
+  const root = await temporaryRoot(t);
+  await writePassingFixture(root);
+  await write(
+    root,
+    "apps/web/app/_features/orders/orders.api.ts",
+    [
+      "export const save = (input: unknown) => requestJson({",
+      '  path: "/api/v1/orders",',
+      '  method: "POST",',
+      "  body: input,",
+      "  schema: orderResponseSchema,",
+      "});",
+    ].join("\n"),
+  );
+
+  const errors = await verifyInvariants(root);
+
+  assert.ok(
+    errors.some((error) => error.includes("body without inputSchema")),
+    errors.join("\n"),
+  );
+});
+
+test("inspects transport options referenced through local variables", async (t) => {
+  const root = await temporaryRoot(t);
+  await writePassingFixture(root);
+  await write(
+    root,
+    "apps/web/app/_features/orders/orders.api.ts",
+    [
+      'import { orderResponseSchema } from "@repo/contracts/orders/schemas";',
+      'import { localOrderSchema } from "./local-order.schema";',
+      "const options = {",
+      '  path: "/api/v1/orders",',
+      '  method: "POST",',
+      "  body: { id: 1 },",
+      "  schema: localOrderSchema,",
+      "};",
+      "export const save = () => requestJson(options);",
+    ].join("\n"),
+  );
+
+  const errors = await verifyInvariants(root);
+
+  assert.ok(
+    errors.some((error) => error.includes("body without inputSchema")),
+    errors.join("\n"),
+  );
+  assert.ok(
+    errors.some(
+      (error) =>
+        error.includes("orders.api.ts") &&
+        error.includes("must import its schema from @repo/contracts"),
+    ),
+    errors.join("\n"),
+  );
+});
+
+test("rejects transport options that cannot be inspected statically", async (t) => {
+  const root = await temporaryRoot(t);
+  await writePassingFixture(root);
+  await write(
+    root,
+    "apps/web/app/_features/orders/orders.api.ts",
+    [
+      "const options = makeRequestOptions();",
+      "export const save = () => requestJson(options);",
+    ].join("\n"),
+  );
+
+  const errors = await verifyInvariants(root);
+
+  assert.ok(
+    errors.some((error) => error.includes("statically inspectable options")),
+    errors.join("\n"),
+  );
+});
+
+test("resolves transport options in their lexical scope", async (t) => {
+  const root = await temporaryRoot(t);
+  await writePassingFixture(root);
+  await write(
+    root,
+    "apps/web/app/_features/orders/orders.api.ts",
+    [
+      'import { orderResponseSchema } from "@repo/contracts/orders/schemas";',
+      'import { localOrderSchema } from "./local-order.schema";',
+      "const options = {",
+      '  path: "/api/v1/orders",',
+      "  body: { id: 1 },",
+      "  schema: localOrderSchema,",
+      "};",
+      "export const save = () => requestJson(options);",
+      "function unrelatedScope() {",
+      "  const options = { schema: orderResponseSchema };",
+      "  return options;",
+      "}",
+    ].join("\n"),
+  );
+
+  const errors = await verifyInvariants(root);
+
+  assert.ok(
+    errors.some((error) => error.includes("body without inputSchema")),
+    errors.join("\n"),
+  );
+  assert.ok(
+    errors.some(
+      (error) =>
+        error.includes("orders.api.ts") &&
+        error.includes("must import its schema from @repo/contracts"),
+    ),
+    errors.join("\n"),
+  );
+});
+
+test("resolves function-scoped var transport options", async (t) => {
+  const root = await temporaryRoot(t);
+  await writePassingFixture(root);
+  await write(
+    root,
+    "apps/web/app/_features/orders/orders.api.ts",
+    [
+      'import { localOrderSchema } from "./local-order.schema";',
+      "export function save() {",
+      "  if (true) {",
+      "    var options = {",
+      '      path: "/api/v1/orders",',
+      "      body: { id: 1 },",
+      "      schema: localOrderSchema,",
+      "    };",
+      "  }",
+      "  return requestJson(options);",
+      "}",
+    ].join("\n"),
+  );
+
+  const errors = await verifyInvariants(root);
+
+  assert.ok(
+    errors.some((error) => error.includes("body without inputSchema")),
+    errors.join("\n"),
+  );
+  assert.ok(
+    errors.some(
+      (error) =>
+        error.includes("orders.api.ts") &&
+        error.includes("must import its schema from @repo/contracts"),
+    ),
+    errors.join("\n"),
+  );
+});
+
+test("keeps TSX rendering functional and logic classes in plain TS", async (t) => {
+  const root = await temporaryRoot(t);
+  await writePassingFixture(root);
+  await write(
+    root,
+    "apps/web/app/dashboard/orders/page.tsx",
+    "export class OrdersPage extends Component { render() { return <main />; } }\n",
+  );
+
+  const errors = await verifyInvariants(root);
+
+  assert.ok(hasRule(errors, RULE.frontendRendering), errors.join("\n"));
 });
 
 test("requires orgId first only for clearly tenant-scoped service-role methods", async (t) => {

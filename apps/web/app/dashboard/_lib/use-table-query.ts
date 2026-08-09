@@ -2,6 +2,7 @@
 
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { pagedSchema, type Paged } from "@repo/contracts/pagination";
+import { pageParamsSchema } from "@repo/contracts/pagination/schemas";
 import type { SortingState } from "@repo/ui/data-table";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { z } from "zod";
@@ -51,15 +52,22 @@ export function useTableQuery<T>({
   const sort = sorting[0];
 
   const params = useMemo(() => {
-    const p = new URLSearchParams({
-      page: String(page),
-      pageSize: String(pageSize),
+    const parsed = pageParamsSchema.parse({
+      page,
+      pageSize,
+      sort: sort?.id,
+      order: sort?.desc ? "desc" : "asc",
+      q: search,
     });
-    if (sort) {
-      p.set("sort", sort.id);
-      p.set("order", sort.desc ? "desc" : "asc");
+    const p = new URLSearchParams({
+      page: String(parsed.page),
+      pageSize: String(parsed.pageSize),
+    });
+    if (parsed.sort) {
+      p.set("sort", parsed.sort);
+      p.set("order", parsed.order);
     }
-    if (search) p.set("q", search);
+    if (parsed.q) p.set("q", parsed.q);
     if (simulateError) p.set("fail", "1");
     return p;
   }, [page, pageSize, sort, search, simulateError]);

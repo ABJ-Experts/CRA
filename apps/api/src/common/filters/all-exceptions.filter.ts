@@ -6,7 +6,12 @@ import {
   HttpStatus,
   Logger,
 } from "@nestjs/common";
+import { apiErrorSchema } from "@repo/contracts/shared/schemas";
+import type { ApiErrorBody as SharedApiErrorBody } from "@repo/contracts/shared/types";
 import type { Request, Response } from "express";
+
+/** @deprecated Import from `@repo/contracts/shared/types`. */
+export type ApiErrorBody = SharedApiErrorBody;
 
 /**
  * The single shape every failed request returns.
@@ -22,18 +27,19 @@ import type { Request, Response } from "express";
  * returns `{rows,total,page,pageSize,pageCount}` bare — and the first table
  * swapped from MSW to the real API would break `use-table-query.ts`.
  */
-export interface ApiErrorBody {
-  statusCode: number;
-  message: string;
-  code?: string;
-  fieldErrors?: Record<string, string>;
+interface HttpExceptionShape {
+  message?: unknown;
+  code?: unknown;
+  fieldErrors?: unknown;
 }
 
-interface HttpExceptionShape {
-  message?: string | string[];
-  code?: string;
-  fieldErrors?: Record<string, string>;
-  error?: string;
+function isStringRecord(value: unknown): value is Record<string, string> {
+  return (
+    value !== null &&
+    typeof value === "object" &&
+    !Array.isArray(value) &&
+    Object.values(value).every((entry) => typeof entry === "string")
+  );
 }
 
 @Catch()
@@ -59,12 +65,17 @@ export class AllExceptionsFilter implements ExceptionFilter {
       } else if (response && typeof response === "object") {
         const shape = response as HttpExceptionShape;
         if (Array.isArray(shape.message)) {
-          message = shape.message[0] ?? message;
+          message =
+            shape.message.find(
+              (entry): entry is string => typeof entry === "string",
+            ) ?? message;
         } else if (typeof shape.message === "string") {
           message = shape.message;
         }
-        code = shape.code;
-        fieldErrors = shape.fieldErrors;
+        code = typeof shape.code === "string" ? shape.code : undefined;
+        fieldErrors = isStringRecord(shape.fieldErrors)
+          ? { ...shape.fieldErrors }
+          : undefined;
       }
     }
 
@@ -93,9 +104,12 @@ export class AllExceptionsFilter implements ExceptionFilter {
       );
     }
 
-    const body: ApiErrorBody = { statusCode: status, message };
-    if (code) body.code = code;
-    if (fieldErrors) body.fieldErrors = fieldErrors;
+    const body: ApiErrorBody = apiErrorSchema.parse({
+      statusCode: status,
+      message,
+      ...(code ? { code } : {}),
+      ...(fieldErrors ? { fieldErrors } : {}),
+    });
 
     res.status(status).json(body);
   }

@@ -72,6 +72,15 @@ theatre and are not allowed.
     complete MFA.
 12. Database changes are additive and generated types are regenerated, never
     hand-edited.
+13. Cross-application wire contracts are schema-first and feature-first:
+    `<feature>/schemas` owns runtime Zod contracts and `<feature>/types` exports
+    their parsed `z.output` types. Nest and browser transports parse both input
+    and output; controllers and `*.api.ts` files do not declare duplicate wire
+    schemas.
+14. React rendering stays functional. Plain TypeScript classes are appropriate
+    for stateful/injected transports, gateways, adapters, and workflows; pure
+    policies stay functions. React classes require an error-boundary or
+    third-party lifecycle reason.
 
 ## Pattern policy
 

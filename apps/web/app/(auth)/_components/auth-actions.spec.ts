@@ -148,11 +148,86 @@ describe("auth action HTTP facade", () => {
     );
 
     await expect(
-      requestPasswordReset({ email: "not-an-email" }),
+      requestPasswordReset({ email: "person@example.com" }),
     ).resolves.toEqual({
       ok: false,
       message: "Please correct the form.",
       fieldErrors: { email: "Enter a valid email address." },
+    });
+  });
+
+  it("parses request and response contracts for every frozen action", async () => {
+    const nextByPath = new Map<string, AuthResult["next"]>([
+      ["/api/v1/auth/sign-up", "verify"],
+      ["/api/v1/auth/reset-password", "sign-in"],
+      ["/api/v1/auth/verify-email", "dashboard"],
+      ["/api/v1/auth/two-factor/verify", "dashboard"],
+      ["/api/v1/auth/unlock", "dashboard"],
+    ]);
+    const fetcher = vi.fn(async (input: RequestInfo | URL) => {
+      const next = nextByPath.get(String(input));
+      return new Response(JSON.stringify(next ? { next } : { ok: true }), {
+        status: 200,
+      });
+    });
+    vi.stubGlobal("fetch", fetcher);
+
+    await expect(
+      signUp({
+        email: " ADA@EXAMPLE.COM ",
+        username: "ada",
+        password: "Password1",
+      }),
+    ).resolves.toEqual({ ok: true, next: "verify" });
+    await expect(
+      requestPasswordReset({ email: "ADA@EXAMPLE.COM" }),
+    ).resolves.toEqual({ ok: true, next: undefined });
+    await expect(
+      resetPassword({ token: "reset-token", password: "Password1" }),
+    ).resolves.toEqual({ ok: true, next: "sign-in" });
+    await expect(verifyCode({ code: "123456" })).resolves.toEqual({
+      ok: true,
+      next: "dashboard",
+    });
+    await expect(verifyTwoFactor({ code: "123456" })).resolves.toEqual({
+      ok: true,
+      next: "dashboard",
+    });
+    await expect(unlock({ password: "Password1" })).resolves.toEqual({
+      ok: true,
+      next: "dashboard",
+    });
+    await expect(resendCode()).resolves.toEqual({ ok: true, next: undefined });
+
+    expect(fetcher).toHaveBeenCalledWith(
+      "/api/v1/auth/sign-up",
+      expect.objectContaining({
+        body: JSON.stringify({
+          email: "ada@example.com",
+          username: "ada",
+          password: "Password1",
+        }),
+      }),
+    );
+    expect(fetcher).toHaveBeenCalledWith(
+      "/api/v1/auth/two-factor/verify",
+      expect.objectContaining({
+        body: JSON.stringify({ code: "123456", recovery: false }),
+      }),
+    );
+  });
+
+  it("maps an aborted request without exposing its runtime details", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        throw new DOMException("internal abort reason", "AbortError");
+      }),
+    );
+
+    await expect(resendCode()).resolves.toEqual({
+      ok: false,
+      message: "Something went wrong. Please try again.",
     });
   });
 

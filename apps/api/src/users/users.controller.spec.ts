@@ -37,7 +37,13 @@ describe("UsersController", () => {
     const { controller, users, page } = fixture();
 
     await expect(
-      controller.list(user, "2", "25", "email", "desc", "  ada  "),
+      controller.list(user, {
+        page: 2,
+        pageSize: 25,
+        sort: "email",
+        order: "desc",
+        q: "ada",
+      }),
     ).resolves.toBe(page);
     expect(users.listMembers).toHaveBeenCalledWith("org-1", {
       page: 2,
@@ -62,10 +68,10 @@ describe("UsersController", () => {
     const { controller, users } = fixture();
 
     await expect(
-      controller.changeRole(memberId, { role: "admin" }, user),
+      controller.changeRole({ id: memberId }, { role: "admin" }, user),
     ).resolves.toEqual({ ok: true });
     await expect(
-      controller.setActive(memberId, { isActive: false }, user),
+      controller.setActive({ id: memberId }, { isActive: false }, user),
     ).resolves.toEqual({ ok: true });
     expect(users.changeRole).toHaveBeenCalledWith(
       "org-1",
@@ -84,7 +90,7 @@ describe("UsersController", () => {
   it("removes a validated member within the active organization", async () => {
     const { controller, users } = fixture();
 
-    await expect(controller.remove(memberId, user)).resolves.toEqual({
+    await expect(controller.remove({ id: memberId }, user)).resolves.toEqual({
       ok: true,
     });
     expect(users.removeMember).toHaveBeenCalledWith(
@@ -94,20 +100,17 @@ describe("UsersController", () => {
     );
   });
 
-  it("rejects malformed member ids before calling the service", async () => {
-    const { controller, users } = fixture();
-
-    await expect(
-      controller.changeRole("not-a-uuid", { role: "admin" }, user),
-    ).rejects.toBeDefined();
-    expect(users.changeRole).not.toHaveBeenCalled();
-  });
-
   it("rejects organization-scoped operations without an active organization", async () => {
     const { controller, users } = fixture();
     const unscoped = { ...user, organizationId: null };
 
-    await expect(controller.list(unscoped)).rejects.toMatchObject({
+    await expect(
+      controller.list(unscoped, {
+        page: 1,
+        pageSize: 15,
+        order: "asc",
+      }),
+    ).rejects.toMatchObject({
       response: {
         message: "You are not a member of any organization.",
         code: "no_organization",

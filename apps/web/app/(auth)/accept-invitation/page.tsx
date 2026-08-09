@@ -69,9 +69,12 @@ function AcceptInvitation() {
           ? "Sign in to accept this invitation."
           : error instanceof ApiClientError && error.kind === "api"
             ? error.message
-            : error instanceof ApiClientError && error.kind === "network"
-              ? "We could not reach the server. Check your connection."
-              : "We could not accept that invitation.",
+            : error instanceof ApiClientError &&
+                error.kind === "invalid_request"
+              ? "That invitation link is not valid."
+              : error instanceof ApiClientError && error.kind === "network"
+                ? "We could not reach the server. Check your connection."
+                : "We could not accept that invitation.",
         needsSignIn,
       });
     }

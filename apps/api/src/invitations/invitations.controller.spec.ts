@@ -12,6 +12,7 @@ const user: RequestUser = Object.freeze({
   accessToken: "access-token",
   aal: "aal2",
 });
+const invitationId = "22222222-2222-4222-8222-222222222222";
 
 function fixture() {
   const accepted = { organizationId: "org-2", organizationName: "Example" };
@@ -71,13 +72,15 @@ describe("InvitationsController", () => {
   it("revokes an invitation within the active organization", async () => {
     const { controller, invitations } = fixture();
 
-    await expect(controller.revoke("invitation-1", user)).resolves.toEqual({
+    await expect(
+      controller.revoke({ id: invitationId }, user),
+    ).resolves.toEqual({
       ok: true,
     });
     expect(invitations.revoke).toHaveBeenCalledWith(
       "org-1",
       { id: "owner-1", email: "owner@cra.test" },
-      "invitation-1",
+      invitationId,
     );
   });
 

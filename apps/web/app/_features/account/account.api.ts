@@ -1,24 +1,22 @@
-import { z } from "zod";
+import { okResponseSchema } from "@repo/contracts/shared/schemas";
+import { updateProfileInputSchema } from "@repo/contracts/users/schemas";
+import type { UpdateProfileInput } from "@repo/contracts/users/types";
 
 import { requestJson } from "../../_lib/http/api-client";
 
-const updateProfileResponseSchema = z.object({ ok: z.literal(true) }).strict();
+export type { UpdateProfileInput } from "@repo/contracts/users/types";
 
-export interface UpdateProfileInput {
-  readonly firstName?: string;
-  readonly lastName?: string;
-  readonly jobTitle?: string;
-  readonly language?: string;
-}
-
-export const accountApi = Object.freeze({
+export class AccountApi {
   updateProfile(input: UpdateProfileInput, signal?: AbortSignal) {
     return requestJson({
       path: "/api/v1/users/me",
       method: "PATCH",
       body: input,
+      inputSchema: updateProfileInputSchema,
       signal,
-      schema: updateProfileResponseSchema,
+      schema: okResponseSchema,
     });
-  },
-});
+  }
+}
+
+export const accountApi = Object.freeze(new AccountApi());

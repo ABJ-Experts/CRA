@@ -98,6 +98,7 @@ describe("authenticatedRequestJson", () => {
           path: "/api/v1/mutation",
           method,
           body: { value: 1 },
+          inputSchema: z.object({ value: z.number() }),
           schema: successSchema,
           fetcher,
         }),

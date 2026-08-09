@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { invitationsApi } from "./invitations.api";
 
 describe("invitationsApi", () => {
+  const token = "t".repeat(32);
   afterEach(() => vi.unstubAllGlobals());
 
   it("accepts an invitation with the exact request and signal", async () => {
@@ -21,7 +22,7 @@ describe("invitationsApi", () => {
     );
     vi.stubGlobal("fetch", fetcher);
 
-    await expect(invitationsApi.accept("token-value", signal)).resolves.toEqual(
+    await expect(invitationsApi.accept(token, signal)).resolves.toEqual(
       response,
     );
     expect(fetcher).toHaveBeenCalledOnce();
@@ -31,7 +32,7 @@ describe("invitationsApi", () => {
       cache: "no-store",
       signal,
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ token: "token-value" }),
+      body: JSON.stringify({ token }),
     });
   });
 
@@ -46,13 +47,23 @@ describe("invitationsApi", () => {
       );
     vi.stubGlobal("fetch", fetcher);
 
-    await expect(invitationsApi.accept("token-value")).rejects.toMatchObject({
+    await expect(invitationsApi.accept(token)).rejects.toMatchObject({
       kind: "invalid_response",
     });
-    await expect(invitationsApi.accept("token-value")).rejects.toMatchObject({
+    await expect(invitationsApi.accept(token)).rejects.toMatchObject({
       kind: "api",
       status: 401,
     });
     expect(fetcher).toHaveBeenCalledTimes(2);
+  });
+
+  it("rejects a malformed token before sending a request", async () => {
+    const fetcher = vi.fn();
+    vi.stubGlobal("fetch", fetcher);
+
+    await expect(invitationsApi.accept("short")).rejects.toMatchObject({
+      kind: "invalid_request",
+    });
+    expect(fetcher).not.toHaveBeenCalled();
   });
 });

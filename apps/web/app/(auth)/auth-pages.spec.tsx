@@ -186,6 +186,24 @@ describe("auth pages", () => {
     expect(navigation.push).toHaveBeenCalledWith("/dashboard");
   });
 
+  it("rejects a whitespace-only sign-in identifier at the field boundary", async () => {
+    render(<SignInPage />);
+
+    fireEvent.change(screen.getByTestId("si-identifier"), {
+      target: { value: "   " },
+    });
+    fireEvent.change(screen.getByTestId("si-password"), {
+      target: { value: "Password123" },
+    });
+    fireEvent.click(screen.getByTestId("si-submit"));
+
+    expect(
+      await screen.findAllByText("Enter your email or user name"),
+    ).not.toHaveLength(0);
+    expect(actions.signIn).not.toHaveBeenCalled();
+    expect(navigation.push).not.toHaveBeenCalled();
+  });
+
   it("routes sign-in through two-factor and exposes provider errors", async () => {
     actions.signIn
       .mockResolvedValueOnce({ ok: true, next: "two-factor" })
@@ -260,6 +278,28 @@ describe("auth pages", () => {
     );
   });
 
+  it("rejects overlong sign-up emails with the shared field contract", async () => {
+    render(<SignUpPage />);
+    fireEvent.change(screen.getByTestId("su-email"), {
+      target: { value: `${"a".repeat(243)}@example.com` },
+    });
+    fireEvent.change(screen.getByTestId("su-username"), {
+      target: { value: "ada" },
+    });
+    fireEvent.change(screen.getByTestId("su-password"), {
+      target: { value: "Password123" },
+    });
+    fireEvent.change(screen.getByTestId("su-confirm"), {
+      target: { value: "Password123" },
+    });
+    fireEvent.click(screen.getByTestId("su-submit"));
+
+    expect(
+      await screen.findAllByText("That is too long to be an email address"),
+    ).not.toHaveLength(0);
+    expect(actions.signUp).not.toHaveBeenCalled();
+  });
+
   it("requests a reset without exposing whether the account exists", async () => {
     render(<ForgotPasswordPage />);
     fireEvent.change(screen.getByTestId("fp-email"), {
@@ -275,6 +315,20 @@ describe("auth pages", () => {
     expect(navigation.push).toHaveBeenCalledWith(
       "/check-email?to=ada%40example.com",
     );
+  });
+
+  it("does not navigate when the shared reset-email contract rejects input", async () => {
+    render(<ForgotPasswordPage />);
+    fireEvent.change(screen.getByTestId("fp-email"), {
+      target: { value: `${"a".repeat(243)}@example.com` },
+    });
+    fireEvent.click(screen.getByTestId("fp-submit"));
+
+    expect(
+      await screen.findByText("That is too long to be an email address"),
+    ).toBeVisible();
+    expect(actions.requestPasswordReset).not.toHaveBeenCalled();
+    expect(navigation.push).not.toHaveBeenCalled();
   });
 
   it("unlocks the known session and reports a rejected password", async () => {

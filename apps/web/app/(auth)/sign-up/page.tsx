@@ -1,5 +1,6 @@
 "use client";
 
+import { signUpInputSchema } from "@repo/contracts/auth/schemas";
 import { Button } from "@repo/ui/button";
 import { Form, FormErrorSummary, FormField, useZodForm } from "@repo/ui/form";
 import { Input, PasswordInput } from "@repo/ui/input";
@@ -13,21 +14,8 @@ import { AuthDivider, AuthTitle } from "../_components/auth-chrome";
 import { SocialButtons } from "../_components/social-buttons";
 
 /** Sign up - Pencil `E06tAN` (light) and `ZPXtp` (dark). */
-const schema = z
-  .object({
-    email: z.email({ message: "Enter a valid email address" }),
-    username: z
-      .string()
-      .min(3, "User name must be at least 3 characters")
-      .max(32, "User name must be 32 characters or fewer")
-      .regex(
-        /^[a-zA-Z0-9_.-]+$/,
-        "Letters, numbers, dot, dash and underscore only",
-      ),
-    password: z
-      .string()
-      .min(8, "Password must be at least 8 characters")
-      .regex(/[0-9]/, "Password must contain a number"),
+const schema = signUpInputSchema
+  .extend({
     confirm: z.string().min(1, "Re-enter your password"),
   })
   .refine((v) => v.password === v.confirm, {
@@ -35,7 +23,7 @@ const schema = z
     path: ["confirm"],
   });
 
-type Values = z.infer<typeof schema>;
+type Values = z.output<typeof schema>;
 
 export default function SignUpPage() {
   const router = useRouter();

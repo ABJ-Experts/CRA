@@ -12,6 +12,7 @@ const user: RequestUser = Object.freeze({
   accessToken: "access-token",
   aal: "aal2",
 });
+const roleId = "33333333-3333-4333-8333-333333333333";
 
 function fixture() {
   const roles = {
@@ -61,22 +62,24 @@ describe("CustomRolesController", () => {
     const { controller, roles } = fixture();
     const patch = { name: "Escalations", isActive: false };
 
-    await expect(controller.update("role-1", patch, user)).resolves.toEqual({
+    await expect(
+      controller.update({ id: roleId }, patch, user),
+    ).resolves.toEqual({
       ok: true,
     });
-    await expect(controller.remove("role-1", user)).resolves.toEqual({
+    await expect(controller.remove({ id: roleId }, user)).resolves.toEqual({
       ok: true,
     });
     expect(roles.update).toHaveBeenCalledWith(
       "org-1",
       { id: "user-1", email: "owner@cra.test" },
-      "role-1",
+      roleId,
       patch,
     );
     expect(roles.remove).toHaveBeenCalledWith(
       "org-1",
       { id: "user-1", email: "owner@cra.test" },
-      "role-1",
+      roleId,
     );
   });
 

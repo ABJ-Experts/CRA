@@ -1,6 +1,15 @@
 import { Controller, Get } from "@nestjs/common";
+import {
+  livenessResponseSchema,
+  readinessResponseSchema,
+} from "@repo/contracts/system/schemas";
+import type {
+  LivenessResponse,
+  ReadinessResponse,
+} from "@repo/contracts/system/types";
 
 import { Public } from "../auth/auth.types";
+import { ZodResponse } from "../common/http/zod-response.interceptor";
 import { SupabaseService } from "../supabase/supabase.service";
 
 /**
@@ -20,12 +29,14 @@ export class HealthController {
   constructor(private readonly supabase: SupabaseService) {}
 
   @Get()
-  liveness(): { status: "ok"; uptime: number } {
+  @ZodResponse(livenessResponseSchema)
+  liveness(): LivenessResponse {
     return { status: "ok", uptime: Math.round(process.uptime()) };
   }
 
   @Get("ready")
-  async readiness(): Promise<{ status: "ok" | "degraded"; database: boolean }> {
+  @ZodResponse(readinessResponseSchema)
+  async readiness(): Promise<ReadinessResponse> {
     const database = await this.supabase.ping();
     return { status: database ? "ok" : "degraded", database };
   }

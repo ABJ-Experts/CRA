@@ -107,4 +107,14 @@ describe("securityApi", () => {
     ).rejects.toMatchObject({ kind: "api", status: 401 });
     expect(fetcher).toHaveBeenCalledTimes(3);
   });
+
+  it("rejects a malformed confirmation code before sending a request", async () => {
+    const fetcher = vi.fn();
+    vi.stubGlobal("fetch", fetcher);
+
+    await expect(
+      securityApi.confirmEnrollment("factor-1", "123"),
+    ).rejects.toMatchObject({ kind: "invalid_request" });
+    expect(fetcher).not.toHaveBeenCalled();
+  });
 });

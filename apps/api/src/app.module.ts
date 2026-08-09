@@ -3,6 +3,7 @@ import { ConfigModule } from "@nestjs/config";
 import { ThrottlerModule } from "@nestjs/throttler";
 
 import { AuthModule } from "./auth/auth.module";
+import { HttpBoundaryModule } from "./common/http/http-boundary.module";
 import { SecurityModule } from "./common/security/security.module";
 import { validateEnv } from "./config/env.validation";
 import { HealthController } from "./health/health.controller";
@@ -35,6 +36,7 @@ import { UsersModule } from "./users/users.module";
      */
     ThrottlerModule.forRoot([{ name: "default", ttl: 60_000, limit: 60 }]),
 
+    HttpBoundaryModule,
     SupabaseModule,
     MailModule,
     AuthModule,

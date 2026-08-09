@@ -12,12 +12,30 @@ import {
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { Throttle } from "@nestjs/throttler";
-import type { AuthNext } from "@repo/contracts/auth";
-import { twoFactorSchema } from "@repo/contracts/auth";
+import {
+  authNextResponseSchema,
+  mfaConfirmInputSchema,
+  mfaConfirmResponseSchema,
+  mfaEnrollmentResponseSchema,
+  mfaFactorParamSchema,
+  mfaFactorsResponseSchema,
+  twoFactorInputSchema,
+} from "@repo/contracts/auth/schemas";
+import type {
+  AuthNextResponse,
+  MfaConfirmInput,
+  MfaConfirmResponse,
+  MfaEnrollmentResponse,
+  MfaFactorParam,
+  MfaFactorsResponse,
+  TwoFactorInput,
+} from "@repo/contracts/auth/types";
+import { okResponseSchema } from "@repo/contracts/shared/schemas";
+import type { OkResponse } from "@repo/contracts/shared/types";
 import type { Response } from "express";
-import { z } from "zod";
 
-import { zodBody } from "../../common/pipes/zod-validation.pipe";
+import { ZodResponse } from "../../common/http/zod-response.interceptor";
+import { zodBody, zodParams } from "../../common/pipes/zod-validation.pipe";
 import {
   AllowMfaPending,
   CurrentUser,
@@ -32,14 +50,6 @@ import {
   type CookieConfig,
 } from "../cookies.util";
 import { MfaService } from "./mfa.service";
-
-const enrollConfirmSchema = z.object({
-  factorId: z.string().min(1),
-  code: z
-    .string()
-    .trim()
-    .regex(/^\d{6}$/, "Enter the 6-digit code"),
-});
 
 /**
  * Two-factor authentication.
@@ -75,7 +85,10 @@ export class MfaController {
   @SelfScoped("Enrols a second factor on the caller's own account.")
   @Post("mfa/enroll")
   @HttpCode(HttpStatus.OK)
-  async enroll(@CurrentUser() user: RequestUser) {
+  @ZodResponse(mfaEnrollmentResponseSchema)
+  async enroll(
+    @CurrentUser() user: RequestUser,
+  ): Promise<MfaEnrollmentResponse> {
     return this.mfa.enroll(user.accessToken);
   }
 
@@ -83,13 +96,13 @@ export class MfaController {
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @Post("mfa/enroll/confirm")
   @HttpCode(HttpStatus.OK)
+  @ZodResponse(mfaConfirmResponseSchema)
   async confirm(
-    @Body(zodBody(enrollConfirmSchema))
-    dto: z.infer<typeof enrollConfirmSchema>,
+    @Body(zodBody(mfaConfirmInputSchema)) dto: MfaConfirmInput,
     @CurrentUser() user: RequestUser,
     @Req() req: AuthedRequest,
     @Res({ passthrough: true }) res: Response,
-  ): Promise<{ recoveryCodes: string[] }> {
+  ): Promise<MfaConfirmResponse> {
     // Shown exactly once — only hashes are stored, so there is no way to
     // retrieve them later.
     const { recoveryCodes, tokens } = await this.mfa.confirmEnrollment(
@@ -107,17 +120,19 @@ export class MfaController {
 
   @SelfScoped("Reports the caller's own enrolled factors.")
   @Get("mfa/factors")
-  async factors(@CurrentUser() user: RequestUser) {
+  @ZodResponse(mfaFactorsResponseSchema)
+  async factors(@CurrentUser() user: RequestUser): Promise<MfaFactorsResponse> {
     return { enrolled: await this.mfa.hasVerifiedFactor(user.accessToken) };
   }
 
   @SelfScoped("Removes a factor from the caller's own account.")
   @Delete("mfa/factors/:id")
   @HttpCode(HttpStatus.OK)
+  @ZodResponse(okResponseSchema)
   async unenroll(
-    @Param("id") id: string,
+    @Param(zodParams(mfaFactorParamSchema)) { id }: MfaFactorParam,
     @CurrentUser() user: RequestUser,
-  ): Promise<{ ok: true }> {
+  ): Promise<OkResponse> {
     await this.mfa.unenroll(user.accessToken, user.id, id);
     return { ok: true };
   }
@@ -133,12 +148,13 @@ export class MfaController {
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @Post("two-factor/verify")
   @HttpCode(HttpStatus.OK)
+  @ZodResponse(authNextResponseSchema)
   async verifyTwoFactor(
-    @Body(zodBody(twoFactorSchema)) dto: { code: string; recovery: boolean },
+    @Body(zodBody(twoFactorInputSchema)) dto: TwoFactorInput,
     @CurrentUser() user: RequestUser,
     @Req() req: AuthedRequest,
     @Res({ passthrough: true }) res: Response,
-  ): Promise<{ next: AuthNext }> {
+  ): Promise<AuthNextResponse> {
     if (dto.recovery) {
       await this.mfa.redeemRecoveryCode(user.id, user.authUserId, dto.code);
     } else {

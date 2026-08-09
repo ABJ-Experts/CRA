@@ -7,22 +7,27 @@ import {
   HttpStatus,
   Post,
 } from "@nestjs/common";
-import type {
-  BaseRole,
-  PermissionKey,
-  PermissionSet,
-} from "@repo/contracts/permissions";
+import type { BaseRole, PermissionKey } from "@repo/contracts/permissions";
 import { PERMISSION_KEYS, isPermissionKey } from "@repo/contracts/permissions";
-import type { MenuKey } from "@repo/contracts/menu";
-import { z } from "zod";
+import {
+  checkPermissionsInputSchema,
+  checkPermissionsResponseSchema,
+  effectivePermissionsResponseSchema,
+  menuResponseSchema,
+  permissionCatalogueResponseSchema,
+} from "@repo/contracts/permissions/schemas";
+import type {
+  CheckPermissionsInput,
+  CheckPermissionsResponse,
+  EffectivePermissionsResponse,
+  MenuResponse,
+  PermissionCatalogueResponse,
+} from "@repo/contracts/permissions/types";
 
+import { ZodResponse } from "../common/http/zod-response.interceptor";
 import { zodBody } from "../common/pipes/zod-validation.pipe";
 import { CurrentUser, SelfScoped } from "../auth/auth.types";
 import { PermissionsService } from "./permissions.service";
-
-const checkSchema = z.object({
-  permissions: z.array(z.string()).min(1).max(50),
-});
 
 /**
  * What the web app reads to decide what to render.
@@ -45,15 +50,12 @@ export class PermissionsController {
    */
   @SelfScoped("Reports only the caller's own permissions.")
   @Get("effective")
+  @ZodResponse(effectivePermissionsResponseSchema)
   async effective(
     @CurrentUser("organizationId") orgId: string | null,
     @CurrentUser("id") userId: string,
     @CurrentUser("role") role: BaseRole | null,
-  ): Promise<{
-    organizationId: string | null;
-    role: BaseRole | null;
-    permissions: PermissionSet;
-  }> {
+  ): Promise<EffectivePermissionsResponse> {
     if (!orgId || !role) {
       // Not a member of anything yet — an empty set rather than an error, so the
       // app can render a "you have no organization" state instead of crashing.
@@ -71,11 +73,12 @@ export class PermissionsController {
   /** Which nav entries to render. */
   @SelfScoped("Reports only the caller's own menu visibility.")
   @Get("menu")
+  @ZodResponse(menuResponseSchema)
   async menu(
     @CurrentUser("organizationId") orgId: string | null,
     @CurrentUser("id") userId: string,
     @CurrentUser("role") role: BaseRole | null,
-  ): Promise<{ menu: MenuKey[] }> {
+  ): Promise<MenuResponse> {
     if (!orgId || !role) return { menu: [] };
     return { menu: await this.permissions.menu(orgId, userId, role) };
   }
@@ -84,12 +87,13 @@ export class PermissionsController {
   @SelfScoped("Checks only the caller's own permissions.")
   @Post("check")
   @HttpCode(HttpStatus.OK)
+  @ZodResponse(checkPermissionsResponseSchema)
   async check(
-    @Body(zodBody(checkSchema)) dto: { permissions: string[] },
+    @Body(zodBody(checkPermissionsInputSchema)) dto: CheckPermissionsInput,
     @CurrentUser("organizationId") orgId: string | null,
     @CurrentUser("id") userId: string,
     @CurrentUser("role") role: BaseRole | null,
-  ): Promise<{ results: Record<string, boolean> }> {
+  ): Promise<CheckPermissionsResponse> {
     if (!orgId || !role)
       throw new ForbiddenException({
         message: "You are not a member of any organization.",
@@ -117,7 +121,8 @@ export class PermissionsController {
   /** The full catalogue, for the admin matrix screen. */
   @SelfScoped("Static catalogue of permission keys; reveals no data.")
   @Get("catalogue")
-  catalogue(): { permissions: readonly PermissionKey[] } {
-    return { permissions: PERMISSION_KEYS };
+  @ZodResponse(permissionCatalogueResponseSchema)
+  catalogue(): PermissionCatalogueResponse {
+    return { permissions: [...PERMISSION_KEYS] };
   }
 }

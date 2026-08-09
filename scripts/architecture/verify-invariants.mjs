@@ -17,6 +17,8 @@ const RULE = Object.freeze({
   mswPassthrough: "[msw-passthrough]",
   menuNavParity: "[menu-nav-parity]",
   patternCatalog: "[pattern-catalog]",
+  zodBoundaries: "[zod-boundaries]",
+  frontendRendering: "[frontend-rendering]",
 });
 
 const GENERATED_DIRECTORIES = new Set([
@@ -267,6 +269,226 @@ function importedModuleSpecifiers(sourceFile) {
   return specifiers;
 }
 
+function importedBindingModules(sourceFile) {
+  const modules = new Map();
+  for (const statement of sourceFile.statements) {
+    if (
+      !ts.isImportDeclaration(statement) ||
+      !statement.importClause ||
+      !ts.isStringLiteralLike(statement.moduleSpecifier)
+    ) {
+      continue;
+    }
+    const specifier = statement.moduleSpecifier.text;
+    if (statement.importClause.name) {
+      modules.set(statement.importClause.name.text, specifier);
+    }
+    const bindings = statement.importClause.namedBindings;
+    if (bindings && ts.isNamespaceImport(bindings)) {
+      modules.set(bindings.name.text, specifier);
+    } else if (bindings && ts.isNamedImports(bindings)) {
+      for (const element of bindings.elements) {
+        modules.set(element.name.text, specifier);
+      }
+    }
+  }
+  return modules;
+}
+
+function rootIdentifier(expression) {
+  let current = unwrapExpression(expression);
+  while (ts.isPropertyAccessExpression(current)) {
+    current = unwrapExpression(current.expression);
+  }
+  return ts.isIdentifier(current) ? current.text : null;
+}
+
+function variableInitializers(sourceFile) {
+  const initializers = new Map();
+  for (const declaration of nodesWithin(sourceFile, ts.isVariableDeclaration)) {
+    if (ts.isIdentifier(declaration.name) && declaration.initializer) {
+      const declarations = initializers.get(declaration.name.text) ?? [];
+      initializers.set(declaration.name.text, [
+        ...declarations,
+        Object.freeze({
+          initializer: declaration.initializer,
+          scope: variableScope(declaration),
+        }),
+      ]);
+    }
+  }
+  return initializers;
+}
+
+function isLexicalScope(node) {
+  return (
+    ts.isSourceFile(node) ||
+    ts.isBlock(node) ||
+    ts.isModuleBlock(node) ||
+    ts.isCaseBlock(node) ||
+    ts.isForStatement(node) ||
+    ts.isForInStatement(node) ||
+    ts.isForOfStatement(node) ||
+    ts.isCatchClause(node)
+  );
+}
+
+function enclosingLexicalScope(node) {
+  let current = node.parent;
+  while (current && !isLexicalScope(current)) current = current.parent;
+  return current ?? node.getSourceFile();
+}
+
+function enclosingFunctionScope(node) {
+  let current = node.parent;
+  while (current && !ts.isSourceFile(current)) {
+    if (ts.isFunctionLike(current)) return current;
+    current = current.parent;
+  }
+  return current ?? node.getSourceFile();
+}
+
+function variableScope(declaration) {
+  const declarationList = declaration.parent;
+  const isBlockScoped =
+    ts.isVariableDeclarationList(declarationList) &&
+    (declarationList.flags & ts.NodeFlags.BlockScoped) !== 0;
+  return isBlockScoped
+    ? enclosingLexicalScope(declaration)
+    : enclosingFunctionScope(declaration);
+}
+
+function scopeContains(scope, node) {
+  let current = node;
+  while (current) {
+    if (current === scope) return true;
+    current = current.parent;
+  }
+  return false;
+}
+
+function scopeDepth(scope) {
+  let depth = 0;
+  let current = scope;
+  while (current.parent) {
+    depth += 1;
+    current = current.parent;
+  }
+  return depth;
+}
+
+function visibleVariable(identifier, variables) {
+  const candidates = (variables.get(identifier.text) ?? []).filter(
+    ({ scope }) => scopeContains(scope, identifier),
+  );
+  if (candidates.length === 0) return null;
+  const deepest = Math.max(...candidates.map(({ scope }) => scopeDepth(scope)));
+  const matches = candidates.filter(
+    ({ scope }) => scopeDepth(scope) === deepest,
+  );
+  return matches.length === 1 ? matches[0] : null;
+}
+
+function inspectableObjectProperties(expression, variables, seen = new Set()) {
+  if (!expression) return null;
+  const node = unwrapExpression(expression);
+  if (ts.isIdentifier(node)) {
+    const variable = visibleVariable(node, variables);
+    if (!variable || seen.has(variable)) return null;
+    return variable.initializer
+      ? inspectableObjectProperties(
+          variable.initializer,
+          variables,
+          new Set([...seen, variable]),
+        )
+      : null;
+  }
+  if (!ts.isObjectLiteralExpression(node)) return null;
+
+  const properties = new Map();
+  for (const property of node.properties) {
+    if (ts.isSpreadAssignment(property)) {
+      const spread = inspectableObjectProperties(
+        property.expression,
+        variables,
+        seen,
+      );
+      if (!spread) return null;
+      for (const [key, value] of spread) properties.set(key, value);
+      continue;
+    }
+    if (ts.isPropertyAssignment(property)) {
+      const key = propertyNameText(property.name);
+      if (!key) return null;
+      properties.set(key, property.initializer);
+      continue;
+    }
+    if (ts.isShorthandPropertyAssignment(property)) {
+      properties.set(property.name.text, property.name);
+      continue;
+    }
+    return null;
+  }
+  return properties;
+}
+
+function isSharedContractReference(
+  expression,
+  imports,
+  variables = new Map(),
+  seen = new Set(),
+) {
+  if (!expression) return false;
+  const node = unwrapExpression(expression);
+  const identifier = rootIdentifier(node);
+  const specifier = identifier ? imports.get(identifier) : undefined;
+  if (
+    specifier === "@repo/contracts" ||
+    specifier?.startsWith("@repo/contracts/")
+  ) {
+    return true;
+  }
+  if (ts.isIdentifier(node)) {
+    const variable = visibleVariable(node, variables);
+    if (!variable || seen.has(variable)) return false;
+    return variable.initializer
+      ? isSharedContractReference(
+          variable.initializer,
+          imports,
+          variables,
+          new Set([...seen, variable]),
+        )
+      : false;
+  }
+  if (ts.isCallExpression(node)) {
+    if (isSharedContractReference(node.expression, imports, variables, seen)) {
+      return true;
+    }
+    return (
+      callName(node) === "useMemo" &&
+      isSharedContractReference(node.arguments[0], imports, variables, seen)
+    );
+  }
+  if (ts.isArrowFunction(node) || ts.isFunctionExpression(node)) {
+    if (!ts.isBlock(node.body)) {
+      return isSharedContractReference(node.body, imports, variables, seen);
+    }
+    return nodesWithin(node.body, ts.isReturnStatement).some((statement) =>
+      isSharedContractReference(statement.expression, imports, variables, seen),
+    );
+  }
+  return false;
+}
+
+function reportNonSharedSchema(sourceFile, relativePath, expression, errors) {
+  const line = sourceFile.getLineAndCharacterOfPosition(
+    expression.getStart(sourceFile),
+  ).line;
+  errors.push(
+    `${RULE.zodBoundaries} ${relativePath}:${line + 1} must import its schema from @repo/contracts`,
+  );
+}
+
 function forbiddenProvider(specifier) {
   const lower = specifier.toLowerCase();
   if (lower === "express" || lower.startsWith("express/")) return "Express";
@@ -338,6 +560,267 @@ async function verifyWebFetch(rootDir, errors) {
         `${RULE.webFetch} ${relativePath}:${line + 1} calls fetch outside the central transport`,
       );
     }
+  }
+}
+
+function zodConstructorName(node) {
+  if (!ts.isCallExpression(node)) return null;
+  const expression = unwrapExpression(node.expression);
+  if (
+    !ts.isPropertyAccessExpression(expression) ||
+    !ts.isIdentifier(expression.expression) ||
+    expression.expression.text !== "z"
+  ) {
+    return null;
+  }
+  return expression.name.text;
+}
+
+async function verifyLocalWireSchemas(rootDir, errors) {
+  const roots = ["apps/api/src", "apps/web/app"];
+  for (const sourceRoot of roots) {
+    const files = await listSourceFiles(rootDir, sourceRoot);
+    for (const absolutePath of files) {
+      const relativePath = displayPath(rootDir, absolutePath);
+      if (
+        isTestFile(relativePath) ||
+        (!relativePath.endsWith(".controller.ts") &&
+          !relativePath.endsWith(".api.ts") &&
+          !relativePath.endsWith("auth-actions.ts"))
+      ) {
+        continue;
+      }
+      const source = await readFile(absolutePath, "utf8");
+      const sourceFile = parseTypeScript(relativePath, source);
+      const constructor = nodesWithin(
+        sourceFile,
+        (node) => zodConstructorName(node) !== null,
+      )[0];
+      if (!constructor) continue;
+      const line = sourceFile.getLineAndCharacterOfPosition(
+        constructor.getStart(sourceFile),
+      ).line;
+      errors.push(
+        `${RULE.zodBoundaries} ${relativePath}:${line + 1} declares a wire schema outside @repo/contracts`,
+      );
+    }
+  }
+}
+
+async function verifyContractSchemaTypeFolders(rootDir, errors) {
+  const contractsRoot = join(rootDir, "packages/contracts/src");
+  let entries;
+  try {
+    entries = await readdir(contractsRoot, { withFileTypes: true });
+  } catch (error) {
+    if (error?.code === "ENOENT") return;
+    throw error;
+  }
+
+  for (const entry of entries.filter((candidate) => candidate.isDirectory())) {
+    const featureRoot = join(contractsRoot, entry.name);
+    const featureEntries = await readdir(featureRoot, { withFileTypes: true });
+    const hasSchemas = featureEntries.some(
+      (candidate) => candidate.isDirectory() && candidate.name === "schemas",
+    );
+    const hasTypes = featureEntries.some(
+      (candidate) => candidate.isDirectory() && candidate.name === "types",
+    );
+    if (hasSchemas !== hasTypes) {
+      errors.push(
+        `${RULE.zodBoundaries} packages/contracts/src/${entry.name} must keep schemas/ and types/ as a pair`,
+      );
+    }
+  }
+
+  const files = await listSourceFiles(rootDir, "packages/contracts/src");
+  for (const absolutePath of files) {
+    const relativePath = displayPath(rootDir, absolutePath);
+    if (isTestFile(relativePath) || !relativePath.includes("/types/")) continue;
+    const source = await readFile(absolutePath, "utf8");
+    const sourceFile = parseTypeScript(relativePath, source);
+    for (const declaration of nodesWithin(
+      sourceFile,
+      (node) =>
+        ts.isInterfaceDeclaration(node) || ts.isTypeAliasDeclaration(node),
+    )) {
+      const name = declaration.name?.text ?? "";
+      if (!/(?:Input|Output|Response|Params?|Body)$/.test(name)) continue;
+      const declaredText = declaration.getText(sourceFile);
+      if (
+        ts.isInterfaceDeclaration(declaration) ||
+        (!declaredText.includes("z.output<") &&
+          !declaredText.includes("z.input<"))
+      ) {
+        errors.push(
+          `${RULE.zodBoundaries} ${relativePath}#${name} must derive from z.input or z.output`,
+        );
+      }
+    }
+  }
+}
+
+function hasDecorator(node, names) {
+  return decoratorsOf(node).some((decorator) => {
+    const expression = unwrapExpression(decorator.expression);
+    return names.has(
+      ts.isCallExpression(expression)
+        ? identifierText(expression.expression)
+        : identifierText(expression),
+    );
+  });
+}
+
+async function verifyControllerZodBoundaries(rootDir, errors) {
+  const files = await listSourceFiles(rootDir, "apps/api/src");
+  const responseDecorators = new Set(["ZodResponse", "NonJsonResponse"]);
+  const parameterParsers = new Map([
+    ["Body", "zodBody"],
+    ["Query", "zodQuery"],
+    ["Param", "zodParams"],
+  ]);
+
+  for (const absolutePath of files) {
+    const relativePath = displayPath(rootDir, absolutePath);
+    if (isTestFile(relativePath) || !relativePath.endsWith(".controller.ts"))
+      continue;
+    const source = await readFile(absolutePath, "utf8");
+    const sourceFile = parseTypeScript(relativePath, source);
+    const imports = importedBindingModules(sourceFile);
+    const variables = variableInitializers(sourceFile);
+    for (const method of nodesWithin(sourceFile, ts.isMethodDeclaration)) {
+      const route = decoratorsByName(method).find((decorator) =>
+        ROUTE_DECORATORS.has(decorator.name),
+      );
+      if (!route) continue;
+      const methodName = propertyNameText(method.name) ?? "<computed>";
+      if (!hasDecorator(method, responseDecorators)) {
+        errors.push(
+          `${RULE.zodBoundaries} ${relativePath}#${methodName} lacks ZodResponse or NonJsonResponse`,
+        );
+      }
+      const responseDecorator = decoratorsByName(method).find(
+        (decorator) => decorator.name === "ZodResponse",
+      );
+      const responseSchema = responseDecorator?.arguments[0];
+      if (
+        responseSchema &&
+        !isSharedContractReference(responseSchema, imports, variables)
+      ) {
+        reportNonSharedSchema(sourceFile, relativePath, responseSchema, errors);
+      }
+
+      for (const parameter of method.parameters) {
+        for (const decorator of decoratorsOf(parameter)) {
+          const expression = unwrapExpression(decorator.expression);
+          if (!ts.isCallExpression(expression)) continue;
+          const boundary = identifierText(expression.expression);
+          const expectedParser = parameterParsers.get(boundary);
+          if (!expectedParser) continue;
+          const parserCall = nodesWithin(
+            expression,
+            (node) =>
+              ts.isCallExpression(node) && callName(node) === expectedParser,
+          )[0];
+          if (!parserCall) {
+            errors.push(
+              `${RULE.zodBoundaries} ${relativePath}#${methodName} ${boundary} lacks ${expectedParser}`,
+            );
+          } else {
+            const requestSchema = parserCall.arguments[0];
+            if (
+              requestSchema &&
+              !isSharedContractReference(requestSchema, imports, variables)
+            ) {
+              reportNonSharedSchema(
+                sourceFile,
+                relativePath,
+                requestSchema,
+                errors,
+              );
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+async function verifyWebRequestSchemas(rootDir, errors) {
+  const files = await listSourceFiles(rootDir, "apps/web/app");
+  for (const absolutePath of files) {
+    const relativePath = displayPath(rootDir, absolutePath);
+    if (isTestFile(relativePath)) continue;
+    const source = await readFile(absolutePath, "utf8");
+    const sourceFile = parseTypeScript(relativePath, source);
+    const imports = importedBindingModules(sourceFile);
+    const variables = variableInitializers(sourceFile);
+    const isAuthActions = relativePath.endsWith("auth-actions.ts");
+    for (const call of nodesWithin(sourceFile, ts.isCallExpression)) {
+      const name = callName(call);
+      const isTransportCall = [
+        "requestJson",
+        "authenticatedRequestJson",
+      ].includes(name);
+      const isAuthActionCall = isAuthActions && name === "post";
+      if (!isTransportCall && !isAuthActionCall) continue;
+      const options = isAuthActionCall ? call.arguments[2] : call.arguments[0];
+      if (!options) continue;
+      const properties = inspectableObjectProperties(options, variables);
+      if (!properties) {
+        const line = sourceFile.getLineAndCharacterOfPosition(
+          call.getStart(sourceFile),
+        ).line;
+        errors.push(
+          `${RULE.zodBoundaries} ${relativePath}:${line + 1} must use statically inspectable options`,
+        );
+        continue;
+      }
+      const keys = new Set(properties.keys());
+      if (isTransportCall && keys.has("body") && !keys.has("inputSchema")) {
+        const line = sourceFile.getLineAndCharacterOfPosition(
+          call.getStart(sourceFile),
+        ).line;
+        errors.push(
+          `${RULE.zodBoundaries} ${relativePath}:${line + 1} sends a body without inputSchema`,
+        );
+      }
+      if ((isTransportCall && !isAuthActions) || isAuthActionCall) {
+        for (const [key, initializer] of properties) {
+          if (
+            !["schema", "inputSchema"].includes(key) ||
+            isSharedContractReference(initializer, imports, variables)
+          ) {
+            continue;
+          }
+          reportNonSharedSchema(sourceFile, relativePath, initializer, errors);
+        }
+      }
+    }
+  }
+}
+
+async function verifyFrontendRendering(rootDir, errors) {
+  const files = await listSourceFiles(rootDir, "apps/web/app");
+  for (const absolutePath of files) {
+    const relativePath = displayPath(rootDir, absolutePath);
+    if (
+      isTestFile(relativePath) ||
+      !relativePath.endsWith(".tsx") ||
+      relativePath.endsWith("error-boundary.tsx")
+    ) {
+      continue;
+    }
+    const source = await readFile(absolutePath, "utf8");
+    const sourceFile = parseTypeScript(relativePath, source);
+    const classDeclaration = nodesWithin(sourceFile, ts.isClassDeclaration)[0];
+    if (!classDeclaration) continue;
+    const line = sourceFile.getLineAndCharacterOfPosition(
+      classDeclaration.getStart(sourceFile),
+    ).line;
+    errors.push(
+      `${RULE.frontendRendering} ${relativePath}:${line + 1} keeps logic/rendering in a class; use a plain .ts logic class and functional JSX`,
+    );
   }
 }
 
@@ -1128,6 +1611,11 @@ export async function verifyInvariants(rootDir) {
   const errors = [];
   await verifyCoreImports(rootDir, errors);
   await verifyWebFetch(rootDir, errors);
+  await verifyLocalWireSchemas(rootDir, errors);
+  await verifyContractSchemaTypeFolders(rootDir, errors);
+  await verifyControllerZodBoundaries(rootDir, errors);
+  await verifyWebRequestSchemas(rootDir, errors);
+  await verifyFrontendRendering(rootDir, errors);
   await verifyTenantServiceRoleMethods(rootDir, errors);
   await verifyControllerRoutes(rootDir, errors);
   await verifyRefreshCookiePath(rootDir, errors);

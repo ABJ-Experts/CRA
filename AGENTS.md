@@ -61,4 +61,7 @@ and use the selection matrix in
 - Security-critical effects are synchronous or transactionally durable. Browser state is never an authorization source.
 - Write the failing test first and maintain at least 80% coverage for every new or materially refactored module.
 - Preserve the API, cookies, auth-action signatures, permission merge order, mock namespace, and menu behavior documented above.
+- Every cross-application API contract lives feature-first in `@repo/contracts`: runtime schemas under `<feature>/schemas/` and parsed wire types under `<feature>/types/`. Derive trusted request and response types with `z.output<typeof schema>`; use `z.input` only for values that have not been parsed yet. Do not duplicate DTO shapes in controllers or web API files.
+- Parse every consumed body, query, and path parameter before application logic, and parse every successful JSON response before serialization. Web callers provide both `inputSchema` for outgoing bodies and `schema` for incoming responses.
+- Keep React/Next rendering components functional. Put stateful, injected transport, gateway, adapter, or workflow logic in focused plain TypeScript classes in `.ts` files when a real lifecycle or dependency boundary exists. Keep pure policies as immutable functions; React class components are reserved for error boundaries or a documented third-party lifecycle constraint.
 - Follow the execution checklist in `docs/ai/coding-rules.md` before considering a feature complete.

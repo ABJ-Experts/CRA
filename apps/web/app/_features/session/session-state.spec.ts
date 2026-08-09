@@ -1,3 +1,4 @@
+import type { SessionResponse } from "@repo/contracts/auth/types";
 import { describe, expect, it } from "vitest";
 
 import { deriveSessionState } from "./session-state";
@@ -126,7 +127,7 @@ describe("deriveSessionState", () => {
           role: "viewer",
         },
       ],
-    };
+    } satisfies SessionResponse;
 
     const state = deriveSessionState({
       enabled: true,

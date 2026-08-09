@@ -74,8 +74,9 @@ async function bootstrap(): Promise<void> {
    * enforce. Two systems means two sets of rules to keep in step, and the day
    * they diverge the server is laxer than the client.
    *
-   * Every endpoint validates its body with `zodBody(schema)` instead, which
-   * also emits `fieldErrors` in exactly the shape the screens expect.
+   * Every consumed body, query, and parameter is parsed through the matching
+   * Zod boundary helper. The global HTTP boundary interceptor separately
+   * parses successful outputs before they are serialized.
    */
   app.enableShutdownHooks();
 

@@ -102,6 +102,28 @@ describe("AllExceptionsFilter", () => {
     });
   });
 
+  it("drops malformed exception metadata before parsing the error contract", () => {
+    const { filter, host, json } = fixture();
+
+    expect(() =>
+      filter.catch(
+        new HttpException(
+          {
+            message: [42, "Choose another value"],
+            code: 99,
+            fieldErrors: { email: 42 },
+          },
+          HttpStatus.BAD_REQUEST,
+        ),
+        host,
+      ),
+    ).not.toThrow();
+    expect(json).toHaveBeenCalledWith({
+      statusCode: HttpStatus.BAD_REQUEST,
+      message: "Choose another value",
+    });
+  });
+
   it("removes internal messages and metadata from server errors", () => {
     const { filter, host, status, json } = fixture();
     const exception = new HttpException(
