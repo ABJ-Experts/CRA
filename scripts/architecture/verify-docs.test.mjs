@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
 
@@ -49,6 +49,22 @@ async function writePolicyShell(root, { matrix, template }) {
   );
 }
 
+async function copyRepositoryPolicy(root) {
+  const paths = [
+    "AGENTS.md",
+    "docs/ai/coding-rules.md",
+    "docs/architecture/README.md",
+    "docs/architecture/pattern-selection-matrix.md",
+    "docs/architecture/feature-design-template.md",
+    "docs/architecture/adrs/ADR-0001-pattern-selection.md",
+  ];
+  for (const path of paths) {
+    const target = join(root, path);
+    await mkdir(dirname(target), { recursive: true });
+    await writeFile(target, await readFile(join(process.cwd(), path), "utf8"));
+  }
+}
+
 test("requires all 22 pattern names and feature decision questions", async (t) => {
   const root = await temporaryRoot(t);
   await mkdir(join(root, "docs", "architecture"), { recursive: true });
@@ -68,7 +84,43 @@ test("requires all 22 pattern names and feature decision questions", async (t) =
 });
 
 test("accepts the repository architecture policy", async () => {
-  assert.deepEqual(await verifyArchitectureDocs(process.cwd()), []);
+  const errors = await verifyArchitectureDocs(process.cwd());
+
+  assert.deepEqual(
+    errors.filter((error) => !error.startsWith("AGENTS.md")),
+    [],
+  );
+});
+
+test("requires enforceable architecture rules in the root agent guide", async () => {
+  const errors = await verifyArchitectureDocs(process.cwd());
+
+  assert.deepEqual(
+    errors.filter((error) => error.startsWith("AGENTS.md")),
+    [],
+  );
+});
+
+test("rejects an agent guide that makes the feature template a quota", async (t) => {
+  const root = await temporaryRoot(t);
+  await copyRepositoryPolicy(root);
+  const agentPath = join(root, "AGENTS.md");
+  const agentGuide = await readFile(agentPath, "utf8");
+  await writeFile(
+    agentPath,
+    agentGuide.replace(
+      /Before a feature\s+introduces a new abstraction, provider, state machine, cross-feature dependency,\s+or persistent workflow, complete/,
+      "For every feature, complete",
+    ),
+  );
+
+  const errors = await verifyArchitectureDocs(root);
+
+  assert.ok(
+    errors.some((error) =>
+      error.includes("Before a feature introduces a new abstraction"),
+    ),
+  );
 });
 
 test("reports every missing required document instead of throwing", async (t) => {
@@ -77,6 +129,8 @@ test("reports every missing required document instead of throwing", async (t) =>
   const errors = await verifyArchitectureDocs(root);
 
   for (const path of [
+    "AGENTS.md",
+    "docs/ai/coding-rules.md",
     "docs/architecture/README.md",
     "docs/architecture/pattern-selection-matrix.md",
     "docs/architecture/feature-design-template.md",
@@ -104,6 +158,28 @@ test("requires real pattern blocks and template headings", async (t) => {
   assert.ok(
     errors.some((error) =>
       error.includes("Feature template is missing heading ## Rollback"),
+    ),
+  );
+});
+
+test("requires the detailed coding workflow and completion gates", async (t) => {
+  const root = await temporaryRoot(t);
+  await mkdir(join(root, "docs", "ai"), { recursive: true });
+  await writeFile(
+    join(root, "docs", "ai", "coding-rules.md"),
+    "# Coding rules\n## Required sequence\n",
+  );
+
+  const errors = await verifyArchitectureDocs(root);
+
+  assert.ok(
+    errors.some((error) =>
+      error.includes("Coding rules are missing heading ## Completion gate"),
+    ),
+  );
+  assert.ok(
+    errors.some((error) =>
+      error.includes("Never automatically retry a POST/PATCH"),
     ),
   );
 });

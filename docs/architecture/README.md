@@ -82,6 +82,11 @@ smallest suitable design, and complete the
 new abstraction. The governing decision is
 [ADR-0001](./adrs/ADR-0001-pattern-selection.md).
 
+Developers and coding agents must also follow the
+[implementation checklist](../ai/coding-rules.md). The short, always-loaded
+rules live in the root `AGENTS.md`; the detailed documents explain their
+rationale and must not weaken them.
+
 ## Verification
 
 Architecture documents are executable policy:
