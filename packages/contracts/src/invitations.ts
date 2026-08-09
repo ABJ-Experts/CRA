@@ -16,7 +16,7 @@ export const invitationSchema = z
     email: z.email(),
     role: z.enum(BASE_ROLES),
     status: invitationStatusSchema,
-    expiresAt: z.iso.datetime(),
+    expiresAt: z.iso.datetime({ offset: true }),
   })
   .strict();
 

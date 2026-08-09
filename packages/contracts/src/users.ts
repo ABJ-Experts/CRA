@@ -21,7 +21,7 @@ export const memberSchema = z
     jobTitle: z.string().nullable(),
     isActive: z.boolean(),
     role: z.enum(BASE_ROLES),
-    joinedAt: z.iso.datetime(),
+    joinedAt: z.iso.datetime({ offset: true }),
     roles: z.array(memberRoleSummarySchema),
   })
   .strict();
