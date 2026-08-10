@@ -66,6 +66,8 @@ describe("sessionApi", () => {
           });
         case "/api/v1/permissions/menu":
           return jsonResponse({ menu: ["dashboard", "ecommerce.orders"] });
+        case "/api/v1/auth/sign-out":
+          return jsonResponse({ ok: true });
         default:
           throw new Error("unexpected request");
       }
@@ -81,6 +83,14 @@ describe("sessionApi", () => {
       "dashboard",
       "ecommerce.orders",
     ]);
+    await expect(sessionApi.signOut({ fetcher })).resolves.toEqual({
+      ok: true,
+    });
+
+    expect(fetcher).toHaveBeenCalledWith(
+      "/api/v1/auth/sign-out",
+      expect.objectContaining({ method: "POST" }),
+    );
   });
 
   it.each([

@@ -7,6 +7,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { NAV, type NavItem, type NavSection } from "./nav-config";
+import { SignOutButton } from "./sign-out-button";
 import { useCanViewMenu } from "../../_providers/session-provider";
 import { getStoredCollapsed, storeCollapsed } from "./sidebar-collapse";
 
@@ -423,6 +424,8 @@ export function Sidebar() {
             </span>
           ) : null}
         </div>
+
+        <SignOutButton collapsed={collapsed} />
 
         {!collapsed ? (
           <div className="flex flex-col gap-[3px]">

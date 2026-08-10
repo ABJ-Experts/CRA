@@ -123,6 +123,7 @@ async function supabase(
 export class RunScopedAccounts {
   private readonly accounts: TestAccount[] = [];
   private readonly invitationIds = new Set<string>();
+  private readonly organizationIds = new Set<string>();
   private sequence = 0;
 
   constructor(private readonly testInfo: TestInfo) {}
@@ -201,6 +202,14 @@ export class RunScopedAccounts {
     this.invitationIds.add(id);
   }
 
+  /**
+   * M1 profiles retain creation and update actors, so their user must be
+   * deleted only after the organization cascade has removed those references.
+   */
+  trackOrganization(id: string): void {
+    this.organizationIds.add(id);
+  }
+
   async invitationToken(email: string): Promise<string> {
     const response = await supabase(
       `/rest/v1/invitations?select=token_hash&email=eq.${encodeURIComponent(email)}&status=eq.pending`,
@@ -240,6 +249,17 @@ export class RunScopedAccounts {
   }
 
   async cleanup(): Promise<void> {
+    for (const id of this.organizationIds) {
+      const response = await supabase(
+        `/rest/v1/organizations?id=eq.${encodeURIComponent(id)}`,
+        { method: "DELETE" },
+      );
+      if (!response.ok) {
+        throw new Error(
+          `Could not clean organization fixture ${id}: ${JSON.stringify(await responseBody(response))}`,
+        );
+      }
+    }
     for (const id of this.invitationIds) {
       await supabase(
         `/rest/v1/audit_logs?entity_id=eq.${encodeURIComponent(id)}`,
@@ -250,10 +270,15 @@ export class RunScopedAccounts {
       });
     }
     for (const account of this.accounts) {
-      await supabase(
-        `/rest/v1/login_attempts?email=eq.${encodeURIComponent(account.email)}`,
+      const loginAttempts = await supabase(
+        `/rest/v1/auth_login_attempts?email=eq.${encodeURIComponent(account.email)}`,
         { method: "DELETE" },
       );
+      if (!loginAttempts.ok) {
+        throw new Error(
+          `Could not clean login-attempt fixture: ${JSON.stringify(await responseBody(loginAttempts))}`,
+        );
+      }
       const response = await supabase(
         `/auth/v1/admin/users/${encodeURIComponent(account.authUserId)}`,
         {

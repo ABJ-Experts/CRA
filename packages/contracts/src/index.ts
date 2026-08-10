@@ -6,3 +6,4 @@ export * from "./http.js";
 export * from "./users.js";
 export * from "./invitations.js";
 export * from "./roles.js";
+export * from "./organizations.js";

@@ -3,6 +3,10 @@
 import "@testing-library/jest-dom/vitest";
 
 import {
+  QueryClient,
+  QueryClientProvider,
+} from "@tanstack/react-query";
+import {
   cleanup,
   fireEvent,
   render,
@@ -17,10 +21,13 @@ import { SIDEBAR_ATTR, SIDEBAR_STORAGE_KEY } from "./sidebar-collapse";
 const state = vi.hoisted(() => ({
   pathname: "/dashboard/tables/basic",
   canView: (key: string) => key.length > 0,
+  replace: vi.fn(),
+  refresh: vi.fn(),
 }));
 
 vi.mock("next/navigation", () => ({
   usePathname: () => state.pathname,
+  useRouter: () => ({ replace: state.replace, refresh: state.refresh }),
 }));
 vi.mock("../../_providers/session-provider", () => ({
   useCanViewMenu: () => state.canView,
@@ -28,9 +35,23 @@ vi.mock("../../_providers/session-provider", () => ({
 
 import { Sidebar } from "./sidebar";
 
+function renderSidebar() {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
+
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <Sidebar />
+    </QueryClientProvider>,
+  );
+}
+
 beforeEach(() => {
   state.pathname = "/dashboard/tables/basic";
   state.canView = () => true;
+  state.replace.mockReset();
+  state.refresh.mockReset();
   localStorage.clear();
   document.documentElement.removeAttribute(SIDEBAR_ATTR);
 });
@@ -44,7 +65,7 @@ afterEach(() => {
 
 describe("Sidebar", () => {
   it("opens the active group and identifies the current nested route", () => {
-    render(<Sidebar />);
+    renderSidebar();
 
     expect(screen.getByRole("navigation", { name: "Main" })).toBeVisible();
     expect(screen.getByRole("link", { name: "CRA" })).toHaveAttribute(
@@ -59,12 +80,13 @@ describe("Sidebar", () => {
       "aria-current",
       "page",
     );
+    expect(screen.getByRole("button", { name: "Sign out" })).toBeVisible();
     expect(screen.getByText("99+")).toBeVisible();
   });
 
   it("persists collapse and restores the expanded rail", async () => {
     const user = userEvent.setup();
-    render(<Sidebar />);
+    renderSidebar();
 
     await user.click(screen.getByRole("button", { name: "Collapse sidebar" }));
     expect(
@@ -84,7 +106,7 @@ describe("Sidebar", () => {
   it("opens and closes expandable groups without mutating the nav contract", async () => {
     const user = userEvent.setup();
     state.pathname = "/dashboard/messages";
-    render(<Sidebar />);
+    renderSidebar();
     const tables = screen.getByRole("button", { name: "Tables" });
 
     expect(tables).toHaveAttribute("aria-expanded", "false");
@@ -97,7 +119,7 @@ describe("Sidebar", () => {
   it("filters unauthorized children and removes empty groups", () => {
     const allowed = new Set(["dashboard", "dashboard.analytics", "messages"]);
     state.canView = (key) => allowed.has(key);
-    render(<Sidebar />);
+    renderSidebar();
 
     expect(screen.getByRole("button", { name: /Dashboard/ })).toBeVisible();
     expect(screen.getByRole("link", { name: "Analytics" })).toBeInTheDocument();
@@ -110,7 +132,7 @@ describe("Sidebar", () => {
 
   it("opens and dismisses the mobile drawer", async () => {
     const user = userEvent.setup();
-    render(<Sidebar />);
+    renderSidebar();
     const open = screen.getByRole("button", { name: "Open navigation" });
 
     await user.click(open);

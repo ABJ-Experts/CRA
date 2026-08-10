@@ -20,6 +20,9 @@ function fixture() {
     list: jest.fn().mockResolvedValue([{ id: "invitation-1" }]),
     create: jest.fn().mockResolvedValue({ id: "invitation-2" }),
     accept: jest.fn().mockResolvedValue(accepted),
+    resend: jest
+      .fn()
+      .mockResolvedValue({ id: invitationId, delivery: "confirmed" }),
     revoke: jest.fn().mockResolvedValue(undefined),
   };
   return {
@@ -67,6 +70,19 @@ describe("InvitationsController", () => {
       id: "owner-1",
       email: "owner@cra.test",
     });
+  });
+
+  it("resends a scoped invitation with no caller-controlled delivery fields", async () => {
+    const { controller, invitations } = fixture();
+
+    await expect(
+      controller.resend({}, { id: invitationId }, user),
+    ).resolves.toEqual({ id: invitationId, delivery: "confirmed" });
+    expect(invitations.resend).toHaveBeenCalledWith(
+      "org-1",
+      { id: "owner-1", email: "owner@cra.test" },
+      invitationId,
+    );
   });
 
   it("revokes an invitation within the active organization", async () => {

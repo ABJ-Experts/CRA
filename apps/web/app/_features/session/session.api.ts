@@ -3,9 +3,11 @@ import {
   effectivePermissionsResponseSchema,
   menuResponseSchema,
 } from "@repo/contracts/permissions/schemas";
+import { okResponseSchema } from "@repo/contracts/shared/schemas";
 export type { EffectivePermissionsResponse } from "@repo/contracts/permissions/types";
 
 import { authenticatedRequestJson } from "../../_lib/http/authenticated-request";
+import { requestJson } from "../../_lib/http/api-client";
 
 export interface SessionRequestOptions {
   readonly signal?: AbortSignal;
@@ -40,6 +42,16 @@ export class SessionApi {
       fetcher: options.fetcher,
     });
     return response.menu;
+  }
+
+  signOut(options: SessionRequestOptions = {}) {
+    return requestJson({
+      path: "/api/v1/auth/sign-out",
+      method: "POST",
+      schema: okResponseSchema,
+      signal: options.signal,
+      fetcher: options.fetcher,
+    });
   }
 }
 

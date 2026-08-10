@@ -4,6 +4,7 @@ import type {
   acceptInvitationInputSchema,
   createInvitationInputSchema,
   invitationIdParamSchema,
+  resendInvitationInputSchema,
 } from "../schemas/index.js";
 
 export type CreateInvitationInput = z.output<
@@ -11,5 +12,8 @@ export type CreateInvitationInput = z.output<
 >;
 export type AcceptInvitationInput = z.output<
   typeof acceptInvitationInputSchema
+>;
+export type ResendInvitationInput = z.output<
+  typeof resendInvitationInputSchema
 >;
 export type InvitationIdParam = z.output<typeof invitationIdParamSchema>;

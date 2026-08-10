@@ -5,7 +5,10 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const navigation = vi.hoisted(() => ({ pathname: "/dashboard" }));
+const navigation = vi.hoisted(() => ({
+  pathname: "/dashboard",
+  replace: vi.fn(),
+}));
 const table = vi.hoisted(() => ({
   refetch: vi.fn(),
   setPage: vi.fn(),
@@ -16,6 +19,10 @@ const table = vi.hoisted(() => ({
 
 vi.mock("next/navigation", () => ({
   usePathname: () => navigation.pathname,
+  useRouter: () => ({ replace: navigation.replace }),
+}));
+vi.mock("./_components/dashboard-onboarding-resume", () => ({
+  DashboardOnboardingResume: () => null,
 }));
 vi.mock("./_lib/use-table-query", () => ({
   useTableQuery: () => ({

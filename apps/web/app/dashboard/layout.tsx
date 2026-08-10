@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Sidebar } from "../_components/sidebar/sidebar";
 import { DashboardTopNav } from "./_components/dashboard-top-nav";
+import { DashboardOnboardingGate } from "./_components/dashboard-onboarding-gate";
 
 /**
  * The shell every dashboard and table screen sits in, matching the frames:
@@ -16,7 +17,9 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       <Sidebar />
       <div className="flex min-w-0 flex-1 flex-col">
         <DashboardTopNav />
-        <main className="min-w-0 flex-1">{children}</main>
+        <main className="min-w-0 flex-1">
+          <DashboardOnboardingGate>{children}</DashboardOnboardingGate>
+        </main>
       </div>
     </div>
   );

@@ -9,6 +9,7 @@ import { validateEnv } from "./config/env.validation";
 import { HealthController } from "./health/health.controller";
 import { MailModule } from "./mail/mail.module";
 import { InvitationsModule } from "./invitations/invitations.module";
+import { OrganizationsModule } from "./organizations/organizations.module";
 import { PermissionsModule } from "./permissions/permissions.module";
 import { SupabaseModule } from "./supabase/supabase.module";
 import { UsersModule } from "./users/users.module";
@@ -43,6 +44,7 @@ import { UsersModule } from "./users/users.module";
     PermissionsModule,
     SecurityModule,
     UsersModule,
+    OrganizationsModule,
     InvitationsModule,
   ],
   controllers: [HealthController],

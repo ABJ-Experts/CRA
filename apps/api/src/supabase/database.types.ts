@@ -319,11 +319,14 @@ export type Database = {
           created_at: string
           custom_role_id: string | null
           declined_at: string | null
+          delivery_attempts: number
+          delivery_confirmed_at: string | null
           email: string
           expires_at: string
           first_name: string | null
           id: string
           invited_by: string | null
+          last_delivery_attempt_at: string | null
           last_name: string | null
           organization_id: string
           revoked_at: string | null
@@ -336,11 +339,14 @@ export type Database = {
           created_at?: string
           custom_role_id?: string | null
           declined_at?: string | null
+          delivery_attempts?: number
+          delivery_confirmed_at?: string | null
           email: string
           expires_at: string
           first_name?: string | null
           id?: string
           invited_by?: string | null
+          last_delivery_attempt_at?: string | null
           last_name?: string | null
           organization_id: string
           revoked_at?: string | null
@@ -353,11 +359,14 @@ export type Database = {
           created_at?: string
           custom_role_id?: string | null
           declined_at?: string | null
+          delivery_attempts?: number
+          delivery_confirmed_at?: string | null
           email?: string
           expires_at?: string
           first_name?: string | null
           id?: string
           invited_by?: string | null
+          last_delivery_attempt_at?: string | null
           last_name?: string | null
           organization_id?: string
           revoked_at?: string | null
@@ -497,6 +506,130 @@ export type Database = {
           },
         ]
       }
+      organization_creation_idempotencies: {
+        Row: {
+          created_at: string
+          idempotency_key: string
+          organization_id: string
+          request_digest: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          idempotency_key: string
+          organization_id: string
+          request_digest: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          idempotency_key?: string
+          organization_id?: string
+          request_digest?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_creation_idempotencies_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_creation_idempotencies_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organization_legal_profiles: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          legal_name: string
+          main_establishment_country: string
+          manufacturer_contact_email: string
+          manufacturer_contact_name: string
+          manufacturer_contact_phone: string | null
+          organization_id: string
+          registered_address_administrative_area: string | null
+          registered_address_country: string
+          registered_address_line_1: string
+          registered_address_line_2: string | null
+          registered_address_locality: string
+          registered_address_postal_code: string
+          updated_at: string
+          updated_by: string
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          legal_name: string
+          main_establishment_country: string
+          manufacturer_contact_email: string
+          manufacturer_contact_name: string
+          manufacturer_contact_phone?: string | null
+          organization_id: string
+          registered_address_administrative_area?: string | null
+          registered_address_country: string
+          registered_address_line_1: string
+          registered_address_line_2?: string | null
+          registered_address_locality: string
+          registered_address_postal_code: string
+          updated_at?: string
+          updated_by: string
+          version?: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          legal_name?: string
+          main_establishment_country?: string
+          manufacturer_contact_email?: string
+          manufacturer_contact_name?: string
+          manufacturer_contact_phone?: string | null
+          organization_id?: string
+          registered_address_administrative_area?: string | null
+          registered_address_country?: string
+          registered_address_line_1?: string
+          registered_address_line_2?: string | null
+          registered_address_locality?: string
+          registered_address_postal_code?: string
+          updated_at?: string
+          updated_by?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_legal_profiles_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_legal_profiles_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_legal_profiles_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organization_members: {
         Row: {
           created_at: string
@@ -539,6 +672,147 @@ export type Database = {
           },
         ]
       }
+      organization_onboarding: {
+        Row: {
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string
+          organization_id: string
+          updated_at: string
+        }
+        Insert: {
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          organization_id: string
+          updated_at?: string
+        }
+        Update: {
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          organization_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_onboarding_completed_by_fkey"
+            columns: ["completed_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_onboarding_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organization_onboarding_evidence: {
+        Row: {
+          id: string
+          is_available: boolean
+          organization_id: string
+          recorded_at: string
+          recorded_by: string
+          resource_id: string
+          stage: string
+          unavailable_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          is_available?: boolean
+          organization_id: string
+          recorded_at?: string
+          recorded_by: string
+          resource_id: string
+          stage: string
+          unavailable_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          is_available?: boolean
+          organization_id?: string
+          recorded_at?: string
+          recorded_by?: string
+          resource_id?: string
+          stage?: string
+          unavailable_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_onboarding_evidence_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_onboarding_evidence_recorded_by_fkey"
+            columns: ["recorded_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organization_onboarding_stages: {
+        Row: {
+          block_reason: string | null
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string
+          organization_id: string
+          stage: string
+          stage_order: number
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          block_reason?: string | null
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          organization_id: string
+          stage: string
+          stage_order: number
+          status: string
+          updated_at?: string
+        }
+        Update: {
+          block_reason?: string | null
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          organization_id?: string
+          stage?: string
+          stage_order?: number
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_onboarding_stages_completed_by_fkey"
+            columns: ["completed_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_onboarding_stages_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organization_permissions_version: {
         Row: {
           organization_id: string
@@ -570,6 +844,7 @@ export type Database = {
           created_at: string
           id: string
           is_active: boolean
+          legal_identity_digest: string | null
           name: string
           size: string | null
           slug: string
@@ -579,6 +854,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_active?: boolean
+          legal_identity_digest?: string | null
           name: string
           size?: string | null
           slug: string
@@ -588,6 +864,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_active?: boolean
+          legal_identity_digest?: string | null
           name?: string
           size?: string | null
           slug?: string
@@ -770,12 +1047,43 @@ export type Database = {
         Args: { p_operation_id: string; p_user_id: string }
         Returns: string
       }
+      complete_organization_onboarding_stage: {
+        Args: {
+          p_actor_user_id: string
+          p_completed_at: string
+          p_organization_id: string
+          p_resource_id: string
+          p_stage: string
+        }
+        Returns: boolean
+      }
       consume_password_reset: {
         Args: { p_token_hash: string }
         Returns: {
           auth_user_id: string | null
           outcome: string
           user_id: string | null
+        }[]
+      }
+      create_organization_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_address_line_1: string
+          p_address_line_2: string
+          p_administrative_area: string
+          p_idempotency_key: string
+          p_legal_name: string
+          p_locality: string
+          p_main_establishment_country: string
+          p_manufacturer_contact_email: string
+          p_manufacturer_contact_name: string
+          p_manufacturer_contact_phone: string
+          p_postal_code: string
+          p_registered_address_country: string
+        }
+        Returns: {
+          organization_id: string
+          outcome: string
         }[]
       }
       expire_stale_invitations: { Args: never; Returns: number }
@@ -792,10 +1100,56 @@ export type Database = {
         Args: { p_operation_id: string; p_user_id: string }
         Returns: string
       }
+      is_iso_3166_alpha_2: { Args: { p_country: string }; Returns: boolean }
       is_login_locked: { Args: { p_email: string }; Returns: string }
+      m1_canonical_text: { Args: { p_value: string }; Returns: string }
+      m1_legal_identity_digest: {
+        Args: {
+          p_address_line_1: string
+          p_address_line_2: string
+          p_administrative_area: string
+          p_legal_name: string
+          p_locality: string
+          p_main_establishment_country: string
+          p_postal_code: string
+          p_registered_address_country: string
+        }
+        Returns: string
+      }
+      m1_normalize_text: { Args: { p_value: string }; Returns: string }
+      m1_organization_request_digest: {
+        Args: {
+          p_address_line_1: string
+          p_address_line_2: string
+          p_administrative_area: string
+          p_legal_name: string
+          p_locality: string
+          p_main_establishment_country: string
+          p_manufacturer_contact_email: string
+          p_manufacturer_contact_name: string
+          p_manufacturer_contact_phone: string
+          p_postal_code: string
+          p_registered_address_country: string
+        }
+        Returns: string
+      }
       mark_mfa_factors_removed: {
         Args: { p_operation_id: string; p_user_id: string }
         Returns: string
+      }
+      reconcile_organization_onboarding: {
+        Args: { p_actor_user_id: string; p_organization_id: string }
+        Returns: undefined
+      }
+      record_invitation_delivery_onboarding_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_invitation_id: string
+          p_organization_id: string
+        }
+        Returns: {
+          outcome: string
+        }[]
       }
       record_login_failure: {
         Args: {
@@ -806,6 +1160,34 @@ export type Database = {
         }
         Returns: string
       }
+      record_organization_onboarding_evidence_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_available?: boolean
+          p_organization_id: string
+          p_resource_id: string
+          p_stage: string
+        }
+        Returns: {
+          outcome: string
+        }[]
+      }
+      resend_invitation_atomic: {
+        Args: {
+          p_actor_email: string
+          p_actor_user_id: string
+          p_expires_at: string
+          p_invitation_id: string
+          p_organization_id: string
+          p_token_hash: string
+        }
+        Returns: {
+          email: string
+          invitation_id: string
+          organization_name: string
+          outcome: string
+        }[]
+      }
       revoke_invitation_atomic: {
         Args: {
           p_actor_email: string
@@ -814,6 +1196,39 @@ export type Database = {
           p_organization_id: string
         }
         Returns: string
+      }
+      switch_organization_atomic: {
+        Args: { p_actor_user_id: string; p_organization_id: string }
+        Returns: {
+          outcome: string
+        }[]
+      }
+      update_organization_legal_profile_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_address_line_1: string
+          p_address_line_2: string
+          p_administrative_area: string
+          p_contact_email_after_digest: string
+          p_contact_email_before_digest: string
+          p_contact_name_after_digest: string
+          p_contact_name_before_digest: string
+          p_contact_phone_after_digest: string
+          p_contact_phone_before_digest: string
+          p_expected_version: number
+          p_legal_name: string
+          p_locality: string
+          p_main_establishment_country: string
+          p_manufacturer_contact_email: string
+          p_manufacturer_contact_name: string
+          p_manufacturer_contact_phone: string
+          p_organization_id: string
+          p_postal_code: string
+          p_registered_address_country: string
+        }
+        Returns: {
+          outcome: string
+        }[]
       }
       user_is_member_of: { Args: { p_org_id: string }; Returns: boolean }
       user_is_org_admin: { Args: { p_org_id: string }; Returns: boolean }

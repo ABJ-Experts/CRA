@@ -83,6 +83,18 @@
       "types": "./dist/roles/types/index.d.ts",
       "default": "./dist/roles/types/index.js"
     },
+    "./organizations": {
+      "types": "./dist/organizations.d.ts",
+      "default": "./dist/organizations.js"
+    },
+    "./organizations/schemas": {
+      "types": "./dist/organizations/schemas/index.d.ts",
+      "default": "./dist/organizations/schemas/index.js"
+    },
+    "./organizations/types": {
+      "types": "./dist/organizations/types/index.d.ts",
+      "default": "./dist/organizations/types/index.js"
+    },
     "./permissions/schemas": {
       "types": "./dist/permissions/schemas/index.d.ts",
       "default": "./dist/permissions/schemas/index.js"

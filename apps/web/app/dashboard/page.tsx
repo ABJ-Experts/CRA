@@ -16,6 +16,7 @@ import {
   Stacked,
   StatusTag,
 } from "./tables/_components/cells";
+import { DashboardOnboardingResume } from "./_components/dashboard-onboarding-resume";
 import { orderSchema, type Order } from "../../mocks/data/table-schemas";
 
 /**
@@ -129,6 +130,9 @@ export default function EcommerceDashboardPage() {
   return (
     <div className="flex flex-col gap-6 px-6 py-6 lg:px-[30px]">
       <Stagger className="flex flex-col gap-6">
+        <StaggerItem>
+          <DashboardOnboardingResume />
+        </StaggerItem>
         <StaggerItem className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
           {TOTALS.map((s) => (
             <StatCard
