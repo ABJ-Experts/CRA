@@ -1,5 +1,6 @@
 import {
   Calendar,
+  Building2,
   FileText,
   Folder,
   LayoutGrid,
@@ -180,6 +181,12 @@ export const NAV: NavSection[] = [
         icon: Settings2,
         href: "/dashboard/management",
         menuKey: "management",
+      },
+      {
+        label: "Organization",
+        icon: Building2,
+        href: "/dashboard/organization",
+        menuKey: "organization",
       },
       {
         label: "Calendar",

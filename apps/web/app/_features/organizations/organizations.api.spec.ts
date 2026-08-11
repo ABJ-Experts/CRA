@@ -216,4 +216,281 @@ describe("organizationsApi", () => {
       }),
     );
   });
+
+  it("uses tenant-scoped administration routes without request body organization ids", async () => {
+    const fetcher = vi
+      .fn()
+      .mockResolvedValueOnce(
+        jsonResponse({
+          settings: {
+            status: "unconfigured",
+            version: 0,
+            values: null,
+          },
+          mfaRolloutReadiness: {
+            enrolledMemberCount: 1,
+            unenrolledMemberCount: 0,
+            safeToEnforce: true,
+          },
+        }),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse({
+          catalog: {
+            timezones: ["UTC/Etc"],
+            notificationChannels: ["email"],
+            aiProviders: ["none"],
+            dataResidencies: ["eu"],
+            minimumSessionAgeMinutes: 5,
+            maximumSessionAgeMinutes: 43200,
+          },
+        }),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse({
+          policies: [
+            {
+              id: "66666666-6666-4666-8666-666666666666",
+              evidenceClass: "sbom",
+              version: 1,
+              requestedRetentionDays: 365,
+              effectiveRetentionDays: 365,
+              effectiveFloorDays: 0,
+              controllingReasons: [],
+              createdAt: "2026-08-10T10:00:00.000Z",
+              updatedAt: "2026-08-10T10:00:00.000Z",
+            },
+          ],
+        }),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse({
+          lifecycle: {
+            status: "active",
+            version: 1,
+            changedAt: "2026-08-10T10:00:00.000Z",
+            blockers: [],
+            error: null,
+          },
+        }),
+      );
+    vi.stubGlobal("fetch", fetcher);
+
+    await organizationsApi.settings();
+    await organizationsApi.settingsCatalog();
+    await organizationsApi.retention();
+    await organizationsApi.lifecycle();
+
+    expect(fetcher).toHaveBeenNthCalledWith(
+      1,
+      "/api/v1/organizations/current/settings",
+      expect.objectContaining({ method: "GET", body: undefined }),
+    );
+    expect(fetcher).toHaveBeenNthCalledWith(
+      2,
+      "/api/v1/organizations/current/settings/catalog",
+      expect.objectContaining({ method: "GET", body: undefined }),
+    );
+    expect(fetcher).toHaveBeenNthCalledWith(
+      3,
+      "/api/v1/organizations/current/retention",
+      expect.objectContaining({ method: "GET", body: undefined }),
+    );
+    expect(fetcher).toHaveBeenNthCalledWith(
+      4,
+      "/api/v1/organizations/current/lifecycle",
+      expect.objectContaining({ method: "GET", body: undefined }),
+    );
+  });
+
+  it("submits tenant administration mutations through shared contracts", async () => {
+    const exportJob = {
+      id: "77777777-7777-4777-8777-777777777777",
+      status: "queued",
+      progress: { completedParts: 0, totalParts: 1 },
+      error: null,
+      manifest: null,
+      createdAt: "2026-08-10T10:00:00.000Z",
+      updatedAt: "2026-08-10T10:00:00.000Z",
+    } as const;
+    const fetcher = vi
+      .fn()
+      .mockResolvedValueOnce(
+        jsonResponse({
+          export: exportJob,
+          idempotent: false,
+        }),
+      )
+      .mockResolvedValueOnce(jsonResponse({ export: exportJob }))
+      .mockResolvedValueOnce(jsonResponse({ export: exportJob }))
+      .mockResolvedValueOnce(
+        jsonResponse({
+          url: "https://exports.example.test/file.zip",
+          filename: "organization-export.zip",
+          expiresInSeconds: 300,
+        }),
+      );
+    vi.stubGlobal("fetch", fetcher);
+
+    await organizationsApi.requestExport({
+      idempotencyKey: "88888888-8888-4888-8888-888888888888",
+    });
+    await organizationsApi.exportStatus(exportJob.id);
+    await organizationsApi.latestExport();
+    await organizationsApi.downloadExport(exportJob.id);
+
+    expect(fetcher).toHaveBeenNthCalledWith(
+      1,
+      "/api/v1/organizations/current/exports",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({
+          idempotencyKey: "88888888-8888-4888-8888-888888888888",
+        }),
+      }),
+    );
+    expect(fetcher).toHaveBeenNthCalledWith(
+      2,
+      `/api/v1/organizations/current/exports/${exportJob.id}`,
+      expect.objectContaining({ method: "GET" }),
+    );
+    expect(fetcher).toHaveBeenNthCalledWith(
+      3,
+      "/api/v1/organizations/current/exports/latest",
+      expect.objectContaining({ method: "GET", body: undefined }),
+    );
+    expect(fetcher).toHaveBeenNthCalledWith(
+      4,
+      `/api/v1/organizations/current/exports/${exportJob.id}/download`,
+      expect.objectContaining({ method: "GET" }),
+    );
+  });
+
+  it("validates export path parameters before sending requests", async () => {
+    const fetcher = vi.fn();
+    vi.stubGlobal("fetch", fetcher);
+
+    await expect(
+      Promise.resolve().then(() => organizationsApi.exportStatus("../not-safe")),
+    ).rejects.toMatchObject({
+      kind: "invalid_request",
+    });
+    await expect(
+      Promise.resolve().then(() => organizationsApi.downloadExport("not-a-uuid")),
+    ).rejects.toMatchObject({
+      kind: "invalid_request",
+    });
+
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+
+  it("uses exact current-tenant methods for settings, retention, and lifecycle commands", async () => {
+    const lifecycle = {
+      status: "active",
+      version: 4,
+      changedAt: "2026-08-10T10:00:00.000Z",
+      blockers: [],
+      error: null,
+    } as const;
+    const fetcher = vi
+      .fn()
+      .mockResolvedValueOnce(
+        jsonResponse({
+          settings: {
+            status: "configured",
+            version: 1,
+            values: {
+              timezone: "Europe/London",
+              workingDays: ["monday"],
+              holidays: [],
+              notificationChannelIds: ["email"],
+              mfaEnforcementDate: null,
+              maximumSessionAgeMinutes: 60,
+              aiProviderId: "disabled",
+              dataResidencyId: "eu",
+            },
+          },
+          mfaRolloutReadiness: {
+            enrolledMemberCount: 1,
+            unenrolledMemberCount: 0,
+            safeToEnforce: true,
+          },
+        }),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse({
+          policies: [
+            {
+              id: "66666666-6666-4666-8666-666666666666",
+              evidenceClass: "sbom",
+              version: 1,
+              requestedRetentionDays: 365,
+              effectiveRetentionDays: 365,
+              effectiveFloorDays: 0,
+              controllingReasons: [],
+              createdAt: "2026-08-10T10:00:00.000Z",
+              updatedAt: "2026-08-10T10:00:00.000Z",
+            },
+          ],
+        }),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse({
+          reauthenticationGrantId: "77777777-7777-4777-8777-777777777777",
+          expiresAt: "2026-08-10T10:05:00.000Z",
+        }),
+      )
+      .mockResolvedValueOnce(jsonResponse({ lifecycle }))
+      .mockResolvedValueOnce(jsonResponse({ lifecycle }))
+      .mockResolvedValueOnce(jsonResponse({ lifecycle }));
+    vi.stubGlobal("fetch", fetcher);
+
+    await organizationsApi.updateSettings({
+      expectedVersion: 0,
+      values: {
+        timezone: "Europe/London",
+        workingDays: ["monday"],
+        holidays: [],
+        notificationChannelIds: ["email"],
+        mfaEnforcementDate: null,
+        maximumSessionAgeMinutes: 60,
+        aiProviderId: "disabled",
+        dataResidencyId: "eu",
+      },
+    });
+    await organizationsApi.updateRetention({
+      expectedVersion: 1,
+      evidenceClass: "sbom",
+      requestedRetentionDays: 365,
+    });
+    const grant = await organizationsApi.reauthenticate({
+      password: "not-persisted",
+    });
+    await organizationsApi.deactivate({
+      reauthenticationGrantId: grant.reauthenticationGrantId,
+      expectedVersion: 4,
+      confirmation: "DEACTIVATE ORGANIZATION",
+    });
+    await organizationsApi.schedulePurge({
+      reauthenticationGrantId: grant.reauthenticationGrantId,
+      expectedVersion: 4,
+      confirmation: "DELETE analytical-engines-ltd",
+    });
+    await organizationsApi.recover({
+      reauthenticationGrantId: grant.reauthenticationGrantId,
+      expectedVersion: 4,
+    });
+
+    expect(fetcher.mock.calls.map(([path, init]) => [path, init?.method])).toEqual([
+      ["/api/v1/organizations/current/settings", "PATCH"],
+      ["/api/v1/organizations/current/retention", "PATCH"],
+      ["/api/v1/organizations/current/lifecycle/reauthentication", "POST"],
+      ["/api/v1/organizations/current/lifecycle/deactivate", "POST"],
+      ["/api/v1/organizations/current/lifecycle/purge", "POST"],
+      ["/api/v1/organizations/current/lifecycle/recover", "POST"],
+    ]);
+    for (const [, init] of fetcher.mock.calls) {
+      expect(String(init?.body ?? "")).not.toContain("organizationId");
+    }
+  });
 });

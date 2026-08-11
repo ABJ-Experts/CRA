@@ -450,9 +450,10 @@ describe("SupabaseOrganizationRepository", () => {
   });
 
   it("switches through the atomic membership-and-audit RPC before reading the result", async () => {
-    const { repository, rpc } = harness(currentQueryResults(), [
-      { data: [{ outcome: "switched" }], error: null },
-    ]);
+    const { repository, rpc } = harness(
+      [{ data: { status: "active" }, error: null }, ...currentQueryResults()],
+      [{ data: [{ outcome: "switched" }], error: null }],
+    );
 
     await expect(
       repository.switchAtomic(organizationId, actorId),
@@ -464,6 +465,24 @@ describe("SupabaseOrganizationRepository", () => {
       p_organization_id: organizationId,
       p_actor_user_id: actorId,
     });
+  });
+
+  it("rejects switching to an inactive organization before setting selection state", async () => {
+    const { repository, rpc, queries } = harness(
+      [{ data: { status: "deactivated" }, error: null }],
+      [],
+    );
+
+    await expect(
+      repository.switchAtomic(organizationId, actorId),
+    ).resolves.toEqual({
+      outcome: "not_found",
+    });
+    expect(rpc).not.toHaveBeenCalled();
+    expect(queries[0]?.eq).toHaveBeenCalledWith(
+      "organization_id",
+      organizationId,
+    );
   });
 
   it("fails closed when onboarding evidence has a non-boolean availability flag", async () => {
@@ -506,7 +525,7 @@ describe("SupabaseOrganizationRepository", () => {
     "does not follow up a switch outcome %s",
     async (outcome) => {
       const { from, repository } = harness(
-        [],
+        [{ data: { status: "active" }, error: null }],
         [{ data: [{ outcome }], error: null }],
       );
 
@@ -515,7 +534,7 @@ describe("SupabaseOrganizationRepository", () => {
       ).resolves.toEqual({
         outcome,
       });
-      expect(from).not.toHaveBeenCalled();
+      expect(from).toHaveBeenCalledTimes(1);
     },
   );
 

@@ -10,10 +10,13 @@ import { organizationKeys } from "./organizations.keys";
 import {
   ORGANIZATIONS_STALE_TIME_MS,
   organizationCurrentQueryOptions,
+  organizationExportQueryOptions,
+  latestOrganizationExportQueryOptions,
   organizationOnboardingQueryOptions,
   useCurrentOrganizationQuery,
   useCreateOrganizationMutation,
   useOnboardingQuery,
+  useLatestOrganizationExportQuery,
   useSwitchOrganizationMutation,
 } from "./organizations.queries";
 
@@ -23,6 +26,9 @@ vi.mock("./organizations.api", () => ({
     switch: vi.fn(),
     current: vi.fn(),
     onboarding: vi.fn(),
+    exportStatus: vi.fn(),
+    latestExport: vi.fn(),
+    downloadExport: vi.fn(),
   },
 }));
 
@@ -48,6 +54,13 @@ describe("organization query helpers", () => {
       all: ["organizations"],
       current: ["organizations", "current"],
       onboarding: ["organizations", "current", "onboarding"],
+      settings: ["organizations", "current", "settings"],
+      settingsCatalog: ["organizations", "current", "settings", "catalog"],
+      retention: ["organizations", "current", "retention"],
+      lifecycle: ["organizations", "current", "lifecycle"],
+      exports: ["organizations", "current", "exports"],
+      latestExport: ["organizations", "current", "exports", "latest"],
+      exportStatus: expect.any(Function),
     });
     expect(Object.isFrozen(organizationKeys)).toBe(true);
     expect(Object.values(organizationKeys).every(Object.isFrozen)).toBe(true);
@@ -65,6 +78,44 @@ describe("organization query helpers", () => {
       enabled: false,
       retry: false,
       staleTime: ORGANIZATIONS_STALE_TIME_MS,
+    });
+  });
+
+  it("polls only queued or running server export state and stops at terminal state", () => {
+    const options = organizationExportQueryOptions(
+      "11111111-1111-4111-8111-111111111111",
+      true,
+    );
+    const refetchInterval = options.refetchInterval as (query: unknown) =>
+      number | false;
+    const exportState = (status: "queued" | "running" | "completed" | "failed" | "expired") =>
+      ({
+        state: {
+          data: {
+            export: {
+              status,
+            },
+          },
+        },
+      });
+
+    expect(refetchInterval(exportState("queued"))).toBe(5_000);
+    expect(refetchInterval(exportState("running"))).toBe(5_000);
+    expect(refetchInterval(exportState("completed"))).toBe(false);
+    expect(refetchInterval(exportState("failed"))).toBe(false);
+    expect(refetchInterval(exportState("expired"))).toBe(false);
+    expect(organizationExportQueryOptions(null, true)).toMatchObject({
+      enabled: false,
+      queryKey: organizationKeys.exports,
+    });
+  });
+
+  it("uses a server-owned latest export query instead of browser persistence", () => {
+    expect(latestOrganizationExportQueryOptions(true)).toMatchObject({
+      queryKey: organizationKeys.latestExport,
+      enabled: true,
+      retry: false,
+      staleTime: 0,
     });
   });
 
@@ -88,6 +139,7 @@ describe("organization query helpers", () => {
         invitations: false,
       },
     } as never);
+    vi.mocked(organizationsApi.latestExport).mockResolvedValue({ export: null });
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
@@ -103,6 +155,7 @@ describe("organization query helpers", () => {
       () => ({
         current: useCurrentOrganizationQuery(true),
         onboarding: useOnboardingQuery(true),
+        latestExport: useLatestOrganizationExportQuery(true),
       }),
       { wrapper: Wrapper },
     );
@@ -110,6 +163,7 @@ describe("organization query helpers", () => {
     await waitFor(() => {
       expect(organizationsApi.current).toHaveBeenCalledOnce();
       expect(organizationsApi.onboarding).toHaveBeenCalledOnce();
+      expect(organizationsApi.latestExport).toHaveBeenCalledOnce();
     });
   });
 

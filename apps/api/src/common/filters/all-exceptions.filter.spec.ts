@@ -148,6 +148,29 @@ describe("AllExceptionsFilter", () => {
     );
   });
 
+  it.each([
+    [HttpStatus.SERVICE_UNAVAILABLE, "unavailable"],
+    [HttpStatus.BAD_GATEWAY, "malformed_provider"],
+  ] as const)(
+    "preserves only safe structured server code %s/%s",
+    (serverStatus, code) => {
+      const { filter, host, status, json } = fixture();
+      const exception = new HttpException(
+        { message: "private provider detail", code },
+        serverStatus,
+      );
+
+      filter.catch(exception, host);
+
+      expect(status).toHaveBeenCalledWith(serverStatus);
+      expect(json).toHaveBeenCalledWith({
+        statusCode: serverStatus,
+        message: "Something went wrong. Please try again.",
+        code,
+      });
+    },
+  );
+
   it("sanitizes and stringifies a non-Error thrown value", () => {
     const { filter, host, json } = fixture();
 

@@ -77,6 +77,8 @@ describe("canViewMenu", () => {
     expect(canViewMenu("ecommerce.orders", { can })).toBe(true);
     expect(canViewMenu("management", { can })).toBe(false);
     expect(canViewMenu("authorization.roles", { can })).toBe(false);
+    expect(canViewMenu("organization", { can })).toBe(true);
+    expect(canViewMenu("organization", { can: () => false })).toBe(false);
   });
 
   it("shows a group when any child is visible", () => {

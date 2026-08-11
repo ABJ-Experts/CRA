@@ -68,7 +68,7 @@ export const PERMISSION_MATRIX = {
   users: ["view", "create", "edit", "delete", "export"],
   roles: ["view", "create", "edit", "delete"],
   invitations: ["view", "create", "delete"],
-  organization: ["view", "edit"],
+  organization: ["view", "edit", "delete", "export"],
   audit: ["view", "export"],
   // Commerce
   products: ["view", "create", "edit", "delete", "export"],
@@ -353,6 +353,8 @@ function adminPreset(): PermissionSet {
   // Organization settings (name, slug, branding, deletion) stay with the owner.
   // Everything else — including user and role administration — is the admin's.
   out.can_edit_organization = false;
+  out.can_delete_organization = false;
+  out.can_export_organization = false;
   return out;
 }
 

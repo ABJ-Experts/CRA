@@ -264,6 +264,21 @@ export class SupabaseOrganizationRepository implements OrganizationRepository {
     orgId: string,
     userId: string,
   ): Promise<SwitchOrganizationAtomicOutcome> {
+    const lifecycleResult = await this.query(
+      this.client()
+        .from("organization_lifecycles")
+        .select("status")
+        .eq("organization_id", orgId)
+        .maybeSingle(),
+    );
+    if (!lifecycleResult.data) return Object.freeze({ outcome: "not_found" });
+    const lifecycle = this.recordOrFail(lifecycleResult.data);
+    if (lifecycle.status !== "active") {
+      if (typeof lifecycle.status !== "string") {
+        throw new OrganizationRepositoryError("malformed");
+      }
+      return Object.freeze({ outcome: "not_found" });
+    }
     const result = await this.rpc(
       "switch_organization_atomic",
       Object.freeze({ p_organization_id: orgId, p_actor_user_id: userId }),

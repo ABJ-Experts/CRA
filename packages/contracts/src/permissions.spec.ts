@@ -153,6 +153,43 @@ describe("presets", () => {
     }
   });
 
+  it("reserves organization export and deletion for owners", () => {
+    expect(
+      hasPermission(
+        DEFAULT_PERMISSIONS_BY_ROLE.owner,
+        "can_export_organization",
+      ),
+    ).toBe(true);
+    expect(
+      hasPermission(
+        DEFAULT_PERMISSIONS_BY_ROLE.owner,
+        "can_delete_organization",
+      ),
+    ).toBe(true);
+    for (const baseRole of ["admin", "member", "viewer"] as const) {
+      expect(
+        hasPermission(
+          DEFAULT_PERMISSIONS_BY_ROLE[baseRole],
+          "can_export_organization",
+        ),
+      ).toBe(false);
+      expect(
+        hasPermission(
+          DEFAULT_PERMISSIONS_BY_ROLE[baseRole],
+          "can_delete_organization",
+        ),
+      ).toBe(false);
+    }
+  });
+
+  it("keeps custom-role permission merging additive, so destructive routes must also require owner", () => {
+    const out = resolveEffectivePermissions({
+      baseRole: "viewer",
+      customRoles: [role({ permissions: { can_delete_organization: true } })],
+    });
+    expect(hasPermission(out, "can_delete_organization")).toBe(true);
+  });
+
   it("admin has everything except organization editing", () => {
     expect(
       hasPermission(DEFAULT_PERMISSIONS_BY_ROLE.admin, "can_edit_organization"),

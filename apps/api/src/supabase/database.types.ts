@@ -313,6 +313,93 @@ export type Database = {
           },
         ]
       }
+      destructive_reauth_grants: {
+        Row: {
+          actor_user_id: string
+          consumed_at: string | null
+          consumed_for: string | null
+          created_at: string
+          expires_at: string
+          id: string
+          lifecycle_version: number
+          organization_id: string
+          session_id: string
+        }
+        Insert: {
+          actor_user_id: string
+          consumed_at?: string | null
+          consumed_for?: string | null
+          created_at?: string
+          expires_at: string
+          id?: string
+          lifecycle_version: number
+          organization_id: string
+          session_id: string
+        }
+        Update: {
+          actor_user_id?: string
+          consumed_at?: string | null
+          consumed_for?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          lifecycle_version?: number
+          organization_id?: string
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "destructive_reauth_grants_actor_user_id_fkey"
+            columns: ["actor_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "destructive_reauth_grants_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      evidence_protection_watermarks: {
+        Row: {
+          evidence_class: string
+          organization_id: string
+          protected_through: string
+          updated_at: string
+        }
+        Insert: {
+          evidence_class: string
+          organization_id: string
+          protected_through?: string
+          updated_at?: string
+        }
+        Update: {
+          evidence_class?: string
+          organization_id?: string
+          protected_through?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evidence_protection_watermarks_evidence_class_fkey"
+            columns: ["evidence_class"]
+            isOneToOne: false
+            referencedRelation: "retention_evidence_classes"
+            referencedColumns: ["identifier"]
+          },
+          {
+            foreignKeyName: "evidence_protection_watermarks_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invitations: {
         Row: {
           accepted_at: string | null
@@ -545,6 +632,528 @@ export type Database = {
           },
         ]
       }
+      organization_deletion_artifact_work: {
+        Row: {
+          attempt_count: number
+          available_at: string
+          bucket_id: string
+          created_at: string
+          deletion_proof_id: string
+          id: string
+          lease_expires_at: string | null
+          lease_owner: string | null
+          max_attempts: number
+          object_prefix: string
+          safe_error_code: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          attempt_count?: number
+          available_at?: string
+          bucket_id: string
+          created_at?: string
+          deletion_proof_id: string
+          id?: string
+          lease_expires_at?: string | null
+          lease_owner?: string | null
+          max_attempts?: number
+          object_prefix: string
+          safe_error_code?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          attempt_count?: number
+          available_at?: string
+          bucket_id?: string
+          created_at?: string
+          deletion_proof_id?: string
+          id?: string
+          lease_expires_at?: string | null
+          lease_owner?: string | null
+          max_attempts?: number
+          object_prefix?: string
+          safe_error_code?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_deletion_artifact_work_deletion_proof_id_fkey"
+            columns: ["deletion_proof_id"]
+            isOneToOne: false
+            referencedRelation: "organization_deletion_proofs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organization_deletion_proofs: {
+        Row: {
+          artifact_deletion_completed_at: string | null
+          created_at: string
+          database_deleted_at: string
+          deleted_organization_id: string
+          id: string
+          lifecycle_version: number
+          organization_slug_digest: string
+          purge_job_id: string
+        }
+        Insert: {
+          artifact_deletion_completed_at?: string | null
+          created_at?: string
+          database_deleted_at: string
+          deleted_organization_id: string
+          id?: string
+          lifecycle_version: number
+          organization_slug_digest: string
+          purge_job_id: string
+        }
+        Update: {
+          artifact_deletion_completed_at?: string | null
+          created_at?: string
+          database_deleted_at?: string
+          deleted_organization_id?: string
+          id?: string
+          lifecycle_version?: number
+          organization_slug_digest?: string
+          purge_job_id?: string
+        }
+        Relationships: []
+      }
+      organization_export_artifact_snapshots: {
+        Row: {
+          artifact_key: string
+          byte_size: number
+          content_type: string | null
+          created_at: string
+          export_job_id: string
+          id: string
+          metadata: Json
+          organization_id: string
+          sha256: string
+          snapshot_object_path: string
+        }
+        Insert: {
+          artifact_key: string
+          byte_size: number
+          content_type?: string | null
+          created_at?: string
+          export_job_id: string
+          id?: string
+          metadata?: Json
+          organization_id: string
+          sha256: string
+          snapshot_object_path: string
+        }
+        Update: {
+          artifact_key?: string
+          byte_size?: number
+          content_type?: string | null
+          created_at?: string
+          export_job_id?: string
+          id?: string
+          metadata?: Json
+          organization_id?: string
+          sha256?: string
+          snapshot_object_path?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_export_artifact_snapshots_export_job_id_fkey"
+            columns: ["export_job_id"]
+            isOneToOne: false
+            referencedRelation: "organization_export_jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_export_artifact_snapshots_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organization_export_idempotencies: {
+        Row: {
+          actor_user_id: string
+          created_at: string
+          export_job_id: string
+          idempotency_key: string
+          organization_id: string
+          request_digest: string
+        }
+        Insert: {
+          actor_user_id: string
+          created_at?: string
+          export_job_id: string
+          idempotency_key: string
+          organization_id: string
+          request_digest: string
+        }
+        Update: {
+          actor_user_id?: string
+          created_at?: string
+          export_job_id?: string
+          idempotency_key?: string
+          organization_id?: string
+          request_digest?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_export_idempotencies_actor_user_id_fkey"
+            columns: ["actor_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_export_idempotencies_export_job_id_fkey"
+            columns: ["export_job_id"]
+            isOneToOne: false
+            referencedRelation: "organization_export_jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_export_idempotencies_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organization_export_jobs: {
+        Row: {
+          actor_user_id: string
+          artifact_object_path: string | null
+          artifact_sha256: string | null
+          attempt_count: number
+          available_at: string
+          checkpoint_version: number
+          completed_parts: number
+          correlation_id: string | null
+          created_at: string
+          id: string
+          lease_expires_at: string | null
+          lease_owner: string | null
+          manifest_file_count: number | null
+          manifest_format_version: number | null
+          manifest_sha256: string | null
+          max_attempts: number
+          organization_id: string
+          request_digest: string
+          safe_diagnostics: Json | null
+          safe_error_code: string | null
+          status: string
+          total_parts: number
+          updated_at: string
+          verified_at: string | null
+        }
+        Insert: {
+          actor_user_id: string
+          artifact_object_path?: string | null
+          artifact_sha256?: string | null
+          attempt_count?: number
+          available_at?: string
+          checkpoint_version?: number
+          completed_parts?: number
+          correlation_id?: string | null
+          created_at?: string
+          id?: string
+          lease_expires_at?: string | null
+          lease_owner?: string | null
+          manifest_file_count?: number | null
+          manifest_format_version?: number | null
+          manifest_sha256?: string | null
+          max_attempts?: number
+          organization_id: string
+          request_digest: string
+          safe_diagnostics?: Json | null
+          safe_error_code?: string | null
+          status?: string
+          total_parts?: number
+          updated_at?: string
+          verified_at?: string | null
+        }
+        Update: {
+          actor_user_id?: string
+          artifact_object_path?: string | null
+          artifact_sha256?: string | null
+          attempt_count?: number
+          available_at?: string
+          checkpoint_version?: number
+          completed_parts?: number
+          correlation_id?: string | null
+          created_at?: string
+          id?: string
+          lease_expires_at?: string | null
+          lease_owner?: string | null
+          manifest_file_count?: number | null
+          manifest_format_version?: number | null
+          manifest_sha256?: string | null
+          max_attempts?: number
+          organization_id?: string
+          request_digest?: string
+          safe_diagnostics?: Json | null
+          safe_error_code?: string | null
+          status?: string
+          total_parts?: number
+          updated_at?: string
+          verified_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_export_jobs_actor_user_id_fkey"
+            columns: ["actor_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_export_jobs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organization_export_parts: {
+        Row: {
+          byte_size: number
+          created_at: string
+          export_job_id: string
+          id: string
+          object_path: string
+          organization_id: string
+          part_number: number
+          sha256: string
+          source_id: string
+        }
+        Insert: {
+          byte_size: number
+          created_at?: string
+          export_job_id: string
+          id?: string
+          object_path: string
+          organization_id: string
+          part_number: number
+          sha256: string
+          source_id: string
+        }
+        Update: {
+          byte_size?: number
+          created_at?: string
+          export_job_id?: string
+          id?: string
+          object_path?: string
+          organization_id?: string
+          part_number?: number
+          sha256?: string
+          source_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_export_parts_export_job_id_fkey"
+            columns: ["export_job_id"]
+            isOneToOne: false
+            referencedRelation: "organization_export_jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_export_parts_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_export_parts_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "organization_export_sources"
+            referencedColumns: ["source_id"]
+          },
+        ]
+      }
+      organization_export_snapshot_records: {
+        Row: {
+          created_at: string
+          export_job_id: string
+          id: string
+          organization_id: string
+          record_index: number
+          record_payload: Json
+          source_id: string
+          table_name: string
+          table_sort: number
+        }
+        Insert: {
+          created_at?: string
+          export_job_id: string
+          id?: string
+          organization_id: string
+          record_index: number
+          record_payload: Json
+          source_id: string
+          table_name: string
+          table_sort: number
+        }
+        Update: {
+          created_at?: string
+          export_job_id?: string
+          id?: string
+          organization_id?: string
+          record_index?: number
+          record_payload?: Json
+          source_id?: string
+          table_name?: string
+          table_sort?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_export_snapshot_records_export_job_id_fkey"
+            columns: ["export_job_id"]
+            isOneToOne: false
+            referencedRelation: "organization_export_jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_export_snapshot_records_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_export_snapshot_records_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "organization_export_sources"
+            referencedColumns: ["source_id"]
+          },
+          {
+            foreignKeyName: "organization_export_snapshot_records_source_id_table_name_fkey"
+            columns: ["source_id", "table_name"]
+            isOneToOne: false
+            referencedRelation: "organization_export_source_tables"
+            referencedColumns: ["source_id", "table_name"]
+          },
+        ]
+      }
+      organization_export_snapshots: {
+        Row: {
+          created_at: string
+          export_job_id: string
+          id: string
+          materialized_at: string | null
+          materialized_by: string | null
+          materialized_checkpoint_version: number | null
+          organization_id: string
+          snapshot_version: number
+          source_catalog_version: number
+          source_ids: string[]
+        }
+        Insert: {
+          created_at?: string
+          export_job_id: string
+          id?: string
+          materialized_at?: string | null
+          materialized_by?: string | null
+          materialized_checkpoint_version?: number | null
+          organization_id: string
+          snapshot_version: number
+          source_catalog_version?: number
+          source_ids: string[]
+        }
+        Update: {
+          created_at?: string
+          export_job_id?: string
+          id?: string
+          materialized_at?: string | null
+          materialized_by?: string | null
+          materialized_checkpoint_version?: number | null
+          organization_id?: string
+          snapshot_version?: number
+          source_catalog_version?: number
+          source_ids?: string[]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_export_snapshots_export_job_id_fkey"
+            columns: ["export_job_id"]
+            isOneToOne: false
+            referencedRelation: "organization_export_jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_export_snapshots_materialized_by_fkey"
+            columns: ["materialized_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_export_snapshots_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organization_export_source_tables: {
+        Row: {
+          record_order_column: string
+          source_id: string
+          table_name: string
+          table_sort: number
+          tenant_key_column: string
+        }
+        Insert: {
+          record_order_column: string
+          source_id: string
+          table_name: string
+          table_sort: number
+          tenant_key_column: string
+        }
+        Update: {
+          record_order_column?: string
+          source_id?: string
+          table_name?: string
+          table_sort?: number
+          tenant_key_column?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_export_source_tables_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "organization_export_sources"
+            referencedColumns: ["source_id"]
+          },
+        ]
+      }
+      organization_export_sources: {
+        Row: {
+          enabled: boolean
+          sort_order: number
+          source_id: string
+        }
+        Insert: {
+          enabled?: boolean
+          sort_order: number
+          source_id: string
+        }
+        Update: {
+          enabled?: boolean
+          sort_order?: number
+          source_id?: string
+        }
+        Relationships: []
+      }
       organization_legal_profiles: {
         Row: {
           created_at: string
@@ -626,6 +1235,63 @@ export type Database = {
             columns: ["updated_by"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organization_lifecycles: {
+        Row: {
+          changed_at: string
+          changed_by: string | null
+          created_at: string
+          deactivated_at: string | null
+          organization_id: string
+          purge_after: string | null
+          purge_block_reasons: Json
+          safe_error_code: string | null
+          status: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          changed_at?: string
+          changed_by?: string | null
+          created_at?: string
+          deactivated_at?: string | null
+          organization_id: string
+          purge_after?: string | null
+          purge_block_reasons?: Json
+          safe_error_code?: string | null
+          status?: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          changed_at?: string
+          changed_by?: string | null
+          created_at?: string
+          deactivated_at?: string | null
+          organization_id?: string
+          purge_after?: string | null
+          purge_block_reasons?: Json
+          safe_error_code?: string | null
+          status?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_lifecycles_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_lifecycles_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
@@ -839,6 +1505,343 @@ export type Database = {
           },
         ]
       }
+      organization_purge_jobs: {
+        Row: {
+          attempt_count: number
+          available_at: string
+          blocked_reasons: Json
+          checkpoint_version: number
+          created_at: string
+          id: string
+          lease_expires_at: string | null
+          lease_owner: string | null
+          lifecycle_version: number
+          max_attempts: number
+          organization_id: string
+          purge_after: string
+          requested_by: string | null
+          safe_diagnostics: Json | null
+          safe_error_code: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          attempt_count?: number
+          available_at: string
+          blocked_reasons?: Json
+          checkpoint_version?: number
+          created_at?: string
+          id?: string
+          lease_expires_at?: string | null
+          lease_owner?: string | null
+          lifecycle_version: number
+          max_attempts?: number
+          organization_id: string
+          purge_after: string
+          requested_by?: string | null
+          safe_diagnostics?: Json | null
+          safe_error_code?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          attempt_count?: number
+          available_at?: string
+          blocked_reasons?: Json
+          checkpoint_version?: number
+          created_at?: string
+          id?: string
+          lease_expires_at?: string | null
+          lease_owner?: string | null
+          lifecycle_version?: number
+          max_attempts?: number
+          organization_id?: string
+          purge_after?: string
+          requested_by?: string | null
+          safe_diagnostics?: Json | null
+          safe_error_code?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_purge_jobs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_purge_jobs_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organization_purge_work_items: {
+        Row: {
+          checkpoint_version: number
+          created_at: string
+          id: string
+          organization_id: string
+          purge_job_id: string
+          safe_error_code: string | null
+          status: string
+          updated_at: string
+          work_kind: string
+        }
+        Insert: {
+          checkpoint_version?: number
+          created_at?: string
+          id?: string
+          organization_id: string
+          purge_job_id: string
+          safe_error_code?: string | null
+          status?: string
+          updated_at?: string
+          work_kind: string
+        }
+        Update: {
+          checkpoint_version?: number
+          created_at?: string
+          id?: string
+          organization_id?: string
+          purge_job_id?: string
+          safe_error_code?: string | null
+          status?: string
+          updated_at?: string
+          work_kind?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_purge_work_items_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_purge_work_items_purge_job_id_fkey"
+            columns: ["purge_job_id"]
+            isOneToOne: false
+            referencedRelation: "organization_purge_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organization_retention_policies: {
+        Row: {
+          created_at: string
+          effective_floor_days: number
+          effective_retention_days: number
+          evidence_class: string
+          floor_snapshot_version: number
+          id: string
+          organization_id: string
+          requested_retention_days: number
+          updated_at: string
+          updated_by: string | null
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          effective_floor_days?: number
+          effective_retention_days: number
+          evidence_class: string
+          floor_snapshot_version?: number
+          id?: string
+          organization_id: string
+          requested_retention_days: number
+          updated_at?: string
+          updated_by?: string | null
+          version?: number
+        }
+        Update: {
+          created_at?: string
+          effective_floor_days?: number
+          effective_retention_days?: number
+          evidence_class?: string
+          floor_snapshot_version?: number
+          id?: string
+          organization_id?: string
+          requested_retention_days?: number
+          updated_at?: string
+          updated_by?: string | null
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_retention_policies_evidence_class_fkey"
+            columns: ["evidence_class"]
+            isOneToOne: false
+            referencedRelation: "retention_evidence_classes"
+            referencedColumns: ["identifier"]
+          },
+          {
+            foreignKeyName: "organization_retention_policies_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_retention_policies_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organization_session_bindings: {
+        Row: {
+          issued_at: string
+          last_seen_at: string
+          organization_id: string
+          session_id: string
+          user_id: string
+        }
+        Insert: {
+          issued_at: string
+          last_seen_at?: string
+          organization_id: string
+          session_id: string
+          user_id: string
+        }
+        Update: {
+          issued_at?: string
+          last_seen_at?: string
+          organization_id?: string
+          session_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_session_bindings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_session_bindings_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organization_session_revocations: {
+        Row: {
+          lifecycle_version: number | null
+          organization_id: string
+          reason: string
+          revoked_at: string
+          session_id: string
+          user_id: string
+        }
+        Insert: {
+          lifecycle_version?: number | null
+          organization_id: string
+          reason: string
+          revoked_at?: string
+          session_id: string
+          user_id: string
+        }
+        Update: {
+          lifecycle_version?: number | null
+          organization_id?: string
+          reason?: string
+          revoked_at?: string
+          session_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_session_revocations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_session_revocations_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organization_settings: {
+        Row: {
+          ai_provider_id: string | null
+          configured: boolean
+          created_at: string
+          data_residency_id: string | null
+          holidays: string[] | null
+          maximum_session_age_minutes: number | null
+          mfa_enforcement_date: string | null
+          notification_channel_ids: string[] | null
+          organization_id: string
+          timezone: string | null
+          updated_at: string
+          updated_by: string | null
+          version: number
+          working_days: string[] | null
+        }
+        Insert: {
+          ai_provider_id?: string | null
+          configured?: boolean
+          created_at?: string
+          data_residency_id?: string | null
+          holidays?: string[] | null
+          maximum_session_age_minutes?: number | null
+          mfa_enforcement_date?: string | null
+          notification_channel_ids?: string[] | null
+          organization_id: string
+          timezone?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          version?: number
+          working_days?: string[] | null
+        }
+        Update: {
+          ai_provider_id?: string | null
+          configured?: boolean
+          created_at?: string
+          data_residency_id?: string | null
+          holidays?: string[] | null
+          maximum_session_age_minutes?: number | null
+          mfa_enforcement_date?: string | null
+          notification_channel_ids?: string[] | null
+          organization_id?: string
+          timezone?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          version?: number
+          working_days?: string[] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_settings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_settings_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organizations: {
         Row: {
           created_at: string
@@ -869,6 +1872,370 @@ export type Database = {
           size?: string | null
           slug?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      retention_authoritative_facts: {
+        Row: {
+          active: boolean
+          evidence_class: string
+          first_observed_at: string
+          last_observed_at: string
+          organization_id: string
+          protect_through: string | null
+          reason_kind: string
+          required_retention_days: number
+          source_record_id: string
+        }
+        Insert: {
+          active?: boolean
+          evidence_class: string
+          first_observed_at?: string
+          last_observed_at?: string
+          organization_id: string
+          protect_through?: string | null
+          reason_kind: string
+          required_retention_days: number
+          source_record_id: string
+        }
+        Update: {
+          active?: boolean
+          evidence_class?: string
+          first_observed_at?: string
+          last_observed_at?: string
+          organization_id?: string
+          protect_through?: string | null
+          reason_kind?: string
+          required_retention_days?: number
+          source_record_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "retention_authoritative_facts_evidence_class_fkey"
+            columns: ["evidence_class"]
+            isOneToOne: false
+            referencedRelation: "retention_evidence_classes"
+            referencedColumns: ["identifier"]
+          },
+          {
+            foreignKeyName: "retention_authoritative_facts_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      retention_authority_states: {
+        Row: {
+          authority_kind: string
+          available: boolean
+          last_reconciled_at: string | null
+          organization_id: string
+          safe_error_code: string | null
+        }
+        Insert: {
+          authority_kind: string
+          available?: boolean
+          last_reconciled_at?: string | null
+          organization_id: string
+          safe_error_code?: string | null
+        }
+        Update: {
+          authority_kind?: string
+          available?: boolean
+          last_reconciled_at?: string | null
+          organization_id?: string
+          safe_error_code?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "retention_authority_states_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      retention_cleanup_items: {
+        Row: {
+          attempt_count: number
+          cleanup_run_id: string
+          created_at: string
+          evidence_class: string
+          id: string
+          observed_at: string
+          organization_id: string
+          protection_watermark: string
+          safe_error_code: string | null
+          source_record_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          attempt_count?: number
+          cleanup_run_id: string
+          created_at?: string
+          evidence_class: string
+          id?: string
+          observed_at: string
+          organization_id: string
+          protection_watermark: string
+          safe_error_code?: string | null
+          source_record_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          attempt_count?: number
+          cleanup_run_id?: string
+          created_at?: string
+          evidence_class?: string
+          id?: string
+          observed_at?: string
+          organization_id?: string
+          protection_watermark?: string
+          safe_error_code?: string | null
+          source_record_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "retention_cleanup_items_cleanup_run_id_fkey"
+            columns: ["cleanup_run_id"]
+            isOneToOne: false
+            referencedRelation: "retention_cleanup_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "retention_cleanup_items_evidence_class_fkey"
+            columns: ["evidence_class"]
+            isOneToOne: false
+            referencedRelation: "retention_evidence_classes"
+            referencedColumns: ["identifier"]
+          },
+          {
+            foreignKeyName: "retention_cleanup_items_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      retention_cleanup_runs: {
+        Row: {
+          attempt_count: number
+          available_at: string
+          blocked_reasons: Json
+          checkpoint_version: number
+          completed_at: string | null
+          created_at: string
+          evidence_class: string
+          id: string
+          lease_expires_at: string | null
+          lease_owner: string | null
+          max_attempts: number
+          organization_id: string
+          requested_by: string | null
+          safe_diagnostics: Json | null
+          safe_error_code: string | null
+          started_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          attempt_count?: number
+          available_at?: string
+          blocked_reasons?: Json
+          checkpoint_version?: number
+          completed_at?: string | null
+          created_at?: string
+          evidence_class: string
+          id?: string
+          lease_expires_at?: string | null
+          lease_owner?: string | null
+          max_attempts?: number
+          organization_id: string
+          requested_by?: string | null
+          safe_diagnostics?: Json | null
+          safe_error_code?: string | null
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          attempt_count?: number
+          available_at?: string
+          blocked_reasons?: Json
+          checkpoint_version?: number
+          completed_at?: string | null
+          created_at?: string
+          evidence_class?: string
+          id?: string
+          lease_expires_at?: string | null
+          lease_owner?: string | null
+          max_attempts?: number
+          organization_id?: string
+          requested_by?: string | null
+          safe_diagnostics?: Json | null
+          safe_error_code?: string | null
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "retention_cleanup_runs_evidence_class_fkey"
+            columns: ["evidence_class"]
+            isOneToOne: false
+            referencedRelation: "retention_evidence_classes"
+            referencedColumns: ["identifier"]
+          },
+          {
+            foreignKeyName: "retention_cleanup_runs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "retention_cleanup_runs_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      retention_evidence_classes: {
+        Row: {
+          default_requested_retention_days: number
+          enabled: boolean
+          identifier: string
+        }
+        Insert: {
+          default_requested_retention_days?: number
+          enabled?: boolean
+          identifier: string
+        }
+        Update: {
+          default_requested_retention_days?: number
+          enabled?: boolean
+          identifier?: string
+        }
+        Relationships: []
+      }
+      retention_floor_reasons: {
+        Row: {
+          evidence_class: string
+          organization_id: string
+          protect_through: string | null
+          reason_kind: string
+          required_retention_days: number
+          snapshot_id: string
+          source_record_id: string
+        }
+        Insert: {
+          evidence_class: string
+          organization_id: string
+          protect_through?: string | null
+          reason_kind: string
+          required_retention_days: number
+          snapshot_id: string
+          source_record_id: string
+        }
+        Update: {
+          evidence_class?: string
+          organization_id?: string
+          protect_through?: string | null
+          reason_kind?: string
+          required_retention_days?: number
+          snapshot_id?: string
+          source_record_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "retention_floor_reasons_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "retention_floor_reasons_snapshot_id_fkey"
+            columns: ["snapshot_id"]
+            isOneToOne: false
+            referencedRelation: "retention_floor_snapshots"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      retention_floor_snapshots: {
+        Row: {
+          created_at: string
+          effective_floor_days: number
+          evidence_class: string
+          id: string
+          organization_id: string
+          reason_digest: string
+          snapshot_version: number
+        }
+        Insert: {
+          created_at?: string
+          effective_floor_days: number
+          evidence_class: string
+          id?: string
+          organization_id: string
+          reason_digest: string
+          snapshot_version: number
+        }
+        Update: {
+          created_at?: string
+          effective_floor_days?: number
+          evidence_class?: string
+          id?: string
+          organization_id?: string
+          reason_digest?: string
+          snapshot_version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "retention_floor_snapshots_organization_id_evidence_class_fkey"
+            columns: ["organization_id", "evidence_class"]
+            isOneToOne: false
+            referencedRelation: "organization_retention_policies"
+            referencedColumns: ["organization_id", "evidence_class"]
+          },
+          {
+            foreignKeyName: "retention_floor_snapshots_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tenant_settings_catalog: {
+        Row: {
+          category: string
+          enabled: boolean
+          identifier: string
+          sort_order: number
+        }
+        Insert: {
+          category: string
+          enabled?: boolean
+          identifier: string
+          sort_order?: number
+        }
+        Update: {
+          category?: string
+          enabled?: boolean
+          identifier?: string
+          sort_order?: number
         }
         Relationships: []
       }
@@ -1033,6 +2400,21 @@ export type Database = {
         }[]
       }
       bump_session_epoch: { Args: { p_user_id: string }; Returns: undefined }
+      checkpoint_organization_export_atomic: {
+        Args: {
+          p_completed_parts: number
+          p_expected_checkpoint_version: number
+          p_export_job_id: string
+          p_lease_owner: string
+          p_organization_id: string
+          p_parts: Json
+          p_total_parts: number
+        }
+        Returns: {
+          checkpoint_version: number
+          outcome: string
+        }[]
+      }
       claim_mfa_recovery: {
         Args: { p_code_hash: string; p_user_id: string }
         Returns: {
@@ -1042,10 +2424,83 @@ export type Database = {
           status: string | null
         }[]
       }
+      claim_organization_deletion_artifact_work_atomic: {
+        Args: { p_lease_owner: string; p_lease_seconds: number }
+        Returns: {
+          bucket_id: string
+          object_prefix: string
+          outcome: string
+          work_id: string
+        }[]
+      }
+      claim_organization_export_atomic: {
+        Args: {
+          p_lease_owner: string
+          p_lease_seconds: number
+          p_organization_id: string
+        }
+        Returns: {
+          checkpoint_version: number
+          export_job_id: string
+          lease_owner: string
+          outcome: string
+          snapshot: Json
+        }[]
+      }
+      claim_organization_purge_atomic: {
+        Args: {
+          p_lease_owner: string
+          p_lease_seconds: number
+          p_organization_id: string
+        }
+        Returns: {
+          blocked_reasons: Json
+          checkpoint_version: number
+          lease_owner: string
+          outcome: string
+          purge_job_id: string
+        }[]
+      }
+      claim_retention_cleanup_atomic: {
+        Args: {
+          p_lease_owner: string
+          p_lease_seconds: number
+          p_organization_id: string
+        }
+        Returns: {
+          blocked_reasons: Json
+          checkpoint_version: number
+          cleanup_run_id: string
+          lease_owner: string
+          outcome: string
+        }[]
+      }
       clear_login_attempts: { Args: { p_email: string }; Returns: undefined }
       complete_mfa_recovery: {
         Args: { p_operation_id: string; p_user_id: string }
         Returns: string
+      }
+      complete_organization_deletion_artifact_work_atomic: {
+        Args: { p_lease_owner: string; p_work_id: string }
+        Returns: {
+          outcome: string
+        }[]
+      }
+      complete_organization_export_atomic: {
+        Args: {
+          p_artifact_object_path?: string
+          p_artifact_sha256: string
+          p_expected_checkpoint_version: number
+          p_export_job_id: string
+          p_lease_owner: string
+          p_manifest_file_count: number
+          p_manifest_sha256: string
+          p_organization_id: string
+        }
+        Returns: {
+          export_job: Json
+          outcome: string
+        }[]
       }
       complete_organization_onboarding_stage: {
         Args: {
@@ -1057,12 +2512,62 @@ export type Database = {
         }
         Returns: boolean
       }
+      complete_organization_purge_atomic: {
+        Args: {
+          p_expected_checkpoint_version: number
+          p_lease_owner: string
+          p_organization_id: string
+          p_purge_job_id: string
+        }
+        Returns: {
+          deletion_proof_id: string
+          outcome: string
+        }[]
+      }
+      complete_retention_cleanup_atomic: {
+        Args: {
+          p_cleanup_run_id: string
+          p_expected_checkpoint_version: number
+          p_item_results: Json
+          p_lease_owner: string
+          p_organization_id: string
+        }
+        Returns: {
+          checkpoint_version: number
+          outcome: string
+        }[]
+      }
+      consume_destructive_reauth_grant_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_consumed_for: string
+          p_grant_id: string
+          p_lifecycle_version: number
+          p_organization_id: string
+          p_session_id: string
+        }
+        Returns: boolean
+      }
       consume_password_reset: {
         Args: { p_token_hash: string }
         Returns: {
           auth_user_id: string | null
           outcome: string
           user_id: string | null
+        }[]
+      }
+      create_destructive_reauth_grant_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_expires_at: string
+          p_lifecycle_version: number
+          p_organization_id: string
+          p_session_id: string
+        }
+        Returns: {
+          expires_at: string
+          grant_id: string
+          outcome: string
         }[]
       }
       create_organization_atomic: {
@@ -1086,6 +2591,20 @@ export type Database = {
           outcome: string
         }[]
       }
+      deactivate_organization_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_confirmation: string
+          p_expected_version: number
+          p_organization_id: string
+          p_reauth_grant_id: string
+          p_session_id: string
+        }
+        Returns: {
+          lifecycle: Json
+          outcome: string
+        }[]
+      }
       expire_stale_invitations: { Args: never; Returns: number }
       fail_mfa_recovery: {
         Args: {
@@ -1095,14 +2614,111 @@ export type Database = {
         }
         Returns: string
       }
+      fail_organization_deletion_artifact_work_atomic: {
+        Args: {
+          p_lease_owner: string
+          p_retryable: boolean
+          p_safe_error_code: string
+          p_work_id: string
+        }
+        Returns: {
+          outcome: string
+          status: string
+        }[]
+      }
+      fail_organization_export_atomic: {
+        Args: {
+          p_expected_checkpoint_version: number
+          p_export_job_id: string
+          p_lease_owner: string
+          p_organization_id: string
+          p_pause?: boolean
+          p_retryable: boolean
+          p_safe_diagnostics?: Json
+          p_safe_error_code: string
+        }
+        Returns: {
+          outcome: string
+          status: string
+        }[]
+      }
+      fail_organization_purge_atomic: {
+        Args: {
+          p_expected_checkpoint_version: number
+          p_lease_owner: string
+          p_organization_id: string
+          p_purge_job_id: string
+          p_retryable: boolean
+          p_safe_diagnostics?: Json
+          p_safe_error_code: string
+        }
+        Returns: {
+          outcome: string
+          status: string
+        }[]
+      }
+      fail_retention_cleanup_atomic: {
+        Args: {
+          p_cleanup_run_id: string
+          p_expected_checkpoint_version: number
+          p_lease_owner: string
+          p_organization_id: string
+          p_retryable: boolean
+          p_safe_diagnostics?: Json
+          p_safe_error_code: string
+        }
+        Returns: {
+          outcome: string
+          status: string
+        }[]
+      }
       get_current_user_id: { Args: never; Returns: string }
       get_mfa_recovery_status: {
         Args: { p_operation_id: string; p_user_id: string }
         Returns: string
       }
+      get_organization_lifecycle: {
+        Args: { p_organization_id: string }
+        Returns: {
+          lifecycle: Json
+          outcome: string
+        }[]
+      }
+      get_organization_retention_policies: {
+        Args: { p_organization_id: string }
+        Returns: {
+          outcome: string
+          policies: Json
+        }[]
+      }
+      get_organization_settings: {
+        Args: { p_organization_id: string }
+        Returns: {
+          outcome: string
+          settings: Json
+        }[]
+      }
+      get_organization_settings_catalog: {
+        Args: { p_organization_id: string }
+        Returns: {
+          catalog: Json
+          outcome: string
+        }[]
+      }
       is_iso_3166_alpha_2: { Args: { p_country: string }; Returns: boolean }
       is_login_locked: { Args: { p_email: string }; Returns: string }
+      m1_accept_invitation_atomic_legacy_unchecked: {
+        Args: { p_email: string; p_token_hash: string; p_user_id: string }
+        Returns: {
+          invitation_id: string
+          organization_id: string
+          organization_name: string
+          organization_slug: string
+          outcome: string
+        }[]
+      }
       m1_canonical_text: { Args: { p_value: string }; Returns: string }
+      m1_export_redact_jsonb: { Args: { p_value: Json }; Returns: Json }
       m1_legal_identity_digest: {
         Args: {
           p_address_line_1: string
@@ -1116,7 +2732,15 @@ export type Database = {
         }
         Returns: string
       }
+      m1_normalize_lifecycle_blockers: {
+        Args: { p_reasons: Json }
+        Returns: Json
+      }
       m1_normalize_text: { Args: { p_value: string }; Returns: string }
+      m1_organization_lifecycle_json: {
+        Args: { p_organization_id: string }
+        Returns: Json
+      }
       m1_organization_request_digest: {
         Args: {
           p_address_line_1: string
@@ -1133,15 +2757,55 @@ export type Database = {
         }
         Returns: string
       }
+      m1_retention_policy_json: {
+        Args: { p_evidence_class: string; p_organization_id: string }
+        Returns: Json
+      }
+      m1_settings_json: { Args: { p_organization_id: string }; Returns: Json }
       mark_mfa_factors_removed: {
         Args: { p_operation_id: string; p_user_id: string }
         Returns: string
+      }
+      materialize_organization_export_snapshot_atomic: {
+        Args: {
+          p_expected_checkpoint_version: number
+          p_export_job_id: string
+          p_lease_owner: string
+          p_organization_id: string
+        }
+        Returns: {
+          checkpoint_version: number
+          outcome: string
+        }[]
       }
       reconcile_organization_onboarding: {
         Args: { p_actor_user_id: string; p_organization_id: string }
         Returns: undefined
       }
+      reconcile_organization_retention_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_authority_available: boolean
+          p_authority_kind: string
+          p_facts: Json
+          p_organization_id: string
+        }
+        Returns: {
+          outcome: string
+          policies: Json
+        }[]
+      }
       record_invitation_delivery_onboarding_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_invitation_id: string
+          p_organization_id: string
+        }
+        Returns: {
+          outcome: string
+        }[]
+      }
+      record_invitation_delivery_onboarding_atomic_legacy_unchecked: {
         Args: {
           p_actor_user_id: string
           p_invitation_id: string
@@ -1160,6 +2824,33 @@ export type Database = {
         }
         Returns: string
       }
+      record_organization_export_artifact_snapshot_atomic: {
+        Args: {
+          p_artifact_key: string
+          p_byte_size: number
+          p_content_type: string
+          p_expected_checkpoint_version: number
+          p_export_job_id: string
+          p_lease_owner: string
+          p_metadata?: Json
+          p_organization_id: string
+          p_sha256: string
+          p_snapshot_object_path: string
+        }
+        Returns: {
+          outcome: string
+        }[]
+      }
+      record_organization_export_download_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_export_job_id: string
+          p_organization_id: string
+        }
+        Returns: {
+          outcome: string
+        }[]
+      }
       record_organization_onboarding_evidence_atomic: {
         Args: {
           p_actor_user_id: string
@@ -1172,7 +2863,74 @@ export type Database = {
           outcome: string
         }[]
       }
+      record_organization_onboarding_evidence_atomic_legacy_unchecked: {
+        Args: {
+          p_actor_user_id: string
+          p_available?: boolean
+          p_organization_id: string
+          p_resource_id: string
+          p_stage: string
+        }
+        Returns: {
+          outcome: string
+        }[]
+      }
+      recover_organization_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_expected_version: number
+          p_organization_id: string
+          p_reauth_grant_id: string
+          p_session_id: string
+        }
+        Returns: {
+          lifecycle: Json
+          outcome: string
+        }[]
+      }
+      register_organization_session_atomic: {
+        Args: {
+          p_issued_at: string
+          p_organization_id: string
+          p_session_id: string
+          p_user_id: string
+        }
+        Returns: {
+          outcome: string
+        }[]
+      }
+      request_organization_export_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_correlation_id?: string
+          p_idempotency_key: string
+          p_organization_id: string
+          p_request_digest: string
+        }
+        Returns: {
+          export_job: Json
+          export_job_id: string
+          idempotent: boolean
+          outcome: string
+        }[]
+      }
       resend_invitation_atomic: {
+        Args: {
+          p_actor_email: string
+          p_actor_user_id: string
+          p_expires_at: string
+          p_invitation_id: string
+          p_organization_id: string
+          p_token_hash: string
+        }
+        Returns: {
+          email: string
+          invitation_id: string
+          organization_name: string
+          outcome: string
+        }[]
+      }
+      resend_invitation_atomic_legacy_unchecked: {
         Args: {
           p_actor_email: string
           p_actor_user_id: string
@@ -1196,6 +2954,21 @@ export type Database = {
           p_organization_id: string
         }
         Returns: string
+      }
+      schedule_organization_purge_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_confirmation: string
+          p_expected_version: number
+          p_organization_id: string
+          p_reauth_grant_id: string
+          p_session_id: string
+        }
+        Returns: {
+          lifecycle: Json
+          outcome: string
+          purge_job_id: string
+        }[]
       }
       switch_organization_atomic: {
         Args: { p_actor_user_id: string; p_organization_id: string }
@@ -1228,6 +3001,40 @@ export type Database = {
         }
         Returns: {
           outcome: string
+        }[]
+      }
+      update_organization_retention_policy_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_evidence_class: string
+          p_expected_version: number
+          p_organization_id: string
+          p_requested_retention_days: number
+        }
+        Returns: {
+          outcome: string
+          policy: Json
+        }[]
+      }
+      update_organization_settings_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_ai_provider_id: string
+          p_data_residency_id: string
+          p_expected_version: number
+          p_holidays: string[]
+          p_maximum_session_age_minutes: number
+          p_mfa_enforcement_date: string
+          p_notification_channel_ids: string[]
+          p_organization_id: string
+          p_session_id: string
+          p_timezone: string
+          p_working_days: string[]
+        }
+        Returns: {
+          outcome: string
+          session_policy_tightened: boolean
+          settings: Json
         }[]
       }
       user_is_member_of: { Args: { p_org_id: string }; Returns: boolean }

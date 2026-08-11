@@ -156,7 +156,7 @@ describe("SessionProvider", () => {
     );
   });
 
-  it("starts all three live requests without a serial dependency", async () => {
+  it("keeps the menu complete while the initial live session requests load", async () => {
     const releases = new Map<string, (response: Response) => void>();
     const fetcher = vi.fn(
       (input: RequestInfo | URL) =>
@@ -175,6 +175,12 @@ describe("SessionProvider", () => {
         "/api/v1/permissions/effective",
         "/api/v1/permissions/menu",
       ]),
+    );
+    expect(screen.getByTestId("state").getAttribute("data-orders")).toBe(
+      "true",
+    );
+    expect(screen.getByTestId("state").getAttribute("data-products")).toBe(
+      "true",
     );
 
     await act(async () => {

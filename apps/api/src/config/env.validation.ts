@@ -26,6 +26,9 @@ const int = (fallback: number) =>
     )
     .refine((n) => Number.isFinite(n) && n > 0, "must be a positive integer");
 
+const boundedInt = (fallback: number, maximum: number, message: string) =>
+  int(fallback).refine((value) => value <= maximum, message);
+
 const fixedZero = z.coerce
   .number()
   .default(0)
@@ -90,6 +93,18 @@ export const envSchema = z.object({
   OTP_TTL_MINUTES: int(15),
   RECOVERY_TTL_MINUTES: int(60),
   INVITATION_TTL_DAYS: int(7),
+  // PostgreSQL owns worker authority; these only bound a process lease and
+  // the current deterministic in-memory STORE-ZIP implementation.
+  TENANT_LIFECYCLE_LEASE_SECONDS: boundedInt(
+    60,
+    3600,
+    "must not exceed 3600 seconds",
+  ),
+  TENANT_EXPORT_MAX_ARCHIVE_BYTES: boundedInt(
+    47_000_000,
+    50_000_000,
+    "must not exceed the private export bucket object limit",
+  ),
   /**
    * Tolerance when comparing a JWT's `iat` against `users.session_epoch_at`.
    *

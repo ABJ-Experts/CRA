@@ -12,7 +12,9 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage --runInBand",
-    "test:e2e": "jest --config ./test/jest-e2e.json"
+    "test:e2e": "jest --config ./test/jest-e2e.json",
+    "worker:tenant-lifecycle": "node dist/tenant-lifecycle-worker.js",
+    "verify:tenant-export-capacity": "node dist/organizations/tenant-administration/worker/tenant-export-capacity.js"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
@@ -74,6 +76,9 @@
       "!**/*.spec.ts",
       "!**/*.d.ts",
       "!**/database.types.ts"
+    ],
+    "setupFiles": [
+      "<rootDir>/test-env.ts"
     ],
     "coverageThreshold": {
       "global": {

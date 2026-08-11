@@ -29,6 +29,8 @@ describe("environment validation", () => {
       RECOVERY_TTL_MINUTES: 60,
       INVITATION_TTL_DAYS: 7,
       SESSION_EPOCH_SKEW_SECONDS: 0,
+      TENANT_LIFECYCLE_LEASE_SECONDS: 60,
+      TENANT_EXPORT_MAX_ARCHIVE_BYTES: 47_000_000,
     });
   });
 
@@ -111,5 +113,15 @@ describe("environment validation", () => {
     expect(() =>
       validateEnv({ ...required, SESSION_EPOCH_SKEW_SECONDS: "1" }),
     ).toThrow("SESSION_EPOCH_SKEW_SECONDS: must be exactly 0");
+  });
+
+  it("bounds the configured lifecycle worker lease and in-memory archive ceiling", () => {
+    expect(() =>
+      validateEnv({
+        ...required,
+        TENANT_LIFECYCLE_LEASE_SECONDS: "3601",
+        TENANT_EXPORT_MAX_ARCHIVE_BYTES: "50000001",
+      }),
+    ).toThrow("TENANT_LIFECYCLE_LEASE_SECONDS: must not exceed 3600 seconds");
   });
 });

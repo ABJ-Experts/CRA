@@ -38,6 +38,7 @@ export const MENU_KEYS = [
   "logistic.routes",
   // Standalone
   "management",
+  "organization",
   "calendar",
   "help",
   "files",
@@ -102,6 +103,7 @@ export const MENU_PERMISSION_MAP: Readonly<
   "logistic.routes": "can_view_routes",
 
   management: "can_view_users",
+  organization: "can_view_organization",
   calendar: "can_view_calendar",
   help: null,
   files: "can_view_files",
