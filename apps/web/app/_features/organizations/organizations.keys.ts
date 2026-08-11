@@ -14,6 +14,13 @@ const settingsCatalog = Object.freeze([
 ] as const);
 const retention = Object.freeze(["organizations", "current", "retention"] as const);
 const lifecycle = Object.freeze(["organizations", "current", "lifecycle"] as const);
+const legalEntities = Object.freeze([
+  "organizations",
+  "current",
+  "legal-entities",
+] as const);
+const branding = Object.freeze(["organizations", "current", "branding"] as const);
+const brandingPreview = Object.freeze([...branding, "preview"] as const);
 const exportsKey = Object.freeze(["organizations", "current", "exports"] as const);
 const latestExport = Object.freeze([...exportsKey, "latest"] as const);
 const exportStatus = Object.freeze((exportId: string) =>
@@ -28,6 +35,9 @@ export const organizationKeys = Object.freeze({
   settingsCatalog,
   retention,
   lifecycle,
+  legalEntities,
+  branding,
+  brandingPreview,
   exports: exportsKey,
   latestExport,
   exportStatus,

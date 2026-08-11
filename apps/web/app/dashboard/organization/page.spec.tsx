@@ -20,8 +20,18 @@ const queries = vi.hoisted(() => ({
   useOrganizationSettingsCatalogQuery: vi.fn(),
   useOrganizationRetentionQuery: vi.fn(),
   useOrganizationLifecycleQuery: vi.fn(),
+  useLegalEntitiesQuery: vi.fn(),
+  useOrganizationBrandingQuery: vi.fn(),
+  useOrganizationBrandingPreviewQuery: vi.fn(),
   useUpdateOrganizationSettingsMutation: vi.fn(),
   useUpdateRetentionMutation: vi.fn(),
+  useCreateLegalEntityMutation: vi.fn(),
+  useUpdateLegalEntityMutation: vi.fn(),
+  useTransitionLegalEntityMutation: vi.fn(),
+  useUpdateBrandingDraftMutation: vi.fn(),
+  useBrandingLogoUploadMutation: vi.fn(),
+  useBrandingPublishMutation: vi.fn(),
+  useBrandingLogoRemoveMutation: vi.fn(),
   useRequestExportMutation: vi.fn(),
   useLatestOrganizationExportQuery: vi.fn(),
   useOrganizationExportQuery: vi.fn(),
@@ -141,8 +151,137 @@ const LIFECYCLE = {
   },
 } as const;
 
+const LEGAL_ENTITIES = {
+  legalEntities: [
+    {
+      id: "99999999-9999-4999-8999-999999999999",
+      organizationId: ORGANIZATION.id,
+      identifier: "analytical-engines-gb",
+      displayName: "Analytical Engines UK",
+      legalName: "Analytical Engines Ltd",
+      registeredAddress: {
+        addressLine1: "1 Engine Way",
+        locality: "London",
+        postalCode: "SW1A 1AA",
+        country: "GB",
+      },
+      mainEstablishmentCountry: "GB",
+      phone: null,
+      registrationIdentifier: "GB123456",
+      taxIdentifier: "VAT987654",
+      manufacturerContactName: "Ada Lovelace",
+      manufacturerContactEmail: "ada@example.com",
+      status: "active",
+      completionStatus: "complete",
+      isDefault: true,
+      version: 2,
+      dependencyProjections: [{ kind: "product", count: 1 }],
+      createdAt: "2026-08-10T10:00:00.000Z",
+      updatedAt: "2026-08-10T10:00:00.000Z",
+      createdBy: "33333333-3333-4333-8333-333333333333",
+      updatedBy: "33333333-3333-4333-8333-333333333333",
+      deletedAt: null,
+    },
+    {
+      id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      organizationId: ORGANIZATION.id,
+      identifier: null,
+      displayName: "Legacy profile completion required",
+      legalName: null,
+      registeredAddress: null,
+      mainEstablishmentCountry: null,
+      phone: null,
+      registrationIdentifier: null,
+      taxIdentifier: null,
+      manufacturerContactName: null,
+      manufacturerContactEmail: null,
+      status: "inactive",
+      completionStatus: "needs_completion",
+      isDefault: false,
+      version: 0,
+      dependencyProjections: [],
+      createdAt: "2026-08-10T10:00:00.000Z",
+      updatedAt: "2026-08-10T10:00:00.000Z",
+      createdBy: "33333333-3333-4333-8333-333333333333",
+      updatedBy: "33333333-3333-4333-8333-333333333333",
+      deletedAt: null,
+    },
+  ],
+} as const;
+
+const BRANDING = {
+  branding: {
+    source: "sentinel",
+    displayName: "CRA Sentinel",
+    footerText: "CRA Sentinel",
+    contactText: null,
+    palette: {
+      primary: "#0167FF",
+      primaryText: "#FFFFFF",
+      secondary: "#00A39B",
+      secondaryText: "#000000",
+    },
+    logo: null,
+    version: 0,
+    publishedAt: null,
+    updatedAt: "1970-01-01T00:00:00.000Z",
+  },
+} as const;
+
+const BRANDING_PREVIEW = {
+  branding: {
+    source: "draft_preview",
+    displayName: "CRA Sentinel Draft",
+    footerText: "Draft footer",
+    contactText: "draft-contact@analytical.test",
+    palette: {
+      primary: "#0167FF",
+      primaryText: "#FFFFFF",
+      secondary: "#00A39B",
+      secondaryText: "#000000",
+    },
+    logo: {
+      assetId: "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
+      width: 128,
+      height: 128,
+      mimeType: "image/webp",
+      sha256: "a".repeat(64),
+      altText: "AE logo",
+    },
+    version: 4,
+    publishedAt: null,
+    updatedAt: "2026-08-10T10:00:00.000Z",
+  },
+} as const;
+
+const BRANDING_DRAFT_RESPONSE = {
+  draft: {
+    id: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+    displayName: "Analytical Engines",
+    footerText: "Draft footer",
+    contactText: "draft-contact@analytical.test",
+    palette: { primary: "#000000", secondary: "#00A39B" },
+    logoAsset: {
+      status: "approved",
+      asset: BRANDING_PREVIEW.branding.logo,
+    },
+    version: 5,
+    createdAt: "2026-08-10T10:00:00.000Z",
+    updatedAt: "2026-08-10T10:00:00.000Z",
+    createdBy: "33333333-3333-4333-8333-333333333333",
+    updatedBy: "33333333-3333-4333-8333-333333333333",
+  },
+} as const;
+
 const updateSettings = { mutateAsync: vi.fn(), isPending: false };
 const updateRetention = { mutateAsync: vi.fn(), isPending: false };
+const createLegalEntity = { mutateAsync: vi.fn(), isPending: false };
+const updateLegalEntity = { mutateAsync: vi.fn(), isPending: false };
+const transitionLegalEntity = { mutateAsync: vi.fn(), isPending: false };
+const updateBranding = { mutateAsync: vi.fn(), isPending: false };
+const uploadBrandingLogo = { mutateAsync: vi.fn(), isPending: false };
+const publishBranding = { mutateAsync: vi.fn(), isPending: false };
+const removeBrandingLogo = { mutateAsync: vi.fn(), isPending: false };
 const requestExport = { mutateAsync: vi.fn(), isPending: false };
 const exportStatus = { data: undefined, isPending: false, isError: false };
 const latestExport = {
@@ -194,8 +333,22 @@ beforeEach(() => {
   queries.useOrganizationSettingsCatalogQuery.mockReturnValue(okQuery(CATALOG));
   queries.useOrganizationRetentionQuery.mockReturnValue(okQuery(RETENTION));
   queries.useOrganizationLifecycleQuery.mockReturnValue(okQuery(LIFECYCLE));
+  queries.useLegalEntitiesQuery.mockReturnValue(okQuery(LEGAL_ENTITIES));
+  queries.useOrganizationBrandingQuery.mockReturnValue(okQuery(BRANDING));
+  queries.useOrganizationBrandingPreviewQuery.mockReturnValue(
+    okQuery(BRANDING_PREVIEW),
+  );
   queries.useUpdateOrganizationSettingsMutation.mockReturnValue(updateSettings);
   queries.useUpdateRetentionMutation.mockReturnValue(updateRetention);
+  queries.useCreateLegalEntityMutation.mockReturnValue(createLegalEntity);
+  queries.useUpdateLegalEntityMutation.mockReturnValue(updateLegalEntity);
+  queries.useTransitionLegalEntityMutation.mockReturnValue(
+    transitionLegalEntity,
+  );
+  queries.useUpdateBrandingDraftMutation.mockReturnValue(updateBranding);
+  queries.useBrandingLogoUploadMutation.mockReturnValue(uploadBrandingLogo);
+  queries.useBrandingPublishMutation.mockReturnValue(publishBranding);
+  queries.useBrandingLogoRemoveMutation.mockReturnValue(removeBrandingLogo);
   queries.useRequestExportMutation.mockReturnValue(requestExport);
   queries.useLatestOrganizationExportQuery.mockReturnValue(latestExport);
   queries.useOrganizationExportQuery.mockReturnValue(exportStatus);
@@ -217,8 +370,14 @@ describe("OrganizationAdministrationPage", () => {
     render(<OrganizationAdministrationPage />);
 
     expect(await screen.findByText("Organization administration")).toBeTruthy();
-    expect(screen.getByText("Analytical Engines Ltd")).toBeTruthy();
+    expect(
+      screen.getByRole("heading", { name: "Analytical Engines Ltd" }),
+    ).toBeTruthy();
     expect(screen.getByText("Evidence retention")).toBeTruthy();
+    expect(screen.getByText("Legal entities")).toBeTruthy();
+    expect(screen.getByText("Organization branding")).toBeTruthy();
+    expect(screen.getByText("Analytical Engines UK")).toBeTruthy();
+    expect(screen.getByText("CRA Sentinel fallback active")).toBeTruthy();
     expect(screen.getByText("Full tenant export")).toBeTruthy();
     expect(screen.getByText("Deactivation and deletion")).toBeTruthy();
     expect(
@@ -331,11 +490,274 @@ describe("OrganizationAdministrationPage", () => {
 
     expect(await screen.findByText("Evidence retention")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Save settings" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "Create legal entity" }),
+    ).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "Publish branding" }),
+    ).toBeNull();
     expect(screen.queryByRole("button", { name: "Request export" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Reauthenticate" })).toBeNull();
     expect(
       screen.getByText(/Only organization owners with export permission/),
     ).toBeTruthy();
+  });
+
+  it("submits a legal entity lifecycle action with the current version", async () => {
+    transitionLegalEntity.mutateAsync.mockResolvedValue({
+      legalEntity: {
+        ...LEGAL_ENTITIES.legalEntities[0],
+        status: "inactive",
+        version: 3,
+      },
+    });
+    render(<OrganizationAdministrationPage />);
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "Deactivate Analytical Engines UK",
+      }),
+    );
+
+    await waitFor(() =>
+      expect(transitionLegalEntity.mutateAsync).toHaveBeenCalledWith({
+        legalEntityId: "99999999-9999-4999-8999-999999999999",
+        input: { expectedVersion: 2, status: "inactive" },
+      }),
+    );
+  });
+
+  it("edits incomplete legal entities with explicit countries and phone", async () => {
+    updateLegalEntity.mutateAsync.mockResolvedValue({
+      legalEntity: {
+        ...LEGAL_ENTITIES.legalEntities[1],
+        identifier: "analytical-engines-eu",
+        legalName: "Analytical Engines EU GmbH",
+        registeredAddress: {
+          addressLine1: "2 Engine Street",
+          locality: "Berlin",
+          postalCode: "10115",
+          country: "DE",
+        },
+        mainEstablishmentCountry: "DE",
+        phone: "+4930123456",
+        manufacturerContactName: "Grace Hopper",
+        manufacturerContactEmail: "grace@example.com",
+        completionStatus: "complete",
+        version: 1,
+      },
+    });
+    render(<OrganizationAdministrationPage />);
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "Edit Legacy profile completion required",
+      }),
+    );
+    fireEvent.change(screen.getByLabelText(/Entity identifier/), {
+      target: { value: "analytical-engines-eu" },
+    });
+    fireEvent.change(screen.getByLabelText(/Legal name/), {
+      target: { value: "Analytical Engines EU GmbH" },
+    });
+    fireEvent.change(screen.getByLabelText(/Main establishment country/), {
+      target: { value: "DE" },
+    });
+    fireEvent.change(screen.getByLabelText(/Manufacturer contact name/), {
+      target: { value: "Grace Hopper" },
+    });
+    fireEvent.change(screen.getByLabelText(/Manufacturer contact email/), {
+      target: { value: "GRACE@EXAMPLE.COM" },
+    });
+    fireEvent.change(screen.getByLabelText(/Phone/), {
+      target: { value: "+4930123456" },
+    });
+    fireEvent.change(screen.getByLabelText(/Address line 1/), {
+      target: { value: "2 Engine Street" },
+    });
+    fireEvent.change(screen.getByLabelText(/Locality/), {
+      target: { value: "Berlin" },
+    });
+    fireEvent.change(screen.getByLabelText(/Postal code/), {
+      target: { value: "10115" },
+    });
+    fireEvent.change(screen.getByLabelText(/Registered address country/), {
+      target: { value: "DE" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save legal entity" }));
+
+    await waitFor(() =>
+      expect(updateLegalEntity.mutateAsync).toHaveBeenCalledWith({
+        legalEntityId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        input: expect.objectContaining({
+          expectedVersion: 0,
+          identifier: "analytical-engines-eu",
+          legalName: "Analytical Engines EU GmbH",
+          mainEstablishmentCountry: "DE",
+          phone: "+4930123456",
+          registeredAddress: expect.objectContaining({
+            addressLine1: "2 Engine Street",
+            locality: "Berlin",
+            postalCode: "10115",
+            country: "DE",
+          }),
+          manufacturerContactEmail: "GRACE@EXAMPLE.COM",
+        }),
+      }),
+    );
+  });
+
+  it("validates branding draft values and publishes with a fresh idempotency key", async () => {
+    vi.spyOn(globalThis.crypto, "randomUUID").mockReturnValue(
+      "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+    );
+    updateBranding.mutateAsync.mockResolvedValue(BRANDING_DRAFT_RESPONSE);
+    publishBranding.mutateAsync.mockResolvedValue({
+      branding: {
+        ...BRANDING.branding,
+        source: "published",
+        displayName: "Analytical Engines",
+        footerText: "Draft footer",
+        contactText: "draft-contact@analytical.test",
+        version: 1,
+        publishedAt: "2026-08-10T10:00:00.000Z",
+      },
+    });
+    render(<OrganizationAdministrationPage />);
+
+    fireEvent.change(await screen.findByLabelText(/Brand display name/), {
+      target: { value: "Analytical Engines" },
+    });
+    fireEvent.change(screen.getByLabelText(/Primary brand color/), {
+      target: { value: "#000000" },
+    });
+    fireEvent.change(screen.getByLabelText(/Footer text/), {
+      target: { value: "Draft footer" },
+    });
+    fireEvent.change(screen.getByLabelText(/Contact text/), {
+      target: { value: "draft-contact@analytical.test" },
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: "Save branding draft" }),
+    );
+    await waitFor(() =>
+      expect(updateBranding.mutateAsync).toHaveBeenCalledWith({
+        expectedVersion: 4,
+        displayName: "Analytical Engines",
+        palette: { primary: "#000000", secondary: "#00A39B" },
+        footerText: "Draft footer",
+        contactText: "draft-contact@analytical.test",
+        logoAssetId: "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
+      }),
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Publish branding" }));
+    await waitFor(() =>
+      expect(publishBranding.mutateAsync).toHaveBeenCalledWith({
+        expectedVersion: 5,
+        idempotencyKey: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      }),
+    );
+  });
+
+  it("renders the server-selected draft logo and uses the published version when removing it", async () => {
+    vi.spyOn(globalThis.crypto, "randomUUID").mockReturnValue(
+      "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+    );
+    queries.useOrganizationBrandingQuery.mockReturnValue(
+      okQuery({
+        branding: {
+          ...BRANDING_PREVIEW.branding,
+          source: "published" as const,
+          logo: {
+            ...BRANDING_PREVIEW.branding.logo,
+            assetId: "ffffffff-ffff-4fff-8fff-ffffffffffff",
+            sha256: "b".repeat(64),
+            altText: "Published logo",
+          },
+          version: 2,
+          publishedAt: "2026-08-10T10:00:00.000Z",
+        },
+      }),
+    );
+    removeBrandingLogo.mutateAsync.mockResolvedValue({
+      branding: {
+        ...BRANDING_PREVIEW.branding,
+        source: "published",
+        logo: null,
+        version: 3,
+        publishedAt: "2026-08-10T10:01:00.000Z",
+      },
+    });
+    render(<OrganizationAdministrationPage />);
+
+    const draftLogo = await screen.findByRole("img", { name: "AE logo" });
+    expect(draftLogo).toHaveAttribute(
+      "src",
+      "/api/v1/organizations/current/branding/logo/preview?v=" + "a".repeat(64),
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Remove published logo" }),
+    );
+    await waitFor(() =>
+      expect(removeBrandingLogo.mutateAsync).toHaveBeenCalledWith({
+        expectedVersion: 2,
+        idempotencyKey: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      }),
+    );
+
+    expect(screen.getByRole("img", { name: "AE logo" })).toBeTruthy();
+  });
+
+  it("hides an unavailable draft logo instead of rendering a broken private asset", async () => {
+    render(<OrganizationAdministrationPage />);
+
+    fireEvent.error(await screen.findByRole("img", { name: "AE logo" }));
+
+    expect(
+      await screen.findByText(
+        "The selected logo is unavailable. No logo is displayed.",
+      ),
+    ).toBeTruthy();
+    expect(screen.queryByRole("img", { name: "AE logo" })).toBeNull();
+  });
+
+  it("uses object URLs only for temporary logo preview and revokes them on cleanup", async () => {
+    Object.defineProperty(URL, "createObjectURL", {
+      configurable: true,
+      value: vi.fn(() => "blob:local-preview"),
+    });
+    Object.defineProperty(URL, "revokeObjectURL", {
+      configurable: true,
+      value: vi.fn(),
+    });
+    const createObjectURL = vi.mocked(URL.createObjectURL);
+    const revokeObjectURL = vi.mocked(URL.revokeObjectURL);
+    uploadBrandingLogo.mutateAsync.mockResolvedValue(BRANDING_DRAFT_RESPONSE);
+    const { unmount } = render(<OrganizationAdministrationPage />);
+
+    const input = await screen.findByLabelText(/Logo image/);
+    fireEvent.change(input, {
+      target: {
+        files: [new File(["png"], "logo.png", { type: "image/png" })],
+      },
+    });
+
+    expect(
+      await screen.findByRole("img", { name: "Selected logo preview" }),
+    ).toHaveAttribute("src", "blob:local-preview");
+    fireEvent.click(screen.getByRole("button", { name: "Upload logo" }));
+    await waitFor(() =>
+      expect(uploadBrandingLogo.mutateAsync).toHaveBeenCalledWith({
+        fields: { altText: "AE logo" },
+        file: expect.any(File),
+      }),
+    );
+
+    unmount();
+    expect(createObjectURL).toHaveBeenCalledOnce();
+    expect(revokeObjectURL).toHaveBeenCalledWith("blob:local-preview");
   });
 
   it("handles a server-side forbidden response even when presentation permissions are stale", async () => {
@@ -347,7 +769,9 @@ describe("OrganizationAdministrationPage", () => {
     render(<OrganizationAdministrationPage />);
 
     expect(
-      await screen.findByText("You no longer have access to organization administration."),
+      await screen.findByText(
+        "You no longer have access to organization administration.",
+      ),
     ).toBeTruthy();
     expect(screen.getByRole("button", { name: "Try again" })).toBeEnabled();
   });
@@ -395,18 +819,30 @@ describe("OrganizationAdministrationPage", () => {
     );
     render(<OrganizationAdministrationPage />);
 
-    fireEvent.change(await screen.findByLabelText(/Fresh password confirmation/), {
-      target: { value: "Password123" },
-    });
+    fireEvent.change(
+      await screen.findByLabelText(/Fresh password confirmation/),
+      {
+        target: { value: "Password123" },
+      },
+    );
     fireEvent.click(screen.getByRole("button", { name: "Reauthenticate" }));
     await screen.findByText("Fresh destructive authorization is ready.");
 
     const confirmation = screen.getByLabelText(/Purge confirmation/);
-    expect(confirmation).toHaveAttribute("placeholder", "DELETE analytical-engines-ltd");
-    expect(screen.getByRole("button", { name: "Schedule purge" })).toBeDisabled();
+    expect(confirmation).toHaveAttribute(
+      "placeholder",
+      "DELETE analytical-engines-ltd",
+    );
+    expect(
+      screen.getByRole("button", { name: "Schedule purge" }),
+    ).toBeDisabled();
 
-    fireEvent.change(confirmation, { target: { value: "DELETE another-tenant" } });
-    expect(screen.getByRole("button", { name: "Schedule purge" })).toBeDisabled();
+    fireEvent.change(confirmation, {
+      target: { value: "DELETE another-tenant" },
+    });
+    expect(
+      screen.getByRole("button", { name: "Schedule purge" }),
+    ).toBeDisabled();
 
     fireEvent.change(confirmation, {
       target: { value: "DELETE analytical-engines-ltd" },
@@ -433,11 +869,15 @@ describe("OrganizationAdministrationPage", () => {
     );
     render(<OrganizationAdministrationPage />);
 
-    const maximumAge = await screen.findByLabelText(/Maximum session age minutes/);
+    const maximumAge = await screen.findByLabelText(
+      /Maximum session age minutes/,
+    );
     fireEvent.change(maximumAge, { target: { value: "240" } });
     fireEvent.click(screen.getByRole("button", { name: "Save settings" }));
 
-    expect(await screen.findByRole("button", { name: "Refresh settings" })).toBeEnabled();
+    expect(
+      await screen.findByRole("button", { name: "Refresh settings" }),
+    ).toBeEnabled();
     expect(maximumAge).toHaveValue(240);
     fireEvent.click(screen.getByRole("button", { name: "Refresh settings" }));
     expect(refetch).toHaveBeenCalledOnce();
@@ -485,15 +925,21 @@ describe("OrganizationAdministrationPage", () => {
     view.rerender(<OrganizationAdministrationPage />);
 
     expect(screen.getByText("Second Organization Ltd")).toBeTruthy();
-    expect(screen.getByLabelText(/Maximum session age minutes/)).toHaveValue(120);
+    expect(screen.getByLabelText(/Maximum session age minutes/)).toHaveValue(
+      120,
+    );
   });
 
   it("keeps recovery available throughout the scheduled grace period, but not after purging", async () => {
     queries.useOrganizationLifecycleQuery.mockReturnValue(
-      okQuery({ lifecycle: { ...LIFECYCLE.lifecycle, status: "purge_scheduled" } }),
+      okQuery({
+        lifecycle: { ...LIFECYCLE.lifecycle, status: "purge_scheduled" },
+      }),
     );
     render(<OrganizationAdministrationPage />);
-    expect(await screen.findByRole("button", { name: "Recover tenant" })).toBeVisible();
+    expect(
+      await screen.findByRole("button", { name: "Recover tenant" }),
+    ).toBeVisible();
 
     cleanup();
     queries.useOrganizationLifecycleQuery.mockReturnValue(

@@ -34,6 +34,19 @@ const fixedZero = z.coerce
   .default(0)
   .refine((value) => value === 0, "must be exactly 0");
 
+/**
+ * Environment values arrive as strings. Unlike the legacy convenience parser,
+ * policy switches must reject typos instead of silently weakening a security
+ * control (for example, treating `enabled` as false).
+ */
+const strictBoolean = (fallback: boolean) =>
+  z
+    .preprocess(
+      (value) => (value === "" ? undefined : value),
+      z.enum(["true", "false"]).optional(),
+    )
+    .transform((value) => (value === undefined ? fallback : value === "true"));
+
 export const envSchema = z.object({
   NODE_ENV: z
     .enum(["development", "test", "production"])
@@ -105,6 +118,12 @@ export const envSchema = z.object({
     50_000_000,
     "must not exceed the private export bucket object limit",
   ),
+  /**
+   * With no scanner adapter configured, decoded raster-only inspection remains
+   * available in non-strict environments and is recorded in the audit trail.
+   * Strict deployments quarantine instead, so an invalid value must fail boot.
+   */
+  BRANDING_SCANNER_STRICT: strictBoolean(false),
   /**
    * Tolerance when comparing a JWT's `iat` against `users.session_epoch_at`.
    *

@@ -31,6 +31,7 @@ describe("environment validation", () => {
       SESSION_EPOCH_SKEW_SECONDS: 0,
       TENANT_LIFECYCLE_LEASE_SECONDS: 60,
       TENANT_EXPORT_MAX_ARCHIVE_BYTES: 47_000_000,
+      BRANDING_SCANNER_STRICT: false,
     });
   });
 
@@ -58,6 +59,7 @@ describe("environment validation", () => {
         RECOVERY_TTL_MINUTES: "45",
         INVITATION_TTL_DAYS: "14",
         SESSION_EPOCH_SKEW_SECONDS: "0",
+        BRANDING_SCANNER_STRICT: "true",
       }),
     ).toMatchObject({
       NODE_ENV: "production",
@@ -67,6 +69,7 @@ describe("environment validation", () => {
       SMTP_PORT: 2525,
       LOGIN_MAX_ATTEMPTS: 8,
       SESSION_EPOCH_SKEW_SECONDS: 0,
+      BRANDING_SCANNER_STRICT: true,
     });
   });
 
@@ -113,6 +116,16 @@ describe("environment validation", () => {
     expect(() =>
       validateEnv({ ...required, SESSION_EPOCH_SKEW_SECONDS: "1" }),
     ).toThrow("SESSION_EPOCH_SKEW_SECONDS: must be exactly 0");
+  });
+
+  it("accepts only explicit branding scanner policy booleans", () => {
+    expect(
+      validateEnv({ ...required, BRANDING_SCANNER_STRICT: "false" }),
+    ).toMatchObject({ BRANDING_SCANNER_STRICT: false });
+
+    expect(() =>
+      validateEnv({ ...required, BRANDING_SCANNER_STRICT: "enabled" }),
+    ).toThrow("BRANDING_SCANNER_STRICT");
   });
 
   it("bounds the configured lifecycle worker lease and in-memory archive ceiling", () => {

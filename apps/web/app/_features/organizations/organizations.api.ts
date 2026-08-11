@@ -1,6 +1,11 @@
 import {
+  createLegalEntityInputSchema,
   createOrganizationInputSchema,
   currentOrganizationResponseSchema,
+  legalEntitiesResponseSchema,
+  legalEntityParamsSchema,
+  legalEntityResponseSchema,
+  legalEntityVersionInputSchema,
   deactivateOrganizationInputSchema,
   destructiveReauthenticationInputSchema,
   destructiveReauthenticationResponseSchema,
@@ -9,6 +14,11 @@ import {
   exportRequestResponseSchema,
   organizationExportParamsSchema,
   onboardingResponseSchema,
+  organizationBrandingDraftResponseSchema,
+  organizationBrandingResponseSchema,
+  brandingLogoUploadFieldsSchema,
+  publishOrganizationBrandingInputSchema,
+  removeOrganizationBrandingInputSchema,
   organizationExportResponseSchema,
   latestOrganizationExportResponseSchema,
   organizationSchema,
@@ -21,20 +31,32 @@ import {
   scheduleOrganizationPurgeInputSchema,
   switchOrganizationInputSchema,
   switchOrganizationResponseSchema,
+  updateLegalEntityInputSchema,
+  updateOrganizationBrandingDraftInputSchema,
   updateOrganizationSettingsInputSchema,
   updateLegalProfileInputSchema,
+  type CreateLegalEntityInput,
+  type BrandingLogoUploadFieldsInput,
   type DeactivateOrganizationInput,
   type CreateOrganizationInput,
   type DestructiveReauthenticationInput,
   type ExportRequestInput,
+  type LegalEntityLifecycleInput,
+  type PublishOrganizationBrandingInput,
   type RecoverOrganizationInput,
+  type RemoveOrganizationBrandingInput,
   type RetentionPolicyUpdateInput,
   type ScheduleOrganizationPurgeInput,
+  type UpdateLegalEntityInput,
+  type UpdateOrganizationBrandingDraftInput,
   type UpdateOrganizationSettingsInput,
   type UpdateLegalProfileInput,
 } from "@repo/contracts";
 
-import { authenticatedRequestJson } from "../../_lib/http/authenticated-request";
+import {
+  authenticatedRequestJson,
+  authenticatedRequestMultipart,
+} from "../../_lib/http/authenticated-request";
 import { ApiClientError } from "../../_lib/http/api-client";
 
 function exportPath(exportId: string, suffix = ""): `/${string}` {
@@ -47,6 +69,24 @@ function exportPath(exportId: string, suffix = ""): `/${string}` {
     );
   }
   return `/api/v1/organizations/current/exports/${parsed.data.exportId}${suffix}`;
+}
+
+function entityPath(legalEntityId: string, suffix = ""): `/${string}` {
+  const parsed = legalEntityParamsSchema.safeParse({ legalEntityId });
+  if (!parsed.success) {
+    throw new ApiClientError(
+      "invalid_request",
+      "The legal entity identifier is invalid.",
+      400,
+    );
+  }
+  return `/api/v1/organizations/current/legal-entities/${parsed.data.legalEntityId}${suffix}`;
+}
+
+function legalEntityActionPath(status: LegalEntityLifecycleInput["status"]) {
+  if (status === "active") return "/activate";
+  if (status === "inactive") return "/deactivate";
+  return "/delete";
 }
 
 /** Typed browser boundary for the server-authoritative organization workflow. */
@@ -79,6 +119,129 @@ export class OrganizationsApi {
       inputSchema: updateLegalProfileInputSchema,
       signal,
       schema: organizationSchema,
+    });
+  }
+
+  legalEntities(signal?: AbortSignal) {
+    return authenticatedRequestJson({
+      path: "/api/v1/organizations/current/legal-entities",
+      method: "GET",
+      signal,
+      schema: legalEntitiesResponseSchema,
+    });
+  }
+
+  createLegalEntity(input: CreateLegalEntityInput, signal?: AbortSignal) {
+    return authenticatedRequestJson({
+      path: "/api/v1/organizations/current/legal-entities",
+      method: "POST",
+      body: input,
+      inputSchema: createLegalEntityInputSchema,
+      signal,
+      schema: legalEntityResponseSchema,
+    });
+  }
+
+  updateLegalEntity(
+    legalEntityId: string,
+    input: UpdateLegalEntityInput,
+    signal?: AbortSignal,
+  ) {
+    return authenticatedRequestJson({
+      path: entityPath(legalEntityId),
+      method: "PATCH",
+      body: input,
+      inputSchema: updateLegalEntityInputSchema,
+      signal,
+      schema: legalEntityResponseSchema,
+    });
+  }
+
+  transitionLegalEntity(
+    legalEntityId: string,
+    input: LegalEntityLifecycleInput,
+    signal?: AbortSignal,
+  ) {
+    return authenticatedRequestJson({
+      path: entityPath(legalEntityId, legalEntityActionPath(input.status)),
+      method: "POST",
+      body: { expectedVersion: input.expectedVersion },
+      inputSchema: legalEntityVersionInputSchema,
+      signal,
+      schema: legalEntityResponseSchema,
+    });
+  }
+
+  branding(signal?: AbortSignal) {
+    return authenticatedRequestJson({
+      path: "/api/v1/organizations/current/branding",
+      method: "GET",
+      signal,
+      schema: organizationBrandingResponseSchema,
+    });
+  }
+
+  previewBranding(signal?: AbortSignal) {
+    return authenticatedRequestJson({
+      path: "/api/v1/organizations/current/branding/preview",
+      method: "GET",
+      signal,
+      schema: organizationBrandingResponseSchema,
+    });
+  }
+
+  updateBrandingDraft(
+    input: UpdateOrganizationBrandingDraftInput,
+    signal?: AbortSignal,
+  ) {
+    return authenticatedRequestJson({
+      path: "/api/v1/organizations/current/branding",
+      method: "PATCH",
+      body: input,
+      inputSchema: updateOrganizationBrandingDraftInputSchema,
+      signal,
+      schema: organizationBrandingDraftResponseSchema,
+    });
+  }
+
+  uploadBrandingLogo(
+    fields: BrandingLogoUploadFieldsInput,
+    file: File,
+    signal?: AbortSignal,
+  ) {
+    return authenticatedRequestMultipart({
+      path: "/api/v1/organizations/current/branding/logo",
+      method: "POST",
+      fields,
+      fieldsSchema: brandingLogoUploadFieldsSchema,
+      file: { name: "logo", value: file },
+      signal,
+      schema: organizationBrandingDraftResponseSchema,
+    });
+  }
+
+  publishBranding(input: PublishOrganizationBrandingInput, signal?: AbortSignal) {
+    return authenticatedRequestJson({
+      path: "/api/v1/organizations/current/branding/publish",
+      method: "POST",
+      body: input,
+      inputSchema: publishOrganizationBrandingInputSchema,
+      signal,
+      schema: organizationBrandingResponseSchema,
+    });
+  }
+
+  removeBrandingLogo(
+    input: RemoveOrganizationBrandingInput,
+    signal?: AbortSignal,
+  ) {
+    return authenticatedRequestJson({
+      path: "/api/v1/organizations/current/branding/logo",
+      method: "DELETE",
+      body: input,
+      inputSchema: removeOrganizationBrandingInputSchema,
+      signal,
+      schema: organizationBrandingResponseSchema,
     });
   }
 

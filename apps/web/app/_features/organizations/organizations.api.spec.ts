@@ -42,6 +42,73 @@ const CREATE_INPUT = {
   idempotencyKey: "44444444-4444-4444-8444-444444444444",
 } as const;
 
+const LEGAL_ENTITY_ID = "99999999-9999-4999-8999-999999999999";
+const LEGAL_ENTITY = {
+  id: LEGAL_ENTITY_ID,
+  organizationId: ORGANIZATION.id,
+  identifier: "analytical-engines-gb",
+  displayName: "Analytical Engines UK",
+  legalName: "Analytical Engines Ltd",
+  registeredAddress: CREATE_INPUT.registeredAddress,
+  mainEstablishmentCountry: "GB",
+  phone: "+442079460000",
+  registrationIdentifier: "GB123456",
+  taxIdentifier: "VAT987654",
+  manufacturerContactName: "Ada Lovelace",
+  manufacturerContactEmail: "ada@example.com",
+  status: "active",
+  completionStatus: "complete",
+  isDefault: true,
+  version: 2,
+  dependencyProjections: [{ kind: "product", count: 1 }],
+  createdAt: "2026-08-10T10:00:00.000Z",
+  updatedAt: "2026-08-10T10:00:00.000Z",
+  createdBy: "33333333-3333-4333-8333-333333333333",
+  updatedBy: "33333333-3333-4333-8333-333333333333",
+  deletedAt: null,
+} as const;
+
+const BRANDING = {
+  source: "published",
+  displayName: "Analytical Engines",
+  footerText: "Analytical Engines footer",
+  contactText: "support@analytical.test",
+  palette: {
+    primary: "#000000",
+    primaryText: "#FFFFFF",
+    secondary: "#FFFFFF",
+    secondaryText: "#000000",
+  },
+  logo: null,
+  version: 3,
+  publishedAt: "2026-08-10T10:00:00.000Z",
+  updatedAt: "2026-08-10T10:00:00.000Z",
+} as const;
+
+const BRANDING_DRAFT = {
+  id: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+  displayName: "Analytical Engines Draft",
+  footerText: "Draft footer",
+  contactText: "draft-contact@analytical.test",
+  palette: { primary: "#000000", secondary: "#FFFFFF" },
+  logoAsset: {
+    status: "approved",
+    asset: {
+      assetId: "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
+      width: 128,
+      height: 128,
+      mimeType: "image/webp",
+      sha256: "a".repeat(64),
+      altText: "AE logo",
+    },
+  },
+  version: 4,
+  createdAt: "2026-08-10T10:00:00.000Z",
+  updatedAt: "2026-08-10T10:00:00.000Z",
+  createdBy: "33333333-3333-4333-8333-333333333333",
+  updatedBy: "33333333-3333-4333-8333-333333333333",
+} as const;
+
 function jsonResponse(value: unknown): Response {
   return new Response(JSON.stringify(value), {
     status: 200,
@@ -492,5 +559,119 @@ describe("organizationsApi", () => {
     for (const [, init] of fetcher.mock.calls) {
       expect(String(init?.body ?? "")).not.toContain("organizationId");
     }
+  });
+
+  it("uses current-tenant legal-entity routes without request body organization ids", async () => {
+    const fetcher = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse({ legalEntities: [LEGAL_ENTITY] }))
+      .mockResolvedValueOnce(jsonResponse({ legalEntity: LEGAL_ENTITY }))
+      .mockResolvedValueOnce(jsonResponse({ legalEntity: LEGAL_ENTITY }))
+      .mockResolvedValueOnce(jsonResponse({ legalEntity: LEGAL_ENTITY }));
+    vi.stubGlobal("fetch", fetcher);
+
+    await organizationsApi.legalEntities();
+    await organizationsApi.createLegalEntity({
+      identifier: "  ANALYTICAL-ENGINES-GB  ",
+      displayName: "Analytical Engines UK",
+      legalName: "Analytical Engines Ltd",
+      registeredAddress: CREATE_INPUT.registeredAddress,
+      mainEstablishmentCountry: "GB",
+      phone: "+442079460000",
+      registrationIdentifier: " gb 123456 ",
+      taxIdentifier: " vat 987654 ",
+      manufacturerContactName: "Ada Lovelace",
+      manufacturerContactEmail: "ADA@EXAMPLE.COM",
+      idempotencyKey: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+    });
+    await organizationsApi.updateLegalEntity(LEGAL_ENTITY_ID, {
+      identifier: "analytical-engines-gb",
+      displayName: "Analytical Engines UK",
+      legalName: "Analytical Engines Ltd",
+      registeredAddress: CREATE_INPUT.registeredAddress,
+      mainEstablishmentCountry: "GB",
+      phone: "+442079460000",
+      registrationIdentifier: "GB123456",
+      taxIdentifier: "VAT987654",
+      manufacturerContactName: "Ada Lovelace",
+      manufacturerContactEmail: "ada@example.com",
+      expectedVersion: 2,
+    });
+    await organizationsApi.transitionLegalEntity(LEGAL_ENTITY_ID, {
+      expectedVersion: 3,
+      status: "inactive",
+    });
+
+    expect(fetcher.mock.calls.map(([path, init]) => [path, init?.method])).toEqual([
+      ["/api/v1/organizations/current/legal-entities", "GET"],
+      ["/api/v1/organizations/current/legal-entities", "POST"],
+      [`/api/v1/organizations/current/legal-entities/${LEGAL_ENTITY_ID}`, "PATCH"],
+      [
+        `/api/v1/organizations/current/legal-entities/${LEGAL_ENTITY_ID}/deactivate`,
+        "POST",
+      ],
+    ]);
+    expect(fetcher.mock.calls[1]?.[1]?.body).toContain(
+      '"identifier":"analytical-engines-gb"',
+    );
+    expect(fetcher.mock.calls[1]?.[1]?.body).toContain(
+      '"manufacturerContactEmail":"ada@example.com"',
+    );
+    for (const [, init] of fetcher.mock.calls) {
+      expect(String(init?.body ?? "")).not.toContain("organizationId");
+    }
+  });
+
+  it("uses current-tenant branding JSON and multipart routes", async () => {
+    const file = new File(["png"], "logo.png", { type: "image/png" });
+    const fetcher = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse({ branding: BRANDING }))
+      .mockResolvedValueOnce(jsonResponse({ branding: BRANDING }))
+      .mockResolvedValueOnce(jsonResponse({ draft: BRANDING_DRAFT }))
+      .mockResolvedValueOnce(jsonResponse({ draft: BRANDING_DRAFT }))
+      .mockResolvedValueOnce(jsonResponse({ branding: BRANDING }))
+      .mockResolvedValueOnce(jsonResponse({ branding: BRANDING }));
+    vi.stubGlobal("fetch", fetcher);
+
+    await organizationsApi.branding();
+    await organizationsApi.previewBranding();
+    await organizationsApi.updateBrandingDraft({
+      expectedVersion: 3,
+      displayName: "  Analytical Engines  ",
+      palette: { primary: "#000000", secondary: "#ffffff" },
+      footerText: "  Draft footer  ",
+      contactText: " draft-contact@analytical.test ",
+      logoAssetId: "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
+    });
+    await organizationsApi.uploadBrandingLogo({ altText: "  AE logo  " }, file);
+    await organizationsApi.publishBranding({
+      expectedVersion: 4,
+      idempotencyKey: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+    });
+    await organizationsApi.removeBrandingLogo({
+      expectedVersion: 5,
+      idempotencyKey: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+    });
+
+    expect(fetcher.mock.calls.map(([path, init]) => [path, init?.method])).toEqual([
+      ["/api/v1/organizations/current/branding", "GET"],
+      ["/api/v1/organizations/current/branding/preview", "GET"],
+      ["/api/v1/organizations/current/branding", "PATCH"],
+      ["/api/v1/organizations/current/branding/logo", "POST"],
+      ["/api/v1/organizations/current/branding/publish", "POST"],
+      ["/api/v1/organizations/current/branding/logo", "DELETE"],
+    ]);
+    const uploadBody = fetcher.mock.calls[3]?.[1]?.body;
+    expect(uploadBody).toBeInstanceOf(FormData);
+    expect((uploadBody as FormData).get("altText")).toBe("AE logo");
+    expect((uploadBody as FormData).get("logo")).toBe(file);
+    expect(fetcher.mock.calls[3]?.[1]?.headers).toBeUndefined();
+    expect(fetcher.mock.calls[2]?.[1]?.body).toContain(
+      '"footerText":"Draft footer"',
+    );
+    expect(fetcher.mock.calls[2]?.[1]?.body).toContain(
+      '"contactText":"draft-contact@analytical.test"',
+    );
   });
 });

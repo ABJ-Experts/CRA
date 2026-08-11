@@ -593,6 +593,302 @@ export type Database = {
           },
         ]
       }
+      organization_branding_assets: {
+        Row: {
+          alt_text: string | null
+          content_hash: string | null
+          created_at: string
+          created_by: string
+          failure_code: string | null
+          height: number | null
+          id: string
+          input_bytes: number | null
+          normalized_bytes: number | null
+          normalized_mime_type: string | null
+          object_path: string | null
+          organization_id: string
+          scanner_status: string
+          source_mime_type: string | null
+          state: string
+          updated_at: string
+          updated_by: string
+          width: number | null
+        }
+        Insert: {
+          alt_text?: string | null
+          content_hash?: string | null
+          created_at?: string
+          created_by: string
+          failure_code?: string | null
+          height?: number | null
+          id?: string
+          input_bytes?: number | null
+          normalized_bytes?: number | null
+          normalized_mime_type?: string | null
+          object_path?: string | null
+          organization_id: string
+          scanner_status?: string
+          source_mime_type?: string | null
+          state?: string
+          updated_at?: string
+          updated_by: string
+          width?: number | null
+        }
+        Update: {
+          alt_text?: string | null
+          content_hash?: string | null
+          created_at?: string
+          created_by?: string
+          failure_code?: string | null
+          height?: number | null
+          id?: string
+          input_bytes?: number | null
+          normalized_bytes?: number | null
+          normalized_mime_type?: string | null
+          object_path?: string | null
+          organization_id?: string
+          scanner_status?: string
+          source_mime_type?: string | null
+          state?: string
+          updated_at?: string
+          updated_by?: string
+          width?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_branding_assets_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_branding_assets_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_branding_assets_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organization_branding_drafts: {
+        Row: {
+          contact_text: string | null
+          created_at: string
+          created_by: string
+          display_name: string
+          footer_text: string | null
+          id: string
+          logo_asset_id: string | null
+          organization_id: string
+          primary_color: string
+          secondary_color: string
+          updated_at: string
+          updated_by: string
+          version: number
+        }
+        Insert: {
+          contact_text?: string | null
+          created_at?: string
+          created_by: string
+          display_name: string
+          footer_text?: string | null
+          id?: string
+          logo_asset_id?: string | null
+          organization_id: string
+          primary_color: string
+          secondary_color: string
+          updated_at?: string
+          updated_by: string
+          version?: number
+        }
+        Update: {
+          contact_text?: string | null
+          created_at?: string
+          created_by?: string
+          display_name?: string
+          footer_text?: string | null
+          id?: string
+          logo_asset_id?: string | null
+          organization_id?: string
+          primary_color?: string
+          secondary_color?: string
+          updated_at?: string
+          updated_by?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_branding_drafts_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_branding_drafts_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_branding_drafts_organization_id_logo_asset_id_fkey"
+            columns: ["organization_id", "logo_asset_id"]
+            isOneToOne: false
+            referencedRelation: "organization_branding_assets"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "organization_branding_drafts_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organization_branding_publish_idempotencies: {
+        Row: {
+          actor_user_id: string
+          created_at: string
+          idempotency_key: string
+          operation: string
+          organization_id: string
+          request_digest: string
+          version: number
+        }
+        Insert: {
+          actor_user_id: string
+          created_at?: string
+          idempotency_key: string
+          operation: string
+          organization_id: string
+          request_digest: string
+          version: number
+        }
+        Update: {
+          actor_user_id?: string
+          created_at?: string
+          idempotency_key?: string
+          operation?: string
+          organization_id?: string
+          request_digest?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_branding_publish_idem_organization_id_version_fkey"
+            columns: ["organization_id", "version"]
+            isOneToOne: false
+            referencedRelation: "organization_branding_versions"
+            referencedColumns: ["organization_id", "version"]
+          },
+          {
+            foreignKeyName: "organization_branding_publish_idempotencie_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_branding_publish_idempotencies_actor_user_id_fkey"
+            columns: ["actor_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organization_branding_versions: {
+        Row: {
+          contact_text: string | null
+          display_name: string
+          draft_version: number
+          footer_text: string | null
+          logo_alt_text: string | null
+          logo_asset_id: string | null
+          logo_height: number | null
+          logo_sha256: string | null
+          logo_width: number | null
+          organization_id: string
+          primary_color: string
+          primary_text_color: string
+          published_at: string
+          published_by: string
+          secondary_color: string
+          secondary_text_color: string
+          version: number
+        }
+        Insert: {
+          contact_text?: string | null
+          display_name: string
+          draft_version: number
+          footer_text?: string | null
+          logo_alt_text?: string | null
+          logo_asset_id?: string | null
+          logo_height?: number | null
+          logo_sha256?: string | null
+          logo_width?: number | null
+          organization_id: string
+          primary_color: string
+          primary_text_color: string
+          published_at?: string
+          published_by: string
+          secondary_color: string
+          secondary_text_color: string
+          version: number
+        }
+        Update: {
+          contact_text?: string | null
+          display_name?: string
+          draft_version?: number
+          footer_text?: string | null
+          logo_alt_text?: string | null
+          logo_asset_id?: string | null
+          logo_height?: number | null
+          logo_sha256?: string | null
+          logo_width?: number | null
+          organization_id?: string
+          primary_color?: string
+          primary_text_color?: string
+          published_at?: string
+          published_by?: string
+          secondary_color?: string
+          secondary_text_color?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_branding_version_organization_id_logo_asset_i_fkey"
+            columns: ["organization_id", "logo_asset_id"]
+            isOneToOne: false
+            referencedRelation: "organization_branding_assets"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "organization_branding_versions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_branding_versions_published_by_fkey"
+            columns: ["published_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organization_creation_idempotencies: {
         Row: {
           created_at: string
@@ -1153,6 +1449,274 @@ export type Database = {
           source_id?: string
         }
         Relationships: []
+      }
+      organization_legal_entities: {
+        Row: {
+          completion_status: string
+          created_at: string
+          created_by: string
+          deleted_at: string | null
+          display_name: string
+          id: string
+          identifier: string
+          is_default: boolean
+          legal_name: string | null
+          main_establishment_country: string | null
+          manufacturer_contact_email: string | null
+          manufacturer_contact_name: string | null
+          organization_id: string
+          phone: string | null
+          registered_address_administrative_area: string | null
+          registered_address_country: string | null
+          registered_address_line_1: string | null
+          registered_address_line_2: string | null
+          registered_address_locality: string | null
+          registered_address_postal_code: string | null
+          registration_identifier: string | null
+          registration_identifier_normalized: string | null
+          status: string
+          tax_identifier: string | null
+          tax_identifier_normalized: string | null
+          updated_at: string
+          updated_by: string
+          version: number
+        }
+        Insert: {
+          completion_status?: string
+          created_at?: string
+          created_by: string
+          deleted_at?: string | null
+          display_name: string
+          id?: string
+          identifier: string
+          is_default?: boolean
+          legal_name?: string | null
+          main_establishment_country?: string | null
+          manufacturer_contact_email?: string | null
+          manufacturer_contact_name?: string | null
+          organization_id: string
+          phone?: string | null
+          registered_address_administrative_area?: string | null
+          registered_address_country?: string | null
+          registered_address_line_1?: string | null
+          registered_address_line_2?: string | null
+          registered_address_locality?: string | null
+          registered_address_postal_code?: string | null
+          registration_identifier?: string | null
+          registration_identifier_normalized?: string | null
+          status?: string
+          tax_identifier?: string | null
+          tax_identifier_normalized?: string | null
+          updated_at?: string
+          updated_by: string
+          version?: number
+        }
+        Update: {
+          completion_status?: string
+          created_at?: string
+          created_by?: string
+          deleted_at?: string | null
+          display_name?: string
+          id?: string
+          identifier?: string
+          is_default?: boolean
+          legal_name?: string | null
+          main_establishment_country?: string | null
+          manufacturer_contact_email?: string | null
+          manufacturer_contact_name?: string | null
+          organization_id?: string
+          phone?: string | null
+          registered_address_administrative_area?: string | null
+          registered_address_country?: string | null
+          registered_address_line_1?: string | null
+          registered_address_line_2?: string | null
+          registered_address_locality?: string | null
+          registered_address_postal_code?: string | null
+          registration_identifier?: string | null
+          registration_identifier_normalized?: string | null
+          status?: string
+          tax_identifier?: string | null
+          tax_identifier_normalized?: string | null
+          updated_at?: string
+          updated_by?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_legal_entities_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_legal_entities_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_legal_entities_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organization_legal_entity_create_idempotencies: {
+        Row: {
+          actor_user_id: string
+          created_at: string
+          idempotency_key: string
+          legal_entity_id: string
+          organization_id: string
+          request_digest: string
+        }
+        Insert: {
+          actor_user_id: string
+          created_at?: string
+          idempotency_key: string
+          legal_entity_id: string
+          organization_id: string
+          request_digest: string
+        }
+        Update: {
+          actor_user_id?: string
+          created_at?: string
+          idempotency_key?: string
+          legal_entity_id?: string
+          organization_id?: string
+          request_digest?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_legal_entity_cre_organization_id_legal_entity_fkey"
+            columns: ["organization_id", "legal_entity_id"]
+            isOneToOne: false
+            referencedRelation: "organization_legal_entities"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "organization_legal_entity_create_idempoten_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_legal_entity_create_idempotenci_actor_user_id_fkey"
+            columns: ["actor_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organization_legal_entity_dependency_authorities: {
+        Row: {
+          authority_kind: string
+          available: boolean
+          last_reconciled_at: string | null
+          legal_entity_id: string
+          organization_id: string
+          reconciled_by: string | null
+          safe_error_code: string | null
+        }
+        Insert: {
+          authority_kind: string
+          available?: boolean
+          last_reconciled_at?: string | null
+          legal_entity_id: string
+          organization_id: string
+          reconciled_by?: string | null
+          safe_error_code?: string | null
+        }
+        Update: {
+          authority_kind?: string
+          available?: boolean
+          last_reconciled_at?: string | null
+          legal_entity_id?: string
+          organization_id?: string
+          reconciled_by?: string | null
+          safe_error_code?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_legal_entity_dep_organization_id_legal_entity_fkey"
+            columns: ["organization_id", "legal_entity_id"]
+            isOneToOne: false
+            referencedRelation: "organization_legal_entities"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "organization_legal_entity_dependency_autho_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_legal_entity_dependency_authori_reconciled_by_fkey"
+            columns: ["reconciled_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organization_legal_entity_dependency_facts: {
+        Row: {
+          authority_kind: string
+          legal_entity_id: string
+          organization_id: string
+          reconciled_at: string
+          reconciled_by: string | null
+          record_count: number
+          source_record_id: string
+        }
+        Insert: {
+          authority_kind: string
+          legal_entity_id: string
+          organization_id: string
+          reconciled_at?: string
+          reconciled_by?: string | null
+          record_count: number
+          source_record_id: string
+        }
+        Update: {
+          authority_kind?: string
+          legal_entity_id?: string
+          organization_id?: string
+          reconciled_at?: string
+          reconciled_by?: string | null
+          record_count?: number
+          source_record_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_legal_entity_de_organization_id_legal_entity_fkey1"
+            columns: ["organization_id", "legal_entity_id"]
+            isOneToOne: false
+            referencedRelation: "organization_legal_entities"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "organization_legal_entity_dependency_facts_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_legal_entity_dependency_facts_reconciled_by_fkey"
+            columns: ["reconciled_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       organization_legal_profiles: {
         Row: {
@@ -2399,6 +2963,7 @@ export type Database = {
           outcome: string
         }[]
       }
+      backfill_organization_legal_entities: { Args: never; Returns: undefined }
       bump_session_epoch: { Args: { p_user_id: string }; Returns: undefined }
       checkpoint_organization_export_atomic: {
         Args: {
@@ -2591,6 +3156,32 @@ export type Database = {
           outcome: string
         }[]
       }
+      create_organization_legal_entity_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_address_line_1: string
+          p_address_line_2: string
+          p_administrative_area: string
+          p_display_name: string
+          p_idempotency_key: string
+          p_identifier: string
+          p_legal_name: string
+          p_locality: string
+          p_main_establishment_country: string
+          p_manufacturer_contact_email: string
+          p_manufacturer_contact_name: string
+          p_organization_id: string
+          p_phone: string
+          p_postal_code: string
+          p_registered_address_country: string
+          p_registration_identifier: string
+          p_tax_identifier: string
+        }
+        Returns: {
+          legal_entity: Json
+          outcome: string
+        }[]
+      }
       deactivate_organization_atomic: {
         Args: {
           p_actor_user_id: string
@@ -2605,6 +3196,10 @@ export type Database = {
           outcome: string
         }[]
       }
+      ensure_organization_branding_draft: {
+        Args: { p_actor_user_id: string; p_organization_id: string }
+        Returns: undefined
+      }
       expire_stale_invitations: { Args: never; Returns: number }
       fail_mfa_recovery: {
         Args: {
@@ -2613,6 +3208,18 @@ export type Database = {
           p_user_id: string
         }
         Returns: string
+      }
+      fail_organization_branding_asset_upload_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_asset_id: string
+          p_failure_code: string
+          p_organization_id: string
+          p_quarantined: boolean
+        }
+        Returns: {
+          outcome: string
+        }[]
       }
       fail_organization_deletion_artifact_work_atomic: {
         Args: {
@@ -2672,10 +3279,82 @@ export type Database = {
           status: string
         }[]
       }
+      finalize_organization_branding_asset_upload_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_asset_id: string
+          p_content_hash: string
+          p_height: number
+          p_input_bytes: number
+          p_organization_id: string
+          p_scanner_status: string
+          p_width: number
+        }
+        Returns: {
+          branding: Json
+          draft: Json
+          outcome: string
+        }[]
+      }
       get_current_user_id: { Args: never; Returns: string }
       get_mfa_recovery_status: {
         Args: { p_operation_id: string; p_user_id: string }
         Returns: string
+      }
+      get_organization_branding: {
+        Args: { p_actor_user_id: string; p_organization_id: string }
+        Returns: {
+          branding: Json
+          outcome: string
+        }[]
+      }
+      get_organization_branding_assets: {
+        Args: { p_actor_user_id: string; p_organization_id: string }
+        Returns: {
+          assets: Json
+          outcome: string
+        }[]
+      }
+      get_organization_branding_draft: {
+        Args: { p_actor_user_id: string; p_organization_id: string }
+        Returns: {
+          branding: Json
+          draft: Json
+          outcome: string
+        }[]
+      }
+      get_organization_branding_export_snapshot: {
+        Args: { p_organization_id: string; p_version: number }
+        Returns: {
+          branding: Json
+          outcome: string
+        }[]
+      }
+      get_organization_branding_logo_render: {
+        Args: { p_actor_user_id: string; p_organization_id: string }
+        Returns: {
+          object_key: string
+          outcome: string
+          sha256: string
+        }[]
+      }
+      get_organization_legal_entities: {
+        Args: { p_actor_user_id: string; p_organization_id: string }
+        Returns: {
+          legal_entities: Json
+          outcome: string
+        }[]
+      }
+      get_organization_legal_entity: {
+        Args: {
+          p_actor_user_id: string
+          p_legal_entity_id: string
+          p_organization_id: string
+        }
+        Returns: {
+          legal_entity: Json
+          outcome: string
+        }[]
       }
       get_organization_lifecycle: {
         Args: { p_organization_id: string }
@@ -2762,6 +3441,88 @@ export type Database = {
         Returns: Json
       }
       m1_settings_json: { Args: { p_organization_id: string }; Returns: Json }
+      m1_v2_brand_text_color: {
+        Args: { p_background: string }
+        Returns: string
+      }
+      m1_v2_branding_asset_logo_json: {
+        Args: { p_asset_id: string }
+        Returns: Json
+      }
+      m1_v2_branding_draft_json: {
+        Args: { p_organization_id: string }
+        Returns: Json
+      }
+      m1_v2_branding_draft_preview_json: {
+        Args: { p_organization_id: string }
+        Returns: Json
+      }
+      m1_v2_branding_operation_digest: {
+        Args: {
+          p_expected_version: number
+          p_operation: string
+          p_request_digest: string
+        }
+        Returns: string
+      }
+      m1_v2_branding_version_json: {
+        Args: { p_organization_id: string; p_version: number }
+        Returns: Json
+      }
+      m1_v2_current_branding_json: {
+        Args: { p_organization_id: string }
+        Returns: Json
+      }
+      m1_v2_hex_contrast: {
+        Args: { p_first: string; p_second: string }
+        Returns: number
+      }
+      m1_v2_hex_luminance: { Args: { p_color: string }; Returns: number }
+      m1_v2_is_active_organization_member: {
+        Args: { p_actor_user_id: string; p_organization_id: string }
+        Returns: boolean
+      }
+      m1_v2_is_active_organization_owner: {
+        Args: { p_actor_user_id: string; p_organization_id: string }
+        Returns: boolean
+      }
+      m1_v2_legal_entity_dependency_json: {
+        Args: { p_legal_entity_id: string; p_organization_id: string }
+        Returns: Json
+      }
+      m1_v2_legal_entity_json: {
+        Args: { p_legal_entity_id: string }
+        Returns: Json
+      }
+      m1_v2_legal_entity_lifecycle_block_reason: {
+        Args: { p_legal_entity_id: string; p_organization_id: string }
+        Returns: string
+      }
+      m1_v2_legal_entity_request_digest: {
+        Args: {
+          p_address_line_1: string
+          p_address_line_2: string
+          p_administrative_area: string
+          p_display_name: string
+          p_identifier: string
+          p_legal_name: string
+          p_locality: string
+          p_main_establishment_country: string
+          p_manufacturer_contact_email: string
+          p_manufacturer_contact_name: string
+          p_phone: string
+          p_postal_code: string
+          p_registered_address_country: string
+          p_registration_identifier: string
+          p_tax_identifier: string
+        }
+        Returns: string
+      }
+      m1_v2_normalize_legal_identifier: {
+        Args: { p_value: string }
+        Returns: string
+      }
+      m1_v2_sentinel_branding_json: { Args: never; Returns: Json }
       mark_mfa_factors_removed: {
         Args: { p_operation_id: string; p_user_id: string }
         Returns: string
@@ -2775,6 +3536,33 @@ export type Database = {
         }
         Returns: {
           checkpoint_version: number
+          outcome: string
+        }[]
+      }
+      publish_organization_branding_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_expected_version: number
+          p_idempotency_key: string
+          p_organization_id: string
+          p_request_digest: string
+        }
+        Returns: {
+          branding: Json
+          idempotent: boolean
+          outcome: string
+        }[]
+      }
+      reconcile_organization_legal_entity_dependencies_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_authority_kind: string
+          p_available: boolean
+          p_facts: Json
+          p_legal_entity_id: string
+          p_organization_id: string
+        }
+        Returns: {
           outcome: string
         }[]
       }
@@ -2899,6 +3687,20 @@ export type Database = {
           outcome: string
         }[]
       }
+      remove_organization_branding_logo_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_expected_version: number
+          p_idempotency_key: string
+          p_organization_id: string
+          p_request_digest: string
+        }
+        Returns: {
+          branding: Json
+          idempotent: boolean
+          outcome: string
+        }[]
+      }
       request_organization_export_atomic: {
         Args: {
           p_actor_user_id: string
@@ -2946,6 +3748,25 @@ export type Database = {
           outcome: string
         }[]
       }
+      reserve_organization_branding_asset_upload_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_alt_text: string
+          p_organization_id: string
+        }
+        Returns: {
+          asset_id: string
+          object_key: string
+          outcome: string
+        }[]
+      }
+      resolve_active_organization_legal_entity_context: {
+        Args: { p_legal_entity_id: string; p_organization_id: string }
+        Returns: {
+          context: Json
+          outcome: string
+        }[]
+      }
       revoke_invitation_atomic: {
         Args: {
           p_actor_email: string
@@ -2954,6 +3775,24 @@ export type Database = {
           p_organization_id: string
         }
         Returns: string
+      }
+      save_organization_branding_draft_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_contact_text: string
+          p_display_name: string
+          p_expected_version: number
+          p_footer_text: string
+          p_logo_asset_id: string
+          p_organization_id: string
+          p_primary_color: string
+          p_secondary_color: string
+        }
+        Returns: {
+          branding: Json
+          draft: Json
+          outcome: string
+        }[]
       }
       schedule_organization_purge_atomic: {
         Args: {
@@ -2973,6 +3812,47 @@ export type Database = {
       switch_organization_atomic: {
         Args: { p_actor_user_id: string; p_organization_id: string }
         Returns: {
+          outcome: string
+        }[]
+      }
+      transition_organization_legal_entity_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_expected_version: number
+          p_legal_entity_id: string
+          p_organization_id: string
+          p_status: string
+        }
+        Returns: {
+          block_reason: string
+          legal_entity: Json
+          outcome: string
+        }[]
+      }
+      update_organization_legal_entity_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_address_line_1: string
+          p_address_line_2: string
+          p_administrative_area: string
+          p_display_name: string
+          p_expected_version: number
+          p_identifier: string
+          p_legal_entity_id: string
+          p_legal_name: string
+          p_locality: string
+          p_main_establishment_country: string
+          p_manufacturer_contact_email: string
+          p_manufacturer_contact_name: string
+          p_organization_id: string
+          p_phone: string
+          p_postal_code: string
+          p_registered_address_country: string
+          p_registration_identifier: string
+          p_tax_identifier: string
+        }
+        Returns: {
+          legal_entity: Json
           outcome: string
         }[]
       }

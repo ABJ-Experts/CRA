@@ -8,11 +8,16 @@ import {
   useOrganizationRetentionQuery,
   useOrganizationSettingsCatalogQuery,
   useOrganizationSettingsQuery,
+  useLegalEntitiesQuery,
+  useOrganizationBrandingPreviewQuery,
+  useOrganizationBrandingQuery,
 } from "../../_features/organizations/organizations.queries";
 import { useMocksReady } from "../../_providers/providers";
 import { useSession } from "../../_providers/session-provider";
 import { PageHeading, SectionCard } from "../_components/dashboard-chrome";
 import { OrganizationExportSection } from "./organization-export-section";
+import { OrganizationBrandingSection } from "./organization-branding-section";
+import { OrganizationLegalEntitiesSection } from "./organization-legal-entities-section";
 import { OrganizationLifecycleSection } from "./organization-lifecycle-section";
 import {
   administrationLoadError,
@@ -66,8 +71,12 @@ export function OrganizationAdministrationContent() {
   const catalog = useOrganizationSettingsCatalogQuery(enabled);
   const retention = useOrganizationRetentionQuery(enabled);
   const lifecycle = useOrganizationLifecycleQuery(enabled);
+  const legalEntities = useLegalEntitiesQuery(enabled);
+  const branding = useOrganizationBrandingQuery(enabled);
+  const brandingPreview = useOrganizationBrandingPreviewQuery(enabled);
   const canView = permissions.can_view_organization === true;
   const canEdit = permissions.can_edit_organization === true;
+  const canManageIdentity = role === "owner" && canEdit;
   // Presentation only. The API independently enforces owner and permission.
   const canExport = role === "owner" && permissions.can_export_organization === true;
   const canDelete = role === "owner" && permissions.can_delete_organization === true;
@@ -78,13 +87,19 @@ export function OrganizationAdministrationContent() {
     settings.isPending ||
     catalog.isPending ||
     retention.isPending ||
-    lifecycle.isPending;
+    lifecycle.isPending ||
+    legalEntities.isPending ||
+    branding.isPending ||
+    brandingPreview.isPending;
   const firstError =
     current.error ??
     settings.error ??
     catalog.error ??
     retention.error ??
     lifecycle.error ??
+    legalEntities.error ??
+    branding.error ??
+    brandingPreview.error ??
     (isError ? new Error("session") : null);
   const failed = firstError !== null;
   const organizationTimezone =
@@ -119,6 +134,9 @@ export function OrganizationAdministrationContent() {
               catalog.refetch(),
               retention.refetch(),
               lifecycle.refetch(),
+              legalEntities.refetch(),
+              branding.refetch(),
+              brandingPreview.refetch(),
             ]);
           }}
         />
@@ -130,7 +148,10 @@ export function OrganizationAdministrationContent() {
         settings.data &&
         catalog.data &&
         retention.data &&
-        lifecycle.data ? (
+        lifecycle.data &&
+        legalEntities.data &&
+        branding.data &&
+        brandingPreview.data ? (
         <>
           <SectionCard title={current.data.organization.name}>
             <p className="text-subhead-regular text-fg-muted">
@@ -159,6 +180,22 @@ export function OrganizationAdministrationContent() {
             policies={retention.data.policies}
             canEdit={canEdit}
             onRefresh={() => void retention.refetch()}
+          />
+          <OrganizationLegalEntitiesSection
+            key={`legal-entities-${current.data.organization.id}`}
+            legalEntities={legalEntities.data.legalEntities}
+            canManage={canManageIdentity}
+            onRefresh={() => void legalEntities.refetch()}
+          />
+          <OrganizationBrandingSection
+            key={`branding-${current.data.organization.id}`}
+            resolvedBranding={branding.data.branding}
+            draftPreview={brandingPreview.data.branding}
+            canManage={canManageIdentity}
+            organizationTimezone={organizationTimezone}
+            onRefresh={() => {
+              void Promise.all([branding.refetch(), brandingPreview.refetch()]);
+            }}
           />
           <OrganizationExportSection
             key={`exports-${current.data.organization.id}`}

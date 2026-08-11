@@ -1,13 +1,19 @@
 import type {
+  CreateLegalEntityInput,
   CreateOrganizationInput,
   DeactivateOrganizationInput,
   DestructiveReauthenticationInput,
   ExportRequestInput,
+  LegalEntityLifecycleInput,
   LatestOrganizationExportResponse,
   OrganizationExportResponse,
+  PublishOrganizationBrandingInput,
   RecoverOrganizationInput,
+  RemoveOrganizationBrandingInput,
   RetentionPolicyUpdateInput,
   ScheduleOrganizationPurgeInput,
+  UpdateLegalEntityInput,
+  UpdateOrganizationBrandingDraftInput,
   UpdateOrganizationSettingsInput,
   UpdateLegalProfileInput,
 } from "@repo/contracts";
@@ -85,6 +91,36 @@ export function organizationLifecycleQueryOptions(enabled: boolean) {
   });
 }
 
+export function organizationLegalEntitiesQueryOptions(enabled: boolean) {
+  return queryOptions({
+    queryKey: organizationKeys.legalEntities,
+    enabled,
+    retry: false,
+    staleTime: ORGANIZATIONS_STALE_TIME_MS,
+    queryFn: ({ signal }) => organizationsApi.legalEntities(signal),
+  });
+}
+
+export function organizationBrandingQueryOptions(enabled: boolean) {
+  return queryOptions({
+    queryKey: organizationKeys.branding,
+    enabled,
+    retry: false,
+    staleTime: ORGANIZATIONS_STALE_TIME_MS,
+    queryFn: ({ signal }) => organizationsApi.branding(signal),
+  });
+}
+
+export function organizationBrandingPreviewQueryOptions(enabled: boolean) {
+  return queryOptions({
+    queryKey: organizationKeys.brandingPreview,
+    enabled,
+    retry: false,
+    staleTime: ORGANIZATIONS_STALE_TIME_MS,
+    queryFn: ({ signal }) => organizationsApi.previewBranding(signal),
+  });
+}
+
 function shouldPollExport(
   status: OrganizationExportResponse["export"]["status"] | undefined,
 ) {
@@ -150,6 +186,18 @@ export function useOrganizationLifecycleQuery(enabled: boolean) {
   return useQuery(organizationLifecycleQueryOptions(enabled));
 }
 
+export function useLegalEntitiesQuery(enabled: boolean) {
+  return useQuery(organizationLegalEntitiesQueryOptions(enabled));
+}
+
+export function useOrganizationBrandingQuery(enabled: boolean) {
+  return useQuery(organizationBrandingQueryOptions(enabled));
+}
+
+export function useOrganizationBrandingPreviewQuery(enabled: boolean) {
+  return useQuery(organizationBrandingPreviewQueryOptions(enabled));
+}
+
 export function useOrganizationExportQuery(
   exportId: string | null,
   enabled: boolean,
@@ -212,6 +260,102 @@ export function useUpdateLegalProfileMutation() {
     mutationFn: (input: UpdateLegalProfileInput) =>
       organizationsApi.updateLegalProfile(input),
     onSuccess: invalidateOrganizationState,
+  });
+}
+
+function useInvalidateLegalEntitiesState() {
+  return useInvalidateTenantAdministrationState(organizationKeys.legalEntities);
+}
+
+function useInvalidateBrandingState() {
+  return useInvalidateTenantAdministrationState(
+    organizationKeys.branding,
+    organizationKeys.brandingPreview,
+  );
+}
+
+export function useCreateLegalEntityMutation() {
+  const invalidateLegalEntitiesState = useInvalidateLegalEntitiesState();
+
+  return useMutation({
+    mutationFn: (input: CreateLegalEntityInput) =>
+      organizationsApi.createLegalEntity(input),
+    onSuccess: invalidateLegalEntitiesState,
+  });
+}
+
+export function useUpdateLegalEntityMutation() {
+  const invalidateLegalEntitiesState = useInvalidateLegalEntitiesState();
+
+  return useMutation({
+    mutationFn: ({
+      legalEntityId,
+      input,
+    }: {
+      legalEntityId: string;
+      input: UpdateLegalEntityInput;
+    }) => organizationsApi.updateLegalEntity(legalEntityId, input),
+    onSuccess: invalidateLegalEntitiesState,
+  });
+}
+
+export function useTransitionLegalEntityMutation() {
+  const invalidateLegalEntitiesState = useInvalidateLegalEntitiesState();
+
+  return useMutation({
+    mutationFn: ({
+      legalEntityId,
+      input,
+    }: {
+      legalEntityId: string;
+      input: LegalEntityLifecycleInput;
+    }) => organizationsApi.transitionLegalEntity(legalEntityId, input),
+    onSuccess: invalidateLegalEntitiesState,
+  });
+}
+
+export function useUpdateBrandingDraftMutation() {
+  const invalidateBrandingState = useInvalidateBrandingState();
+
+  return useMutation({
+    mutationFn: (input: UpdateOrganizationBrandingDraftInput) =>
+      organizationsApi.updateBrandingDraft(input),
+    onSuccess: invalidateBrandingState,
+  });
+}
+
+export function useBrandingLogoUploadMutation() {
+  const invalidateBrandingState = useInvalidateBrandingState();
+
+  return useMutation({
+    mutationFn: ({
+      fields,
+      file,
+    }: {
+      fields: Parameters<typeof organizationsApi.uploadBrandingLogo>[0];
+      file: File;
+    }) => organizationsApi.uploadBrandingLogo(fields, file),
+    onSuccess: invalidateBrandingState,
+  });
+}
+
+export function useBrandingPublishMutation() {
+  const invalidateBrandingState = useInvalidateBrandingState();
+
+  return useMutation({
+    mutationFn: (input: PublishOrganizationBrandingInput) =>
+      organizationsApi.publishBranding(input),
+    onSuccess: invalidateBrandingState,
+  });
+}
+
+export function useBrandingLogoRemoveMutation() {
+  const invalidateBrandingState = useInvalidateBrandingState();
+
+  return useMutation({
+    mutationFn: (input: RemoveOrganizationBrandingInput) =>
+      organizationsApi.removeBrandingLogo(input),
+    onSuccess: invalidateBrandingState,
   });
 }
 

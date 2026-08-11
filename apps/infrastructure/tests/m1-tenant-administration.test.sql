@@ -799,8 +799,11 @@ declare
   v_fail record;
   v_artifact_work record;
   v_artifact_failure record;
+  v_first_artifact_completion record;
+  v_second_artifact_work record;
   v_artifact_lease_one uuid := '24000000-0000-4000-8000-000000000020';
   v_artifact_lease_two uuid := '24000000-0000-4000-8000-000000000021';
+  v_artifact_lease_three uuid := '24000000-0000-4000-8000-000000000022';
   v_proof uuid;
   v_kind text;
 begin
@@ -853,16 +856,43 @@ begin
   select * into v_artifact_work from public.claim_organization_deletion_artifact_work_atomic(
     v_artifact_lease_two, 60
   );
-  select * into v_result from public.complete_organization_deletion_artifact_work_atomic(
+  select * into v_first_artifact_completion from public.complete_organization_deletion_artifact_work_atomic(
     v_artifact_work.work_id, v_artifact_lease_two
   );
   perform pg_temp.check(
-    'post-database artifact work retries durably and can complete without restoring access',
+    'deletion proof waits for every private artifact prefix before completing',
+    v_first_artifact_completion.outcome = 'completed'
+    and (select artifact_deletion_completed_at is null
+           from public.organization_deletion_proofs where id = v_proof)
+    and (select count(*) = 1
+           from public.organization_deletion_artifact_work
+          where deletion_proof_id = v_proof and status <> 'completed')
+  );
+  select * into v_second_artifact_work from public.claim_organization_deletion_artifact_work_atomic(
+    v_artifact_lease_three, 60
+  );
+  select * into v_result from public.complete_organization_deletion_artifact_work_atomic(
+    v_second_artifact_work.work_id, v_artifact_lease_three
+  );
+  perform pg_temp.check(
+    'post-database artifact work retries durably and completes every private prefix without restoring access',
     v_artifact_failure.outcome = 'recorded'
     and v_artifact_failure.status = 'retry'
     and v_result.outcome = 'completed'
     and (select artifact_deletion_completed_at is not null
            from public.organization_deletion_proofs where id = v_proof)
+    and (select count(*) = 2
+           from public.organization_deletion_artifact_work
+          where deletion_proof_id = v_proof)
+    and not exists (
+      select 1
+        from public.organization_deletion_artifact_work
+       where deletion_proof_id = v_proof and status <> 'completed'
+    )
+    and (select array_agg(bucket_id order by bucket_id)
+           from public.organization_deletion_artifact_work
+          where deletion_proof_id = v_proof)
+        = array['organization-branding', 'tenant-exports']::text[]
     and not exists (select 1 from public.organizations where id = v_org)
   );
 end
@@ -986,7 +1016,8 @@ select pg_temp.check(
       'organization_onboarding_evidence', 'organization_export_jobs',
       'organization_export_parts', 'organization_export_snapshots',
       'organization_purge_jobs', 'organization_purge_work_items',
-      'organization_permissions_version'
+      'organization_permissions_version', 'legal_entities',
+      'organization_branding'
     ]::text[]
 );
 

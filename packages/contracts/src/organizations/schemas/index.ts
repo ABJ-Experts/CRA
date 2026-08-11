@@ -1,4 +1,6 @@
 export * from "./iso-3166-alpha-2.js";
+export * from "./legal-entity.schema.js";
+export * from "./organization-branding.schema.js";
 export * from "./organization-export.schema.js";
 export * from "./organization-input.schema.js";
 export * from "./organization-lifecycle.schema.js";

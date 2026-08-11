@@ -10,8 +10,39 @@ import {
   type OrganizationRepository,
 } from "./application/organization-repository.port";
 import { OrganizationUseCases } from "./application/organization-use-cases";
+import {
+  BrandingUseCases,
+  type BrandingRepository,
+  type BrandingRequestIdentityPort,
+  type BrandingScannerPolicyPort,
+  type BrandingScannerPort,
+  type BrandingStoragePort,
+  type LogoProcessorPort,
+} from "./branding/application/branding-use-cases";
+import { BrandingController } from "./branding/branding.controller";
+import {
+  ConfigBrandingScannerPolicyAdapter,
+  NodeBrandingRequestIdentityAdapter,
+  UnavailableBrandingScannerAdapter,
+} from "./branding/infrastructure/branding-adapters";
+import { BrandLogoProcessor } from "./branding/infrastructure/brand-logo-processor";
+import { SupabaseBrandingRepository } from "./branding/infrastructure/supabase-branding.repository";
+import { SupabaseBrandingStorageAdapter } from "./branding/infrastructure/supabase-branding-storage.adapter";
+import { BrandingService } from "./branding/branding.service";
 import { SupabaseOnboardingEvidenceRecorder } from "./infrastructure/supabase-onboarding-evidence-recorder.adapter";
 import { SupabaseOrganizationRepository } from "./infrastructure/supabase-organization.repository";
+import {
+  LEGAL_ENTITY_DEPENDENCY_REPORTER,
+  LEGAL_ENTITY_DIRECTORY,
+} from "./legal-entities/application/legal-entity-ports";
+import {
+  LEGAL_ENTITY_REPOSITORY,
+  LegalEntityUseCases,
+  type LegalEntityRepository,
+} from "./legal-entities/application/legal-entity-use-cases";
+import { SupabaseLegalEntityRepository } from "./legal-entities/infrastructure/supabase-legal-entity.repository";
+import { LegalEntitiesController } from "./legal-entities/legal-entities.controller";
+import { LegalEntitiesService } from "./legal-entities/legal-entities.service";
 import { OrganizationsController } from "./organizations.controller";
 import { OrganizationsService } from "./organizations.service";
 import {
@@ -50,7 +81,12 @@ import { TenantAdministrationService } from "./tenant-administration/tenant-admi
 
 @Module({
   imports: [SupabaseModule, AuthModule],
-  controllers: [OrganizationsController, TenantAdministrationController],
+  controllers: [
+    OrganizationsController,
+    TenantAdministrationController,
+    LegalEntitiesController,
+    BrandingController,
+  ],
   providers: [
     SupabaseOrganizationRepository,
     SupabaseOnboardingEvidenceRecorder,
@@ -65,6 +101,60 @@ import { TenantAdministrationService } from "./tenant-administration/tenant-admi
       inject: [ORGANIZATION_REPOSITORY],
     },
     OrganizationsService,
+    SupabaseBrandingRepository,
+    SupabaseBrandingStorageAdapter,
+    BrandLogoProcessor,
+    UnavailableBrandingScannerAdapter,
+    ConfigBrandingScannerPolicyAdapter,
+    NodeBrandingRequestIdentityAdapter,
+    {
+      provide: BrandingUseCases,
+      inject: [
+        SupabaseBrandingRepository,
+        BrandLogoProcessor,
+        SupabaseBrandingStorageAdapter,
+        UnavailableBrandingScannerAdapter,
+        ConfigBrandingScannerPolicyAdapter,
+        NodeBrandingRequestIdentityAdapter,
+      ],
+      useFactory: (
+        repository: BrandingRepository,
+        processor: LogoProcessorPort,
+        storage: BrandingStoragePort,
+        scanner: BrandingScannerPort,
+        scannerPolicy: BrandingScannerPolicyPort,
+        requestIdentity: BrandingRequestIdentityPort,
+      ) =>
+        new BrandingUseCases(
+          repository,
+          processor,
+          storage,
+          scanner,
+          scannerPolicy,
+          requestIdentity,
+        ),
+    },
+    BrandingService,
+    SupabaseLegalEntityRepository,
+    {
+      provide: LEGAL_ENTITY_REPOSITORY,
+      useExisting: SupabaseLegalEntityRepository,
+    },
+    {
+      provide: LegalEntityUseCases,
+      inject: [LEGAL_ENTITY_REPOSITORY],
+      useFactory: (repository: LegalEntityRepository) =>
+        new LegalEntityUseCases(repository),
+    },
+    {
+      provide: LEGAL_ENTITY_DIRECTORY,
+      useExisting: LegalEntityUseCases,
+    },
+    {
+      provide: LEGAL_ENTITY_DEPENDENCY_REPORTER,
+      useExisting: LegalEntityUseCases,
+    },
+    LegalEntitiesService,
     SupabaseTenantAdministrationRepository,
     SupabaseTenantLifecycleWorkerRepository,
     SupabaseTenantLifecycleStorageAdapter,
@@ -170,6 +260,8 @@ import { TenantAdministrationService } from "./tenant-administration/tenant-admi
   exports: [
     OrganizationsService,
     OnboardingEvidenceRecorder,
+    LEGAL_ENTITY_DIRECTORY,
+    LEGAL_ENTITY_DEPENDENCY_REPORTER,
     TenantLifecycleWorker,
   ],
 })

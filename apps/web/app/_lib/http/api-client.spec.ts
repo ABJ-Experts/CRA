@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { describe, expect, it, vi } from "vitest";
 
-import { ApiClientError, requestJson } from "./api-client";
+import { ApiClientError, requestJson, requestMultipart } from "./api-client";
 
 const successSchema = z.object({ ok: z.literal(true) }).strict();
 
@@ -232,5 +232,61 @@ describe("requestJson", () => {
       }),
     ).rejects.toBeInstanceOf(ApiClientError);
     expect(fetcher).not.toHaveBeenCalled();
+  });
+
+  it("validates multipart fields before sending file uploads", async () => {
+    const fetcher = vi.fn();
+    const file = new File(["png"], "logo.png", { type: "image/png" });
+
+    await expect(
+      requestMultipart({
+        path: "/api/v1/test/logo",
+        method: "POST",
+        fields: { altText: "" },
+        fieldsSchema: z.object({ altText: z.string().trim().min(1) }).strict(),
+        file: { name: "logo", value: file },
+        schema: successSchema,
+        fetcher,
+      }),
+    ).rejects.toMatchObject({ kind: "invalid_request" });
+
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+
+  it("sends multipart requests with same-origin credentials and parses responses", async () => {
+    const file = new File(["png"], "logo.png", { type: "image/png" });
+    const fetcher = vi.fn(
+      async () => new Response(JSON.stringify({ ok: true }), { status: 200 }),
+    );
+
+    await expect(
+      requestMultipart({
+        path: "/api/v1/test/logo",
+        method: "POST",
+        fields: { altText: "  Product logo  " },
+        fieldsSchema: z
+          .object({ altText: z.string().trim().min(1) })
+          .strict(),
+        file: { name: "logo", value: file },
+        schema: successSchema,
+        fetcher,
+      }),
+    ).resolves.toEqual({ ok: true });
+
+    expect(fetcher).toHaveBeenCalledWith(
+      "/api/v1/test/logo",
+      expect.objectContaining({
+        method: "POST",
+        credentials: "same-origin",
+        cache: "no-store",
+        headers: undefined,
+      }),
+    );
+    const body = (
+      fetcher.mock.calls as unknown as [string, RequestInit][]
+    )[0]?.[1].body;
+    expect(body).toBeInstanceOf(FormData);
+    expect((body as FormData).get("altText")).toBe("Product logo");
+    expect((body as FormData).get("logo")).toBe(file);
   });
 });

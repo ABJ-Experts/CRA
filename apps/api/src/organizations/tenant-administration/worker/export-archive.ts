@@ -96,6 +96,22 @@ export const exportSourceRegistry: readonly ExportSourceRegistration[] =
       sourceId: "organization_permissions_version",
       tables: ["organization_permissions_version"],
     },
+    {
+      sourceId: "organization_branding",
+      tables: [
+        "organization_branding_drafts",
+        "organization_branding_assets",
+        "organization_branding_versions",
+      ],
+    },
+    {
+      sourceId: "legal_entities",
+      tables: [
+        "organization_legal_entities",
+        "organization_legal_entity_dependency_authorities",
+        "organization_legal_entity_dependency_facts",
+      ],
+    },
   ]);
 
 /** Explicit omissions are security objects, never an accidental omission. */
@@ -117,6 +133,10 @@ export const exportSourceExclusions: Readonly<Record<string, string>> =
       "Transient immutable copies of registered sources; exporting them would duplicate and recursively re-export tenant records.",
     organization_export_artifact_snapshots:
       "Artifact metadata and copied bytes remain behind the authoritative artifact snapshot port until its owning domain is bound.",
+    organization_legal_entity_create_idempotencies:
+      "Legal entity create idempotency keys and request digests are request-security material.",
+    organization_branding_publish_idempotencies:
+      "Branding publish idempotency keys and request digests are request-security material.",
   });
 
 const crcTable = (() => {
