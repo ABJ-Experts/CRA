@@ -82,7 +82,7 @@ describe("deriveSessionState", () => {
       role: "viewer" as const,
       permissions: { can_view_orders: true },
     };
-    const menu = ["dashboard", "ecommerce.orders"] as const;
+    const menu = ["dashboard", "organization"] as const;
 
     const state = deriveSessionState({
       enabled: true,

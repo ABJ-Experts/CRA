@@ -33,6 +33,12 @@ export class BrandingService {
     return this.unwrap(this.useCases.renderLogo(command));
   }
 
+  renderPublishedLogo(
+    command: Parameters<BrandingUseCases["renderPublishedLogo"]>[0],
+  ) {
+    return this.unwrap(this.useCases.renderPublishedLogo(command));
+  }
+
   saveDraft(command: Parameters<BrandingUseCases["saveDraft"]>[0]) {
     return this.unwrap(this.useCases.saveDraft(command));
   }

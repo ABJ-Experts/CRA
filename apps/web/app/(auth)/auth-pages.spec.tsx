@@ -168,6 +168,11 @@ describe("auth pages", () => {
   it("submits sign-in credentials and routes to the dashboard", async () => {
     render(<SignInPage />);
 
+    expect(screen.getByTestId("sign-in-form")).toHaveAttribute(
+      "method",
+      "post",
+    );
+
     fireEvent.change(screen.getByTestId("si-identifier"), {
       target: { value: "ada@example.com" },
     });

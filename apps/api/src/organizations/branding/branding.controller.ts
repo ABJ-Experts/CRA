@@ -116,6 +116,23 @@ export class BrandingController {
     response.send(logo.bytes);
   }
 
+  @RequirePermissions("can_view_organization")
+  @Get("logo")
+  @NonJsonResponse("stream")
+  async renderPublishedLogo(
+    @CurrentUser() user: RequestUser,
+    @Res() response: Response,
+  ): Promise<void> {
+    const logo = await this.branding.renderPublishedLogo({
+      organizationId: this.organizationId(user),
+      actorId: user.id,
+    });
+    response.setHeader("Content-Type", logo.mimeType);
+    response.setHeader("Cache-Control", "private, no-store");
+    response.setHeader("ETag", `"${logo.sha256}"`);
+    response.send(logo.bytes);
+  }
+
   @RequireRole("owner")
   @RequirePermissions("can_edit_organization")
   @Patch()

@@ -11,6 +11,7 @@ import { MailModule } from "./mail/mail.module";
 import { InvitationsModule } from "./invitations/invitations.module";
 import { OrganizationsModule } from "./organizations/organizations.module";
 import { PermissionsModule } from "./permissions/permissions.module";
+import { ProductsModule } from "./products/products.module";
 import { SupabaseModule } from "./supabase/supabase.module";
 import { UsersModule } from "./users/users.module";
 
@@ -42,6 +43,7 @@ import { UsersModule } from "./users/users.module";
     MailModule,
     AuthModule,
     PermissionsModule,
+    ProductsModule,
     SecurityModule,
     UsersModule,
     OrganizationsModule,

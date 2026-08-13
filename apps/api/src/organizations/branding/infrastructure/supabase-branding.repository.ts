@@ -82,6 +82,24 @@ export class SupabaseBrandingRepository implements BrandingRepository {
     });
   }
 
+  async getRenderablePublishedLogo(orgId: string, actorId: string) {
+    const row = await this.singleRpc(
+      "get_organization_branding_published_logo_render",
+      {
+        p_organization_id: orgId,
+        p_actor_user_id: actorId,
+      },
+    );
+    const outcome = this.outcome(row, FOUND_OUTCOMES);
+    if (outcome === "not_found") return Object.freeze({ outcome });
+    if (outcome !== "found") throw new BrandingProviderError("malformed");
+    return Object.freeze({
+      outcome,
+      objectKey: this.requiredString(row, "object_key"),
+      sha256: this.requiredString(row, "sha256"),
+    });
+  }
+
   async reserveAsset(
     orgId: string,
     actorId: string,

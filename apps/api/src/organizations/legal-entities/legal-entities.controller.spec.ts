@@ -52,6 +52,24 @@ describe("LegalEntitiesController", () => {
     );
   });
 
+  it("uses the shared legalEntityId parameter key on every entity route", () => {
+    const routes = [
+      ["get", ":legalEntityId"],
+      ["update", ":legalEntityId"],
+      ["activate", ":legalEntityId/activate"],
+      ["deactivate", ":legalEntityId/deactivate"],
+      ["softDelete", ":legalEntityId/delete"],
+    ] as const;
+
+    for (const [name, route] of routes) {
+      const handler = Object.getOwnPropertyDescriptor(
+        LegalEntitiesController.prototype,
+        name,
+      )?.value as object;
+      expect(Reflect.getMetadata(PATH_METADATA, handler)).toBe(route);
+    }
+  });
+
   it("requires organization view permission for reads and owner plus edit permission for every mutation", () => {
     for (const name of ["list", "get"] as const) {
       const handler = Object.getOwnPropertyDescriptor(

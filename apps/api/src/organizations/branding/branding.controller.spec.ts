@@ -38,10 +38,18 @@ describe("BrandingController", () => {
     expect(Reflect.getMetadata(PATH_METADATA, handler("renderLogo"))).toBe(
       "logo/preview",
     );
+    expect(
+      Reflect.getMetadata(PATH_METADATA, handler("renderPublishedLogo")),
+    ).toBe("logo");
   });
 
   it("gates reads with view permission and writes with owner plus edit permission", () => {
-    for (const name of ["resolved", "preview", "renderLogo"] as const) {
+    for (const name of [
+      "resolved",
+      "preview",
+      "renderLogo",
+      "renderPublishedLogo",
+    ] as const) {
       expect(
         Reflect.getMetadata(REQUIRE_PERMISSIONS_KEY, handler(name)),
       ).toEqual(["can_view_organization"]);
@@ -75,6 +83,11 @@ describe("BrandingController", () => {
         mimeType: "image/webp",
         sha256: "a".repeat(64),
       }),
+      renderPublishedLogo: jest.fn().mockResolvedValue({
+        bytes: Buffer.from("published-webp"),
+        mimeType: "image/webp",
+        sha256: "b".repeat(64),
+      }),
       saveDraft: jest.fn().mockResolvedValue({ branding: {} }),
       publish: jest.fn().mockResolvedValue({ branding: {} }),
       removeLogo: jest.fn().mockResolvedValue({ branding: {} }),
@@ -98,6 +111,11 @@ describe("BrandingController", () => {
       send: jest.fn(),
     };
     await controller.renderLogo(user, response as never);
+    const publishedResponse = {
+      setHeader: jest.fn(),
+      send: jest.fn(),
+    };
+    await controller.renderPublishedLogo(user, publishedResponse as never);
     await controller.saveDraft(
       {
         expectedVersion: 1,
@@ -141,6 +159,18 @@ describe("BrandingController", () => {
       ["ETag", `"${"a".repeat(64)}"`],
     ]);
     expect(response.send).toHaveBeenCalledWith(Buffer.from("webp"));
+    expect(service.renderPublishedLogo).toHaveBeenCalledWith({
+      organizationId,
+      actorId,
+    });
+    expect(publishedResponse.setHeader.mock.calls).toEqual([
+      ["Content-Type", "image/webp"],
+      ["Cache-Control", "private, no-store"],
+      ["ETag", `"${"b".repeat(64)}"`],
+    ]);
+    expect(publishedResponse.send).toHaveBeenCalledWith(
+      Buffer.from("published-webp"),
+    );
     expect(service.saveDraft).toHaveBeenCalledWith({
       organizationId,
       actorId,

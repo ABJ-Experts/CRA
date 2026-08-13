@@ -85,6 +85,7 @@ select pg_temp.check(
         'publish_organization_branding_atomic',
         'remove_organization_branding_logo_atomic',
         'get_organization_branding_logo_render',
+        'get_organization_branding_published_logo_render',
         'get_organization_branding_export_snapshot'
       ])
       and (
@@ -122,6 +123,7 @@ declare
   v_published record;
   v_removed record;
   v_logo_render record;
+  v_published_logo_render record;
   v_kind text;
 begin
   insert into public.users (email) values ('v2-owner@integration.test')
@@ -274,6 +276,10 @@ begin
     and v_branding.branding->>'source' = 'sentinel'
     and v_branding.branding->>'displayName' = 'CRA Sentinel'
     and v_branding.branding->>'version' = '0'
+    and v_branding.branding#>>'{palette,primary}' = '#595FE5'
+    and v_branding.branding#>>'{palette,primaryText}' = '#FFFFFF'
+    and v_branding.branding#>>'{palette,secondary}' = '#ADB0ED'
+    and v_branding.branding#>>'{palette,secondaryText}' = '#000000'
   );
 
   select * into v_draft from public.save_organization_branding_draft_atomic(
@@ -311,6 +317,8 @@ begin
     v_org, v_draft_asset.asset_id, v_owner, repeat('d', 64), 4096, 64, 64, 'clean'
   );
   select * into v_logo_render from public.get_organization_branding_logo_render(v_org, v_owner);
+  select * into v_published_logo_render
+    from public.get_organization_branding_published_logo_render(v_org, v_owner);
   perform pg_temp.check(
     'authenticated raster rendering selects the approved draft logo before the immutable published logo',
     v_finalized.outcome = 'finalized'
@@ -318,6 +326,14 @@ begin
     and v_logo_render.outcome = 'found'
     and v_logo_render.object_key = v_draft_asset.object_key || repeat('d', 64) || '.webp'
     and v_logo_render.sha256 = repeat('d', 64)
+  );
+  perform pg_temp.check(
+    'published logo rendering ignores a newer approved draft logo and remains member-scoped',
+    v_published_logo_render.outcome = 'found'
+    and v_published_logo_render.object_key = v_asset.object_key || repeat('a', 64) || '.webp'
+    and v_published_logo_render.sha256 = repeat('a', 64)
+    and (select outcome = 'not_found' and object_key is null and sha256 is null
+           from public.get_organization_branding_published_logo_render(v_org, v_other_owner))
   );
 
   select * into v_removed from public.remove_organization_branding_logo_atomic(

@@ -251,7 +251,7 @@ export class SupabaseOrganizationRepository implements OrganizationRepository {
       nextIncompleteStage: incomplete?.stage ?? null,
       blocked: incomplete?.status === "blocked",
       integrationAvailability: {
-        products: false,
+        products: true,
         sbom: false,
         invitations: true,
       },

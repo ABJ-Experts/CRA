@@ -112,6 +112,11 @@ vi.mock("@repo/ui/chart", () => {
 vi.mock("../_components/sidebar/sidebar", () => ({
   Sidebar: () => <nav aria-label="Sidebar" />,
 }));
+vi.mock("./organization-theme-provider", () => ({
+  OrganizationThemeProvider: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="organization-theme-provider">{children}</div>
+  ),
+}));
 
 import ComingSoonPage from "./[...slug]/page";
 import { PageHeading, SectionCard } from "./_components/dashboard-chrome";
@@ -255,6 +260,9 @@ describe("dashboard pages", () => {
 
     expect(screen.getByRole("navigation", { name: "Sidebar" })).toBeVisible();
     expect(screen.getByRole("main")).toHaveTextContent("Dashboard content");
+    expect(
+      screen.getByTestId("organization-theme-provider"),
+    ).toBeInTheDocument();
   });
 
   it("turns a catch-all slug into a readable placeholder", async () => {

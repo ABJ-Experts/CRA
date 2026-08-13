@@ -217,9 +217,9 @@ export const organizationBrandingDraftSchema = z
   .strict();
 
 const sentinelPalette = Object.freeze({
-  primary: "#0167FF",
+  primary: "#595FE5",
   primaryText: WHITE,
-  secondary: "#00A39B",
+  secondary: "#ADB0ED",
   secondaryText: BLACK,
 });
 

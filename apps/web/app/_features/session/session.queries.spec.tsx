@@ -65,7 +65,7 @@ describe("sessionApi", () => {
             permissions: { can_view_orders: true },
           });
         case "/api/v1/permissions/menu":
-          return jsonResponse({ menu: ["dashboard", "ecommerce.orders"] });
+          return jsonResponse({ menu: ["dashboard", "organization"] });
         case "/api/v1/auth/sign-out":
           return jsonResponse({ ok: true });
         default:
@@ -81,7 +81,7 @@ describe("sessionApi", () => {
     });
     await expect(sessionApi.menu({ fetcher })).resolves.toEqual([
       "dashboard",
-      "ecommerce.orders",
+      "organization",
     ]);
     await expect(sessionApi.signOut({ fetcher })).resolves.toEqual({
       ok: true,

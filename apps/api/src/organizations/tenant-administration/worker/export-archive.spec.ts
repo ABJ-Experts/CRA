@@ -61,6 +61,21 @@ describe("tenant export archive", () => {
     ).not.toThrow();
   });
 
+  it("keeps all persisted product-registry records in the product export source", () => {
+    const productRegistry = exportSourceRegistry.find(
+      (source) => source.sourceId === "product_registry",
+    );
+
+    expect(productRegistry?.tables).toEqual(
+      expect.arrayContaining([
+        "products",
+        "product_releases",
+        "product_release_market_availability",
+        "product_regulatory_outbox_events",
+      ]),
+    );
+  });
+
   it("models a resumable capacity profile against the 24-hour target", () => {
     expect(
       simulateExportCapacity({

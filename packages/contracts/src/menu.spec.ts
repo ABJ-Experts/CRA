@@ -64,45 +64,38 @@ describe("canViewMenu", () => {
   it("always shows unmapped entries so a failed session cannot empty the rail", () => {
     for (const key of [
       "dashboard",
-      "tables.basic",
       "profile.account",
-      "help",
-      "docs",
     ] as MenuKey[]) {
       expect(canViewMenu(key, { can: () => false })).toBe(true);
     }
   });
 
   it("gates a mapped entry on its permission", () => {
-    expect(canViewMenu("ecommerce.orders", { can })).toBe(true);
     expect(canViewMenu("management", { can })).toBe(false);
     expect(canViewMenu("authorization.roles", { can })).toBe(false);
     expect(canViewMenu("organization", { can })).toBe(true);
     expect(canViewMenu("organization", { can: () => false })).toBe(false);
   });
 
-  it("shows a group when any child is visible", () => {
-    const onlyOrders = (k: string) => k === "can_view_orders";
-    expect(canViewMenu("ecommerce", { can: onlyOrders as never })).toBe(true);
-  });
-
   it("hides a group when every child is hidden", () => {
     expect(canViewMenu("authorization", { can: () => false })).toBe(false);
-    expect(canViewMenu("logistic", { can: () => false })).toBe(false);
   });
 
   it("an explicit override of false hides an entry the permission would allow", () => {
     expect(
-      canViewMenu("ecommerce.orders", {
+      canViewMenu("organization", {
         can,
-        overrides: { "ecommerce.orders": false },
+        overrides: { organization: false },
       }),
     ).toBe(false);
   });
 
   it("an override of false on a group hides it even when children are visible", () => {
     expect(
-      canViewMenu("ecommerce", { can, overrides: { ecommerce: false } }),
+      canViewMenu("authorization", {
+        can: () => true,
+        overrides: { authorization: false },
+      }),
     ).toBe(false);
   });
 

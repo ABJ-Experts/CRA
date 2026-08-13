@@ -11,7 +11,7 @@ function fixture() {
       can_edit_users: false,
       can_view_orders: true,
     },
-    menuOverrides: { "dashboard.crypto": false } as const,
+    menuOverrides: { organization: false } as const,
   };
   const resolver = {
     resolve: jest.fn().mockResolvedValue(resolution),
@@ -87,15 +87,14 @@ describe("PermissionsService facade", () => {
     const menu = await service.menu("org-1", "user-1", "member");
 
     expect(menu).toContain("management");
-    expect(menu).toContain("ecommerce.orders");
-    expect(menu).not.toContain("dashboard.crypto");
+    expect(menu).not.toContain("organization");
     expect(menu).not.toContain("authorization.roles");
   });
 
   it.each([
     ["management", true],
     ["authorization.roles", false],
-    ["dashboard.crypto", false],
+    ["organization", false],
   ] as const)("checks menu key %s", async (key, visible) => {
     const { service } = fixture();
 

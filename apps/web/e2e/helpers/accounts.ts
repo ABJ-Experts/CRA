@@ -250,6 +250,22 @@ export class RunScopedAccounts {
 
   async cleanup(): Promise<void> {
     for (const id of this.organizationIds) {
+      for (const table of [
+        "product_release_create_idempotencies",
+        "product_create_idempotencies",
+        "product_releases",
+        "products",
+      ]) {
+        const dependentResponse = await supabase(
+          `/rest/v1/${table}?organization_id=eq.${encodeURIComponent(id)}`,
+          { method: "DELETE" },
+        );
+        if (!dependentResponse.ok) {
+          throw new Error(
+            `Could not clean ${table} fixture rows for ${id}: ${JSON.stringify(await responseBody(dependentResponse))}`,
+          );
+        }
+      }
       const response = await supabase(
         `/rest/v1/organizations?id=eq.${encodeURIComponent(id)}`,
         { method: "DELETE" },

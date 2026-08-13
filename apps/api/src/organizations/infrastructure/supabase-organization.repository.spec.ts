@@ -418,7 +418,7 @@ describe("SupabaseOrganizationRepository", () => {
       nextIncompleteStage: "first_product",
       blocked: true,
       integrationAvailability: {
-        products: false,
+        products: true,
         sbom: false,
         invitations: true,
       },

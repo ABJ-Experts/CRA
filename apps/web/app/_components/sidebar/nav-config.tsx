@@ -1,19 +1,10 @@
 import {
-  Calendar,
   Building2,
-  FileText,
-  Folder,
   LayoutGrid,
-  LifeBuoy,
-  Mail,
-  MessageSquare,
+  Package,
   Settings2,
   ShieldCheck,
-  ShoppingCart,
-  Table2,
-  Truck,
   UserRound,
-  Wallet,
   type LucideIcon,
 } from "lucide-react";
 import type { MenuKey } from "@repo/contracts/menu";
@@ -21,15 +12,7 @@ import type { MenuKey } from "@repo/contracts/menu";
 export interface NavLeaf {
   label: string;
   href: string;
-  /** Count badge. Renders as `99+` above 99, matching the frame. */
-  notice?: number;
-  /**
-   * RBAC key for this entry. Maps to a `menu_permissions` row and to
-   * `MENU_PERMISSION_MAP` in `@repo/contracts/menu`, which decides whether the
-   * item renders. `menu-nav-parity.spec.ts` asserts this tree and the contract's
-   * `MENU_KEYS` stay identical in both directions, so an entry can never be
-   * added here without a way to grant it.
-   */
+  /** RBAC/menu key shared with the API response contract. */
   menuKey: MenuKey;
 }
 
@@ -37,179 +20,47 @@ export interface NavItem {
   label: string;
   href?: string;
   icon: LucideIcon;
-  notice?: number;
   children?: NavLeaf[];
   menuKey: MenuKey;
 }
 
 export interface NavSection {
-  /** Rendered as the frame's 10px SemiBold section caption. */
   label?: string;
   items: NavItem[];
 }
 
-/**
- * The navigation from Pencil frame `ty4xx`, item for item.
- *
- * Kept as data rather than markup so the expanded rail, the collapsed rail
- * and the mobile drawer all render from one source - three hand-written
- * copies would drift the moment a route is added.
- */
+/** Customer navigation for the currently implemented CRA workspace. */
 export const NAV: NavSection[] = [
   {
     items: [
       {
         label: "Dashboard",
+        href: "/dashboard",
         icon: LayoutGrid,
-        notice: 128,
         menuKey: "dashboard",
-        children: [
-          {
-            label: "E-commerce",
-            href: "/dashboard",
-            menuKey: "dashboard.ecommerce",
-          },
-          {
-            label: "Analytics",
-            href: "/dashboard/analytics",
-            menuKey: "dashboard.analytics",
-          },
-          {
-            label: "Crypto",
-            href: "/dashboard/crypto",
-            notice: 3,
-            menuKey: "dashboard.crypto",
-          },
-          {
-            label: "Project",
-            href: "/dashboard/project",
-            menuKey: "dashboard.project",
-          },
-        ],
-      },
-      {
-        label: "Tables",
-        icon: Table2,
-        menuKey: "tables",
-        /* The four skins the Pencil frames ship, in the order they appear
-         * there: Basic, Striped, Bordered, Splitted. */
-        children: [
-          {
-            label: "Basic",
-            href: "/dashboard/tables/basic",
-            menuKey: "tables.basic",
-          },
-          {
-            label: "Striped",
-            href: "/dashboard/tables/striped",
-            menuKey: "tables.striped",
-          },
-          {
-            label: "Bordered",
-            href: "/dashboard/tables/bordered",
-            menuKey: "tables.bordered",
-          },
-          {
-            label: "Splitted",
-            href: "/dashboard/tables/splitted",
-            menuKey: "tables.splitted",
-          },
-        ],
-      },
-      {
-        label: "Messages",
-        icon: MessageSquare,
-        href: "/dashboard/messages",
-        notice: 7,
-        menuKey: "messages",
-      },
-      {
-        label: "Email",
-        icon: Mail,
-        href: "/dashboard/email",
-        menuKey: "email",
-      },
-      {
-        label: "E-commerce",
-        icon: ShoppingCart,
-        menuKey: "ecommerce",
-        children: [
-          {
-            label: "Products",
-            href: "/dashboard/products",
-            menuKey: "ecommerce.products",
-          },
-          {
-            label: "Orders",
-            href: "/dashboard/orders",
-            notice: 12,
-            menuKey: "ecommerce.orders",
-          },
-        ],
-      },
-      {
-        label: "Finance",
-        icon: Wallet,
-        menuKey: "finance",
-        children: [
-          {
-            label: "Invoices",
-            href: "/dashboard/invoices",
-            menuKey: "finance.invoices",
-          },
-        ],
-      },
-      {
-        label: "Logistic",
-        icon: Truck,
-        menuKey: "logistic",
-        children: [
-          {
-            label: "Fleet",
-            href: "/dashboard/fleet",
-            menuKey: "logistic.fleet",
-          },
-          {
-            label: "Routes",
-            href: "/dashboard/routes",
-            menuKey: "logistic.routes",
-          },
-        ],
       },
       {
         label: "Management",
-        icon: Settings2,
         href: "/dashboard/management",
+        icon: Settings2,
         menuKey: "management",
       },
       {
         label: "Organization",
-        icon: Building2,
         href: "/dashboard/organization",
+        icon: Building2,
         menuKey: "organization",
       },
       {
-        label: "Calendar",
-        icon: Calendar,
-        href: "/dashboard/calendar",
-        menuKey: "calendar",
-      },
-      {
-        label: "Help Center",
-        icon: LifeBuoy,
-        href: "/dashboard/help",
-        menuKey: "help",
-      },
-      {
-        label: "File Manager",
-        icon: Folder,
-        href: "/dashboard/files",
-        menuKey: "files",
+        label: "Products",
+        href: "/dashboard/products",
+        icon: Package,
+        menuKey: "products",
       },
     ],
   },
   {
-    label: "Admin Authorization",
+    label: "Account & access",
     items: [
       {
         label: "Profile",
@@ -245,7 +96,6 @@ export const NAV: NavSection[] = [
           },
         ],
       },
-      { label: "Docs", icon: FileText, href: "/showcase", menuKey: "docs" },
     ],
   },
 ];

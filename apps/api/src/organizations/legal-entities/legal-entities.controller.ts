@@ -44,7 +44,7 @@ export class LegalEntitiesController {
   }
 
   @RequirePermissions("can_view_organization")
-  @Get(":entityId")
+  @Get(":legalEntityId")
   @ZodResponse(legalEntityResponseSchema)
   get(
     @Param(zodParams(legalEntityParamsSchema)) params: LegalEntityParams,
@@ -75,7 +75,7 @@ export class LegalEntitiesController {
 
   @RequireRole("owner")
   @RequirePermissions("can_edit_organization")
-  @Patch(":entityId")
+  @Patch(":legalEntityId")
   @ZodResponse(legalEntityResponseSchema)
   update(
     @Param(zodParams(legalEntityParamsSchema)) params: LegalEntityParams,
@@ -92,7 +92,7 @@ export class LegalEntitiesController {
 
   @RequireRole("owner")
   @RequirePermissions("can_edit_organization")
-  @Post(":entityId/activate")
+  @Post(":legalEntityId/activate")
   @HttpCode(HttpStatus.OK)
   @ZodResponse(legalEntityResponseSchema)
   activate(
@@ -111,7 +111,7 @@ export class LegalEntitiesController {
 
   @RequireRole("owner")
   @RequirePermissions("can_edit_organization")
-  @Post(":entityId/deactivate")
+  @Post(":legalEntityId/deactivate")
   @HttpCode(HttpStatus.OK)
   @ZodResponse(legalEntityResponseSchema)
   deactivate(
@@ -130,7 +130,7 @@ export class LegalEntitiesController {
 
   @RequireRole("owner")
   @RequirePermissions("can_edit_organization")
-  @Post(":entityId/delete")
+  @Post(":legalEntityId/delete")
   @HttpCode(HttpStatus.OK)
   @ZodResponse(legalEntityResponseSchema)
   softDelete(

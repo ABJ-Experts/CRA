@@ -45,6 +45,7 @@ export default function SignInPage() {
 
       <Form
         form={form}
+        method="post"
         className="gap-6"
         onSubmit={async (values) => {
           setFormError(null);

@@ -141,6 +141,22 @@ describe("SupabaseBrandingRepository", () => {
     });
   });
 
+  it("resolves only the published approved logo and keeps not-found keyless", async () => {
+    const provider = supabase([{ outcome: "not_found" }]);
+    const repository = new SupabaseBrandingRepository(provider as never);
+
+    await expect(
+      repository.getRenderablePublishedLogo(organizationId, actorId),
+    ).resolves.toEqual({ outcome: "not_found" });
+    expect(provider.rpc).toHaveBeenCalledWith(
+      "get_organization_branding_published_logo_render",
+      {
+        p_organization_id: organizationId,
+        p_actor_user_id: actorId,
+      },
+    );
+  });
+
   it("uses the draft RPC and preserves a generic inaccessible result", async () => {
     const provider = supabase([{ outcome: "not_found" }]);
     const repository = new SupabaseBrandingRepository(provider as never);

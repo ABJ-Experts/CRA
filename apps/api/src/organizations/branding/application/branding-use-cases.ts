@@ -81,6 +81,13 @@ export interface BrandingRepository {
     | Readonly<{ outcome: "found"; objectKey: string; sha256: string }>
     | Readonly<{ outcome: "not_found" }>
   >;
+  getRenderablePublishedLogo(
+    orgId: string,
+    actorId: string,
+  ): Promise<
+    | Readonly<{ outcome: "found"; objectKey: string; sha256: string }>
+    | Readonly<{ outcome: "not_found" }>
+  >;
   reserveAsset(
     orgId: string,
     actorId: string,
@@ -352,6 +359,33 @@ export class BrandingUseCases {
   > {
     try {
       const logo = await this.repository.getRenderableLogo(
+        input.organizationId,
+        input.actorId,
+      );
+      if (logo.outcome === "not_found") return this.notFound();
+      const download = await this.storage.download(logo.objectKey, logo.sha256);
+      if (download.outcome === "not_found") return this.notFound();
+      return success(
+        Object.freeze({
+          bytes: Buffer.from(download.bytes),
+          mimeType: download.mimeType,
+          sha256: logo.sha256,
+        }),
+      );
+    } catch (error) {
+      return this.providerFailure(error);
+    }
+  }
+
+  async renderPublishedLogo(
+    input: Readonly<{ organizationId: string; actorId: string }>,
+  ): Promise<
+    BrandingResult<
+      Readonly<{ bytes: Buffer; mimeType: "image/webp"; sha256: string }>
+    >
+  > {
+    try {
+      const logo = await this.repository.getRenderablePublishedLogo(
         input.organizationId,
         input.actorId,
       );

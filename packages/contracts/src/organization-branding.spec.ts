@@ -211,6 +211,15 @@ describe("organization-branding contracts", () => {
     expectTypeOf(resolveOrganizationBranding).returns.toEqualTypeOf<ResolvedOrganizationBranding>();
   });
 
+  it("uses the published dashboard fallback palette exactly", () => {
+    expect(CRA_SENTINEL_BRANDING.palette).toEqual({
+      primary: "#595FE5",
+      primaryText: "#FFFFFF",
+      secondary: "#ADB0ED",
+      secondaryText: "#000000",
+    });
+  });
+
   it("copies only resolved public branding fields", () => {
     const resolved = resolveOrganizationBranding({
       ...CRA_SENTINEL_BRANDING,

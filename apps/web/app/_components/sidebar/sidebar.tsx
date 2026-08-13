@@ -1,14 +1,15 @@
 "use client";
 
-import { Avatar } from "@repo/ui/avatar";
 import { cn } from "@repo/ui/cn";
-import { Bell, ChevronDown, PanelLeft, X } from "lucide-react";
+import type { ResolvedOrganizationBranding } from "@repo/contracts";
+import { ChevronDown, PanelLeft, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { NAV, type NavItem, type NavSection } from "./nav-config";
 import { SignOutButton } from "./sign-out-button";
 import { useCanViewMenu } from "../../_providers/session-provider";
+import { useDashboardOrganizationBranding } from "../../dashboard/organization-theme-provider";
 import { getStoredCollapsed, storeCollapsed } from "./sidebar-collapse";
 
 /**
@@ -29,7 +30,6 @@ import { getStoredCollapsed, storeCollapsed } from "./sidebar-collapse";
  *               its 60px left inset (16 + 20 + 24)
  *   sub-item    48 tall, radius 12, padding 14 16 13 60
  *   section     43 tall, padding 14, 10px SemiBold -> `fg-subtle`
- *   notice      radius 9, padding 1 4 0 4, `brink-red-500`, 10px SemiBold
  *   bottom      padding 24, gap 24
  *
  * ONE ADDITION, deliberate: the frame ships no selected state - every item is
@@ -44,33 +44,39 @@ const COLLAPSED = "w-[66px]";
 /** Matches the attribute `sidebarScript` sets on <html> before first paint. */
 const PRE_PAINT_COLLAPSED = "[html[data-sidebar=collapsed]_&]:w-[66px]";
 
-function Notice({ count, className }: { count: number; className?: string }) {
-  return (
-    <span
-      className={cn(
-        "inline-flex h-4 min-w-7 shrink-0 items-center justify-center",
-        "rounded-[9px] px-1 pt-px",
-        "bg-brink-red-500 text-caption-2-semibold text-white tabular-nums",
-        className,
-      )}
-    >
-      {count > 99 ? "99+" : count}
-    </span>
-  );
-}
+function SidebarBrandMark({
+  branding,
+}: {
+  readonly branding: ResolvedOrganizationBranding | null;
+}) {
+  if (branding?.logo) {
+    return (
+      <span className="flex size-8 items-center justify-center rounded-lg bg-[var(--organization-brand-secondary)] p-1 text-[var(--organization-brand-secondary-text)]">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/api/v1/organizations/current/branding/logo"
+          alt={branding.logo.altText ?? branding.displayName}
+          className="max-h-full max-w-full object-contain"
+        />
+      </span>
+    );
+  }
 
-/** The 8px dot the frame shows instead of a count when the rail is collapsed. */
-function NoticeDot() {
+  const mark = Array.from(branding?.displayName.trim() ?? "C")[0] ?? "C";
   return (
     <span
       aria-hidden="true"
-      className="absolute top-2 right-2 size-2 rounded-full bg-brink-red-500 ring-2 ring-canvas"
-    />
+      className="flex size-8 items-center justify-center rounded-lg bg-active-500 text-on-accent"
+    >
+      {mark}
+    </span>
   );
 }
 
 export function Sidebar() {
   const pathname = usePathname();
+  const branding = useDashboardOrganizationBranding();
+  const publishedBranding = branding?.source === "published" ? branding : null;
   /* Seeded false to match the server render, then corrected on mount from the
    * same value the pre-paint script already applied to <html>. Reading storage
    * during render instead would be a hydration mismatch. */
@@ -203,10 +209,6 @@ export function Sidebar() {
             <span className="min-w-0 flex-1 truncate">{item.label}</span>
           ) : null}
         </span>
-        {!collapsed && item.notice !== undefined ? (
-          <Notice count={item.notice} />
-        ) : null}
-        {collapsed && item.notice !== undefined ? <NoticeDot /> : null}
         {!collapsed && hasChildren ? (
           <ChevronDown
             aria-hidden="true"
@@ -278,9 +280,6 @@ export function Sidebar() {
                     <span className="min-w-0 flex-1 truncate">
                       {child.label}
                     </span>
-                    {child.notice !== undefined ? (
-                      <Notice count={child.notice} />
-                    ) : null}
                   </Link>
                 </li>
               ))}
@@ -303,20 +302,14 @@ export function Sidebar() {
         {!collapsed ? (
           <Link
             href="/dashboard"
+            aria-label={publishedBranding?.displayName ?? "CRA Sentinel"}
             className="flex items-center gap-2 text-headline-semibold text-fg"
           >
-            <span
-              aria-hidden="true"
-              className="flex size-8 items-center justify-center rounded-lg bg-active-500 text-white"
-            >
-              C
-            </span>
-            CRA
+            <SidebarBrandMark branding={publishedBranding} />
+            {publishedBranding?.displayName ?? "CRA Sentinel"}
           </Link>
         ) : (
-          <span className="flex size-8 items-center justify-center rounded-lg bg-active-500 text-white">
-            C
-          </span>
+          <SidebarBrandMark branding={publishedBranding} />
         )}
         {!collapsed ? (
           <button
@@ -378,64 +371,18 @@ export function Sidebar() {
         />
       </nav>
 
-      {/* Bottom: padding 24, gap 24. */}
+      {/* The customer account is available from the Profile section. */}
       <div
         className={cn(
-          "flex shrink-0 flex-col gap-6",
+          "flex shrink-0 flex-col",
           collapsed ? "items-center px-4 pb-6" : "p-6",
         )}
       >
-        <div
-          className={cn(
-            "flex items-center gap-3",
-            collapsed && "flex-col gap-4",
-          )}
-        >
-          <button
-            type="button"
-            aria-label="Notifications, 3 unread"
-            className={cn(
-              "relative flex size-8 shrink-0 items-center justify-center rounded-xl p-2",
-              "text-fg-muted transition-colors duration-150 motion-reduce:transition-none",
-              "hover:bg-surface hover:text-fg",
-              "outline-none focus-visible:ring-2 focus-visible:ring-active-500",
-              !collapsed && "order-last",
-            )}
-          >
-            <Bell aria-hidden="true" className="size-4" />
-            <span
-              aria-hidden="true"
-              className="absolute top-1 right-1 size-2 rounded-full bg-brink-red-500 ring-2 ring-canvas"
-            />
-          </button>
-          <Avatar
-            name="Ada Foster"
-            status="online"
-            className="size-10 shrink-0"
-          />
-          {!collapsed ? (
-            <span className="flex min-w-0 flex-1 flex-col">
-              <span className="truncate text-subhead-medium text-fg">
-                Ada Foster
-              </span>
-              <span className="truncate text-caption-2-regular text-fg-subtle">
-                ada@cra.com
-              </span>
-            </span>
-          ) : null}
-        </div>
-
         <SignOutButton collapsed={collapsed} />
-
-        {!collapsed ? (
-          <div className="flex flex-col gap-[3px]">
-            <span className="text-caption-2-semibold text-fg">
-              &copy; CRA Corp.
-            </span>
-            <span className="text-caption-2-regular text-fg-muted">
-              All in One Premium UI Kits
-            </span>
-          </div>
+        {!collapsed && publishedBranding?.footerText ? (
+          <p className="mt-6 text-caption-2-regular text-fg-muted">
+            {publishedBranding.footerText}
+          </p>
         ) : null}
       </div>
     </div>

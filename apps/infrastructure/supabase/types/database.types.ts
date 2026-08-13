@@ -483,6 +483,65 @@ export type Database = {
           },
         ]
       }
+      member_state_reference_entries: {
+        Row: {
+          active: boolean
+          country_code: string
+          created_at: string
+          name: string
+          reference_version_id: string
+        }
+        Insert: {
+          active?: boolean
+          country_code: string
+          created_at?: string
+          name: string
+          reference_version_id: string
+        }
+        Update: {
+          active?: boolean
+          country_code?: string
+          created_at?: string
+          name?: string
+          reference_version_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "member_state_reference_entries_reference_version_id_fkey"
+            columns: ["reference_version_id"]
+            isOneToOne: false
+            referencedRelation: "member_state_reference_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      member_state_reference_versions: {
+        Row: {
+          active: boolean
+          created_at: string
+          effective_from: string
+          id: string
+          reference_set_id: string
+          version: number
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          effective_from: string
+          id?: string
+          reference_set_id: string
+          version: number
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          effective_from?: string
+          id?: string
+          reference_set_id?: string
+          version?: number
+        }
+        Relationships: []
+      }
       menu_permissions: {
         Row: {
           base_role: string | null
@@ -2437,6 +2496,576 @@ export type Database = {
         }
         Relationships: []
       }
+      product_create_idempotencies: {
+        Row: {
+          actor_user_id: string
+          created_at: string
+          idempotency_key: string
+          organization_id: string
+          payload_digest: string
+          product_id: string
+        }
+        Insert: {
+          actor_user_id: string
+          created_at?: string
+          idempotency_key: string
+          organization_id: string
+          payload_digest: string
+          product_id: string
+        }
+        Update: {
+          actor_user_id?: string
+          created_at?: string
+          idempotency_key?: string
+          organization_id?: string
+          payload_digest?: string
+          product_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_create_idempotencies_actor_user_id_fkey"
+            columns: ["actor_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_create_idempotencies_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_create_idempotencies_organization_id_product_id_fkey"
+            columns: ["organization_id", "product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      product_legal_entity_assignments: {
+        Row: {
+          assigned_at: string
+          assigned_by: string
+          id: string
+          legal_entity_id: string
+          legal_entity_snapshot: Json
+          legal_entity_version: number
+          organization_id: string
+          product_id: string
+          reason: string | null
+        }
+        Insert: {
+          assigned_at?: string
+          assigned_by: string
+          id?: string
+          legal_entity_id: string
+          legal_entity_snapshot: Json
+          legal_entity_version: number
+          organization_id: string
+          product_id: string
+          reason?: string | null
+        }
+        Update: {
+          assigned_at?: string
+          assigned_by?: string
+          id?: string
+          legal_entity_id?: string
+          legal_entity_snapshot?: Json
+          legal_entity_version?: number
+          organization_id?: string
+          product_id?: string
+          reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_legal_entity_assignme_organization_id_legal_entity_fkey"
+            columns: ["organization_id", "legal_entity_id"]
+            isOneToOne: false
+            referencedRelation: "organization_legal_entities"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "product_legal_entity_assignment_organization_id_product_id_fkey"
+            columns: ["organization_id", "product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "product_legal_entity_assignments_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_lifecycle_dependency_facts: {
+        Row: {
+          active: boolean
+          authority_kind: string
+          export_order_key: string | null
+          organization_id: string
+          product_id: string
+          reconciled_at: string
+          reconciled_by: string
+          record_id: string
+          release_id: string | null
+        }
+        Insert: {
+          active?: boolean
+          authority_kind: string
+          export_order_key?: string | null
+          organization_id: string
+          product_id: string
+          reconciled_at?: string
+          reconciled_by: string
+          record_id: string
+          release_id?: string | null
+        }
+        Update: {
+          active?: boolean
+          authority_kind?: string
+          export_order_key?: string | null
+          organization_id?: string
+          product_id?: string
+          reconciled_at?: string
+          reconciled_by?: string
+          record_id?: string
+          release_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_dependencies_release_product_fkey"
+            columns: ["organization_id", "product_id", "release_id"]
+            isOneToOne: false
+            referencedRelation: "product_releases"
+            referencedColumns: ["organization_id", "product_id", "id"]
+          },
+          {
+            foreignKeyName: "product_lifecycle_dependency_fa_organization_id_product_id_fkey"
+            columns: ["organization_id", "product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "product_lifecycle_dependency_fa_organization_id_release_id_fkey"
+            columns: ["organization_id", "release_id"]
+            isOneToOne: false
+            referencedRelation: "product_releases"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "product_lifecycle_dependency_facts_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_lifecycle_dependency_facts_reconciled_by_fkey"
+            columns: ["reconciled_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_regulatory_outbox_events: {
+        Row: {
+          correlation_id: string
+          delivered_at: string | null
+          delivery_attempts: number
+          event_key: string
+          event_type: string
+          id: string
+          last_delivery_error: string | null
+          occurred_at: string
+          organization_id: string
+          payload: Json
+          product_id: string
+          release_id: string
+        }
+        Insert: {
+          correlation_id: string
+          delivered_at?: string | null
+          delivery_attempts?: number
+          event_key: string
+          event_type: string
+          id?: string
+          last_delivery_error?: string | null
+          occurred_at?: string
+          organization_id: string
+          payload: Json
+          product_id: string
+          release_id: string
+        }
+        Update: {
+          correlation_id?: string
+          delivered_at?: string | null
+          delivery_attempts?: number
+          event_key?: string
+          event_type?: string
+          id?: string
+          last_delivery_error?: string | null
+          occurred_at?: string
+          organization_id?: string
+          payload?: Json
+          product_id?: string
+          release_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_regulatory_outbox_eve_organization_id_product_id_r_fkey"
+            columns: ["organization_id", "product_id", "release_id"]
+            isOneToOne: false
+            referencedRelation: "product_releases"
+            referencedColumns: ["organization_id", "product_id", "id"]
+          },
+          {
+            foreignKeyName: "product_regulatory_outbox_events_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_release_create_idempotencies: {
+        Row: {
+          actor_user_id: string
+          created_at: string
+          idempotency_key: string
+          organization_id: string
+          payload_digest: string
+          release_id: string
+        }
+        Insert: {
+          actor_user_id: string
+          created_at?: string
+          idempotency_key: string
+          organization_id: string
+          payload_digest: string
+          release_id: string
+        }
+        Update: {
+          actor_user_id?: string
+          created_at?: string
+          idempotency_key?: string
+          organization_id?: string
+          payload_digest?: string
+          release_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_release_create_idempote_organization_id_release_id_fkey"
+            columns: ["organization_id", "release_id"]
+            isOneToOne: false
+            referencedRelation: "product_releases"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "product_release_create_idempotencies_actor_user_id_fkey"
+            columns: ["actor_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_release_create_idempotencies_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_release_market_availability: {
+        Row: {
+          available_at: string
+          available_by: string
+          country_code: string
+          created_at: string
+          id: string
+          organization_id: string
+          product_id: string
+          reference_version_id: string
+          release_id: string
+          unavailable_at: string | null
+          unavailable_by: string | null
+          updated_at: string
+        }
+        Insert: {
+          available_at?: string
+          available_by: string
+          country_code: string
+          created_at?: string
+          id?: string
+          organization_id: string
+          product_id: string
+          reference_version_id: string
+          release_id: string
+          unavailable_at?: string | null
+          unavailable_by?: string | null
+          updated_at?: string
+        }
+        Update: {
+          available_at?: string
+          available_by?: string
+          country_code?: string
+          created_at?: string
+          id?: string
+          organization_id?: string
+          product_id?: string
+          reference_version_id?: string
+          release_id?: string
+          unavailable_at?: string | null
+          unavailable_by?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_release_market_availa_organization_id_product_id_r_fkey"
+            columns: ["organization_id", "product_id", "release_id"]
+            isOneToOne: false
+            referencedRelation: "product_releases"
+            referencedColumns: ["organization_id", "product_id", "id"]
+          },
+          {
+            foreignKeyName: "product_release_market_availa_reference_version_id_country_fkey"
+            columns: ["reference_version_id", "country_code"]
+            isOneToOne: false
+            referencedRelation: "member_state_reference_entries"
+            referencedColumns: ["reference_version_id", "country_code"]
+          },
+          {
+            foreignKeyName: "product_release_market_availability_available_by_fkey"
+            columns: ["available_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_release_market_availability_unavailable_by_fkey"
+            columns: ["unavailable_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_releases: {
+        Row: {
+          archived_at: string | null
+          archived_by: string | null
+          created_at: string
+          created_by: string
+          description: string | null
+          id: string
+          label: string
+          legal_entity_id: string
+          legal_entity_snapshot: Json
+          legal_entity_version: number
+          lifecycle: string
+          organization_id: string
+          placed_on_market_at: string | null
+          product_id: string
+          release_version: string
+          release_version_normalized: string | null
+          updated_at: string
+          updated_by: string
+          version: number
+        }
+        Insert: {
+          archived_at?: string | null
+          archived_by?: string | null
+          created_at?: string
+          created_by: string
+          description?: string | null
+          id?: string
+          label: string
+          legal_entity_id: string
+          legal_entity_snapshot: Json
+          legal_entity_version: number
+          lifecycle?: string
+          organization_id: string
+          placed_on_market_at?: string | null
+          product_id: string
+          release_version: string
+          release_version_normalized?: string | null
+          updated_at?: string
+          updated_by: string
+          version?: number
+        }
+        Update: {
+          archived_at?: string | null
+          archived_by?: string | null
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          id?: string
+          label?: string
+          legal_entity_id?: string
+          legal_entity_snapshot?: Json
+          legal_entity_version?: number
+          lifecycle?: string
+          organization_id?: string
+          placed_on_market_at?: string | null
+          product_id?: string
+          release_version?: string
+          release_version_normalized?: string | null
+          updated_at?: string
+          updated_by?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_releases_archived_by_fkey"
+            columns: ["archived_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_releases_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_releases_organization_id_legal_entity_id_fkey"
+            columns: ["organization_id", "legal_entity_id"]
+            isOneToOne: false
+            referencedRelation: "organization_legal_entities"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "product_releases_organization_id_product_id_fkey"
+            columns: ["organization_id", "product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "product_releases_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      products: {
+        Row: {
+          archived_at: string | null
+          archived_by: string | null
+          created_at: string
+          created_by: string
+          description: string | null
+          id: string
+          internal_code: string
+          internal_code_normalized: string | null
+          legal_entity_id: string
+          legal_entity_snapshot: Json
+          legal_entity_version: number
+          name: string
+          organization_id: string
+          product_type: string
+          responsible_owner_id: string
+          updated_at: string
+          updated_by: string
+          version: number
+        }
+        Insert: {
+          archived_at?: string | null
+          archived_by?: string | null
+          created_at?: string
+          created_by: string
+          description?: string | null
+          id?: string
+          internal_code: string
+          internal_code_normalized?: string | null
+          legal_entity_id: string
+          legal_entity_snapshot: Json
+          legal_entity_version: number
+          name: string
+          organization_id: string
+          product_type: string
+          responsible_owner_id: string
+          updated_at?: string
+          updated_by: string
+          version?: number
+        }
+        Update: {
+          archived_at?: string | null
+          archived_by?: string | null
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          id?: string
+          internal_code?: string
+          internal_code_normalized?: string | null
+          legal_entity_id?: string
+          legal_entity_snapshot?: Json
+          legal_entity_version?: number
+          name?: string
+          organization_id?: string
+          product_type?: string
+          responsible_owner_id?: string
+          updated_at?: string
+          updated_by?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "products_archived_by_fkey"
+            columns: ["archived_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_organization_id_legal_entity_id_fkey"
+            columns: ["organization_id", "legal_entity_id"]
+            isOneToOne: false
+            referencedRelation: "organization_legal_entities"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "products_responsible_owner_id_fkey"
+            columns: ["responsible_owner_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       retention_authoritative_facts: {
         Row: {
           active: boolean
@@ -2961,6 +3590,63 @@ export type Database = {
           outcome: string
         }[]
       }
+      add_product_release_market_availability_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_correlation_id: string
+          p_country_code: string
+          p_expected_version: number
+          p_organization_id: string
+          p_product_id: string
+          p_reason: string
+          p_release_id: string
+        }
+        Returns: {
+          outcome: string
+          release: Json
+        }[]
+      }
+      archive_product_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_expected_version: number
+          p_organization_id: string
+          p_product_id: string
+          p_reason: string
+        }
+        Returns: {
+          outcome: string
+          product: Json
+        }[]
+      }
+      archive_product_release_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_expected_version: number
+          p_organization_id: string
+          p_product_id: string
+          p_reason: string
+          p_release_id: string
+        }
+        Returns: {
+          outcome: string
+          release: Json
+        }[]
+      }
+      assign_product_legal_entity_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_expected_version: number
+          p_legal_entity_id: string
+          p_organization_id: string
+          p_product_id: string
+          p_reason: string
+        }
+        Returns: {
+          outcome: string
+          product: Json
+        }[]
+      }
       backfill_organization_legal_entities: { Args: never; Returns: undefined }
       bump_session_epoch: { Args: { p_user_id: string }; Returns: undefined }
       checkpoint_organization_export_atomic: {
@@ -3119,6 +3805,39 @@ export type Database = {
           user_id: string | null
         }[]
       }
+      correct_product_release_market_availability_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_correlation_id: string
+          p_expected_version: number
+          p_from_country_code: string
+          p_organization_id: string
+          p_product_id: string
+          p_reason: string
+          p_release_id: string
+          p_to_country_code: string
+        }
+        Returns: {
+          outcome: string
+          release: Json
+        }[]
+      }
+      correct_product_release_placed_on_market_at_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_corrected_placed_on_market_at: string
+          p_correlation_id: string
+          p_expected_version: number
+          p_organization_id: string
+          p_product_id: string
+          p_reason: string
+          p_release_id: string
+        }
+        Returns: {
+          outcome: string
+          release: Json
+        }[]
+      }
       create_destructive_reauth_grant_atomic: {
         Args: {
           p_actor_user_id: string
@@ -3178,6 +3897,38 @@ export type Database = {
         Returns: {
           legal_entity: Json
           outcome: string
+        }[]
+      }
+      create_product_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_description: string
+          p_idempotency_key: string
+          p_internal_code: string
+          p_legal_entity_id: string
+          p_name: string
+          p_organization_id: string
+          p_product_type: string
+          p_responsible_owner_id: string
+        }
+        Returns: {
+          outcome: string
+          product: Json
+        }[]
+      }
+      create_product_release_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_description: string
+          p_idempotency_key: string
+          p_label: string
+          p_organization_id: string
+          p_product_id: string
+          p_release_version: string
+        }
+        Returns: {
+          outcome: string
+          release: Json
         }[]
       }
       deactivate_organization_atomic: {
@@ -3295,6 +4046,13 @@ export type Database = {
         }[]
       }
       get_current_user_id: { Args: never; Returns: string }
+      get_m2_member_states: {
+        Args: { p_actor_user_id: string; p_organization_id: string }
+        Returns: {
+          member_states: Json
+          outcome: string
+        }[]
+      }
       get_mfa_recovery_status: {
         Args: { p_operation_id: string; p_user_id: string }
         Returns: string
@@ -3329,6 +4087,14 @@ export type Database = {
         }[]
       }
       get_organization_branding_logo_render: {
+        Args: { p_actor_user_id: string; p_organization_id: string }
+        Returns: {
+          object_key: string
+          outcome: string
+          sha256: string
+        }[]
+      }
+      get_organization_branding_published_logo_render: {
         Args: { p_actor_user_id: string; p_organization_id: string }
         Returns: {
           object_key: string
@@ -3382,8 +4148,86 @@ export type Database = {
           outcome: string
         }[]
       }
+      get_product: {
+        Args: {
+          p_actor_user_id: string
+          p_organization_id: string
+          p_product_id: string
+        }
+        Returns: {
+          outcome: string
+          product: Json
+        }[]
+      }
+      get_product_release: {
+        Args: {
+          p_actor_user_id: string
+          p_organization_id: string
+          p_product_id: string
+          p_release_id: string
+        }
+        Returns: {
+          outcome: string
+          release: Json
+        }[]
+      }
+      get_product_release_lifecycle_timeline: {
+        Args: {
+          p_actor_user_id: string
+          p_organization_id: string
+          p_product_id: string
+          p_release_id: string
+        }
+        Returns: {
+          outcome: string
+          timeline: Json
+        }[]
+      }
+      get_product_release_market_availability: {
+        Args: {
+          p_actor_user_id: string
+          p_organization_id: string
+          p_product_id: string
+          p_release_id: string
+        }
+        Returns: {
+          market_availability: Json
+          outcome: string
+        }[]
+      }
       is_iso_3166_alpha_2: { Args: { p_country: string }; Returns: boolean }
       is_login_locked: { Args: { p_email: string }; Returns: string }
+      list_product_releases: {
+        Args: {
+          p_actor_user_id: string
+          p_archived: boolean
+          p_lifecycle: string
+          p_organization_id: string
+          p_page: number
+          p_page_size: number
+          p_product_id: string
+        }
+        Returns: {
+          outcome: string
+          releases: Json
+        }[]
+      }
+      list_products: {
+        Args: {
+          p_actor_user_id: string
+          p_archived: boolean
+          p_organization_id: string
+          p_page: number
+          p_page_size: number
+          p_product_type: string
+          p_q: string
+          p_responsible_owner_id: string
+        }
+        Returns: {
+          outcome: string
+          products: Json
+        }[]
+      }
       m1_accept_invitation_atomic_legacy_unchecked: {
         Args: { p_email: string; p_token_hash: string; p_user_id: string }
         Returns: {
@@ -3521,6 +4365,69 @@ export type Database = {
         Returns: string
       }
       m1_v2_sentinel_branding_json: { Args: never; Returns: Json }
+      m2_active_member: {
+        Args: { p_actor_user_id: string; p_organization_id: string }
+        Returns: boolean
+      }
+      m2_assert_no_legacy_release_lifecycle: { Args: never; Returns: undefined }
+      m2_audit_release_command_rejection: {
+        Args: {
+          p_action: string
+          p_actor_user_id: string
+          p_attempt: Json
+          p_before: Json
+          p_correlation_id: string
+          p_error_code: string
+          p_organization_id: string
+          p_release_id: string
+        }
+        Returns: undefined
+      }
+      m2_emit_product_regulatory_event: {
+        Args: {
+          p_correlation_id: string
+          p_event_type: string
+          p_organization_id: string
+          p_payload: Json
+          p_product_id: string
+          p_release_id: string
+          p_release_version: number
+        }
+        Returns: string
+      }
+      m2_market_availability_item_json: {
+        Args: {
+          p_availability: Database["public"]["Tables"]["product_release_market_availability"]["Row"]
+        }
+        Returns: Json
+      }
+      m2_market_availability_json: {
+        Args: { p_organization_id: string; p_release_id: string }
+        Returns: Json
+      }
+      m2_member_states_json: { Args: never; Returns: Json }
+      m2_parse_utc_z: { Args: { p_value: string }; Returns: string }
+      m2_product_json: {
+        Args: { p_organization_id: string; p_product_id: string }
+        Returns: Json
+      }
+      m2_reconcile_product_entity: {
+        Args: {
+          p_actor_user_id: string
+          p_legal_entity_id: string
+          p_organization_id: string
+        }
+        Returns: undefined
+      }
+      m2_release_json: {
+        Args: { p_organization_id: string; p_release_id: string }
+        Returns: Json
+      }
+      m2_release_timeline_json: {
+        Args: { p_organization_id: string; p_release_id: string }
+        Returns: Json
+      }
+      m2_utc_z: { Args: { p_value: string }; Returns: string }
       mark_mfa_factors_removed: {
         Args: { p_operation_id: string; p_user_id: string }
         Returns: string
@@ -3699,6 +4606,22 @@ export type Database = {
           outcome: string
         }[]
       }
+      remove_product_release_market_availability_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_correlation_id: string
+          p_country_code: string
+          p_expected_version: number
+          p_organization_id: string
+          p_product_id: string
+          p_reason: string
+          p_release_id: string
+        }
+        Returns: {
+          outcome: string
+          release: Json
+        }[]
+      }
       request_organization_export_atomic: {
         Args: {
           p_actor_user_id: string
@@ -3827,6 +4750,23 @@ export type Database = {
           outcome: string
         }[]
       }
+      transition_product_release_lifecycle_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_correlation_id: string
+          p_expected_version: number
+          p_organization_id: string
+          p_placed_on_market_at: string
+          p_product_id: string
+          p_reason: string
+          p_release_id: string
+          p_target_lifecycle: string
+        }
+        Returns: {
+          outcome: string
+          release: Json
+        }[]
+      }
       update_organization_legal_entity_atomic: {
         Args: {
           p_actor_user_id: string
@@ -3913,6 +4853,41 @@ export type Database = {
           outcome: string
           session_policy_tightened: boolean
           settings: Json
+        }[]
+      }
+      update_product_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_description: string
+          p_description_provided: boolean
+          p_expected_version: number
+          p_internal_code: string
+          p_name: string
+          p_organization_id: string
+          p_product_id: string
+          p_product_type: string
+          p_responsible_owner_id: string
+        }
+        Returns: {
+          outcome: string
+          product: Json
+        }[]
+      }
+      update_product_release_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_description: string
+          p_description_provided: boolean
+          p_expected_version: number
+          p_label: string
+          p_organization_id: string
+          p_product_id: string
+          p_release_id: string
+          p_release_version: string
+        }
+        Returns: {
+          outcome: string
+          release: Json
         }[]
       }
       user_is_member_of: { Args: { p_org_id: string }; Returns: boolean }

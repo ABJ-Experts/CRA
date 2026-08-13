@@ -1,0 +1,818 @@
+import type {
+  ArchiveProductInput,
+  ArchiveReleaseInput,
+  AddReleaseMarketAvailabilityInput,
+  CorrectPlacedOnMarketDateInput,
+  CorrectReleaseMarketAvailabilityInput,
+  CreateProductInput,
+  CreateReleaseInput,
+  MemberStateReference,
+  MoveProductLegalEntityInput,
+  Product,
+  ProductListQuery,
+  Release,
+  ReleaseLifecycleTimelineEvent,
+  ReleaseMarketAvailability,
+  ReleaseListQuery,
+  RemoveReleaseMarketAvailabilityInput,
+  TransitionReleaseLifecycleInput,
+  UpdateProductInput,
+  UpdateReleaseInput,
+} from "@repo/contracts/products";
+
+import type { Result } from "../../common/domain/result";
+import { failure, success } from "../../common/domain/result";
+import type {
+  LegalEntityContext,
+  LegalEntityDirectory,
+} from "../../organizations/legal-entities/application/legal-entity-ports";
+import type {
+  ReleaseMarketAvailabilityReader,
+  ReleaseRegulatoryStateReader,
+} from "./release-regulatory-reader.port";
+
+export type ProductRepository = Readonly<{
+  listProducts(
+    organizationId: string,
+    actorId: string,
+    query: ProductListQuery,
+  ): Promise<ProductListOutcome>;
+  getProduct(
+    organizationId: string,
+    actorId: string,
+    productId: string,
+  ): Promise<ProductOutcome>;
+  createProduct(
+    organizationId: string,
+    actorId: string,
+    input: CreateProductInput,
+  ): Promise<ProductMutationOutcome>;
+  updateProduct(
+    organizationId: string,
+    actorId: string,
+    productId: string,
+    input: UpdateProductInput,
+  ): Promise<ProductMutationOutcome>;
+  assignProductLegalEntity(
+    organizationId: string,
+    actorId: string,
+    productId: string,
+    input: MoveProductLegalEntityInput,
+  ): Promise<ProductMutationOutcome>;
+  archiveProduct(
+    organizationId: string,
+    actorId: string,
+    productId: string,
+    input: ArchiveProductInput,
+  ): Promise<ProductMutationOutcome>;
+  listReleases(
+    organizationId: string,
+    actorId: string,
+    productId: string,
+    query: ReleaseListQuery,
+  ): Promise<ReleaseListOutcome>;
+  getRelease(
+    organizationId: string,
+    actorId: string,
+    productId: string,
+    releaseId: string,
+  ): Promise<ReleaseOutcome>;
+  createRelease(
+    organizationId: string,
+    actorId: string,
+    productId: string,
+    input: CreateReleaseInput,
+  ): Promise<ReleaseMutationOutcome>;
+  updateRelease(
+    organizationId: string,
+    actorId: string,
+    productId: string,
+    releaseId: string,
+    input: UpdateReleaseInput,
+  ): Promise<ReleaseMutationOutcome>;
+  archiveRelease(
+    organizationId: string,
+    actorId: string,
+    productId: string,
+    releaseId: string,
+    input: ArchiveReleaseInput,
+  ): Promise<ReleaseMutationOutcome>;
+  listMemberStates(
+    organizationId: string,
+    actorId: string,
+  ): Promise<MemberStatesOutcome>;
+  getReleaseMarketAvailability(
+    organizationId: string,
+    actorId: string,
+    productId: string,
+    releaseId: string,
+  ): Promise<ReleaseMarketAvailabilityOutcome>;
+  addReleaseMarketAvailability(
+    organizationId: string,
+    actorId: string,
+    productId: string,
+    releaseId: string,
+    input: AddReleaseMarketAvailabilityInput,
+  ): Promise<ReleaseMutationOutcome>;
+  removeReleaseMarketAvailability(
+    organizationId: string,
+    actorId: string,
+    productId: string,
+    releaseId: string,
+    countryCode: string,
+    input: RemoveReleaseMarketAvailabilityInput,
+  ): Promise<ReleaseMutationOutcome>;
+  correctReleaseMarketAvailability(
+    organizationId: string,
+    actorId: string,
+    productId: string,
+    releaseId: string,
+    input: CorrectReleaseMarketAvailabilityInput,
+  ): Promise<ReleaseMutationOutcome>;
+  transitionReleaseLifecycle(
+    organizationId: string,
+    actorId: string,
+    productId: string,
+    releaseId: string,
+    input: TransitionReleaseLifecycleInput,
+  ): Promise<ReleaseMutationOutcome>;
+  correctPlacedOnMarketDate(
+    organizationId: string,
+    actorId: string,
+    productId: string,
+    releaseId: string,
+    input: CorrectPlacedOnMarketDateInput,
+  ): Promise<ReleaseMutationOutcome>;
+  getReleaseLifecycleTimeline(
+    organizationId: string,
+    actorId: string,
+    productId: string,
+    releaseId: string,
+  ): Promise<ReleaseLifecycleTimelineOutcome>;
+}>;
+
+export const PRODUCT_REPOSITORY = Symbol("PRODUCT_REPOSITORY");
+
+export type ProductPage = Readonly<{
+  rows: readonly Product[];
+  total: number;
+  page: number;
+  pageSize: number;
+  pageCount: number;
+}>;
+export type ReleasePage = Readonly<{
+  rows: readonly Release[];
+  total: number;
+  page: number;
+  pageSize: number;
+  pageCount: number;
+}>;
+export type ProductOutcome =
+  | Readonly<{ outcome: "found"; product: Product }>
+  | Readonly<{ outcome: "not_found" }>;
+export type ProductListOutcome =
+  | Readonly<{ outcome: "found"; products: ProductPage }>
+  | Readonly<{ outcome: "not_found" }>;
+export type ReleaseOutcome =
+  | Readonly<{ outcome: "found"; release: Release }>
+  | Readonly<{ outcome: "not_found" }>;
+export type ReleaseListOutcome =
+  | Readonly<{ outcome: "found"; releases: ReleasePage }>
+  | Readonly<{ outcome: "not_found" }>;
+export type MemberStatesOutcome =
+  | Readonly<{
+      outcome: "found";
+      memberStates: readonly MemberStateReference[];
+    }>
+  | Readonly<{ outcome: "not_found" }>;
+export type ReleaseMarketAvailabilityOutcome =
+  | Readonly<{
+      outcome: "found";
+      marketAvailability: readonly ReleaseMarketAvailability[];
+    }>
+  | Readonly<{ outcome: "not_found" }>;
+export type ReleaseLifecycleTimelineOutcome =
+  | Readonly<{
+      outcome: "found";
+      timeline: readonly ReleaseLifecycleTimelineEvent[];
+    }>
+  | Readonly<{ outcome: "not_found" }>;
+export type ProductMutationOutcome =
+  | Readonly<{
+      outcome: "created" | "replayed" | "updated" | "assigned" | "archived";
+      product: Product;
+    }>
+  | Readonly<{ outcome: "conflict"; product?: Product }>
+  | Readonly<{
+      outcome:
+        | "idempotency_mismatch"
+        | "invalid_request"
+        | "invalid_state"
+        | "blocked"
+        | "not_found";
+    }>;
+export type ReleaseMutationOutcome =
+  | Readonly<{
+      outcome:
+        | "created"
+        | "replayed"
+        | "updated"
+        | "archived"
+        | "transitioned"
+        | "corrected";
+      release: Release;
+    }>
+  | Readonly<{ outcome: "conflict"; release?: Release }>
+  | Readonly<{
+      outcome:
+        | "idempotency_mismatch"
+        | "invalid_request"
+        | "invalid_state"
+        | "blocked"
+        | "not_found"
+        | "invalid_transition"
+        | "placement_requires_placed_on_market_at"
+        | "placement_requires_active_market_availability"
+        | "placed_on_market_date_not_set"
+        | "member_state_unavailable"
+        | "market_availability_not_found";
+    }>;
+
+export type ProductError = Readonly<{
+  code:
+    | "invalid_request"
+    | "conflict"
+    | "not_found"
+    | "invalid_state"
+    | "dependency_blocked"
+    | "inactive"
+    | "incomplete"
+    | "invalid_transition"
+    | "placement_requires_placed_on_market_at"
+    | "placement_requires_active_market_availability"
+    | "placed_on_market_date_not_set"
+    | "member_state_unavailable"
+    | "market_availability_not_found"
+    | "unavailable"
+    | "malformed_provider";
+  current?: Product | Release;
+}>;
+
+type ProductResult<T> = Result<T, ProductError>;
+
+/** Framework-free tenant-scoped product and release workflows. */
+export class ProductUseCases
+  implements ReleaseMarketAvailabilityReader, ReleaseRegulatoryStateReader
+{
+  constructor(
+    private readonly repository: ProductRepository,
+    private readonly legalEntities: LegalEntityDirectory,
+  ) {}
+
+  async list(
+    organizationId: string,
+    actorId: string,
+    query: ProductListQuery,
+  ): Promise<ProductResult<Readonly<{ products: ProductPage }>>> {
+    try {
+      const outcome = await this.repository.listProducts(
+        organizationId,
+        actorId,
+        query,
+      );
+      return outcome.outcome === "found"
+        ? success(
+            Object.freeze({ products: immutableProductPage(outcome.products) }),
+          )
+        : this.notFound();
+    } catch (error) {
+      return this.providerFailure(error);
+    }
+  }
+
+  async get(
+    command: Readonly<{
+      organizationId: string;
+      actorId: string;
+      productId: string;
+    }>,
+  ): Promise<ProductResult<Readonly<{ product: Product }>>> {
+    try {
+      const outcome = await this.repository.getProduct(
+        command.organizationId,
+        command.actorId,
+        command.productId,
+      );
+      return outcome.outcome === "found"
+        ? success(Object.freeze({ product: outcome.product }))
+        : this.notFound();
+    } catch (error) {
+      return this.providerFailure(error);
+    }
+  }
+
+  async create(
+    command: Readonly<{
+      organizationId: string;
+      actorId: string;
+      input: CreateProductInput;
+    }>,
+  ): Promise<ProductResult<Readonly<{ product: Product }>>> {
+    const legalEntity = await this.activeEntity(
+      command.organizationId,
+      command.input.legalEntityId,
+    );
+    if (!legalEntity.ok) return legalEntity;
+    try {
+      return this.productMutation(
+        await this.repository.createProduct(
+          command.organizationId,
+          command.actorId,
+          command.input,
+        ),
+      );
+    } catch (error) {
+      return this.providerFailure(error);
+    }
+  }
+
+  async update(
+    command: Readonly<{
+      organizationId: string;
+      actorId: string;
+      productId: string;
+      input: UpdateProductInput;
+    }>,
+  ): Promise<ProductResult<Readonly<{ product: Product }>>> {
+    try {
+      return this.productMutation(
+        await this.repository.updateProduct(
+          command.organizationId,
+          command.actorId,
+          command.productId,
+          command.input,
+        ),
+      );
+    } catch (error) {
+      return this.providerFailure(error);
+    }
+  }
+
+  async assignLegalEntity(
+    command: Readonly<{
+      organizationId: string;
+      actorId: string;
+      productId: string;
+      input: MoveProductLegalEntityInput;
+    }>,
+  ): Promise<ProductResult<Readonly<{ product: Product }>>> {
+    const legalEntity = await this.activeEntity(
+      command.organizationId,
+      command.input.legalEntityId,
+    );
+    if (!legalEntity.ok) return legalEntity;
+    try {
+      return this.productMutation(
+        await this.repository.assignProductLegalEntity(
+          command.organizationId,
+          command.actorId,
+          command.productId,
+          command.input,
+        ),
+      );
+    } catch (error) {
+      return this.providerFailure(error);
+    }
+  }
+
+  async archive(
+    command: Readonly<{
+      organizationId: string;
+      actorId: string;
+      productId: string;
+      input: ArchiveProductInput;
+    }>,
+  ): Promise<ProductResult<Readonly<{ product: Product }>>> {
+    try {
+      return this.productMutation(
+        await this.repository.archiveProduct(
+          command.organizationId,
+          command.actorId,
+          command.productId,
+          command.input,
+        ),
+      );
+    } catch (error) {
+      return this.providerFailure(error);
+    }
+  }
+
+  async listReleases(
+    command: Readonly<{
+      organizationId: string;
+      actorId: string;
+      productId: string;
+      query: ReleaseListQuery;
+    }>,
+  ): Promise<ProductResult<Readonly<{ releases: ReleasePage }>>> {
+    try {
+      const outcome = await this.repository.listReleases(
+        command.organizationId,
+        command.actorId,
+        command.productId,
+        command.query,
+      );
+      return outcome.outcome === "found"
+        ? success(
+            Object.freeze({ releases: immutableReleasePage(outcome.releases) }),
+          )
+        : this.notFound();
+    } catch (error) {
+      return this.providerFailure(error);
+    }
+  }
+
+  async getRelease(
+    command: Readonly<{
+      organizationId: string;
+      actorId: string;
+      productId: string;
+      releaseId: string;
+    }>,
+  ): Promise<ProductResult<Readonly<{ release: Release }>>> {
+    try {
+      const outcome = await this.repository.getRelease(
+        command.organizationId,
+        command.actorId,
+        command.productId,
+        command.releaseId,
+      );
+      return outcome.outcome === "found"
+        ? success(Object.freeze({ release: outcome.release }))
+        : this.notFound();
+    } catch (error) {
+      return this.providerFailure(error);
+    }
+  }
+
+  async getReleaseRegulatoryState(
+    command: Readonly<{
+      organizationId: string;
+      actorId: string;
+      productId: string;
+      releaseId: string;
+    }>,
+  ): Promise<ProductResult<Readonly<{ release: Release }>>> {
+    return this.getRelease(command);
+  }
+
+  async createRelease(
+    command: Readonly<{
+      organizationId: string;
+      actorId: string;
+      productId: string;
+      input: CreateReleaseInput;
+    }>,
+  ): Promise<ProductResult<Readonly<{ release: Release }>>> {
+    try {
+      return this.releaseMutation(
+        await this.repository.createRelease(
+          command.organizationId,
+          command.actorId,
+          command.productId,
+          command.input,
+        ),
+      );
+    } catch (error) {
+      return this.providerFailure(error);
+    }
+  }
+
+  async updateRelease(
+    command: Readonly<{
+      organizationId: string;
+      actorId: string;
+      productId: string;
+      releaseId: string;
+      input: UpdateReleaseInput;
+    }>,
+  ): Promise<ProductResult<Readonly<{ release: Release }>>> {
+    try {
+      return this.releaseMutation(
+        await this.repository.updateRelease(
+          command.organizationId,
+          command.actorId,
+          command.productId,
+          command.releaseId,
+          command.input,
+        ),
+      );
+    } catch (error) {
+      return this.providerFailure(error);
+    }
+  }
+
+  async archiveRelease(
+    command: Readonly<{
+      organizationId: string;
+      actorId: string;
+      productId: string;
+      releaseId: string;
+      input: ArchiveReleaseInput;
+    }>,
+  ): Promise<ProductResult<Readonly<{ release: Release }>>> {
+    try {
+      return this.releaseMutation(
+        await this.repository.archiveRelease(
+          command.organizationId,
+          command.actorId,
+          command.productId,
+          command.releaseId,
+          command.input,
+        ),
+      );
+    } catch (error) {
+      return this.providerFailure(error);
+    }
+  }
+
+  async listMemberStates(
+    command: Readonly<{ organizationId: string; actorId: string }>,
+  ) {
+    try {
+      const outcome = await this.repository.listMemberStates(
+        command.organizationId,
+        command.actorId,
+      );
+      return outcome.outcome === "found"
+        ? success(
+            Object.freeze({
+              memberStates: Object.freeze([...outcome.memberStates]),
+            }),
+          )
+        : this.notFound();
+    } catch (error) {
+      return this.providerFailure(error);
+    }
+  }
+
+  async getReleaseMarketAvailability(
+    command: Readonly<{
+      organizationId: string;
+      actorId: string;
+      productId: string;
+      releaseId: string;
+    }>,
+  ): Promise<
+    ProductResult<
+      Readonly<{ marketAvailability: readonly ReleaseMarketAvailability[] }>
+    >
+  > {
+    try {
+      const outcome = await this.repository.getReleaseMarketAvailability(
+        command.organizationId,
+        command.actorId,
+        command.productId,
+        command.releaseId,
+      );
+      return outcome.outcome === "found"
+        ? success(
+            Object.freeze({
+              marketAvailability: Object.freeze([
+                ...outcome.marketAvailability,
+              ]),
+            }),
+          )
+        : this.notFound();
+    } catch (error) {
+      return this.providerFailure(error);
+    }
+  }
+
+  async addReleaseMarketAvailability(
+    command: Readonly<{
+      organizationId: string;
+      actorId: string;
+      productId: string;
+      releaseId: string;
+      input: AddReleaseMarketAvailabilityInput;
+    }>,
+  ): Promise<ProductResult<Readonly<{ release: Release }>>> {
+    try {
+      return this.releaseMutation(
+        await this.repository.addReleaseMarketAvailability(
+          command.organizationId,
+          command.actorId,
+          command.productId,
+          command.releaseId,
+          command.input,
+        ),
+      );
+    } catch (error) {
+      return this.providerFailure(error);
+    }
+  }
+
+  async removeReleaseMarketAvailability(
+    command: Readonly<{
+      organizationId: string;
+      actorId: string;
+      productId: string;
+      releaseId: string;
+      countryCode: string;
+      input: RemoveReleaseMarketAvailabilityInput;
+    }>,
+  ): Promise<ProductResult<Readonly<{ release: Release }>>> {
+    try {
+      return this.releaseMutation(
+        await this.repository.removeReleaseMarketAvailability(
+          command.organizationId,
+          command.actorId,
+          command.productId,
+          command.releaseId,
+          command.countryCode,
+          command.input,
+        ),
+      );
+    } catch (error) {
+      return this.providerFailure(error);
+    }
+  }
+
+  async correctReleaseMarketAvailability(
+    command: Readonly<{
+      organizationId: string;
+      actorId: string;
+      productId: string;
+      releaseId: string;
+      input: CorrectReleaseMarketAvailabilityInput;
+    }>,
+  ): Promise<ProductResult<Readonly<{ release: Release }>>> {
+    try {
+      return this.releaseMutation(
+        await this.repository.correctReleaseMarketAvailability(
+          command.organizationId,
+          command.actorId,
+          command.productId,
+          command.releaseId,
+          command.input,
+        ),
+      );
+    } catch (error) {
+      return this.providerFailure(error);
+    }
+  }
+
+  async transitionReleaseLifecycle(
+    command: Readonly<{
+      organizationId: string;
+      actorId: string;
+      productId: string;
+      releaseId: string;
+      input: TransitionReleaseLifecycleInput;
+    }>,
+  ): Promise<ProductResult<Readonly<{ release: Release }>>> {
+    try {
+      return this.releaseMutation(
+        await this.repository.transitionReleaseLifecycle(
+          command.organizationId,
+          command.actorId,
+          command.productId,
+          command.releaseId,
+          command.input,
+        ),
+      );
+    } catch (error) {
+      return this.providerFailure(error);
+    }
+  }
+
+  async correctPlacedOnMarketDate(
+    command: Readonly<{
+      organizationId: string;
+      actorId: string;
+      productId: string;
+      releaseId: string;
+      input: CorrectPlacedOnMarketDateInput;
+    }>,
+  ): Promise<ProductResult<Readonly<{ release: Release }>>> {
+    try {
+      return this.releaseMutation(
+        await this.repository.correctPlacedOnMarketDate(
+          command.organizationId,
+          command.actorId,
+          command.productId,
+          command.releaseId,
+          command.input,
+        ),
+      );
+    } catch (error) {
+      return this.providerFailure(error);
+    }
+  }
+
+  async getReleaseLifecycleTimeline(
+    command: Readonly<{
+      organizationId: string;
+      actorId: string;
+      productId: string;
+      releaseId: string;
+    }>,
+  ) {
+    try {
+      const outcome = await this.repository.getReleaseLifecycleTimeline(
+        command.organizationId,
+        command.actorId,
+        command.productId,
+        command.releaseId,
+      );
+      return outcome.outcome === "found"
+        ? success(
+            Object.freeze({ timeline: Object.freeze([...outcome.timeline]) }),
+          )
+        : this.notFound();
+    } catch (error) {
+      return this.providerFailure(error);
+    }
+  }
+
+  private async activeEntity(
+    organizationId: string,
+    legalEntityId: string,
+  ): Promise<Result<LegalEntityContext, ProductError>> {
+    const result = await this.legalEntities.resolveActiveContext(
+      organizationId,
+      legalEntityId,
+    );
+    return result.ok
+      ? result
+      : failure(Object.freeze({ code: result.error.code }));
+  }
+  private productMutation(
+    outcome: ProductMutationOutcome,
+  ): ProductResult<Readonly<{ product: Product }>> {
+    if (outcome.outcome === "conflict")
+      return failure(
+        Object.freeze({
+          code: "conflict",
+          ...(outcome.product ? { current: outcome.product } : {}),
+        }),
+      );
+    if ("product" in outcome && outcome.product)
+      return success(Object.freeze({ product: outcome.product }));
+    return failure(
+      Object.freeze({ code: this.mutationErrorCode(outcome.outcome) }),
+    );
+  }
+  private releaseMutation(
+    outcome: ReleaseMutationOutcome,
+  ): ProductResult<Readonly<{ release: Release }>> {
+    if (outcome.outcome === "conflict")
+      return failure(
+        Object.freeze({
+          code: "conflict",
+          ...(outcome.release ? { current: outcome.release } : {}),
+        }),
+      );
+    if ("release" in outcome && outcome.release)
+      return success(Object.freeze({ release: outcome.release }));
+    return failure(
+      Object.freeze({ code: this.mutationErrorCode(outcome.outcome) }),
+    );
+  }
+  private notFound<T>(): ProductResult<T> {
+    return failure(Object.freeze({ code: "not_found" }));
+  }
+  private providerFailure<T>(error?: unknown): ProductResult<T> {
+    if (error instanceof Error && error.message === "malformed")
+      return failure(Object.freeze({ code: "malformed_provider" }));
+    return failure(Object.freeze({ code: "unavailable" }));
+  }
+  private mutationErrorCode(outcome: string): ProductError["code"] {
+    switch (outcome) {
+      case "blocked":
+        return "dependency_blocked";
+      case "idempotency_mismatch":
+        return "conflict";
+      case "invalid_request":
+      case "invalid_state":
+      case "not_found":
+      case "invalid_transition":
+      case "placement_requires_placed_on_market_at":
+      case "placement_requires_active_market_availability":
+      case "placed_on_market_date_not_set":
+      case "member_state_unavailable":
+      case "market_availability_not_found":
+        return outcome;
+      default:
+        return "unavailable";
+    }
+  }
+}
+
+function immutableProductPage(page: ProductPage): ProductPage {
+  return Object.freeze({ ...page, rows: Object.freeze([...page.rows]) });
+}
+function immutableReleasePage(page: ReleasePage): ReleasePage {
+  return Object.freeze({ ...page, rows: Object.freeze([...page.rows]) });
+}

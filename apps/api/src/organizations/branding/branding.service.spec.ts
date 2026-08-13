@@ -8,6 +8,7 @@ function harness(result: unknown = { ok: true, value }) {
     getDraft: jest.fn().mockResolvedValue(result),
     uploadLogo: jest.fn().mockResolvedValue(result),
     renderLogo: jest.fn().mockResolvedValue(result),
+    renderPublishedLogo: jest.fn().mockResolvedValue(result),
     saveDraft: jest.fn().mockResolvedValue(result),
     publish: jest.fn().mockResolvedValue(result),
     removeLogo: jest.fn().mockResolvedValue(result),
@@ -24,6 +25,7 @@ describe("BrandingService", () => {
     await expect(service.preview(command)).resolves.toBe(value);
     await expect(service.uploadLogo(command)).resolves.toBe(value);
     await expect(service.renderLogo(command)).resolves.toBe(value);
+    await expect(service.renderPublishedLogo(command)).resolves.toBe(value);
     await expect(service.saveDraft(command)).resolves.toBe(value);
     await expect(service.publish(command)).resolves.toBe(value);
     await expect(service.removeLogo(command)).resolves.toBe(value);

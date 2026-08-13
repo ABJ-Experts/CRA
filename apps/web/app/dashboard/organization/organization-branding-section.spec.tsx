@@ -6,6 +6,7 @@ import type {
   OrganizationBrandingDraft,
   ResolvedOrganizationBranding,
 } from "@repo/contracts";
+import { CRA_SENTINEL_BRANDING } from "@repo/contracts";
 import {
   cleanup,
   fireEvent,
@@ -139,6 +140,20 @@ afterEach(() => {
 });
 
 describe("OrganizationBrandingSection", () => {
+  it("shows the shared sentinel colors in the branding editor", () => {
+    renderSection({
+      resolvedBranding: CRA_SENTINEL_BRANDING,
+      draftPreview: CRA_SENTINEL_BRANDING,
+    });
+
+    expect(screen.getByLabelText("Primary brand color")).toHaveValue(
+      "#595FE5",
+    );
+    expect(screen.getByLabelText("Secondary brand color")).toHaveValue(
+      "#ADB0ED",
+    );
+  });
+
   it("shows the server's draft snapshot to viewers without exposing owner controls", () => {
     renderSection({
       resolvedBranding: { ...DRAFT_PREVIEW, footerText: null },

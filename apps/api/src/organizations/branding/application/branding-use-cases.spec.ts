@@ -79,6 +79,11 @@ function harness(
       objectKey: "private/object.webp",
       sha256: "a".repeat(64),
     }),
+    getRenderablePublishedLogo: jest.fn().mockResolvedValue({
+      outcome: "found",
+      objectKey: "private/published-object.webp",
+      sha256: "b".repeat(64),
+    }),
     reserveAsset: jest.fn().mockResolvedValue({
       outcome: "reserved",
       assetId,
@@ -682,6 +687,28 @@ describe("BrandingUseCases", () => {
     ]);
     expect((storage.download as jest.Mock).mock.calls).toEqual([
       ["private/object.webp", "a".repeat(64)],
+    ]);
+  });
+
+  it("renders only the published approved logo through storage", async () => {
+    const { useCases, repository, storage } = harness();
+
+    await expect(
+      useCases.renderPublishedLogo({ organizationId, actorId }),
+    ).resolves.toEqual({
+      ok: true,
+      value: {
+        bytes: Buffer.from("webp"),
+        mimeType: "image/webp",
+        sha256: "b".repeat(64),
+      },
+    });
+
+    expect(
+      (repository.getRenderablePublishedLogo as jest.Mock).mock.calls,
+    ).toEqual([[organizationId, actorId]]);
+    expect((storage.download as jest.Mock).mock.calls).toEqual([
+      ["private/published-object.webp", "b".repeat(64)],
     ]);
   });
 

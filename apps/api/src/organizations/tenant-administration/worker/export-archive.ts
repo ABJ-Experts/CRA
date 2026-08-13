@@ -112,6 +112,17 @@ export const exportSourceRegistry: readonly ExportSourceRegistration[] =
         "organization_legal_entity_dependency_facts",
       ],
     },
+    {
+      sourceId: "product_registry",
+      tables: [
+        "products",
+        "product_releases",
+        "product_legal_entity_assignments",
+        "product_lifecycle_dependency_facts",
+        "product_release_market_availability",
+        "product_regulatory_outbox_events",
+      ],
+    },
   ]);
 
 /** Explicit omissions are security objects, never an accidental omission. */
@@ -137,6 +148,10 @@ export const exportSourceExclusions: Readonly<Record<string, string>> =
       "Legal entity create idempotency keys and request digests are request-security material.",
     organization_branding_publish_idempotencies:
       "Branding publish idempotency keys and request digests are request-security material.",
+    product_create_idempotencies:
+      "Product idempotency keys and request digests are request-security material.",
+    product_release_create_idempotencies:
+      "Release idempotency keys and request digests are request-security material.",
   });
 
 const crcTable = (() => {

@@ -14,15 +14,31 @@
 
 @import "@repo/design-system/styles.css";
 
-@layer base {
-  /* Compatibility aliases. `page.module.css` still reads var(--foreground) and
-   * var(--background) in `a.primary`. Delete these two lines only when that
-   * file has been migrated to utilities. */
-  :root {
-    --background: var(--color-canvas);
-    --foreground: var(--color-fg);
-  }
+/* Published organization branding is intentionally limited to the dashboard
+ * provider's concrete wrapper. Auth and public pages keep the product theme,
+ * and the structural/status semantic tokens stay stable across organizations. */
+[data-organization-theme="published"] {
+  --color-active-500: var(--organization-brand-primary);
+  --color-active-600: color-mix(
+    in srgb,
+    var(--organization-brand-primary),
+    black 12%
+  );
+  --color-active-100: color-mix(
+    in srgb,
+    var(--organization-brand-primary) 12%,
+    var(--color-canvas)
+  );
+  --color-accent: var(--organization-brand-primary);
+  --color-accent-subtle: color-mix(
+    in srgb,
+    var(--organization-brand-primary) 12%,
+    var(--color-canvas)
+  );
+  --color-on-accent: var(--organization-brand-primary-text);
+}
 
+@layer base {
   body {
     background-color: var(--color-canvas);
     color: var(--color-fg);
@@ -64,7 +80,7 @@
  *          inherits `none`, so rendering is identical and
  *          `.footer a:hover { text-decoration: underline }` still works.
  *   :root { --background: #fff; --foreground: #171717 } + dark media query
- *       -> replaced by --color-canvas / --color-fg, aliased above.
+ *       -> replaced by --color-canvas / --color-fg.
  *   @media (prefers-color-scheme: dark) { html { color-scheme: dark } }
  *       -> replaced by the color-scheme + [data-theme] rules in
  *          @repo/design-system, which also support a manual toggle.

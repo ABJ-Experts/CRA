@@ -95,6 +95,18 @@
       "types": "./dist/organizations/types/index.d.ts",
       "default": "./dist/organizations/types/index.js"
     },
+    "./products": {
+      "types": "./dist/products.d.ts",
+      "default": "./dist/products.js"
+    },
+    "./products/schemas": {
+      "types": "./dist/products/schemas/index.d.ts",
+      "default": "./dist/products/schemas/index.js"
+    },
+    "./products/types": {
+      "types": "./dist/products/types/index.d.ts",
+      "default": "./dist/products/types/index.js"
+    },
     "./permissions/schemas": {
       "types": "./dist/permissions/schemas/index.d.ts",
       "default": "./dist/permissions/schemas/index.js"
