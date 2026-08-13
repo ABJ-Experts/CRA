@@ -2408,6 +2408,10 @@ export type Database = {
           mfa_enforcement_date: string | null
           notification_channel_ids: string[] | null
           organization_id: string
+          support_alert_intervals: number[]
+          support_alert_intervals_updated_at: string
+          support_alert_intervals_updated_by: string | null
+          support_alert_intervals_version: number
           timezone: string | null
           updated_at: string
           updated_by: string | null
@@ -2424,6 +2428,10 @@ export type Database = {
           mfa_enforcement_date?: string | null
           notification_channel_ids?: string[] | null
           organization_id: string
+          support_alert_intervals?: number[]
+          support_alert_intervals_updated_at?: string
+          support_alert_intervals_updated_by?: string | null
+          support_alert_intervals_version?: number
           timezone?: string | null
           updated_at?: string
           updated_by?: string | null
@@ -2440,6 +2448,10 @@ export type Database = {
           mfa_enforcement_date?: string | null
           notification_channel_ids?: string[] | null
           organization_id?: string
+          support_alert_intervals?: number[]
+          support_alert_intervals_updated_at?: string
+          support_alert_intervals_updated_by?: string | null
+          support_alert_intervals_version?: number
           timezone?: string | null
           updated_at?: string
           updated_by?: string | null
@@ -2452,6 +2464,13 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: true
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_settings_support_alert_intervals_updated_by_fkey"
+            columns: ["support_alert_intervals_updated_by"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
           {
@@ -2540,6 +2559,13 @@ export type Database = {
             foreignKeyName: "product_create_idempotencies_organization_id_product_id_fkey"
             columns: ["organization_id", "product_id"]
             isOneToOne: false
+            referencedRelation: "product_retention_alert_operations"
+            referencedColumns: ["organization_id", "product_id"]
+          },
+          {
+            foreignKeyName: "product_create_idempotencies_organization_id_product_id_fkey"
+            columns: ["organization_id", "product_id"]
+            isOneToOne: false
             referencedRelation: "products"
             referencedColumns: ["organization_id", "id"]
           },
@@ -2586,6 +2612,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "organization_legal_entities"
             referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "product_legal_entity_assignment_organization_id_product_id_fkey"
+            columns: ["organization_id", "product_id"]
+            isOneToOne: false
+            referencedRelation: "product_retention_alert_operations"
+            referencedColumns: ["organization_id", "product_id"]
           },
           {
             foreignKeyName: "product_legal_entity_assignment_organization_id_product_id_fkey"
@@ -2649,6 +2682,13 @@ export type Database = {
             foreignKeyName: "product_lifecycle_dependency_fa_organization_id_product_id_fkey"
             columns: ["organization_id", "product_id"]
             isOneToOne: false
+            referencedRelation: "product_retention_alert_operations"
+            referencedColumns: ["organization_id", "product_id"]
+          },
+          {
+            foreignKeyName: "product_lifecycle_dependency_fa_organization_id_product_id_fkey"
+            columns: ["organization_id", "product_id"]
+            isOneToOne: false
             referencedRelation: "products"
             referencedColumns: ["organization_id", "id"]
           },
@@ -2677,46 +2717,82 @@ export type Database = {
       }
       product_regulatory_outbox_events: {
         Row: {
+          alert_threshold_days: number | null
+          checkpoint_version: number
           correlation_id: string
           delivered_at: string | null
+          delivered_to_user_id: string | null
           delivery_attempts: number
+          delivery_state: string
+          due_at: string | null
           event_key: string
           event_type: string
           id: string
           last_delivery_error: string | null
+          last_error_code: string | null
+          lease_expires_at: string | null
+          lease_owner: string | null
+          missed: boolean
+          obsolete_at: string | null
           occurred_at: string
           organization_id: string
           payload: Json
           product_id: string
-          release_id: string
+          release_id: string | null
+          support_period_id: string | null
+          support_period_revision: number | null
         }
         Insert: {
+          alert_threshold_days?: number | null
+          checkpoint_version?: number
           correlation_id: string
           delivered_at?: string | null
+          delivered_to_user_id?: string | null
           delivery_attempts?: number
+          delivery_state?: string
+          due_at?: string | null
           event_key: string
           event_type: string
           id?: string
           last_delivery_error?: string | null
+          last_error_code?: string | null
+          lease_expires_at?: string | null
+          lease_owner?: string | null
+          missed?: boolean
+          obsolete_at?: string | null
           occurred_at?: string
           organization_id: string
           payload: Json
           product_id: string
-          release_id: string
+          release_id?: string | null
+          support_period_id?: string | null
+          support_period_revision?: number | null
         }
         Update: {
+          alert_threshold_days?: number | null
+          checkpoint_version?: number
           correlation_id?: string
           delivered_at?: string | null
+          delivered_to_user_id?: string | null
           delivery_attempts?: number
+          delivery_state?: string
+          due_at?: string | null
           event_key?: string
           event_type?: string
           id?: string
           last_delivery_error?: string | null
+          last_error_code?: string | null
+          lease_expires_at?: string | null
+          lease_owner?: string | null
+          missed?: boolean
+          obsolete_at?: string | null
           occurred_at?: string
           organization_id?: string
           payload?: Json
           product_id?: string
-          release_id?: string
+          release_id?: string | null
+          support_period_id?: string | null
+          support_period_revision?: number | null
         }
         Relationships: [
           {
@@ -2727,11 +2803,25 @@ export type Database = {
             referencedColumns: ["organization_id", "product_id", "id"]
           },
           {
+            foreignKeyName: "product_regulatory_outbox_events_delivered_to_user_id_fkey"
+            columns: ["delivered_to_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "product_regulatory_outbox_events_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_regulatory_outbox_support_period_fk"
+            columns: ["organization_id", "support_period_id"]
+            isOneToOne: false
+            referencedRelation: "product_support_periods"
+            referencedColumns: ["organization_id", "id"]
           },
         ]
       }
@@ -2948,11 +3038,141 @@ export type Database = {
             foreignKeyName: "product_releases_organization_id_product_id_fkey"
             columns: ["organization_id", "product_id"]
             isOneToOne: false
+            referencedRelation: "product_retention_alert_operations"
+            referencedColumns: ["organization_id", "product_id"]
+          },
+          {
+            foreignKeyName: "product_releases_organization_id_product_id_fkey"
+            columns: ["organization_id", "product_id"]
+            isOneToOne: false
             referencedRelation: "products"
             referencedColumns: ["organization_id", "id"]
           },
           {
             foreignKeyName: "product_releases_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_support_periods: {
+        Row: {
+          created_at: string
+          created_by: string
+          decision_actor_id: string
+          effective_at: string
+          expected_lifetime_justification: string
+          id: string
+          idempotency_key: string | null
+          idempotency_request_digest: string | null
+          organization_id: string
+          product_id: string
+          release_id: string | null
+          scope_revision: number
+          superseded_at: string | null
+          superseded_by_id: string | null
+          support_ends_at: string
+          support_starts_at: string
+          updated_at: string
+          updated_by: string
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          decision_actor_id: string
+          effective_at?: string
+          expected_lifetime_justification: string
+          id?: string
+          idempotency_key?: string | null
+          idempotency_request_digest?: string | null
+          organization_id: string
+          product_id: string
+          release_id?: string | null
+          scope_revision: number
+          superseded_at?: string | null
+          superseded_by_id?: string | null
+          support_ends_at: string
+          support_starts_at: string
+          updated_at?: string
+          updated_by: string
+          version?: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          decision_actor_id?: string
+          effective_at?: string
+          expected_lifetime_justification?: string
+          id?: string
+          idempotency_key?: string | null
+          idempotency_request_digest?: string | null
+          organization_id?: string
+          product_id?: string
+          release_id?: string | null
+          scope_revision?: number
+          superseded_at?: string | null
+          superseded_by_id?: string | null
+          support_ends_at?: string
+          support_starts_at?: string
+          updated_at?: string
+          updated_by?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_support_periods_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_support_periods_decision_actor_id_fkey"
+            columns: ["decision_actor_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_support_periods_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_support_periods_organization_id_product_id_fkey"
+            columns: ["organization_id", "product_id"]
+            isOneToOne: false
+            referencedRelation: "product_retention_alert_operations"
+            referencedColumns: ["organization_id", "product_id"]
+          },
+          {
+            foreignKeyName: "product_support_periods_organization_id_product_id_fkey"
+            columns: ["organization_id", "product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "product_support_periods_organization_id_product_id_release_fkey"
+            columns: ["organization_id", "product_id", "release_id"]
+            isOneToOne: false
+            referencedRelation: "product_releases"
+            referencedColumns: ["organization_id", "product_id", "id"]
+          },
+          {
+            foreignKeyName: "product_support_periods_organization_id_superseded_by_id_fkey"
+            columns: ["organization_id", "superseded_by_id"]
+            isOneToOne: false
+            referencedRelation: "product_support_periods"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "product_support_periods_updated_by_fkey"
             columns: ["updated_by"]
             isOneToOne: false
             referencedRelation: "users"
@@ -2977,6 +3197,12 @@ export type Database = {
           organization_id: string
           product_type: string
           responsible_owner_id: string
+          retention_protection_until: string | null
+          retention_recalculated_at: string | null
+          retention_recalculated_by: string | null
+          retention_rule_version: string | null
+          retention_status: string
+          retention_until: string | null
           updated_at: string
           updated_by: string
           version: number
@@ -2997,6 +3223,12 @@ export type Database = {
           organization_id: string
           product_type: string
           responsible_owner_id: string
+          retention_protection_until?: string | null
+          retention_recalculated_at?: string | null
+          retention_recalculated_by?: string | null
+          retention_rule_version?: string | null
+          retention_status?: string
+          retention_until?: string | null
           updated_at?: string
           updated_by: string
           version?: number
@@ -3017,6 +3249,12 @@ export type Database = {
           organization_id?: string
           product_type?: string
           responsible_owner_id?: string
+          retention_protection_until?: string | null
+          retention_recalculated_at?: string | null
+          retention_recalculated_by?: string | null
+          retention_rule_version?: string | null
+          retention_status?: string
+          retention_until?: string | null
           updated_at?: string
           updated_by?: string
           version?: number
@@ -3053,6 +3291,13 @@ export type Database = {
           {
             foreignKeyName: "products_responsible_owner_id_fkey"
             columns: ["responsible_owner_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_retention_recalculated_by_fkey"
+            columns: ["retention_recalculated_by"]
             isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
@@ -3577,7 +3822,26 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      product_retention_alert_operations: {
+        Row: {
+          current_alert_lag: string | null
+          dead_letter_count: number | null
+          missed_delivery_count: number | null
+          organization_id: string | null
+          product_id: string | null
+          retention_status: string | null
+          retrying_count: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "products_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       accept_invitation_atomic: {
@@ -3710,6 +3974,20 @@ export type Database = {
           purge_job_id: string
         }[]
       }
+      claim_product_support_alert_atomic: {
+        Args: {
+          p_lease_owner: string
+          p_lease_seconds: number
+          p_organization_id: string
+        }
+        Returns: {
+          checkpoint_version: number
+          delivery_id: string
+          event: Json
+          lease_owner: string
+          outcome: string
+        }[]
+      }
       claim_retention_cleanup_atomic: {
         Args: {
           p_lease_owner: string
@@ -3770,6 +4048,18 @@ export type Database = {
         }
         Returns: {
           deletion_proof_id: string
+          outcome: string
+        }[]
+      }
+      complete_product_support_alert_delivery_atomic: {
+        Args: {
+          p_delivery_id: string
+          p_expected_checkpoint_version: number
+          p_lease_owner: string
+          p_organization_id: string
+          p_recipient_user_id: string
+        }
+        Returns: {
           outcome: string
         }[]
       }
@@ -3931,6 +4221,23 @@ export type Database = {
           release: Json
         }[]
       }
+      create_product_support_period_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_correlation_id: string
+          p_expected_lifetime_justification: string
+          p_idempotency_key: string
+          p_organization_id: string
+          p_product_id: string
+          p_release_id: string
+          p_support_ends_at: string
+          p_support_starts_at: string
+        }
+        Returns: {
+          outcome: string
+          support_period: Json
+        }[]
+      }
       deactivate_organization_atomic: {
         Args: {
           p_actor_user_id: string
@@ -4011,6 +4318,19 @@ export type Database = {
         Returns: {
           outcome: string
           status: string
+        }[]
+      }
+      fail_product_support_alert_delivery_atomic: {
+        Args: {
+          p_code: string
+          p_delivery_id: string
+          p_expected_checkpoint_version: number
+          p_lease_owner: string
+          p_organization_id: string
+          p_retryable: boolean
+        }
+        Returns: {
+          outcome: string
         }[]
       }
       fail_retention_cleanup_atomic: {
@@ -4148,6 +4468,13 @@ export type Database = {
           outcome: string
         }[]
       }
+      get_organization_support_alert_intervals: {
+        Args: { p_actor_user_id: string; p_organization_id: string }
+        Returns: {
+          intervals: Json
+          outcome: string
+        }[]
+      }
       get_product: {
         Args: {
           p_actor_user_id: string
@@ -4195,8 +4522,68 @@ export type Database = {
           outcome: string
         }[]
       }
+      get_product_retention_calculation: {
+        Args: {
+          p_actor_user_id: string
+          p_organization_id: string
+          p_product_id: string
+        }
+        Returns: {
+          outcome: string
+          retention: Json
+        }[]
+      }
+      get_product_retention_worker_now: {
+        Args: never
+        Returns: {
+          database_now: string
+          outcome: string
+        }[]
+      }
+      get_product_support_alert_history: {
+        Args: {
+          p_actor_user_id: string
+          p_organization_id: string
+          p_product_id: string
+        }
+        Returns: {
+          alerts: Json
+          outcome: string
+        }[]
+      }
+      get_product_support_alert_owner_or_admin_recipient: {
+        Args: { p_organization_id: string }
+        Returns: {
+          email: string
+          user_id: string
+        }[]
+      }
+      get_product_support_alert_product_owner_recipient: {
+        Args: { p_organization_id: string; p_product_id: string }
+        Returns: {
+          email: string
+          user_id: string
+        }[]
+      }
+      get_product_support_periods: {
+        Args: {
+          p_actor_user_id: string
+          p_organization_id: string
+          p_product_id: string
+        }
+        Returns: {
+          outcome: string
+          support_periods: Json
+        }[]
+      }
       is_iso_3166_alpha_2: { Args: { p_country: string }; Returns: boolean }
       is_login_locked: { Args: { p_email: string }; Returns: string }
+      list_due_product_support_alert_organizations: {
+        Args: never
+        Returns: {
+          organization_id: string
+        }[]
+      }
       list_product_releases: {
         Args: {
           p_actor_user_id: string
@@ -4369,6 +4756,40 @@ export type Database = {
         Args: { p_actor_user_id: string; p_organization_id: string }
         Returns: boolean
       }
+      m2_active_support_period: {
+        Args: {
+          p_organization_id: string
+          p_product_id: string
+          p_release_id: string
+        }
+        Returns: {
+          created_at: string
+          created_by: string
+          decision_actor_id: string
+          effective_at: string
+          expected_lifetime_justification: string
+          id: string
+          idempotency_key: string | null
+          idempotency_request_digest: string | null
+          organization_id: string
+          product_id: string
+          release_id: string | null
+          scope_revision: number
+          superseded_at: string | null
+          superseded_by_id: string | null
+          support_ends_at: string
+          support_starts_at: string
+          updated_at: string
+          updated_by: string
+          version: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "product_support_periods"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       m2_assert_no_legacy_release_lifecycle: { Args: never; Returns: undefined }
       m2_audit_release_command_rejection: {
         Args: {
@@ -4406,9 +4827,26 @@ export type Database = {
         Returns: Json
       }
       m2_member_states_json: { Args: never; Returns: Json }
+      m2_normalize_retention_calculation: {
+        Args: { p_calculation: Json }
+        Returns: Json
+      }
       m2_parse_utc_z: { Args: { p_value: string }; Returns: string }
       m2_product_json: {
         Args: { p_organization_id: string; p_product_id: string }
+        Returns: Json
+      }
+      m2_read_product_retention_calculation: {
+        Args: { p_organization_id: string; p_product_id: string }
+        Returns: Json
+      }
+      m2_recalculate_product_retention_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_allow_protection_reduction?: boolean
+          p_organization_id: string
+          p_product_id: string
+        }
         Returns: Json
       }
       m2_reconcile_product_entity: {
@@ -4416,6 +4854,15 @@ export type Database = {
           p_actor_user_id: string
           p_legal_entity_id: string
           p_organization_id: string
+        }
+        Returns: undefined
+      }
+      m2_record_retention_recalculation: {
+        Args: {
+          p_actor_user_id: string
+          p_cause: string
+          p_organization_id: string
+          p_product_id: string
         }
         Returns: undefined
       }
@@ -4427,7 +4874,46 @@ export type Database = {
         Args: { p_organization_id: string; p_release_id: string }
         Returns: Json
       }
+      m2_retention_placement_candidate: {
+        Args: { p_placed_at: string }
+        Returns: string
+      }
+      m2_schedule_support_alerts: {
+        Args: {
+          p_correlation_id: string
+          p_organization_id: string
+          p_period: Database["public"]["Tables"]["product_support_periods"]["Row"]
+          p_product_id: string
+        }
+        Returns: undefined
+      }
+      m2_support_period_command_digest: {
+        Args: { p_payload: Json }
+        Returns: string
+      }
+      m2_support_period_json: {
+        Args: {
+          p_period: Database["public"]["Tables"]["product_support_periods"]["Row"]
+        }
+        Returns: Json
+      }
+      m2_support_preview_json: {
+        Args: {
+          p_current: Database["public"]["Tables"]["product_support_periods"]["Row"]
+          p_expected_lifetime_justification: string
+          p_organization_id: string
+          p_product_id: string
+          p_release_id: string
+          p_support_ends_at: string
+          p_support_starts_at: string
+        }
+        Returns: Json
+      }
       m2_utc_z: { Args: { p_value: string }; Returns: string }
+      m2_valid_support_alert_intervals: {
+        Args: { p_values: number[] }
+        Returns: boolean
+      }
       mark_mfa_factors_removed: {
         Args: { p_operation_id: string; p_user_id: string }
         Returns: string
@@ -4442,6 +4928,22 @@ export type Database = {
         Returns: {
           checkpoint_version: number
           outcome: string
+        }[]
+      }
+      preview_product_support_period_change: {
+        Args: {
+          p_actor_user_id: string
+          p_expected_lifetime_justification: string
+          p_expected_version: number
+          p_organization_id: string
+          p_product_id: string
+          p_release_id: string
+          p_support_ends_at: string
+          p_support_starts_at: string
+        }
+        Returns: {
+          outcome: string
+          preview: Json
         }[]
       }
       publish_organization_branding_atomic: {
@@ -4730,6 +5232,27 @@ export type Database = {
           purge_job_id: string
         }[]
       }
+      supersede_product_support_period_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_allow_protection_reduction: boolean
+          p_correlation_id: string
+          p_expected_lifetime_justification: string
+          p_expected_version: number
+          p_idempotency_key: string
+          p_organization_id: string
+          p_preview_digest: string
+          p_product_id: string
+          p_reason: string
+          p_support_ends_at: string
+          p_support_period_id: string
+          p_support_starts_at: string
+        }
+        Returns: {
+          outcome: string
+          support_period: Json
+        }[]
+      }
       switch_organization_atomic: {
         Args: { p_actor_user_id: string; p_organization_id: string }
         Returns: {
@@ -4853,6 +5376,19 @@ export type Database = {
           outcome: string
           session_policy_tightened: boolean
           settings: Json
+        }[]
+      }
+      update_organization_support_alert_intervals_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_alert_intervals: number[]
+          p_correlation_id: string
+          p_expected_version: number
+          p_organization_id: string
+        }
+        Returns: {
+          intervals: Json
+          outcome: string
         }[]
       }
       update_product_atomic: {

@@ -23,6 +23,7 @@ import {
   useTransitionReleaseLifecycleMutation,
 } from "../../_features/products/products.queries";
 import { ApiClientError } from "../../_lib/http/api-client";
+import { SupportPeriodRetentionSection } from "./support-period-retention-section";
 
 function errorMessage(error: unknown, fallback: string): string {
   if (error instanceof ApiClientError && error.status === 404)
@@ -642,6 +643,13 @@ export function ReleaseRegulatoryControls({
           ) : null}
         </div>
       ) : null}
+      <SupportPeriodRetentionSection
+        productId={productId}
+        release={release}
+        canEdit={canEdit}
+        enabled={enabled}
+        onReload={onReload}
+      />
     </div>
   );
 }

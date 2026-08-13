@@ -18,6 +18,7 @@ import {
   archiveReleaseInputSchema,
   correctPlacedOnMarketDateInputSchema,
   correctReleaseMarketAvailabilityInputSchema,
+  createSupportPeriodRequestSchema,
   createProductInputSchema,
   createReleaseInputSchema,
   memberStatesResponseSchema,
@@ -25,6 +26,7 @@ import {
   productListQuerySchema,
   productParamsSchema,
   productResponseSchema,
+  productRetentionResponseSchema,
   productsResponseSchema,
   releaseLifecycleTimelineResponseSchema,
   releaseListQuerySchema,
@@ -34,7 +36,16 @@ import {
   releaseResponseSchema,
   releasesResponseSchema,
   removeReleaseMarketAvailabilityInputSchema,
+  previewSupportPeriodChangeRequestSchema,
+  supportAlertHistoryResponseSchema,
+  supportAlertIntervalsResponseSchema,
+  supportPeriodChangePreviewResponseSchema,
+  supportPeriodHistoryResponseSchema,
+  supportPeriodIdParamsSchema,
+  supportPeriodResponseSchema,
+  supersedeSupportPeriodRequestSchema,
   transitionReleaseLifecycleInputSchema,
+  updateSupportAlertIntervalsRequestSchema,
   updateProductInputSchema,
   updateReleaseInputSchema,
   type AddReleaseMarketAvailabilityInput,
@@ -42,16 +53,20 @@ import {
   type ArchiveReleaseInput,
   type CorrectPlacedOnMarketDateInput,
   type CorrectReleaseMarketAvailabilityInput,
+  type CreateSupportPeriodRequest,
   type CreateProductInput,
   type CreateReleaseInput,
   type MoveProductLegalEntityInput,
   type ProductListQuery,
   type ProductParams,
+  type PreviewSupportPeriodChangeRequest,
   type ReleaseMarketAvailabilityParams,
   type ReleaseListQuery,
   type ReleaseParams,
   type RemoveReleaseMarketAvailabilityInput,
+  type SupersedeSupportPeriodRequest,
   type TransitionReleaseLifecycleInput,
+  type UpdateSupportAlertIntervalsRequest,
   type UpdateProductInput,
   type UpdateReleaseInput,
 } from "@repo/contracts/products";
@@ -96,6 +111,34 @@ export class ProductsController {
       organizationId: this.organizationId(user),
       actorId: user.id,
     });
+  }
+
+  // Register this static path before the one-segment :productId route.
+  @RequirePermissions("can_view_products")
+  @Get("support-alert-intervals")
+  @ZodResponse(supportAlertIntervalsResponseSchema)
+  async getSupportAlertIntervals(@CurrentUser() user: RequestUser) {
+    const { intervals } = await this.products.getSupportAlertIntervals({
+      organizationId: this.organizationId(user),
+      actorId: user.id,
+    });
+    return intervals;
+  }
+
+  @RequirePermissions("can_edit_products")
+  @Patch("support-alert-intervals")
+  @ZodResponse(supportAlertIntervalsResponseSchema)
+  async updateSupportAlertIntervals(
+    @Body(zodBody(updateSupportAlertIntervalsRequestSchema))
+    input: UpdateSupportAlertIntervalsRequest,
+    @CurrentUser() user: RequestUser,
+  ) {
+    const { intervals } = await this.products.updateSupportAlertIntervals({
+      organizationId: this.organizationId(user),
+      actorId: user.id,
+      input,
+    });
+    return intervals;
   }
 
   @RequirePermissions("can_view_products")
@@ -383,6 +426,121 @@ export class ProductsController {
     });
   }
 
+  @RequirePermissions("can_view_products")
+  @Get(":productId/support-periods")
+  @ZodResponse(supportPeriodHistoryResponseSchema)
+  getSupportPeriods(
+    @Param(zodParams(productParamsSchema)) params: ProductParams,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.products.getSupportPeriods({
+      organizationId: this.organizationId(user),
+      actorId: user.id,
+      productId: params.productId,
+    });
+  }
+
+  @RequirePermissions("can_edit_products")
+  @Post(":productId/support-period-preview")
+  @ZodResponse(supportPeriodChangePreviewResponseSchema)
+  previewSupportPeriodChange(
+    @Param(zodParams(productParamsSchema)) params: ProductParams,
+    @Body(zodBody(previewSupportPeriodChangeRequestSchema))
+    input: PreviewSupportPeriodChangeRequest,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.products.previewSupportPeriodChange({
+      organizationId: this.organizationId(user),
+      actorId: user.id,
+      productId: params.productId,
+      input,
+    });
+  }
+
+  @RequirePermissions("can_edit_products")
+  @Post(":productId/support-periods")
+  @HttpCode(HttpStatus.CREATED)
+  @ZodResponse(supportPeriodResponseSchema)
+  createSupportPeriod(
+    @Param(zodParams(productParamsSchema)) params: ProductParams,
+    @Body(zodBody(createSupportPeriodRequestSchema))
+    input: CreateSupportPeriodRequest,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.products.createSupportPeriod({
+      organizationId: this.organizationId(user),
+      actorId: user.id,
+      productId: params.productId,
+      input,
+    });
+  }
+
+  @RequirePermissions("can_edit_products")
+  @Post(":productId/support-periods/:supportPeriodId/supersessions")
+  @ZodResponse(supportPeriodResponseSchema)
+  async supersedeSupportPeriod(
+    @Param(zodParams(supportPeriodIdParamsSchema))
+    params: ProductParams & Readonly<{ supportPeriodId: string }>,
+    @Body(zodBody(supersedeSupportPeriodRequestSchema))
+    input: SupersedeSupportPeriodRequest,
+    @CurrentUser() user: RequestUser,
+  ) {
+    const organizationId = this.organizationId(user);
+    const history = await this.products.getSupportPeriods({
+      organizationId,
+      actorId: user.id,
+      productId: params.productId,
+    });
+    const current = history.supportPeriods.find(
+      (period) => period.id === params.supportPeriodId,
+    );
+    if (!current || current.supersededAt !== null) {
+      throw new NotFoundException({
+        message: "Product registry request could not be completed.",
+        code: "not_found",
+      });
+    }
+    const shortening =
+      Date.parse(input.supportEndsAt) < Date.parse(current.supportEndsAt);
+    await this.ensureElevatedShorteningPermission(shortening, user);
+    return this.products.supersedeSupportPeriod({
+      organizationId,
+      actorId: user.id,
+      productId: params.productId,
+      supportPeriodId: params.supportPeriodId,
+      input,
+      allowProtectionReduction: shortening,
+    });
+  }
+
+  @RequirePermissions("can_view_products")
+  @Get(":productId/retention")
+  @ZodResponse(productRetentionResponseSchema)
+  getProductRetentionCalculation(
+    @Param(zodParams(productParamsSchema)) params: ProductParams,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.products.getProductRetentionCalculation({
+      organizationId: this.organizationId(user),
+      actorId: user.id,
+      productId: params.productId,
+    });
+  }
+
+  @RequirePermissions("can_view_products")
+  @Get(":productId/support-alerts")
+  @ZodResponse(supportAlertHistoryResponseSchema)
+  getSupportAlertHistory(
+    @Param(zodParams(productParamsSchema)) params: ProductParams,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.products.getSupportAlertHistory({
+      organizationId: this.organizationId(user),
+      actorId: user.id,
+      productId: params.productId,
+    });
+  }
+
   private organizationId(user: RequestUser): string {
     if (user.organizationId) return user.organizationId;
     throw new NotFoundException({
@@ -402,6 +560,36 @@ export class ProductsController {
       (await this.permissions.can(user.organizationId, user.id, user.role, [
         "can_delete_products",
       ]))
+    ) {
+      return;
+    }
+    throw new ForbiddenException({
+      message: "You do not have access to this.",
+      code: "insufficient_permissions",
+    });
+  }
+
+  /**
+   * Editing products is sufficient for a non-reducing correction. A reduction
+   * is deliberately stricter: the actor must be the tenant owner *and* retain
+   * the independent deletion permission. This prevents ownership labels from
+   * becoming an implicit compliance override.
+   */
+  private async ensureElevatedShorteningPermission(
+    shortening: boolean,
+    user: RequestUser,
+  ): Promise<void> {
+    if (!shortening) return;
+    if (!user.organizationId || user.role !== "owner") {
+      throw new ForbiddenException({
+        message: "You do not have access to this.",
+        code: "insufficient_permissions",
+      });
+    }
+    if (
+      await this.permissions.can(user.organizationId, user.id, user.role, [
+        "can_delete_products",
+      ])
     ) {
       return;
     }

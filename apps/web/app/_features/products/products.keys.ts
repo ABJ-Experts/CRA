@@ -34,6 +34,32 @@ const lifecycleTimeline = Object.freeze(
       "lifecycle-timeline",
     ] as const),
 );
+const supportPeriods = Object.freeze((productId: string, releaseId?: string) =>
+  Object.freeze(
+    releaseId === undefined
+      ? (["products", productId, "support-periods"] as const)
+      : (["products", productId, "support-periods", releaseId] as const),
+  ),
+);
+const supportRetention = Object.freeze(
+  (productId: string, releaseId?: string) =>
+    Object.freeze(
+      releaseId === undefined
+        ? (["products", productId, "retention"] as const)
+        : (["products", productId, "retention", releaseId] as const),
+    ),
+);
+const supportAlerts = Object.freeze((productId: string, releaseId?: string) =>
+  Object.freeze(
+    releaseId === undefined
+      ? (["products", productId, "support-alerts"] as const)
+      : (["products", productId, "support-alerts", releaseId] as const),
+  ),
+);
+const supportAlertIntervals = Object.freeze([
+  "products",
+  "support-alert-intervals",
+] as const);
 
 export const productKeys = Object.freeze({
   all,
@@ -46,4 +72,8 @@ export const productKeys = Object.freeze({
   memberStates,
   marketAvailability,
   lifecycleTimeline,
+  supportPeriods,
+  supportRetention,
+  supportAlerts,
+  supportAlertIntervals,
 });

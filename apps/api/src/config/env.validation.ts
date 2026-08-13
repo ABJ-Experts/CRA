@@ -118,6 +118,18 @@ export const envSchema = z.object({
     50_000_000,
     "must not exceed the private export bucket object limit",
   ),
+  // M2 alert workers use database time as their scheduler. These values only
+  // bound a lease and the threshold for an operational clock-skew observation.
+  PRODUCT_RETENTION_ALERT_LEASE_SECONDS: boundedInt(
+    60,
+    3600,
+    "must not exceed 3600 seconds",
+  ),
+  PRODUCT_RETENTION_MAX_CLOCK_SKEW_MILLISECONDS: boundedInt(
+    5_000,
+    300_000,
+    "must not exceed 300000 milliseconds",
+  ),
   /**
    * With no scanner adapter configured, decoded raster-only inspection remains
    * available in non-strict environments and is recorded in the audit trail.

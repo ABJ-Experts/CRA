@@ -1,5 +1,8 @@
+import { randomUUID } from "node:crypto";
 import { Module } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
 
+import { MailModule } from "../mail/mail.module";
 import { OrganizationsModule } from "../organizations/organizations.module";
 import { SupabaseModule } from "../supabase/supabase.module";
 import {
@@ -16,12 +19,21 @@ import {
   RELEASE_MARKET_AVAILABILITY_READER,
   RELEASE_REGULATORY_STATE_READER,
 } from "./application/release-regulatory-reader.port";
+import {
+  PRODUCT_RETENTION_PROJECTION,
+  PRODUCT_RETENTION_READER,
+} from "./application/product-retention-reader.port";
 import { SupabaseProductRepository } from "./infrastructure/supabase-product.repository";
 import { ProductsController } from "./products.controller";
 import { ProductsService } from "./products.service";
+import { ProductRetentionWorker } from "./worker/product-retention-worker";
+import {
+  MailProductRetentionDeliveryAdapter,
+  SupabaseProductRetentionWorkerRepository,
+} from "./worker/supabase-product-retention-worker.adapter";
 
 @Module({
-  imports: [SupabaseModule, OrganizationsModule, PermissionsModule],
+  imports: [SupabaseModule, OrganizationsModule, PermissionsModule, MailModule],
   controllers: [ProductsController],
   providers: [
     SupabaseProductRepository,
@@ -42,12 +54,51 @@ import { ProductsService } from "./products.service";
       provide: RELEASE_MARKET_AVAILABILITY_READER,
       useExisting: ProductUseCases,
     },
+    {
+      provide: PRODUCT_RETENTION_READER,
+      useExisting: ProductUseCases,
+    },
+    {
+      provide: PRODUCT_RETENTION_PROJECTION,
+      useExisting: ProductUseCases,
+    },
+    SupabaseProductRetentionWorkerRepository,
+    MailProductRetentionDeliveryAdapter,
+    {
+      provide: ProductRetentionWorker,
+      inject: [
+        SupabaseProductRetentionWorkerRepository,
+        MailProductRetentionDeliveryAdapter,
+        ConfigService,
+      ],
+      useFactory: (
+        repository: SupabaseProductRetentionWorkerRepository,
+        delivery: MailProductRetentionDeliveryAdapter,
+        config: ConfigService,
+      ) =>
+        new ProductRetentionWorker({
+          workerId: randomUUID(),
+          leaseSeconds: config.getOrThrow<number>(
+            "PRODUCT_RETENTION_ALERT_LEASE_SECONDS",
+          ),
+          maximumClockSkewMilliseconds: config.getOrThrow<number>(
+            "PRODUCT_RETENTION_MAX_CLOCK_SKEW_MILLISECONDS",
+          ),
+          clock: repository.clock,
+          queue: repository.queue,
+          recipients: repository.recipients,
+          delivery,
+        }),
+    },
     ProductsService,
   ],
   exports: [
     ProductUseCases,
     RELEASE_REGULATORY_STATE_READER,
     RELEASE_MARKET_AVAILABILITY_READER,
+    PRODUCT_RETENTION_READER,
+    PRODUCT_RETENTION_PROJECTION,
+    ProductRetentionWorker,
   ],
 })
 export class ProductsModule {}

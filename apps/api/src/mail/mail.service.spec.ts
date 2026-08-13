@@ -2,7 +2,7 @@ import { Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { createTransport } from "nodemailer";
 
-import { MailService } from "./mail.service";
+import { MailService, RequiredMailDeliveryError } from "./mail.service";
 
 interface SentMessage {
   from: string;
@@ -185,4 +185,73 @@ describe("MailService", () => {
       );
     },
   );
+
+  it("reports a required support alert delivery failure to its outbox owner", async () => {
+    mockSendMail.mockRejectedValueOnce(new Error("connection refused"));
+    const service = new MailService(enabledConfig());
+
+    await expect(
+      service.sendSupportPeriodAlert(
+        "owner@cra.test",
+        {
+          productName: "Product <one>",
+          supportEndsAt: "2036-02-28T00:00:00.000Z",
+          thresholdDays: 30,
+          missed: false,
+        },
+        "support-period:revision-1:30",
+      ),
+    ).rejects.toEqual(new RequiredMailDeliveryError("delivery_failed"));
+    expect(mockSendMail.mock.calls[0]?.[0]?.html).toContain(
+      "Product &lt;one&gt;",
+    );
+  });
+
+  it("reports a disabled required support alert delivery to its outbox owner", async () => {
+    const service = new MailService(
+      config({
+        SMTP_FROM: "CRA <no-reply@cra.test>",
+        APP_URL: "https://cra.test",
+      }),
+    );
+
+    await expect(
+      service.sendSupportPeriodAlert(
+        "owner@cra.test",
+        {
+          productName: "Product one",
+          supportEndsAt: "2036-02-28T00:00:00.000Z",
+          thresholdDays: 30,
+          missed: false,
+        },
+        "support-period:revision-1:30",
+      ),
+    ).rejects.toEqual(new RequiredMailDeliveryError("provider_unavailable"));
+  });
+
+  it("uses a stable provider idempotency message identifier for support alerts", async () => {
+    const service = new MailService(enabledConfig());
+
+    await service.sendSupportPeriodAlert(
+      "owner@cra.test",
+      {
+        productName: "Product one",
+        supportEndsAt: "2036-02-28T00:00:00.000Z",
+        thresholdDays: 30,
+        missed: false,
+      },
+      "support-period:revision-1:30",
+    );
+
+    const mail = mockSendMail.mock.calls[0]?.[0] as
+      | Readonly<{
+          messageId?: unknown;
+          headers?: Readonly<Record<string, unknown>>;
+        }>
+      | undefined;
+    expect(mail?.messageId).toMatch(
+      /^<support-period-[a-f0-9]{64}@cra\.local>$/,
+    );
+    expect(mail?.headers?.["X-CRA-Idempotency-Key"]).toMatch(/^[a-f0-9]{64}$/);
+  });
 });

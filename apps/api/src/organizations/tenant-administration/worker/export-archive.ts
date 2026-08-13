@@ -121,6 +121,7 @@ export const exportSourceRegistry: readonly ExportSourceRegistration[] =
         "product_lifecycle_dependency_facts",
         "product_release_market_availability",
         "product_regulatory_outbox_events",
+        "product_support_periods",
       ],
     },
   ]);

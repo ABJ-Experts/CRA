@@ -14,6 +14,7 @@
     "test:cov": "jest --coverage --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "worker:tenant-lifecycle": "node dist/tenant-lifecycle-worker.js",
+    "worker:product-retention": "node dist/product-retention-worker.js",
     "verify:tenant-export-capacity": "node dist/organizations/tenant-administration/worker/tenant-export-capacity.js"
   },
   "dependencies": {

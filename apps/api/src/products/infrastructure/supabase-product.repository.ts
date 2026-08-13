@@ -8,6 +8,12 @@ import {
   releaseMarketAvailabilityResponseSchema,
   releaseResponseSchema,
   releasesResponseSchema,
+  productRetentionResponseSchema,
+  supportAlertHistoryResponseSchema,
+  supportAlertIntervalsResponseSchema,
+  supportPeriodChangePreviewResponseSchema,
+  supportPeriodHistoryResponseSchema,
+  supportPeriodResponseSchema,
   type AddReleaseMarketAvailabilityInput,
   type ArchiveProductInput,
   type ArchiveReleaseInput,
@@ -27,6 +33,15 @@ import {
   type TransitionReleaseLifecycleInput,
   type UpdateProductInput,
   type UpdateReleaseInput,
+  type CreateSupportPeriodRequest,
+  type PreviewSupportPeriodChangeRequest,
+  type ProductRetentionCalculation,
+  type ProductSupportPeriod,
+  type SupportAlertHistoryItem,
+  type SupportAlertIntervals,
+  type SupportPeriodChangePreview,
+  type SupersedeSupportPeriodRequest,
+  type UpdateSupportAlertIntervalsRequest,
 } from "@repo/contracts/products";
 
 import { SupabaseService } from "../../supabase/supabase.service";
@@ -34,6 +49,13 @@ import type {
   ProductMutationOutcome,
   ProductRepository,
   ReleaseMutationOutcome,
+  SupportAlertHistoryOutcome,
+  SupportAlertIntervalsMutationOutcome,
+  SupportAlertIntervalsOutcome,
+  SupportPeriodHistoryOutcome,
+  SupportPeriodMutationOutcome,
+  SupportPeriodPreviewOutcome,
+  ProductRetentionOutcome,
 } from "../application/product-use-cases";
 
 type ProviderRow = Readonly<Record<string, unknown>>;
@@ -80,6 +102,15 @@ const RELEASE_OUTCOMES = new Set([
   "placed_on_market_date_not_set",
   "member_state_unavailable",
   "market_availability_not_found",
+]);
+const SUPPORT_MUTATION_OUTCOMES = new Set([
+  "created",
+  "superseded",
+  "conflict",
+  "idempotency_mismatch",
+  "blocked",
+  "not_found",
+  "invalid_request",
 ]);
 
 /** Service-role adapter: organizationId is the first argument of every operation. */
@@ -487,6 +518,186 @@ export class SupabaseProductRepository implements ProductRepository {
     return this.releaseMutation(row);
   }
 
+  async getSupportPeriods(
+    organizationId: string,
+    actorId: string,
+    productId: string,
+  ): Promise<SupportPeriodHistoryOutcome> {
+    const row = await this.singleRpc("get_product_support_periods", {
+      p_organization_id: organizationId,
+      p_product_id: productId,
+      p_actor_user_id: actorId,
+    });
+    if (this.outcome(row, new Set(["found", "not_found"])) === "not_found") {
+      return Object.freeze({ outcome: "not_found" });
+    }
+    return Object.freeze({
+      outcome: "found",
+      supportPeriods: this.supportPeriods(row.support_periods),
+    });
+  }
+
+  async previewSupportPeriodChange(
+    organizationId: string,
+    actorId: string,
+    productId: string,
+    input: PreviewSupportPeriodChangeRequest,
+  ): Promise<SupportPeriodPreviewOutcome> {
+    const row = await this.singleRpc("preview_product_support_period_change", {
+      p_organization_id: organizationId,
+      p_product_id: productId,
+      p_release_id: input.releaseId ?? null,
+      p_actor_user_id: actorId,
+      p_expected_version: input.expectedVersion,
+      p_support_starts_at: input.proposed.supportStartsAt,
+      p_support_ends_at: input.proposed.supportEndsAt,
+      p_expected_lifetime_justification:
+        input.proposed.expectedLifetimeJustification,
+    });
+    const outcome = this.outcome(
+      row,
+      new Set(["found", "not_found", "conflict", "invalid_request"]),
+    );
+    if (outcome !== "found")
+      return Object.freeze({
+        outcome: outcome as "not_found" | "conflict" | "invalid_request",
+      });
+    return Object.freeze({
+      outcome,
+      preview: this.supportPreview(row.preview),
+    });
+  }
+
+  async createSupportPeriod(
+    organizationId: string,
+    actorId: string,
+    productId: string,
+    input: CreateSupportPeriodRequest,
+  ): Promise<SupportPeriodMutationOutcome> {
+    const row = await this.singleRpc("create_product_support_period_atomic", {
+      p_organization_id: organizationId,
+      p_product_id: productId,
+      p_release_id: input.releaseId ?? null,
+      p_actor_user_id: actorId,
+      p_support_starts_at: input.supportStartsAt,
+      p_support_ends_at: input.supportEndsAt,
+      p_expected_lifetime_justification: input.expectedLifetimeJustification,
+      p_idempotency_key: input.idempotencyKey,
+      p_correlation_id: randomUUID(),
+    });
+    return this.supportPeriodMutation(row);
+  }
+
+  async supersedeSupportPeriod(
+    organizationId: string,
+    actorId: string,
+    productId: string,
+    supportPeriodId: string,
+    input: SupersedeSupportPeriodRequest,
+    allowProtectionReduction: boolean,
+  ): Promise<SupportPeriodMutationOutcome> {
+    const row = await this.singleRpc(
+      "supersede_product_support_period_atomic",
+      {
+        p_organization_id: organizationId,
+        p_product_id: productId,
+        p_support_period_id: supportPeriodId,
+        p_actor_user_id: actorId,
+        p_expected_version: input.expectedVersion,
+        p_support_starts_at: input.supportStartsAt,
+        p_support_ends_at: input.supportEndsAt,
+        p_expected_lifetime_justification: input.expectedLifetimeJustification,
+        p_reason: input.reason,
+        p_preview_digest: input.previewDigest ?? null,
+        p_allow_protection_reduction: allowProtectionReduction,
+        p_idempotency_key: input.idempotencyKey ?? randomUUID(),
+        p_correlation_id: randomUUID(),
+      },
+    );
+    return this.supportPeriodMutation(row);
+  }
+
+  async getProductRetentionCalculation(
+    organizationId: string,
+    actorId: string,
+    productId: string,
+  ): Promise<ProductRetentionOutcome> {
+    const row = await this.singleRpc("get_product_retention_calculation", {
+      p_organization_id: organizationId,
+      p_product_id: productId,
+      p_actor_user_id: actorId,
+    });
+    if (this.outcome(row, new Set(["found", "not_found"])) === "not_found") {
+      return Object.freeze({ outcome: "not_found" });
+    }
+    return Object.freeze({
+      outcome: "found",
+      retention: this.retention(row.retention),
+    });
+  }
+
+  async getSupportAlertHistory(
+    organizationId: string,
+    actorId: string,
+    productId: string,
+  ): Promise<SupportAlertHistoryOutcome> {
+    const row = await this.singleRpc("get_product_support_alert_history", {
+      p_organization_id: organizationId,
+      p_product_id: productId,
+      p_actor_user_id: actorId,
+    });
+    if (this.outcome(row, new Set(["found", "not_found"])) === "not_found") {
+      return Object.freeze({ outcome: "not_found" });
+    }
+    return Object.freeze({ outcome: "found", alerts: this.alerts(row.alerts) });
+  }
+
+  async getSupportAlertIntervals(
+    organizationId: string,
+    actorId: string,
+  ): Promise<SupportAlertIntervalsOutcome> {
+    const row = await this.singleRpc(
+      "get_organization_support_alert_intervals",
+      {
+        p_organization_id: organizationId,
+        p_actor_user_id: actorId,
+      },
+    );
+    if (this.outcome(row, new Set(["found", "not_found"])) === "not_found") {
+      return Object.freeze({ outcome: "not_found" });
+    }
+    return Object.freeze({
+      outcome: "found",
+      intervals: this.intervals(row.intervals),
+    });
+  }
+
+  async updateSupportAlertIntervals(
+    organizationId: string,
+    actorId: string,
+    input: UpdateSupportAlertIntervalsRequest,
+  ): Promise<SupportAlertIntervalsMutationOutcome> {
+    const row = await this.singleRpc(
+      "update_organization_support_alert_intervals_atomic",
+      {
+        p_organization_id: organizationId,
+        p_actor_user_id: actorId,
+        p_expected_version: input.expectedVersion,
+        p_alert_intervals: input.alertIntervalsDays,
+        p_correlation_id: randomUUID(),
+      },
+    );
+    const outcome = this.outcome(
+      row,
+      new Set(["updated", "conflict", "not_found", "invalid_request"]),
+    );
+    return outcome === "updated"
+      ? Object.freeze({ outcome, intervals: this.intervals(row.intervals) })
+      : Object.freeze({
+          outcome: outcome as "conflict" | "not_found" | "invalid_request",
+        });
+  }
+
   private productInput(
     organizationId: string,
     actorId: string,
@@ -576,6 +787,24 @@ export class SupabaseProductRepository implements ProductRepository {
         | "market_availability_not_found",
     });
   }
+  private supportPeriodMutation(
+    row: ProviderRow,
+  ): SupportPeriodMutationOutcome {
+    const outcome = this.outcome(row, SUPPORT_MUTATION_OUTCOMES);
+    return outcome === "created" || outcome === "superseded"
+      ? Object.freeze({
+          outcome,
+          supportPeriod: this.supportPeriod(row.support_period),
+        })
+      : Object.freeze({
+          outcome: outcome as
+            | "conflict"
+            | "idempotency_mismatch"
+            | "blocked"
+            | "not_found"
+            | "invalid_request",
+        });
+  }
   private product(value: unknown): Product {
     return this.parse(productResponseSchema, { product: value }).product;
   }
@@ -605,6 +834,33 @@ export class SupabaseProductRepository implements ProductRepository {
     return Object.freeze(
       this.parse(releaseLifecycleTimelineResponseSchema, value).timeline,
     );
+  }
+  private supportPeriods(value: unknown): readonly ProductSupportPeriod[] {
+    return Object.freeze(
+      this.parse(supportPeriodHistoryResponseSchema, { supportPeriods: value })
+        .supportPeriods,
+    );
+  }
+  private supportPeriod(value: unknown): ProductSupportPeriod {
+    return this.parse(supportPeriodResponseSchema, { supportPeriod: value })
+      .supportPeriod;
+  }
+  private supportPreview(value: unknown): SupportPeriodChangePreview {
+    return this.parse(supportPeriodChangePreviewResponseSchema, {
+      preview: value,
+    }).preview;
+  }
+  private retention(value: unknown): ProductRetentionCalculation {
+    return this.parse(productRetentionResponseSchema, { retention: value })
+      .retention;
+  }
+  private alerts(value: unknown): readonly SupportAlertHistoryItem[] {
+    return Object.freeze(
+      this.parse(supportAlertHistoryResponseSchema, { alerts: value }).alerts,
+    );
+  }
+  private intervals(value: unknown): SupportAlertIntervals {
+    return this.parse(supportAlertIntervalsResponseSchema, value);
   }
   private async singleRpc(
     name: string,

@@ -3,6 +3,7 @@ import { describe, expect, expectTypeOf, it } from "vitest";
 import {
   EU27_MEMBER_STATE_CODES,
   addReleaseMarketAvailabilityInputSchema,
+  createSupportPeriodRequestSchema,
   correctPlacedOnMarketDateInputSchema,
   correctReleaseMarketAvailabilityInputSchema,
   createProductInputSchema,
@@ -20,14 +21,25 @@ import {
   removeReleaseMarketAvailabilityInputSchema,
   releaseParamsSchema,
   releaseResponseSchema,
+  productRetentionCalculationSchema,
+  productSupportPeriodSchema,
+  previewSupportPeriodChangeRequestSchema,
+  supportAlertHistoryResponseSchema,
+  supportAlertIntervalsSchema,
+  supportPeriodChangePreviewSchema,
+  supportPeriodHistoryResponseSchema,
+  supersedeSupportPeriodRequestSchema,
   transitionReleaseLifecycleInputSchema,
+  updateSupportAlertIntervalsRequestSchema,
   updateProductInputSchema,
   updateReleaseInputSchema,
 } from "./products.js";
 import type {
   CreateProductInput,
+  ProductRetentionCalculation,
   ReleaseLifecycleState,
   ReleaseMarketAvailability,
+  ProductSupportPeriod,
 } from "./products.js";
 
 const ids = {
@@ -408,5 +420,222 @@ describe("release market lifecycle contracts", () => {
       | "end_of_support"
       | "withdrawn"
     >();
+  });
+});
+
+describe("product support period and retention contracts", () => {
+  const productId = "77777777-7777-4777-8777-777777777777";
+  const releaseId = "88888888-8888-4888-8888-888888888888";
+  const supportPeriodId = "99999999-9999-4999-8999-999999999999";
+  const occurredAt = "2026-08-13T10:15:30.000Z";
+  const supportEndsAt = "2032-08-13T10:15:30.000Z";
+
+  const activeProductSupportPeriod = {
+    id: supportPeriodId,
+    organizationId: ids.owner,
+    productId,
+    releaseId: null,
+    supportStartsAt: occurredAt,
+    supportEndsAt,
+    expectedLifetimeJustification:
+      "Expected product lifetime and support commitment approved by the owner",
+    decisionActorId: ids.owner,
+    effectiveAt: occurredAt,
+    supersededAt: null,
+    supersededById: null,
+    scopeRevision: 3,
+    version: 3,
+    createdAt: occurredAt,
+    updatedAt: occurredAt,
+    createdBy: ids.owner,
+    updatedBy: ids.owner,
+  } as const;
+
+  it("parses an active product-wide decision and a release override", () => {
+    const productWide = productSupportPeriodSchema.parse(
+      activeProductSupportPeriod,
+    );
+    const releaseOverride = productSupportPeriodSchema.parse({
+      ...activeProductSupportPeriod,
+      id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      releaseId,
+    });
+
+    expect(productWide.releaseId).toBeNull();
+    expect(releaseOverride.releaseId).toBe(releaseId);
+    expectTypeOf<ProductSupportPeriod>().toEqualTypeOf<typeof productWide>();
+  });
+
+  it("requires immutable support history to agree with supersession facts", () => {
+    expect(
+      productSupportPeriodSchema.safeParse({
+        ...activeProductSupportPeriod,
+        supersededById: ids.entity,
+      }).success,
+    ).toBe(false);
+    expect(
+      productSupportPeriodSchema.safeParse({
+        ...activeProductSupportPeriod,
+        supersededAt: occurredAt,
+        supersededById: ids.entity,
+      }).success,
+    ).toBe(true);
+    expect(
+      supportPeriodHistoryResponseSchema.safeParse({
+        supportPeriods: [activeProductSupportPeriod],
+        unexpected: true,
+      }).success,
+    ).toBe(false);
+  });
+
+  it("strictly validates create, supersede, and preview support decisions", () => {
+    expect(
+      createSupportPeriodRequestSchema.parse({
+        supportStartsAt: occurredAt,
+        supportEndsAt,
+        expectedLifetimeJustification: "Initial product support period",
+        idempotencyKey: ids.key,
+      }),
+    ).toMatchObject({ supportEndsAt, releaseId: undefined });
+    expect(
+      createSupportPeriodRequestSchema.safeParse({
+        releaseId,
+        supportStartsAt: occurredAt,
+        supportEndsAt: "2032-08-13T15:45:30.000+05:30",
+        expectedLifetimeJustification: "Release-specific support override",
+        idempotencyKey: ids.key,
+      }).success,
+    ).toBe(false);
+    expect(
+      supersedeSupportPeriodRequestSchema.parse({
+        supportStartsAt: occurredAt,
+        supportEndsAt,
+        expectedLifetimeJustification: "New approved support commitment",
+        reason: "Approved support commitment supersedes the prior decision",
+        expectedVersion: 3,
+      }),
+    ).toMatchObject({ expectedVersion: 3 });
+    expect(
+      previewSupportPeriodChangeRequestSchema.parse({
+        expectedVersion: 3,
+        current: {
+          supportStartsAt: occurredAt,
+          supportEndsAt,
+          expectedLifetimeJustification: "Initial product support period",
+        },
+        proposed: {
+          supportStartsAt: occurredAt,
+          supportEndsAt: "2033-08-13T10:15:30.000Z",
+          expectedLifetimeJustification: "Revised product support period",
+        },
+      }),
+    ).toMatchObject({ expectedVersion: 3 });
+    expect(
+      previewSupportPeriodChangeRequestSchema.safeParse({
+        expectedVersion: 3,
+        unsupported: true,
+      }).success,
+    ).toBe(false);
+    expect(
+      previewSupportPeriodChangeRequestSchema.parse({
+        expectedVersion: 0,
+        current: null,
+        proposed: {
+          supportStartsAt: occurredAt,
+          supportEndsAt,
+          expectedLifetimeJustification: "Initial support commitment preview",
+        },
+      }),
+    ).toMatchObject({ current: null, expectedVersion: 0 });
+  });
+
+  it("represents complete and incomplete retention explanations explicitly", () => {
+    const calculation = productRetentionCalculationSchema.parse({
+      ruleVersion: "m2.v1.later_of_placement_plus_10y_or_support_end",
+      status: "current",
+      placedOnMarketCandidate: "2036-08-13T10:15:30.000Z",
+      supportPeriodCandidate: "2032-08-13T10:15:30.000Z",
+      retentionUntil: "2036-08-13T10:15:30.000Z",
+      retentionProtectionUntil: "2036-08-13T10:15:30.000Z",
+      winningRule: "placed_on_market_plus_10_calendar_years",
+      incompleteReasons: [],
+      legalHoldActive: false,
+      releaseCalculations: [],
+    });
+    expectTypeOf<ProductRetentionCalculation>().toEqualTypeOf<
+      typeof calculation
+    >();
+    expect(
+      productRetentionCalculationSchema.safeParse({
+        ...calculation,
+        status: "incomplete",
+      }).success,
+    ).toBe(false);
+    expect(
+      productRetentionCalculationSchema.safeParse({
+        ruleVersion: "m2.v1.later_of_placement_plus_10y_or_support_end",
+        status: "incomplete",
+        placedOnMarketCandidate: null,
+        supportPeriodCandidate: null,
+        retentionUntil: null,
+        retentionProtectionUntil: null,
+        winningRule: null,
+        incompleteReasons: ["missing_support_period"],
+        legalHoldActive: false,
+        releaseCalculations: [],
+      }).success,
+    ).toBe(true);
+  });
+
+  it("validates unique support-alert interval configuration and alert history", () => {
+    const intervals = supportAlertIntervalsSchema.parse({
+      alertIntervalsDays: [365, 90, 30, 90],
+      version: 2,
+      updatedAt: occurredAt,
+      updatedBy: ids.owner,
+    });
+    expect(intervals.alertIntervalsDays).toEqual([365, 90, 30]);
+    expect(
+      updateSupportAlertIntervalsRequestSchema.safeParse({
+        alertIntervalsDays: [90, 90],
+        expectedVersion: 2,
+      }).success,
+    ).toBe(false);
+    expect(
+      supportAlertHistoryResponseSchema.parse({
+        alerts: [
+          {
+            id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+            supportPeriodId,
+            releaseId: null,
+            thresholdDays: 90,
+            dueAt: "2032-05-15T10:15:30.000Z",
+            deliveryState: "pending",
+            missed: false,
+            obsolete: false,
+            attempts: 0,
+            createdAt: occurredAt,
+          },
+        ],
+      }),
+    ).toMatchObject({
+      alerts: [expect.objectContaining({ deliveryState: "pending" })],
+    });
+  });
+
+  it("exposes an immutable preview of the resulting support decision", () => {
+    expect(
+      supportPeriodChangePreviewSchema.parse({
+        current: activeProductSupportPeriod,
+        proposed: {
+          supportStartsAt: occurredAt,
+          supportEndsAt,
+          expectedLifetimeJustification: "Release-specific support override",
+        },
+        lowering: false,
+        previewDigest:
+          "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      }),
+    ).toMatchObject({ proposed: { supportEndsAt } });
   });
 });

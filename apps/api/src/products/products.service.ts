@@ -96,6 +96,46 @@ export class ProductsService {
   ) {
     return this.unwrap(this.useCases.getReleaseLifecycleTimeline(command));
   }
+  getSupportPeriods(
+    command: Parameters<ProductUseCases["getSupportPeriods"]>[0],
+  ) {
+    return this.unwrap(this.useCases.getSupportPeriods(command));
+  }
+  previewSupportPeriodChange(
+    command: Parameters<ProductUseCases["previewSupportPeriodChange"]>[0],
+  ) {
+    return this.unwrap(this.useCases.previewSupportPeriodChange(command));
+  }
+  createSupportPeriod(
+    command: Parameters<ProductUseCases["createSupportPeriod"]>[0],
+  ) {
+    return this.unwrap(this.useCases.createSupportPeriod(command));
+  }
+  supersedeSupportPeriod(
+    command: Parameters<ProductUseCases["supersedeSupportPeriod"]>[0],
+  ) {
+    return this.unwrap(this.useCases.supersedeSupportPeriod(command));
+  }
+  getProductRetentionCalculation(
+    command: Parameters<ProductUseCases["getProductRetentionCalculation"]>[0],
+  ) {
+    return this.unwrap(this.useCases.getProductRetentionCalculation(command));
+  }
+  getSupportAlertHistory(
+    command: Parameters<ProductUseCases["getSupportAlertHistory"]>[0],
+  ) {
+    return this.unwrap(this.useCases.getSupportAlertHistory(command));
+  }
+  getSupportAlertIntervals(
+    command: Parameters<ProductUseCases["getSupportAlertIntervals"]>[0],
+  ) {
+    return this.unwrap(this.useCases.getSupportAlertIntervals(command));
+  }
+  updateSupportAlertIntervals(
+    command: Parameters<ProductUseCases["updateSupportAlertIntervals"]>[0],
+  ) {
+    return this.unwrap(this.useCases.updateSupportAlertIntervals(command));
+  }
 
   private async unwrap<T>(
     pending: Promise<Result<T, ProductError>>,

@@ -51,6 +51,26 @@ const RELEASE = {
   createdBy: USER_ID,
   updatedBy: USER_ID,
 } as const;
+const SUPPORT_PERIOD_ID = "66666666-6666-4666-8666-666666666666";
+const SUPPORT_PERIOD = {
+  id: SUPPORT_PERIOD_ID,
+  organizationId: ORGANIZATION_ID,
+  productId: PRODUCT_ID,
+  releaseId: RELEASE_ID,
+  supportStartsAt: NOW,
+  supportEndsAt: "2029-08-12T10:00:00.000Z",
+  expectedLifetimeJustification: "Vendor support commitment",
+  decisionActorId: USER_ID,
+  effectiveAt: NOW,
+  supersededAt: null,
+  supersededById: null,
+  scopeRevision: 1,
+  version: 1,
+  createdAt: NOW,
+  createdBy: USER_ID,
+  updatedAt: NOW,
+  updatedBy: USER_ID,
+} as const;
 
 function json(value: unknown) {
   return new Response(JSON.stringify(value), { status: 200 });
@@ -246,6 +266,173 @@ describe("productsApi", () => {
     expect(fetcher).toHaveBeenCalledWith(
       `/api/v1/products/${PRODUCT_ID}/releases/${RELEASE_ID}/lifecycle-timeline`,
       expect.objectContaining({ method: "GET" }),
+    );
+  });
+
+  it("uses product support period and retention report endpoints", async () => {
+    const fetcher = vi.fn(async (path: string) => {
+      if (path.includes("/support-periods?")) {
+        return json({
+          supportPeriods: [SUPPORT_PERIOD],
+        });
+      }
+      if (path.endsWith("/support-period-preview")) {
+        return json({
+          preview: {
+            current: SUPPORT_PERIOD,
+            proposed: {
+              supportStartsAt: NOW,
+              supportEndsAt: "2029-08-12T10:00:00.000Z",
+              expectedLifetimeJustification: "Vendor support commitment",
+            },
+            lowering: false,
+            previewDigest: "a".repeat(64),
+            activeScopeRevision: 1,
+            isShortening: false,
+            retentionProtectionWouldReduce: false,
+            blockedReasons: [],
+            affectedCategories: ["retention_dates"],
+            currentRetentionUntil: null,
+            proposedRetentionUntil: "2036-08-12T10:00:00.000Z",
+          },
+        });
+      }
+      if (path.endsWith("/retention")) {
+        return json({
+          retention: {
+            ruleVersion: "m2.v1.later_of_placement_plus_10y_or_support_end",
+            status: "current",
+            placedOnMarketCandidate: "2036-08-12T10:00:00.000Z",
+            supportPeriodCandidate: "2029-08-12T10:00:00.000Z",
+            retentionUntil: "2036-08-12T10:00:00.000Z",
+            retentionProtectionUntil: "2036-08-12T10:00:00.000Z",
+            winningRule: "placed_on_market_plus_10_calendar_years",
+            incompleteReasons: [],
+            legalHoldActive: false,
+            releaseCalculations: [
+              {
+                releaseId: RELEASE_ID,
+                ruleVersion: "m2.v1.later_of_placement_plus_10y_or_support_end",
+                status: "current",
+                placedOnMarketCandidate: "2036-08-12T10:00:00.000Z",
+                supportPeriodCandidate: "2029-08-12T10:00:00.000Z",
+                retentionUntil: "2036-08-12T10:00:00.000Z",
+                retentionProtectionUntil: "2036-08-12T10:00:00.000Z",
+                winningRule: "placed_on_market_plus_10_calendar_years",
+                incompleteReasons: [],
+                legalHoldActive: false,
+              },
+            ],
+          },
+        });
+      }
+      if (path.endsWith("/support-alerts")) {
+        return json({ alerts: [] });
+      }
+      return json({ supportPeriod: SUPPORT_PERIOD });
+    });
+    vi.stubGlobal("fetch", fetcher);
+
+    await productsApi.listSupportPeriods(PRODUCT_ID, RELEASE_ID);
+    await productsApi.previewSupportPeriod(PRODUCT_ID, {
+      releaseId: RELEASE_ID,
+      expectedVersion: 1,
+      current: {
+        supportStartsAt: NOW,
+        supportEndsAt: "2029-08-12T10:00:00.000Z",
+        expectedLifetimeJustification: "Vendor support commitment",
+      },
+      proposed: {
+        supportStartsAt: NOW,
+        supportEndsAt: "2030-08-12T10:00:00.000Z",
+        expectedLifetimeJustification: "Extended vendor support",
+      },
+    });
+    await productsApi.createSupportPeriod(PRODUCT_ID, {
+      releaseId: RELEASE_ID,
+      supportStartsAt: NOW,
+      supportEndsAt: "2029-08-12T10:00:00.000Z",
+      expectedLifetimeJustification: "Vendor support commitment",
+      idempotencyKey: "77777777-7777-4777-8777-777777777777",
+    });
+    await productsApi.supersedeSupportPeriod(PRODUCT_ID, SUPPORT_PERIOD_ID, {
+      supportStartsAt: "2026-08-13T10:00:00.000Z",
+      supportEndsAt: "2030-08-13T10:00:00.000Z",
+      expectedLifetimeJustification: "Extended vendor support",
+      expectedVersion: 1,
+      reason: "Contract extension",
+      idempotencyKey: "88888888-8888-4888-8888-888888888888",
+    });
+    await productsApi.getSupportRetention(PRODUCT_ID);
+    await productsApi.getSupportAlerts(PRODUCT_ID);
+
+    expect(fetcher).toHaveBeenCalledWith(
+      `/api/v1/products/${PRODUCT_ID}/support-periods?releaseId=${RELEASE_ID}`,
+      expect.objectContaining({ method: "GET" }),
+    );
+    expect(fetcher).toHaveBeenCalledWith(
+      `/api/v1/products/${PRODUCT_ID}/support-period-preview`,
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({
+          releaseId: RELEASE_ID,
+          expectedVersion: 1,
+          current: {
+            supportStartsAt: NOW,
+            supportEndsAt: "2029-08-12T10:00:00.000Z",
+            expectedLifetimeJustification: "Vendor support commitment",
+          },
+          proposed: {
+            supportStartsAt: NOW,
+            supportEndsAt: "2030-08-12T10:00:00.000Z",
+            expectedLifetimeJustification: "Extended vendor support",
+          },
+        }),
+      }),
+    );
+    expect(fetcher).toHaveBeenCalledWith(
+      `/api/v1/products/${PRODUCT_ID}/support-periods/${SUPPORT_PERIOD_ID}/supersessions`,
+      expect.objectContaining({ method: "POST" }),
+    );
+    expect(fetcher).toHaveBeenCalledWith(
+      `/api/v1/products/${PRODUCT_ID}/retention`,
+      expect.objectContaining({ method: "GET" }),
+    );
+    expect(fetcher).toHaveBeenCalledWith(
+      `/api/v1/products/${PRODUCT_ID}/support-alerts`,
+      expect.objectContaining({ method: "GET" }),
+    );
+  });
+
+  it("uses the product support alert interval endpoints", async () => {
+    const intervals = {
+      alertIntervalsDays: [30, 180],
+      version: 1,
+      updatedAt: NOW,
+      updatedBy: USER_ID,
+    };
+    const fetcher = vi.fn(async () => json(intervals));
+    vi.stubGlobal("fetch", fetcher);
+
+    await productsApi.getSupportAlertIntervals();
+    await productsApi.updateSupportAlertIntervals({
+      alertIntervalsDays: [14, 120],
+      expectedVersion: 1,
+    });
+
+    expect(fetcher).toHaveBeenCalledWith(
+      "/api/v1/products/support-alert-intervals",
+      expect.objectContaining({ method: "GET" }),
+    );
+    expect(fetcher).toHaveBeenCalledWith(
+      "/api/v1/products/support-alert-intervals",
+      expect.objectContaining({
+        method: "PATCH",
+        body: JSON.stringify({
+          alertIntervalsDays: [14, 120],
+          expectedVersion: 1,
+        }),
+      }),
     );
   });
 });

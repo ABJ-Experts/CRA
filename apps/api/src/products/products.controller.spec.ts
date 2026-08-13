@@ -36,6 +36,14 @@ describe("ProductsController", () => {
       transitionReleaseLifecycle: "can_edit_products",
       correctPlacedOnMarketDate: "can_edit_products",
       getReleaseLifecycleTimeline: "can_view_products",
+      getSupportAlertIntervals: "can_view_products",
+      updateSupportAlertIntervals: "can_edit_products",
+      getSupportPeriods: "can_view_products",
+      previewSupportPeriodChange: "can_edit_products",
+      createSupportPeriod: "can_edit_products",
+      supersedeSupportPeriod: "can_edit_products",
+      getProductRetentionCalculation: "can_view_products",
+      getSupportAlertHistory: "can_view_products",
     };
     for (const [name, permission] of Object.entries(permissions)) {
       const handler = Object.getOwnPropertyDescriptor(
@@ -99,5 +107,124 @@ describe("ProductsController", () => {
       user.role,
       ["can_delete_products"],
     );
+  });
+
+  it("requires owner plus delete permission before a support period can shorten", async () => {
+    const active = {
+      id: "00000000-0000-4000-8000-000000000005",
+      supportEndsAt: "2036-08-13T00:00:00.000Z",
+      supersededAt: null,
+    };
+    const products = {
+      getSupportPeriods: jest
+        .fn()
+        .mockResolvedValue({ supportPeriods: [active] }),
+      supersedeSupportPeriod: jest.fn().mockResolvedValue({}),
+    };
+    const permissions = { can: jest.fn().mockResolvedValue(false) };
+    const controller = new ProductsController(
+      products as never,
+      permissions as never,
+    );
+    const user = {
+      id: "00000000-0000-4000-8000-000000000001",
+      organizationId: "00000000-0000-4000-8000-000000000002",
+      role: "admin",
+    } as RequestUser;
+    const params = {
+      productId: "00000000-0000-4000-8000-000000000003",
+      supportPeriodId: active.id,
+    };
+    const input = {
+      supportStartsAt: "2026-08-13T00:00:00.000Z",
+      supportEndsAt: "2030-08-13T00:00:00.000Z",
+      expectedLifetimeJustification: "A documented expected product lifetime.",
+      expectedVersion: 1,
+      reason: "Corrected support commitment after compliance review.",
+      previewDigest: "a".repeat(64),
+    };
+
+    await expect(
+      controller.supersedeSupportPeriod(params, input, user),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    expect(products.supersedeSupportPeriod).not.toHaveBeenCalled();
+    expect(permissions.can).not.toHaveBeenCalled();
+  });
+
+  it("passes an elevated shortening decision only after owner delete authorization", async () => {
+    const active = {
+      id: "00000000-0000-4000-8000-000000000005",
+      supportEndsAt: "2036-08-13T00:00:00.000Z",
+      supersededAt: null,
+    };
+    const products = {
+      getSupportPeriods: jest
+        .fn()
+        .mockResolvedValue({ supportPeriods: [active] }),
+      supersedeSupportPeriod: jest.fn().mockResolvedValue({}),
+    };
+    const permissions = { can: jest.fn().mockResolvedValue(true) };
+    const controller = new ProductsController(
+      products as never,
+      permissions as never,
+    );
+    const user = {
+      id: "00000000-0000-4000-8000-000000000001",
+      organizationId: "00000000-0000-4000-8000-000000000002",
+      role: "owner",
+    } as RequestUser;
+    const params = {
+      productId: "00000000-0000-4000-8000-000000000003",
+      supportPeriodId: active.id,
+    };
+    const input = {
+      supportStartsAt: "2026-08-13T00:00:00.000Z",
+      supportEndsAt: "2030-08-13T00:00:00.000Z",
+      expectedLifetimeJustification: "A documented expected product lifetime.",
+      expectedVersion: 1,
+      reason: "Corrected support commitment after compliance review.",
+      previewDigest: "a".repeat(64),
+    };
+
+    await controller.supersedeSupportPeriod(params, input, user);
+
+    expect(permissions.can).toHaveBeenCalledWith(
+      user.organizationId,
+      user.id,
+      user.role,
+      ["can_delete_products"],
+    );
+    expect(products.supersedeSupportPeriod).toHaveBeenCalledWith(
+      expect.objectContaining({ allowProtectionReduction: true }),
+    );
+  });
+
+  it("returns alert intervals in the declared wire-contract shape", async () => {
+    const intervals = {
+      alertIntervalsDays: [180, 90, 30],
+      version: 1,
+      updatedAt: "2026-08-13T00:00:00.000Z",
+      updatedBy: null,
+    };
+    const products = {
+      getSupportAlertIntervals: jest.fn().mockResolvedValue({ intervals }),
+      updateSupportAlertIntervals: jest.fn().mockResolvedValue({ intervals }),
+    };
+    const controller = new ProductsController(products as never, {} as never);
+    const user = {
+      id: "00000000-0000-4000-8000-000000000001",
+      organizationId: "00000000-0000-4000-8000-000000000002",
+      role: "owner",
+    } as RequestUser;
+
+    await expect(controller.getSupportAlertIntervals(user)).resolves.toEqual(
+      intervals,
+    );
+    await expect(
+      controller.updateSupportAlertIntervals(
+        { alertIntervalsDays: [180, 90, 30], expectedVersion: 1 },
+        user,
+      ),
+    ).resolves.toEqual(intervals);
   });
 });

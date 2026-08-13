@@ -4,6 +4,7 @@ import {
   archiveReleaseInputSchema,
   correctPlacedOnMarketDateInputSchema,
   correctReleaseMarketAvailabilityInputSchema,
+  createSupportPeriodRequestSchema,
   createProductInputSchema,
   createReleaseInputSchema,
   memberStatesResponseSchema,
@@ -20,7 +21,17 @@ import {
   releaseResponseSchema,
   releasesResponseSchema,
   removeReleaseMarketAvailabilityInputSchema,
+  supportAlertIntervalsResponseSchema,
+  supportAlertHistoryResponseSchema,
+  supportPeriodHistoryResponseSchema,
+  supportPeriodIdParamsSchema,
+  previewSupportPeriodChangeRequestSchema,
+  supportPeriodChangePreviewResponseSchema,
+  supportPeriodResponseSchema,
+  productRetentionResponseSchema,
+  supersedeSupportPeriodRequestSchema,
   transitionReleaseLifecycleInputSchema,
+  updateSupportAlertIntervalsRequestSchema,
   updateProductInputSchema,
   updateReleaseInputSchema,
   type AddReleaseMarketAvailabilityInput,
@@ -28,13 +39,17 @@ import {
   type ArchiveReleaseInput,
   type CorrectPlacedOnMarketDateInput,
   type CorrectReleaseMarketAvailabilityInput,
+  type CreateSupportPeriodRequest,
   type CreateProductInput,
   type CreateReleaseInput,
   type MoveProductLegalEntityInput,
   type ProductListQuery,
   type RemoveReleaseMarketAvailabilityInput,
   type ReleaseListQuery,
+  type SupersedeSupportPeriodRequest,
+  type PreviewSupportPeriodChangeRequest,
   type TransitionReleaseLifecycleInput,
+  type UpdateSupportAlertIntervalsRequest,
   type UpdateProductInput,
   type UpdateReleaseInput,
 } from "@repo/contracts/products";
@@ -88,6 +103,25 @@ function releaseMarketAvailabilityPath(
     );
   }
   return `/api/v1/products/${parsed.data.productId}/releases/${parsed.data.releaseId}/market-availability/${parsed.data.countryCode}`;
+}
+
+function supportPeriodPath(
+  productId: string,
+  supportPeriodId: string,
+  suffix = "",
+): `/${string}` {
+  const parsed = supportPeriodIdParamsSchema.safeParse({
+    productId,
+    supportPeriodId,
+  });
+  if (!parsed.success) {
+    throw new ApiClientError(
+      "invalid_request",
+      "The support period identifier is invalid.",
+      400,
+    );
+  }
+  return `/api/v1/products/${parsed.data.productId}/support-periods/${parsed.data.supportPeriodId}${suffix}`;
 }
 
 function queryPath(
@@ -370,6 +404,112 @@ export class ProductsApi {
     return authenticatedRequestJson({
       path: releasePath(productId, releaseId, "/lifecycle-timeline"),
       schema: releaseLifecycleTimelineResponseSchema,
+      signal,
+    });
+  }
+
+  async listSupportPeriods(
+    productId: string,
+    releaseId: string,
+    signal?: AbortSignal,
+  ) {
+    const parsed = releaseParamsSchema.safeParse({ productId, releaseId });
+    if (!parsed.success) {
+      throw new ApiClientError(
+        "invalid_request",
+        "The release identifier is invalid.",
+        400,
+      );
+    }
+    return authenticatedRequestJson({
+      path: queryPath(productPath(productId, "/support-periods"), {
+        releaseId: parsed.data.releaseId,
+      }),
+      schema: supportPeriodHistoryResponseSchema,
+      signal,
+    });
+  }
+
+  async previewSupportPeriod(
+    productId: string,
+    input: PreviewSupportPeriodChangeRequest,
+    signal?: AbortSignal,
+  ) {
+    return authenticatedRequestJson({
+      path: productPath(productId, "/support-period-preview"),
+      method: "POST",
+      body: input,
+      inputSchema: previewSupportPeriodChangeRequestSchema,
+      schema: supportPeriodChangePreviewResponseSchema,
+      signal,
+    });
+  }
+
+  async createSupportPeriod(
+    productId: string,
+    input: CreateSupportPeriodRequest,
+    signal?: AbortSignal,
+  ) {
+    return authenticatedRequestJson({
+      path: productPath(productId, "/support-periods"),
+      method: "POST",
+      body: input,
+      inputSchema: createSupportPeriodRequestSchema,
+      schema: supportPeriodResponseSchema,
+      signal,
+    });
+  }
+
+  async supersedeSupportPeriod(
+    productId: string,
+    supportPeriodId: string,
+    input: SupersedeSupportPeriodRequest,
+    signal?: AbortSignal,
+  ) {
+    return authenticatedRequestJson({
+      path: supportPeriodPath(productId, supportPeriodId, "/supersessions"),
+      method: "POST",
+      body: input,
+      inputSchema: supersedeSupportPeriodRequestSchema,
+      schema: supportPeriodResponseSchema,
+      signal,
+    });
+  }
+
+  async getSupportRetention(productId: string, signal?: AbortSignal) {
+    return authenticatedRequestJson({
+      path: productPath(productId, "/retention"),
+      schema: productRetentionResponseSchema,
+      signal,
+    });
+  }
+
+  async getSupportAlerts(productId: string, signal?: AbortSignal) {
+    return authenticatedRequestJson({
+      path: productPath(productId, "/support-alerts"),
+      schema: supportAlertHistoryResponseSchema,
+      signal,
+    });
+  }
+
+  async getSupportAlertIntervals(signal?: AbortSignal) {
+    return authenticatedRequestJson({
+      path: "/api/v1/products/support-alert-intervals",
+      schema: supportAlertIntervalsResponseSchema,
+      signal,
+    });
+  }
+
+  async updateSupportAlertIntervals(
+    input: UpdateSupportAlertIntervalsRequest,
+    signal?: AbortSignal,
+  ) {
+    return authenticatedRequestJson({
+      path: "/api/v1/products/support-alert-intervals",
+      method: "PATCH",
+      body: input,
+      inputSchema: updateSupportAlertIntervalsRequestSchema,
+      schema: supportAlertIntervalsResponseSchema,
       signal,
     });
   }

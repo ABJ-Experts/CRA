@@ -8,11 +8,15 @@ import type {
   CorrectReleaseMarketAvailabilityInput,
   CreateProductInput,
   CreateReleaseInput,
+  CreateSupportPeriodRequest,
   MoveProductLegalEntityInput,
   ProductListQuery,
   ReleaseListQuery,
   RemoveReleaseMarketAvailabilityInput,
+  SupersedeSupportPeriodRequest,
+  PreviewSupportPeriodChangeRequest,
   TransitionReleaseLifecycleInput,
+  UpdateSupportAlertIntervalsRequest,
   UpdateProductInput,
   UpdateReleaseInput,
 } from "@repo/contracts/products";
@@ -110,15 +114,94 @@ export function useReleaseLifecycleTimelineQuery(
   });
 }
 
+export function useSupportPeriodHistoryQuery(
+  productId: string,
+  releaseId: string,
+  enabled: boolean,
+) {
+  return useQuery({
+    queryKey: productKeys.supportPeriods(productId, releaseId),
+    enabled,
+    retry: false,
+    queryFn: ({ signal }) =>
+      productsApi.listSupportPeriods(productId, releaseId, signal),
+  });
+}
+
+export function useSupportPeriodRetentionQuery(
+  productId: string,
+  releaseId: string,
+  enabled: boolean,
+) {
+  return useQuery({
+    queryKey: productKeys.supportRetention(productId, releaseId),
+    enabled,
+    retry: false,
+    queryFn: ({ signal }) => productsApi.getSupportRetention(productId, signal),
+  });
+}
+
+export function useSupportAlertsQuery(
+  productId: string,
+  releaseId: string,
+  enabled: boolean,
+) {
+  return useQuery({
+    queryKey: productKeys.supportAlerts(productId, releaseId),
+    enabled,
+    retry: false,
+    queryFn: ({ signal }) => productsApi.getSupportAlerts(productId, signal),
+  });
+}
+
+export function useSupportAlertIntervalsQuery(enabled: boolean) {
+  return useQuery({
+    queryKey: productKeys.supportAlertIntervals,
+    enabled,
+    retry: false,
+    queryFn: ({ signal }) => productsApi.getSupportAlertIntervals(signal),
+  });
+}
+
 function useInvalidateProducts() {
   const client = useQueryClient();
-  return async (productId?: string) => {
+  return async (
+    productId?: string,
+    releaseId?: string,
+    options: Readonly<{ support?: boolean }> = {},
+  ) => {
     await Promise.all([
       client.invalidateQueries({ queryKey: productKeys.all }),
       ...(productId
         ? [
             client.invalidateQueries({
               queryKey: productKeys.detail(productId),
+            }),
+            client.invalidateQueries({
+              queryKey: productKeys.releases(productId),
+            }),
+            ...(options.support
+              ? [
+                  client.invalidateQueries({
+                    queryKey: productKeys.supportPeriods(productId),
+                  }),
+                  client.invalidateQueries({
+                    queryKey: productKeys.supportRetention(productId),
+                  }),
+                  client.invalidateQueries({
+                    queryKey: productKeys.supportAlerts(productId),
+                  }),
+                ]
+              : []),
+          ]
+        : []),
+      ...(productId && releaseId
+        ? [
+            client.invalidateQueries({
+              queryKey: productKeys.marketAvailability(productId, releaseId),
+            }),
+            client.invalidateQueries({
+              queryKey: productKeys.lifecycleTimeline(productId, releaseId),
             }),
           ]
         : []),
@@ -199,7 +282,7 @@ export function useAddReleaseMarketAvailabilityMutation(
   return useMutation({
     mutationFn: (input: AddReleaseMarketAvailabilityInput) =>
       productsApi.addReleaseMarketAvailability(productId, releaseId, input),
-    onSuccess: () => invalidate(productId),
+    onSuccess: () => invalidate(productId, releaseId),
   });
 }
 
@@ -222,7 +305,7 @@ export function useRemoveReleaseMarketAvailabilityMutation(
         countryCode,
         input,
       ),
-    onSuccess: () => invalidate(productId),
+    onSuccess: () => invalidate(productId, releaseId),
   });
 }
 
@@ -234,7 +317,7 @@ export function useCorrectReleaseMarketAvailabilityMutation(
   return useMutation({
     mutationFn: (input: CorrectReleaseMarketAvailabilityInput) =>
       productsApi.correctReleaseMarketAvailability(productId, releaseId, input),
-    onSuccess: () => invalidate(productId),
+    onSuccess: () => invalidate(productId, releaseId),
   });
 }
 
@@ -246,7 +329,7 @@ export function useTransitionReleaseLifecycleMutation(
   return useMutation({
     mutationFn: (input: TransitionReleaseLifecycleInput) =>
       productsApi.transitionReleaseLifecycle(productId, releaseId, input),
-    onSuccess: () => invalidate(productId),
+    onSuccess: () => invalidate(productId, releaseId),
   });
 }
 
@@ -258,6 +341,53 @@ export function useCorrectPlacedOnMarketDateMutation(
   return useMutation({
     mutationFn: (input: CorrectPlacedOnMarketDateInput) =>
       productsApi.correctPlacedOnMarketDate(productId, releaseId, input),
-    onSuccess: () => invalidate(productId),
+    onSuccess: () => invalidate(productId, releaseId),
+  });
+}
+
+export function usePreviewSupportPeriodMutation(productId: string) {
+  return useMutation({
+    mutationFn: (input: PreviewSupportPeriodChangeRequest) =>
+      productsApi.previewSupportPeriod(productId, input),
+  });
+}
+
+export function useCreateSupportPeriodMutation(productId: string) {
+  const invalidate = useInvalidateProducts();
+  return useMutation({
+    mutationFn: (input: CreateSupportPeriodRequest) =>
+      productsApi.createSupportPeriod(productId, input),
+    onSuccess: () => invalidate(productId, undefined, { support: true }),
+  });
+}
+
+export function useSupersedeSupportPeriodMutation(productId: string) {
+  const invalidate = useInvalidateProducts();
+  return useMutation({
+    mutationFn: ({
+      supportPeriodId,
+      input,
+    }: Readonly<{
+      supportPeriodId: string;
+      input: SupersedeSupportPeriodRequest;
+    }>) =>
+      productsApi.supersedeSupportPeriod(productId, supportPeriodId, input),
+    onSuccess: () => invalidate(productId, undefined, { support: true }),
+  });
+}
+
+export function useUpdateSupportAlertIntervalsMutation() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (input: UpdateSupportAlertIntervalsRequest) =>
+      productsApi.updateSupportAlertIntervals(input),
+    onSuccess: async () => {
+      await Promise.all([
+        client.invalidateQueries({
+          queryKey: productKeys.supportAlertIntervals,
+        }),
+        client.invalidateQueries({ queryKey: productKeys.all }),
+      ]);
+    },
   });
 }

@@ -2,7 +2,13 @@
 
 import "@testing-library/jest-dom/vitest";
 
-import type { Release } from "@repo/contracts/products";
+import type {
+  ProductRetentionCalculation,
+  ProductSupportPeriod,
+  Release,
+  SupportAlertHistoryItem,
+  SupportAlertIntervals,
+} from "@repo/contracts/products";
 
 import {
   cleanup,
@@ -15,6 +21,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiClientError } from "../../_lib/http/api-client";
 import { ProductDetailContent } from "./product-detail-content";
+
+vi.mock("../../_features/organizations/organizations.queries", () => ({
+  useOrganizationSettingsQuery: () => ({ data: undefined }),
+}));
 
 const PRODUCT = {
   id: "11111111-1111-4111-8111-111111111111",
@@ -58,9 +68,79 @@ const RELEASE = {
   updatedBy: PRODUCT.updatedBy,
 } as const;
 
+type QueryState<TData> = {
+  isPending: boolean;
+  isError: boolean;
+  error: unknown;
+  data: TData;
+  refetch: ReturnType<typeof vi.fn>;
+};
+
+const SUPPORT_PERIOD = {
+  id: "66666666-6666-4666-8666-666666666666",
+  releaseId: RELEASE.id,
+  supportStartsAt: "2026-08-12T10:00:00.000Z",
+  supportEndsAt: "2029-08-12T10:00:00.000Z",
+  expectedLifetimeJustification: "Vendor support commitment",
+  decisionActorId: PRODUCT.updatedBy,
+  effectiveAt: PRODUCT.updatedAt,
+  supersededAt: null,
+  supersededById: null,
+  scopeRevision: 1,
+  version: 1,
+  organizationId: PRODUCT.organizationId,
+  productId: PRODUCT.id,
+  createdAt: PRODUCT.createdAt,
+  createdBy: PRODUCT.createdBy,
+  updatedAt: PRODUCT.updatedAt,
+  updatedBy: PRODUCT.updatedBy,
+} satisfies ProductSupportPeriod;
+
 const transitionMutation = {
   isPending: false,
   mutateAsync: vi.fn(async () => ({ release: RELEASE })),
+};
+const previewSupportPeriodMutation = {
+  isPending: false,
+  data: null as unknown,
+  mutateAsync: vi.fn(async () => ({
+    preview: {
+      current: SUPPORT_PERIOD,
+      proposed: {
+        supportStartsAt: "2026-08-12T10:00:00.000Z",
+        supportEndsAt: "2030-08-12T10:00:00.000Z",
+        expectedLifetimeJustification: "Vendor support commitment",
+      },
+      lowering: false,
+      previewDigest: "a".repeat(64),
+      activeScopeRevision: 1,
+      isShortening: false,
+      retentionProtectionWouldReduce: false,
+      blockedReasons: [],
+      affectedCategories: ["retention_dates"],
+      currentRetentionUntil: null,
+      proposedRetentionUntil: "2036-08-12T10:00:00.000Z",
+    },
+  })),
+};
+const createSupportPeriodMutation = {
+  isPending: false,
+  mutateAsync: vi.fn(async () => ({
+    supportPeriod: SUPPORT_PERIOD,
+  })),
+};
+const supersedeSupportPeriodMutation = {
+  isPending: false,
+  mutateAsync: vi.fn(async () => ({ supportPeriod: SUPPORT_PERIOD })),
+};
+const updateSupportAlertIntervalsMutation = {
+  isPending: false,
+  mutateAsync: vi.fn(async () => ({
+    alertIntervalsDays: [30, 180],
+    version: 1,
+    updatedAt: PRODUCT.updatedAt,
+    updatedBy: PRODUCT.updatedBy,
+  })),
 };
 
 const state = {
@@ -122,6 +202,52 @@ const state = {
     data: { timeline: [] },
     refetch: vi.fn(),
   },
+  supportPeriods: {
+    isPending: false,
+    isError: false,
+    error: null as unknown,
+    data: { supportPeriods: [] },
+    refetch: vi.fn(),
+  } as QueryState<{ supportPeriods: ProductSupportPeriod[] }>,
+  supportRetention: {
+    isPending: false,
+    isError: false,
+    error: null as unknown,
+    data: {
+      retention: {
+        ruleVersion: "m2.v1.later_of_placement_plus_10y_or_support_end",
+        status: "incomplete",
+        placedOnMarketCandidate: null,
+        supportPeriodCandidate: null,
+        retentionUntil: null,
+        retentionProtectionUntil: null,
+        winningRule: null,
+        incompleteReasons: ["missing_support_period"],
+        legalHoldActive: false,
+        releaseCalculations: [],
+      },
+    },
+    refetch: vi.fn(),
+  } as QueryState<{ retention: ProductRetentionCalculation }>,
+  supportAlerts: {
+    isPending: false,
+    isError: false,
+    error: null as unknown,
+    data: { alerts: [] },
+    refetch: vi.fn(),
+  } as QueryState<{ alerts: SupportAlertHistoryItem[] }>,
+  supportAlertIntervals: {
+    isPending: false,
+    isError: false,
+    error: null as unknown,
+    data: {
+      alertIntervalsDays: [30, 180],
+      version: 1,
+      updatedAt: PRODUCT.updatedAt,
+      updatedBy: PRODUCT.updatedBy,
+    },
+    refetch: vi.fn(),
+  } as QueryState<SupportAlertIntervals>,
 };
 
 vi.mock("../../_features/products/products.queries", () => ({
@@ -152,6 +278,15 @@ vi.mock("../../_features/products/products.queries", () => ({
     isPending: false,
     mutateAsync: vi.fn(),
   }),
+  useSupportPeriodHistoryQuery: () => state.supportPeriods,
+  useSupportPeriodRetentionQuery: () => state.supportRetention,
+  useSupportAlertsQuery: () => state.supportAlerts,
+  useSupportAlertIntervalsQuery: () => state.supportAlertIntervals,
+  usePreviewSupportPeriodMutation: () => previewSupportPeriodMutation,
+  useCreateSupportPeriodMutation: () => createSupportPeriodMutation,
+  useSupersedeSupportPeriodMutation: () => supersedeSupportPeriodMutation,
+  useUpdateSupportAlertIntervalsMutation: () =>
+    updateSupportAlertIntervalsMutation,
 }));
 vi.mock("../../_providers/providers", () => ({ useMocksReady: () => true }));
 vi.mock("../../_providers/session-provider", () => ({
@@ -196,7 +331,42 @@ describe("ProductDetailContent", () => {
     state.timeline.isPending = false;
     state.timeline.isError = false;
     state.timeline.data = { timeline: [] };
+    state.supportPeriods.isPending = false;
+    state.supportPeriods.isError = false;
+    state.supportPeriods.data = { supportPeriods: [] };
+    state.supportRetention.isPending = false;
+    state.supportRetention.isError = false;
+    state.supportRetention.data = {
+      retention: {
+        ruleVersion: "m2.v1.later_of_placement_plus_10y_or_support_end",
+        status: "incomplete",
+        placedOnMarketCandidate: null,
+        supportPeriodCandidate: null,
+        retentionUntil: null,
+        retentionProtectionUntil: null,
+        winningRule: null,
+        incompleteReasons: ["missing_support_period"],
+        legalHoldActive: false,
+        releaseCalculations: [],
+      },
+    };
+    state.supportAlerts.isPending = false;
+    state.supportAlerts.isError = false;
+    state.supportAlerts.data = { alerts: [] };
+    state.supportAlertIntervals.isPending = false;
+    state.supportAlertIntervals.isError = false;
+    state.supportAlertIntervals.data = {
+      alertIntervalsDays: [30, 180],
+      version: 1,
+      updatedAt: PRODUCT.updatedAt,
+      updatedBy: PRODUCT.updatedBy,
+    };
     transitionMutation.mutateAsync.mockClear();
+    previewSupportPeriodMutation.data = null;
+    previewSupportPeriodMutation.mutateAsync.mockClear();
+    createSupportPeriodMutation.mutateAsync.mockClear();
+    supersedeSupportPeriodMutation.mutateAsync.mockClear();
+    updateSupportAlertIntervalsMutation.mutateAsync.mockClear();
   });
 
   afterEach(() => {
@@ -351,6 +521,150 @@ describe("ProductDetailContent", () => {
       expect(transitionMutation.mutateAsync).toHaveBeenCalledWith({
         targetState: "in_support",
         expectedVersion: 1,
+      }),
+    );
+  });
+
+  it("shows support period report states for each release", () => {
+    state.releases.data = {
+      releases: {
+        rows: [RELEASE],
+        total: 1,
+        page: 1,
+        pageSize: 50,
+        pageCount: 1,
+      },
+    };
+    state.supportPeriods.data = {
+      supportPeriods: [SUPPORT_PERIOD],
+    };
+    state.supportRetention.data = {
+      retention: {
+        ruleVersion: "m2.v1.later_of_placement_plus_10y_or_support_end",
+        status: "current",
+        placedOnMarketCandidate: "2036-08-12T10:00:00.000Z",
+        supportPeriodCandidate: "2029-08-12T10:00:00.000Z",
+        retentionUntil: "2036-08-12T10:00:00.000Z",
+        retentionProtectionUntil: "2036-08-12T10:00:00.000Z",
+        winningRule: "placed_on_market_plus_10_calendar_years",
+        incompleteReasons: [],
+        legalHoldActive: false,
+        releaseCalculations: [
+          {
+            releaseId: RELEASE.id,
+            ruleVersion: "m2.v1.later_of_placement_plus_10y_or_support_end",
+            status: "current",
+            placedOnMarketCandidate: "2036-08-12T10:00:00.000Z",
+            supportPeriodCandidate: "2029-08-12T10:00:00.000Z",
+            retentionUntil: "2036-08-12T10:00:00.000Z",
+            retentionProtectionUntil: "2036-08-12T10:00:00.000Z",
+            winningRule: "placed_on_market_plus_10_calendar_years",
+            incompleteReasons: [],
+            legalHoldActive: false,
+          },
+        ],
+      },
+    };
+    state.supportAlerts.data = {
+      alerts: [
+        {
+          id: "88888888-8888-4888-8888-888888888888",
+          supportPeriodId: "66666666-6666-4666-8666-666666666666",
+          supportPeriodRevision: 1,
+          thresholdDays: 180,
+          dueAt: "2029-02-13T10:00:00.000Z",
+          deliveredAt: null,
+          deliveryState: "scheduled",
+          missed: false,
+          obsolete: false,
+          attempts: 0,
+          lastErrorCode: null,
+        },
+      ],
+    };
+
+    render(<ProductDetailContent productId={PRODUCT.id} />);
+
+    expect(screen.getByText("Support and retention")).toBeInTheDocument();
+    expect(screen.getByText(/12 Aug 2026.*12 Aug 2029/)).toBeInTheDocument();
+    expect(screen.getByText(/Retention status: current/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/180 days before support end · scheduled/),
+    ).toBeInTheDocument();
+  });
+
+  it("records a support period through parsed mutation input", async () => {
+    state.releases.data = {
+      releases: {
+        rows: [RELEASE],
+        total: 1,
+        page: 1,
+        pageSize: 50,
+        pageCount: 1,
+      },
+    };
+    render(<ProductDetailContent productId={PRODUCT.id} />);
+
+    fireEvent.change(screen.getByLabelText(/Support starts/), {
+      target: { value: "2026-08-12T10:00:00.000Z" },
+    });
+    fireEvent.change(screen.getByLabelText(/Support ends/), {
+      target: { value: "2029-08-12T10:00:00.000Z" },
+    });
+    fireEvent.change(screen.getByLabelText(/Expected lifetime justification/), {
+      target: { value: "Vendor support commitment" },
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: "Record support period" }),
+    );
+
+    await waitFor(() =>
+      expect(createSupportPeriodMutation.mutateAsync).toHaveBeenCalledWith(
+        expect.objectContaining({
+          releaseId: RELEASE.id,
+          supportStartsAt: "2026-08-12T10:00:00.000Z",
+          supportEndsAt: "2029-08-12T10:00:00.000Z",
+          expectedLifetimeJustification: "Vendor support commitment",
+        }),
+      ),
+    );
+    expect(previewSupportPeriodMutation.mutateAsync).not.toHaveBeenCalled();
+  });
+
+  it("previews a support-period supersession with current and proposed values", async () => {
+    state.releases.data = {
+      releases: {
+        rows: [RELEASE],
+        total: 1,
+        page: 1,
+        pageSize: 50,
+        pageCount: 1,
+      },
+    };
+    state.supportPeriods.data = {
+      supportPeriods: [SUPPORT_PERIOD],
+    };
+    render(<ProductDetailContent productId={PRODUCT.id} />);
+
+    fireEvent.change(screen.getByLabelText(/Support ends/), {
+      target: { value: "2030-08-12T10:00:00.000Z" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Preview retention" }));
+
+    await waitFor(() =>
+      expect(previewSupportPeriodMutation.mutateAsync).toHaveBeenCalledWith({
+        releaseId: RELEASE.id,
+        expectedVersion: 1,
+        current: {
+          supportStartsAt: "2026-08-12T10:00:00.000Z",
+          supportEndsAt: "2029-08-12T10:00:00.000Z",
+          expectedLifetimeJustification: "Vendor support commitment",
+        },
+        proposed: {
+          supportStartsAt: "2026-08-12T10:00:00.000Z",
+          supportEndsAt: "2030-08-12T10:00:00.000Z",
+          expectedLifetimeJustification: "Vendor support commitment",
+        },
       }),
     );
   });

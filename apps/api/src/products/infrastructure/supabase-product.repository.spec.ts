@@ -119,6 +119,69 @@ describe("SupabaseProductRepository", () => {
     );
   });
 
+  it("keeps support-period writes org-first and parses their successful record", async () => {
+    const { repository, calls } = harness({
+      outcome: "created",
+      support_period: supportPeriodJson(),
+    });
+
+    await expect(
+      repository.createSupportPeriod(organizationId, actorId, productId, {
+        releaseId,
+        supportStartsAt: "2026-08-13T00:00:00.000Z",
+        supportEndsAt: "2036-08-13T00:00:00.000Z",
+        expectedLifetimeJustification:
+          "Expected lifetime is supported by the approved maintenance plan.",
+        idempotencyKey: "10000000-0000-4000-8000-000000000002",
+      }),
+    ).resolves.toEqual({
+      outcome: "created",
+      supportPeriod: supportPeriodJson(),
+    });
+
+    expect(calls[0]).toMatchObject({
+      name: "create_product_support_period_atomic",
+      args: {
+        p_organization_id: organizationId,
+        p_actor_user_id: actorId,
+        p_product_id: productId,
+        p_release_id: releaseId,
+        p_idempotency_key: "10000000-0000-4000-8000-000000000002",
+      },
+    });
+    expect(calls[0]?.args.p_correlation_id).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
+    );
+  });
+
+  it("parses the complete retention explanation instead of trusting provider JSON", async () => {
+    const retention = retentionJson();
+    const { repository } = harness({ outcome: "found", retention });
+
+    await expect(
+      repository.getProductRetentionCalculation(
+        organizationId,
+        actorId,
+        productId,
+      ),
+    ).resolves.toEqual({ outcome: "found", retention });
+  });
+
+  it("rejects a malformed retention response at the infrastructure boundary", async () => {
+    const { repository } = harness({
+      outcome: "found",
+      retention: { status: "current" },
+    });
+
+    await expect(
+      repository.getProductRetentionCalculation(
+        organizationId,
+        actorId,
+        productId,
+      ),
+    ).rejects.toMatchObject({ code: "malformed" });
+  });
+
   function releaseJson(overrides: Record<string, unknown> = {}) {
     return {
       id: releaseId,
@@ -144,6 +207,57 @@ describe("SupabaseProductRepository", () => {
       createdBy: actorId,
       updatedBy: actorId,
       ...overrides,
+    };
+  }
+
+  function supportPeriodJson() {
+    return {
+      id: "00000000-0000-4000-8000-000000000006",
+      organizationId,
+      productId,
+      releaseId,
+      supportStartsAt: "2026-08-13T00:00:00.000Z",
+      supportEndsAt: "2036-08-13T00:00:00.000Z",
+      expectedLifetimeJustification:
+        "Expected lifetime is supported by the approved maintenance plan.",
+      decisionActorId: actorId,
+      effectiveAt: "2026-08-13T00:00:00.000Z",
+      supersededAt: null,
+      supersededById: null,
+      scopeRevision: 1,
+      version: 1,
+      createdAt: "2026-08-13T00:00:00.000Z",
+      createdBy: actorId,
+      updatedAt: "2026-08-13T00:00:00.000Z",
+      updatedBy: actorId,
+    };
+  }
+
+  function retentionJson() {
+    return {
+      ruleVersion: "m2.v1.later_of_placement_plus_10y_or_support_end",
+      status: "current",
+      placedOnMarketCandidate: "2036-08-13T00:00:00.000Z",
+      supportPeriodCandidate: "2036-08-13T00:00:00.000Z",
+      retentionUntil: "2036-08-13T00:00:00.000Z",
+      retentionProtectionUntil: "2036-08-13T00:00:00.000Z",
+      winningRule: "equal",
+      incompleteReasons: [],
+      legalHoldActive: false,
+      releaseCalculations: [
+        {
+          releaseId,
+          ruleVersion: "m2.v1.later_of_placement_plus_10y_or_support_end",
+          status: "current",
+          placedOnMarketCandidate: "2036-08-13T00:00:00.000Z",
+          supportPeriodCandidate: "2036-08-13T00:00:00.000Z",
+          retentionUntil: "2036-08-13T00:00:00.000Z",
+          retentionProtectionUntil: "2036-08-13T00:00:00.000Z",
+          winningRule: "equal",
+          incompleteReasons: [],
+          legalHoldActive: false,
+        },
+      ],
     };
   }
 });

@@ -18,6 +18,15 @@ import type {
   TransitionReleaseLifecycleInput,
   UpdateProductInput,
   UpdateReleaseInput,
+  CreateSupportPeriodRequest,
+  PreviewSupportPeriodChangeRequest,
+  ProductRetentionCalculation,
+  ProductSupportPeriod,
+  SupportAlertHistoryItem,
+  SupportAlertIntervals,
+  SupportPeriodChangePreview,
+  SupersedeSupportPeriodRequest,
+  UpdateSupportAlertIntervalsRequest,
 } from "@repo/contracts/products";
 
 import type { Result } from "../../common/domain/result";
@@ -30,6 +39,10 @@ import type {
   ReleaseMarketAvailabilityReader,
   ReleaseRegulatoryStateReader,
 } from "./release-regulatory-reader.port";
+import type {
+  ProductRetentionProjectionPort,
+  ProductRetentionReaderPort,
+} from "./product-retention-reader.port";
 
 export type ProductRepository = Readonly<{
   listProducts(
@@ -149,6 +162,50 @@ export type ProductRepository = Readonly<{
     productId: string,
     releaseId: string,
   ): Promise<ReleaseLifecycleTimelineOutcome>;
+  getSupportPeriods(
+    organizationId: string,
+    actorId: string,
+    productId: string,
+  ): Promise<SupportPeriodHistoryOutcome>;
+  previewSupportPeriodChange(
+    organizationId: string,
+    actorId: string,
+    productId: string,
+    input: PreviewSupportPeriodChangeRequest,
+  ): Promise<SupportPeriodPreviewOutcome>;
+  createSupportPeriod(
+    organizationId: string,
+    actorId: string,
+    productId: string,
+    input: CreateSupportPeriodRequest,
+  ): Promise<SupportPeriodMutationOutcome>;
+  supersedeSupportPeriod(
+    organizationId: string,
+    actorId: string,
+    productId: string,
+    supportPeriodId: string,
+    input: SupersedeSupportPeriodRequest,
+    allowProtectionReduction: boolean,
+  ): Promise<SupportPeriodMutationOutcome>;
+  getProductRetentionCalculation(
+    organizationId: string,
+    actorId: string,
+    productId: string,
+  ): Promise<ProductRetentionOutcome>;
+  getSupportAlertHistory(
+    organizationId: string,
+    actorId: string,
+    productId: string,
+  ): Promise<SupportAlertHistoryOutcome>;
+  getSupportAlertIntervals(
+    organizationId: string,
+    actorId: string,
+  ): Promise<SupportAlertIntervalsOutcome>;
+  updateSupportAlertIntervals(
+    organizationId: string,
+    actorId: string,
+    input: UpdateSupportAlertIntervalsRequest,
+  ): Promise<SupportAlertIntervalsMutationOutcome>;
 }>;
 
 export const PRODUCT_REPOSITORY = Symbol("PRODUCT_REPOSITORY");
@@ -197,6 +254,40 @@ export type ReleaseLifecycleTimelineOutcome =
       timeline: readonly ReleaseLifecycleTimelineEvent[];
     }>
   | Readonly<{ outcome: "not_found" }>;
+export type SupportPeriodHistoryOutcome =
+  | Readonly<{
+      outcome: "found";
+      supportPeriods: readonly ProductSupportPeriod[];
+    }>
+  | Readonly<{ outcome: "not_found" }>;
+export type SupportPeriodPreviewOutcome =
+  | Readonly<{ outcome: "found"; preview: SupportPeriodChangePreview }>
+  | Readonly<{ outcome: "not_found" | "conflict" | "invalid_request" }>;
+export type SupportPeriodMutationOutcome =
+  | Readonly<{
+      outcome: "created" | "superseded";
+      supportPeriod: ProductSupportPeriod;
+    }>
+  | Readonly<{
+      outcome:
+        | "conflict"
+        | "idempotency_mismatch"
+        | "blocked"
+        | "not_found"
+        | "invalid_request";
+    }>;
+export type ProductRetentionOutcome =
+  | Readonly<{ outcome: "found"; retention: ProductRetentionCalculation }>
+  | Readonly<{ outcome: "not_found" }>;
+export type SupportAlertHistoryOutcome =
+  | Readonly<{ outcome: "found"; alerts: readonly SupportAlertHistoryItem[] }>
+  | Readonly<{ outcome: "not_found" }>;
+export type SupportAlertIntervalsOutcome =
+  | Readonly<{ outcome: "found"; intervals: SupportAlertIntervals }>
+  | Readonly<{ outcome: "not_found" }>;
+export type SupportAlertIntervalsMutationOutcome =
+  | Readonly<{ outcome: "updated"; intervals: SupportAlertIntervals }>
+  | Readonly<{ outcome: "conflict" | "not_found" | "invalid_request" }>;
 export type ProductMutationOutcome =
   | Readonly<{
       outcome: "created" | "replayed" | "updated" | "assigned" | "archived";
@@ -262,7 +353,11 @@ type ProductResult<T> = Result<T, ProductError>;
 
 /** Framework-free tenant-scoped product and release workflows. */
 export class ProductUseCases
-  implements ReleaseMarketAvailabilityReader, ReleaseRegulatoryStateReader
+  implements
+    ReleaseMarketAvailabilityReader,
+    ReleaseRegulatoryStateReader,
+    ProductRetentionReaderPort,
+    ProductRetentionProjectionPort
 {
   constructor(
     private readonly repository: ProductRepository,
@@ -736,6 +831,203 @@ export class ProductUseCases
     }
   }
 
+  async getSupportPeriods(
+    command: Readonly<{
+      organizationId: string;
+      actorId: string;
+      productId: string;
+    }>,
+  ): Promise<
+    ProductResult<Readonly<{ supportPeriods: readonly ProductSupportPeriod[] }>>
+  > {
+    try {
+      const outcome = await this.repository.getSupportPeriods(
+        command.organizationId,
+        command.actorId,
+        command.productId,
+      );
+      return outcome.outcome === "found"
+        ? success(
+            Object.freeze({
+              supportPeriods: Object.freeze([...outcome.supportPeriods]),
+            }),
+          )
+        : this.notFound();
+    } catch (error) {
+      return this.providerFailure(error);
+    }
+  }
+
+  async previewSupportPeriodChange(
+    command: Readonly<{
+      organizationId: string;
+      actorId: string;
+      productId: string;
+      input: PreviewSupportPeriodChangeRequest;
+    }>,
+  ): Promise<ProductResult<Readonly<{ preview: SupportPeriodChangePreview }>>> {
+    try {
+      const outcome = await this.repository.previewSupportPeriodChange(
+        command.organizationId,
+        command.actorId,
+        command.productId,
+        command.input,
+      );
+      if (outcome.outcome === "found")
+        return success(Object.freeze({ preview: outcome.preview }));
+      return failure(
+        Object.freeze({ code: this.mutationErrorCode(outcome.outcome) }),
+      );
+    } catch (error) {
+      return this.providerFailure(error);
+    }
+  }
+
+  async createSupportPeriod(
+    command: Readonly<{
+      organizationId: string;
+      actorId: string;
+      productId: string;
+      input: CreateSupportPeriodRequest;
+    }>,
+  ): Promise<ProductResult<Readonly<{ supportPeriod: ProductSupportPeriod }>>> {
+    try {
+      return this.supportPeriodMutation(
+        await this.repository.createSupportPeriod(
+          command.organizationId,
+          command.actorId,
+          command.productId,
+          command.input,
+        ),
+      );
+    } catch (error) {
+      return this.providerFailure(error);
+    }
+  }
+
+  async supersedeSupportPeriod(
+    command: Readonly<{
+      organizationId: string;
+      actorId: string;
+      productId: string;
+      supportPeriodId: string;
+      input: SupersedeSupportPeriodRequest;
+      allowProtectionReduction: boolean;
+    }>,
+  ): Promise<ProductResult<Readonly<{ supportPeriod: ProductSupportPeriod }>>> {
+    try {
+      return this.supportPeriodMutation(
+        await this.repository.supersedeSupportPeriod(
+          command.organizationId,
+          command.actorId,
+          command.productId,
+          command.supportPeriodId,
+          command.input,
+          command.allowProtectionReduction,
+        ),
+      );
+    } catch (error) {
+      return this.providerFailure(error);
+    }
+  }
+
+  async getProductRetentionCalculation(
+    command: Readonly<{
+      organizationId: string;
+      actorId: string;
+      productId: string;
+    }>,
+  ): Promise<
+    ProductResult<Readonly<{ retention: ProductRetentionCalculation }>>
+  > {
+    try {
+      const outcome = await this.repository.getProductRetentionCalculation(
+        command.organizationId,
+        command.actorId,
+        command.productId,
+      );
+      return outcome.outcome === "found"
+        ? success(Object.freeze({ retention: outcome.retention }))
+        : this.notFound();
+    } catch (error) {
+      return this.providerFailure(error);
+    }
+  }
+
+  async getRetentionProjection(
+    command: Readonly<{
+      organizationId: string;
+      actorId: string;
+      productId: string;
+    }>,
+  ): Promise<
+    ProductResult<Readonly<{ retention: ProductRetentionCalculation }>>
+  > {
+    return this.getProductRetentionCalculation(command);
+  }
+
+  async getSupportAlertHistory(
+    command: Readonly<{
+      organizationId: string;
+      actorId: string;
+      productId: string;
+    }>,
+  ): Promise<
+    ProductResult<Readonly<{ alerts: readonly SupportAlertHistoryItem[] }>>
+  > {
+    try {
+      const outcome = await this.repository.getSupportAlertHistory(
+        command.organizationId,
+        command.actorId,
+        command.productId,
+      );
+      return outcome.outcome === "found"
+        ? success(Object.freeze({ alerts: Object.freeze([...outcome.alerts]) }))
+        : this.notFound();
+    } catch (error) {
+      return this.providerFailure(error);
+    }
+  }
+
+  async getSupportAlertIntervals(
+    command: Readonly<{ organizationId: string; actorId: string }>,
+  ): Promise<ProductResult<Readonly<{ intervals: SupportAlertIntervals }>>> {
+    try {
+      const outcome = await this.repository.getSupportAlertIntervals(
+        command.organizationId,
+        command.actorId,
+      );
+      return outcome.outcome === "found"
+        ? success(Object.freeze({ intervals: outcome.intervals }))
+        : this.notFound();
+    } catch (error) {
+      return this.providerFailure(error);
+    }
+  }
+
+  async updateSupportAlertIntervals(
+    command: Readonly<{
+      organizationId: string;
+      actorId: string;
+      input: UpdateSupportAlertIntervalsRequest;
+    }>,
+  ): Promise<ProductResult<Readonly<{ intervals: SupportAlertIntervals }>>> {
+    try {
+      const outcome = await this.repository.updateSupportAlertIntervals(
+        command.organizationId,
+        command.actorId,
+        command.input,
+      );
+      return outcome.outcome === "updated"
+        ? success(Object.freeze({ intervals: outcome.intervals }))
+        : failure(
+            Object.freeze({ code: this.mutationErrorCode(outcome.outcome) }),
+          );
+    } catch (error) {
+      return this.providerFailure(error);
+    }
+  }
+
   private async activeEntity(
     organizationId: string,
     legalEntityId: string,
@@ -780,6 +1072,16 @@ export class ProductUseCases
       Object.freeze({ code: this.mutationErrorCode(outcome.outcome) }),
     );
   }
+  private supportPeriodMutation(
+    outcome: SupportPeriodMutationOutcome,
+  ): ProductResult<Readonly<{ supportPeriod: ProductSupportPeriod }>> {
+    if (outcome.outcome === "created" || outcome.outcome === "superseded") {
+      return success(Object.freeze({ supportPeriod: outcome.supportPeriod }));
+    }
+    return failure(
+      Object.freeze({ code: this.mutationErrorCode(outcome.outcome) }),
+    );
+  }
   private notFound<T>(): ProductResult<T> {
     return failure(Object.freeze({ code: "not_found" }));
   }
@@ -792,6 +1094,7 @@ export class ProductUseCases
     switch (outcome) {
       case "blocked":
         return "dependency_blocked";
+      case "conflict":
       case "idempotency_mismatch":
         return "conflict";
       case "invalid_request":
