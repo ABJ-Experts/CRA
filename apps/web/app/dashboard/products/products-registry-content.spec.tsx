@@ -111,6 +111,46 @@ describe("ProductsRegistryContent", () => {
     expect(screen.queryByText("SKU")).not.toBeInTheDocument();
   });
 
+  it("orients the user before they scan or filter the registry", () => {
+    render(<ProductsRegistryContent />);
+
+    expect(screen.getByText("1 product in this registry")).toBeInTheDocument();
+    expect(
+      screen.getByRole("searchbox", { name: "Search products" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("checkbox", { name: "Include archived products" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Standalone software")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Open product Sentinel" }),
+    ).toBeInTheDocument();
+  });
+
+  it("does not present an empty registry total while products are loading", () => {
+    state.products = {
+      isPending: true,
+      isError: false,
+      error: null,
+      data: {
+        products: {
+          rows: [PRODUCT],
+          total: 1,
+          page: 1,
+          pageSize: 25,
+          pageCount: 1,
+        },
+      },
+      refetch: vi.fn(),
+    };
+    render(<ProductsRegistryContent />);
+
+    expect(screen.getByText("Loading registry…")).toBeInTheDocument();
+    expect(
+      screen.queryByText("0 products in this registry"),
+    ).not.toBeInTheDocument();
+  });
+
   it("shows a safe forbidden state rather than product data", () => {
     state.session.permissions = {
       can_view_products: false,

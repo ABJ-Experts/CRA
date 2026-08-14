@@ -141,9 +141,7 @@ export function SupportPeriodRetentionSection({
   }) => {
     setSupportStartsAt(utcInstantFromDateTimeInput(event.currentTarget.value));
   };
-  const updateSupportEndsAt = (event: {
-    currentTarget: HTMLInputElement;
-  }) => {
+  const updateSupportEndsAt = (event: { currentTarget: HTMLInputElement }) => {
     setSupportEndsAt(utcInstantFromDateTimeInput(event.currentTarget.value));
   };
   const previewResult = preview.data?.preview ?? null;
@@ -295,15 +293,12 @@ export function SupportPeriodRetentionSection({
 
   return (
     <section
-      className="lg:col-span-2 rounded-2xl border border-border bg-surface-subtle p-4 sm:p-5"
+      className="mt-2 border-t border-border pt-6"
       aria-label={`Support and retention for ${release.label}`}
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-caption-1-semibold text-fg-muted">
-            Compliance window
-          </p>
-          <h3 className="mt-1 text-title-3-semibold text-fg">
+          <h3 className="text-title-3-semibold text-fg">
             Support and retention
           </h3>
           <p className="mt-1 max-w-2xl text-caption-1-regular text-fg-muted">
@@ -345,10 +340,7 @@ export function SupportPeriodRetentionSection({
           aria-label="Support period history"
         >
           {supportPeriods.map((period) => (
-            <li
-              key={period.id}
-              className="rounded-xl border border-border bg-canvas p-3"
-            >
+            <li key={period.id} className="rounded-xl bg-surface-subtle p-3">
               <span className="block text-fg">
                 {displayInstant(period.supportStartsAt)} to{" "}
                 {displayInstant(period.supportEndsAt)}
@@ -364,8 +356,8 @@ export function SupportPeriodRetentionSection({
           ))}
         </ul>
       )}
-      <div className="mt-4 grid gap-3 lg:grid-cols-2">
-        <section className="rounded-xl border border-border bg-canvas p-4">
+      <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
+        <section className="rounded-xl bg-surface-subtle p-4">
           <h4 className="text-caption-1-semibold text-fg">Retention</h4>
           {retention.isPending ? (
             <p
@@ -396,36 +388,60 @@ export function SupportPeriodRetentionSection({
             </div>
           ) : (
             <>
-              <p className="mt-2 text-caption-1-regular text-fg-muted">
-                Retention status: {releaseRetention?.status ?? "incomplete"}
-                {releaseRetention?.retentionUntil
-                  ? ` · retained until ${displayInstant(releaseRetention.retentionUntil)}`
-                  : ""}
-              </p>
-              {releaseRetention?.placedOnMarketCandidate ? (
-                <p className="mt-1 text-caption-1-regular text-fg-muted">
-                  Placed-on-market + 10 calendar years:{" "}
-                  {displayInstant(releaseRetention.placedOnMarketCandidate)}
-                </p>
-              ) : null}
-              {releaseRetention?.supportPeriodCandidate ? (
-                <p className="mt-1 text-caption-1-regular text-fg-muted">
-                  Support-period end:{" "}
-                  {displayInstant(releaseRetention.supportPeriodCandidate)}
-                </p>
-              ) : null}
-              {releaseRetention?.winningRule ? (
-                <p className="mt-1 text-caption-1-regular text-fg-muted">
-                  Controlling rule:{" "}
-                  {releaseRetention.winningRule.replaceAll("_", " ")}
-                </p>
-              ) : null}
-              {releaseRetention?.retentionProtectionUntil ? (
-                <p className="mt-1 text-caption-1-regular text-fg-muted">
-                  Deletion protection through:{" "}
-                  {displayInstant(releaseRetention.retentionProtectionUntil)}
-                </p>
-              ) : null}
+              <dl className="mt-3 grid gap-3 sm:grid-cols-2">
+                <div className="min-w-0 sm:col-span-2">
+                  <dt className="text-caption-1-regular text-fg-muted">
+                    Legal retention outcome
+                  </dt>
+                  <dd className="mt-1 text-subhead-semibold text-fg">
+                    {releaseRetention?.retentionUntil
+                      ? `Retained until ${displayInstant(releaseRetention.retentionUntil)}`
+                      : `Calculation ${releaseRetention?.status ?? "incomplete"}`}
+                  </dd>
+                </div>
+                {releaseRetention?.placedOnMarketCandidate ? (
+                  <div className="min-w-0">
+                    <dt className="text-caption-1-regular text-fg-muted">
+                      Market-date floor
+                    </dt>
+                    <dd className="mt-1 break-words text-caption-1-regular text-fg">
+                      {displayInstant(releaseRetention.placedOnMarketCandidate)}
+                    </dd>
+                  </div>
+                ) : null}
+                {releaseRetention?.supportPeriodCandidate ? (
+                  <div className="min-w-0">
+                    <dt className="text-caption-1-regular text-fg-muted">
+                      Support-period end
+                    </dt>
+                    <dd className="mt-1 break-words text-caption-1-regular text-fg">
+                      {displayInstant(releaseRetention.supportPeriodCandidate)}
+                    </dd>
+                  </div>
+                ) : null}
+                {releaseRetention?.winningRule ? (
+                  <div className="min-w-0">
+                    <dt className="text-caption-1-regular text-fg-muted">
+                      Controlling rule
+                    </dt>
+                    <dd className="mt-1 break-words text-caption-1-regular text-fg">
+                      {releaseRetention.winningRule.replaceAll("_", " ")}
+                    </dd>
+                  </div>
+                ) : null}
+                {releaseRetention?.retentionProtectionUntil ? (
+                  <div className="min-w-0">
+                    <dt className="text-caption-1-regular text-fg-muted">
+                      Deletion protection
+                    </dt>
+                    <dd className="mt-1 break-words text-caption-1-regular text-fg">
+                      {displayInstant(
+                        releaseRetention.retentionProtectionUntil,
+                      )}
+                    </dd>
+                  </div>
+                ) : null}
+              </dl>
               {releaseRetention?.legalHoldActive ? (
                 <p
                   role="alert"
@@ -444,7 +460,7 @@ export function SupportPeriodRetentionSection({
             </>
           )}
         </section>
-        <section className="rounded-xl border border-border bg-canvas p-4">
+        <section className="rounded-xl bg-surface-subtle p-4">
           <h4 className="text-caption-1-semibold text-fg">Support alerts</h4>
           {alerts.isPending ? (
             <p
@@ -478,9 +494,9 @@ export function SupportPeriodRetentionSection({
               No support alerts are open.
             </p>
           ) : (
-            <ul className="mt-2 space-y-1 text-caption-1-regular text-fg-muted">
+            <ul className="mt-3 grid gap-2 text-caption-1-regular text-fg-muted">
               {releaseAlerts.map((alert) => (
-                <li key={alert.id}>
+                <li key={alert.id} className="rounded-lg bg-canvas px-3 py-2">
                   {alert.thresholdDays} days before support end ·{" "}
                   {alert.deliveryState}
                   {alert.missed ? " · missed" : ""}
@@ -492,7 +508,7 @@ export function SupportPeriodRetentionSection({
         </section>
       </div>
       {canEdit ? (
-        <div className="mt-4 grid gap-4 rounded-xl border border-border bg-canvas p-4 lg:grid-cols-2">
+        <div className="mt-4 grid gap-4 rounded-xl bg-surface-subtle p-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
           <form
             className="grid gap-3"
             noValidate
@@ -524,14 +540,17 @@ export function SupportPeriodRetentionSection({
               onInput={updateSupportEndsAt}
               required
             />
-            <Input
-              label="Expected lifetime justification"
-              value={expectedLifetimeJustification}
-              onChange={(event) =>
-                setExpectedLifetimeJustification(event.target.value)
-              }
-              required
-            />
+            <label className="grid gap-2 text-caption-1-regular text-fg">
+              Expected lifetime justification
+              <textarea
+                required
+                value={expectedLifetimeJustification}
+                onChange={(event) =>
+                  setExpectedLifetimeJustification(event.target.value)
+                }
+                className="min-h-28 rounded-xl border border-border bg-canvas px-3 py-2 text-subhead-regular text-fg"
+              />
+            </label>
             {previewResult ? (
               <p className="text-caption-1-regular text-fg-muted">
                 Preview retention{" "}
@@ -551,6 +570,7 @@ export function SupportPeriodRetentionSection({
                 type="submit"
                 variant="outline"
                 tone="grey"
+                className="w-full sm:w-auto"
                 loading={preview.isPending}
                 loadingLabel="Previewing retention"
               >
@@ -558,6 +578,7 @@ export function SupportPeriodRetentionSection({
               </Button>
               <Button
                 type="button"
+                className="w-full sm:w-auto"
                 loading={create.isPending}
                 loadingLabel="Recording support period"
                 disabled={canSupersede}
@@ -567,18 +588,21 @@ export function SupportPeriodRetentionSection({
               </Button>
               {canSupersede ? (
                 <>
-                  <Input
-                    label="Supersession reason"
-                    value={supersessionReason}
-                    onChange={(event) =>
-                      setSupersessionReason(event.target.value)
-                    }
-                    required
-                  />
+                  <div className="basis-full">
+                    <Input
+                      label="Supersession reason"
+                      value={supersessionReason}
+                      onChange={(event) =>
+                        setSupersessionReason(event.target.value)
+                      }
+                      required
+                    />
+                  </div>
                   <Button
                     type="button"
                     variant="outline"
                     tone="grey"
+                    className="w-full sm:w-auto"
                     loading={supersede.isPending}
                     loadingLabel="Superseding support period"
                     onClick={() => void supersedeSupportPeriod()}
@@ -609,6 +633,7 @@ export function SupportPeriodRetentionSection({
             />
             <Button
               type="submit"
+              className="w-full sm:w-auto"
               loading={updateIntervals.isPending}
               loadingLabel="Saving support alert intervals"
             >

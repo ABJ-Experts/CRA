@@ -278,10 +278,8 @@ export function ReleaseRegulatoryControls({
     <div className="mt-5 grid gap-4 border-t border-border pt-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-caption-1-semibold text-fg-muted">
-            Release compliance
-          </p>
-          <p className="mt-1 text-caption-1-regular text-fg-muted">
+          <p className="text-subhead-semibold text-fg">Release compliance</p>
+          <p className="mt-1 max-w-3xl text-caption-1-regular text-fg-muted">
             Manage market availability and lifecycle before recording the
             product support commitment.
           </p>
@@ -293,7 +291,7 @@ export function ReleaseRegulatoryControls({
       <div className="grid gap-4 lg:grid-cols-2">
         <section
           aria-label={`Market availability for ${release.label}`}
-          className="rounded-xl border border-border bg-surface-subtle p-4"
+          className="min-w-0 rounded-xl bg-surface-subtle p-4"
         >
           <h3 className="text-subhead-semibold text-fg">Market availability</h3>
           {availability.isPending ? (
@@ -335,15 +333,17 @@ export function ReleaseRegulatoryControls({
               {activeAvailability.map((item) => (
                 <li
                   key={item.countryCode}
-                  className="rounded-lg border border-border px-2 py-1 text-caption-1-regular text-fg"
+                  className="flex min-w-0 flex-wrap items-center gap-2 rounded-lg border border-border bg-canvas px-3 py-2 text-caption-1-regular text-fg"
                 >
-                  {item.memberStateName} ({item.countryCode})
+                  <span className="min-w-0 break-words">
+                    {item.memberStateName} ({item.countryCode})
+                  </span>
                   {canEdit ? (
                     <Button
                       type="button"
                       variant="outline"
                       tone="grey"
-                      className="ml-2"
+                      className="w-full sm:w-auto"
                       loading={removeAvailability.isPending}
                       loadingLabel="Removing Member State"
                       onClick={() => void removeMarket(item.countryCode)}
@@ -362,7 +362,7 @@ export function ReleaseRegulatoryControls({
                 aria-label="Market change reason"
                 value={marketReason}
                 onChange={(event) => setMarketReason(event.target.value)}
-                className="mt-1 h-9 w-full rounded-lg border border-border bg-canvas px-2 text-caption-1-regular text-fg"
+                className="mt-1 h-10 w-full rounded-xl border border-border bg-canvas px-3 text-caption-1-regular text-fg"
               />
             </label>
           ) : null}
@@ -407,7 +407,7 @@ export function ReleaseRegulatoryControls({
                       aria-label="Add Member State"
                       value={countryCode}
                       onChange={(event) => setCountryCode(event.target.value)}
-                      className="mt-1 h-9 w-full rounded-lg border border-border bg-canvas px-2 text-caption-1-regular text-fg"
+                      className="mt-1 h-10 w-full rounded-xl border border-border bg-canvas px-3 text-caption-1-regular text-fg"
                     >
                       <option value="">Select a Member State</option>
                       {memberStates.data?.memberStates
@@ -430,6 +430,7 @@ export function ReleaseRegulatoryControls({
                   </label>
                   <Button
                     type="submit"
+                    className="w-full sm:w-auto"
                     loading={addAvailability.isPending}
                     loadingLabel="Adding Member State"
                   >
@@ -439,7 +440,7 @@ export function ReleaseRegulatoryControls({
               )}
               {activeAvailability.length > 0 ? (
                 <details className="mt-3">
-                  <summary className="cursor-pointer text-caption-1-regular text-fg-muted">
+                  <summary className="flex h-10 cursor-pointer items-center rounded-xl border border-border px-3 text-caption-1-regular text-fg-muted transition-colors hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-active-500 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas">
                     Correct a Member State
                   </summary>
                   <form
@@ -455,7 +456,7 @@ export function ReleaseRegulatoryControls({
                         onChange={(event) =>
                           setFromCountryCode(event.target.value)
                         }
-                        className="mt-1 h-9 w-full rounded-lg border border-border bg-canvas px-2 text-caption-1-regular text-fg"
+                        className="mt-1 h-10 w-full rounded-xl border border-border bg-canvas px-3 text-caption-1-regular text-fg"
                       >
                         <option value="">Select recorded Member State</option>
                         {activeAvailability.map((item) => (
@@ -476,7 +477,7 @@ export function ReleaseRegulatoryControls({
                         onChange={(event) =>
                           setToCountryCode(event.target.value)
                         }
-                        className="mt-1 h-9 w-full rounded-lg border border-border bg-canvas px-2 text-caption-1-regular text-fg"
+                        className="mt-1 h-10 w-full rounded-xl border border-border bg-canvas px-3 text-caption-1-regular text-fg"
                       >
                         <option value="">
                           Select replacement Member State
@@ -495,6 +496,7 @@ export function ReleaseRegulatoryControls({
                     </label>
                     <Button
                       type="submit"
+                      className="w-full sm:w-auto"
                       loading={correctAvailability.isPending}
                       loadingLabel="Correcting Member State"
                     >
@@ -508,11 +510,12 @@ export function ReleaseRegulatoryControls({
         </section>
         <section
           aria-label={`Lifecycle for ${release.label}`}
-          className="rounded-xl border border-border bg-surface-subtle p-4"
+          className="min-w-0 rounded-xl bg-surface-subtle p-4"
         >
           <h3 className="text-subhead-semibold text-fg">Lifecycle</h3>
           <p className="mt-2 text-caption-1-regular text-fg-muted">
-            Current state: {lifecycleLabel(release.lifecycle)}
+            Current state:{" "}
+            <span className="text-fg">{lifecycleLabel(release.lifecycle)}</span>
             {release.placedOnMarketAt
               ? ` · placed on market ${release.placedOnMarketAt}`
               : ""}
@@ -531,7 +534,7 @@ export function ReleaseRegulatoryControls({
                   onChange={(event) =>
                     setTargetState(event.target.value as ReleaseLifecycleState)
                   }
-                  className="mt-1 h-9 w-full rounded-lg border border-border bg-canvas px-2 text-caption-1-regular text-fg"
+                  className="mt-1 h-10 w-full rounded-xl border border-border bg-canvas px-3 text-caption-1-regular text-fg"
                 >
                   {targets.map((target) => (
                     <option key={target} value={target}>
@@ -550,7 +553,7 @@ export function ReleaseRegulatoryControls({
                     onChange={(event) =>
                       setPlacedOnMarketAt(event.target.value)
                     }
-                    className="mt-1 h-9 w-full rounded-lg border border-border bg-canvas px-2 text-caption-1-regular text-fg"
+                    className="mt-1 h-10 w-full rounded-xl border border-border bg-canvas px-3 text-caption-1-regular text-fg"
                   />
                 </label>
               ) : null}
@@ -561,12 +564,13 @@ export function ReleaseRegulatoryControls({
                     aria-label="Withdrawal reason"
                     value={lifecycleReason}
                     onChange={(event) => setLifecycleReason(event.target.value)}
-                    className="mt-1 h-9 w-full rounded-lg border border-border bg-canvas px-2 text-caption-1-regular text-fg"
+                    className="mt-1 h-10 w-full rounded-xl border border-border bg-canvas px-3 text-caption-1-regular text-fg"
                   />
                 </label>
               ) : null}
               <Button
                 type="submit"
+                className="w-full sm:w-auto"
                 loading={transition.isPending}
                 loadingLabel="Recording lifecycle transition"
               >
@@ -581,7 +585,7 @@ export function ReleaseRegulatoryControls({
           ) : null}
           {canCorrectPlacedDate && release.placedOnMarketAt ? (
             <details className="mt-3">
-              <summary className="cursor-pointer text-caption-1-regular text-fg-muted">
+              <summary className="flex h-10 cursor-pointer items-center rounded-xl border border-border px-3 text-caption-1-regular text-fg-muted transition-colors hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-active-500 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas">
                 Correct placed-on-market date
               </summary>
               <form
@@ -597,7 +601,7 @@ export function ReleaseRegulatoryControls({
                     onChange={(event) =>
                       setCorrectedPlacedOnMarketAt(event.target.value)
                     }
-                    className="mt-1 h-9 w-full rounded-lg border border-border bg-canvas px-2 text-caption-1-regular text-fg"
+                    className="mt-1 h-10 w-full rounded-xl border border-border bg-canvas px-3 text-caption-1-regular text-fg"
                   />
                 </label>
                 <label className="text-caption-1-regular text-fg">
@@ -608,11 +612,12 @@ export function ReleaseRegulatoryControls({
                     onChange={(event) =>
                       setCorrectionReason(event.target.value)
                     }
-                    className="mt-1 h-9 w-full rounded-lg border border-border bg-canvas px-2 text-caption-1-regular text-fg"
+                    className="mt-1 h-10 w-full rounded-xl border border-border bg-canvas px-3 text-caption-1-regular text-fg"
                   />
                 </label>
                 <Button
                   type="submit"
+                  className="w-full sm:w-auto"
                   loading={correctPlacedDate.isPending}
                   loadingLabel="Correcting placed-on-market date"
                 >

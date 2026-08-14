@@ -373,16 +373,47 @@ describe("OrganizationAdministrationPage", () => {
     expect(
       screen.getByRole("heading", { name: "Analytical Engines Ltd" }),
     ).toBeTruthy();
-    expect(screen.getByText("Evidence retention")).toBeTruthy();
-    expect(screen.getByText("Legal entities")).toBeTruthy();
-    expect(screen.getByText("Organization branding")).toBeTruthy();
+    expect(
+      screen.getByRole("region", { name: "Organization workspace" }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("heading", { name: "Organization configuration" }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("heading", { name: "Identity and presentation" }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("heading", { name: "Tenant lifecycle" }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("heading", { name: "Evidence retention" }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("heading", { name: "Legal entities" }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("heading", { name: "Organization branding" }),
+    ).toBeTruthy();
     expect(screen.getByText("Analytical Engines UK")).toBeTruthy();
     expect(screen.getByText("CRA Sentinel fallback active")).toBeTruthy();
     expect(screen.getByText("Full tenant export")).toBeTruthy();
     expect(screen.getByText("Deactivation and deletion")).toBeTruthy();
-    expect(
-      screen.getByRole("button", { name: "Request export" }),
-    ).toBeEnabled();
+    const retentionButtons = screen.getAllByRole("button", {
+      name: "Save retention",
+    });
+    expect(retentionButtons).toHaveLength(1);
+    expect(retentionButtons[0]).toHaveClass("lg:self-end");
+    const requestExportButton = screen.getByRole("button", {
+      name: "Request export",
+    });
+    expect(requestExportButton).toBeEnabled();
+    expect(requestExportButton.parentElement).toHaveClass("mt-auto");
+    expect(screen.getByRole("button", { name: "Reauthenticate" })).toHaveClass(
+      "lg:self-end",
+    );
+    expect(screen.getByRole("button", { name: "Deactivate tenant" })).toHaveClass(
+      "lg:self-end",
+    );
   });
 
   it("reuses the same export idempotency key when a browser retry follows a failed request", async () => {

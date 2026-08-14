@@ -374,7 +374,7 @@ export function OrganizationRetentionSection({
         {policies.map((policy) => (
           <form
             key={policy.id}
-            className="grid gap-3 rounded-xl border border-border p-4 lg:grid-cols-[1fr_180px_auto]"
+            className="grid gap-3 rounded-xl bg-surface-subtle p-4 lg:grid-cols-[1fr_180px_auto]"
             onSubmit={(event) => {
               event.preventDefault();
               void save(
@@ -412,7 +412,11 @@ export function OrganizationRetentionSection({
               required
             />
             {canEdit ? (
-              <Button type="submit" loading={updateRetention.isPending}>
+              <Button
+                type="submit"
+                className="lg:self-end"
+                loading={updateRetention.isPending}
+              >
                 Save retention
               </Button>
             ) : null}

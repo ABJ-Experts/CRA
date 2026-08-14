@@ -528,6 +528,40 @@ describe("ProductDetailContent", () => {
     expect(screen.queryByLabelText("Lifecycle")).not.toBeInTheDocument();
   });
 
+  it("groups each release into an accessible workspace with its compliance controls", () => {
+    state.releases.data = {
+      releases: {
+        rows: [
+          {
+            ...RELEASE,
+            description: "A release used to verify the compliance workflow.",
+          },
+        ],
+        total: 1,
+        page: 1,
+        pageSize: 50,
+        pageCount: 1,
+      },
+    };
+
+    render(<ProductDetailContent productId={PRODUCT.id} />);
+
+    const releaseWorkspace = screen.getByLabelText(
+      "Release workspace for Sentinel 1.0",
+    );
+    expect(releaseWorkspace).toHaveTextContent(
+      "A release used to verify the compliance workflow.",
+    );
+    expect(
+      screen.getByLabelText("Product registry summary"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("region", {
+        name: "Support and retention for Sentinel 1.0",
+      }),
+    ).toBeInTheDocument();
+  });
+
   it("reports a placement guard without presenting it as a stale update", async () => {
     state.releases.data = {
       releases: {
@@ -678,7 +712,8 @@ describe("ProductDetailContent", () => {
 
     expect(screen.getByText("Support and retention")).toBeInTheDocument();
     expect(screen.getByText(/12 Aug 2026.*12 Aug 2029/)).toBeInTheDocument();
-    expect(screen.getByText(/Retention status: current/)).toBeInTheDocument();
+    expect(screen.getByText("Legal retention outcome")).toBeInTheDocument();
+    expect(screen.getByText(/Retained until 12 Aug 2036/)).toBeInTheDocument();
     expect(
       screen.getByText(/180 days before support end · scheduled/),
     ).toBeInTheDocument();

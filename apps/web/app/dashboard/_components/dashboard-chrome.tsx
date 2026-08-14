@@ -23,17 +23,19 @@ export function PageHeading({
   actions?: ReactNode;
 }) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-4 py-3">
-      <div className="flex min-w-0 flex-col">
-        <h1 className="truncate text-h5 text-fg">{title}</h1>
+    <div className="flex flex-wrap items-start justify-between gap-4 py-3">
+      <div className="flex min-w-0 max-w-6xl flex-col">
+        <h1 className="break-words text-h5 text-fg">{title}</h1>
         {subtitle ? (
-          <p className="truncate text-caption-1-regular text-fg-muted">
+          <p className="break-words text-caption-1-regular text-fg-muted">
             {subtitle}
           </p>
         ) : null}
       </div>
       {actions ? (
-        <div className="flex items-center gap-3">{actions}</div>
+        <div className="flex w-full flex-wrap items-center gap-3 sm:w-auto sm:justify-end">
+          {actions}
+        </div>
       ) : null}
     </div>
   );

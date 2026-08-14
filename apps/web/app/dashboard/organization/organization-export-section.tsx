@@ -87,8 +87,8 @@ export function OrganizationExportSection({
   }
 
   return (
-    <SectionCard title="Full tenant export">
-      <div className="flex flex-col gap-4">
+    <SectionCard title="Full tenant export" className="h-full" bodyClassName="flex">
+      <div className="flex flex-1 flex-col gap-4">
         {!canExport ? (
           <ReadonlyNotice>
             Only organization owners with export permission can request or
@@ -100,7 +100,7 @@ export function OrganizationExportSection({
           artifact snapshots. Secret material is excluded by the server.
         </p>
         {currentExport ? (
-          <div className="rounded-xl border border-border p-4" aria-live="polite">
+          <div className="rounded-xl bg-surface-subtle p-4" aria-live="polite">
             <p className="text-subhead-semibold text-fg">
               Status: {labelize(currentExport.status)}
             </p>
@@ -160,7 +160,7 @@ export function OrganizationExportSection({
           </div>
         ) : null}
         <ErrorText>{message}</ErrorText>
-        <div className="flex flex-wrap gap-3">
+        <div className="mt-auto flex flex-wrap gap-3 pt-1">
           {canExport ? (
             <Button
               type="button"

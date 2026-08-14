@@ -150,7 +150,7 @@ export function OrganizationLifecycleSection({
             recover, or schedule purge.
           </ReadonlyNotice>
         ) : null}
-        <div className="rounded-xl border border-border p-4">
+        <div className="rounded-xl bg-surface-subtle p-4">
           <p className="text-subhead-semibold text-fg">
             Current lifecycle: {labelize(lifecycle.status)}
           </p>
@@ -187,7 +187,11 @@ export function OrganizationLifecycleSection({
                 disabled={busy}
                 required={mfaRequired}
               />
-              <Button type="submit" loading={reauthenticate.isPending}>
+              <Button
+                type="submit"
+                className="lg:self-end"
+                loading={reauthenticate.isPending}
+              >
                 Reauthenticate
               </Button>
             </form>
@@ -197,7 +201,7 @@ export function OrganizationLifecycleSection({
                 the exact text requested for the action after reauthentication.
               </p>
               {lifecycle.status === "active" ? (
-                <div className="flex flex-col gap-3">
+                <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto]">
                   <Input
                     label="Deactivation confirmation"
                     value={deactivationConfirmation}
@@ -211,6 +215,7 @@ export function OrganizationLifecycleSection({
                   />
                   <Button
                     type="button"
+                    className="lg:self-end"
                     onClick={() => void runLifecycle("deactivate")}
                     disabled={busy || !canDeactivate}
                   >
@@ -219,7 +224,7 @@ export function OrganizationLifecycleSection({
                 </div>
               ) : null}
               {lifecycle.status === "deactivated" ? (
-                <div className="flex flex-col gap-3">
+                <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto]">
                   <Input
                     label="Purge confirmation"
                     value={purgeConfirmation}
@@ -230,7 +235,7 @@ export function OrganizationLifecycleSection({
                     autoComplete="off"
                     helperText="Type the exact confirmation to schedule irreversible deletion after the grace period."
                   />
-                  <div className="flex flex-wrap gap-3">
+                  <div className="flex flex-wrap gap-3 lg:self-end">
                     <Button
                       type="button"
                       variant="outline"

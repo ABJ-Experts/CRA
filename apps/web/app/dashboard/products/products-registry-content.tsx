@@ -7,6 +7,10 @@ import {
   type ProductType,
 } from "@repo/contracts/products";
 import { Button } from "@repo/ui/button";
+import { Checkbox } from "@repo/ui/checkbox";
+import { SearchInput } from "@repo/ui/input";
+import { Tag } from "@repo/ui/tag";
+import { ArrowUpRight } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
@@ -300,30 +304,39 @@ function ProductRow({
   onOpen: (id: string) => void;
 }) {
   return (
-    <li className="flex flex-wrap items-center justify-between gap-4 border-b border-border py-4 last:border-b-0">
-      <div className="min-w-0">
-        <p className="text-subhead-semibold text-fg">{product.name}</p>
+    <li className="flex flex-col gap-4 border-b border-border py-5 first:pt-1 last:border-b-0 last:pb-1 sm:flex-row sm:items-center sm:justify-between">
+      <div className="min-w-0 space-y-2">
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
+          <p className="min-w-0 truncate text-headline-semibold text-fg">
+            {product.name}
+          </p>
+          <Tag variant="fill" tone="indigo" size="sm">
+            {productTypeLabel(product.productType)}
+          </Tag>
+          {product.archivedAt ? (
+            <Tag variant="fill" tone="red" size="sm">
+              Archived
+            </Tag>
+          ) : null}
+        </div>
         <p className="text-caption-1-regular text-fg-muted">
-          {product.internalCode} · {productTypeLabel(product.productType)} ·{" "}
-          {product.legalEntity.legalName}
+          {product.internalCode} · {product.legalEntity.legalName}
         </p>
       </div>
-      <div className="flex items-center gap-3">
-        {product.archivedAt ? (
-          <span className="rounded-full border border-border px-3 py-1 text-caption-1-regular text-fg-muted">
-            Archived
-          </span>
-        ) : null}
-        <span className="text-caption-1-regular text-fg-muted">
-          {product.releaseCount} releases
+      <div className="flex items-center justify-between gap-3 sm:justify-end">
+        <span className="text-caption-1-semibold tabular-nums text-fg">
+          {product.releaseCount}{" "}
+          {product.releaseCount === 1 ? "release" : "releases"}
         </span>
         <Button
           type="button"
           variant="outline"
           tone="grey"
+          endIcon={<ArrowUpRight aria-hidden="true" />}
+          aria-label={`Open product ${product.name}`}
           onClick={() => onOpen(product.id)}
         >
-          View
+          Open
         </Button>
       </div>
     </li>
@@ -354,6 +367,18 @@ export function ProductsRegistryContent() {
     () => entities.data?.legalEntities ?? [],
     [entities.data?.legalEntities],
   );
+  const productCount = products.data?.products.total ?? 0;
+  const countLabel = `${productCount} ${productCount === 1 ? "product" : "products"} in this registry`;
+  const registrySummary = products.isPending ? (
+    <p className="text-caption-1-semibold text-fg">Loading registry…</p>
+  ) : products.data ? (
+    <p
+      aria-live="polite"
+      className="text-caption-1-semibold tabular-nums text-fg"
+    >
+      {countLabel}
+    </p>
+  ) : null;
 
   return (
     <div className="flex flex-col gap-6 px-6 py-6 lg:px-[30px]">
@@ -406,26 +431,22 @@ export function ProductsRegistryContent() {
               }
             />
           ) : null}
-          <SectionCard title="Product registry">
-            <div className="mb-4 flex flex-wrap gap-3">
-              <label className="sr-only" htmlFor="product-search">
-                Search products
-              </label>
-              <input
-                id="product-search"
+          <SectionCard title="Product registry" action={registrySummary}>
+            <div className="mb-6 flex flex-col gap-3 border-b border-border pb-5 lg:flex-row lg:items-center lg:justify-between">
+              <SearchInput
+                aria-label="Search products"
                 value={search}
-                onChange={(event) => setSearch(event.target.value)}
+                onValueChange={setSearch}
                 placeholder="Search name or internal code"
-                className="h-10 min-w-64 rounded-xl border border-border bg-canvas px-3 text-subhead-regular text-fg"
+                clearable
+                wrapperClassName="max-w-xl"
               />
-              <label className="flex items-center gap-2 text-caption-1-regular text-fg">
-                <input
-                  type="checkbox"
-                  checked={archived}
-                  onChange={(event) => setArchived(event.target.checked)}
-                />{" "}
-                Show archived
-              </label>
+              <Checkbox
+                checked={archived}
+                onCheckedChange={(value) => setArchived(value === true)}
+                label="Include archived products"
+                wrapperClassName="shrink-0"
+              />
             </div>
             {products.isPending ? (
               <p role="status" className="text-subhead-regular text-fg-muted">
