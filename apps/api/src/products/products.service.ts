@@ -136,6 +136,96 @@ export class ProductsService {
   ) {
     return this.unwrap(this.useCases.updateSupportAlertIntervals(command));
   }
+  createSoftwareBaseline(
+    command: Parameters<ProductUseCases["createSoftwareBaseline"]>[0],
+  ) {
+    return this.unwrap(this.useCases.createSoftwareBaseline(command));
+  }
+  appendSoftwareBaselineRevision(
+    command: Parameters<ProductUseCases["appendSoftwareBaselineRevision"]>[0],
+  ) {
+    return this.unwrap(this.useCases.appendSoftwareBaselineRevision(command));
+  }
+  getSoftwareBaselineHistory(
+    command: Parameters<ProductUseCases["getSoftwareBaselineHistory"]>[0],
+  ) {
+    return this.unwrap(this.useCases.getSoftwareBaselineHistory(command));
+  }
+  archiveSoftwareBaseline(
+    command: Parameters<ProductUseCases["archiveSoftwareBaseline"]>[0],
+  ) {
+    return this.unwrap(this.useCases.archiveSoftwareBaseline(command));
+  }
+  assignSoftwareBaselineMembership(
+    command: Parameters<ProductUseCases["assignSoftwareBaselineMembership"]>[0],
+  ) {
+    return this.unwrap(this.useCases.assignSoftwareBaselineMembership(command));
+  }
+  endSoftwareBaselineMembership(
+    command: Parameters<ProductUseCases["endSoftwareBaselineMembership"]>[0],
+  ) {
+    return this.unwrap(this.useCases.endSoftwareBaselineMembership(command));
+  }
+  getSoftwareBaselineMemberships(
+    command: Parameters<ProductUseCases["getSoftwareBaselineMemberships"]>[0],
+  ) {
+    return this.unwrap(this.useCases.getSoftwareBaselineMemberships(command));
+  }
+  createProductVariantRelationship(
+    command: Parameters<ProductUseCases["createProductVariantRelationship"]>[0],
+  ) {
+    return this.unwrap(this.useCases.createProductVariantRelationship(command));
+  }
+  endProductVariantRelationship(
+    command: Parameters<ProductUseCases["endProductVariantRelationship"]>[0],
+  ) {
+    return this.unwrap(this.useCases.endProductVariantRelationship(command));
+  }
+  getProductVariantRelationships(
+    command: Parameters<ProductUseCases["getProductVariantRelationships"]>[0],
+  ) {
+    return this.unwrap(this.useCases.getProductVariantRelationships(command));
+  }
+  previewProductComponentLink(
+    command: Parameters<ProductUseCases["previewProductComponentLink"]>[0],
+  ) {
+    return this.unwrap(this.useCases.previewProductComponentLink(command));
+  }
+  createProductComponentLink(
+    command: Parameters<ProductUseCases["createProductComponentLink"]>[0],
+  ) {
+    return this.unwrap(this.useCases.createProductComponentLink(command));
+  }
+  supersedeProductComponentLink(
+    command: Parameters<ProductUseCases["supersedeProductComponentLink"]>[0],
+  ) {
+    return this.unwrap(this.useCases.supersedeProductComponentLink(command));
+  }
+  endProductComponentLink(
+    command: Parameters<ProductUseCases["endProductComponentLink"]>[0],
+  ) {
+    return this.unwrap(this.useCases.endProductComponentLink(command));
+  }
+  getProductComponentLinks(
+    command: Parameters<ProductUseCases["getProductComponentLinks"]>[0],
+  ) {
+    return this.unwrap(this.useCases.getProductComponentLinks(command));
+  }
+  getProductRelationshipGraph(
+    command: Parameters<ProductUseCases["getProductRelationshipGraph"]>[0],
+  ) {
+    return this.unwrap(this.useCases.getProductRelationshipGraph(command));
+  }
+  getRelationshipPropagationEvents(
+    command: Parameters<ProductUseCases["getRelationshipPropagationEvents"]>[0],
+  ) {
+    return this.unwrap(this.useCases.getRelationshipPropagationEvents(command));
+  }
+  requestRelationshipReevaluation(
+    command: Parameters<ProductUseCases["requestRelationshipReevaluation"]>[0],
+  ) {
+    return this.unwrap(this.useCases.requestRelationshipReevaluation(command));
+  }
 
   private async unwrap<T>(
     pending: Promise<Result<T, ProductError>>,
@@ -168,6 +258,8 @@ export class ProductsService {
       case "placement_requires_active_market_availability":
       case "placed_on_market_date_not_set":
       case "member_state_unavailable":
+      case "cycle_detected":
+      case "depth_exceeded":
         return new ConflictException({ message, code: error.code });
       case "unavailable":
         return new ServiceUnavailableException({ message, code: error.code });

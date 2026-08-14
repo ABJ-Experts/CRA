@@ -60,6 +60,28 @@ const supportAlertIntervals = Object.freeze([
   "products",
   "support-alert-intervals",
 ] as const);
+const baselineRevisions = Object.freeze((baselineId: string) =>
+  Object.freeze(["products", "baselines", baselineId, "revisions"] as const),
+);
+const baselineMemberships = Object.freeze((productId: string) =>
+  Object.freeze(["products", productId, "baseline-memberships"] as const),
+);
+const variantRelationships = Object.freeze((productId: string) =>
+  Object.freeze(["products", productId, "variant-relationships"] as const),
+);
+const componentLinks = Object.freeze((productId: string) =>
+  Object.freeze(["products", productId, "component-links"] as const),
+);
+const relationshipGraph = Object.freeze((productId: string) =>
+  Object.freeze(["products", productId, "relationship-graph"] as const),
+);
+const relationshipPropagationEvents = Object.freeze((productId: string) =>
+  Object.freeze([
+    "products",
+    productId,
+    "relationship-propagation-events",
+  ] as const),
+);
 
 export const productKeys = Object.freeze({
   all,
@@ -76,4 +98,10 @@ export const productKeys = Object.freeze({
   supportRetention,
   supportAlerts,
   supportAlertIntervals,
+  baselineRevisions,
+  baselineMemberships,
+  variantRelationships,
+  componentLinks,
+  relationshipGraph,
+  relationshipPropagationEvents,
 });

@@ -435,4 +435,286 @@ describe("productsApi", () => {
       }),
     );
   });
+
+  it("uses parsed baseline, variant, component, graph, and propagation endpoints", async () => {
+    const baseline = {
+      id: "99999999-9999-4999-8999-999999999999",
+      organizationId: ORGANIZATION_ID,
+      baselineId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      revisionNumber: 1,
+      identifier: "sentinel-runtime",
+      name: "Sentinel runtime",
+      description: null,
+      revisionSummary: "Initial approved runtime baseline",
+      source: "Architecture board",
+      provenance: "ADR-14",
+      effectiveStartsAt: NOW,
+      effectiveEndsAt: null,
+      version: 1,
+      archivedAt: null,
+      createdAt: NOW,
+      createdBy: USER_ID,
+      updatedAt: NOW,
+      updatedBy: USER_ID,
+    } as const;
+    const membership = {
+      id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      organizationId: ORGANIZATION_ID,
+      productId: PRODUCT_ID,
+      releaseId: RELEASE_ID,
+      baselineId: baseline.baselineId,
+      baselineRevisionId: baseline.id,
+      baselineRevisionNumber: 1,
+      source: "Architecture board",
+      provenance: "ADR-14",
+      effectiveStartsAt: NOW,
+      effectiveEndsAt: null,
+      assignedAt: NOW,
+      assignedBy: USER_ID,
+      endedAt: null,
+      endedBy: null,
+      endReason: null,
+      version: 1,
+      updatedAt: NOW,
+      updatedBy: USER_ID,
+    } as const;
+    const component = {
+      id: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      organizationId: ORGANIZATION_ID,
+      relationshipType: "embedded" as const,
+      parentProductId: PRODUCT_ID,
+      componentProductId: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+      parentReleaseId: RELEASE_ID,
+      componentReleaseId: null,
+      quantity: 1,
+      source: "Architecture board",
+      provenance: "ADR-14",
+      reason: "Runtime dependency",
+      effectiveStartsAt: NOW,
+      effectiveEndsAt: null,
+      createdAt: NOW,
+      createdBy: USER_ID,
+      endedAt: null,
+      endedBy: null,
+      endReason: null,
+      version: 1,
+      updatedAt: NOW,
+      updatedBy: USER_ID,
+    } as const;
+    const variant = {
+      id: "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
+      organizationId: ORGANIZATION_ID,
+      relationshipType: "variant" as const,
+      sourceType: "base_release" as const,
+      sourceProductId: PRODUCT_ID,
+      targetProductId: PRODUCT_ID,
+      sourceReleaseId: RELEASE_ID,
+      targetReleaseId: RELEASE_ID,
+      baselineRevisionId: null,
+      source: "Architecture board",
+      provenance: "ADR-14",
+      reason: "Regional configuration",
+      effectiveStartsAt: NOW,
+      effectiveEndsAt: null,
+      createdAt: NOW,
+      createdBy: USER_ID,
+      endedAt: null,
+      endedBy: null,
+      endReason: null,
+      version: 1,
+      updatedAt: NOW,
+      updatedBy: USER_ID,
+    } as const;
+    const event = {
+      id: "ffffffff-ffff-4fff-8fff-ffffffffffff",
+      organizationId: ORGANIZATION_ID,
+      graphVersion: 1,
+      eventKey: "product.relationship.changed",
+      eventType: "product_relationship.graph_changed" as const,
+      deliveryState: "scheduled" as const,
+      correlationId: "12121212-1212-4212-8212-121212121212",
+      occurredAt: NOW,
+      deliveredAt: null,
+      retryCount: 0,
+    } as const;
+    const fetcher = vi.fn(async (path: string, init?: RequestInit) => {
+      if (path.endsWith("/revisions")) {
+        return (init?.method ?? "GET") === "GET"
+          ? json({ baselines: [baseline] })
+          : json({ baseline });
+      }
+      if (path.includes("baseline-memberships")) {
+        return path.endsWith("/baseline-memberships") &&
+          (init?.method ?? "GET") === "GET"
+          ? json({ memberships: [membership] })
+          : json({ membership });
+      }
+      if (path.includes("variant-relationships")) {
+        return path.endsWith("/variant-relationships") &&
+          (init?.method ?? "GET") === "GET"
+          ? json({ relationships: [variant] })
+          : json({ relationship: variant, graphVersion: 1 });
+      }
+      if (path.endsWith("/component-links/preview")) {
+        return json({
+          preview: {
+            outcome: "allowed",
+            graphVersion: 1,
+            candidateDepth: 1,
+            relationshipPathIds: [],
+            productPathIds: [PRODUCT_ID],
+          },
+        });
+      }
+      if (path.includes("component-links")) {
+        return path.endsWith("/component-links") &&
+          (init?.method ?? "GET") === "GET"
+          ? json({ links: [component] })
+          : json({ relationship: component, graphVersion: 1 });
+      }
+      if (path.includes("relationship-graph")) {
+        return json({
+          graph: {
+            organizationId: ORGANIZATION_ID,
+            rootProductId: PRODUCT_ID,
+            rootReleaseId: null,
+            graphVersion: 1,
+            evaluatedAt: NOW,
+            nodes: [],
+            links: [component],
+          },
+        });
+      }
+      if (path.includes("relationship-propagation-events")) {
+        return json({ events: [event], nextCursor: null });
+      }
+      if (path.includes("relationship-reevaluations")) {
+        return json({ event });
+      }
+      return json({ baseline });
+    });
+    vi.stubGlobal("fetch", fetcher);
+    const createBaseline = {
+      identifier: baseline.identifier,
+      name: baseline.name,
+      revisionSummary: baseline.revisionSummary,
+      source: baseline.source,
+      provenance: baseline.provenance,
+      effectiveStartsAt: NOW,
+      idempotencyKey: "13131313-1313-4313-8313-131313131313",
+    };
+    const componentInput = {
+      componentProductId: component.componentProductId,
+      parentReleaseId: RELEASE_ID,
+      quantity: 1,
+      source: component.source,
+      provenance: component.provenance,
+      reason: component.reason,
+      effectiveStartsAt: NOW,
+      expectedGraphVersion: 1,
+    };
+
+    await productsApi.createSoftwareBaseline(createBaseline);
+    await productsApi.listSoftwareBaselineRevisions(baseline.baselineId);
+    const appendBaseline = {
+      name: createBaseline.name,
+      revisionSummary: createBaseline.revisionSummary,
+      source: createBaseline.source,
+      provenance: createBaseline.provenance,
+      effectiveStartsAt: createBaseline.effectiveStartsAt,
+      idempotencyKey: createBaseline.idempotencyKey,
+    };
+    const appendedBaseline = await productsApi.appendSoftwareBaselineRevision(
+      baseline.baselineId,
+      {
+        ...appendBaseline,
+        expectedVersion: 1,
+      },
+    );
+    expect(appendedBaseline).toEqual({ baseline });
+    await productsApi.archiveSoftwareBaseline(baseline.baselineId, {
+      expectedVersion: 1,
+      reason: "Retired runtime baseline",
+    });
+    await productsApi.listSoftwareBaselineMemberships(PRODUCT_ID);
+    await productsApi.assignSoftwareBaselineMembership(PRODUCT_ID, {
+      releaseId: RELEASE_ID,
+      baselineId: baseline.baselineId,
+      baselineRevisionId: baseline.id,
+      expectedBaselineVersion: 1,
+      source: baseline.source,
+      provenance: baseline.provenance,
+      effectiveStartsAt: NOW,
+      idempotencyKey: "14141414-1414-4414-8414-141414141414",
+    });
+    await productsApi.endSoftwareBaselineMembership(PRODUCT_ID, membership.id, {
+      expectedVersion: 1,
+      reason: "No longer applicable",
+      effectiveEndsAt: "2026-08-13T00:00:00.000Z",
+    });
+    await productsApi.listProductVariantRelationships(PRODUCT_ID);
+    await productsApi.createProductVariantRelationship(PRODUCT_ID, {
+      sourceType: "base_release",
+      baseReleaseId: RELEASE_ID,
+      variantProductId: PRODUCT_ID,
+      variantReleaseId: RELEASE_ID,
+      source: variant.source,
+      provenance: variant.provenance,
+      reason: variant.reason,
+      effectiveStartsAt: NOW,
+      expectedGraphVersion: 1,
+      idempotencyKey: "15151515-1515-4515-8515-151515151515",
+    });
+    await productsApi.endProductVariantRelationship(PRODUCT_ID, variant.id, {
+      expectedVersion: 1,
+      expectedGraphVersion: 1,
+      reason: "No longer a supported variant",
+      effectiveEndsAt: "2026-08-13T00:00:00.000Z",
+    });
+    await productsApi.listProductComponentLinks(PRODUCT_ID);
+    await productsApi.previewProductComponentLink(PRODUCT_ID, componentInput);
+    await productsApi.createProductComponentLink(PRODUCT_ID, {
+      ...componentInput,
+      idempotencyKey: "16161616-1616-4616-8616-161616161616",
+    });
+    await productsApi.supersedeProductComponentLink(PRODUCT_ID, component.id, {
+      ...componentInput,
+      expectedVersion: 1,
+      idempotencyKey: "17171717-1717-4717-8717-171717171717",
+    });
+    await productsApi.endProductComponentLink(PRODUCT_ID, component.id, {
+      expectedVersion: 1,
+      expectedGraphVersion: 1,
+      reason: "No longer embedded",
+      effectiveEndsAt: "2026-08-13T00:00:00.000Z",
+    });
+    await productsApi.getProductRelationshipGraph(PRODUCT_ID, { maxDepth: 1 });
+    await productsApi.listRelationshipPropagationEvents(PRODUCT_ID, {
+      deliveryState: "scheduled",
+    });
+    await productsApi.requestRelationshipReevaluation(PRODUCT_ID, {
+      expectedGraphVersion: 1,
+      reason: "Refresh downstream relationship assessments",
+      source: component.source,
+      provenance: component.provenance,
+      idempotencyKey: "18181818-1818-4818-8818-181818181818",
+    });
+
+    expect(fetcher).toHaveBeenCalledWith(
+      `/api/v1/products/${PRODUCT_ID}/component-links/${component.id}/supersessions`,
+      expect.objectContaining({ method: "POST" }),
+    );
+    expect(fetcher).toHaveBeenCalledWith(
+      `/api/v1/products/${PRODUCT_ID}/relationship-graph?maxDepth=1`,
+      expect.objectContaining({ method: "GET" }),
+    );
+    expect(fetcher).toHaveBeenCalledWith(
+      `/api/v1/products/${PRODUCT_ID}/relationship-propagation-events?pageSize=25&deliveryState=scheduled`,
+      expect.objectContaining({ method: "GET" }),
+    );
+    expect(fetcher).toHaveBeenCalledWith(
+      `/api/v1/products/${PRODUCT_ID}/relationship-reevaluations`,
+      expect.objectContaining({ method: "POST" }),
+    );
+  });
 });

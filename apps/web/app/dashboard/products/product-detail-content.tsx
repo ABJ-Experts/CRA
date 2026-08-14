@@ -26,6 +26,7 @@ import { ApiClientError } from "../../_lib/http/api-client";
 import { PageHeading, SectionCard } from "../_components/dashboard-chrome";
 
 import { ReleaseRegulatoryControls } from "./release-regulatory-controls";
+import { ProductRelationshipSection } from "./product-relationship-section";
 
 function errorMessage(error: unknown, fallback: string): string {
   if (error instanceof ApiClientError && error.status === 404)
@@ -393,14 +394,16 @@ function ReleaseRow({
           ) : null}
         </div>
       ) : null}
-      <ReleaseRegulatoryControls
-        productId={productId}
-        release={release}
-        canEdit={canEdit && !release.archivedAt}
-        canCorrectPlacedDate={canCorrectPlacedDate && !release.archivedAt}
-        enabled={enabled}
-        onReload={onReload}
-      />
+      <div className="basis-full">
+        <ReleaseRegulatoryControls
+          productId={productId}
+          release={release}
+          canEdit={canEdit && !release.archivedAt}
+          canCorrectPlacedDate={canCorrectPlacedDate && !release.archivedAt}
+          enabled={enabled}
+          onReload={onReload}
+        />
+      </div>
     </li>
   );
 }
@@ -635,6 +638,21 @@ export function ProductDetailContent({ productId }: { productId: string }) {
             {canCreate && !product.data.product.archivedAt ? (
               <ReleaseCreateForm productId={productId} />
             ) : null}
+          </SectionCard>
+          <SectionCard>
+            <ProductRelationshipSection
+              productId={productId}
+              releases={
+                releases.data?.releases.rows.map((release) => ({
+                  id: release.id,
+                  label: release.label,
+                  version: release.version,
+                })) ?? []
+              }
+              canEdit={canEdit && !product.data.product.archivedAt}
+              enabled={enabled}
+              onReload={reloadProductData}
+            />
           </SectionCard>
         </>
       ) : null}

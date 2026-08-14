@@ -287,6 +287,97 @@ vi.mock("../../_features/products/products.queries", () => ({
   useSupersedeSupportPeriodMutation: () => supersedeSupportPeriodMutation,
   useUpdateSupportAlertIntervalsMutation: () =>
     updateSupportAlertIntervalsMutation,
+  useSoftwareBaselineMembershipsQuery: () => ({
+    isPending: false,
+    isError: false,
+    error: null,
+    data: { memberships: [], baselines: [] },
+    refetch: vi.fn(),
+  }),
+  useProductVariantRelationshipsQuery: () => ({
+    isPending: false,
+    isError: false,
+    error: null,
+    data: { relationships: [] },
+    refetch: vi.fn(),
+  }),
+  useProductComponentLinksQuery: () => ({
+    isPending: false,
+    isError: false,
+    error: null,
+    data: { links: [] },
+    refetch: vi.fn(),
+  }),
+  useProductRelationshipGraphQuery: () => ({
+    isPending: false,
+    isError: false,
+    error: null,
+    data: { graph: { graphVersion: 0, nodes: [], links: [] } },
+    refetch: vi.fn(),
+  }),
+  useRelationshipPropagationEventsQuery: () => ({
+    isPending: false,
+    isError: false,
+    error: null,
+    data: { events: [] },
+    refetch: vi.fn(),
+  }),
+  usePreviewProductComponentLinkMutation: () => ({
+    isPending: false,
+    data: undefined,
+    mutateAsync: vi.fn(),
+  }),
+  useCreateProductComponentLinkMutation: () => ({
+    isPending: false,
+    mutateAsync: vi.fn(),
+  }),
+  useEndProductComponentLinkMutation: () => ({
+    isPending: false,
+    mutateAsync: vi.fn(),
+  }),
+  useSupersedeProductComponentLinkMutation: () => ({
+    isPending: false,
+    mutateAsync: vi.fn(),
+  }),
+  useAssignSoftwareBaselineMembershipMutation: () => ({
+    isPending: false,
+    mutateAsync: vi.fn(),
+  }),
+  useEndSoftwareBaselineMembershipMutation: () => ({
+    isPending: false,
+    mutateAsync: vi.fn(),
+  }),
+  useCreateProductVariantRelationshipMutation: () => ({
+    isPending: false,
+    mutateAsync: vi.fn(),
+  }),
+  useEndProductVariantRelationshipMutation: () => ({
+    isPending: false,
+    mutateAsync: vi.fn(),
+  }),
+  useSoftwareBaselineRevisionsQuery: () => ({
+    isPending: false,
+    isError: false,
+    error: null,
+    data: { baselines: [] },
+    refetch: vi.fn(),
+  }),
+  useCreateSoftwareBaselineMutation: () => ({
+    isPending: false,
+    mutateAsync: vi.fn(),
+  }),
+  useAppendSoftwareBaselineRevisionMutation: () => ({
+    isPending: false,
+    mutateAsync: vi.fn(),
+  }),
+  useArchiveSoftwareBaselineMutation: () => ({
+    isPending: false,
+    mutateAsync: vi.fn(),
+  }),
+  useRequestRelationshipReevaluationMutation: () => ({
+    isPending: false,
+    mutateAsync: vi.fn(),
+  }),
 }));
 vi.mock("../../_providers/providers", () => ({ useMocksReady: () => true }));
 vi.mock("../../_providers/session-provider", () => ({
@@ -606,10 +697,10 @@ describe("ProductDetailContent", () => {
     render(<ProductDetailContent productId={PRODUCT.id} />);
 
     fireEvent.change(screen.getByLabelText(/Support starts/), {
-      target: { value: "2026-08-12T10:00:00.000Z" },
+      target: { value: "2026-08-12T10:00" },
     });
     fireEvent.change(screen.getByLabelText(/Support ends/), {
-      target: { value: "2029-08-12T10:00:00.000Z" },
+      target: { value: "2029-08-12T10:00" },
     });
     fireEvent.change(screen.getByLabelText(/Expected lifetime justification/), {
       target: { value: "Vendor support commitment" },
@@ -647,7 +738,7 @@ describe("ProductDetailContent", () => {
     render(<ProductDetailContent productId={PRODUCT.id} />);
 
     fireEvent.change(screen.getByLabelText(/Support ends/), {
-      target: { value: "2030-08-12T10:00:00.000Z" },
+      target: { value: "2030-08-12T10:00" },
     });
     fireEvent.click(screen.getByRole("button", { name: "Preview retention" }));
 

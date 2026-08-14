@@ -182,6 +182,175 @@ describe("SupabaseProductRepository", () => {
     ).rejects.toMatchObject({ code: "malformed" });
   });
 
+  it("resolves propagation candidates through the org-first source RPC and parses its envelope", async () => {
+    const candidate = {
+      productId,
+      releaseId,
+      relationshipPathIds: [],
+      graphVersion: 3,
+      evaluatedAt: "2026-08-13T00:00:00.000Z",
+    };
+    const { repository, calls } = harness({
+      outcome: "found",
+      candidates: {
+        candidates: [candidate],
+        nextCursor: null,
+        graphVersion: 3,
+        evaluatedAt: "2026-08-13T00:00:00.000Z",
+      },
+    });
+
+    await expect(
+      repository.getRelationshipPropagationCandidates(organizationId, actorId, {
+        organizationId,
+        actorId,
+        sourceReleaseId: releaseId,
+        graphVersion: 3,
+        pageSize: 25,
+      }),
+    ).resolves.toEqual({
+      outcome: "found",
+      candidates: [candidate],
+      nextCursor: null,
+      graphVersion: 3,
+      evaluatedAt: "2026-08-13T00:00:00.000Z",
+    });
+    expect(calls[0]).toMatchObject({
+      name: "get_product_relationship_propagation_candidates",
+      args: {
+        p_organization_id: organizationId,
+        p_source_release_id: releaseId,
+        p_source_baseline_revision_id: null,
+        p_actor_user_id: actorId,
+      },
+    });
+    expect(calls[0]?.args).not.toHaveProperty("p_source_product_id");
+  });
+
+  it("keeps every relationship lookup and command tenant-safe when the resource is absent", async () => {
+    const { repository, calls } = harness({ outcome: "not_found" });
+    const baselineId = "00000000-0000-4000-8000-000000000005";
+    const membershipId = "00000000-0000-4000-8000-000000000006";
+    const relationshipId = "00000000-0000-4000-8000-000000000007";
+
+    const results = await Promise.all([
+      repository.createSoftwareBaseline(organizationId, actorId, {} as never),
+      repository.appendSoftwareBaselineRevision(
+        organizationId,
+        actorId,
+        baselineId,
+        {} as never,
+      ),
+      repository.getSoftwareBaselineHistory(
+        organizationId,
+        actorId,
+        baselineId,
+      ),
+      repository.archiveSoftwareBaseline(
+        organizationId,
+        actorId,
+        baselineId,
+        {} as never,
+      ),
+      repository.assignSoftwareBaselineMembership(
+        organizationId,
+        actorId,
+        productId,
+        {} as never,
+      ),
+      repository.endSoftwareBaselineMembership(
+        organizationId,
+        actorId,
+        productId,
+        membershipId,
+        {} as never,
+      ),
+      repository.getSoftwareBaselineMemberships(
+        organizationId,
+        actorId,
+        productId,
+      ),
+      repository.createProductVariantRelationship(
+        organizationId,
+        actorId,
+        productId,
+        {} as never,
+      ),
+      repository.endProductVariantRelationship(
+        organizationId,
+        actorId,
+        productId,
+        relationshipId,
+        {} as never,
+      ),
+      repository.getProductVariantRelationships(
+        organizationId,
+        actorId,
+        productId,
+      ),
+      repository.previewProductComponentLink(
+        organizationId,
+        actorId,
+        productId,
+        {} as never,
+      ),
+      repository.createProductComponentLink(
+        organizationId,
+        actorId,
+        productId,
+        {} as never,
+      ),
+      repository.endProductComponentLink(
+        organizationId,
+        actorId,
+        productId,
+        relationshipId,
+        {} as never,
+      ),
+      repository.supersedeProductComponentLink(
+        organizationId,
+        actorId,
+        productId,
+        relationshipId,
+        {} as never,
+      ),
+      repository.getProductComponentLinks(organizationId, actorId, productId),
+      repository.getProductRelationshipGraph(
+        organizationId,
+        actorId,
+        productId,
+        {} as never,
+      ),
+      repository.getRelationshipPropagationCandidates(organizationId, actorId, {
+        organizationId,
+        actorId,
+        sourceReleaseId: releaseId,
+        graphVersion: 1,
+      }),
+      repository.getRelationshipPropagationEvents(
+        organizationId,
+        actorId,
+        productId,
+        {} as never,
+      ),
+      repository.requestRelationshipReevaluation(
+        organizationId,
+        actorId,
+        productId,
+        {} as never,
+      ),
+    ]);
+
+    expect(results.every((result) => result.outcome === "not_found")).toBe(
+      true,
+    );
+    expect(calls).toHaveLength(19);
+    for (const call of calls) {
+      expect(call.args.p_organization_id).toBe(organizationId);
+      expect(call.args.p_actor_user_id).toBe(actorId);
+    }
+  });
+
   function releaseJson(overrides: Record<string, unknown> = {}) {
     return {
       id: releaseId,

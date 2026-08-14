@@ -19,6 +19,20 @@ import {
   correctPlacedOnMarketDateInputSchema,
   correctReleaseMarketAvailabilityInputSchema,
   createSupportPeriodRequestSchema,
+  createSoftwareBaselineInputSchema,
+  appendSoftwareBaselineRevisionInputSchema,
+  archiveSoftwareBaselineInputSchema,
+  assignSoftwareBaselineMembershipInputSchema,
+  endSoftwareBaselineMembershipInputSchema,
+  createProductVariantRelationshipInputSchema,
+  endProductVariantRelationshipInputSchema,
+  previewProductComponentLinkInputSchema,
+  createProductComponentLinkInputSchema,
+  supersedeProductComponentLinkInputSchema,
+  endProductComponentLinkInputSchema,
+  productRelationshipGraphQuerySchema,
+  relationshipPropagationEventsQuerySchema,
+  requestRelationshipReevaluationInputSchema,
   createProductInputSchema,
   createReleaseInputSchema,
   memberStatesResponseSchema,
@@ -43,6 +57,21 @@ import {
   supportPeriodHistoryResponseSchema,
   supportPeriodIdParamsSchema,
   supportPeriodResponseSchema,
+  softwareBaselineResponseSchema,
+  softwareBaselinesResponseSchema,
+  softwareBaselineMembershipsResponseSchema,
+  softwareBaselineMembershipResponseSchema,
+  productVariantRelationshipResponseSchema,
+  productVariantRelationshipsResponseSchema,
+  productComponentLinkResponseSchema,
+  productComponentLinksResponseSchema,
+  productRelationshipGraphResponseSchema,
+  productRelationshipPreviewResponseSchema,
+  relationshipPropagationEventsResponseSchema,
+  requestRelationshipReevaluationResponseSchema,
+  softwareBaselineParamsSchema,
+  softwareBaselineMembershipParamsSchema,
+  productRelationshipParamsSchema,
   supersedeSupportPeriodRequestSchema,
   transitionReleaseLifecycleInputSchema,
   updateSupportAlertIntervalsRequestSchema,
@@ -69,6 +98,20 @@ import {
   type UpdateSupportAlertIntervalsRequest,
   type UpdateProductInput,
   type UpdateReleaseInput,
+  type CreateSoftwareBaselineInput,
+  type AppendSoftwareBaselineRevisionInput,
+  type ArchiveSoftwareBaselineInput,
+  type AssignSoftwareBaselineMembershipInput,
+  type EndSoftwareBaselineMembershipInput,
+  type CreateProductVariantRelationshipInput,
+  type EndProductVariantRelationshipInput,
+  type PreviewProductComponentLinkInput,
+  type CreateProductComponentLinkInput,
+  type SupersedeProductComponentLinkInput,
+  type EndProductComponentLinkInput,
+  type ProductRelationshipGraphQuery,
+  type RelationshipPropagationEventsQuery,
+  type RequestRelationshipReevaluationInput,
 } from "@repo/contracts/products";
 
 import {
@@ -139,6 +182,73 @@ export class ProductsController {
       input,
     });
     return intervals;
+  }
+
+  @RequirePermissions("can_edit_products")
+  @Post("baselines")
+  @HttpCode(HttpStatus.CREATED)
+  @ZodResponse(softwareBaselineResponseSchema)
+  createSoftwareBaseline(
+    @Body(zodBody(createSoftwareBaselineInputSchema))
+    input: CreateSoftwareBaselineInput,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.products.createSoftwareBaseline({
+      organizationId: this.organizationId(user),
+      actorId: user.id,
+      input,
+    });
+  }
+
+  @RequirePermissions("can_view_products")
+  @Get("baselines/:baselineId/revisions")
+  @ZodResponse(softwareBaselinesResponseSchema)
+  getSoftwareBaselineHistory(
+    @Param(zodParams(softwareBaselineParamsSchema))
+    params: Readonly<{ baselineId: string }>,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.products.getSoftwareBaselineHistory({
+      organizationId: this.organizationId(user),
+      actorId: user.id,
+      baselineId: params.baselineId,
+    });
+  }
+
+  @RequirePermissions("can_edit_products")
+  @Post("baselines/:baselineId/revisions")
+  @ZodResponse(softwareBaselineResponseSchema)
+  appendSoftwareBaselineRevision(
+    @Param(zodParams(softwareBaselineParamsSchema))
+    params: Readonly<{ baselineId: string }>,
+    @Body(zodBody(appendSoftwareBaselineRevisionInputSchema))
+    input: AppendSoftwareBaselineRevisionInput,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.products.appendSoftwareBaselineRevision({
+      organizationId: this.organizationId(user),
+      actorId: user.id,
+      baselineId: params.baselineId,
+      input,
+    });
+  }
+
+  @RequirePermissions("can_edit_products")
+  @Post("baselines/:baselineId/archive")
+  @ZodResponse(softwareBaselineResponseSchema)
+  archiveSoftwareBaseline(
+    @Param(zodParams(softwareBaselineParamsSchema))
+    params: Readonly<{ baselineId: string }>,
+    @Body(zodBody(archiveSoftwareBaselineInputSchema))
+    input: ArchiveSoftwareBaselineInput,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.products.archiveSoftwareBaseline({
+      organizationId: this.organizationId(user),
+      actorId: user.id,
+      baselineId: params.baselineId,
+      input,
+    });
   }
 
   @RequirePermissions("can_view_products")
@@ -213,6 +323,247 @@ export class ProductsController {
     @CurrentUser() user: RequestUser,
   ) {
     return this.products.archive({
+      organizationId: this.organizationId(user),
+      actorId: user.id,
+      productId: params.productId,
+      input,
+    });
+  }
+
+  @RequirePermissions("can_view_products")
+  @Get(":productId/baseline-memberships")
+  @ZodResponse(softwareBaselineMembershipsResponseSchema)
+  getSoftwareBaselineMemberships(
+    @Param(zodParams(productParamsSchema)) params: ProductParams,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.products.getSoftwareBaselineMemberships({
+      organizationId: this.organizationId(user),
+      actorId: user.id,
+      productId: params.productId,
+    });
+  }
+
+  @RequirePermissions("can_edit_products")
+  @Post(":productId/baseline-memberships")
+  @HttpCode(HttpStatus.CREATED)
+  @ZodResponse(softwareBaselineMembershipResponseSchema)
+  assignSoftwareBaselineMembership(
+    @Param(zodParams(productParamsSchema)) params: ProductParams,
+    @Body(zodBody(assignSoftwareBaselineMembershipInputSchema))
+    input: AssignSoftwareBaselineMembershipInput,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.products.assignSoftwareBaselineMembership({
+      organizationId: this.organizationId(user),
+      actorId: user.id,
+      productId: params.productId,
+      input,
+    });
+  }
+
+  @RequirePermissions("can_edit_products")
+  @Post(":productId/baseline-memberships/:membershipId/end")
+  @ZodResponse(softwareBaselineMembershipResponseSchema)
+  endSoftwareBaselineMembership(
+    @Param(zodParams(softwareBaselineMembershipParamsSchema))
+    params: Readonly<{ productId: string; membershipId: string }>,
+    @Body(zodBody(endSoftwareBaselineMembershipInputSchema))
+    input: EndSoftwareBaselineMembershipInput,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.products.endSoftwareBaselineMembership({
+      organizationId: this.organizationId(user),
+      actorId: user.id,
+      productId: params.productId,
+      membershipId: params.membershipId,
+      input,
+    });
+  }
+
+  @RequirePermissions("can_view_products")
+  @Get(":productId/variant-relationships")
+  @ZodResponse(productVariantRelationshipsResponseSchema)
+  getProductVariantRelationships(
+    @Param(zodParams(productParamsSchema)) params: ProductParams,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.products.getProductVariantRelationships({
+      organizationId: this.organizationId(user),
+      actorId: user.id,
+      productId: params.productId,
+    });
+  }
+
+  @RequirePermissions("can_edit_products")
+  @Post(":productId/variant-relationships")
+  @HttpCode(HttpStatus.CREATED)
+  @ZodResponse(productVariantRelationshipResponseSchema)
+  createProductVariantRelationship(
+    @Param(zodParams(productParamsSchema)) params: ProductParams,
+    @Body(zodBody(createProductVariantRelationshipInputSchema))
+    input: CreateProductVariantRelationshipInput,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.products.createProductVariantRelationship({
+      organizationId: this.organizationId(user),
+      actorId: user.id,
+      targetProductId: params.productId,
+      input,
+    });
+  }
+
+  @RequirePermissions("can_edit_products")
+  @Post(":productId/variant-relationships/:relationshipId/end")
+  @ZodResponse(productVariantRelationshipResponseSchema)
+  endProductVariantRelationship(
+    @Param(zodParams(productRelationshipParamsSchema))
+    params: Readonly<{ productId: string; relationshipId: string }>,
+    @Body(zodBody(endProductVariantRelationshipInputSchema))
+    input: EndProductVariantRelationshipInput,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.products.endProductVariantRelationship({
+      organizationId: this.organizationId(user),
+      actorId: user.id,
+      productId: params.productId,
+      relationshipId: params.relationshipId,
+      input,
+    });
+  }
+
+  @RequirePermissions("can_view_products")
+  @Get(":productId/component-links")
+  @ZodResponse(productComponentLinksResponseSchema)
+  getProductComponentLinks(
+    @Param(zodParams(productParamsSchema)) params: ProductParams,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.products.getProductComponentLinks({
+      organizationId: this.organizationId(user),
+      actorId: user.id,
+      productId: params.productId,
+    });
+  }
+
+  @RequirePermissions("can_edit_products")
+  @Post(":productId/component-links/preview")
+  @ZodResponse(productRelationshipPreviewResponseSchema)
+  previewProductComponentLink(
+    @Param(zodParams(productParamsSchema)) params: ProductParams,
+    @Body(zodBody(previewProductComponentLinkInputSchema))
+    input: PreviewProductComponentLinkInput,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.products.previewProductComponentLink({
+      organizationId: this.organizationId(user),
+      actorId: user.id,
+      parentProductId: params.productId,
+      input,
+    });
+  }
+
+  @RequirePermissions("can_edit_products")
+  @Post(":productId/component-links")
+  @HttpCode(HttpStatus.CREATED)
+  @ZodResponse(productComponentLinkResponseSchema)
+  createProductComponentLink(
+    @Param(zodParams(productParamsSchema)) params: ProductParams,
+    @Body(zodBody(createProductComponentLinkInputSchema))
+    input: CreateProductComponentLinkInput,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.products.createProductComponentLink({
+      organizationId: this.organizationId(user),
+      actorId: user.id,
+      parentProductId: params.productId,
+      input,
+    });
+  }
+
+  @RequirePermissions("can_edit_products")
+  @Post(":productId/component-links/:relationshipId/supersessions")
+  @ZodResponse(productComponentLinkResponseSchema)
+  supersedeProductComponentLink(
+    @Param(zodParams(productRelationshipParamsSchema))
+    params: Readonly<{ productId: string; relationshipId: string }>,
+    @Body(zodBody(supersedeProductComponentLinkInputSchema))
+    input: SupersedeProductComponentLinkInput,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.products.supersedeProductComponentLink({
+      organizationId: this.organizationId(user),
+      actorId: user.id,
+      productId: params.productId,
+      relationshipId: params.relationshipId,
+      input,
+    });
+  }
+
+  @RequirePermissions("can_edit_products")
+  @Post(":productId/component-links/:relationshipId/end")
+  @ZodResponse(productComponentLinkResponseSchema)
+  endProductComponentLink(
+    @Param(zodParams(productRelationshipParamsSchema))
+    params: Readonly<{ productId: string; relationshipId: string }>,
+    @Body(zodBody(endProductComponentLinkInputSchema))
+    input: EndProductComponentLinkInput,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.products.endProductComponentLink({
+      organizationId: this.organizationId(user),
+      actorId: user.id,
+      productId: params.productId,
+      relationshipId: params.relationshipId,
+      input,
+    });
+  }
+
+  @RequirePermissions("can_view_products")
+  @Get(":productId/relationship-graph")
+  @ZodResponse(productRelationshipGraphResponseSchema)
+  getProductRelationshipGraph(
+    @Param(zodParams(productParamsSchema)) params: ProductParams,
+    @Query(zodQuery(productRelationshipGraphQuerySchema))
+    query: ProductRelationshipGraphQuery,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.products.getProductRelationshipGraph({
+      organizationId: this.organizationId(user),
+      actorId: user.id,
+      productId: params.productId,
+      query,
+    });
+  }
+
+  @RequirePermissions("can_view_products")
+  @Get(":productId/relationship-propagation-events")
+  @ZodResponse(relationshipPropagationEventsResponseSchema)
+  getRelationshipPropagationEvents(
+    @Param(zodParams(productParamsSchema)) params: ProductParams,
+    @Query(zodQuery(relationshipPropagationEventsQuerySchema))
+    query: RelationshipPropagationEventsQuery,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.products.getRelationshipPropagationEvents({
+      organizationId: this.organizationId(user),
+      actorId: user.id,
+      productId: params.productId,
+      query,
+    });
+  }
+
+  @RequirePermissions("can_edit_products")
+  @Post(":productId/relationship-reevaluations")
+  @HttpCode(HttpStatus.CREATED)
+  @ZodResponse(requestRelationshipReevaluationResponseSchema)
+  requestRelationshipReevaluation(
+    @Param(zodParams(productParamsSchema)) params: ProductParams,
+    @Body(zodBody(requestRelationshipReevaluationInputSchema))
+    input: RequestRelationshipReevaluationInput,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.products.requestRelationshipReevaluation({
       organizationId: this.organizationId(user),
       actorId: user.id,
       productId: params.productId,

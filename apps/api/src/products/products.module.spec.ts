@@ -8,6 +8,7 @@ import {
   PRODUCT_RETENTION_PROJECTION,
   PRODUCT_RETENTION_READER,
 } from "./application/product-retention-reader.port";
+import { PRODUCT_RELATIONSHIP_RESOLVER } from "./application/product-relationship-reader.port";
 import { ProductUseCases } from "./application/product-use-cases";
 import { ProductsModule } from "./products.module";
 
@@ -38,12 +39,17 @@ describe("ProductsModule regulatory readers", () => {
       provide: PRODUCT_RETENTION_PROJECTION,
       useExisting: ProductUseCases,
     });
+    expect(providers).toContainEqual({
+      provide: PRODUCT_RELATIONSHIP_RESOLVER,
+      useExisting: ProductUseCases,
+    });
     expect(exports).toEqual(
       expect.arrayContaining([
         RELEASE_REGULATORY_STATE_READER,
         RELEASE_MARKET_AVAILABILITY_READER,
         PRODUCT_RETENTION_READER,
         PRODUCT_RETENTION_PROJECTION,
+        PRODUCT_RELATIONSHIP_RESOLVER,
       ]),
     );
   });

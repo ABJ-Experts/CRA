@@ -1,0 +1,798 @@
+"use client";
+
+import {
+  appendSoftwareBaselineRevisionInputSchema,
+  archiveSoftwareBaselineInputSchema,
+  assignSoftwareBaselineMembershipInputSchema,
+  createProductComponentLinkInputSchema,
+  createProductVariantRelationshipInputSchema,
+  createSoftwareBaselineInputSchema,
+  endProductComponentLinkInputSchema,
+  endProductVariantRelationshipInputSchema,
+  endSoftwareBaselineMembershipInputSchema,
+  previewProductComponentLinkInputSchema,
+  requestRelationshipReevaluationInputSchema,
+  supersedeProductComponentLinkInputSchema,
+  type ProductComponentLink,
+  type ProductVariantRelationship,
+  type SoftwareBaselineReleaseMembership,
+} from "@repo/contracts/products";
+import { Button } from "@repo/ui/button";
+import { useState } from "react";
+
+import {
+  useAppendSoftwareBaselineRevisionMutation,
+  useArchiveSoftwareBaselineMutation,
+  useAssignSoftwareBaselineMembershipMutation,
+  useCreateProductComponentLinkMutation,
+  useCreateProductVariantRelationshipMutation,
+  useCreateSoftwareBaselineMutation,
+  useEndProductComponentLinkMutation,
+  useEndProductVariantRelationshipMutation,
+  useEndSoftwareBaselineMembershipMutation,
+  usePreviewProductComponentLinkMutation,
+  useRequestRelationshipReevaluationMutation,
+  useSupersedeProductComponentLinkMutation,
+} from "../../_features/products/products.queries";
+import { ApiClientError } from "../../_lib/http/api-client";
+import { ProductRelationshipEvidenceInputs } from "./product-relationship-evidence-inputs";
+import { ProductRelationshipLifecycleControls } from "./product-relationship-lifecycle-controls";
+
+type ReleaseOption = Readonly<{ id: string; label: string; version: string }>;
+
+type FormProps = Readonly<{
+  productId: string;
+  releases: readonly ReleaseOption[];
+  graphVersion: number;
+  memberships: readonly SoftwareBaselineReleaseMembership[];
+  variants: readonly ProductVariantRelationship[];
+  components: readonly ProductComponentLink[];
+  organizationTimezone: string | null;
+  onReload: () => void;
+}>;
+
+function messageFor(error: unknown, fallback: string): string {
+  if (error instanceof ApiClientError && error.status === 403) {
+    return "You do not have permission to perform that action.";
+  }
+  if (error instanceof ApiClientError && error.status === 404) {
+    return "This relationship resource is unavailable.";
+  }
+  if (error instanceof ApiClientError && error.code === "cycle_detected") {
+    return "This link would create a cycle and was not recorded.";
+  }
+  if (error instanceof ApiClientError && error.code === "depth_exceeded") {
+    return "This link exceeds the supported relationship depth and was not recorded.";
+  }
+  if (error instanceof ApiClientError && error.status === 409) {
+    return "The relationship graph changed in another session. Reload it before trying again.";
+  }
+  if (
+    error instanceof ApiClientError &&
+    (error.kind === "network" ||
+      error.kind === "invalid_response" ||
+      (error.status !== undefined && error.status >= 500))
+  ) {
+    return "The relationship registry is temporarily unavailable. Try again.";
+  }
+  return error instanceof ApiClientError && error.kind === "api"
+    ? error.message
+    : fallback;
+}
+
+function needsGraphReload(error: unknown): boolean {
+  return (
+    error instanceof ApiClientError &&
+    (error.code === "conflict" ||
+      error.code === "cycle_detected" ||
+      error.code === "depth_exceeded")
+  );
+}
+
+function toUtcInstant(value: string): string | undefined {
+  if (value === "") return undefined;
+  const instant = new Date(value);
+  return Number.isNaN(instant.getTime()) ? undefined : instant.toISOString();
+}
+
+export function ProductRelationshipMutationForms({
+  productId,
+  releases,
+  graphVersion,
+  memberships,
+  variants,
+  components,
+  organizationTimezone,
+  onReload,
+}: FormProps) {
+  const createBaseline = useCreateSoftwareBaselineMutation();
+  const [baselineId, setBaselineId] = useState("");
+  const [baselineRevisionId, setBaselineRevisionId] = useState("");
+  const [baselineVersion, setBaselineVersion] = useState("0");
+  const appendBaseline = useAppendSoftwareBaselineRevisionMutation(baselineId);
+  const archiveBaseline = useArchiveSoftwareBaselineMutation(baselineId);
+  const assignMembership =
+    useAssignSoftwareBaselineMembershipMutation(productId);
+  const endMembership = useEndSoftwareBaselineMembershipMutation(productId);
+  const createVariant = useCreateProductVariantRelationshipMutation(productId);
+  const endVariant = useEndProductVariantRelationshipMutation(productId);
+  const previewComponent = usePreviewProductComponentLinkMutation(productId);
+  const createComponent = useCreateProductComponentLinkMutation(productId);
+  const supersedeComponent =
+    useSupersedeProductComponentLinkMutation(productId);
+  const endComponent = useEndProductComponentLinkMutation(productId);
+  const requestReevaluation =
+    useRequestRelationshipReevaluationMutation(productId);
+  const [baselineIdentifier, setBaselineIdentifier] = useState("");
+  const [baselineName, setBaselineName] = useState("");
+  const [baselineSummary, setBaselineSummary] = useState("");
+  const [selectedReleaseId, setSelectedReleaseId] = useState(
+    releases[0]?.id ?? "",
+  );
+  const [variantSourceType, setVariantSourceType] = useState<
+    "base_release" | "baseline_revision"
+  >("base_release");
+  const [variantProductId, setVariantProductId] = useState(productId);
+  const [variantReleaseId, setVariantReleaseId] = useState("");
+  const [componentProductId, setComponentProductId] = useState("");
+  const [componentReleaseId, setComponentReleaseId] = useState("");
+  const [quantity, setQuantity] = useState("1");
+  const [selectedMembershipId, setSelectedMembershipId] = useState("");
+  const [selectedVariantId, setSelectedVariantId] = useState("");
+  const [selectedComponentId, setSelectedComponentId] = useState("");
+  const [source, setSource] = useState("");
+  const [provenance, setProvenance] = useState("");
+  const [reason, setReason] = useState("");
+  const [startsAt, setStartsAt] = useState("");
+  const [endsAt, setEndsAt] = useState("");
+  const [message, setMessage] = useState<string | null>(null);
+  const [reload, setReload] = useState(false);
+
+  const evidence = {
+    source,
+    provenance,
+    reason,
+    effectiveStartsAt: toUtcInstant(startsAt),
+    effectiveEndsAt: toUtcInstant(endsAt),
+  };
+  const hasSharedEvidence =
+    source.trim().length > 0 &&
+    provenance.trim().length > 0 &&
+    reason.trim().length > 0;
+  const hasEndEvidence =
+    hasSharedEvidence && evidence.effectiveEndsAt !== undefined;
+  const hasUpdateEvidence =
+    hasSharedEvidence && evidence.effectiveStartsAt !== undefined;
+
+  function report(error: unknown, fallback: string) {
+    setReload(needsGraphReload(error));
+    setMessage(messageFor(error, fallback));
+  }
+
+  async function createBaselineRecord() {
+    const parsed = createSoftwareBaselineInputSchema.safeParse({
+      identifier: baselineIdentifier,
+      name: baselineName,
+      revisionSummary: baselineSummary,
+      source,
+      provenance,
+      effectiveStartsAt: evidence.effectiveStartsAt,
+      effectiveEndsAt: evidence.effectiveEndsAt,
+      idempotencyKey: crypto.randomUUID(),
+    });
+    if (!parsed.success)
+      return setMessage(
+        parsed.error.issues[0]?.message ?? "Check the software baseline.",
+      );
+    try {
+      const result = await createBaseline.mutateAsync(parsed.data);
+      setBaselineId(result.baseline.baselineId);
+      setBaselineRevisionId(result.baseline.id);
+      setBaselineVersion(String(result.baseline.version));
+      setMessage("Software baseline recorded and selected for membership.");
+    } catch (error) {
+      report(error, "The software baseline could not be recorded.");
+    }
+  }
+
+  async function appendBaselineRevision() {
+    const parsed = appendSoftwareBaselineRevisionInputSchema.safeParse({
+      name: baselineName,
+      revisionSummary: baselineSummary,
+      source,
+      provenance,
+      effectiveStartsAt: evidence.effectiveStartsAt,
+      effectiveEndsAt: evidence.effectiveEndsAt,
+      expectedVersion: Number(baselineVersion),
+      idempotencyKey: crypto.randomUUID(),
+    });
+    if (!parsed.success)
+      return setMessage(
+        parsed.error.issues[0]?.message ?? "Check the baseline revision.",
+      );
+    try {
+      const result = await appendBaseline.mutateAsync(parsed.data);
+      setBaselineRevisionId(result.baseline.id);
+      setBaselineVersion(String(result.baseline.version));
+      setMessage("Software baseline revision recorded and selected.");
+    } catch (error) {
+      report(error, "The baseline revision could not be recorded.");
+    }
+  }
+
+  async function archiveBaselineRecord() {
+    const parsed = archiveSoftwareBaselineInputSchema.safeParse({
+      expectedVersion: Number(baselineVersion),
+      reason,
+    });
+    if (!parsed.success)
+      return setMessage(
+        parsed.error.issues[0]?.message ??
+          "Check the baseline archive request.",
+      );
+    try {
+      await archiveBaseline.mutateAsync(parsed.data);
+      setMessage("Software baseline archived.");
+    } catch (error) {
+      report(error, "The software baseline could not be archived.");
+    }
+  }
+
+  async function assignMembershipRecord() {
+    const parsed = assignSoftwareBaselineMembershipInputSchema.safeParse({
+      releaseId: selectedReleaseId,
+      baselineId,
+      baselineRevisionId,
+      expectedBaselineVersion: Number(baselineVersion),
+      source,
+      provenance,
+      effectiveStartsAt: evidence.effectiveStartsAt,
+      effectiveEndsAt: evidence.effectiveEndsAt,
+      idempotencyKey: crypto.randomUUID(),
+    });
+    if (!parsed.success)
+      return setMessage(
+        parsed.error.issues[0]?.message ?? "Check the baseline membership.",
+      );
+    try {
+      await assignMembership.mutateAsync(parsed.data);
+      setMessage("Software baseline membership recorded.");
+    } catch (error) {
+      report(error, "The baseline membership could not be recorded.");
+    }
+  }
+
+  async function endMembershipRecord() {
+    const membership = memberships.find(
+      (item) => item.id === selectedMembershipId,
+    );
+    if (!membership) return setMessage("Select an active baseline membership.");
+    const parsed = endSoftwareBaselineMembershipInputSchema.safeParse({
+      expectedVersion: membership.version,
+      reason,
+      effectiveEndsAt: evidence.effectiveEndsAt,
+    });
+    if (!parsed.success)
+      return setMessage(
+        parsed.error.issues[0]?.message ??
+          "Check the baseline membership end request.",
+      );
+    try {
+      await endMembership.mutateAsync({
+        membershipId: membership.id,
+        input: parsed.data,
+      });
+      setMessage("Software baseline membership ended.");
+    } catch (error) {
+      report(error, "The baseline membership could not be ended.");
+    }
+  }
+
+  async function createVariantRecord() {
+    const parsed = createProductVariantRelationshipInputSchema.safeParse({
+      sourceType: variantSourceType,
+      baseReleaseId:
+        variantSourceType === "base_release" ? selectedReleaseId : undefined,
+      baselineRevisionId:
+        variantSourceType === "baseline_revision"
+          ? baselineRevisionId
+          : undefined,
+      variantProductId,
+      variantReleaseId,
+      source,
+      provenance,
+      reason,
+      effectiveStartsAt: evidence.effectiveStartsAt,
+      effectiveEndsAt: evidence.effectiveEndsAt,
+      expectedGraphVersion: graphVersion,
+      idempotencyKey: crypto.randomUUID(),
+    });
+    if (!parsed.success)
+      return setMessage(
+        parsed.error.issues[0]?.message ?? "Check the variant relationship.",
+      );
+    try {
+      await createVariant.mutateAsync(parsed.data);
+      setMessage("Variant relationship recorded.");
+    } catch (error) {
+      report(error, "The variant relationship could not be recorded.");
+    }
+  }
+
+  async function endVariantRecord() {
+    const relationship = variants.find((item) => item.id === selectedVariantId);
+    if (!relationship)
+      return setMessage("Select an active variant relationship.");
+    const parsed = endProductVariantRelationshipInputSchema.safeParse({
+      expectedVersion: relationship.version,
+      expectedGraphVersion: graphVersion,
+      reason,
+      effectiveEndsAt: evidence.effectiveEndsAt,
+    });
+    if (!parsed.success)
+      return setMessage(
+        parsed.error.issues[0]?.message ??
+          "Check the variant relationship end request.",
+      );
+    try {
+      await endVariant.mutateAsync({
+        relationshipId: relationship.id,
+        input: parsed.data,
+      });
+      setMessage("Variant relationship ended.");
+    } catch (error) {
+      report(error, "The variant relationship could not be ended.");
+    }
+  }
+
+  function componentInput() {
+    return {
+      componentProductId,
+      parentReleaseId: selectedReleaseId || undefined,
+      componentReleaseId: componentReleaseId || undefined,
+      quantity: Number(quantity),
+      source,
+      provenance,
+      reason,
+      effectiveStartsAt: evidence.effectiveStartsAt,
+      effectiveEndsAt: evidence.effectiveEndsAt,
+      expectedGraphVersion: graphVersion,
+    };
+  }
+
+  async function previewComponentRecord() {
+    const parsed =
+      previewProductComponentLinkInputSchema.safeParse(componentInput());
+    if (!parsed.success)
+      return setMessage(
+        parsed.error.issues[0]?.message ?? "Check the component link.",
+      );
+    try {
+      await previewComponent.mutateAsync(parsed.data);
+      setMessage("Component-link preview updated.");
+    } catch (error) {
+      report(error, "The component link preview could not be prepared.");
+    }
+  }
+
+  async function createComponentRecord() {
+    const parsed = createProductComponentLinkInputSchema.safeParse({
+      ...componentInput(),
+      idempotencyKey: crypto.randomUUID(),
+    });
+    if (!parsed.success)
+      return setMessage(
+        parsed.error.issues[0]?.message ?? "Check the component link.",
+      );
+    try {
+      await createComponent.mutateAsync(parsed.data);
+      setMessage("Component link recorded.");
+    } catch (error) {
+      report(error, "The component link could not be recorded.");
+    }
+  }
+
+  async function updateComponentRecord() {
+    const link = components.find((item) => item.id === selectedComponentId);
+    if (!link) return setMessage("Select an active component link to update.");
+    const parsed = supersedeProductComponentLinkInputSchema.safeParse({
+      ...componentInput(),
+      expectedVersion: link.version,
+      idempotencyKey: crypto.randomUUID(),
+    });
+    if (!parsed.success)
+      return setMessage(
+        parsed.error.issues[0]?.message ??
+          "Check the replacement component link.",
+      );
+    try {
+      await supersedeComponent.mutateAsync({
+        relationshipId: link.id,
+        input: parsed.data,
+      });
+      setMessage("Component link superseded.");
+    } catch (error) {
+      report(error, "The component link could not be superseded.");
+    }
+  }
+
+  async function endComponentRecord() {
+    const link = components.find((item) => item.id === selectedComponentId);
+    if (!link) return setMessage("Select an active component link.");
+    const parsed = endProductComponentLinkInputSchema.safeParse({
+      expectedVersion: link.version,
+      expectedGraphVersion: graphVersion,
+      reason,
+      effectiveEndsAt: evidence.effectiveEndsAt,
+    });
+    if (!parsed.success)
+      return setMessage(
+        parsed.error.issues[0]?.message ??
+          "Check the component link end request.",
+      );
+    try {
+      await endComponent.mutateAsync({
+        relationshipId: link.id,
+        input: parsed.data,
+      });
+      setMessage("Component link ended.");
+    } catch (error) {
+      report(error, "The component link could not be ended.");
+    }
+  }
+
+  async function requestReevaluationRecord() {
+    const parsed = requestRelationshipReevaluationInputSchema.safeParse({
+      expectedGraphVersion: graphVersion,
+      reason,
+      source,
+      provenance,
+      idempotencyKey: crypto.randomUUID(),
+    });
+    if (!parsed.success)
+      return setMessage(
+        parsed.error.issues[0]?.message ?? "Check the re-evaluation request.",
+      );
+    try {
+      await requestReevaluation.mutateAsync(parsed.data);
+      setMessage("Relationship re-evaluation queued.");
+    } catch (error) {
+      report(error, "The relationship re-evaluation could not be queued.");
+    }
+  }
+
+  return (
+    <section
+      aria-label="Relationship commands"
+      className="grid gap-4 border-t border-border pt-5"
+    >
+      <header className="flex flex-wrap items-end justify-between gap-3">
+        <h3 className="text-subhead-semibold text-fg">Record a change</h3>
+        <p className="text-caption-1-regular text-fg-muted">
+          Times display in {organizationTimezone ?? "UTC"} and submit as UTC.
+        </p>
+      </header>
+      <section
+        aria-label="Relationship evidence"
+        className="rounded-xl border border-border bg-surface-subtle p-4"
+      >
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h4 className="text-caption-1-semibold text-fg">
+            Evidence for this change
+          </h4>
+          <p className="text-caption-1-regular text-fg-muted">
+            Set the source, evidence, and effective interval once.
+          </p>
+        </div>
+        <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <ProductRelationshipEvidenceInputs
+            source={source}
+            provenance={provenance}
+            reason={reason}
+            startsAt={startsAt}
+            endsAt={endsAt}
+            onSource={setSource}
+            onProvenance={setProvenance}
+            onReason={setReason}
+            onStartsAt={setStartsAt}
+            onEndsAt={setEndsAt}
+          />
+        </div>
+      </section>
+      <div className="grid items-start gap-4 xl:grid-cols-3">
+        <section className="grid content-start gap-3 rounded-xl border border-border bg-canvas p-4">
+          <h4 className="text-subhead-semibold text-fg">Software baseline</h4>
+          <label className="flex flex-col gap-2 text-caption-1-regular text-fg">
+            Baseline identifier
+            <input
+              aria-label="Baseline identifier"
+              required
+              value={baselineIdentifier}
+              onChange={(event) => setBaselineIdentifier(event.target.value)}
+              className="h-10 rounded-xl border border-border bg-canvas px-3 text-subhead-regular text-fg"
+            />
+          </label>
+          <label className="flex flex-col gap-2 text-caption-1-regular text-fg">
+            Baseline name
+            <input
+              aria-label="Baseline name"
+              required
+              value={baselineName}
+              onChange={(event) => setBaselineName(event.target.value)}
+              className="h-10 rounded-xl border border-border bg-canvas px-3 text-subhead-regular text-fg"
+            />
+          </label>
+          <label className="flex flex-col gap-2 text-caption-1-regular text-fg">
+            Revision summary
+            <input
+              aria-label="Baseline revision summary"
+              required
+              value={baselineSummary}
+              onChange={(event) => setBaselineSummary(event.target.value)}
+              className="h-10 rounded-xl border border-border bg-canvas px-3 text-subhead-regular text-fg"
+            />
+          </label>
+          <Button
+            type="button"
+            loading={createBaseline.isPending}
+            loadingLabel="Recording software baseline"
+            onClick={() => void createBaselineRecord()}
+          >
+            Record software baseline
+          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              tone="grey"
+              disabled={baselineId === ""}
+              loading={appendBaseline.isPending}
+              loadingLabel="Recording baseline revision"
+              onClick={() => void appendBaselineRevision()}
+            >
+              Record baseline revision
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              tone="grey"
+              disabled={baselineId === ""}
+              loading={archiveBaseline.isPending}
+              loadingLabel="Archiving software baseline"
+              onClick={() => void archiveBaselineRecord()}
+            >
+              Archive software baseline
+            </Button>
+          </div>
+        </section>
+        <section className="grid content-start gap-3 rounded-xl border border-border bg-canvas p-4">
+          <h4 className="text-subhead-semibold text-fg">Assign baseline</h4>
+          <label className="flex flex-col gap-2 text-caption-1-regular text-fg">
+            Release
+            <select
+              aria-label="Relationship release"
+              value={selectedReleaseId}
+              onChange={(event) => setSelectedReleaseId(event.target.value)}
+              className="h-10 rounded-xl border border-border bg-canvas px-3 text-subhead-regular text-fg"
+            >
+              <option value="">Select release</option>
+              {releases.map((release) => (
+                <option key={release.id} value={release.id}>
+                  {release.label} {release.version}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="flex flex-col gap-2 text-caption-1-regular text-fg">
+            Baseline ID
+            <input
+              aria-label="Baseline ID"
+              required
+              value={baselineId}
+              onChange={(event) => setBaselineId(event.target.value)}
+              className="h-10 rounded-xl border border-border bg-canvas px-3 text-subhead-regular text-fg"
+            />
+          </label>
+          <label className="flex flex-col gap-2 text-caption-1-regular text-fg">
+            Baseline revision ID
+            <input
+              aria-label="Baseline revision ID"
+              required
+              value={baselineRevisionId}
+              onChange={(event) => setBaselineRevisionId(event.target.value)}
+              className="h-10 rounded-xl border border-border bg-canvas px-3 text-subhead-regular text-fg"
+            />
+          </label>
+          <label className="flex flex-col gap-2 text-caption-1-regular text-fg">
+            Baseline version
+            <input
+              aria-label="Baseline version"
+              required
+              inputMode="numeric"
+              value={baselineVersion}
+              onChange={(event) => setBaselineVersion(event.target.value)}
+              className="h-10 rounded-xl border border-border bg-canvas px-3 text-subhead-regular text-fg"
+            />
+          </label>
+          <Button
+            type="button"
+            loading={assignMembership.isPending}
+            loadingLabel="Recording baseline membership"
+            onClick={() => void assignMembershipRecord()}
+          >
+            Record baseline membership
+          </Button>
+        </section>
+        <section className="grid content-start gap-3 rounded-xl border border-border bg-canvas p-4">
+          <h4 className="text-subhead-semibold text-fg">
+            Variant relationship
+          </h4>
+          <label className="flex flex-col gap-2 text-caption-1-regular text-fg">
+            Variant source
+            <select
+              aria-label="Variant source"
+              value={variantSourceType}
+              onChange={(event) =>
+                setVariantSourceType(
+                  event.target.value === "baseline_revision"
+                    ? "baseline_revision"
+                    : "base_release",
+                )
+              }
+              className="h-10 rounded-xl border border-border bg-canvas px-3 text-subhead-regular text-fg"
+            >
+              <option value="base_release">Base release</option>
+              <option value="baseline_revision">Baseline revision</option>
+            </select>
+          </label>
+          <label className="flex flex-col gap-2 text-caption-1-regular text-fg">
+            Variant product ID
+            <input
+              aria-label="Variant product ID"
+              required
+              value={variantProductId}
+              onChange={(event) => setVariantProductId(event.target.value)}
+              className="h-10 rounded-xl border border-border bg-canvas px-3 text-subhead-regular text-fg"
+            />
+          </label>
+          <label className="flex flex-col gap-2 text-caption-1-regular text-fg">
+            Variant release ID
+            <input
+              aria-label="Variant release ID"
+              required
+              value={variantReleaseId}
+              onChange={(event) => setVariantReleaseId(event.target.value)}
+              className="h-10 rounded-xl border border-border bg-canvas px-3 text-subhead-regular text-fg"
+            />
+          </label>
+          <Button
+            type="button"
+            loading={createVariant.isPending}
+            loadingLabel="Recording variant relationship"
+            onClick={() => void createVariantRecord()}
+          >
+            Record variant relationship
+          </Button>
+        </section>
+      </div>
+      <section className="grid gap-3 rounded-xl border border-border bg-surface-subtle p-4">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <div>
+            <h4 className="text-subhead-semibold text-fg">
+              Embedded component
+            </h4>
+            <p className="mt-1 text-caption-1-regular text-fg-muted">
+              Preview the graph impact before recording or replacing a link.
+            </p>
+          </div>
+          <span className="text-caption-1-regular text-fg-muted">
+            Graph v{graphVersion}
+          </span>
+        </div>
+        <div className="grid gap-3 md:grid-cols-3">
+          <label className="flex flex-col gap-2 text-caption-1-regular text-fg">
+            Component product ID
+            <input
+              aria-label="Component product ID"
+              required
+              value={componentProductId}
+              onChange={(event) => setComponentProductId(event.target.value)}
+              className="h-10 rounded-xl border border-border bg-canvas px-3 text-subhead-regular text-fg"
+            />
+          </label>
+          <label className="flex flex-col gap-2 text-caption-1-regular text-fg">
+            Component release ID{" "}
+            <span className="text-fg-muted">(optional)</span>
+            <input
+              aria-label="Component release ID"
+              value={componentReleaseId}
+              onChange={(event) => setComponentReleaseId(event.target.value)}
+              className="h-10 rounded-xl border border-border bg-canvas px-3 text-subhead-regular text-fg"
+            />
+          </label>
+          <label className="flex flex-col gap-2 text-caption-1-regular text-fg">
+            Quantity
+            <input
+              aria-label="Component quantity"
+              required
+              inputMode="numeric"
+              value={quantity}
+              onChange={(event) => setQuantity(event.target.value)}
+              className="h-10 rounded-xl border border-border bg-canvas px-3 text-subhead-regular text-fg"
+            />
+          </label>
+        </div>
+        {previewComponent.data?.preview ? (
+          <p className="text-caption-1-regular text-fg-muted">
+            Preview:{" "}
+            {previewComponent.data.preview.outcome.replaceAll("_", " ")} ·
+            candidate depth {previewComponent.data.preview.candidateDepth}
+          </p>
+        ) : null}
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            tone="grey"
+            loading={previewComponent.isPending}
+            loadingLabel="Previewing component link"
+            onClick={() => void previewComponentRecord()}
+          >
+            Preview component link
+          </Button>
+          <Button
+            type="button"
+            loading={createComponent.isPending}
+            loadingLabel="Recording component link"
+            onClick={() => void createComponentRecord()}
+          >
+            Record component link
+          </Button>
+        </div>
+      </section>
+      <ProductRelationshipLifecycleControls
+        memberships={memberships}
+        variants={variants}
+        components={components}
+        selectedMembershipId={selectedMembershipId}
+        selectedVariantId={selectedVariantId}
+        selectedComponentId={selectedComponentId}
+        effectiveEndsAt={endsAt}
+        hasEndEvidence={hasEndEvidence}
+        hasUpdateEvidence={hasUpdateEvidence}
+        hasReevaluationEvidence={hasSharedEvidence}
+        endMembershipPending={endMembership.isPending}
+        endVariantPending={endVariant.isPending}
+        endComponentPending={endComponent.isPending}
+        updateComponentPending={supersedeComponent.isPending}
+        reevaluationPending={requestReevaluation.isPending}
+        onSelectedMembershipChange={setSelectedMembershipId}
+        onSelectedVariantChange={setSelectedVariantId}
+        onSelectedComponentChange={setSelectedComponentId}
+        onEffectiveEndsAtChange={setEndsAt}
+        onEndMembership={() => void endMembershipRecord()}
+        onEndVariant={() => void endVariantRecord()}
+        onEndComponent={() => void endComponentRecord()}
+        onUpdateComponent={() => void updateComponentRecord()}
+        onRequestReevaluation={() => void requestReevaluationRecord()}
+      />
+      {message ? (
+        <div className="lg:col-span-2 flex flex-wrap items-center gap-2">
+          <p role="alert" className="text-caption-1-regular text-danger">
+            {message}
+          </p>
+          {reload ? (
+            <Button
+              type="button"
+              variant="outline"
+              tone="grey"
+              onClick={onReload}
+            >
+              Reload relationship graph
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
+    </section>
+  );
+}

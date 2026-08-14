@@ -23,6 +23,7 @@ import {
   PRODUCT_RETENTION_PROJECTION,
   PRODUCT_RETENTION_READER,
 } from "./application/product-retention-reader.port";
+import { PRODUCT_RELATIONSHIP_RESOLVER } from "./application/product-relationship-reader.port";
 import { SupabaseProductRepository } from "./infrastructure/supabase-product.repository";
 import { ProductsController } from "./products.controller";
 import { ProductsService } from "./products.service";
@@ -62,6 +63,10 @@ import {
       provide: PRODUCT_RETENTION_PROJECTION,
       useExisting: ProductUseCases,
     },
+    {
+      provide: PRODUCT_RELATIONSHIP_RESOLVER,
+      useExisting: ProductUseCases,
+    },
     SupabaseProductRetentionWorkerRepository,
     MailProductRetentionDeliveryAdapter,
     {
@@ -98,6 +103,7 @@ import {
     RELEASE_MARKET_AVAILABILITY_READER,
     PRODUCT_RETENTION_READER,
     PRODUCT_RETENTION_PROJECTION,
+    PRODUCT_RELATIONSHIP_RESOLVER,
     ProductRetentionWorker,
   ],
 })

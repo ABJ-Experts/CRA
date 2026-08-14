@@ -70,6 +70,19 @@ function formatComplianceInstant(
   }
 }
 
+function dateTimeInputValue(instant: string): string {
+  if (!instant) return "";
+  const date = new Date(instant);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toISOString().slice(0, 16);
+}
+
+function utcInstantFromDateTimeInput(value: string): string {
+  if (!value) return "";
+  const date = new Date(`${value}:00.000Z`);
+  return Number.isNaN(date.getTime()) ? value : date.toISOString();
+}
+
 export function SupportPeriodRetentionSection({
   productId,
   release,
@@ -123,6 +136,16 @@ export function SupportPeriodRetentionSection({
   const [alertIntervalsDays, setAlertIntervalsDays] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [staleUpdate, setStaleUpdate] = useState(false);
+  const updateSupportStartsAt = (event: {
+    currentTarget: HTMLInputElement;
+  }) => {
+    setSupportStartsAt(utcInstantFromDateTimeInput(event.currentTarget.value));
+  };
+  const updateSupportEndsAt = (event: {
+    currentTarget: HTMLInputElement;
+  }) => {
+    setSupportEndsAt(utcInstantFromDateTimeInput(event.currentTarget.value));
+  };
   const previewResult = preview.data?.preview ?? null;
   const organizationTimezone =
     organizationSettings.data?.settings.values?.timezone ?? null;
@@ -272,10 +295,28 @@ export function SupportPeriodRetentionSection({
 
   return (
     <section
-      className="lg:col-span-2"
+      className="lg:col-span-2 rounded-2xl border border-border bg-surface-subtle p-4 sm:p-5"
       aria-label={`Support and retention for ${release.label}`}
     >
-      <h3 className="text-subhead-semibold text-fg">Support and retention</h3>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-caption-1-semibold text-fg-muted">
+            Compliance window
+          </p>
+          <h3 className="mt-1 text-title-3-semibold text-fg">
+            Support and retention
+          </h3>
+          <p className="mt-1 max-w-2xl text-caption-1-regular text-fg-muted">
+            Record the support commitment, then review the legal retention date
+            and scheduled expiry reminders.
+          </p>
+        </div>
+        <span className="rounded-full bg-surface-raised px-3 py-1 text-caption-1-semibold text-fg-muted">
+          {activeSupportPeriod
+            ? "Support period active"
+            : "Support period needed"}
+        </span>
+      </div>
       {history.isPending ? (
         <p role="status" className="mt-2 text-caption-1-regular text-fg-muted">
           Loading support periods...
@@ -304,7 +345,10 @@ export function SupportPeriodRetentionSection({
           aria-label="Support period history"
         >
           {supportPeriods.map((period) => (
-            <li key={period.id} className="rounded-lg border border-border p-3">
+            <li
+              key={period.id}
+              className="rounded-xl border border-border bg-canvas p-3"
+            >
               <span className="block text-fg">
                 {displayInstant(period.supportStartsAt)} to{" "}
                 {displayInstant(period.supportEndsAt)}
@@ -320,8 +364,8 @@ export function SupportPeriodRetentionSection({
           ))}
         </ul>
       )}
-      <div className="mt-4 grid gap-4 lg:grid-cols-2">
-        <div>
+      <div className="mt-4 grid gap-3 lg:grid-cols-2">
+        <section className="rounded-xl border border-border bg-canvas p-4">
           <h4 className="text-caption-1-semibold text-fg">Retention</h4>
           {retention.isPending ? (
             <p
@@ -399,8 +443,8 @@ export function SupportPeriodRetentionSection({
               ) : null}
             </>
           )}
-        </div>
-        <div>
+        </section>
+        <section className="rounded-xl border border-border bg-canvas p-4">
           <h4 className="text-caption-1-semibold text-fg">Support alerts</h4>
           {alerts.isPending ? (
             <p
@@ -445,27 +489,39 @@ export function SupportPeriodRetentionSection({
               ))}
             </ul>
           )}
-        </div>
+        </section>
       </div>
       {canEdit ? (
-        <div className="mt-4 grid gap-4 rounded-xl border border-border p-4 lg:grid-cols-2">
+        <div className="mt-4 grid gap-4 rounded-xl border border-border bg-canvas p-4 lg:grid-cols-2">
           <form
             className="grid gap-3"
             noValidate
             onSubmit={previewSupportPeriod}
           >
+            <div>
+              <h4 className="text-subhead-semibold text-fg">
+                {activeSupportPeriod
+                  ? "Revise support period"
+                  : "Record support period"}
+              </h4>
+              <p className="mt-1 text-caption-1-regular text-fg-muted">
+                Dates are entered and stored as UTC instants.
+              </p>
+            </div>
             <Input
-              label="Support starts"
-              placeholder="2026-08-12T00:00:00.000Z"
-              value={supportStartsAt}
-              onChange={(event) => setSupportStartsAt(event.target.value)}
+              label="Support starts (UTC)"
+              type="datetime-local"
+              value={dateTimeInputValue(supportStartsAt)}
+              onChange={updateSupportStartsAt}
+              onInput={updateSupportStartsAt}
               required
             />
             <Input
-              label="Support ends"
-              placeholder="2029-08-12T00:00:00.000Z"
-              value={supportEndsAt}
-              onChange={(event) => setSupportEndsAt(event.target.value)}
+              label="Support ends (UTC)"
+              type="datetime-local"
+              value={dateTimeInputValue(supportEndsAt)}
+              onChange={updateSupportEndsAt}
+              onInput={updateSupportEndsAt}
               required
             />
             <Input
@@ -533,7 +589,17 @@ export function SupportPeriodRetentionSection({
               ) : null}
             </div>
           </form>
-          <form className="grid gap-3" noValidate onSubmit={saveAlertIntervals}>
+          <form
+            className="grid content-start gap-3"
+            noValidate
+            onSubmit={saveAlertIntervals}
+          >
+            <div>
+              <h4 className="text-subhead-semibold text-fg">Alert schedule</h4>
+              <p className="mt-1 text-caption-1-regular text-fg-muted">
+                Choose when responsible users are reminded before support ends.
+              </p>
+            </div>
             <Input
               label="Support alert intervals"
               value={alertIntervalsDays}

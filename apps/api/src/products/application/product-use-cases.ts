@@ -1,14 +1,25 @@
 import type {
   ArchiveProductInput,
+  ArchiveSoftwareBaselineInput,
   ArchiveReleaseInput,
   AddReleaseMarketAvailabilityInput,
   CorrectPlacedOnMarketDateInput,
   CorrectReleaseMarketAvailabilityInput,
   CreateProductInput,
+  CreateProductComponentLinkInput,
+  CreateProductVariantRelationshipInput,
   CreateReleaseInput,
+  CreateSoftwareBaselineInput,
   MemberStateReference,
   MoveProductLegalEntityInput,
   Product,
+  ProductComponentLink,
+  ProductRelationshipGraph,
+  ProductRelationshipGraphQuery,
+  ProductRelationshipPreview,
+  RelationshipPropagationCandidate,
+  RelationshipPropagationEvent,
+  RelationshipPropagationEventsQuery,
   ProductListQuery,
   Release,
   ReleaseLifecycleTimelineEvent,
@@ -26,8 +37,20 @@ import type {
   SupportAlertIntervals,
   SupportPeriodChangePreview,
   SupersedeSupportPeriodRequest,
+  SoftwareBaseline,
+  SoftwareBaselineReleaseMembership,
+  ProductVariantRelationship,
+  AppendSoftwareBaselineRevisionInput,
+  AssignSoftwareBaselineMembershipInput,
+  EndProductComponentLinkInput,
+  EndProductVariantRelationshipInput,
+  EndSoftwareBaselineMembershipInput,
+  PreviewProductComponentLinkInput,
+  RequestRelationshipReevaluationInput,
+  SupersedeProductComponentLinkInput,
   UpdateSupportAlertIntervalsRequest,
 } from "@repo/contracts/products";
+import { relationshipPropagationQuerySchema } from "@repo/contracts/products";
 
 import type { Result } from "../../common/domain/result";
 import { failure, success } from "../../common/domain/result";
@@ -43,6 +66,10 @@ import type {
   ProductRetentionProjectionPort,
   ProductRetentionReaderPort,
 } from "./product-retention-reader.port";
+import type {
+  ProductRelationshipPropagationCommand,
+  ProductRelationshipResolverPort,
+} from "./product-relationship-reader.port";
 
 export type ProductRepository = Readonly<{
   listProducts(
@@ -206,6 +233,121 @@ export type ProductRepository = Readonly<{
     actorId: string,
     input: UpdateSupportAlertIntervalsRequest,
   ): Promise<SupportAlertIntervalsMutationOutcome>;
+  getRelationshipPropagationCandidates(
+    organizationId: string,
+    actorId: string,
+    query: ProductRelationshipPropagationCommand,
+  ): Promise<RelationshipPropagationCandidatesOutcome>;
+  createSoftwareBaseline(
+    organizationId: string,
+    actorId: string,
+    input: CreateSoftwareBaselineInput,
+  ): Promise<SoftwareBaselineMutationOutcome>;
+  appendSoftwareBaselineRevision(
+    organizationId: string,
+    actorId: string,
+    baselineId: string,
+    input: AppendSoftwareBaselineRevisionInput,
+  ): Promise<SoftwareBaselineMutationOutcome>;
+  getSoftwareBaselineHistory(
+    organizationId: string,
+    actorId: string,
+    baselineId: string,
+  ): Promise<SoftwareBaselineHistoryOutcome>;
+  archiveSoftwareBaseline(
+    organizationId: string,
+    actorId: string,
+    baselineId: string,
+    input: ArchiveSoftwareBaselineInput,
+  ): Promise<SoftwareBaselineMutationOutcome>;
+  assignSoftwareBaselineMembership(
+    organizationId: string,
+    actorId: string,
+    productId: string,
+    input: AssignSoftwareBaselineMembershipInput,
+  ): Promise<SoftwareBaselineMembershipMutationOutcome>;
+  endSoftwareBaselineMembership(
+    organizationId: string,
+    actorId: string,
+    productId: string,
+    membershipId: string,
+    input: EndSoftwareBaselineMembershipInput,
+  ): Promise<SoftwareBaselineMembershipMutationOutcome>;
+  getSoftwareBaselineMemberships(
+    organizationId: string,
+    actorId: string,
+    productId: string,
+    asOf?: string,
+  ): Promise<SoftwareBaselineMembershipsOutcome>;
+  createProductVariantRelationship(
+    organizationId: string,
+    actorId: string,
+    targetProductId: string,
+    input: CreateProductVariantRelationshipInput,
+  ): Promise<ProductRelationshipMutationOutcome<ProductVariantRelationship>>;
+  endProductVariantRelationship(
+    organizationId: string,
+    actorId: string,
+    productId: string,
+    relationshipId: string,
+    input: EndProductVariantRelationshipInput,
+  ): Promise<ProductRelationshipMutationOutcome<ProductVariantRelationship>>;
+  getProductVariantRelationships(
+    organizationId: string,
+    actorId: string,
+    productId: string,
+    asOf?: string,
+  ): Promise<ProductVariantRelationshipsOutcome>;
+  previewProductComponentLink(
+    organizationId: string,
+    actorId: string,
+    parentProductId: string,
+    input: PreviewProductComponentLinkInput,
+  ): Promise<ProductRelationshipPreviewOutcome>;
+  createProductComponentLink(
+    organizationId: string,
+    actorId: string,
+    parentProductId: string,
+    input: CreateProductComponentLinkInput,
+  ): Promise<ProductRelationshipMutationOutcome<ProductComponentLink>>;
+  endProductComponentLink(
+    organizationId: string,
+    actorId: string,
+    productId: string,
+    relationshipId: string,
+    input: EndProductComponentLinkInput,
+  ): Promise<ProductRelationshipMutationOutcome<ProductComponentLink>>;
+  supersedeProductComponentLink(
+    organizationId: string,
+    actorId: string,
+    productId: string,
+    relationshipId: string,
+    input: SupersedeProductComponentLinkInput,
+  ): Promise<ProductRelationshipMutationOutcome<ProductComponentLink>>;
+  getProductComponentLinks(
+    organizationId: string,
+    actorId: string,
+    productId: string,
+    asOf?: string,
+  ): Promise<ProductComponentLinksOutcome>;
+  getProductRelationshipGraph(
+    organizationId: string,
+    actorId: string,
+    productId: string,
+    query: ProductRelationshipGraphQuery,
+  ): Promise<ProductRelationshipGraphOutcome>;
+  getRelationshipPropagationEvents(
+    organizationId: string,
+    actorId: string,
+    productId: string,
+    query: RelationshipPropagationEventsQuery,
+  ): Promise<RelationshipPropagationEventsOutcome>;
+  requestRelationshipReevaluation(
+    organizationId: string,
+    actorId: string,
+    productId: string,
+    input: RequestRelationshipReevaluationInput,
+  ): Promise<RelationshipPropagationEventMutationOutcome>;
 }>;
 
 export const PRODUCT_REPOSITORY = Symbol("PRODUCT_REPOSITORY");
@@ -288,6 +430,103 @@ export type SupportAlertIntervalsOutcome =
 export type SupportAlertIntervalsMutationOutcome =
   | Readonly<{ outcome: "updated"; intervals: SupportAlertIntervals }>
   | Readonly<{ outcome: "conflict" | "not_found" | "invalid_request" }>;
+export type RelationshipPropagationCandidatesOutcome =
+  | Readonly<{
+      outcome: "found";
+      candidates: readonly RelationshipPropagationCandidate[];
+      nextCursor: string | null;
+      graphVersion: number;
+      evaluatedAt: string;
+    }>
+  | Readonly<{ outcome: "conflict" | "not_found" | "invalid_request" }>;
+export type SoftwareBaselineMutationOutcome =
+  | Readonly<{
+      outcome: "created" | "updated" | "archived" | "replayed";
+      baseline: SoftwareBaseline;
+    }>
+  | Readonly<{
+      outcome:
+        | "conflict"
+        | "idempotency_mismatch"
+        | "blocked"
+        | "not_found"
+        | "invalid_request";
+    }>;
+export type SoftwareBaselineHistoryOutcome =
+  | Readonly<{ outcome: "found"; baselines: readonly SoftwareBaseline[] }>
+  | Readonly<{ outcome: "not_found" }>;
+export type SoftwareBaselineMembershipMutationOutcome =
+  | Readonly<{
+      outcome: "created" | "ended" | "replayed";
+      membership: SoftwareBaselineReleaseMembership;
+    }>
+  | Readonly<{
+      outcome:
+        | "conflict"
+        | "idempotency_mismatch"
+        | "blocked"
+        | "not_found"
+        | "invalid_request";
+    }>;
+export type SoftwareBaselineMembershipsOutcome =
+  | Readonly<{
+      outcome: "found";
+      memberships: readonly SoftwareBaselineReleaseMembership[];
+    }>
+  | Readonly<{ outcome: "not_found" }>;
+export type ProductRelationshipMutationOutcome<T> =
+  | Readonly<{
+      outcome: "created" | "ended" | "replayed";
+      relationship: T;
+      graphVersion: number;
+    }>
+  | Readonly<{
+      outcome:
+        | "conflict"
+        | "idempotency_mismatch"
+        | "cycle_detected"
+        | "depth_exceeded"
+        | "blocked"
+        | "not_found"
+        | "invalid_request";
+    }>;
+export type ProductVariantRelationshipsOutcome =
+  | Readonly<{
+      outcome: "found";
+      relationships: readonly ProductVariantRelationship[];
+    }>
+  | Readonly<{ outcome: "not_found" }>;
+export type ProductRelationshipPreviewOutcome =
+  | Readonly<{ outcome: "found"; preview: ProductRelationshipPreview }>
+  | Readonly<{
+      outcome:
+        | "conflict"
+        | "cycle_detected"
+        | "depth_exceeded"
+        | "not_found"
+        | "invalid_request";
+    }>;
+export type ProductComponentLinksOutcome =
+  | Readonly<{
+      outcome: "found";
+      links: readonly ProductComponentLink[];
+    }>
+  | Readonly<{ outcome: "not_found" }>;
+export type ProductRelationshipGraphOutcome =
+  | Readonly<{ outcome: "found"; graph: ProductRelationshipGraph }>
+  | Readonly<{ outcome: "not_found" | "invalid_request" }>;
+export type RelationshipPropagationEventsOutcome =
+  | Readonly<{
+      outcome: "found";
+      events: readonly RelationshipPropagationEvent[];
+      nextCursor: string | null;
+    }>
+  | Readonly<{ outcome: "not_found" | "invalid_request" }>;
+export type RelationshipPropagationEventMutationOutcome =
+  | Readonly<{ outcome: "created"; event: RelationshipPropagationEvent }>
+  | Readonly<{
+      outcome: "conflict" | "blocked" | "not_found" | "invalid_request";
+    }>;
 export type ProductMutationOutcome =
   | Readonly<{
       outcome: "created" | "replayed" | "updated" | "assigned" | "archived";
@@ -344,6 +583,8 @@ export type ProductError = Readonly<{
     | "placed_on_market_date_not_set"
     | "member_state_unavailable"
     | "market_availability_not_found"
+    | "cycle_detected"
+    | "depth_exceeded"
     | "unavailable"
     | "malformed_provider";
   current?: Product | Release;
@@ -357,7 +598,8 @@ export class ProductUseCases
     ReleaseMarketAvailabilityReader,
     ReleaseRegulatoryStateReader,
     ProductRetentionReaderPort,
-    ProductRetentionProjectionPort
+    ProductRetentionProjectionPort,
+    ProductRelationshipResolverPort
 {
   constructor(
     private readonly repository: ProductRepository,
@@ -966,6 +1208,534 @@ export class ProductUseCases
     return this.getProductRetentionCalculation(command);
   }
 
+  async createSoftwareBaseline(
+    command: Readonly<{
+      organizationId: string;
+      actorId: string;
+      input: CreateSoftwareBaselineInput;
+    }>,
+  ): Promise<ProductResult<Readonly<{ baseline: SoftwareBaseline }>>> {
+    try {
+      return this.softwareBaselineMutation(
+        await this.repository.createSoftwareBaseline(
+          command.organizationId,
+          command.actorId,
+          command.input,
+        ),
+      );
+    } catch (error) {
+      return this.providerFailure(error);
+    }
+  }
+
+  async appendSoftwareBaselineRevision(
+    command: Readonly<{
+      organizationId: string;
+      actorId: string;
+      baselineId: string;
+      input: AppendSoftwareBaselineRevisionInput;
+    }>,
+  ): Promise<ProductResult<Readonly<{ baseline: SoftwareBaseline }>>> {
+    try {
+      return this.softwareBaselineMutation(
+        await this.repository.appendSoftwareBaselineRevision(
+          command.organizationId,
+          command.actorId,
+          command.baselineId,
+          command.input,
+        ),
+      );
+    } catch (error) {
+      return this.providerFailure(error);
+    }
+  }
+
+  async getSoftwareBaselineHistory(
+    command: Readonly<{
+      organizationId: string;
+      actorId: string;
+      baselineId: string;
+    }>,
+  ): Promise<
+    ProductResult<Readonly<{ baselines: readonly SoftwareBaseline[] }>>
+  > {
+    try {
+      const outcome = await this.repository.getSoftwareBaselineHistory(
+        command.organizationId,
+        command.actorId,
+        command.baselineId,
+      );
+      return outcome.outcome === "found"
+        ? success(
+            Object.freeze({ baselines: Object.freeze([...outcome.baselines]) }),
+          )
+        : this.notFound();
+    } catch (error) {
+      return this.providerFailure(error);
+    }
+  }
+
+  async archiveSoftwareBaseline(
+    command: Readonly<{
+      organizationId: string;
+      actorId: string;
+      baselineId: string;
+      input: ArchiveSoftwareBaselineInput;
+    }>,
+  ): Promise<ProductResult<Readonly<{ baseline: SoftwareBaseline }>>> {
+    try {
+      return this.softwareBaselineMutation(
+        await this.repository.archiveSoftwareBaseline(
+          command.organizationId,
+          command.actorId,
+          command.baselineId,
+          command.input,
+        ),
+      );
+    } catch (error) {
+      return this.providerFailure(error);
+    }
+  }
+
+  async assignSoftwareBaselineMembership(
+    command: Readonly<{
+      organizationId: string;
+      actorId: string;
+      productId: string;
+      input: AssignSoftwareBaselineMembershipInput;
+    }>,
+  ): Promise<
+    ProductResult<Readonly<{ membership: SoftwareBaselineReleaseMembership }>>
+  > {
+    try {
+      return this.softwareBaselineMembershipMutation(
+        await this.repository.assignSoftwareBaselineMembership(
+          command.organizationId,
+          command.actorId,
+          command.productId,
+          command.input,
+        ),
+      );
+    } catch (error) {
+      return this.providerFailure(error);
+    }
+  }
+
+  async endSoftwareBaselineMembership(
+    command: Readonly<{
+      organizationId: string;
+      actorId: string;
+      productId: string;
+      membershipId: string;
+      input: EndSoftwareBaselineMembershipInput;
+    }>,
+  ): Promise<
+    ProductResult<Readonly<{ membership: SoftwareBaselineReleaseMembership }>>
+  > {
+    try {
+      return this.softwareBaselineMembershipMutation(
+        await this.repository.endSoftwareBaselineMembership(
+          command.organizationId,
+          command.actorId,
+          command.productId,
+          command.membershipId,
+          command.input,
+        ),
+      );
+    } catch (error) {
+      return this.providerFailure(error);
+    }
+  }
+
+  async getSoftwareBaselineMemberships(
+    command: Readonly<{
+      organizationId: string;
+      actorId: string;
+      productId: string;
+      asOf?: string;
+    }>,
+  ): Promise<
+    ProductResult<
+      Readonly<{ memberships: readonly SoftwareBaselineReleaseMembership[] }>
+    >
+  > {
+    try {
+      const outcome = await this.repository.getSoftwareBaselineMemberships(
+        command.organizationId,
+        command.actorId,
+        command.productId,
+        command.asOf,
+      );
+      return outcome.outcome === "found"
+        ? success(
+            Object.freeze({
+              memberships: Object.freeze([...outcome.memberships]),
+            }),
+          )
+        : this.notFound();
+    } catch (error) {
+      return this.providerFailure(error);
+    }
+  }
+
+  async createProductVariantRelationship(
+    command: Readonly<{
+      organizationId: string;
+      actorId: string;
+      targetProductId: string;
+      input: CreateProductVariantRelationshipInput;
+    }>,
+  ): Promise<
+    ProductResult<
+      Readonly<{
+        relationship: ProductVariantRelationship;
+        graphVersion: number;
+      }>
+    >
+  > {
+    if (command.input.variantProductId !== command.targetProductId) {
+      return failure(Object.freeze({ code: "invalid_request" }));
+    }
+    try {
+      return this.productRelationshipMutation(
+        await this.repository.createProductVariantRelationship(
+          command.organizationId,
+          command.actorId,
+          command.targetProductId,
+          command.input,
+        ),
+      );
+    } catch (error) {
+      return this.providerFailure(error);
+    }
+  }
+
+  async endProductVariantRelationship(
+    command: Readonly<{
+      organizationId: string;
+      actorId: string;
+      productId: string;
+      relationshipId: string;
+      input: EndProductVariantRelationshipInput;
+    }>,
+  ): Promise<
+    ProductResult<
+      Readonly<{
+        relationship: ProductVariantRelationship;
+        graphVersion: number;
+      }>
+    >
+  > {
+    try {
+      return this.productRelationshipMutation(
+        await this.repository.endProductVariantRelationship(
+          command.organizationId,
+          command.actorId,
+          command.productId,
+          command.relationshipId,
+          command.input,
+        ),
+      );
+    } catch (error) {
+      return this.providerFailure(error);
+    }
+  }
+
+  async getProductVariantRelationships(
+    command: Readonly<{
+      organizationId: string;
+      actorId: string;
+      productId: string;
+      asOf?: string;
+    }>,
+  ): Promise<
+    ProductResult<
+      Readonly<{ relationships: readonly ProductVariantRelationship[] }>
+    >
+  > {
+    try {
+      const outcome = await this.repository.getProductVariantRelationships(
+        command.organizationId,
+        command.actorId,
+        command.productId,
+        command.asOf,
+      );
+      return outcome.outcome === "found"
+        ? success(
+            Object.freeze({
+              relationships: Object.freeze([...outcome.relationships]),
+            }),
+          )
+        : this.notFound();
+    } catch (error) {
+      return this.providerFailure(error);
+    }
+  }
+
+  async previewProductComponentLink(
+    command: Readonly<{
+      organizationId: string;
+      actorId: string;
+      parentProductId: string;
+      input: PreviewProductComponentLinkInput;
+    }>,
+  ): Promise<ProductResult<Readonly<{ preview: ProductRelationshipPreview }>>> {
+    try {
+      const outcome = await this.repository.previewProductComponentLink(
+        command.organizationId,
+        command.actorId,
+        command.parentProductId,
+        command.input,
+      );
+      return outcome.outcome === "found"
+        ? success(Object.freeze({ preview: outcome.preview }))
+        : failure(
+            Object.freeze({ code: this.mutationErrorCode(outcome.outcome) }),
+          );
+    } catch (error) {
+      return this.providerFailure(error);
+    }
+  }
+
+  async createProductComponentLink(
+    command: Readonly<{
+      organizationId: string;
+      actorId: string;
+      parentProductId: string;
+      input: CreateProductComponentLinkInput;
+    }>,
+  ): Promise<
+    ProductResult<
+      Readonly<{ relationship: ProductComponentLink; graphVersion: number }>
+    >
+  > {
+    try {
+      return this.productRelationshipMutation(
+        await this.repository.createProductComponentLink(
+          command.organizationId,
+          command.actorId,
+          command.parentProductId,
+          command.input,
+        ),
+      );
+    } catch (error) {
+      return this.providerFailure(error);
+    }
+  }
+
+  async endProductComponentLink(
+    command: Readonly<{
+      organizationId: string;
+      actorId: string;
+      productId: string;
+      relationshipId: string;
+      input: EndProductComponentLinkInput;
+    }>,
+  ): Promise<
+    ProductResult<
+      Readonly<{ relationship: ProductComponentLink; graphVersion: number }>
+    >
+  > {
+    try {
+      return this.productRelationshipMutation(
+        await this.repository.endProductComponentLink(
+          command.organizationId,
+          command.actorId,
+          command.productId,
+          command.relationshipId,
+          command.input,
+        ),
+      );
+    } catch (error) {
+      return this.providerFailure(error);
+    }
+  }
+
+  async supersedeProductComponentLink(
+    command: Readonly<{
+      organizationId: string;
+      actorId: string;
+      productId: string;
+      relationshipId: string;
+      input: SupersedeProductComponentLinkInput;
+    }>,
+  ): Promise<
+    ProductResult<
+      Readonly<{ relationship: ProductComponentLink; graphVersion: number }>
+    >
+  > {
+    try {
+      return this.productRelationshipMutation(
+        await this.repository.supersedeProductComponentLink(
+          command.organizationId,
+          command.actorId,
+          command.productId,
+          command.relationshipId,
+          command.input,
+        ),
+      );
+    } catch (error) {
+      return this.providerFailure(error);
+    }
+  }
+
+  async getProductComponentLinks(
+    command: Readonly<{
+      organizationId: string;
+      actorId: string;
+      productId: string;
+      asOf?: string;
+    }>,
+  ): Promise<
+    ProductResult<Readonly<{ links: readonly ProductComponentLink[] }>>
+  > {
+    try {
+      const outcome = await this.repository.getProductComponentLinks(
+        command.organizationId,
+        command.actorId,
+        command.productId,
+        command.asOf,
+      );
+      return outcome.outcome === "found"
+        ? success(Object.freeze({ links: Object.freeze([...outcome.links]) }))
+        : this.notFound();
+    } catch (error) {
+      return this.providerFailure(error);
+    }
+  }
+
+  async getProductRelationshipGraph(
+    command: Readonly<{
+      organizationId: string;
+      actorId: string;
+      productId: string;
+      query: ProductRelationshipGraphQuery;
+    }>,
+  ): Promise<ProductResult<Readonly<{ graph: ProductRelationshipGraph }>>> {
+    try {
+      const outcome = await this.repository.getProductRelationshipGraph(
+        command.organizationId,
+        command.actorId,
+        command.productId,
+        command.query,
+      );
+      return outcome.outcome === "found"
+        ? success(Object.freeze({ graph: outcome.graph }))
+        : failure(Object.freeze({ code: outcome.outcome }));
+    } catch (error) {
+      return this.providerFailure(error);
+    }
+  }
+
+  async getRelationshipPropagationEvents(
+    command: Readonly<{
+      organizationId: string;
+      actorId: string;
+      productId: string;
+      query: RelationshipPropagationEventsQuery;
+    }>,
+  ): Promise<
+    ProductResult<
+      Readonly<{
+        events: readonly RelationshipPropagationEvent[];
+        nextCursor: string | null;
+      }>
+    >
+  > {
+    try {
+      const outcome = await this.repository.getRelationshipPropagationEvents(
+        command.organizationId,
+        command.actorId,
+        command.productId,
+        command.query,
+      );
+      return outcome.outcome === "found"
+        ? success(
+            Object.freeze({
+              events: Object.freeze([...outcome.events]),
+              nextCursor: outcome.nextCursor,
+            }),
+          )
+        : failure(Object.freeze({ code: outcome.outcome }));
+    } catch (error) {
+      return this.providerFailure(error);
+    }
+  }
+
+  async requestRelationshipReevaluation(
+    command: Readonly<{
+      organizationId: string;
+      actorId: string;
+      productId: string;
+      input: RequestRelationshipReevaluationInput;
+    }>,
+  ): Promise<ProductResult<Readonly<{ event: RelationshipPropagationEvent }>>> {
+    try {
+      const outcome = await this.repository.requestRelationshipReevaluation(
+        command.organizationId,
+        command.actorId,
+        command.productId,
+        command.input,
+      );
+      return outcome.outcome === "created"
+        ? success(Object.freeze({ event: outcome.event }))
+        : failure(
+            Object.freeze({ code: this.mutationErrorCode(outcome.outcome) }),
+          );
+    } catch (error) {
+      return this.providerFailure(error);
+    }
+  }
+
+  async getRelationshipPropagationCandidates(
+    command: ProductRelationshipPropagationCommand,
+  ): Promise<
+    ProductResult<
+      Readonly<{
+        candidates: readonly RelationshipPropagationCandidate[];
+        nextCursor: string | null;
+        graphVersion: number;
+        evaluatedAt: string;
+      }>
+    >
+  > {
+    const parsed = relationshipPropagationQuerySchema.safeParse({
+      sourceReleaseId: command.sourceReleaseId,
+      sourceBaselineRevisionId: command.sourceBaselineRevisionId,
+      graphVersion: command.graphVersion,
+      asOf: command.asOf,
+      cursor: command.cursor,
+      pageSize: command.pageSize,
+    });
+    if (!parsed.success) {
+      return failure(Object.freeze({ code: "invalid_request" }));
+    }
+    try {
+      const outcome =
+        await this.repository.getRelationshipPropagationCandidates(
+          command.organizationId,
+          command.actorId,
+          Object.freeze({
+            organizationId: command.organizationId,
+            actorId: command.actorId,
+            ...parsed.data,
+          }),
+        );
+      return outcome.outcome === "found"
+        ? success(
+            Object.freeze({
+              candidates: Object.freeze([...outcome.candidates]),
+              nextCursor: outcome.nextCursor,
+              graphVersion: outcome.graphVersion,
+              evaluatedAt: outcome.evaluatedAt,
+            }),
+          )
+        : failure(Object.freeze({ code: outcome.outcome }));
+    } catch (error) {
+      return this.providerFailure(error);
+    }
+  }
+
   async getSupportAlertHistory(
     command: Readonly<{
       organizationId: string;
@@ -1082,6 +1852,43 @@ export class ProductUseCases
       Object.freeze({ code: this.mutationErrorCode(outcome.outcome) }),
     );
   }
+  private softwareBaselineMutation(
+    outcome: SoftwareBaselineMutationOutcome,
+  ): ProductResult<Readonly<{ baseline: SoftwareBaseline }>> {
+    if ("baseline" in outcome) {
+      return success(Object.freeze({ baseline: outcome.baseline }));
+    }
+    return failure(
+      Object.freeze({ code: this.mutationErrorCode(outcome.outcome) }),
+    );
+  }
+  private softwareBaselineMembershipMutation(
+    outcome: SoftwareBaselineMembershipMutationOutcome,
+  ): ProductResult<
+    Readonly<{ membership: SoftwareBaselineReleaseMembership }>
+  > {
+    if ("membership" in outcome) {
+      return success(Object.freeze({ membership: outcome.membership }));
+    }
+    return failure(
+      Object.freeze({ code: this.mutationErrorCode(outcome.outcome) }),
+    );
+  }
+  private productRelationshipMutation<T>(
+    outcome: ProductRelationshipMutationOutcome<T>,
+  ): ProductResult<Readonly<{ relationship: T; graphVersion: number }>> {
+    if ("relationship" in outcome) {
+      return success(
+        Object.freeze({
+          relationship: outcome.relationship,
+          graphVersion: outcome.graphVersion,
+        }),
+      );
+    }
+    return failure(
+      Object.freeze({ code: this.mutationErrorCode(outcome.outcome) }),
+    );
+  }
   private notFound<T>(): ProductResult<T> {
     return failure(Object.freeze({ code: "not_found" }));
   }
@@ -1106,6 +1913,8 @@ export class ProductUseCases
       case "placed_on_market_date_not_set":
       case "member_state_unavailable":
       case "market_availability_not_found":
+      case "cycle_detected":
+      case "depth_exceeded":
         return outcome;
       default:
         return "unavailable";

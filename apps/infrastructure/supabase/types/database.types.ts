@@ -2408,6 +2408,7 @@ export type Database = {
           mfa_enforcement_date: string | null
           notification_channel_ids: string[] | null
           organization_id: string
+          product_relationship_graph_version: number
           support_alert_intervals: number[]
           support_alert_intervals_updated_at: string
           support_alert_intervals_updated_by: string | null
@@ -2428,6 +2429,7 @@ export type Database = {
           mfa_enforcement_date?: string | null
           notification_channel_ids?: string[] | null
           organization_id: string
+          product_relationship_graph_version?: number
           support_alert_intervals?: number[]
           support_alert_intervals_updated_at?: string
           support_alert_intervals_updated_by?: string | null
@@ -2448,6 +2450,7 @@ export type Database = {
           mfa_enforcement_date?: string | null
           notification_channel_ids?: string[] | null
           organization_id?: string
+          product_relationship_graph_version?: number
           support_alert_intervals?: number[]
           support_alert_intervals_updated_at?: string
           support_alert_intervals_updated_by?: string | null
@@ -2727,6 +2730,7 @@ export type Database = {
           due_at: string | null
           event_key: string
           event_type: string
+          graph_version: number | null
           id: string
           last_delivery_error: string | null
           last_error_code: string | null
@@ -2753,6 +2757,7 @@ export type Database = {
           due_at?: string | null
           event_key: string
           event_type: string
+          graph_version?: number | null
           id?: string
           last_delivery_error?: string | null
           last_error_code?: string | null
@@ -2779,6 +2784,7 @@ export type Database = {
           due_at?: string | null
           event_key?: string
           event_type?: string
+          graph_version?: number | null
           id?: string
           last_delivery_error?: string | null
           last_error_code?: string | null
@@ -2822,6 +2828,189 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "product_support_periods"
             referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      product_relationships: {
+        Row: {
+          baseline_revision_id: string | null
+          created_at: string
+          created_by: string
+          effective_ends_at: string | null
+          effective_starts_at: string
+          end_reason: string | null
+          ended_at: string | null
+          ended_by: string | null
+          graph_version: number
+          id: string
+          idempotency_key: string | null
+          idempotency_request_digest: string | null
+          organization_id: string
+          provenance: string
+          quantity: number | null
+          reason: string
+          relationship_type: string
+          source: string
+          source_product_id: string | null
+          source_release_id: string | null
+          source_type: string | null
+          superseded_by_id: string | null
+          target_product_id: string
+          target_release_id: string | null
+          updated_at: string
+          updated_by: string
+          version: number
+        }
+        Insert: {
+          baseline_revision_id?: string | null
+          created_at?: string
+          created_by: string
+          effective_ends_at?: string | null
+          effective_starts_at: string
+          end_reason?: string | null
+          ended_at?: string | null
+          ended_by?: string | null
+          graph_version: number
+          id?: string
+          idempotency_key?: string | null
+          idempotency_request_digest?: string | null
+          organization_id: string
+          provenance: string
+          quantity?: number | null
+          reason: string
+          relationship_type: string
+          source: string
+          source_product_id?: string | null
+          source_release_id?: string | null
+          source_type?: string | null
+          superseded_by_id?: string | null
+          target_product_id: string
+          target_release_id?: string | null
+          updated_at?: string
+          updated_by: string
+          version?: number
+        }
+        Update: {
+          baseline_revision_id?: string | null
+          created_at?: string
+          created_by?: string
+          effective_ends_at?: string | null
+          effective_starts_at?: string
+          end_reason?: string | null
+          ended_at?: string | null
+          ended_by?: string | null
+          graph_version?: number
+          id?: string
+          idempotency_key?: string | null
+          idempotency_request_digest?: string | null
+          organization_id?: string
+          provenance?: string
+          quantity?: number | null
+          reason?: string
+          relationship_type?: string
+          source?: string
+          source_product_id?: string | null
+          source_release_id?: string | null
+          source_type?: string | null
+          superseded_by_id?: string | null
+          target_product_id?: string
+          target_release_id?: string | null
+          updated_at?: string
+          updated_by?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_relationships_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_relationships_ended_by_fkey"
+            columns: ["ended_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_relationships_organization_id_baseline_revision_id_fkey"
+            columns: ["organization_id", "baseline_revision_id"]
+            isOneToOne: false
+            referencedRelation: "software_baselines"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "product_relationships_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_relationships_organization_id_source_product_id_fkey"
+            columns: ["organization_id", "source_product_id"]
+            isOneToOne: false
+            referencedRelation: "product_retention_alert_operations"
+            referencedColumns: ["organization_id", "product_id"]
+          },
+          {
+            foreignKeyName: "product_relationships_organization_id_source_product_id_fkey"
+            columns: ["organization_id", "source_product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "product_relationships_organization_id_source_product_id_so_fkey"
+            columns: [
+              "organization_id",
+              "source_product_id",
+              "source_release_id",
+            ]
+            isOneToOne: false
+            referencedRelation: "product_releases"
+            referencedColumns: ["organization_id", "product_id", "id"]
+          },
+          {
+            foreignKeyName: "product_relationships_organization_id_superseded_by_id_fkey"
+            columns: ["organization_id", "superseded_by_id"]
+            isOneToOne: false
+            referencedRelation: "product_relationships"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "product_relationships_organization_id_target_product_id_fkey"
+            columns: ["organization_id", "target_product_id"]
+            isOneToOne: false
+            referencedRelation: "product_retention_alert_operations"
+            referencedColumns: ["organization_id", "product_id"]
+          },
+          {
+            foreignKeyName: "product_relationships_organization_id_target_product_id_fkey"
+            columns: ["organization_id", "target_product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "product_relationships_organization_id_target_product_id_ta_fkey"
+            columns: [
+              "organization_id",
+              "target_product_id",
+              "target_release_id",
+            ]
+            isOneToOne: false
+            referencedRelation: "product_releases"
+            referencedColumns: ["organization_id", "product_id", "id"]
+          },
+          {
+            foreignKeyName: "product_relationships_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -3654,6 +3843,231 @@ export type Database = {
           },
         ]
       }
+      software_baseline_release_memberships: {
+        Row: {
+          assigned_at: string
+          assigned_by: string
+          baseline_id: string
+          baseline_revision_id: string
+          created_at: string
+          effective_ends_at: string | null
+          effective_starts_at: string
+          end_reason: string | null
+          ended_at: string | null
+          ended_by: string | null
+          id: string
+          idempotency_key: string | null
+          idempotency_request_digest: string | null
+          organization_id: string
+          product_id: string
+          provenance: string
+          release_id: string
+          source: string
+          updated_at: string
+          updated_by: string
+          version: number
+        }
+        Insert: {
+          assigned_at?: string
+          assigned_by: string
+          baseline_id: string
+          baseline_revision_id: string
+          created_at?: string
+          effective_ends_at?: string | null
+          effective_starts_at: string
+          end_reason?: string | null
+          ended_at?: string | null
+          ended_by?: string | null
+          id?: string
+          idempotency_key?: string | null
+          idempotency_request_digest?: string | null
+          organization_id: string
+          product_id: string
+          provenance: string
+          release_id: string
+          source: string
+          updated_at?: string
+          updated_by: string
+          version?: number
+        }
+        Update: {
+          assigned_at?: string
+          assigned_by?: string
+          baseline_id?: string
+          baseline_revision_id?: string
+          created_at?: string
+          effective_ends_at?: string | null
+          effective_starts_at?: string
+          end_reason?: string | null
+          ended_at?: string | null
+          ended_by?: string | null
+          id?: string
+          idempotency_key?: string | null
+          idempotency_request_digest?: string | null
+          organization_id?: string
+          product_id?: string
+          provenance?: string
+          release_id?: string
+          source?: string
+          updated_at?: string
+          updated_by?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "software_baseline_release_mem_organization_id_baseline_rev_fkey"
+            columns: ["organization_id", "baseline_revision_id", "baseline_id"]
+            isOneToOne: false
+            referencedRelation: "software_baselines"
+            referencedColumns: ["organization_id", "id", "baseline_id"]
+          },
+          {
+            foreignKeyName: "software_baseline_release_mem_organization_id_product_id_r_fkey"
+            columns: ["organization_id", "product_id", "release_id"]
+            isOneToOne: false
+            referencedRelation: "product_releases"
+            referencedColumns: ["organization_id", "product_id", "id"]
+          },
+          {
+            foreignKeyName: "software_baseline_release_memberships_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "software_baseline_release_memberships_ended_by_fkey"
+            columns: ["ended_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "software_baseline_release_memberships_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "software_baseline_release_memberships_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      software_baselines: {
+        Row: {
+          archive_reason: string | null
+          archived_at: string | null
+          archived_by: string | null
+          baseline_id: string
+          created_at: string
+          created_by: string
+          description: string | null
+          effective_ends_at: string | null
+          effective_starts_at: string
+          id: string
+          idempotency_key: string | null
+          idempotency_request_digest: string | null
+          identifier: string
+          identifier_normalized: string | null
+          is_current: boolean
+          name: string
+          organization_id: string
+          provenance: string
+          revision_number: number
+          revision_summary: string
+          source: string
+          updated_at: string
+          updated_by: string
+          version: number
+        }
+        Insert: {
+          archive_reason?: string | null
+          archived_at?: string | null
+          archived_by?: string | null
+          baseline_id: string
+          created_at?: string
+          created_by: string
+          description?: string | null
+          effective_ends_at?: string | null
+          effective_starts_at: string
+          id?: string
+          idempotency_key?: string | null
+          idempotency_request_digest?: string | null
+          identifier: string
+          identifier_normalized?: string | null
+          is_current?: boolean
+          name: string
+          organization_id: string
+          provenance: string
+          revision_number: number
+          revision_summary: string
+          source: string
+          updated_at?: string
+          updated_by: string
+          version?: number
+        }
+        Update: {
+          archive_reason?: string | null
+          archived_at?: string | null
+          archived_by?: string | null
+          baseline_id?: string
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          effective_ends_at?: string | null
+          effective_starts_at?: string
+          id?: string
+          idempotency_key?: string | null
+          idempotency_request_digest?: string | null
+          identifier?: string
+          identifier_normalized?: string | null
+          is_current?: boolean
+          name?: string
+          organization_id?: string
+          provenance?: string
+          revision_number?: number
+          revision_summary?: string
+          source?: string
+          updated_at?: string
+          updated_by?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "software_baselines_archived_by_fkey"
+            columns: ["archived_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "software_baselines_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "software_baselines_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "software_baselines_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tenant_settings_catalog: {
         Row: {
           category: string
@@ -3822,6 +4236,23 @@ export type Database = {
       }
     }
     Views: {
+      m2_product_relationship_operations: {
+        Row: {
+          active_component_links: number | null
+          active_variant_relationships: number | null
+          historical_relationships: number | null
+          organization_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_relationships_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       product_retention_alert_operations: {
         Row: {
           current_alert_lag: string | null
@@ -3870,6 +4301,27 @@ export type Database = {
           release: Json
         }[]
       }
+      append_software_baseline_revision_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_baseline_id: string
+          p_correlation_id: string
+          p_description: string
+          p_effective_ends_at: string
+          p_effective_starts_at: string
+          p_expected_version: number
+          p_idempotency_key: string
+          p_name: string
+          p_organization_id: string
+          p_provenance: string
+          p_revision_summary: string
+          p_source: string
+        }
+        Returns: {
+          baseline: Json
+          outcome: string
+        }[]
+      }
       archive_product_atomic: {
         Args: {
           p_actor_user_id: string
@@ -3897,6 +4349,20 @@ export type Database = {
           release: Json
         }[]
       }
+      archive_software_baseline_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_baseline_id: string
+          p_correlation_id: string
+          p_expected_version: number
+          p_organization_id: string
+          p_reason: string
+        }
+        Returns: {
+          baseline: Json
+          outcome: string
+        }[]
+      }
       assign_product_legal_entity_atomic: {
         Args: {
           p_actor_user_id: string
@@ -3909,6 +4375,27 @@ export type Database = {
         Returns: {
           outcome: string
           product: Json
+        }[]
+      }
+      assign_software_baseline_membership_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_baseline_id: string
+          p_baseline_revision_id: string
+          p_correlation_id: string
+          p_effective_ends_at: string
+          p_effective_starts_at: string
+          p_expected_baseline_version: number
+          p_idempotency_key: string
+          p_organization_id: string
+          p_product_id: string
+          p_provenance: string
+          p_release_id: string
+          p_source: string
+        }
+        Returns: {
+          membership: Json
+          outcome: string
         }[]
       }
       backfill_organization_legal_entities: { Args: never; Returns: undefined }
@@ -4206,6 +4693,30 @@ export type Database = {
           product: Json
         }[]
       }
+      create_product_component_link_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_component_product_id: string
+          p_component_release_id: string
+          p_correlation_id: string
+          p_effective_ends_at: string
+          p_effective_starts_at: string
+          p_expected_graph_version: number
+          p_idempotency_key: string
+          p_organization_id: string
+          p_parent_product_id: string
+          p_parent_release_id: string
+          p_provenance: string
+          p_quantity: number
+          p_reason: string
+          p_source: string
+        }
+        Returns: {
+          graph_version: number
+          outcome: string
+          relationship: Json
+        }[]
+      }
       create_product_release_atomic: {
         Args: {
           p_actor_user_id: string
@@ -4238,6 +4749,49 @@ export type Database = {
           support_period: Json
         }[]
       }
+      create_product_variant_relationship_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_base_release_id: string
+          p_baseline_revision_id: string
+          p_correlation_id: string
+          p_effective_ends_at: string
+          p_effective_starts_at: string
+          p_expected_graph_version: number
+          p_idempotency_key: string
+          p_organization_id: string
+          p_provenance: string
+          p_reason: string
+          p_source: string
+          p_variant_product_id: string
+          p_variant_release_id: string
+        }
+        Returns: {
+          graph_version: number
+          outcome: string
+          relationship: Json
+        }[]
+      }
+      create_software_baseline_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_correlation_id: string
+          p_description: string
+          p_effective_ends_at: string
+          p_effective_starts_at: string
+          p_idempotency_key: string
+          p_identifier: string
+          p_name: string
+          p_organization_id: string
+          p_provenance: string
+          p_revision_summary: string
+          p_source: string
+        }
+        Returns: {
+          baseline: Json
+          outcome: string
+        }[]
+      }
       deactivate_organization_atomic: {
         Args: {
           p_actor_user_id: string
@@ -4249,6 +4803,58 @@ export type Database = {
         }
         Returns: {
           lifecycle: Json
+          outcome: string
+        }[]
+      }
+      end_product_component_link_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_correlation_id: string
+          p_effective_ends_at: string
+          p_expected_graph_version: number
+          p_expected_version: number
+          p_organization_id: string
+          p_product_id: string
+          p_reason: string
+          p_relationship_id: string
+        }
+        Returns: {
+          graph_version: number
+          outcome: string
+          relationship: Json
+        }[]
+      }
+      end_product_variant_relationship_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_correlation_id: string
+          p_effective_ends_at: string
+          p_expected_graph_version: number
+          p_expected_version: number
+          p_organization_id: string
+          p_product_id: string
+          p_reason: string
+          p_relationship_id: string
+        }
+        Returns: {
+          graph_version: number
+          outcome: string
+          relationship: Json
+        }[]
+      }
+      end_software_baseline_membership_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_correlation_id: string
+          p_effective_ends_at: string
+          p_expected_version: number
+          p_membership_id: string
+          p_organization_id: string
+          p_product_id: string
+          p_reason: string
+        }
+        Returns: {
+          membership: Json
           outcome: string
         }[]
       }
@@ -4486,6 +5092,63 @@ export type Database = {
           product: Json
         }[]
       }
+      get_product_component_links: {
+        Args: {
+          p_actor_user_id: string
+          p_as_of?: string
+          p_organization_id: string
+          p_product_id: string
+        }
+        Returns: {
+          links: Json
+          outcome: string
+        }[]
+      }
+      get_product_relationship_graph: {
+        Args: {
+          p_actor_user_id: string
+          p_as_of: string
+          p_include_ended: boolean
+          p_max_depth: number
+          p_organization_id: string
+          p_product_id: string
+          p_root_release_id: string
+        }
+        Returns: {
+          graph: Json
+          outcome: string
+        }[]
+      }
+      get_product_relationship_propagation_candidates: {
+        Args: {
+          p_actor_user_id: string
+          p_as_of: string
+          p_cursor: string
+          p_graph_version: number
+          p_organization_id: string
+          p_page_size: number
+          p_source_baseline_revision_id: string
+          p_source_release_id: string
+        }
+        Returns: {
+          candidates: Json
+          outcome: string
+        }[]
+      }
+      get_product_relationship_propagation_events: {
+        Args: {
+          p_actor_user_id: string
+          p_cursor: string
+          p_delivery_state: string
+          p_organization_id: string
+          p_page_size: number
+          p_product_id: string
+        }
+        Returns: {
+          events: Json
+          outcome: string
+        }[]
+      }
       get_product_release: {
         Args: {
           p_actor_user_id: string
@@ -4540,6 +5203,18 @@ export type Database = {
           outcome: string
         }[]
       }
+      get_product_software_baseline_memberships: {
+        Args: {
+          p_actor_user_id: string
+          p_as_of?: string
+          p_organization_id: string
+          p_product_id: string
+        }
+        Returns: {
+          memberships: Json
+          outcome: string
+        }[]
+      }
       get_product_support_alert_history: {
         Args: {
           p_actor_user_id: string
@@ -4574,6 +5249,29 @@ export type Database = {
         Returns: {
           outcome: string
           support_periods: Json
+        }[]
+      }
+      get_product_variant_relationships: {
+        Args: {
+          p_actor_user_id: string
+          p_as_of?: string
+          p_organization_id: string
+          p_product_id: string
+        }
+        Returns: {
+          outcome: string
+          relationships: Json
+        }[]
+      }
+      get_software_baseline_history: {
+        Args: {
+          p_actor_user_id: string
+          p_baseline_id: string
+          p_organization_id: string
+        }
+        Returns: {
+          baselines: Json
+          outcome: string
         }[]
       }
       is_iso_3166_alpha_2: { Args: { p_country: string }; Returns: boolean }
@@ -4804,6 +5502,27 @@ export type Database = {
         }
         Returns: undefined
       }
+      m2_baseline_membership_json: {
+        Args: {
+          p_membership: Database["public"]["Tables"]["software_baseline_release_memberships"]["Row"]
+        }
+        Returns: Json
+      }
+      m2_bump_relationship_graph: {
+        Args: { p_actor_user_id: string; p_organization_id: string }
+        Returns: number
+      }
+      m2_component_link_preview: {
+        Args: {
+          p_component_product_id: string
+          p_effective_at: string
+          p_excluding_relationship_id?: string
+          p_graph_version: number
+          p_organization_id: string
+          p_parent_product_id: string
+        }
+        Returns: Json
+      }
       m2_emit_product_regulatory_event: {
         Args: {
           p_correlation_id: string
@@ -4815,6 +5534,17 @@ export type Database = {
           p_release_version: number
         }
         Returns: string
+      }
+      m2_lock_relationship_graph: {
+        Args: {
+          p_actor_user_id: string
+          p_expected_graph_version: number
+          p_organization_id: string
+        }
+        Returns: {
+          graph_version: number
+          outcome: string
+        }[]
       }
       m2_market_availability_item_json: {
         Args: {
@@ -4834,6 +5564,12 @@ export type Database = {
       m2_parse_utc_z: { Args: { p_value: string }; Returns: string }
       m2_product_json: {
         Args: { p_organization_id: string; p_product_id: string }
+        Returns: Json
+      }
+      m2_product_relationship_json: {
+        Args: {
+          p_relationship: Database["public"]["Tables"]["product_relationships"]["Row"]
+        }
         Returns: Json
       }
       m2_read_product_retention_calculation: {
@@ -4866,6 +5602,25 @@ export type Database = {
         }
         Returns: undefined
       }
+      m2_relationship_digest: { Args: { p_payload: Json }; Returns: string }
+      m2_relationship_graph_event_atomic: {
+        Args: {
+          p_correlation_id: string
+          p_graph_version: number
+          p_organization_id: string
+          p_payload: Json
+          p_product_id: string
+          p_subject_id: string
+          p_subject_kind: string
+        }
+        Returns: undefined
+      }
+      m2_relationship_outbox_event_json: {
+        Args: {
+          p_event: Database["public"]["Tables"]["product_regulatory_outbox_events"]["Row"]
+        }
+        Returns: Json
+      }
       m2_release_json: {
         Args: { p_organization_id: string; p_release_id: string }
         Returns: Json
@@ -4886,6 +5641,12 @@ export type Database = {
           p_product_id: string
         }
         Returns: undefined
+      }
+      m2_software_baseline_json: {
+        Args: {
+          p_baseline: Database["public"]["Tables"]["software_baselines"]["Row"]
+        }
+        Returns: Json
       }
       m2_support_period_command_digest: {
         Args: { p_payload: Json }
@@ -4928,6 +5689,27 @@ export type Database = {
         Returns: {
           checkpoint_version: number
           outcome: string
+        }[]
+      }
+      preview_product_component_link: {
+        Args: {
+          p_actor_user_id: string
+          p_component_product_id: string
+          p_component_release_id: string
+          p_effective_ends_at: string
+          p_effective_starts_at: string
+          p_expected_graph_version: number
+          p_organization_id: string
+          p_parent_product_id: string
+          p_parent_release_id: string
+          p_provenance: string
+          p_quantity: number
+          p_reason: string
+          p_source: string
+        }
+        Returns: {
+          outcome: string
+          preview: Json
         }[]
       }
       preview_product_support_period_change: {
@@ -5139,6 +5921,23 @@ export type Database = {
           outcome: string
         }[]
       }
+      request_product_relationship_reevaluation_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_correlation_id: string
+          p_expected_graph_version: number
+          p_idempotency_key: string
+          p_organization_id: string
+          p_product_id: string
+          p_provenance: string
+          p_reason: string
+          p_source: string
+        }
+        Returns: {
+          event: Json
+          outcome: string
+        }[]
+      }
       resend_invitation_atomic: {
         Args: {
           p_actor_email: string
@@ -5230,6 +6029,32 @@ export type Database = {
           lifecycle: Json
           outcome: string
           purge_job_id: string
+        }[]
+      }
+      supersede_product_component_link_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_component_product_id: string
+          p_component_release_id: string
+          p_correlation_id: string
+          p_effective_ends_at: string
+          p_effective_starts_at: string
+          p_expected_graph_version: number
+          p_expected_version: number
+          p_idempotency_key: string
+          p_organization_id: string
+          p_parent_release_id: string
+          p_product_id: string
+          p_provenance: string
+          p_quantity: number
+          p_reason: string
+          p_relationship_id: string
+          p_source: string
+        }
+        Returns: {
+          graph_version: number
+          outcome: string
+          relationship: Json
         }[]
       }
       supersede_product_support_period_atomic: {

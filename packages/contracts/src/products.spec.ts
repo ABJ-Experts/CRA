@@ -33,6 +33,13 @@ import {
   updateSupportAlertIntervalsRequestSchema,
   updateProductInputSchema,
   updateReleaseInputSchema,
+  appendSoftwareBaselineRevisionInputSchema,
+  assignSoftwareBaselineMembershipInputSchema,
+  createProductComponentLinkInputSchema,
+  createProductVariantRelationshipInputSchema,
+  createSoftwareBaselineInputSchema,
+  productComponentLinkSchema,
+  relationshipPropagationQuerySchema,
 } from "./products.js";
 import type {
   CreateProductInput,
@@ -637,5 +644,186 @@ describe("product support period and retention contracts", () => {
           "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
       }),
     ).toMatchObject({ proposed: { supportEndsAt } });
+  });
+});
+
+describe("product relationship contracts", () => {
+  const productId = "77777777-7777-4777-8777-777777777777";
+  const releaseId = "88888888-8888-4888-8888-888888888888";
+  const baselineId = "99999999-9999-4999-8999-999999999999";
+  const revisionId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+  const occurredAt = "2026-08-13T10:15:30.000Z";
+  const effectiveEndsAt = "2026-09-13T10:15:30.000Z";
+
+  it("requires a stable baseline identifier, provenance, and a strict UTC interval", () => {
+    expect(
+      createSoftwareBaselineInputSchema.parse({
+        identifier: "BASE-001",
+        name: "Shared firmware baseline",
+        revisionSummary: "Initial approved firmware composition",
+        source: "Supplier-approved component manifest",
+        provenance: "PROC-42 / signed supplier release",
+        effectiveStartsAt: occurredAt,
+        idempotencyKey: ids.key,
+      }),
+    ).toMatchObject({ identifier: "BASE-001", effectiveStartsAt: occurredAt });
+    expect(
+      appendSoftwareBaselineRevisionInputSchema.safeParse({
+        name: "Shared firmware baseline",
+        revisionSummary: "Impossible historic revision",
+        source: "Supplier manifest",
+        provenance: "PROC-42",
+        effectiveStartsAt: effectiveEndsAt,
+        effectiveEndsAt: occurredAt,
+        expectedVersion: 3,
+        idempotencyKey: ids.key,
+      }).success,
+    ).toBe(false);
+    expect(
+      createSoftwareBaselineInputSchema.safeParse({
+        identifier: "BASE-001",
+        name: "Shared firmware baseline",
+        revisionSummary: "Initial approved firmware composition",
+        source: "Supplier-approved component manifest",
+        provenance: "PROC-42 / signed supplier release",
+        effectiveStartsAt: "2026-08-13T15:45:30.000+05:30",
+        idempotencyKey: ids.key,
+      }).success,
+    ).toBe(false);
+  });
+
+  it("requires memberships to retain a selected revision and valid effective interval", () => {
+    expect(
+      assignSoftwareBaselineMembershipInputSchema.parse({
+        releaseId,
+        baselineId,
+        baselineRevisionId: revisionId,
+        expectedBaselineVersion: 2,
+        source: "Approved release integration record",
+        provenance: "REL-100",
+        effectiveStartsAt: occurredAt,
+        effectiveEndsAt,
+        idempotencyKey: ids.key,
+      }),
+    ).toMatchObject({ baselineRevisionId: revisionId });
+    expect(
+      assignSoftwareBaselineMembershipInputSchema.safeParse({
+        releaseId,
+        baselineId,
+        expectedBaselineVersion: 2,
+        source: "Approved release integration record",
+        provenance: "REL-100",
+        effectiveStartsAt: occurredAt,
+        idempotencyKey: ids.key,
+      }).success,
+    ).toBe(false);
+  });
+
+  it("enforces exactly one variant source and the required variant release", () => {
+    const input = {
+      sourceType: "base_release",
+      baseReleaseId: releaseId,
+      variantProductId: productId,
+      variantReleaseId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      source: "Engineering approved variant relation",
+      provenance: "ENG-22",
+      reason: "Shares a verified base release",
+      effectiveStartsAt: occurredAt,
+      expectedGraphVersion: 4,
+      idempotencyKey: ids.key,
+    } as const;
+    expect(
+      createProductVariantRelationshipInputSchema.parse(input),
+    ).toMatchObject({ baseReleaseId: releaseId });
+    expect(
+      createProductVariantRelationshipInputSchema.safeParse({
+        ...input,
+        baselineRevisionId: revisionId,
+      }).success,
+    ).toBe(false);
+    expect(
+      createProductVariantRelationshipInputSchema.safeParse({
+        ...input,
+        variantReleaseId: undefined,
+      }).success,
+    ).toBe(false);
+  });
+
+  it("rejects malformed component scopes, self links, and unbounded quantities", () => {
+    const component = {
+      componentProductId: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      quantity: 2,
+      source: "Assembly bill of materials",
+      provenance: "BOM-9",
+      reason: "Embedded safety processor",
+      effectiveStartsAt: occurredAt,
+      expectedGraphVersion: 3,
+      idempotencyKey: ids.key,
+    } as const;
+    expect(
+      createProductComponentLinkInputSchema.parse(component),
+    ).toMatchObject({
+      quantity: 2,
+    });
+    expect(
+      createProductComponentLinkInputSchema.safeParse({
+        ...component,
+        quantity: 0,
+      }).success,
+    ).toBe(false);
+    expect(
+      createProductComponentLinkInputSchema.safeParse({
+        ...component,
+        unknown: true,
+      }).success,
+    ).toBe(false);
+    expect(
+      productComponentLinkSchema.safeParse({
+        id: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+        organizationId: ids.owner,
+        relationshipType: "embedded",
+        parentProductId: productId,
+        componentProductId: productId,
+        parentReleaseId: null,
+        componentReleaseId: null,
+        quantity: 1,
+        source: "Assembly bill of materials",
+        provenance: "BOM-9",
+        reason: "Embedded safety processor",
+        effectiveStartsAt: occurredAt,
+        effectiveEndsAt: null,
+        createdAt: occurredAt,
+        createdBy: ids.owner,
+        endedAt: null,
+        endedBy: null,
+        endReason: null,
+        version: 0,
+      }).success,
+    ).toBe(false);
+  });
+
+  it("bounds and validates propagation cursors with exactly one opaque source", () => {
+    expect(
+      relationshipPropagationQuerySchema.parse({
+        sourceReleaseId: releaseId,
+        graphVersion: 3,
+        cursor: "next-page",
+        pageSize: "25",
+      }),
+    ).toMatchObject({ sourceReleaseId: releaseId, pageSize: 25 });
+    expect(
+      relationshipPropagationQuerySchema.safeParse({
+        sourceReleaseId: releaseId,
+        sourceBaselineRevisionId: revisionId,
+        graphVersion: 3,
+      }).success,
+    ).toBe(false);
+    expect(
+      relationshipPropagationQuerySchema.safeParse({
+        sourceReleaseId: releaseId,
+        graphVersion: 3,
+        cursor: "",
+      }).success,
+    ).toBe(false);
   });
 });

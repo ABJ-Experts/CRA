@@ -2,6 +2,15 @@ import { randomUUID } from "node:crypto";
 import { Injectable } from "@nestjs/common";
 import {
   memberStatesResponseSchema,
+  productComponentLinkResponseSchema,
+  productComponentLinksResponseSchema,
+  productRelationshipGraphResponseSchema,
+  productRelationshipPreviewResponseSchema,
+  relationshipPropagationCandidatesResponseSchema,
+  relationshipPropagationEventsResponseSchema,
+  requestRelationshipReevaluationResponseSchema,
+  productVariantRelationshipResponseSchema,
+  productVariantRelationshipsResponseSchema,
   productResponseSchema,
   productsResponseSchema,
   releaseLifecycleTimelineResponseSchema,
@@ -14,21 +23,36 @@ import {
   supportPeriodChangePreviewResponseSchema,
   supportPeriodHistoryResponseSchema,
   supportPeriodResponseSchema,
+  softwareBaselineResponseSchema,
+  softwareBaselinesResponseSchema,
+  softwareBaselineMembershipsResponseSchema,
+  softwareBaselineMembershipResponseSchema,
+  type ArchiveSoftwareBaselineInput,
   type AddReleaseMarketAvailabilityInput,
   type ArchiveProductInput,
   type ArchiveReleaseInput,
   type CorrectPlacedOnMarketDateInput,
   type CorrectReleaseMarketAvailabilityInput,
   type CreateProductInput,
+  type CreateProductComponentLinkInput,
+  type CreateProductVariantRelationshipInput,
   type CreateReleaseInput,
+  type CreateSoftwareBaselineInput,
   type MemberStateReference,
   type MoveProductLegalEntityInput,
   type Product,
+  type ProductComponentLink,
+  type ProductRelationshipGraph,
+  type ProductRelationshipGraphQuery,
+  type ProductRelationshipPreview,
+  type ProductVariantRelationship,
   type ProductListQuery,
   type Release,
   type ReleaseLifecycleTimelineEvent,
   type ReleaseMarketAvailability,
   type ReleaseListQuery,
+  type RelationshipPropagationEvent,
+  type RelationshipPropagationEventsQuery,
   type RemoveReleaseMarketAvailabilityInput,
   type TransitionReleaseLifecycleInput,
   type UpdateProductInput,
@@ -42,6 +66,16 @@ import {
   type SupportPeriodChangePreview,
   type SupersedeSupportPeriodRequest,
   type UpdateSupportAlertIntervalsRequest,
+  type SoftwareBaseline,
+  type SoftwareBaselineReleaseMembership,
+  type AppendSoftwareBaselineRevisionInput,
+  type AssignSoftwareBaselineMembershipInput,
+  type EndProductComponentLinkInput,
+  type EndProductVariantRelationshipInput,
+  type EndSoftwareBaselineMembershipInput,
+  type PreviewProductComponentLinkInput,
+  type RequestRelationshipReevaluationInput,
+  type SupersedeProductComponentLinkInput,
 } from "@repo/contracts/products";
 
 import { SupabaseService } from "../../supabase/supabase.service";
@@ -56,7 +90,20 @@ import type {
   SupportPeriodMutationOutcome,
   SupportPeriodPreviewOutcome,
   ProductRetentionOutcome,
+  ProductComponentLinksOutcome,
+  ProductRelationshipGraphOutcome,
+  ProductRelationshipMutationOutcome,
+  ProductRelationshipPreviewOutcome,
+  ProductVariantRelationshipsOutcome,
+  RelationshipPropagationCandidatesOutcome,
+  RelationshipPropagationEventsOutcome,
+  RelationshipPropagationEventMutationOutcome,
+  SoftwareBaselineHistoryOutcome,
+  SoftwareBaselineMembershipMutationOutcome,
+  SoftwareBaselineMembershipsOutcome,
+  SoftwareBaselineMutationOutcome,
 } from "../application/product-use-cases";
+import type { ProductRelationshipPropagationCommand } from "../application/product-relationship-reader.port";
 
 type ProviderRow = Readonly<Record<string, unknown>>;
 type ProviderResult = Readonly<{
@@ -108,6 +155,39 @@ const SUPPORT_MUTATION_OUTCOMES = new Set([
   "superseded",
   "conflict",
   "idempotency_mismatch",
+  "blocked",
+  "not_found",
+  "invalid_request",
+]);
+const BASELINE_MUTATION_OUTCOMES = new Set([
+  "created",
+  "updated",
+  "archived",
+  "replayed",
+  "conflict",
+  "idempotency_mismatch",
+  "blocked",
+  "not_found",
+  "invalid_request",
+]);
+const BASELINE_MEMBERSHIP_MUTATION_OUTCOMES = new Set([
+  "created",
+  "ended",
+  "replayed",
+  "conflict",
+  "idempotency_mismatch",
+  "blocked",
+  "not_found",
+  "invalid_request",
+]);
+const PRODUCT_RELATIONSHIP_MUTATION_OUTCOMES = new Set([
+  "created",
+  "ended",
+  "replayed",
+  "conflict",
+  "idempotency_mismatch",
+  "cycle_detected",
+  "depth_exceeded",
   "blocked",
   "not_found",
   "invalid_request",
@@ -698,6 +778,543 @@ export class SupabaseProductRepository implements ProductRepository {
         });
   }
 
+  async createSoftwareBaseline(
+    organizationId: string,
+    actorId: string,
+    input: CreateSoftwareBaselineInput,
+  ): Promise<SoftwareBaselineMutationOutcome> {
+    const row = await this.singleRpc(
+      "create_software_baseline_atomic",
+      Object.freeze({
+        p_organization_id: organizationId,
+        p_actor_user_id: actorId,
+        p_identifier: input.identifier,
+        p_name: input.name,
+        p_description: input.description ?? null,
+        p_revision_summary: input.revisionSummary,
+        p_source: input.source,
+        p_provenance: input.provenance,
+        p_effective_starts_at: input.effectiveStartsAt,
+        p_effective_ends_at: input.effectiveEndsAt ?? null,
+        p_idempotency_key: input.idempotencyKey,
+        p_correlation_id: randomUUID(),
+      }),
+    );
+    return this.softwareBaselineMutation(row);
+  }
+
+  async appendSoftwareBaselineRevision(
+    organizationId: string,
+    actorId: string,
+    baselineId: string,
+    input: AppendSoftwareBaselineRevisionInput,
+  ): Promise<SoftwareBaselineMutationOutcome> {
+    const row = await this.singleRpc(
+      "append_software_baseline_revision_atomic",
+      Object.freeze({
+        p_organization_id: organizationId,
+        p_baseline_id: baselineId,
+        p_actor_user_id: actorId,
+        p_expected_version: input.expectedVersion,
+        p_name: input.name,
+        p_description: input.description ?? null,
+        p_revision_summary: input.revisionSummary,
+        p_source: input.source,
+        p_provenance: input.provenance,
+        p_effective_starts_at: input.effectiveStartsAt,
+        p_effective_ends_at: input.effectiveEndsAt ?? null,
+        p_idempotency_key: input.idempotencyKey,
+        p_correlation_id: randomUUID(),
+      }),
+    );
+    return this.softwareBaselineMutation(row);
+  }
+
+  async getSoftwareBaselineHistory(
+    organizationId: string,
+    actorId: string,
+    baselineId: string,
+  ): Promise<SoftwareBaselineHistoryOutcome> {
+    const row = await this.singleRpc(
+      "get_software_baseline_history",
+      Object.freeze({
+        p_organization_id: organizationId,
+        p_baseline_id: baselineId,
+        p_actor_user_id: actorId,
+      }),
+    );
+    if (this.outcome(row, new Set(["found", "not_found"])) === "not_found") {
+      return Object.freeze({ outcome: "not_found" });
+    }
+    return Object.freeze({
+      outcome: "found",
+      baselines: this.baselines(row.baselines),
+    });
+  }
+
+  async archiveSoftwareBaseline(
+    organizationId: string,
+    actorId: string,
+    baselineId: string,
+    input: ArchiveSoftwareBaselineInput,
+  ): Promise<SoftwareBaselineMutationOutcome> {
+    const row = await this.singleRpc(
+      "archive_software_baseline_atomic",
+      Object.freeze({
+        p_organization_id: organizationId,
+        p_baseline_id: baselineId,
+        p_actor_user_id: actorId,
+        p_expected_version: input.expectedVersion,
+        p_reason: input.reason,
+        p_correlation_id: randomUUID(),
+      }),
+    );
+    return this.softwareBaselineMutation(row);
+  }
+
+  async assignSoftwareBaselineMembership(
+    organizationId: string,
+    actorId: string,
+    productId: string,
+    input: AssignSoftwareBaselineMembershipInput,
+  ): Promise<SoftwareBaselineMembershipMutationOutcome> {
+    const row = await this.singleRpc(
+      "assign_software_baseline_membership_atomic",
+      Object.freeze({
+        p_organization_id: organizationId,
+        p_product_id: productId,
+        p_baseline_id: input.baselineId,
+        p_baseline_revision_id: input.baselineRevisionId,
+        p_release_id: input.releaseId,
+        p_actor_user_id: actorId,
+        p_expected_baseline_version: input.expectedBaselineVersion,
+        p_source: input.source,
+        p_provenance: input.provenance,
+        p_effective_starts_at: input.effectiveStartsAt,
+        p_effective_ends_at: input.effectiveEndsAt ?? null,
+        p_idempotency_key: input.idempotencyKey,
+        p_correlation_id: randomUUID(),
+      }),
+    );
+    return this.softwareBaselineMembershipMutation(row);
+  }
+
+  async endSoftwareBaselineMembership(
+    organizationId: string,
+    actorId: string,
+    productId: string,
+    membershipId: string,
+    input: EndSoftwareBaselineMembershipInput,
+  ): Promise<SoftwareBaselineMembershipMutationOutcome> {
+    const row = await this.singleRpc(
+      "end_software_baseline_membership_atomic",
+      Object.freeze({
+        p_organization_id: organizationId,
+        p_product_id: productId,
+        p_membership_id: membershipId,
+        p_actor_user_id: actorId,
+        p_expected_version: input.expectedVersion,
+        p_reason: input.reason,
+        p_effective_ends_at: input.effectiveEndsAt,
+        p_correlation_id: randomUUID(),
+      }),
+    );
+    return this.softwareBaselineMembershipMutation(row);
+  }
+
+  async getSoftwareBaselineMemberships(
+    organizationId: string,
+    actorId: string,
+    productId: string,
+    asOf?: string,
+  ): Promise<SoftwareBaselineMembershipsOutcome> {
+    const row = await this.singleRpc(
+      "get_product_software_baseline_memberships",
+      Object.freeze({
+        p_organization_id: organizationId,
+        p_product_id: productId,
+        p_actor_user_id: actorId,
+        p_as_of: asOf ?? null,
+      }),
+    );
+    if (this.outcome(row, new Set(["found", "not_found"])) === "not_found") {
+      return Object.freeze({ outcome: "not_found" });
+    }
+    return Object.freeze({
+      outcome: "found",
+      memberships: this.baselineMemberships(row.memberships),
+    });
+  }
+
+  async createProductVariantRelationship(
+    organizationId: string,
+    actorId: string,
+    targetProductId: string,
+    input: CreateProductVariantRelationshipInput,
+  ): Promise<ProductRelationshipMutationOutcome<ProductVariantRelationship>> {
+    const row = await this.singleRpc(
+      "create_product_variant_relationship_atomic",
+      Object.freeze({
+        p_organization_id: organizationId,
+        p_base_release_id: input.baseReleaseId ?? null,
+        p_baseline_revision_id: input.baselineRevisionId ?? null,
+        p_variant_product_id: targetProductId,
+        p_variant_release_id: input.variantReleaseId ?? null,
+        p_actor_user_id: actorId,
+        p_expected_graph_version: input.expectedGraphVersion,
+        p_source: input.source,
+        p_provenance: input.provenance,
+        p_idempotency_key: input.idempotencyKey,
+        p_reason: input.reason,
+        p_effective_starts_at: input.effectiveStartsAt,
+        p_effective_ends_at: input.effectiveEndsAt ?? null,
+        p_correlation_id: randomUUID(),
+      }),
+    );
+    return this.productVariantRelationshipMutation(row);
+  }
+
+  async endProductVariantRelationship(
+    organizationId: string,
+    actorId: string,
+    productId: string,
+    relationshipId: string,
+    input: EndProductVariantRelationshipInput,
+  ): Promise<ProductRelationshipMutationOutcome<ProductVariantRelationship>> {
+    const row = await this.singleRpc(
+      "end_product_variant_relationship_atomic",
+      Object.freeze({
+        p_organization_id: organizationId,
+        p_product_id: productId,
+        p_relationship_id: relationshipId,
+        p_actor_user_id: actorId,
+        p_expected_version: input.expectedVersion,
+        p_expected_graph_version: input.expectedGraphVersion,
+        p_reason: input.reason,
+        p_effective_ends_at: input.effectiveEndsAt,
+        p_correlation_id: randomUUID(),
+      }),
+    );
+    return this.productVariantRelationshipMutation(row);
+  }
+
+  async getProductVariantRelationships(
+    organizationId: string,
+    actorId: string,
+    productId: string,
+    asOf?: string,
+  ): Promise<ProductVariantRelationshipsOutcome> {
+    const row = await this.singleRpc(
+      "get_product_variant_relationships",
+      Object.freeze({
+        p_organization_id: organizationId,
+        p_product_id: productId,
+        p_actor_user_id: actorId,
+        p_as_of: asOf ?? null,
+      }),
+    );
+    if (this.outcome(row, new Set(["found", "not_found"])) === "not_found") {
+      return Object.freeze({ outcome: "not_found" });
+    }
+    return Object.freeze({
+      outcome: "found",
+      relationships: this.variantRelationships(row.relationships),
+    });
+  }
+
+  async previewProductComponentLink(
+    organizationId: string,
+    actorId: string,
+    parentProductId: string,
+    input: PreviewProductComponentLinkInput,
+  ): Promise<ProductRelationshipPreviewOutcome> {
+    const row = await this.singleRpc(
+      "preview_product_component_link",
+      Object.freeze({
+        p_organization_id: organizationId,
+        p_parent_product_id: parentProductId,
+        p_component_product_id: input.componentProductId,
+        p_actor_user_id: actorId,
+        p_expected_graph_version: input.expectedGraphVersion,
+        p_parent_release_id: input.parentReleaseId ?? null,
+        p_component_release_id: input.componentReleaseId ?? null,
+        p_quantity: input.quantity,
+        p_source: input.source,
+        p_provenance: input.provenance,
+        p_reason: input.reason,
+        p_effective_starts_at: input.effectiveStartsAt,
+        p_effective_ends_at: input.effectiveEndsAt ?? null,
+      }),
+    );
+    const outcome = this.outcome(
+      row,
+      new Set([
+        "found",
+        "conflict",
+        "cycle_detected",
+        "depth_exceeded",
+        "not_found",
+        "invalid_request",
+      ]),
+    );
+    return outcome === "found"
+      ? Object.freeze({
+          outcome,
+          preview: this.relationshipPreview(row.preview),
+        })
+      : Object.freeze({
+          outcome: outcome as
+            | "conflict"
+            | "cycle_detected"
+            | "depth_exceeded"
+            | "not_found"
+            | "invalid_request",
+        });
+  }
+
+  async createProductComponentLink(
+    organizationId: string,
+    actorId: string,
+    parentProductId: string,
+    input: CreateProductComponentLinkInput,
+  ): Promise<ProductRelationshipMutationOutcome<ProductComponentLink>> {
+    const row = await this.singleRpc(
+      "create_product_component_link_atomic",
+      Object.freeze({
+        p_organization_id: organizationId,
+        p_parent_product_id: parentProductId,
+        p_component_product_id: input.componentProductId,
+        p_actor_user_id: actorId,
+        p_expected_graph_version: input.expectedGraphVersion,
+        p_parent_release_id: input.parentReleaseId ?? null,
+        p_component_release_id: input.componentReleaseId ?? null,
+        p_quantity: input.quantity,
+        p_source: input.source,
+        p_provenance: input.provenance,
+        p_reason: input.reason,
+        p_effective_starts_at: input.effectiveStartsAt,
+        p_effective_ends_at: input.effectiveEndsAt ?? null,
+        p_idempotency_key: input.idempotencyKey,
+        p_correlation_id: randomUUID(),
+      }),
+    );
+    return this.productComponentLinkMutation(row);
+  }
+
+  async endProductComponentLink(
+    organizationId: string,
+    actorId: string,
+    productId: string,
+    relationshipId: string,
+    input: EndProductComponentLinkInput,
+  ): Promise<ProductRelationshipMutationOutcome<ProductComponentLink>> {
+    const row = await this.singleRpc(
+      "end_product_component_link_atomic",
+      Object.freeze({
+        p_organization_id: organizationId,
+        p_product_id: productId,
+        p_relationship_id: relationshipId,
+        p_actor_user_id: actorId,
+        p_expected_version: input.expectedVersion,
+        p_expected_graph_version: input.expectedGraphVersion,
+        p_reason: input.reason,
+        p_effective_ends_at: input.effectiveEndsAt,
+        p_correlation_id: randomUUID(),
+      }),
+    );
+    return this.productComponentLinkMutation(row);
+  }
+
+  async supersedeProductComponentLink(
+    organizationId: string,
+    actorId: string,
+    productId: string,
+    relationshipId: string,
+    input: SupersedeProductComponentLinkInput,
+  ): Promise<ProductRelationshipMutationOutcome<ProductComponentLink>> {
+    const row = await this.singleRpc(
+      "supersede_product_component_link_atomic",
+      Object.freeze({
+        p_organization_id: organizationId,
+        p_product_id: productId,
+        p_relationship_id: relationshipId,
+        p_actor_user_id: actorId,
+        p_expected_version: input.expectedVersion,
+        p_expected_graph_version: input.expectedGraphVersion,
+        p_component_product_id: input.componentProductId,
+        p_parent_release_id: input.parentReleaseId ?? null,
+        p_component_release_id: input.componentReleaseId ?? null,
+        p_quantity: input.quantity,
+        p_reason: input.reason,
+        p_source: input.source,
+        p_provenance: input.provenance,
+        p_effective_starts_at: input.effectiveStartsAt,
+        p_effective_ends_at: input.effectiveEndsAt ?? null,
+        p_idempotency_key: input.idempotencyKey,
+        p_correlation_id: randomUUID(),
+      }),
+    );
+    return this.productComponentLinkMutation(row);
+  }
+
+  async getProductComponentLinks(
+    organizationId: string,
+    actorId: string,
+    productId: string,
+    asOf?: string,
+  ): Promise<ProductComponentLinksOutcome> {
+    const row = await this.singleRpc(
+      "get_product_component_links",
+      Object.freeze({
+        p_organization_id: organizationId,
+        p_product_id: productId,
+        p_actor_user_id: actorId,
+        p_as_of: asOf ?? null,
+      }),
+    );
+    if (this.outcome(row, new Set(["found", "not_found"])) === "not_found") {
+      return Object.freeze({ outcome: "not_found" });
+    }
+    return Object.freeze({
+      outcome: "found",
+      links: this.componentLinks(row.links),
+    });
+  }
+
+  async getProductRelationshipGraph(
+    organizationId: string,
+    actorId: string,
+    productId: string,
+    query: ProductRelationshipGraphQuery,
+  ): Promise<ProductRelationshipGraphOutcome> {
+    const row = await this.singleRpc(
+      "get_product_relationship_graph",
+      Object.freeze({
+        p_organization_id: organizationId,
+        p_product_id: productId,
+        p_actor_user_id: actorId,
+        p_as_of: query.asOf ?? null,
+        p_root_release_id: query.rootReleaseId ?? null,
+        p_max_depth: query.maxDepth,
+        p_include_ended: query.includeEnded ?? false,
+      }),
+    );
+    const outcome = this.outcome(
+      row,
+      new Set<"found" | "not_found" | "invalid_request">([
+        "found",
+        "not_found",
+        "invalid_request",
+      ]),
+    );
+    if (outcome !== "found") return Object.freeze({ outcome });
+    return Object.freeze({
+      outcome: "found",
+      graph: this.relationshipGraph(row.graph),
+    });
+  }
+
+  async getRelationshipPropagationCandidates(
+    organizationId: string,
+    actorId: string,
+    query: ProductRelationshipPropagationCommand,
+  ): Promise<RelationshipPropagationCandidatesOutcome> {
+    const row = await this.singleRpc(
+      "get_product_relationship_propagation_candidates",
+      Object.freeze({
+        p_organization_id: organizationId,
+        p_source_release_id: query.sourceReleaseId ?? null,
+        p_source_baseline_revision_id: query.sourceBaselineRevisionId ?? null,
+        p_actor_user_id: actorId,
+        p_graph_version: query.graphVersion,
+        p_as_of: query.asOf ?? null,
+        p_page_size: query.pageSize ?? null,
+        p_cursor: query.cursor ?? null,
+      }),
+    );
+    const outcome = this.outcome(
+      row,
+      new Set<"found" | "conflict" | "not_found" | "invalid_request">([
+        "found",
+        "conflict",
+        "not_found",
+        "invalid_request",
+      ]),
+    );
+    if (outcome !== "found") return Object.freeze({ outcome });
+    return this.relationshipPropagationCandidates(row.candidates);
+  }
+
+  async getRelationshipPropagationEvents(
+    organizationId: string,
+    actorId: string,
+    productId: string,
+    query: RelationshipPropagationEventsQuery,
+  ): Promise<RelationshipPropagationEventsOutcome> {
+    const row = await this.singleRpc(
+      "get_product_relationship_propagation_events",
+      Object.freeze({
+        p_organization_id: organizationId,
+        p_actor_user_id: actorId,
+        p_product_id: productId,
+        p_cursor: query.cursor ?? null,
+        p_page_size: query.pageSize,
+        p_delivery_state: query.deliveryState ?? null,
+      }),
+    );
+    const outcome = this.outcome(
+      row,
+      new Set<"found" | "not_found" | "invalid_request">([
+        "found",
+        "not_found",
+        "invalid_request",
+      ]),
+    );
+    if (outcome !== "found") return Object.freeze({ outcome });
+    return this.relationshipPropagationEvents(row.events);
+  }
+
+  async requestRelationshipReevaluation(
+    organizationId: string,
+    actorId: string,
+    productId: string,
+    input: RequestRelationshipReevaluationInput,
+  ): Promise<RelationshipPropagationEventMutationOutcome> {
+    const row = await this.singleRpc(
+      "request_product_relationship_reevaluation_atomic",
+      Object.freeze({
+        p_organization_id: organizationId,
+        p_product_id: productId,
+        p_actor_user_id: actorId,
+        p_expected_graph_version: input.expectedGraphVersion,
+        p_reason: input.reason,
+        p_source: input.source,
+        p_provenance: input.provenance,
+        p_idempotency_key: input.idempotencyKey,
+        p_correlation_id: randomUUID(),
+      }),
+    );
+    const outcome = this.outcome(
+      row,
+      new Set([
+        "created",
+        "conflict",
+        "blocked",
+        "not_found",
+        "invalid_request",
+      ]),
+    );
+    return outcome === "created"
+      ? Object.freeze({
+          outcome,
+          event: this.relationshipPropagationEvent(row.event),
+        })
+      : Object.freeze({
+          outcome: outcome as
+            "conflict" | "blocked" | "not_found" | "invalid_request",
+        });
+  }
+
   private productInput(
     organizationId: string,
     actorId: string,
@@ -805,6 +1422,90 @@ export class SupabaseProductRepository implements ProductRepository {
             | "invalid_request",
         });
   }
+  private softwareBaselineMutation(
+    row: ProviderRow,
+  ): SoftwareBaselineMutationOutcome {
+    const outcome = this.outcome(row, BASELINE_MUTATION_OUTCOMES);
+    return ["created", "updated", "archived", "replayed"].includes(outcome)
+      ? Object.freeze({
+          outcome: outcome as "created" | "updated" | "archived" | "replayed",
+          baseline: this.baseline(row.baseline),
+        })
+      : Object.freeze({
+          outcome: outcome as
+            | "conflict"
+            | "idempotency_mismatch"
+            | "blocked"
+            | "not_found"
+            | "invalid_request",
+        });
+  }
+  private softwareBaselineMembershipMutation(
+    row: ProviderRow,
+  ): SoftwareBaselineMembershipMutationOutcome {
+    const outcome = this.outcome(row, BASELINE_MEMBERSHIP_MUTATION_OUTCOMES);
+    return ["created", "ended", "replayed"].includes(outcome)
+      ? Object.freeze({
+          outcome: outcome as "created" | "ended" | "replayed",
+          membership: this.baselineMembership(row.membership),
+        })
+      : Object.freeze({
+          outcome: outcome as
+            | "conflict"
+            | "idempotency_mismatch"
+            | "blocked"
+            | "not_found"
+            | "invalid_request",
+        });
+  }
+  private productVariantRelationshipMutation(
+    row: ProviderRow,
+  ): ProductRelationshipMutationOutcome<ProductVariantRelationship> {
+    return this.productRelationshipMutation(
+      row,
+      productVariantRelationshipResponseSchema,
+    );
+  }
+  private productComponentLinkMutation(
+    row: ProviderRow,
+  ): ProductRelationshipMutationOutcome<ProductComponentLink> {
+    return this.productRelationshipMutation(
+      row,
+      productComponentLinkResponseSchema,
+    );
+  }
+  private productRelationshipMutation<T>(
+    row: ProviderRow,
+    schema: Readonly<{
+      safeParse(value: unknown): Readonly<{
+        success: boolean;
+        data?: Readonly<{ relationship: T; graphVersion: number }>;
+      }>;
+    }>,
+  ): ProductRelationshipMutationOutcome<T> {
+    const outcome = this.outcome(row, PRODUCT_RELATIONSHIP_MUTATION_OUTCOMES);
+    if (["created", "ended", "replayed"].includes(outcome)) {
+      const parsed = this.parse(schema, {
+        relationship: row.relationship,
+        graphVersion: row.graph_version,
+      });
+      return Object.freeze({
+        outcome: outcome as "created" | "ended" | "replayed",
+        relationship: parsed.relationship,
+        graphVersion: parsed.graphVersion,
+      });
+    }
+    return Object.freeze({
+      outcome: outcome as
+        | "conflict"
+        | "idempotency_mismatch"
+        | "cycle_detected"
+        | "depth_exceeded"
+        | "blocked"
+        | "not_found"
+        | "invalid_request",
+    });
+  }
   private product(value: unknown): Product {
     return this.parse(productResponseSchema, { product: value }).product;
   }
@@ -861,6 +1562,90 @@ export class SupabaseProductRepository implements ProductRepository {
   }
   private intervals(value: unknown): SupportAlertIntervals {
     return this.parse(supportAlertIntervalsResponseSchema, value);
+  }
+  private baseline(value: unknown): SoftwareBaseline {
+    return this.parse(softwareBaselineResponseSchema, { baseline: value })
+      .baseline;
+  }
+  private baselines(value: unknown): readonly SoftwareBaseline[] {
+    return Object.freeze(
+      this.parse(softwareBaselinesResponseSchema, { baselines: value })
+        .baselines,
+    );
+  }
+  private baselineMembership(
+    value: unknown,
+  ): SoftwareBaselineReleaseMembership {
+    return this.parse(softwareBaselineMembershipResponseSchema, {
+      membership: value,
+    }).membership;
+  }
+  private baselineMemberships(
+    value: unknown,
+  ): readonly SoftwareBaselineReleaseMembership[] {
+    return Object.freeze(
+      this.parse(softwareBaselineMembershipsResponseSchema, {
+        memberships: value,
+      }).memberships,
+    );
+  }
+  private variantRelationships(
+    value: unknown,
+  ): readonly ProductVariantRelationship[] {
+    return Object.freeze(
+      this.parse(productVariantRelationshipsResponseSchema, {
+        relationships: value,
+      }).relationships,
+    );
+  }
+  private componentLinks(value: unknown): readonly ProductComponentLink[] {
+    return Object.freeze(
+      this.parse(productComponentLinksResponseSchema, { links: value }).links,
+    );
+  }
+  private relationshipPreview(value: unknown): ProductRelationshipPreview {
+    return this.parse(productRelationshipPreviewResponseSchema, {
+      preview: value,
+    }).preview;
+  }
+  private relationshipGraph(value: unknown): ProductRelationshipGraph {
+    return this.parse(productRelationshipGraphResponseSchema, { graph: value })
+      .graph;
+  }
+  private relationshipPropagationCandidates(
+    value: unknown,
+  ): RelationshipPropagationCandidatesOutcome {
+    const parsed = this.parse(
+      relationshipPropagationCandidatesResponseSchema,
+      value,
+    );
+    return Object.freeze({
+      outcome: "found",
+      candidates: Object.freeze([...parsed.candidates]),
+      nextCursor: parsed.nextCursor,
+      graphVersion: parsed.graphVersion,
+      evaluatedAt: parsed.evaluatedAt,
+    });
+  }
+  private relationshipPropagationEvents(
+    value: unknown,
+  ): RelationshipPropagationEventsOutcome {
+    const parsed = this.parse(
+      relationshipPropagationEventsResponseSchema,
+      value,
+    );
+    return Object.freeze({
+      outcome: "found",
+      events: Object.freeze([...parsed.events]),
+      nextCursor: parsed.nextCursor,
+    });
+  }
+  private relationshipPropagationEvent(
+    value: unknown,
+  ): RelationshipPropagationEvent {
+    return this.parse(requestRelationshipReevaluationResponseSchema, {
+      event: value,
+    }).event;
   }
   private async singleRpc(
     name: string,

@@ -72,6 +72,9 @@ describe("tenant export archive", () => {
         "product_releases",
         "product_release_market_availability",
         "product_regulatory_outbox_events",
+        "software_baselines",
+        "software_baseline_release_memberships",
+        "product_relationships",
       ]),
     );
   });

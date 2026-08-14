@@ -1,16 +1,36 @@
 import {
   addReleaseMarketAvailabilityInputSchema,
+  appendSoftwareBaselineRevisionInputSchema,
   archiveProductInputSchema,
   archiveReleaseInputSchema,
+  archiveSoftwareBaselineInputSchema,
+  assignSoftwareBaselineMembershipInputSchema,
+  createProductComponentLinkInputSchema,
+  createProductVariantRelationshipInputSchema,
   correctPlacedOnMarketDateInputSchema,
   correctReleaseMarketAvailabilityInputSchema,
   createSupportPeriodRequestSchema,
   createProductInputSchema,
   createReleaseInputSchema,
+  createSoftwareBaselineInputSchema,
+  endProductComponentLinkInputSchema,
+  endProductVariantRelationshipInputSchema,
+  endSoftwareBaselineMembershipInputSchema,
   memberStatesResponseSchema,
   moveProductLegalEntityInputSchema,
   productListQuerySchema,
   productParamsSchema,
+  productComponentLinkResponseSchema,
+  productComponentLinksResponseSchema,
+  productRelationshipGraphQuerySchema,
+  productRelationshipGraphResponseSchema,
+  productRelationshipParamsSchema,
+  productRelationshipPreviewResponseSchema,
+  productVariantRelationshipResponseSchema,
+  productVariantRelationshipsResponseSchema,
+  previewProductComponentLinkInputSchema,
+  requestRelationshipReevaluationInputSchema,
+  requestRelationshipReevaluationResponseSchema,
   productResponseSchema,
   productsResponseSchema,
   releaseLifecycleTimelineResponseSchema,
@@ -20,6 +40,15 @@ import {
   releaseParamsSchema,
   releaseResponseSchema,
   releasesResponseSchema,
+  relationshipPropagationEventsQuerySchema,
+  relationshipPropagationEventsResponseSchema,
+  softwareBaselineMembershipParamsSchema,
+  softwareBaselineMembershipResponseSchema,
+  softwareBaselineMembershipsResponseSchema,
+  softwareBaselineParamsSchema,
+  softwareBaselineResponseSchema,
+  softwareBaselinesResponseSchema,
+  supersedeProductComponentLinkInputSchema,
   removeReleaseMarketAvailabilityInputSchema,
   supportAlertIntervalsResponseSchema,
   supportAlertHistoryResponseSchema,
@@ -35,18 +64,32 @@ import {
   updateProductInputSchema,
   updateReleaseInputSchema,
   type AddReleaseMarketAvailabilityInput,
+  type AppendSoftwareBaselineRevisionInput,
   type ArchiveProductInput,
   type ArchiveReleaseInput,
+  type ArchiveSoftwareBaselineInput,
+  type AssignSoftwareBaselineMembershipInput,
+  type CreateProductComponentLinkInput,
+  type CreateProductVariantRelationshipInput,
   type CorrectPlacedOnMarketDateInput,
   type CorrectReleaseMarketAvailabilityInput,
   type CreateSupportPeriodRequest,
   type CreateProductInput,
   type CreateReleaseInput,
+  type CreateSoftwareBaselineInput,
+  type EndProductComponentLinkInput,
+  type EndProductVariantRelationshipInput,
+  type EndSoftwareBaselineMembershipInput,
   type MoveProductLegalEntityInput,
   type ProductListQuery,
+  type ProductRelationshipGraphQuery,
+  type PreviewProductComponentLinkInput,
+  type RequestRelationshipReevaluationInput,
   type RemoveReleaseMarketAvailabilityInput,
   type ReleaseListQuery,
+  type RelationshipPropagationEventsQuery,
   type SupersedeSupportPeriodRequest,
+  type SupersedeProductComponentLinkInput,
   type PreviewSupportPeriodChangeRequest,
   type TransitionReleaseLifecycleInput,
   type UpdateSupportAlertIntervalsRequest,
@@ -122,6 +165,59 @@ function supportPeriodPath(
     );
   }
   return `/api/v1/products/${parsed.data.productId}/support-periods/${parsed.data.supportPeriodId}${suffix}`;
+}
+
+function baselinePath(baselineId: string, suffix = ""): `/${string}` {
+  const parsed = softwareBaselineParamsSchema.safeParse({ baselineId });
+  if (!parsed.success) {
+    throw new ApiClientError(
+      "invalid_request",
+      "The software baseline identifier is invalid.",
+      400,
+    );
+  }
+  return `/api/v1/products/baselines/${parsed.data.baselineId}${suffix}`;
+}
+
+function relationshipPath(
+  productId: string,
+  relationshipId: string,
+  suffix = "",
+): `/${string}` {
+  const parsed = productRelationshipParamsSchema.safeParse({
+    productId,
+    relationshipId,
+  });
+  if (!parsed.success) {
+    throw new ApiClientError(
+      "invalid_request",
+      "The relationship identifier is invalid.",
+      400,
+    );
+  }
+  return `/api/v1/products/${parsed.data.productId}${suffix.replace(
+    ":relationshipId",
+    parsed.data.relationshipId,
+  )}`;
+}
+
+function membershipPath(
+  productId: string,
+  membershipId: string,
+  suffix = "",
+): `/${string}` {
+  const parsed = softwareBaselineMembershipParamsSchema.safeParse({
+    productId,
+    membershipId,
+  });
+  if (!parsed.success) {
+    throw new ApiClientError(
+      "invalid_request",
+      "The baseline membership identifier is invalid.",
+      400,
+    );
+  }
+  return `/api/v1/products/${parsed.data.productId}/baseline-memberships/${parsed.data.membershipId}${suffix}`;
 }
 
 function queryPath(
@@ -510,6 +606,283 @@ export class ProductsApi {
       body: input,
       inputSchema: updateSupportAlertIntervalsRequestSchema,
       schema: supportAlertIntervalsResponseSchema,
+      signal,
+    });
+  }
+
+  async createSoftwareBaseline(
+    input: CreateSoftwareBaselineInput,
+    signal?: AbortSignal,
+  ) {
+    return authenticatedRequestJson({
+      path: "/api/v1/products/baselines",
+      method: "POST",
+      body: input,
+      inputSchema: createSoftwareBaselineInputSchema,
+      schema: softwareBaselineResponseSchema,
+      signal,
+    });
+  }
+
+  async listSoftwareBaselineRevisions(
+    baselineId: string,
+    signal?: AbortSignal,
+  ) {
+    return authenticatedRequestJson({
+      path: baselinePath(baselineId, "/revisions"),
+      // The API deliberately returns the immutable baseline rows under the
+      // established `baselines` envelope. Keep the gateway aligned with that
+      // strict wire contract rather than accepting a second, look-alike shape.
+      schema: softwareBaselinesResponseSchema,
+      signal,
+    });
+  }
+
+  async appendSoftwareBaselineRevision(
+    baselineId: string,
+    input: AppendSoftwareBaselineRevisionInput,
+    signal?: AbortSignal,
+  ) {
+    return authenticatedRequestJson({
+      path: baselinePath(baselineId, "/revisions"),
+      method: "POST",
+      body: input,
+      inputSchema: appendSoftwareBaselineRevisionInputSchema,
+      schema: softwareBaselineResponseSchema,
+      signal,
+    });
+  }
+
+  async archiveSoftwareBaseline(
+    baselineId: string,
+    input: ArchiveSoftwareBaselineInput,
+    signal?: AbortSignal,
+  ) {
+    return authenticatedRequestJson({
+      path: baselinePath(baselineId, "/archive"),
+      method: "POST",
+      body: input,
+      inputSchema: archiveSoftwareBaselineInputSchema,
+      schema: softwareBaselineResponseSchema,
+      signal,
+    });
+  }
+
+  async listSoftwareBaselineMemberships(
+    productId: string,
+    signal?: AbortSignal,
+  ) {
+    return authenticatedRequestJson({
+      path: productPath(productId, "/baseline-memberships"),
+      schema: softwareBaselineMembershipsResponseSchema,
+      signal,
+    });
+  }
+
+  async assignSoftwareBaselineMembership(
+    productId: string,
+    input: AssignSoftwareBaselineMembershipInput,
+    signal?: AbortSignal,
+  ) {
+    return authenticatedRequestJson({
+      path: productPath(productId, "/baseline-memberships"),
+      method: "POST",
+      body: input,
+      inputSchema: assignSoftwareBaselineMembershipInputSchema,
+      schema: softwareBaselineMembershipResponseSchema,
+      signal,
+    });
+  }
+
+  async endSoftwareBaselineMembership(
+    productId: string,
+    membershipId: string,
+    input: EndSoftwareBaselineMembershipInput,
+    signal?: AbortSignal,
+  ) {
+    return authenticatedRequestJson({
+      path: membershipPath(productId, membershipId, "/end"),
+      method: "POST",
+      body: input,
+      inputSchema: endSoftwareBaselineMembershipInputSchema,
+      schema: softwareBaselineMembershipResponseSchema,
+      signal,
+    });
+  }
+
+  async listProductVariantRelationships(
+    productId: string,
+    signal?: AbortSignal,
+  ) {
+    return authenticatedRequestJson({
+      path: productPath(productId, "/variant-relationships"),
+      schema: productVariantRelationshipsResponseSchema,
+      signal,
+    });
+  }
+
+  async createProductVariantRelationship(
+    productId: string,
+    input: CreateProductVariantRelationshipInput,
+    signal?: AbortSignal,
+  ) {
+    return authenticatedRequestJson({
+      path: productPath(productId, "/variant-relationships"),
+      method: "POST",
+      body: input,
+      inputSchema: createProductVariantRelationshipInputSchema,
+      schema: productVariantRelationshipResponseSchema,
+      signal,
+    });
+  }
+
+  async endProductVariantRelationship(
+    productId: string,
+    relationshipId: string,
+    input: EndProductVariantRelationshipInput,
+    signal?: AbortSignal,
+  ) {
+    return authenticatedRequestJson({
+      path: relationshipPath(
+        productId,
+        relationshipId,
+        "/variant-relationships/:relationshipId/end",
+      ),
+      method: "POST",
+      body: input,
+      inputSchema: endProductVariantRelationshipInputSchema,
+      schema: productVariantRelationshipResponseSchema,
+      signal,
+    });
+  }
+
+  async listProductComponentLinks(productId: string, signal?: AbortSignal) {
+    return authenticatedRequestJson({
+      path: productPath(productId, "/component-links"),
+      schema: productComponentLinksResponseSchema,
+      signal,
+    });
+  }
+
+  async previewProductComponentLink(
+    productId: string,
+    input: PreviewProductComponentLinkInput,
+    signal?: AbortSignal,
+  ) {
+    return authenticatedRequestJson({
+      path: productPath(productId, "/component-links/preview"),
+      method: "POST",
+      body: input,
+      inputSchema: previewProductComponentLinkInputSchema,
+      schema: productRelationshipPreviewResponseSchema,
+      signal,
+    });
+  }
+
+  async createProductComponentLink(
+    productId: string,
+    input: CreateProductComponentLinkInput,
+    signal?: AbortSignal,
+  ) {
+    return authenticatedRequestJson({
+      path: productPath(productId, "/component-links"),
+      method: "POST",
+      body: input,
+      inputSchema: createProductComponentLinkInputSchema,
+      schema: productComponentLinkResponseSchema,
+      signal,
+    });
+  }
+
+  async supersedeProductComponentLink(
+    productId: string,
+    relationshipId: string,
+    input: SupersedeProductComponentLinkInput,
+    signal?: AbortSignal,
+  ) {
+    return authenticatedRequestJson({
+      path: relationshipPath(
+        productId,
+        relationshipId,
+        "/component-links/:relationshipId/supersessions",
+      ),
+      method: "POST",
+      body: input,
+      inputSchema: supersedeProductComponentLinkInputSchema,
+      schema: productComponentLinkResponseSchema,
+      signal,
+    });
+  }
+
+  async endProductComponentLink(
+    productId: string,
+    relationshipId: string,
+    input: EndProductComponentLinkInput,
+    signal?: AbortSignal,
+  ) {
+    return authenticatedRequestJson({
+      path: relationshipPath(
+        productId,
+        relationshipId,
+        "/component-links/:relationshipId/end",
+      ),
+      method: "POST",
+      body: input,
+      inputSchema: endProductComponentLinkInputSchema,
+      schema: productComponentLinkResponseSchema,
+      signal,
+    });
+  }
+
+  async getProductRelationshipGraph(
+    productId: string,
+    input: Partial<ProductRelationshipGraphQuery> = {},
+    signal?: AbortSignal,
+  ) {
+    const query = apiClient.parseInput(productRelationshipGraphQuerySchema, {
+      ...input,
+      includeEnded:
+        input.includeEnded === undefined
+          ? undefined
+          : String(input.includeEnded),
+    });
+    return authenticatedRequestJson({
+      path: queryPath(productPath(productId, "/relationship-graph"), query),
+      schema: productRelationshipGraphResponseSchema,
+      signal,
+    });
+  }
+
+  async listRelationshipPropagationEvents(
+    productId: string,
+    input: Partial<RelationshipPropagationEventsQuery> = {},
+    signal?: AbortSignal,
+  ) {
+    const query = apiClient.parseInput(
+      relationshipPropagationEventsQuerySchema,
+      input,
+    );
+    return authenticatedRequestJson({
+      path: queryPath(
+        productPath(productId, "/relationship-propagation-events"),
+        query,
+      ),
+      schema: relationshipPropagationEventsResponseSchema,
+      signal,
+    });
+  }
+
+  async requestRelationshipReevaluation(
+    productId: string,
+    input: RequestRelationshipReevaluationInput,
+    signal?: AbortSignal,
+  ) {
+    return authenticatedRequestJson({
+      path: productPath(productId, "/relationship-reevaluations"),
+      method: "POST",
+      body: input,
+      inputSchema: requestRelationshipReevaluationInputSchema,
+      schema: requestRelationshipReevaluationResponseSchema,
       signal,
     });
   }

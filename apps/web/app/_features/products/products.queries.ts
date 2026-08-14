@@ -4,16 +4,30 @@ import type {
   AddReleaseMarketAvailabilityInput,
   ArchiveProductInput,
   ArchiveReleaseInput,
+  ArchiveSoftwareBaselineInput,
+  AppendSoftwareBaselineRevisionInput,
+  AssignSoftwareBaselineMembershipInput,
+  CreateProductComponentLinkInput,
+  CreateProductVariantRelationshipInput,
   CorrectPlacedOnMarketDateInput,
   CorrectReleaseMarketAvailabilityInput,
   CreateProductInput,
   CreateReleaseInput,
+  CreateSoftwareBaselineInput,
+  EndProductComponentLinkInput,
+  EndProductVariantRelationshipInput,
+  EndSoftwareBaselineMembershipInput,
   CreateSupportPeriodRequest,
   MoveProductLegalEntityInput,
   ProductListQuery,
+  ProductRelationshipGraphQuery,
+  PreviewProductComponentLinkInput,
+  RequestRelationshipReevaluationInput,
   ReleaseListQuery,
+  RelationshipPropagationEventsQuery,
   RemoveReleaseMarketAvailabilityInput,
   SupersedeSupportPeriodRequest,
+  SupersedeProductComponentLinkInput,
   PreviewSupportPeriodChangeRequest,
   TransitionReleaseLifecycleInput,
   UpdateSupportAlertIntervalsRequest,
@@ -30,7 +44,7 @@ import {
 import { productKeys } from "./products.keys";
 import { productsApi } from "./products.api";
 
-function listKey(query: Partial<ProductListQuery>): string {
+function listKey(query: Record<string, unknown>): string {
   return JSON.stringify(
     Object.entries(query).filter(([, value]) => value !== undefined),
   );
@@ -163,12 +177,95 @@ export function useSupportAlertIntervalsQuery(enabled: boolean) {
   });
 }
 
+export function useSoftwareBaselineRevisionsQuery(
+  baselineId: string,
+  enabled: boolean,
+) {
+  return useQuery({
+    queryKey: productKeys.baselineRevisions(baselineId),
+    enabled,
+    retry: false,
+    queryFn: ({ signal }) =>
+      productsApi.listSoftwareBaselineRevisions(baselineId, signal),
+  });
+}
+
+export function useSoftwareBaselineMembershipsQuery(
+  productId: string,
+  enabled: boolean,
+) {
+  return useQuery({
+    queryKey: productKeys.baselineMemberships(productId),
+    enabled,
+    retry: false,
+    queryFn: ({ signal }) =>
+      productsApi.listSoftwareBaselineMemberships(productId, signal),
+  });
+}
+
+export function useProductVariantRelationshipsQuery(
+  productId: string,
+  enabled: boolean,
+) {
+  return useQuery({
+    queryKey: productKeys.variantRelationships(productId),
+    enabled,
+    retry: false,
+    queryFn: ({ signal }) =>
+      productsApi.listProductVariantRelationships(productId, signal),
+  });
+}
+
+export function useProductComponentLinksQuery(
+  productId: string,
+  enabled: boolean,
+) {
+  return useQuery({
+    queryKey: productKeys.componentLinks(productId),
+    enabled,
+    retry: false,
+    queryFn: ({ signal }) =>
+      productsApi.listProductComponentLinks(productId, signal),
+  });
+}
+
+export function useProductRelationshipGraphQuery(
+  productId: string,
+  enabled: boolean,
+  query: Partial<ProductRelationshipGraphQuery> = {},
+) {
+  return useQuery({
+    queryKey: [...productKeys.relationshipGraph(productId), listKey(query)],
+    enabled,
+    retry: false,
+    queryFn: ({ signal }) =>
+      productsApi.getProductRelationshipGraph(productId, query, signal),
+  });
+}
+
+export function useRelationshipPropagationEventsQuery(
+  productId: string,
+  enabled: boolean,
+  query: Partial<RelationshipPropagationEventsQuery> = {},
+) {
+  return useQuery({
+    queryKey: [
+      ...productKeys.relationshipPropagationEvents(productId),
+      listKey(query),
+    ],
+    enabled,
+    retry: false,
+    queryFn: ({ signal }) =>
+      productsApi.listRelationshipPropagationEvents(productId, query, signal),
+  });
+}
+
 function useInvalidateProducts() {
   const client = useQueryClient();
   return async (
     productId?: string,
     releaseId?: string,
-    options: Readonly<{ support?: boolean }> = {},
+    options: Readonly<{ support?: boolean; relationships?: boolean }> = {},
   ) => {
     await Promise.all([
       client.invalidateQueries({ queryKey: productKeys.all }),
@@ -190,6 +287,26 @@ function useInvalidateProducts() {
                   }),
                   client.invalidateQueries({
                     queryKey: productKeys.supportAlerts(productId),
+                  }),
+                ]
+              : []),
+            ...(options.relationships
+              ? [
+                  client.invalidateQueries({
+                    queryKey: productKeys.baselineMemberships(productId),
+                  }),
+                  client.invalidateQueries({
+                    queryKey: productKeys.variantRelationships(productId),
+                  }),
+                  client.invalidateQueries({
+                    queryKey: productKeys.componentLinks(productId),
+                  }),
+                  client.invalidateQueries({
+                    queryKey: productKeys.relationshipGraph(productId),
+                  }),
+                  client.invalidateQueries({
+                    queryKey:
+                      productKeys.relationshipPropagationEvents(productId),
                   }),
                 ]
               : []),
@@ -389,5 +506,157 @@ export function useUpdateSupportAlertIntervalsMutation() {
         client.invalidateQueries({ queryKey: productKeys.all }),
       ]);
     },
+  });
+}
+
+export function useCreateSoftwareBaselineMutation() {
+  const invalidate = useInvalidateProducts();
+  return useMutation({
+    mutationFn: (input: CreateSoftwareBaselineInput) =>
+      productsApi.createSoftwareBaseline(input),
+    onSuccess: () => invalidate(),
+  });
+}
+
+export function useAppendSoftwareBaselineRevisionMutation(baselineId: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (input: AppendSoftwareBaselineRevisionInput) =>
+      productsApi.appendSoftwareBaselineRevision(baselineId, input),
+    onSuccess: async () => {
+      await Promise.all([
+        client.invalidateQueries({
+          queryKey: productKeys.baselineRevisions(baselineId),
+        }),
+        client.invalidateQueries({ queryKey: productKeys.all }),
+      ]);
+    },
+  });
+}
+
+export function useArchiveSoftwareBaselineMutation(baselineId: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (input: ArchiveSoftwareBaselineInput) =>
+      productsApi.archiveSoftwareBaseline(baselineId, input),
+    onSuccess: async () => {
+      await Promise.all([
+        client.invalidateQueries({
+          queryKey: productKeys.baselineRevisions(baselineId),
+        }),
+        client.invalidateQueries({ queryKey: productKeys.all }),
+      ]);
+    },
+  });
+}
+
+export function useAssignSoftwareBaselineMembershipMutation(productId: string) {
+  const invalidate = useInvalidateProducts();
+  return useMutation({
+    mutationFn: (input: AssignSoftwareBaselineMembershipInput) =>
+      productsApi.assignSoftwareBaselineMembership(productId, input),
+    onSuccess: () => invalidate(productId, undefined, { relationships: true }),
+  });
+}
+
+export function useEndSoftwareBaselineMembershipMutation(productId: string) {
+  const invalidate = useInvalidateProducts();
+  return useMutation({
+    mutationFn: ({
+      membershipId,
+      input,
+    }: Readonly<{
+      membershipId: string;
+      input: EndSoftwareBaselineMembershipInput;
+    }>) =>
+      productsApi.endSoftwareBaselineMembership(productId, membershipId, input),
+    onSuccess: () => invalidate(productId, undefined, { relationships: true }),
+  });
+}
+
+export function useCreateProductVariantRelationshipMutation(productId: string) {
+  const invalidate = useInvalidateProducts();
+  return useMutation({
+    mutationFn: (input: CreateProductVariantRelationshipInput) =>
+      productsApi.createProductVariantRelationship(productId, input),
+    onSuccess: () => invalidate(productId, undefined, { relationships: true }),
+  });
+}
+
+export function useEndProductVariantRelationshipMutation(productId: string) {
+  const invalidate = useInvalidateProducts();
+  return useMutation({
+    mutationFn: ({
+      relationshipId,
+      input,
+    }: Readonly<{
+      relationshipId: string;
+      input: EndProductVariantRelationshipInput;
+    }>) =>
+      productsApi.endProductVariantRelationship(
+        productId,
+        relationshipId,
+        input,
+      ),
+    onSuccess: () => invalidate(productId, undefined, { relationships: true }),
+  });
+}
+
+export function usePreviewProductComponentLinkMutation(productId: string) {
+  return useMutation({
+    mutationFn: (input: PreviewProductComponentLinkInput) =>
+      productsApi.previewProductComponentLink(productId, input),
+  });
+}
+
+export function useCreateProductComponentLinkMutation(productId: string) {
+  const invalidate = useInvalidateProducts();
+  return useMutation({
+    mutationFn: (input: CreateProductComponentLinkInput) =>
+      productsApi.createProductComponentLink(productId, input),
+    onSuccess: () => invalidate(productId, undefined, { relationships: true }),
+  });
+}
+
+export function useSupersedeProductComponentLinkMutation(productId: string) {
+  const invalidate = useInvalidateProducts();
+  return useMutation({
+    mutationFn: ({
+      relationshipId,
+      input,
+    }: Readonly<{
+      relationshipId: string;
+      input: SupersedeProductComponentLinkInput;
+    }>) =>
+      productsApi.supersedeProductComponentLink(
+        productId,
+        relationshipId,
+        input,
+      ),
+    onSuccess: () => invalidate(productId, undefined, { relationships: true }),
+  });
+}
+
+export function useEndProductComponentLinkMutation(productId: string) {
+  const invalidate = useInvalidateProducts();
+  return useMutation({
+    mutationFn: ({
+      relationshipId,
+      input,
+    }: Readonly<{
+      relationshipId: string;
+      input: EndProductComponentLinkInput;
+    }>) =>
+      productsApi.endProductComponentLink(productId, relationshipId, input),
+    onSuccess: () => invalidate(productId, undefined, { relationships: true }),
+  });
+}
+
+export function useRequestRelationshipReevaluationMutation(productId: string) {
+  const invalidate = useInvalidateProducts();
+  return useMutation({
+    mutationFn: (input: RequestRelationshipReevaluationInput) =>
+      productsApi.requestRelationshipReevaluation(productId, input),
+    onSuccess: () => invalidate(productId, undefined, { relationships: true }),
   });
 }

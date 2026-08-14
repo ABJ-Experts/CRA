@@ -122,6 +122,9 @@ export const exportSourceRegistry: readonly ExportSourceRegistration[] =
         "product_release_market_availability",
         "product_regulatory_outbox_events",
         "product_support_periods",
+        "software_baselines",
+        "software_baseline_release_memberships",
+        "product_relationships",
       ],
     },
   ]);
