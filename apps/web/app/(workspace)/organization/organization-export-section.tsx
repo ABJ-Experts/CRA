@@ -11,7 +11,7 @@ import {
   useRequestExportMutation,
 } from "../../_features/organizations/organizations.queries";
 import { ErrorText, messageFor, ReadonlyNotice } from "./organization-administration-ui";
-import { SectionCard } from "../_components/dashboard-chrome";
+import { SectionCard } from "../../dashboard/_components/dashboard-chrome";
 import { formatOrganizationInstant } from "./organization-administration-ui";
 
 function labelize(value: string): string {

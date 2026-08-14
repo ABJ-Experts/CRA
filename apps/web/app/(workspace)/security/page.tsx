@@ -7,7 +7,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Image from "next/image";
 import { useState } from "react";
 
-import { SectionCard } from "../_components/dashboard-chrome";
+import { SectionCard } from "../../dashboard/_components/dashboard-chrome";
 import {
   securityApi,
   securityQueryKeys,

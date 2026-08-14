@@ -42,7 +42,7 @@ vi.mock("@repo/ui/select", () => ({
   ),
   SelectItem: ({ children }: { children: ReactNode }) => <>{children}</>,
 }));
-vi.mock("../tables/_components/table-page", () => ({
+vi.mock("../../dashboard/tables/_components/table-page", () => ({
   TablePage: ({
     columns,
     getRowId,

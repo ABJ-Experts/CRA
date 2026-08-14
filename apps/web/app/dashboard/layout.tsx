@@ -1,8 +1,5 @@
 import type { ReactNode } from "react";
-import { Sidebar } from "../_components/sidebar/sidebar";
-import { DashboardTopNav } from "./_components/dashboard-top-nav";
-import { DashboardOnboardingGate } from "./_components/dashboard-onboarding-gate";
-import { OrganizationThemeProvider } from "./organization-theme-provider";
+import { WorkspaceShell } from "../(workspace)/workspace-shell";
 
 /**
  * The shell every dashboard and table screen sits in, matching the frames:
@@ -13,17 +10,5 @@ import { OrganizationThemeProvider } from "./organization-theme-provider";
  * the Crypto frame is 1938 tall and must scroll rather than be clipped.
  */
 export default function DashboardLayout({ children }: { children: ReactNode }) {
-  return (
-    <OrganizationThemeProvider>
-      <div className="flex min-h-dvh bg-canvas">
-        <Sidebar />
-        <div className="flex min-w-0 flex-1 flex-col">
-          <DashboardTopNav />
-          <main className="min-w-0 flex-1">
-            <DashboardOnboardingGate>{children}</DashboardOnboardingGate>
-          </main>
-        </div>
-      </div>
-    </OrganizationThemeProvider>
-  );
+  return <WorkspaceShell>{children}</WorkspaceShell>;
 }

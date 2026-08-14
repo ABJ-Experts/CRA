@@ -18,7 +18,7 @@ export function DashboardOnboardingGate({ children }: { children: ReactNode }) {
   const { session, isError, isLoading } = useSession();
   const liveApiEnabled =
     mocksReady && process.env.NEXT_PUBLIC_ENABLE_MOCKS === "false";
-  const isOnboardingRoute = pathname === "/dashboard/onboarding";
+  const isOnboardingRoute = pathname === "/onboarding";
   const hasNoMemberships =
     session !== null && session.organizations.length === 0;
 
@@ -30,7 +30,7 @@ export function DashboardOnboardingGate({ children }: { children: ReactNode }) {
       hasNoMemberships &&
       !isOnboardingRoute
     ) {
-      router.replace("/dashboard/onboarding");
+      router.replace("/onboarding");
     }
   }, [
     hasNoMemberships,

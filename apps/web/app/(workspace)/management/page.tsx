@@ -12,8 +12,8 @@ import { useCallback, useMemo, useState } from "react";
 import { useHasPermission } from "../../_providers/session-provider";
 import { membersApi } from "../../_features/members/members.api";
 import { ApiClientError } from "../../_lib/http/api-client";
-import { Stacked } from "../tables/_components/cells";
-import { TablePage } from "../tables/_components/table-page";
+import { Stacked } from "../../dashboard/tables/_components/cells";
+import { TablePage } from "../../dashboard/tables/_components/table-page";
 
 /**
  * User management.

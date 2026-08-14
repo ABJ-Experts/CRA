@@ -18,7 +18,7 @@ import {
   messageFor,
   ReadonlyNotice,
 } from "./organization-administration-ui";
-import { SectionCard } from "../_components/dashboard-chrome";
+import { SectionCard } from "../../dashboard/_components/dashboard-chrome";
 
 function labelize(value: string): string {
   return value

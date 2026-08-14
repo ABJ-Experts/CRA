@@ -23,7 +23,7 @@ import {
 import { useMocksReady } from "../../_providers/providers";
 import { useSession } from "../../_providers/session-provider";
 import { ApiClientError } from "../../_lib/http/api-client";
-import { PageHeading, SectionCard } from "../_components/dashboard-chrome";
+import { PageHeading, SectionCard } from "../../dashboard/_components/dashboard-chrome";
 
 import { ReleaseRegulatoryControls } from "./release-regulatory-controls";
 import { ProductRelationshipSection } from "./product-relationship-section";
@@ -518,7 +518,7 @@ export function ProductDetailContent({ productId }: { productId: string }) {
             type="button"
             variant="outline"
             tone="grey"
-            onClick={() => router.push("/dashboard/products")}
+            onClick={() => router.push("/products")}
           >
             Back to products
           </Button>

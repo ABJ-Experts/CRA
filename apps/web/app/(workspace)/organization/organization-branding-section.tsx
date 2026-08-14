@@ -15,7 +15,7 @@ import {
   useBrandingPublishMutation,
   useUpdateBrandingDraftMutation,
 } from "../../_features/organizations/organizations.queries";
-import { SectionCard } from "../_components/dashboard-chrome";
+import { SectionCard } from "../../dashboard/_components/dashboard-chrome";
 import {
   ErrorText,
   formatOrganizationInstant,

@@ -9,7 +9,7 @@ import {
   SectionCard,
   Stagger,
   StaggerItem,
-} from "../_components/dashboard-chrome";
+} from "../../dashboard/_components/dashboard-chrome";
 import { rolesApi, rolesQueryKeys } from "../../_features/roles/roles.api";
 import { useHasPermission } from "../../_providers/session-provider";
 

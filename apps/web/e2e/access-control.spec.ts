@@ -67,7 +67,7 @@ test("revocation is immediate, outages stay visible, and restored checks do not 
     const unavailable = memberPage.waitForResponse((response) =>
       response.url().includes("/api/v1/users?"),
     );
-    await memberPage.goto("/dashboard/management");
+    await memberPage.goto("/management");
     const outage = await unavailable;
     expect(outage.status()).toBe(503);
     expect(await outage.json()).toMatchObject({

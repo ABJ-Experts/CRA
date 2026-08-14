@@ -15,7 +15,7 @@ import {
   useTransitionLegalEntityMutation,
   useUpdateLegalEntityMutation,
 } from "../../_features/organizations/organizations.queries";
-import { SectionCard } from "../_components/dashboard-chrome";
+import { SectionCard } from "../../dashboard/_components/dashboard-chrome";
 import { ErrorText, messageFor, ReadonlyNotice } from "./organization-administration-ui";
 
 type LegalEntityDraft = Omit<CreateLegalEntityInput, "idempotencyKey">;

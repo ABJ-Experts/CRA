@@ -52,13 +52,13 @@ describe("DashboardOnboardingGate", () => {
     );
 
     await waitFor(() =>
-      expect(navigation.replace).toHaveBeenCalledWith("/dashboard/onboarding"),
+      expect(navigation.replace).toHaveBeenCalledWith("/onboarding"),
     );
   });
 
   it("does not loop on onboarding or redirect while session state is uncertain", () => {
     vi.stubEnv("NEXT_PUBLIC_ENABLE_MOCKS", "false");
-    navigation.pathname = "/dashboard/onboarding";
+    navigation.pathname = "/onboarding";
     render(
       <DashboardOnboardingGate>
         <div>Onboarding body</div>

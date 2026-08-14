@@ -15,7 +15,7 @@ import {
 } from "../../_features/organizations/organizations.queries";
 import { useMocksReady } from "../../_providers/providers";
 import { useSession } from "../../_providers/session-provider";
-import { PageHeading, SectionCard } from "../_components/dashboard-chrome";
+import { PageHeading, SectionCard } from "../../dashboard/_components/dashboard-chrome";
 import { OrganizationExportSection } from "./organization-export-section";
 import { OrganizationBrandingSection } from "./organization-branding-section";
 import { OrganizationLegalEntitiesSection } from "./organization-legal-entities-section";

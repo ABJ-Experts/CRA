@@ -16,7 +16,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SIDEBAR_ATTR, SIDEBAR_STORAGE_KEY } from "./sidebar-collapse";
 
 const state = vi.hoisted(() => ({
-  pathname: "/dashboard/organization",
+  pathname: "/organization",
   canView: (key: string) => key.length > 0,
   replace: vi.fn(),
   refresh: vi.fn(),
@@ -54,7 +54,7 @@ function renderSidebar() {
 }
 
 beforeEach(() => {
-  state.pathname = "/dashboard/organization";
+  state.pathname = "/organization";
   state.canView = () => true;
   state.replace.mockReset();
   state.refresh.mockReset();
@@ -85,6 +85,38 @@ describe("Sidebar", () => {
     );
     expect(screen.getByRole("button", { name: "Sign out" })).toBeVisible();
     expect(screen.getByText("C")).toHaveClass("text-on-accent");
+  });
+
+  it("links customer navigation to canonical top-level routes", () => {
+    renderSidebar();
+
+    expect(screen.getByRole("link", { name: "Management" })).toHaveAttribute(
+      "href",
+      "/management",
+    );
+    expect(
+      screen.getByRole("link", { name: "Organization" }),
+    ).toHaveAttribute("href", "/organization");
+    expect(screen.getByRole("link", { name: "Products" })).toHaveAttribute(
+      "href",
+      "/products",
+    );
+    expect(screen.getByRole("link", { name: "Account" })).toHaveAttribute(
+      "href",
+      "/account",
+    );
+    expect(screen.getByRole("link", { name: "Security" })).toHaveAttribute(
+      "href",
+      "/security",
+    );
+    expect(screen.getByRole("link", { name: "Roles" })).toHaveAttribute(
+      "href",
+      "/roles",
+    );
+    expect(screen.getByRole("link", { name: "Permissions" })).toHaveAttribute(
+      "href",
+      "/permissions",
+    );
   });
 
   it("renders the published name and published-only logo endpoint", () => {
@@ -154,7 +186,7 @@ describe("Sidebar", () => {
 
   it("opens and closes access-control navigation without mutating the nav contract", async () => {
     const user = userEvent.setup();
-    state.pathname = "/dashboard/roles";
+    state.pathname = "/roles";
     renderSidebar();
     const authorization = screen.getByRole("button", { name: "Authorization" });
 

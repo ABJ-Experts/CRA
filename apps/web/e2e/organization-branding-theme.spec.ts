@@ -67,7 +67,7 @@ async function waitForAdministration(page: Page): Promise<void> {
       response.request().method() === "GET",
   );
 
-  await page.goto("/dashboard/organization");
+  await page.goto("/organization");
   expect((await branding).status()).toBe(200);
   expect((await preview).status()).toBe(200);
   await expect(

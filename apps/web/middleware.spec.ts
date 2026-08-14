@@ -244,6 +244,30 @@ describe("middleware integration", () => {
     expect(response.headers.get("location")).toBeNull();
   });
 
+  it.each([
+    ["/management", "/management"],
+    ["/organization", "/organization"],
+    ["/products", "/products"],
+    ["/products/product-123", "/products/product-123"],
+    ["/account", "/account"],
+    ["/security", "/security"],
+    ["/roles", "/roles"],
+    ["/permissions", "/permissions"],
+    ["/onboarding?stage=organization", "/onboarding?stage=organization"],
+  ] as const)(
+    "protects the canonical customer path %s",
+    async (pathname, returnUrl) => {
+      const { middleware } = await loadMiddleware();
+      const response = await middleware(
+        new NextRequest(`https://app.cra.test${pathname}`),
+      );
+
+      expect(response.headers.get("location")).toBe(
+        `https://app.cra.test/sign-in?returnUrl=${encodeURIComponent(returnUrl)}`,
+      );
+    },
+  );
+
   it("bypasses route gating while development mocks are enabled", async () => {
     const { middleware } = await loadMiddleware({
       nodeEnv: "development",

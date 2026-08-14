@@ -15,7 +15,7 @@ import {
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Fragment, useState } from "react";
 
-import { SectionCard } from "../_components/dashboard-chrome";
+import { SectionCard } from "../../dashboard/_components/dashboard-chrome";
 import { rolesApi, rolesQueryKeys } from "../../_features/roles/roles.api";
 import { ApiClientError } from "../../_lib/http/api-client";
 import { useHasPermission } from "../../_providers/session-provider";

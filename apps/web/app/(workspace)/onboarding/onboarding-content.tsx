@@ -15,7 +15,7 @@ import {
 import { InvitationManager } from "./invitation-manager";
 import { useMocksReady } from "../../_providers/providers";
 import { useSession } from "../../_providers/session-provider";
-import { PageHeading, SectionCard } from "../_components/dashboard-chrome";
+import { PageHeading, SectionCard } from "../../dashboard/_components/dashboard-chrome";
 import { OnboardingProgress } from "./onboarding-progress";
 import { OrganizationProfileForm } from "./organization-profile-form";
 

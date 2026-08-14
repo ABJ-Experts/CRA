@@ -6,7 +6,7 @@ import { Avatar } from "@repo/ui/avatar";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 
-import { SectionCard } from "../_components/dashboard-chrome";
+import { SectionCard } from "../../dashboard/_components/dashboard-chrome";
 import { accountApi } from "../../_features/account/account.api";
 import { sessionKeys } from "../../_features/session/session.keys";
 import { ApiClientError } from "../../_lib/http/api-client";

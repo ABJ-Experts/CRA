@@ -56,7 +56,7 @@ export function DashboardOnboardingResume() {
         </p>
       </div>
       <Button asChild size="sm">
-        <Link href="/dashboard/onboarding">Resume onboarding</Link>
+        <Link href="/onboarding">Resume onboarding</Link>
       </Button>
     </section>
   );

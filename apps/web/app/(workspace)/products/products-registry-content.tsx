@@ -22,7 +22,7 @@ import { useLegalEntitiesQuery } from "../../_features/organizations/organizatio
 import { useMocksReady } from "../../_providers/providers";
 import { useSession } from "../../_providers/session-provider";
 import { ApiClientError } from "../../_lib/http/api-client";
-import { PageHeading, SectionCard } from "../_components/dashboard-chrome";
+import { PageHeading, SectionCard } from "../../dashboard/_components/dashboard-chrome";
 
 const PRODUCT_TYPES: readonly {
   readonly value: ProductType;
@@ -427,7 +427,7 @@ export function ProductsRegistryContent() {
               ownerId={session?.user.id ?? ""}
               legalEntities={activeEntities}
               onCreated={(product) =>
-                router.push(`/dashboard/products/${product.id}`)
+                router.push(`/products/${product.id}`)
               }
             />
           ) : null}
@@ -481,7 +481,7 @@ export function ProductsRegistryContent() {
                   <ProductRow
                     key={product.id}
                     product={product}
-                    onOpen={(id) => router.push(`/dashboard/products/${id}`)}
+                    onOpen={(id) => router.push(`/products/${id}`)}
                   />
                 ))}
               </ul>

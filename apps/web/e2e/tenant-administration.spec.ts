@@ -131,7 +131,7 @@ async function waitForAdministrationReads(page: Page): Promise<void> {
       response.request().method() === "GET",
   );
 
-  await page.goto("/dashboard/organization");
+  await page.goto("/organization");
   for (const response of await Promise.all([
     current,
     settings,

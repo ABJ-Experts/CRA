@@ -28,7 +28,7 @@ test("an organization owner creates a product and sees its empty release registr
     );
     expect(proxiedSession.status()).toBe(200);
     const page = await context.newPage();
-    await page.goto("/dashboard/onboarding");
+    await page.goto("/onboarding");
     const legalName = `E2E Product Registry ${testInfo.parallelIndex}-${Date.now()}`;
     await page
       .getByRole("textbox", { name: "Legal organization name", exact: true })
@@ -85,7 +85,7 @@ test("an organization owner creates a product and sees its empty release registr
         new URL(response.url()).pathname === "/api/v1/products" &&
         response.request().method() === "GET",
     );
-    await page.goto("/dashboard/products");
+    await page.goto("/products");
     expect((await productList).status()).toBe(200);
 
     await page
@@ -114,7 +114,7 @@ test("an organization owner creates a product and sees its empty release registr
     const persisted = await productCreated;
     expect(persisted.status()).toBe(201);
     const productId = ((await persisted.json()) as ProductResponse).product.id;
-    await expect(page).toHaveURL(`/dashboard/products/${productId}`);
+    await expect(page).toHaveURL(`/products/${productId}`);
     await expect(
       page.getByRole("heading", { name: "E2E Sentinel", exact: true }),
     ).toBeVisible();

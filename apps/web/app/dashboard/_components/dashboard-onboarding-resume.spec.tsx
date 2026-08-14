@@ -63,7 +63,7 @@ describe("DashboardOnboardingResume", () => {
     ).toBeVisible();
     expect(
       screen.getByRole("link", { name: "Resume onboarding" }),
-    ).toHaveAttribute("href", "/dashboard/onboarding");
+    ).toHaveAttribute("href", "/onboarding");
   });
 
   it("does not show a progress prompt without permission or after completion", () => {

@@ -41,19 +41,19 @@ export const NAV: NavSection[] = [
       },
       {
         label: "Management",
-        href: "/dashboard/management",
+        href: "/management",
         icon: Settings2,
         menuKey: "management",
       },
       {
         label: "Organization",
-        href: "/dashboard/organization",
+        href: "/organization",
         icon: Building2,
         menuKey: "organization",
       },
       {
         label: "Products",
-        href: "/dashboard/products",
+        href: "/products",
         icon: Package,
         menuKey: "products",
       },
@@ -69,12 +69,12 @@ export const NAV: NavSection[] = [
         children: [
           {
             label: "Account",
-            href: "/dashboard/account",
+            href: "/account",
             menuKey: "profile.account",
           },
           {
             label: "Security",
-            href: "/dashboard/security",
+            href: "/security",
             menuKey: "profile.security",
           },
         ],
@@ -86,12 +86,12 @@ export const NAV: NavSection[] = [
         children: [
           {
             label: "Roles",
-            href: "/dashboard/roles",
+            href: "/roles",
             menuKey: "authorization.roles",
           },
           {
             label: "Permissions",
-            href: "/dashboard/permissions",
+            href: "/permissions",
             menuKey: "authorization.permissions",
           },
         ],

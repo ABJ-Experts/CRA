@@ -41,7 +41,7 @@ test("manufacturer creates a legal profile and resumes server onboarding", async
     );
     await page.goto("/dashboard");
     expect((await pageSession).status()).toBe(200);
-    await expect(page).toHaveURL(/\/dashboard\/onboarding$/);
+    await expect(page).toHaveURL(/\/onboarding$/);
     await expect(
       page.getByRole("heading", {
         name: "Organization onboarding",
@@ -162,7 +162,7 @@ test("manufacturer creates a legal profile and resumes server onboarding", async
             "/api/v1/organizations/current/onboarding" &&
           response.request().method() === "GET",
       );
-      await resumedPage.goto("/dashboard/onboarding");
+      await resumedPage.goto("/onboarding");
       expect((await resumedOnboarding).status()).toBe(200);
       await expect(
         resumedPage.getByText(legalName, { exact: true }),
