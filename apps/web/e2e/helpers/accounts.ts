@@ -15,6 +15,7 @@ const MAILPIT_ORIGIN =
 const SUPABASE_URL = process.env.SUPABASE_URL ?? "http://127.0.0.1:54321";
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const PASSWORD = "Password123";
+const PRODUCT_IMPORT_BUCKET = "product-imports";
 
 const configuredRunId = process.env.E2E_RUN_ID;
 if (configuredRunId && !/^[a-zA-Z0-9-]{8,80}$/.test(configuredRunId)) {
@@ -117,6 +118,95 @@ async function supabase(
       authorization: `Bearer ${SERVICE_ROLE_KEY}`,
       ...init.headers,
     },
+  });
+}
+
+type StorageObject = Readonly<{ name?: string; id?: string | null }>;
+
+async function listStorageObjects(
+  bucket: string,
+  prefix: string,
+): Promise<readonly string[]> {
+  const objects: string[] = [];
+  for (let offset = 0; ; offset += 1000) {
+    const response = await supabase(`/storage/v1/object/list/${bucket}`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ prefix, limit: 1000, offset }),
+    });
+    const body = await responseBody(response);
+    if (!response.ok || !Array.isArray(body)) {
+      throw new Error(
+        `Could not list scoped storage objects for ${bucket}/${prefix}: ${JSON.stringify(body)}`,
+      );
+    }
+    for (const entry of body as StorageObject[]) {
+      if (
+        !entry.name ||
+        entry.name.includes("..") ||
+        entry.name.includes("\\")
+      ) {
+        throw new Error(`Unexpected scoped storage object name in ${bucket}`);
+      }
+      const path = `${prefix}${entry.name}`;
+      if (entry.id === null) {
+        objects.push(...(await listStorageObjects(bucket, `${path}/`)));
+      } else {
+        objects.push(path);
+      }
+    }
+    if (body.length < 1000) return objects;
+  }
+}
+
+async function removeImportStorageObjects(
+  bucket: string,
+  organizationId: string,
+  importIds: readonly string[],
+): Promise<void> {
+  for (const importId of importIds) {
+    const prefix = `${organizationId}/${importId}/`;
+    const objects = await listStorageObjects(bucket, prefix);
+    if (objects.some((object) => !object.startsWith(prefix))) {
+      throw new Error(`Refusing to remove storage outside ${bucket}/${prefix}`);
+    }
+    for (let index = 0; index < objects.length; index += 1000) {
+      const prefixes = objects.slice(index, index + 1000);
+      const response = await supabase(`/storage/v1/object/${bucket}`, {
+        method: "DELETE",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ prefixes }),
+      });
+      if (!response.ok) {
+        throw new Error(
+          `Could not remove scoped storage objects for ${bucket}/${prefix}: ${JSON.stringify(await responseBody(response))}`,
+        );
+      }
+    }
+    const remaining = await listStorageObjects(bucket, prefix);
+    if (remaining.length !== 0) {
+      throw new Error(
+        `Scoped storage cleanup assertion failed for ${bucket}/${prefix}`,
+      );
+    }
+  }
+}
+
+async function runScopedImportIds(
+  organizationId: string,
+): Promise<readonly string[]> {
+  const response = await supabase(
+    `/rest/v1/product_import_jobs?select=id&organization_id=eq.${encodeURIComponent(organizationId)}`,
+  );
+  const body = await responseBody(response);
+  if (!response.ok || !Array.isArray(body)) {
+    throw new Error(
+      `Could not resolve scoped import fixtures for ${organizationId}: ${JSON.stringify(body)}`,
+    );
+  }
+  return body.flatMap((row: unknown) => {
+    if (!row || typeof row !== "object" || !("id" in row)) return [];
+    return typeof row.id === "string" ? [row.id] : [];
   });
 }
 
@@ -250,11 +340,43 @@ export class RunScopedAccounts {
 
   async cleanup(): Promise<void> {
     for (const id of this.organizationIds) {
+      const importIds = await runScopedImportIds(id);
       // Keep this explicit rather than relying on the organization cascade:
       // relationship/finding rows deliberately use restrictive composite FKs
       // while they are authoritative. Every request is narrowed to the unique
       // run-scoped organization, so seeded and concurrent E2E organizations
       // are never selected.
+      await removeImportStorageObjects(PRODUCT_IMPORT_BUCKET, id, importIds);
+      for (const importId of importIds) {
+        for (const [table, scope] of [
+          [
+            "product_import_rows",
+            `import_id=eq.${encodeURIComponent(importId)}`,
+          ],
+          [
+            "product_import_jobs",
+            `id=eq.${encodeURIComponent(importId)}&organization_id=eq.${encodeURIComponent(id)}`,
+          ],
+        ] as const) {
+          const deletion = await supabase(`/rest/v1/${table}?${scope}`, {
+            method: "DELETE",
+          });
+          if (!deletion.ok) {
+            throw new Error(
+              `Could not clean scoped ${table} fixture ${importId}: ${JSON.stringify(await responseBody(deletion))}`,
+            );
+          }
+          const assertion = await supabase(
+            `/rest/v1/${table}?select=id&${scope}`,
+          );
+          const rows = await responseBody(assertion);
+          if (!assertion.ok || !Array.isArray(rows) || rows.length !== 0) {
+            throw new Error(
+              `Scoped cleanup assertion failed for ${table} / ${importId}: ${JSON.stringify(rows)}`,
+            );
+          }
+        }
+      }
       for (const table of [
         "finding_product_impact_overrides",
         "finding_impact_associations",

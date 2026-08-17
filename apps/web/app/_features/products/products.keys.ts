@@ -86,6 +86,13 @@ const relationshipPropagationEvents = Object.freeze((productId: string) =>
     "relationship-propagation-events",
   ] as const),
 );
+const imports = Object.freeze(["products", "imports"] as const);
+const importDetail = Object.freeze((importId: string) =>
+  Object.freeze(["products", "imports", importId] as const),
+);
+const importRows = Object.freeze((importId: string, query: string) =>
+  Object.freeze(["products", "imports", importId, "rows", query] as const),
+);
 
 export const productKeys = Object.freeze({
   all,
@@ -110,4 +117,7 @@ export const productKeys = Object.freeze({
   componentLinks,
   relationshipGraph,
   relationshipPropagationEvents,
+  imports,
+  importDetail,
+  importRows,
 });

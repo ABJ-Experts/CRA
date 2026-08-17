@@ -16,6 +16,7 @@
     "worker:tenant-lifecycle": "node dist/tenant-lifecycle-worker.js",
     "worker:product-retention": "node dist/product-retention-worker.js",
     "worker:finding-propagation": "node dist/finding-propagation-worker.js",
+    "worker:product-import": "node dist/product-import-worker.js",
     "verify:tenant-export-capacity": "node dist/organizations/tenant-administration/worker/tenant-export-capacity.js"
   },
   "dependencies": {
@@ -27,6 +28,7 @@
     "@repo/contracts": "workspace:*",
     "@supabase/supabase-js": "^2.112.2",
     "cookie-parser": "^1.4.7",
+    "csv-parse": "^6.2.1",
     "file-type": "^16.5.4",
     "helmet": "^8.3.0",
     "jose": "^5.10.0",

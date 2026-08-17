@@ -10,6 +10,7 @@ import {
   type LegalEntityDirectory,
 } from "../organizations/legal-entities/application/legal-entity-ports";
 import { PermissionsModule } from "../permissions/permissions.module";
+import { PermissionsService } from "../permissions/permissions.service";
 import {
   PRODUCT_REPOSITORY,
   ProductUseCases,
@@ -30,6 +31,11 @@ import {
 } from "./application/product-relationship-worker.port";
 import { SupabaseProductRepository } from "./infrastructure/supabase-product.repository";
 import { SupabaseProductRelationshipWorkerAdapter } from "./infrastructure/supabase-product-relationship-worker.adapter";
+import { ProductImportWorker } from "./imports/product-import-worker";
+import { ProductImportsController } from "./imports/product-imports.controller";
+import { ProductImportsService } from "./imports/product-imports.service";
+import { ProductImportUseCases } from "./imports/product-release-import-use-cases";
+import { SupabaseProductImportRepository } from "./imports/supabase-product-import.repository";
 import { ProductsController } from "./products.controller";
 import { ProductsService } from "./products.service";
 import { ProductRetentionWorker } from "./worker/product-retention-worker";
@@ -40,9 +46,10 @@ import {
 
 @Module({
   imports: [SupabaseModule, OrganizationsModule, PermissionsModule, MailModule],
-  controllers: [ProductsController],
+  controllers: [ProductImportsController, ProductsController],
   providers: [
     SupabaseProductRepository,
+    SupabaseProductImportRepository,
     { provide: PRODUCT_REPOSITORY, useExisting: SupabaseProductRepository },
     {
       provide: ProductUseCases,
@@ -109,6 +116,48 @@ import {
           delivery,
         }),
     },
+    {
+      provide: ProductImportUseCases,
+      inject: [SupabaseProductImportRepository],
+      useFactory: (repository: SupabaseProductImportRepository) =>
+        new ProductImportUseCases(repository),
+    },
+    ProductImportsService,
+    {
+      provide: ProductImportWorker,
+      inject: [
+        SupabaseProductImportRepository,
+        ProductImportUseCases,
+        PermissionsService,
+        ConfigService,
+      ],
+      useFactory: (
+        repository: SupabaseProductImportRepository,
+        useCases: ProductImportUseCases,
+        permissions: PermissionsService,
+        config: ConfigService,
+      ) =>
+        new ProductImportWorker({
+          workerId: randomUUID(),
+          leaseSeconds: config.getOrThrow<number>(
+            "PRODUCT_IMPORT_LEASE_SECONDS",
+          ),
+          repository,
+          useCases,
+          authorizeCommit: async (organizationId, actorId) => {
+            const role = await repository.actorBaseRole(
+              organizationId,
+              actorId,
+            );
+            return role
+              ? permissions.can(organizationId, actorId, role, [
+                  "can_create_products",
+                  "can_edit_products",
+                ])
+              : false;
+          },
+        }),
+    },
     ProductsService,
   ],
   exports: [
@@ -121,6 +170,7 @@ import {
     PRODUCT_RELATIONSHIP_GRAPH_EVENT_WORKER,
     PRODUCT_RELATIONSHIP_PROPAGATION_WORKER,
     ProductRetentionWorker,
+    ProductImportWorker,
   ],
 })
 export class ProductsModule {}

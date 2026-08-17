@@ -3067,6 +3067,264 @@ export type Database = {
           },
         ]
       }
+      product_import_jobs: {
+        Row: {
+          actor_user_id: string
+          byte_size: number
+          canceled_at: string | null
+          cancellation_reason: string | null
+          checkpoint_row_number: number
+          commit_actor_user_id: string | null
+          commit_idempotency_key: string | null
+          commit_request_digest: string | null
+          committed_at: string | null
+          committed_row_count: number
+          content_hash: string
+          correlation_id: string
+          create_count: number
+          created_at: string
+          dry_run_completed_at: string | null
+          error_code: string | null
+          expires_at: string
+          failed_count: number
+          id: string
+          lease_expires_at: string | null
+          lease_owner: string | null
+          next_attempt_at: string
+          organization_id: string
+          original_filename: string
+          processed_row_count: number
+          report_deleted_at: string | null
+          report_object_path: string | null
+          retention_until: string
+          retry_count: number
+          row_count: number
+          schema_version: string
+          skipped_count: number
+          source_deleted_at: string | null
+          source_object_path: string
+          status: string
+          unchanged_count: number
+          update_count: number
+          updated_at: string
+          upload_idempotency_key: string
+          upload_request_digest: string
+          warning_count: number
+          work_kind: string
+        }
+        Insert: {
+          actor_user_id: string
+          byte_size: number
+          canceled_at?: string | null
+          cancellation_reason?: string | null
+          checkpoint_row_number?: number
+          commit_actor_user_id?: string | null
+          commit_idempotency_key?: string | null
+          commit_request_digest?: string | null
+          committed_at?: string | null
+          committed_row_count?: number
+          content_hash: string
+          correlation_id: string
+          create_count?: number
+          created_at?: string
+          dry_run_completed_at?: string | null
+          error_code?: string | null
+          expires_at: string
+          failed_count?: number
+          id: string
+          lease_expires_at?: string | null
+          lease_owner?: string | null
+          next_attempt_at?: string
+          organization_id: string
+          original_filename: string
+          processed_row_count?: number
+          report_deleted_at?: string | null
+          report_object_path?: string | null
+          retention_until: string
+          retry_count?: number
+          row_count?: number
+          schema_version: string
+          skipped_count?: number
+          source_deleted_at?: string | null
+          source_object_path: string
+          status: string
+          unchanged_count?: number
+          update_count?: number
+          updated_at?: string
+          upload_idempotency_key: string
+          upload_request_digest: string
+          warning_count?: number
+          work_kind?: string
+        }
+        Update: {
+          actor_user_id?: string
+          byte_size?: number
+          canceled_at?: string | null
+          cancellation_reason?: string | null
+          checkpoint_row_number?: number
+          commit_actor_user_id?: string | null
+          commit_idempotency_key?: string | null
+          commit_request_digest?: string | null
+          committed_at?: string | null
+          committed_row_count?: number
+          content_hash?: string
+          correlation_id?: string
+          create_count?: number
+          created_at?: string
+          dry_run_completed_at?: string | null
+          error_code?: string | null
+          expires_at?: string
+          failed_count?: number
+          id?: string
+          lease_expires_at?: string | null
+          lease_owner?: string | null
+          next_attempt_at?: string
+          organization_id?: string
+          original_filename?: string
+          processed_row_count?: number
+          report_deleted_at?: string | null
+          report_object_path?: string | null
+          retention_until?: string
+          retry_count?: number
+          row_count?: number
+          schema_version?: string
+          skipped_count?: number
+          source_deleted_at?: string | null
+          source_object_path?: string
+          status?: string
+          unchanged_count?: number
+          update_count?: number
+          updated_at?: string
+          upload_idempotency_key?: string
+          upload_request_digest?: string
+          warning_count?: number
+          work_kind?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_import_jobs_actor_user_id_fkey"
+            columns: ["actor_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_import_jobs_commit_actor_user_id_fkey"
+            columns: ["commit_actor_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_import_jobs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_import_rows: {
+        Row: {
+          committed_at: string | null
+          created_at: string
+          expected_product_version: number | null
+          expected_release_version: number | null
+          id: string
+          import_id: string
+          issues: Json
+          organization_id: string
+          product_id: string | null
+          product_internal_code: string | null
+          product_internal_code_normalized: string | null
+          proposed: Json
+          proposed_action: string
+          release_id: string | null
+          release_version: string | null
+          release_version_normalized: string | null
+          result: string
+          row_hash: string
+          row_type: string | null
+          source_row_number: number
+          updated_at: string
+        }
+        Insert: {
+          committed_at?: string | null
+          created_at?: string
+          expected_product_version?: number | null
+          expected_release_version?: number | null
+          id?: string
+          import_id: string
+          issues?: Json
+          organization_id: string
+          product_id?: string | null
+          product_internal_code?: string | null
+          product_internal_code_normalized?: string | null
+          proposed?: Json
+          proposed_action: string
+          release_id?: string | null
+          release_version?: string | null
+          release_version_normalized?: string | null
+          result: string
+          row_hash: string
+          row_type?: string | null
+          source_row_number: number
+          updated_at?: string
+        }
+        Update: {
+          committed_at?: string | null
+          created_at?: string
+          expected_product_version?: number | null
+          expected_release_version?: number | null
+          id?: string
+          import_id?: string
+          issues?: Json
+          organization_id?: string
+          product_id?: string | null
+          product_internal_code?: string | null
+          product_internal_code_normalized?: string | null
+          proposed?: Json
+          proposed_action?: string
+          release_id?: string | null
+          release_version?: string | null
+          release_version_normalized?: string | null
+          result?: string
+          row_hash?: string
+          row_type?: string | null
+          source_row_number?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_import_rows_organization_id_import_id_fkey"
+            columns: ["organization_id", "import_id"]
+            isOneToOne: false
+            referencedRelation: "product_import_jobs"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "product_import_rows_organization_id_product_id_fkey"
+            columns: ["organization_id", "product_id"]
+            isOneToOne: false
+            referencedRelation: "product_retention_alert_operations"
+            referencedColumns: ["organization_id", "product_id"]
+          },
+          {
+            foreignKeyName: "product_import_rows_organization_id_product_id_fkey"
+            columns: ["organization_id", "product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "product_import_rows_organization_id_release_id_fkey"
+            columns: ["organization_id", "release_id"]
+            isOneToOne: false
+            referencedRelation: "product_releases"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
       product_legal_entity_assignments: {
         Row: {
           assigned_at: string
@@ -4909,6 +5167,18 @@ export type Database = {
       }
       backfill_organization_legal_entities: { Args: never; Returns: undefined }
       bump_session_epoch: { Args: { p_user_id: string }; Returns: undefined }
+      cancel_product_import_job: {
+        Args: {
+          p_actor_user_id: string
+          p_import_id: string
+          p_organization_id: string
+          p_reason: string
+        }
+        Returns: {
+          job: Json
+          outcome: string
+        }[]
+      }
       checkpoint_organization_export_atomic: {
         Args: {
           p_completed_parts: number
@@ -4921,6 +5191,21 @@ export type Database = {
         }
         Returns: {
           checkpoint_version: number
+          outcome: string
+        }[]
+      }
+      checkpoint_product_import_job: {
+        Args: {
+          p_checkpoint_row_number: number
+          p_import_id: string
+          p_lease_seconds: number
+          p_organization_id: string
+          p_processed_row_count: number
+          p_status: string
+          p_worker_id: string
+        }
+        Returns: {
+          job: Json
           outcome: string
         }[]
       }
@@ -5013,6 +5298,31 @@ export type Database = {
           purge_job_id: string
         }[]
       }
+      claim_product_import_job: {
+        Args: {
+          p_lease_seconds: number
+          p_organization_id: string
+          p_worker_id: string
+        }
+        Returns: {
+          job: Json
+          outcome: string
+          work: Json
+        }[]
+      }
+      claim_product_import_job_by_id: {
+        Args: {
+          p_import_id: string
+          p_lease_seconds: number
+          p_organization_id: string
+          p_worker_id: string
+        }
+        Returns: {
+          job: Json
+          outcome: string
+          work: Json
+        }[]
+      }
       claim_product_relationship_graph_event_atomic: {
         Args: {
           p_lease_owner: string
@@ -5062,6 +5372,32 @@ export type Database = {
         }[]
       }
       clear_login_attempts: { Args: { p_email: string }; Returns: undefined }
+      commit_product_import_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_content_hash: string
+          p_idempotency_key: string
+          p_import_id: string
+          p_organization_id: string
+        }
+        Returns: {
+          job: Json
+          outcome: string
+        }[]
+      }
+      commit_product_import_rows_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_content_hash: string
+          p_idempotency_key: string
+          p_import_id: string
+          p_organization_id: string
+        }
+        Returns: {
+          job: Json
+          outcome: string
+        }[]
+      }
       complete_mfa_recovery: {
         Args: { p_operation_id: string; p_user_id: string }
         Returns: string
@@ -5107,6 +5443,27 @@ export type Database = {
         }
         Returns: {
           deletion_proof_id: string
+          outcome: string
+        }[]
+      }
+      complete_product_import_dry_run: {
+        Args: {
+          p_content_hash: string
+          p_create_count: number
+          p_error_code: string
+          p_failed_count: number
+          p_import_id: string
+          p_organization_id: string
+          p_report_object_path: string
+          p_row_count: number
+          p_skipped_count: number
+          p_unchanged_count: number
+          p_update_count: number
+          p_warning_count: number
+          p_worker_id: string
+        }
+        Returns: {
+          job: Json
           outcome: string
         }[]
       }
@@ -5330,6 +5687,23 @@ export type Database = {
           relationship: Json
         }[]
       }
+      create_product_import_job: {
+        Args: {
+          p_actor_user_id: string
+          p_byte_size: number
+          p_content_hash: string
+          p_correlation_id: string
+          p_import_id: string
+          p_organization_id: string
+          p_original_filename: string
+          p_source_object_path: string
+          p_upload_idempotency_key: string
+        }
+        Returns: {
+          job: Json
+          outcome: string
+        }[]
+      }
       create_product_release_atomic: {
         Args: {
           p_actor_user_id: string
@@ -5521,6 +5895,12 @@ export type Database = {
         Args: { p_actor_user_id: string; p_organization_id: string }
         Returns: undefined
       }
+      expire_product_import_jobs: {
+        Args: { p_batch_size: number; p_organization_id: string }
+        Returns: {
+          expired_count: number
+        }[]
+      }
       expire_stale_invitations: { Args: never; Returns: number }
       fail_finding_propagation_job_atomic: {
         Args: {
@@ -5598,6 +5978,19 @@ export type Database = {
         Returns: {
           outcome: string
           status: string
+        }[]
+      }
+      fail_product_import_job: {
+        Args: {
+          p_error_code: string
+          p_import_id: string
+          p_organization_id: string
+          p_retryable: boolean
+          p_worker_id: string
+        }
+        Returns: {
+          job: Json
+          outcome: string
         }[]
       }
       fail_product_relationship_graph_event_atomic: {
@@ -5812,6 +6205,25 @@ export type Database = {
           outcome: string
         }[]
       }
+      get_product_import_cleanup_candidates: {
+        Args: { p_batch_size: number; p_organization_id: string }
+        Returns: {
+          import_id: string
+          report_object_path: string
+          source_object_path: string
+        }[]
+      }
+      get_product_import_job: {
+        Args: {
+          p_actor_user_id: string
+          p_import_id: string
+          p_organization_id: string
+        }
+        Returns: {
+          job: Json
+          outcome: string
+        }[]
+      }
       get_product_relationship_graph: {
         Args: {
           p_actor_user_id: string
@@ -6005,6 +6417,13 @@ export type Database = {
           organization_id: string
         }[]
       }
+      list_due_product_import_organizations: {
+        Args: { p_limit: number }
+        Returns: {
+          oldest_due_at: string
+          organization_id: string
+        }[]
+      }
       list_due_product_relationship_graph_event_organizations: {
         Args: never
         Returns: {
@@ -6015,6 +6434,33 @@ export type Database = {
         Args: never
         Returns: {
           organization_id: string
+        }[]
+      }
+      list_product_import_jobs: {
+        Args: {
+          p_actor_user_id: string
+          p_organization_id: string
+          p_page: number
+          p_page_size: number
+          p_status: string
+        }
+        Returns: {
+          imports: Json
+          outcome: string
+        }[]
+      }
+      list_product_import_rows: {
+        Args: {
+          p_actor_user_id: string
+          p_import_id: string
+          p_organization_id: string
+          p_page: number
+          p_page_size: number
+          p_result: string
+        }
+        Returns: {
+          outcome: string
+          rows: Json
         }[]
       }
       list_product_releases: {
@@ -6317,6 +6763,18 @@ export type Database = {
         Returns: Json
       }
       m2_parse_utc_z: { Args: { p_value: string }; Returns: string }
+      m2_product_import_job_export_json: {
+        Args: {
+          p_job: Database["public"]["Tables"]["product_import_jobs"]["Row"]
+        }
+        Returns: Json
+      }
+      m2_product_import_row_export_json: {
+        Args: {
+          p_row: Database["public"]["Tables"]["product_import_rows"]["Row"]
+        }
+        Returns: Json
+      }
       m2_product_json: {
         Args: { p_organization_id: string; p_product_id: string }
         Returns: Json
@@ -6434,6 +6892,29 @@ export type Database = {
         Args: { p_operation_id: string; p_user_id: string }
         Returns: string
       }
+      mark_product_import_objects_deleted: {
+        Args: {
+          p_import_id: string
+          p_organization_id: string
+          p_report_deleted: boolean
+          p_source_deleted: boolean
+        }
+        Returns: {
+          outcome: string
+        }[]
+      }
+      mark_product_import_stale_conflict: {
+        Args: {
+          p_error_code: string
+          p_import_id: string
+          p_organization_id: string
+          p_worker_id: string
+        }
+        Returns: {
+          job: Json
+          outcome: string
+        }[]
+      }
       materialize_organization_export_snapshot_atomic: {
         Args: {
           p_expected_checkpoint_version: number
@@ -6513,6 +6994,28 @@ export type Database = {
           outcome: string
           preview: Json
         }[]
+      }
+      product_import_commit_references_valid: {
+        Args: { p_import_id: string; p_organization_id: string }
+        Returns: boolean
+      }
+      product_import_issue_code_is_valid: {
+        Args: { p_code: string }
+        Returns: boolean
+      }
+      product_import_issues_are_safe: {
+        Args: { p_issues: Json }
+        Returns: boolean
+      }
+      product_import_job_json: {
+        Args: { p_import_id: string; p_organization_id: string }
+        Returns: Json
+      }
+      product_import_row_json: {
+        Args: {
+          p_row: Database["public"]["Tables"]["product_import_rows"]["Row"]
+        }
+        Returns: Json
       }
       publish_organization_branding_atomic: {
         Args: {
@@ -6638,6 +7141,18 @@ export type Database = {
           outcome: string
         }[]
       }
+      record_product_import_report_download: {
+        Args: {
+          p_actor_user_id: string
+          p_correlation_id: string
+          p_import_id: string
+          p_organization_id: string
+        }
+        Returns: {
+          object_path: string
+          outcome: string
+        }[]
+      }
       recover_organization_atomic: {
         Args: {
           p_actor_user_id: string
@@ -6725,6 +7240,19 @@ export type Database = {
           export_job: Json
           export_job_id: string
           idempotent: boolean
+          outcome: string
+        }[]
+      }
+      request_product_import_commit: {
+        Args: {
+          p_actor_user_id: string
+          p_content_hash: string
+          p_idempotency_key: string
+          p_import_id: string
+          p_organization_id: string
+        }
+        Returns: {
+          job: Json
           outcome: string
         }[]
       }
@@ -6821,6 +7349,19 @@ export type Database = {
           branding: Json
           draft: Json
           outcome: string
+        }[]
+      }
+      save_product_import_rows_page: {
+        Args: {
+          p_content_hash: string
+          p_import_id: string
+          p_organization_id: string
+          p_rows: Json
+          p_worker_id: string
+        }
+        Returns: {
+          outcome: string
+          saved_count: number
         }[]
       }
       schedule_organization_purge_atomic: {

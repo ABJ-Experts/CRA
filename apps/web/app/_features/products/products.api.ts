@@ -22,6 +22,17 @@ import {
   productParamsSchema,
   productComponentLinkResponseSchema,
   productComponentLinksResponseSchema,
+  productImportCancelInputSchema,
+  productImportCommitInputSchema,
+  productImportListQuerySchema,
+  productImportParamsSchema,
+  productImportReportLinkResponseSchema,
+  productImportResponseSchema,
+  productImportRowsQuerySchema,
+  productImportRowsResponseSchema,
+  productImportTemplateResponseSchema,
+  productImportUploadFieldsSchema,
+  productImportsResponseSchema,
   productRelationshipGraphQuerySchema,
   productRelationshipGraphResponseSchema,
   productRelationshipParamsSchema,
@@ -84,6 +95,16 @@ import {
   type EndSoftwareBaselineMembershipInput,
   type MoveProductLegalEntityInput,
   type ProductListQuery,
+  type ProductImportCancelInput,
+  type ProductImportCommitInput,
+  type ProductImportReportLinkResponse,
+  type ProductImportResponse,
+  type ProductImportRowsResponse,
+  type ProductImportsResponse,
+  type ProductImportListQuery,
+  type ProductImportRowsQuery,
+  type ProductImportTemplateResponse,
+  type ProductImportUploadFields,
   type ProductRelationshipGraphQuery,
   type PreviewProductComponentLinkInput,
   type RequestRelationshipReevaluationInput,
@@ -100,7 +121,10 @@ import {
   type UpdateReleaseInput,
 } from "@repo/contracts/products";
 
-import { authenticatedRequestJson } from "../../_lib/http/authenticated-request";
+import {
+  authenticatedRequestJson,
+  authenticatedRequestMultipart,
+} from "../../_lib/http/authenticated-request";
 import { ApiClientError, apiClient } from "../../_lib/http/api-client";
 
 function productPath(productId: string, suffix = ""): `/${string}` {
@@ -223,6 +247,18 @@ function membershipPath(
   return `/api/v1/products/${parsed.data.productId}/baseline-memberships/${parsed.data.membershipId}${suffix}`;
 }
 
+function importPath(importId: string, suffix = ""): `/${string}` {
+  const parsed = productImportParamsSchema.safeParse({ importId });
+  if (!parsed.success) {
+    throw new ApiClientError(
+      "invalid_request",
+      "The import identifier is invalid.",
+      400,
+    );
+  }
+  return `/api/v1/products/imports/${parsed.data.importId}${suffix}`;
+}
+
 function queryPath(
   path: `/${string}`,
   query: Record<string, unknown>,
@@ -237,6 +273,122 @@ function queryPath(
 
 /** Typed browser boundary for the authoritative M2 API, never dashboard mocks. */
 export class ProductsApi {
+  getImportTemplate(
+    signal?: AbortSignal,
+  ): Promise<ProductImportTemplateResponse> {
+    return authenticatedRequestJson<typeof productImportTemplateResponseSchema>(
+      {
+        path: "/api/v1/products/imports/template",
+        schema: productImportTemplateResponseSchema,
+        signal,
+      },
+    );
+  }
+
+  uploadImport(
+    fields: ProductImportUploadFields,
+    file: File,
+    signal?: AbortSignal,
+  ): Promise<ProductImportResponse> {
+    return authenticatedRequestMultipart<
+      typeof productImportResponseSchema,
+      typeof productImportUploadFieldsSchema
+    >({
+      path: "/api/v1/products/imports",
+      method: "POST",
+      fields,
+      fieldsSchema: productImportUploadFieldsSchema,
+      file: { name: "file", value: file },
+      schema: productImportResponseSchema,
+      signal,
+    });
+  }
+
+  getImport(
+    importId: string,
+    signal?: AbortSignal,
+  ): Promise<ProductImportResponse> {
+    return authenticatedRequestJson<typeof productImportResponseSchema>({
+      path: importPath(importId),
+      schema: productImportResponseSchema,
+      signal,
+    });
+  }
+
+  listImportRows(
+    importId: string,
+    query: Partial<ProductImportRowsQuery> = {},
+    signal?: AbortSignal,
+  ): Promise<ProductImportRowsResponse> {
+    const parsed = apiClient.parseInput(productImportRowsQuerySchema, query);
+    return authenticatedRequestJson<typeof productImportRowsResponseSchema>({
+      path: queryPath(importPath(importId, "/rows"), parsed),
+      schema: productImportRowsResponseSchema,
+      signal,
+    });
+  }
+
+  commitImport(
+    importId: string,
+    input: ProductImportCommitInput,
+    signal?: AbortSignal,
+  ): Promise<ProductImportResponse> {
+    return authenticatedRequestJson<
+      typeof productImportResponseSchema,
+      typeof productImportCommitInputSchema
+    >({
+      path: importPath(importId, "/commit"),
+      method: "POST",
+      body: input,
+      inputSchema: productImportCommitInputSchema,
+      schema: productImportResponseSchema,
+      signal,
+    });
+  }
+
+  cancelImport(
+    importId: string,
+    input: ProductImportCancelInput,
+    signal?: AbortSignal,
+  ): Promise<ProductImportResponse> {
+    return authenticatedRequestJson<
+      typeof productImportResponseSchema,
+      typeof productImportCancelInputSchema
+    >({
+      path: importPath(importId, "/cancel"),
+      method: "POST",
+      body: input,
+      inputSchema: productImportCancelInputSchema,
+      schema: productImportResponseSchema,
+      signal,
+    });
+  }
+
+  listImports(
+    query: Partial<ProductImportListQuery> = {},
+    signal?: AbortSignal,
+  ): Promise<ProductImportsResponse> {
+    const parsed = apiClient.parseInput(productImportListQuerySchema, query);
+    return authenticatedRequestJson<typeof productImportsResponseSchema>({
+      path: queryPath("/api/v1/products/imports", parsed),
+      schema: productImportsResponseSchema,
+      signal,
+    });
+  }
+
+  getImportReportLink(
+    importId: string,
+    signal?: AbortSignal,
+  ): Promise<ProductImportReportLinkResponse> {
+    return authenticatedRequestJson<
+      typeof productImportReportLinkResponseSchema
+    >({
+      path: importPath(importId, "/report"),
+      schema: productImportReportLinkResponseSchema,
+      signal,
+    });
+  }
+
   async listMemberStates(signal?: AbortSignal) {
     return authenticatedRequestJson({
       path: "/api/v1/products/member-states",

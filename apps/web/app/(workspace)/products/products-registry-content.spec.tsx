@@ -60,6 +60,45 @@ const state = {
 vi.mock("../../_features/products/products.queries", () => ({
   useProductsQuery: () => state.products,
   useCreateProductMutation: () => ({ isPending: false, mutateAsync: vi.fn() }),
+  useProductImportTemplateQuery: () => ({
+    refetch: vi.fn(),
+    isFetching: false,
+  }),
+  useProductImportsQuery: () => ({
+    data: undefined,
+    isPending: false,
+    isError: false,
+    error: null,
+  }),
+  useProductImportQuery: () => ({
+    data: undefined,
+    isPending: false,
+    isError: false,
+    error: null,
+  }),
+  useProductImportRowsQuery: () => ({
+    data: undefined,
+    isPending: false,
+    isError: false,
+    error: null,
+    refetch: vi.fn(),
+  }),
+  useUploadProductImportMutation: () => ({
+    isPending: false,
+    mutateAsync: vi.fn(),
+  }),
+  useCommitProductImportMutation: () => ({
+    isPending: false,
+    mutateAsync: vi.fn(),
+  }),
+  useCancelProductImportMutation: () => ({
+    isPending: false,
+    mutateAsync: vi.fn(),
+  }),
+  useProductImportReportMutation: () => ({
+    isPending: false,
+    mutateAsync: vi.fn(),
+  }),
 }));
 vi.mock("../../_features/organizations/organizations.queries", () => ({
   useLegalEntitiesQuery: () => ({ data: { legalEntities: [] } }),
@@ -69,6 +108,9 @@ vi.mock("../../_providers/session-provider", () => ({
   useSession: () => state.session,
 }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
+vi.mock("@tanstack/react-query", () => ({
+  useQueryClient: () => ({ invalidateQueries: vi.fn() }),
+}));
 
 describe("ProductsRegistryContent", () => {
   const environment = process.env.NEXT_PUBLIC_ENABLE_MOCKS;

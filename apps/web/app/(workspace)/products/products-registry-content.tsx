@@ -23,6 +23,7 @@ import { useMocksReady } from "../../_providers/providers";
 import { useSession } from "../../_providers/session-provider";
 import { ApiClientError } from "../../_lib/http/api-client";
 import { PageHeading, SectionCard } from "../../dashboard/_components/dashboard-chrome";
+import { ProductImportSection } from "./product-import-section";
 
 const PRODUCT_TYPES: readonly {
   readonly value: ProductType;
@@ -353,6 +354,8 @@ export function ProductsRegistryContent() {
   const hasMembership = (session?.organizations.length ?? 0) > 0;
   const canView = permissions.can_view_products === true;
   const canCreate = permissions.can_create_products === true;
+  const canEdit = permissions.can_edit_products === true;
+  const canExport = permissions.can_export_products === true;
   const [search, setSearch] = useState("");
   const [archived, setArchived] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
@@ -431,6 +434,12 @@ export function ProductsRegistryContent() {
               }
             />
           ) : null}
+          <ProductImportSection
+            canView={canView}
+            canCreate={canCreate}
+            canEdit={canEdit}
+            canExport={canExport}
+          />
           <SectionCard title="Product registry" action={registrySummary}>
             <div className="mb-6 flex flex-col gap-3 border-b border-border pb-5 lg:flex-row lg:items-center lg:justify-between">
               <SearchInput

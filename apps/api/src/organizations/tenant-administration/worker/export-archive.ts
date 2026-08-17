@@ -125,6 +125,8 @@ export const exportSourceRegistry: readonly ExportSourceRegistration[] =
         "software_baselines",
         "software_baseline_release_memberships",
         "product_relationships",
+        "product_import_jobs",
+        "product_import_rows",
       ],
     },
     {

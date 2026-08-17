@@ -37,6 +37,18 @@ import {
   assignSoftwareBaselineMembershipInputSchema,
   createProductComponentLinkInputSchema,
   createProductVariantRelationshipInputSchema,
+  productImportCancelInputSchema,
+  productImportCommitInputSchema,
+  productImportFieldIssueSchema,
+  productImportMaxBytes,
+  productImportMaxRows,
+  productImportReportLinkResponseSchema,
+  productImportResponseSchema,
+  productImportRowsQuerySchema,
+  productImportRowsResponseSchema,
+  productImportSyncRowThreshold,
+  productImportTemplateResponseSchema,
+  productImportUploadFieldsSchema,
   createSoftwareBaselineInputSchema,
   productComponentLinkSchema,
   relationshipPropagationQuerySchema,
@@ -48,6 +60,7 @@ import {
 import type {
   CreateProductInput,
   ProductRetentionCalculation,
+  ProductImportCommitInput,
   ReleaseLifecycleState,
   ReleaseMarketAvailability,
   ProductSupportPeriod,
@@ -126,6 +139,160 @@ describe("product registry contracts", () => {
       | "component"
       | "remote_data_processing"
     >();
+  });
+});
+
+describe("product release import contracts", () => {
+  const importId = "55555555-5555-4555-8555-555555555555";
+  const now = "2026-08-17T12:00:00.000Z";
+  const contentHash =
+    "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+
+  it("parses upload, commit, cancel, and row result contracts strictly", () => {
+    expect(
+      productImportUploadFieldsSchema.parse({
+        idempotencyKey: ids.key,
+      }),
+    ).toEqual({ idempotencyKey: ids.key });
+
+    const commit = productImportCommitInputSchema.parse({
+      contentHash,
+      idempotencyKey: ids.key,
+    });
+    expectTypeOf<ProductImportCommitInput>().toEqualTypeOf<typeof commit>();
+    expect(
+      productImportCommitInputSchema.safeParse({
+        ...commit,
+        changed: true,
+      }).success,
+    ).toBe(false);
+    expect(productImportCancelInputSchema.parse({})).toEqual({});
+
+    expect(
+      productImportResponseSchema.parse({
+        import: {
+          id: importId,
+          schemaVersion: "m2-product-release-import-v1",
+          status: "dry_run_completed",
+          contentHash,
+          byteSize: productImportMaxBytes,
+          rowCount: productImportMaxRows,
+          processedRowCount: productImportMaxRows,
+          counts: {
+            create: 1,
+            update: 0,
+            unchanged: 1,
+            skipped: 0,
+            failed: 0,
+            warnings: 0,
+          },
+          errorCode: null,
+          expiresAt: now,
+          createdAt: now,
+          updatedAt: now,
+          committedAt: null,
+        },
+      }).import.status,
+    ).toBe("dry_run_completed");
+
+    expect(
+      productImportRowsResponseSchema.parse({
+        rows: {
+          rows: [
+            {
+              sourceRowNumber: 2,
+              rowType: "product",
+              proposedAction: "failed",
+              result: "failed",
+              productInternalCode: null,
+              releaseVersion: null,
+              issues: [
+                {
+                  field: "product_internal_code",
+                  code: "duplicate_in_file",
+                  message: "This internal code appears more than once.",
+                  severity: "error",
+                },
+              ],
+            },
+          ],
+          total: 1,
+          page: 1,
+          pageSize: 50,
+          pageCount: 1,
+        },
+      }).rows.rows[0]?.issues[0]?.code,
+    ).toBe("duplicate_in_file");
+  });
+
+  it("documents the downloadable template contract", () => {
+    const template = productImportTemplateResponseSchema.parse({
+      schemaVersion: "m2-product-release-import-v1",
+      filename: "product-release-import-v1.csv",
+      contentType: "text/csv; charset=utf-8",
+      csv: "format_version,record_type,operation\n",
+    });
+    expect(template.csv).toContain("record_type");
+    expect(
+      productImportRowsQuerySchema.parse({
+        page: "2",
+        pageSize: "100",
+        result: "failed",
+      }),
+    ).toEqual({ page: 2, pageSize: 100, result: "failed" });
+  });
+
+  it("uses the approved hard limits and never exposes raw storage details", () => {
+    expect(productImportMaxBytes).toBe(10 * 1024 * 1024);
+    expect(productImportMaxRows).toBe(10_000);
+    expect(productImportSyncRowThreshold).toBe(1_000);
+    expect(
+      productImportFieldIssueSchema.safeParse({
+        field: "row_type",
+        code: "invalid_record_type",
+        message: "The record type is not supported.",
+        severity: "error",
+      }).success,
+    ).toBe(false);
+
+    expect(
+      productImportResponseSchema.safeParse({
+        import: {
+          id: importId,
+          schemaVersion: "m2-product-release-import-v1",
+          status: "validating",
+          contentHash,
+          byteSize: 10,
+          rowCount: 1,
+          processedRowCount: 0,
+          counts: {
+            create: 0,
+            update: 0,
+            unchanged: 0,
+            skipped: 0,
+            failed: 0,
+            warnings: 0,
+          },
+          errorCode: null,
+          expiresAt: now,
+          createdAt: now,
+          updatedAt: now,
+          committedAt: null,
+          objectPath: "should-not-be-public",
+        },
+      }).success,
+    ).toBe(false);
+
+    expect(
+      productImportReportLinkResponseSchema.parse({
+        report: {
+          filename: "product-release-import-report.csv",
+          contentType: "text/csv; charset=utf-8",
+          downloadUrl: "https://storage.example.test/signed-report",
+          expiresAt: now,
+        },
+      }).report.downloadUrl,
+    ).toContain("signed-report");
   });
 });
 

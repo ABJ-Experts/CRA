@@ -146,6 +146,62 @@ describe("productsApi", () => {
     expect(fetcher).toHaveBeenCalledOnce();
   });
 
+  it("uploads an import through the versioned M2 namespace with parsed multipart fields", async () => {
+    const importId = "77777777-7777-4777-8777-777777777777";
+    const fetcher = vi.fn(async () =>
+      json({
+        import: {
+          id: importId,
+          schemaVersion: "m2-product-release-import-v1",
+          status: "dry_run_completed",
+          contentHash: "a".repeat(64),
+          byteSize: 32,
+          rowCount: 1,
+          processedRowCount: 1,
+          counts: {
+            create: 1,
+            update: 0,
+            unchanged: 0,
+            skipped: 0,
+            failed: 0,
+            warnings: 0,
+          },
+          errorCode: null,
+          expiresAt: "2026-08-18T10:00:00.000Z",
+          createdAt: NOW,
+          updatedAt: NOW,
+          committedAt: null,
+        },
+      }),
+    );
+    vi.stubGlobal("fetch", fetcher);
+    const file = new File(["record_type\nproduct\n"], "products.csv", {
+      type: "text/csv",
+    });
+
+    await expect(
+      productsApi.uploadImport(
+        { idempotencyKey: "88888888-8888-4888-8888-888888888888" },
+        file,
+      ),
+    ).resolves.toMatchObject({ import: { id: importId } });
+
+    expect(fetcher).toHaveBeenCalledWith(
+      "/api/v1/products/imports",
+      expect.objectContaining({ method: "POST", body: expect.any(FormData) }),
+    );
+    const body = (
+      fetcher.mock.calls as unknown as readonly [
+        RequestInfo | URL,
+        RequestInit?,
+      ][]
+    )[0]?.[1]?.body as FormData;
+    expect(body.get("idempotencyKey")).toBe(
+      "88888888-8888-4888-8888-888888888888",
+    );
+    expect(body.get("file")).toBe(file);
+  });
+
   it("keeps release reads in the product-specific versioned namespace", async () => {
     const fetcher = vi.fn(async () =>
       json({

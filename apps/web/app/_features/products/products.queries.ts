@@ -20,6 +20,15 @@ import type {
   CreateSupportPeriodRequest,
   MoveProductLegalEntityInput,
   ProductListQuery,
+  ProductImportCancelInput,
+  ProductImportCommitInput,
+  ProductImportListQuery,
+  ProductImportResponse,
+  ProductImportRowsResponse,
+  ProductImportRowsQuery,
+  ProductImportsResponse,
+  ProductImportTemplateResponse,
+  ProductImportUploadFields,
   ProductRelationshipGraphQuery,
   PreviewProductComponentLinkInput,
   RequestRelationshipReevaluationInput,
@@ -61,6 +70,119 @@ export function useProductsQuery(
     retry: false,
     placeholderData: keepPreviousData,
     queryFn: ({ signal }) => productsApi.list(query, signal),
+  });
+}
+
+function shouldPollImport(status: string | undefined): boolean {
+  return (
+    status === "queued" ||
+    status === "parsing" ||
+    status === "validating" ||
+    status === "committing" ||
+    status === "retrying"
+  );
+}
+
+export function useProductImportQuery(importId: string, enabled: boolean) {
+  return useQuery<ProductImportResponse>({
+    queryKey: productKeys.importDetail(importId),
+    enabled: enabled && importId !== "",
+    retry: false,
+    refetchInterval: (query) =>
+      shouldPollImport(query.state.data?.import.status) ? 2_000 : false,
+    queryFn: ({ signal }) => productsApi.getImport(importId, signal),
+  });
+}
+
+export function useProductImportRowsQuery(
+  importId: string,
+  query: Partial<ProductImportRowsQuery>,
+  enabled: boolean,
+) {
+  return useQuery<ProductImportRowsResponse>({
+    queryKey: productKeys.importRows(importId, listKey(query)),
+    enabled: enabled && importId !== "",
+    retry: false,
+    placeholderData: keepPreviousData,
+    queryFn: ({ signal }) =>
+      productsApi.listImportRows(importId, query, signal),
+  });
+}
+
+export function useProductImportTemplateQuery(enabled: boolean) {
+  return useQuery<ProductImportTemplateResponse>({
+    queryKey: [...productKeys.imports, "template"],
+    enabled,
+    retry: false,
+    staleTime: Infinity,
+    queryFn: ({ signal }) => productsApi.getImportTemplate(signal),
+  });
+}
+
+export function useProductImportsQuery(
+  query: Partial<ProductImportListQuery>,
+  enabled: boolean,
+) {
+  return useQuery<ProductImportsResponse>({
+    queryKey: [...productKeys.imports, listKey(query)],
+    enabled,
+    retry: false,
+    placeholderData: keepPreviousData,
+    queryFn: ({ signal }) => productsApi.listImports(query, signal),
+  });
+}
+
+export function useUploadProductImportMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      fields,
+      file,
+    }: {
+      fields: ProductImportUploadFields;
+      file: File;
+    }) => productsApi.uploadImport(fields, file),
+    onSuccess: (response) => {
+      void queryClient.invalidateQueries({
+        queryKey: productKeys.importDetail(response.import.id),
+      });
+      void queryClient.invalidateQueries({ queryKey: productKeys.imports });
+    },
+  });
+}
+
+export function useCommitProductImportMutation(importId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: ProductImportCommitInput) =>
+      productsApi.commitImport(importId, input),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: productKeys.importDetail(importId),
+      });
+      void queryClient.invalidateQueries({ queryKey: productKeys.imports });
+      void queryClient.invalidateQueries({ queryKey: productKeys.lists });
+    },
+  });
+}
+
+export function useCancelProductImportMutation(importId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: ProductImportCancelInput) =>
+      productsApi.cancelImport(importId, input),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: productKeys.importDetail(importId),
+      });
+      void queryClient.invalidateQueries({ queryKey: productKeys.imports });
+    },
+  });
+}
+
+export function useProductImportReportMutation(importId: string) {
+  return useMutation({
+    mutationFn: () => productsApi.getImportReportLink(importId),
   });
 }
 

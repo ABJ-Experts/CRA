@@ -137,6 +137,11 @@ export const envSchema = z.object({
     3600,
     "must not exceed 3600 seconds",
   ),
+  PRODUCT_IMPORT_LEASE_SECONDS: boundedInt(
+    60,
+    300,
+    "must not exceed 300 seconds",
+  ),
   /**
    * With no scanner adapter configured, decoded raster-only inspection remains
    * available in non-strict environments and is recorded in the audit trail.
