@@ -40,6 +40,10 @@ import {
   createSoftwareBaselineInputSchema,
   productComponentLinkSchema,
   relationshipPropagationQuerySchema,
+  relationshipPropagationEventSchema,
+  relationshipPropagationEventsQuerySchema,
+  productRelationshipGraphEventScopeSchema,
+  softwareBaselineListQuerySchema,
 } from "./products.js";
 import type {
   CreateProductInput,
@@ -692,6 +696,51 @@ describe("product relationship contracts", () => {
     ).toBe(false);
   });
 
+  it("keeps baseline discovery bounded and graph-event source scopes explicit", () => {
+    expect(
+      softwareBaselineListQuerySchema.parse({ q: "firmware", pageSize: "25" }),
+    ).toMatchObject({ q: "firmware", pageSize: 25 });
+    expect(
+      softwareBaselineListQuerySchema.safeParse({ pageSize: 101 }).success,
+    ).toBe(false);
+    expect(
+      productRelationshipGraphEventScopeSchema.parse({
+        scopeKind: "product",
+        sourceProductId: productId,
+      }),
+    ).toEqual({ scopeKind: "product", sourceProductId: productId });
+    expect(
+      productRelationshipGraphEventScopeSchema.safeParse({
+        scopeKind: "release",
+        sourceProductId: productId,
+        sourceReleaseId: releaseId,
+        sourceBaselineRevisionId: revisionId,
+      }).success,
+    ).toBe(false);
+  });
+
+  it("exposes obsolete propagation events as a selectable historical state", () => {
+    expect(
+      relationshipPropagationEventsQuerySchema.parse({
+        deliveryState: "obsolete",
+      }),
+    ).toMatchObject({ deliveryState: "obsolete", pageSize: 25 });
+    expect(
+      relationshipPropagationEventSchema.parse({
+        id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+        organizationId: ids.owner,
+        graphVersion: 3,
+        eventKey: "relationship:obsolete:history",
+        eventType: "product_relationship.graph_changed",
+        deliveryState: "obsolete",
+        correlationId: ids.key,
+        occurredAt,
+        deliveredAt: null,
+        retryCount: 1,
+      }),
+    ).toMatchObject({ deliveryState: "obsolete" });
+  });
+
   it("requires memberships to retain a selected revision and valid effective interval", () => {
     expect(
       assignSoftwareBaselineMembershipInputSchema.parse({
@@ -802,15 +851,26 @@ describe("product relationship contracts", () => {
     ).toBe(false);
   });
 
-  it("bounds and validates propagation cursors with exactly one opaque source", () => {
+  it("requires canonical propagation cursors with exactly one source", () => {
+    expect(() =>
+      relationshipPropagationQuerySchema.parse({
+        sourceReleaseId: releaseId,
+        graphVersion: 3,
+        cursor: "not-a-candidate-cursor",
+      }),
+    ).toThrow();
     expect(
       relationshipPropagationQuerySchema.parse({
         sourceReleaseId: releaseId,
         graphVersion: 3,
-        cursor: "next-page",
+        cursor: `${productId}:${releaseId}`,
         pageSize: "25",
       }),
-    ).toMatchObject({ sourceReleaseId: releaseId, pageSize: 25 });
+    ).toMatchObject({
+      sourceReleaseId: releaseId,
+      cursor: `${productId}:${releaseId}`,
+      pageSize: 25,
+    });
     expect(
       relationshipPropagationQuerySchema.safeParse({
         sourceReleaseId: releaseId,

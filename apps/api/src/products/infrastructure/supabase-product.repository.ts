@@ -24,6 +24,7 @@ import {
   supportPeriodHistoryResponseSchema,
   supportPeriodResponseSchema,
   softwareBaselineResponseSchema,
+  softwareBaselineListResponseSchema,
   softwareBaselinesResponseSchema,
   softwareBaselineMembershipsResponseSchema,
   softwareBaselineMembershipResponseSchema,
@@ -67,6 +68,7 @@ import {
   type SupersedeSupportPeriodRequest,
   type UpdateSupportAlertIntervalsRequest,
   type SoftwareBaseline,
+  type SoftwareBaselineListQuery,
   type SoftwareBaselineReleaseMembership,
   type AppendSoftwareBaselineRevisionInput,
   type AssignSoftwareBaselineMembershipInput,
@@ -99,6 +101,7 @@ import type {
   RelationshipPropagationEventsOutcome,
   RelationshipPropagationEventMutationOutcome,
   SoftwareBaselineHistoryOutcome,
+  SoftwareBaselineListOutcome,
   SoftwareBaselineMembershipMutationOutcome,
   SoftwareBaselineMembershipsOutcome,
   SoftwareBaselineMutationOutcome,
@@ -852,6 +855,31 @@ export class SupabaseProductRepository implements ProductRepository {
     });
   }
 
+  async listSoftwareBaselines(
+    organizationId: string,
+    actorId: string,
+    query: SoftwareBaselineListQuery,
+  ): Promise<SoftwareBaselineListOutcome> {
+    const row = await this.singleRpc(
+      "list_software_baselines",
+      Object.freeze({
+        p_organization_id: organizationId,
+        p_actor_user_id: actorId,
+        p_query: query.q ?? null,
+        p_cursor: query.cursor ?? null,
+        p_page_size: query.pageSize,
+        p_include_archived: query.includeArchived ?? false,
+      }),
+    );
+    if (this.outcome(row, new Set(["found", "not_found"])) === "not_found") {
+      return Object.freeze({ outcome: "not_found" });
+    }
+    return Object.freeze({
+      outcome: "found",
+      baselines: this.baselinePage(row.baselines),
+    });
+  }
+
   async archiveSoftwareBaseline(
     organizationId: string,
     actorId: string,
@@ -1572,6 +1600,11 @@ export class SupabaseProductRepository implements ProductRepository {
       this.parse(softwareBaselinesResponseSchema, { baselines: value })
         .baselines,
     );
+  }
+  private baselinePage(value: unknown) {
+    return this.parse(softwareBaselineListResponseSchema, {
+      baselines: value,
+    }).baselines;
   }
   private baselineMembership(
     value: unknown,

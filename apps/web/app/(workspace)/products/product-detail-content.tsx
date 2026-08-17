@@ -23,9 +23,13 @@ import {
 import { useMocksReady } from "../../_providers/providers";
 import { useSession } from "../../_providers/session-provider";
 import { ApiClientError } from "../../_lib/http/api-client";
-import { PageHeading, SectionCard } from "../../dashboard/_components/dashboard-chrome";
+import {
+  PageHeading,
+  SectionCard,
+} from "../../dashboard/_components/dashboard-chrome";
 
 import { ReleaseRegulatoryControls } from "./release-regulatory-controls";
+import { FindingImpactStatus } from "./finding-impact-status";
 import { ProductRelationshipSection } from "./product-relationship-section";
 
 const PRODUCT_TYPE_LABELS = Object.freeze({
@@ -704,6 +708,7 @@ export function ProductDetailContent({ productId }: { productId: string }) {
               <ReleaseCreateForm productId={productId} />
             ) : null}
           </SectionCard>
+          <FindingImpactStatus productId={productId} enabled={enabled} />
           <ProductRelationshipSection
             productId={productId}
             releases={

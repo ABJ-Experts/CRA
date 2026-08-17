@@ -25,6 +25,7 @@ import type {
   RequestRelationshipReevaluationInput,
   ReleaseListQuery,
   RelationshipPropagationEventsQuery,
+  SoftwareBaselineListQuery,
   RemoveReleaseMarketAvailabilityInput,
   SupersedeSupportPeriodRequest,
   SupersedeProductComponentLinkInput,
@@ -187,6 +188,19 @@ export function useSoftwareBaselineRevisionsQuery(
     retry: false,
     queryFn: ({ signal }) =>
       productsApi.listSoftwareBaselineRevisions(baselineId, signal),
+  });
+}
+
+export function useSoftwareBaselinesQuery(
+  query: Partial<SoftwareBaselineListQuery>,
+  enabled: boolean,
+) {
+  return useQuery({
+    queryKey: productKeys.baselineList(listKey(query)),
+    enabled,
+    retry: false,
+    placeholderData: keepPreviousData,
+    queryFn: ({ signal }) => productsApi.listSoftwareBaselines(query, signal),
   });
 }
 
@@ -578,8 +592,19 @@ export function useCreateProductVariantRelationshipMutation(productId: string) {
   const invalidate = useInvalidateProducts();
   return useMutation({
     mutationFn: (input: CreateProductVariantRelationshipInput) =>
-      productsApi.createProductVariantRelationship(productId, input),
-    onSuccess: () => invalidate(productId, undefined, { relationships: true }),
+      productsApi.createProductVariantRelationship(input.variantProductId, input),
+    onSuccess: async (_result, input) => {
+      await Promise.all([
+        invalidate(productId, undefined, { relationships: true }),
+        ...(input.variantProductId === productId
+          ? []
+          : [
+              invalidate(input.variantProductId, undefined, {
+                relationships: true,
+              }),
+            ]),
+      ]);
+    },
   });
 }
 

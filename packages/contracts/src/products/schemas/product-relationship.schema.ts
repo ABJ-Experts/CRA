@@ -39,6 +39,67 @@ export const productVariantSourceTypeSchema = z.enum([
   "baseline_revision",
 ]);
 
+/**
+ * The product outbox exposes only the source selection needed by the finding
+ * boundary. A discriminator makes product-wide component changes explicit;
+ * null-pair conventions allowed malformed events to be retried forever.
+ */
+export const productRelationshipGraphEventScopeSchema = z.discriminatedUnion(
+  "scopeKind",
+  [
+    z
+      .object({
+        scopeKind: z.literal("product"),
+        sourceProductId: z.uuid(),
+      })
+      .strict(),
+    z
+      .object({
+        scopeKind: z.literal("release"),
+        sourceProductId: z.uuid(),
+        sourceReleaseId: z.uuid(),
+      })
+      .strict(),
+    z
+      .object({
+        scopeKind: z.literal("baseline"),
+        sourceProductId: z.uuid(),
+        sourceBaselineRevisionId: z.uuid(),
+      })
+      .strict(),
+  ],
+);
+
+/** Opaque, bounded checkpoint used only by the durable graph-event worker. */
+export const productRelationshipGraphEventCursorSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(160);
+
+export const productRelationshipGraphEventCheckpointSchema = z
+  .object({
+    deliveryCursor: productRelationshipGraphEventCursorSchema.nullable(),
+    isFinal: z.boolean(),
+  })
+  .strict()
+  .superRefine((value, context) => {
+    if (value.isFinal && value.deliveryCursor !== null) {
+      context.addIssue({
+        code: "custom",
+        message: "A final graph-event checkpoint cannot retain a cursor",
+        path: ["deliveryCursor"],
+      });
+    }
+    if (!value.isFinal && value.deliveryCursor === null) {
+      context.addIssue({
+        code: "custom",
+        message: "A non-final graph-event checkpoint requires a cursor",
+        path: ["deliveryCursor"],
+      });
+    }
+  });
+
 /** A stable baseline identity with its current immutable revision projection. */
 export const softwareBaselineSchema = z
   .object({
@@ -389,6 +450,16 @@ export const productComponentLinkParamsSchema = productRelationshipParamsSchema;
 const rawBoolean = z
   .enum(["true", "false"])
   .transform((value) => value === "true");
+
+/** Bounded searchable current-revision projection for baseline selectors. */
+export const softwareBaselineListQuerySchema = z
+  .object({
+    cursor: z.uuid().optional(),
+    pageSize: z.coerce.number().int().min(1).max(100).default(25),
+    q: z.string().trim().min(1).max(128).optional(),
+    includeArchived: rawBoolean.optional(),
+  })
+  .strict();
 export const productRelationshipGraphQuerySchema = z
   .object({
     asOf: utcZDateTimeSchema.optional(),
@@ -422,11 +493,17 @@ const propagationSourceQuerySchema = z
     }
   });
 
+const relationshipPropagationCursorSchema = z
+  .string()
+  .regex(
+    /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}:(?:[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12})?$/i,
+  );
+
 export const relationshipPropagationQuerySchema = propagationSourceQuerySchema
   .extend({
     graphVersion: graphVersionSchema,
     asOf: utcZDateTimeSchema.optional(),
-    cursor: z.string().trim().min(1).max(1_000).optional(),
+    cursor: relationshipPropagationCursorSchema.optional(),
     pageSize: z.coerce.number().int().min(1).max(100).default(25),
   })
   .strict();
@@ -435,7 +512,14 @@ export const relationshipPropagationEventsQuerySchema = z
     cursor: z.string().trim().min(1).max(1_000).optional(),
     pageSize: z.coerce.number().int().min(1).max(100).default(25),
     deliveryState: z
-      .enum(["scheduled", "leased", "delivered", "retrying", "dead_letter"])
+      .enum([
+        "scheduled",
+        "leased",
+        "delivered",
+        "retrying",
+        "dead_letter",
+        "obsolete",
+      ])
       .optional(),
   })
   .strict();
@@ -505,10 +589,13 @@ export const relationshipPropagationEventSchema = z
       "delivered",
       "retrying",
       "dead_letter",
+      "obsolete",
     ]),
     correlationId: z.uuid(),
     occurredAt: utcZDateTimeSchema,
     deliveredAt: utcZDateTimeSchema.nullable(),
+    obsoleteAt: utcZDateTimeSchema.nullable().optional(),
+    lastErrorCode: z.string().trim().min(1).max(100).nullable().optional(),
     retryCount: z.number().int().nonnegative(),
   })
   .strict();
@@ -518,6 +605,16 @@ export const softwareBaselineResponseSchema = z
   .strict();
 export const softwareBaselinesResponseSchema = z
   .object({ baselines: z.array(softwareBaselineSchema) })
+  .strict();
+export const softwareBaselineListResponseSchema = z
+  .object({
+    baselines: z
+      .object({
+        items: z.array(softwareBaselineSchema),
+        nextCursor: z.uuid().nullable(),
+      })
+      .strict(),
+  })
   .strict();
 export const softwareBaselineRevisionResponseSchema = z
   .object({ revision: softwareBaselineRevisionSchema })

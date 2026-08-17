@@ -250,9 +250,23 @@ export class RunScopedAccounts {
 
   async cleanup(): Promise<void> {
     for (const id of this.organizationIds) {
+      // Keep this explicit rather than relying on the organization cascade:
+      // relationship/finding rows deliberately use restrictive composite FKs
+      // while they are authoritative. Every request is narrowed to the unique
+      // run-scoped organization, so seeded and concurrent E2E organizations
+      // are never selected.
       for (const table of [
+        "finding_product_impact_overrides",
+        "finding_impact_associations",
+        "finding_propagation_jobs",
+        "finding_propagation_sources",
+        "product_relationships",
+        "software_baseline_release_memberships",
+        "product_lifecycle_dependency_facts",
+        "software_baselines",
         "product_release_create_idempotencies",
         "product_create_idempotencies",
+        "product_legal_entity_assignments",
         "product_releases",
         "products",
       ]) {
@@ -266,6 +280,10 @@ export class RunScopedAccounts {
           );
         }
       }
+      // The durable outbox is intentionally not writable through the public
+      // service-role REST surface. Its release and organization foreign keys
+      // cascade during the scoped product/organization cleanup above, which
+      // preserves the same dependency order without broadening its grants.
       const response = await supabase(
         `/rest/v1/organizations?id=eq.${encodeURIComponent(id)}`,
         { method: "DELETE" },
@@ -274,6 +292,30 @@ export class RunScopedAccounts {
         throw new Error(
           `Could not clean organization fixture ${id}: ${JSON.stringify(await responseBody(response))}`,
         );
+      }
+      for (const table of [
+        "finding_propagation_sources",
+        "finding_propagation_jobs",
+        "finding_impact_associations",
+        "finding_product_impact_overrides",
+        "software_baselines",
+        "product_relationships",
+        "products",
+        "organizations",
+      ]) {
+        const scope =
+          table === "organizations"
+            ? `id=eq.${encodeURIComponent(id)}`
+            : `organization_id=eq.${encodeURIComponent(id)}`;
+        const assertion = await supabase(
+          `/rest/v1/${table}?select=id&${scope}`,
+        );
+        const rows = await responseBody(assertion);
+        if (!assertion.ok || !Array.isArray(rows) || rows.length !== 0) {
+          throw new Error(
+            `Scoped cleanup assertion failed for ${table} / ${id}: ${JSON.stringify(rows)}`,
+          );
+        }
       }
     }
     for (const id of this.invitationIds) {

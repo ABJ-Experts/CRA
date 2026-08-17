@@ -18,7 +18,7 @@ import {
   type SoftwareBaselineReleaseMembership,
 } from "@repo/contracts/products";
 import { Button } from "@repo/ui/button";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import {
   useAppendSoftwareBaselineRevisionMutation,
@@ -30,8 +30,12 @@ import {
   useEndProductComponentLinkMutation,
   useEndProductVariantRelationshipMutation,
   useEndSoftwareBaselineMembershipMutation,
+  useProductReleasesQuery,
+  useProductsQuery,
   usePreviewProductComponentLinkMutation,
   useRequestRelationshipReevaluationMutation,
+  useSoftwareBaselinesQuery,
+  useSoftwareBaselineRevisionsQuery,
   useSupersedeProductComponentLinkMutation,
 } from "../../_features/products/products.queries";
 import { ApiClientError } from "../../_lib/http/api-client";
@@ -50,6 +54,101 @@ type FormProps = Readonly<{
   organizationTimezone: string | null;
   onReload: () => void;
 }>;
+
+type ProductSearchSelectProps = Readonly<{
+  label: string;
+  searchLabel: string;
+  search: string;
+  selectedId: string;
+  selectedLabel: string;
+  excludedProductId: string;
+  onSearchChange: (value: string) => void;
+  onSelectionChange: (product: Readonly<{ id: string; name: string }>) => void;
+}>;
+
+function ProductSearchSelect({
+  label,
+  searchLabel,
+  search,
+  selectedId,
+  selectedLabel,
+  excludedProductId,
+  onSearchChange,
+  onSelectionChange,
+}: ProductSearchSelectProps) {
+  const trimmedSearch = search.trim();
+  const products = useProductsQuery(
+    { q: trimmedSearch, page: 1, pageSize: 25, archived: false },
+    trimmedSearch.length > 0,
+  );
+  const rows = (products.data?.products.rows ?? []).filter(
+    (product) => product.id !== excludedProductId,
+  );
+
+  return (
+    <div className="grid gap-2">
+      <label className="flex flex-col gap-2 text-caption-1-regular text-fg">
+        {searchLabel}
+        <input
+          aria-label={searchLabel}
+          autoComplete="off"
+          value={search}
+          onChange={(event) => onSearchChange(event.target.value)}
+          placeholder="Type a product name or internal code"
+          className="h-10 rounded-xl border border-border bg-canvas px-3 text-subhead-regular text-fg"
+        />
+      </label>
+      <label className="flex flex-col gap-2 text-caption-1-regular text-fg">
+        {label}
+        <select
+          aria-label={label}
+          value={selectedId}
+          disabled={trimmedSearch.length === 0 || products.isPending}
+          onChange={(event) => {
+            const selected = rows.find(
+              (product) => product.id === event.target.value,
+            );
+            if (selected) {
+              onSelectionChange({ id: selected.id, name: selected.name });
+            }
+          }}
+          className="h-10 rounded-xl border border-border bg-canvas px-3 text-subhead-regular text-fg disabled:cursor-not-allowed disabled:text-fg-muted"
+        >
+          <option value="">
+            {products.isPending ? "Searching products…" : "Select product"}
+          </option>
+          {selectedId !== "" &&
+          !rows.some((product) => product.id === selectedId) ? (
+            <option value={selectedId}>{selectedLabel}</option>
+          ) : null}
+          {rows.map((product) => (
+            <option key={product.id} value={product.id}>
+              {product.name} · {product.internalCode}
+            </option>
+          ))}
+        </select>
+      </label>
+      {trimmedSearch.length === 0 ? (
+        <p className="text-caption-1-regular text-fg-muted">
+          Search the current organization before selecting a product.
+        </p>
+      ) : null}
+      {products.isError ? (
+        <p role="alert" className="text-caption-1-regular text-danger">
+          Product search is unavailable. Try again.
+        </p>
+      ) : null}
+      {!products.isPending &&
+      !products.isError &&
+      trimmedSearch.length > 0 &&
+      rows.length === 0 ? (
+        <p className="text-caption-1-regular text-fg-muted">
+          No products match this search.
+        </p>
+      ) : null}
+    </div>
+  );
+}
 
 function messageFor(error: unknown, fallback: string): string {
   if (error instanceof ApiClientError && error.status === 403) {
@@ -109,6 +208,9 @@ export function ProductRelationshipMutationForms({
   const [baselineId, setBaselineId] = useState("");
   const [baselineRevisionId, setBaselineRevisionId] = useState("");
   const [baselineVersion, setBaselineVersion] = useState("0");
+  const [baselineSearch, setBaselineSearch] = useState("");
+  const [baselineCursor, setBaselineCursor] = useState<string | undefined>();
+  const [selectedBaselineLabel, setSelectedBaselineLabel] = useState("");
   const appendBaseline = useAppendSoftwareBaselineRevisionMutation(baselineId);
   const archiveBaseline = useArchiveSoftwareBaselineMutation(baselineId);
   const assignMembership =
@@ -129,12 +231,17 @@ export function ProductRelationshipMutationForms({
   const [selectedReleaseId, setSelectedReleaseId] = useState(
     releases[0]?.id ?? "",
   );
+  const hasInitializedRelease = useRef(releases[0] !== undefined);
   const [variantSourceType, setVariantSourceType] = useState<
     "base_release" | "baseline_revision"
   >("base_release");
-  const [variantProductId, setVariantProductId] = useState(productId);
+  const [variantProductSearch, setVariantProductSearch] = useState("");
+  const [variantProductId, setVariantProductId] = useState("");
+  const [variantProductName, setVariantProductName] = useState("");
   const [variantReleaseId, setVariantReleaseId] = useState("");
+  const [componentProductSearch, setComponentProductSearch] = useState("");
   const [componentProductId, setComponentProductId] = useState("");
+  const [componentProductName, setComponentProductName] = useState("");
   const [componentReleaseId, setComponentReleaseId] = useState("");
   const [quantity, setQuantity] = useState("1");
   const [selectedMembershipId, setSelectedMembershipId] = useState("");
@@ -147,6 +254,36 @@ export function ProductRelationshipMutationForms({
   const [endsAt, setEndsAt] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [reload, setReload] = useState(false);
+  const baselines = useSoftwareBaselinesQuery(
+    {
+      q: baselineSearch.trim(),
+      cursor: baselineCursor,
+      pageSize: 25,
+      includeArchived: false,
+    },
+    baselineSearch.trim().length > 0,
+  );
+  const baselineRevisions = useSoftwareBaselineRevisionsQuery(
+    baselineId,
+    baselineId !== "",
+  );
+  const variantReleases = useProductReleasesQuery(
+    variantProductId,
+    { page: 1, pageSize: 100, archived: false },
+    variantProductId !== "",
+  );
+  const componentReleases = useProductReleasesQuery(
+    componentProductId,
+    { page: 1, pageSize: 100, archived: false },
+    componentProductId !== "",
+  );
+
+  useEffect(() => {
+    if (!hasInitializedRelease.current && releases[0]) {
+      setSelectedReleaseId(releases[0].id);
+      hasInitializedRelease.current = true;
+    }
+  }, [releases]);
 
   const evidence = {
     source,
@@ -169,6 +306,36 @@ export function ProductRelationshipMutationForms({
     setMessage(messageFor(error, fallback));
   }
 
+  function selectBaseline(
+    baseline: Readonly<{
+      id: string;
+      baselineId: string;
+      version: number;
+      name?: string;
+    }>,
+  ) {
+    setBaselineId(baseline.baselineId);
+    setBaselineRevisionId(baseline.id);
+    setBaselineVersion(String(baseline.version));
+    setSelectedBaselineLabel(baseline.name ?? baseline.baselineId);
+  }
+
+  function selectVariantProduct(
+    product: Readonly<{ id: string; name: string }>,
+  ) {
+    setVariantProductId(product.id);
+    setVariantProductName(product.name);
+    setVariantReleaseId("");
+  }
+
+  function selectComponentProduct(
+    product: Readonly<{ id: string; name: string }>,
+  ) {
+    setComponentProductId(product.id);
+    setComponentProductName(product.name);
+    setComponentReleaseId("");
+  }
+
   async function createBaselineRecord() {
     const parsed = createSoftwareBaselineInputSchema.safeParse({
       identifier: baselineIdentifier,
@@ -186,9 +353,9 @@ export function ProductRelationshipMutationForms({
       );
     try {
       const result = await createBaseline.mutateAsync(parsed.data);
-      setBaselineId(result.baseline.baselineId);
-      setBaselineRevisionId(result.baseline.id);
-      setBaselineVersion(String(result.baseline.version));
+      selectBaseline(result.baseline);
+      setBaselineSearch(result.baseline.name ?? "");
+      setSelectedBaselineLabel(result.baseline.name ?? "");
       setMessage("Software baseline recorded and selected for membership.");
     } catch (error) {
       report(error, "The software baseline could not be recorded.");
@@ -212,8 +379,7 @@ export function ProductRelationshipMutationForms({
       );
     try {
       const result = await appendBaseline.mutateAsync(parsed.data);
-      setBaselineRevisionId(result.baseline.id);
-      setBaselineVersion(String(result.baseline.version));
+      selectBaseline(result.baseline);
       setMessage("Software baseline revision recorded and selected.");
     } catch (error) {
       report(error, "The baseline revision could not be recorded.");
@@ -499,8 +665,8 @@ export function ProductRelationshipMutationForms({
           />
         </div>
       </section>
-      <div className="grid items-start gap-4 xl:grid-cols-3">
-        <section className="grid content-start gap-3 rounded-xl border border-border bg-canvas p-4">
+      <div className="grid items-start gap-4 md:grid-cols-2 2xl:grid-cols-3">
+        <section className="grid min-w-0 content-start gap-3 rounded-xl border border-border bg-canvas p-4">
           <h4 className="text-subhead-semibold text-fg">Software baseline</h4>
           <label className="flex flex-col gap-2 text-caption-1-regular text-fg">
             Baseline identifier
@@ -565,7 +731,7 @@ export function ProductRelationshipMutationForms({
             </Button>
           </div>
         </section>
-        <section className="grid content-start gap-3 rounded-xl border border-border bg-canvas p-4">
+        <section className="grid min-w-0 content-start gap-3 rounded-xl border border-border bg-canvas p-4">
           <h4 className="text-subhead-semibold text-fg">Assign baseline</h4>
           <label className="flex flex-col gap-2 text-caption-1-regular text-fg">
             Release
@@ -584,36 +750,110 @@ export function ProductRelationshipMutationForms({
             </select>
           </label>
           <label className="flex flex-col gap-2 text-caption-1-regular text-fg">
-            Baseline ID
+            Search software baselines
             <input
-              aria-label="Baseline ID"
-              required
-              value={baselineId}
-              onChange={(event) => setBaselineId(event.target.value)}
+              aria-label="Search software baselines"
+              autoComplete="off"
+              value={baselineSearch}
+              onChange={(event) => {
+                setBaselineSearch(event.target.value);
+                setBaselineCursor(undefined);
+              }}
+              placeholder="Type a baseline name or identifier"
               className="h-10 rounded-xl border border-border bg-canvas px-3 text-subhead-regular text-fg"
             />
           </label>
           <label className="flex flex-col gap-2 text-caption-1-regular text-fg">
-            Baseline revision ID
-            <input
-              aria-label="Baseline revision ID"
-              required
+            Software baseline
+            <select
+              aria-label="Software baseline"
               value={baselineRevisionId}
-              onChange={(event) => setBaselineRevisionId(event.target.value)}
-              className="h-10 rounded-xl border border-border bg-canvas px-3 text-subhead-regular text-fg"
-            />
+              disabled={
+                baselineSearch.trim().length === 0 || baselines.isPending
+              }
+              onChange={(event) => {
+                const baseline = baselines.data?.baselines.items.find(
+                  (item) => item.id === event.target.value,
+                );
+                if (baseline) selectBaseline(baseline);
+              }}
+              className="h-10 rounded-xl border border-border bg-canvas px-3 text-subhead-regular text-fg disabled:cursor-not-allowed disabled:text-fg-muted"
+            >
+              <option value="">
+                {baselines.isPending
+                  ? "Searching baselines…"
+                  : "Select baseline"}
+              </option>
+              {baselineRevisionId !== "" &&
+              !baselines.data?.baselines.items.some(
+                (baseline) => baseline.id === baselineRevisionId,
+              ) ? (
+                <option value={baselineRevisionId}>
+                  {selectedBaselineLabel}
+                </option>
+              ) : null}
+              {baselines.data?.baselines.items.map((baseline) => (
+                <option key={baseline.id} value={baseline.id}>
+                  {baseline.name} · {baseline.identifier} · revision{" "}
+                  {baseline.revisionNumber}
+                </option>
+              ))}
+            </select>
           </label>
           <label className="flex flex-col gap-2 text-caption-1-regular text-fg">
-            Baseline version
-            <input
-              aria-label="Baseline version"
-              required
-              inputMode="numeric"
-              value={baselineVersion}
-              onChange={(event) => setBaselineVersion(event.target.value)}
-              className="h-10 rounded-xl border border-border bg-canvas px-3 text-subhead-regular text-fg"
-            />
+            Baseline revision
+            <select
+              aria-label="Baseline revision"
+              value={baselineRevisionId}
+              disabled={baselineId === "" || baselineRevisions.isPending}
+              onChange={(event) => {
+                const baseline = baselineRevisions.data?.baselines.find(
+                  (item) => item.id === event.target.value,
+                );
+                if (baseline) selectBaseline(baseline);
+              }}
+              className="h-10 rounded-xl border border-border bg-canvas px-3 text-subhead-regular text-fg disabled:cursor-not-allowed disabled:text-fg-muted"
+            >
+              <option value="">
+                {baselineRevisions.isPending
+                  ? "Loading revisions…"
+                  : "Select revision"}
+              </option>
+              {baselineRevisions.data?.baselines.map((baseline) => (
+                <option key={baseline.id} value={baseline.id}>
+                  Revision {baseline.revisionNumber} · version{" "}
+                  {baseline.version}
+                </option>
+              ))}
+            </select>
           </label>
+          {baselines.isError ? (
+            <p role="alert" className="text-caption-1-regular text-danger">
+              Software baseline search is unavailable. Try again.
+            </p>
+          ) : null}
+          {!baselines.isPending &&
+          !baselines.isError &&
+          baselineSearch.trim().length > 0 &&
+          (baselines.data?.baselines.items.length ?? 0) === 0 ? (
+            <p className="text-caption-1-regular text-fg-muted">
+              No software baselines match this search.
+            </p>
+          ) : null}
+          {baselines.data?.baselines.nextCursor ? (
+            <Button
+              type="button"
+              variant="outline"
+              tone="grey"
+              onClick={() =>
+                setBaselineCursor(
+                  baselines.data?.baselines.nextCursor ?? undefined,
+                )
+              }
+            >
+              More matching baselines
+            </Button>
+          ) : null}
           <Button
             type="button"
             loading={assignMembership.isPending}
@@ -623,7 +863,7 @@ export function ProductRelationshipMutationForms({
             Record baseline membership
           </Button>
         </section>
-        <section className="grid content-start gap-3 rounded-xl border border-border bg-canvas p-4">
+        <section className="grid min-w-0 content-start gap-3 rounded-xl border border-border bg-canvas p-4">
           <h4 className="text-subhead-semibold text-fg">
             Variant relationship
           </h4>
@@ -645,25 +885,36 @@ export function ProductRelationshipMutationForms({
               <option value="baseline_revision">Baseline revision</option>
             </select>
           </label>
+          <ProductSearchSelect
+            label="Variant product"
+            searchLabel="Search variant product"
+            search={variantProductSearch}
+            selectedId={variantProductId}
+            selectedLabel={variantProductName}
+            excludedProductId={productId}
+            onSearchChange={setVariantProductSearch}
+            onSelectionChange={selectVariantProduct}
+          />
           <label className="flex flex-col gap-2 text-caption-1-regular text-fg">
-            Variant product ID
-            <input
-              aria-label="Variant product ID"
-              required
-              value={variantProductId}
-              onChange={(event) => setVariantProductId(event.target.value)}
-              className="h-10 rounded-xl border border-border bg-canvas px-3 text-subhead-regular text-fg"
-            />
-          </label>
-          <label className="flex flex-col gap-2 text-caption-1-regular text-fg">
-            Variant release ID
-            <input
-              aria-label="Variant release ID"
-              required
+            Variant release
+            <select
+              aria-label="Variant release"
               value={variantReleaseId}
+              disabled={variantProductId === "" || variantReleases.isPending}
               onChange={(event) => setVariantReleaseId(event.target.value)}
-              className="h-10 rounded-xl border border-border bg-canvas px-3 text-subhead-regular text-fg"
-            />
+              className="h-10 rounded-xl border border-border bg-canvas px-3 text-subhead-regular text-fg disabled:cursor-not-allowed disabled:text-fg-muted"
+            >
+              <option value="">
+                {variantReleases.isPending
+                  ? "Loading releases…"
+                  : "Select release"}
+              </option>
+              {variantReleases.data?.releases.rows.map((release) => (
+                <option key={release.id} value={release.id}>
+                  {release.label} · {release.version}
+                </option>
+              ))}
+            </select>
           </label>
           <Button
             type="button"
@@ -690,25 +941,38 @@ export function ProductRelationshipMutationForms({
           </span>
         </div>
         <div className="grid gap-3 md:grid-cols-3">
+          <ProductSearchSelect
+            label="Component product"
+            searchLabel="Search component product"
+            search={componentProductSearch}
+            selectedId={componentProductId}
+            selectedLabel={componentProductName}
+            excludedProductId={productId}
+            onSearchChange={setComponentProductSearch}
+            onSelectionChange={selectComponentProduct}
+          />
           <label className="flex flex-col gap-2 text-caption-1-regular text-fg">
-            Component product ID
-            <input
-              aria-label="Component product ID"
-              required
-              value={componentProductId}
-              onChange={(event) => setComponentProductId(event.target.value)}
-              className="h-10 rounded-xl border border-border bg-canvas px-3 text-subhead-regular text-fg"
-            />
-          </label>
-          <label className="flex flex-col gap-2 text-caption-1-regular text-fg">
-            Component release ID{" "}
-            <span className="text-fg-muted">(optional)</span>
-            <input
-              aria-label="Component release ID"
+            Component release <span className="text-fg-muted">(optional)</span>
+            <select
+              aria-label="Component release"
               value={componentReleaseId}
+              disabled={
+                componentProductId === "" || componentReleases.isPending
+              }
               onChange={(event) => setComponentReleaseId(event.target.value)}
-              className="h-10 rounded-xl border border-border bg-canvas px-3 text-subhead-regular text-fg"
-            />
+              className="h-10 rounded-xl border border-border bg-canvas px-3 text-subhead-regular text-fg disabled:cursor-not-allowed disabled:text-fg-muted"
+            >
+              <option value="">
+                {componentReleases.isPending
+                  ? "Loading releases…"
+                  : "All product releases"}
+              </option>
+              {componentReleases.data?.releases.rows.map((release) => (
+                <option key={release.id} value={release.id}>
+                  {release.label} · {release.version}
+                </option>
+              ))}
+            </select>
           </label>
           <label className="flex flex-col gap-2 text-caption-1-regular text-fg">
             Quantity

@@ -251,6 +251,15 @@ const state = {
 };
 
 vi.mock("../../_features/products/products.queries", () => ({
+  useProductsQuery: () => ({
+    isPending: false,
+    isError: false,
+    error: null,
+    data: {
+      products: { rows: [], total: 0, page: 1, pageSize: 25, pageCount: 1 },
+    },
+    refetch: vi.fn(),
+  }),
   useProductQuery: () => state.product,
   useProductReleasesQuery: () => state.releases,
   useUpdateProductMutation: () => ({ isPending: false, mutateAsync: vi.fn() }),
@@ -362,6 +371,15 @@ vi.mock("../../_features/products/products.queries", () => ({
     data: { baselines: [] },
     refetch: vi.fn(),
   }),
+  useSoftwareBaselinesQuery: () => ({
+    isPending: false,
+    isError: false,
+    error: null,
+    data: {
+      baselines: { items: [], nextCursor: null },
+    },
+    refetch: vi.fn(),
+  }),
   useCreateSoftwareBaselineMutation: () => ({
     isPending: false,
     mutateAsync: vi.fn(),
@@ -377,6 +395,31 @@ vi.mock("../../_features/products/products.queries", () => ({
   useRequestRelationshipReevaluationMutation: () => ({
     isPending: false,
     mutateAsync: vi.fn(),
+  }),
+}));
+vi.mock("../../_features/findings/finding-impact.queries", () => ({
+  useFindingImpactSummaryQuery: () => ({
+    isPending: false,
+    isError: false,
+    error: null,
+    data: {
+      summary: {
+        productId: PRODUCT.id,
+        releaseId: null,
+        activeImpactCount: 0,
+        supersededImpactCount: 0,
+        closedImpactCount: 0,
+        overrideCount: 0,
+        latestGraphVersion: null,
+        latestEvaluatedAt: null,
+        propagationState: "idle",
+        queuedJobCount: 0,
+        inProgressJobCount: 0,
+        retryingJobCount: 0,
+        deadLetterJobCount: 0,
+      },
+    },
+    refetch: vi.fn(),
   }),
 }));
 vi.mock("../../_providers/providers", () => ({ useMocksReady: () => true }));
@@ -477,6 +520,9 @@ describe("ProductDetailContent", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Add release" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Finding impact" }),
     ).toBeInTheDocument();
   });
 

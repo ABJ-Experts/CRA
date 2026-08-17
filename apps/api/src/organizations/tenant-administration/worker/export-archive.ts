@@ -127,6 +127,15 @@ export const exportSourceRegistry: readonly ExportSourceRegistration[] =
         "product_relationships",
       ],
     },
+    {
+      sourceId: "finding_propagation",
+      tables: [
+        "finding_propagation_sources",
+        "finding_impact_associations",
+        "finding_product_impact_overrides",
+        "finding_propagation_jobs",
+      ],
+    },
   ]);
 
 /** Explicit omissions are security objects, never an accidental omission. */
@@ -156,6 +165,8 @@ export const exportSourceExclusions: Readonly<Record<string, string>> =
       "Product idempotency keys and request digests are request-security material.",
     product_release_create_idempotencies:
       "Release idempotency keys and request digests are request-security material.",
+    software_baseline_lifecycle_dependency_facts:
+      "Historical M2 projection copied into product_lifecycle_dependency_facts and dropped by the forward consolidation migration.",
   });
 
 const crcTable = (() => {

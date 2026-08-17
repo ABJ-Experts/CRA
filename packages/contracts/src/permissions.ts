@@ -74,6 +74,9 @@ export const PERMISSION_MATRIX = {
   products: ["view", "create", "edit", "delete", "export"],
   orders: ["view", "create", "edit", "delete", "export"],
   invoices: ["view", "create", "edit", "delete", "export"],
+  // Finding evidence/triage remains owned by its module. The product detail
+  // receives only a separately-authorized aggregate impact summary.
+  findings: ["view", "edit"],
   // Logistics
   fleet: ["view", "create", "edit", "delete"],
   routes: ["view", "create", "edit", "delete"],
@@ -305,6 +308,7 @@ const VIEWER_MODULES: readonly PermissionModule[] = [
   "dashboards",
   "tables",
   "analytics",
+  "findings",
 ];
 
 /** Modules a member may also create/edit in — day-to-day operational work. */

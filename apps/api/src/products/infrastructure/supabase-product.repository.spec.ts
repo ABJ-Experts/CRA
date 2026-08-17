@@ -227,6 +227,37 @@ describe("SupabaseProductRepository", () => {
     expect(calls[0]?.args).not.toHaveProperty("p_source_product_id");
   });
 
+  it("accepts an allowed preview returned by the database", async () => {
+    const allowedPreview = {
+      outcome: "allowed",
+      graphVersion: 3,
+      candidateDepth: 1,
+      relationshipPathIds: [],
+      productPathIds: [productId],
+    };
+    const { repository } = harness({
+      outcome: "found",
+      preview: allowedPreview,
+    });
+
+    await expect(
+      repository.previewProductComponentLink(
+        organizationId,
+        actorId,
+        productId,
+        {
+          componentProductId: "00000000-0000-4000-8000-000000000005",
+          quantity: 1,
+          source: "Manual",
+          provenance: "Repository regression",
+          reason: "Verify successful preview transport",
+          effectiveStartsAt: "2026-08-13T00:00:00.000Z",
+          expectedGraphVersion: 3,
+        },
+      ),
+    ).resolves.toEqual({ outcome: "found", preview: allowedPreview });
+  });
+
   it("keeps every relationship lookup and command tenant-safe when the resource is absent", async () => {
     const { repository, calls } = harness({ outcome: "not_found" });
     const baselineId = "00000000-0000-4000-8000-000000000005";
@@ -246,6 +277,11 @@ describe("SupabaseProductRepository", () => {
         actorId,
         baselineId,
       ),
+      repository.listSoftwareBaselines(organizationId, actorId, {
+        q: "firmware",
+        cursor: releaseId,
+        pageSize: 25,
+      }),
       repository.archiveSoftwareBaseline(
         organizationId,
         actorId,
@@ -344,11 +380,99 @@ describe("SupabaseProductRepository", () => {
     expect(results.every((result) => result.outcome === "not_found")).toBe(
       true,
     );
-    expect(calls).toHaveLength(19);
+    expect(calls).toHaveLength(20);
     for (const call of calls) {
       expect(call.args.p_organization_id).toBe(organizationId);
       expect(call.args.p_actor_user_id).toBe(actorId);
     }
+  });
+
+  it("uses a tenant-first cursor RPC for baseline selectors", async () => {
+    const { repository, calls } = harness({
+      outcome: "found",
+      baselines: { items: [], nextCursor: null },
+    });
+
+    await expect(
+      repository.listSoftwareBaselines(organizationId, actorId, {
+        q: "firmware",
+        pageSize: 25,
+      }),
+    ).resolves.toEqual({
+      outcome: "found",
+      baselines: { items: [], nextCursor: null },
+    });
+    expect(calls).toEqual([
+      {
+        name: "list_software_baselines",
+        args: {
+          p_organization_id: organizationId,
+          p_actor_user_id: actorId,
+          p_query: "firmware",
+          p_cursor: null,
+          p_page_size: 25,
+          p_include_archived: false,
+        },
+      },
+    ]);
+  });
+
+  it("returns obsolete relationship propagation events and forwards the historical filter", async () => {
+    const { repository, calls } = harness({
+      outcome: "found",
+      events: {
+        events: [
+          {
+            id: "00000000-0000-4000-8000-000000000007",
+            organizationId,
+            graphVersion: 4,
+            eventKey: "relationship:history:obsolete",
+            eventType: "product_relationship.graph_changed",
+            deliveryState: "obsolete",
+            correlationId: "00000000-0000-4000-8000-000000000008",
+            occurredAt: "2026-08-17T10:00:00.000Z",
+            deliveredAt: null,
+            obsoleteAt: "2026-08-17T10:01:00.000Z",
+            lastErrorCode: "stale_graph",
+            retryCount: 2,
+          },
+        ],
+        nextCursor: null,
+      },
+    });
+
+    await expect(
+      repository.getRelationshipPropagationEvents(
+        organizationId,
+        actorId,
+        productId,
+        { pageSize: 25, deliveryState: "obsolete" },
+      ),
+    ).resolves.toEqual({
+      outcome: "found",
+      events: [
+        expect.objectContaining({
+          deliveryState: "obsolete",
+          obsoleteAt: "2026-08-17T10:01:00.000Z",
+          lastErrorCode: "stale_graph",
+          retryCount: 2,
+        }),
+      ],
+      nextCursor: null,
+    });
+    expect(calls).toEqual([
+      {
+        name: "get_product_relationship_propagation_events",
+        args: {
+          p_organization_id: organizationId,
+          p_actor_user_id: actorId,
+          p_product_id: productId,
+          p_cursor: null,
+          p_page_size: 25,
+          p_delivery_state: "obsolete",
+        },
+      },
+    ]);
   });
 
   function releaseJson(overrides: Record<string, unknown> = {}) {

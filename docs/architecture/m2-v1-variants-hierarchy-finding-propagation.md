@@ -11,8 +11,10 @@
   deterministic mutation previews, graph-change events, and a published
   resolver port.
 - Out of scope: SBOM ingestion, finding creation, analyst triage, applicability
-  decisions, finding-impact persistence, product-specific finding exceptions,
-  reporting, evidence storage, and a graph database.
+  decisions, reporting, evidence storage, and a graph database. Finding-impact
+  persistence and product-specific exceptions are owned by the companion
+  `m2-v1-finding-impact-propagation.md` feature; this product module still does
+  not read or persist those records.
 - The existing `/api/v1/products` prefix, strict product/release response
   schemas, archive semantics, auth cookies, permission merge order, and
   dashboard mock namespace are unchanged.
@@ -65,9 +67,13 @@ requirements.
   controller -> product use cases/inward ports -> Supabase RPC adapter. The
   graph resolver is an exported inward-owned port; no other module reads M2
   tables directly.
-- **Transactional outbox.** Every graph-changing write appends a uniquely
-  keyed re-evaluation event to existing `product_regulatory_outbox_events` in
-  the same transaction. The future finding owner can consume it durably; no
+- **Transactional outbox with bounded inverse fan-out.** Every graph-changing
+  write appends a uniquely keyed re-evaluation event to existing
+  `product_regulatory_outbox_events` in the same transaction. Its durable
+  continuation cursor advances only after a finding-owned source page commits.
+  The event describes one strict `product`, `release`, or `baseline` scope;
+  product-wide embedded links and manual re-evaluation therefore remain
+  representable instead of becoming an ambiguous empty scope. No
   process-local observer is authoritative.
 
 ## Rejected patterns
@@ -82,7 +88,7 @@ requirements.
   access from M2 violate module ownership and would place a five-million-row
   finding dataset in the product export/lock path.
 - Separate baseline-identity, baseline-revision, variant, component-link,
-  graph-version, dependency-fact, command-idempotency, and outbox tables add
+  graph-version, command-idempotency, source-fan-out, and outbox tables add
   avoidable storage and export surface. The current requirements fit three
   history tables, `organization_settings`, and the existing regulatory outbox.
 - A new notification/event-bus/provider stack duplicates the existing durable
@@ -127,10 +133,12 @@ requirements.
 ## Finding propagation boundary
 
 `ProductRelationshipResolverPort` accepts a verified organization, opaque
-source release or baseline revision, graph version, `asOf`, and keyset cursor.
-It returns only candidate product/release IDs, canonical relationship path IDs,
-graph version, and evaluation time. It never asserts vulnerability
-applicability.
+source product with an optional release or baseline revision, graph version,
+`asOf`, and keyset cursor. It returns only candidate product/release IDs,
+canonical relationship path IDs, graph version, and evaluation time. It never
+asserts vulnerability applicability. A matching product-owned event port
+describes its scope and checkpoints its opaque continuation cursor; it does not
+expose product tables to findings.
 
 The finding/SBOM owner combines these candidates with its own component and
 configuration evidence, owns analyst assessment and explicit product override,
@@ -142,16 +150,16 @@ supersedes/closes any former impact after re-evaluation.
 
 ## Failure modes
 
-| Failure | Handling |
-| --- | --- |
-| Invalid/equal effective dates, blank reason/source/provenance, invalid quantity | Zod and database constraint reject before partial persistence. |
-| Self link, direct/indirect cycle, or candidate depth over 64 | Locked deterministic graph validation returns `cycle_detected` or `depth_exceeded`, records a safe rejection audit fact, and persists nothing. |
-| Concurrent graph mutation/stale version | The locked organization-settings graph version and expected version return `conflict`; the UI reloads graph state. |
-| Cross-tenant direct or recursive identifier | Organization composite FK/RPC predicate returns indistinguishable `not_found`. |
-| Duplicate command/retry | The caller key and canonical payload digest are stored on the relevant history record (not a fourth command table), so the original outcome is replayed and a divergent retry fails closed. Active-equivalence constraints separately reject an unkeyed duplicate. |
-| Baseline/product/release archive with an active membership or relationship | `blocked`; history is preserved. |
-| Outbox consumer unavailable/restarted | Durable event keeps leased/retry/dead-letter state; the relationship write remains auditable and no finding work is silently claimed complete. |
-| Finding not applicable to a variant configuration | M2 returns a candidate only; the finding owner makes and audits the non-applicability decision. |
+| Failure                                                                         | Handling                                                                                                                                                                                                                                                           |
+| ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Invalid/equal effective dates, blank reason/source/provenance, invalid quantity | Zod and database constraint reject before partial persistence.                                                                                                                                                                                                     |
+| Self link, direct/indirect cycle, or candidate depth over 64                    | Locked deterministic graph validation returns `cycle_detected` or `depth_exceeded`, records a safe rejection audit fact, and persists nothing.                                                                                                                     |
+| Concurrent graph mutation/stale version                                         | The locked organization-settings graph version and expected version return `conflict`; the UI reloads graph state.                                                                                                                                                 |
+| Cross-tenant direct or recursive identifier                                     | Organization composite FK/RPC predicate returns indistinguishable `not_found`.                                                                                                                                                                                     |
+| Duplicate command/retry                                                         | The caller key and canonical payload digest are stored on the relevant history record (not a fourth command table), so the original outcome is replayed and a divergent retry fails closed. Active-equivalence constraints separately reject an unkeyed duplicate. |
+| Baseline/product/release archive with an active membership or relationship      | `blocked`; history is preserved.                                                                                                                                                                                                                                   |
+| Outbox consumer unavailable/restarted                                           | Durable event keeps leased/retry/dead-letter state; the relationship write remains auditable and no finding work is silently claimed complete.                                                                                                                     |
+| Finding not applicable to a variant configuration                               | M2 returns a candidate only; the finding owner makes and audits the non-applicability decision.                                                                                                                                                                    |
 
 ## Tests, observability, and rollout
 
@@ -160,10 +168,11 @@ supersedes/closes any former impact after re-evaluation.
   validation. Add generated acyclic graph/property coverage where it exercises
   behavior beyond focused examples.
 - SQL tests cover RLS/grants/search path, indexes, active duplicate prevention,
-  rollback, direct/two-node/three-node/deep cycle rejection,
-  concurrent graph writes, historical reads, and archive blockers. A fixture
-  creates 500 products/5,000 releases and asserts bounded indexed plans; it
-  does not create finding rows.
+  rollback, direct/two-node/three-node/deep cycle rejection, concurrent graph
+  writes, historical reads, and archive blockers. An opt-in, rollback-only
+  local fixture creates 500 products, 5,000 releases, and 5 million opaque
+  finding sources to assert indexed plans for source pages, claims, summaries,
+  and bounded traversal. It never commits fixture data.
 - API/web/browser tests cover parsing, permissions, tenant 404s, baseline
   history, preview/create/end, stale graph reload, empty/forbidden/unavailable
   states, and organization switching. Live browser testing creates uniquely
@@ -171,14 +180,17 @@ supersedes/closes any former impact after re-evaluation.
 - Operational views expose traversal latency, candidate fan-out, cycle/depth
   rejection, event lag, stale re-evaluation, retries, and dead letters without
   finding content, SBOM material, credentials, or session data.
-- Deploy in order: additive migration and export registration, generated
-  types, API/ports, then UI. Roll back callers/workers only; retain history and
-  repair database facts with a forward migration.
+- Deploy in order: additive migration (including lifecycle-fact consolidation)
+  and export registration, generated types, API/ports/workers, then UI. The
+  worker can resume from an event cursor after a restart; an operator retries a
+  safe dead letter after correcting the dependency, or emits a newer graph
+  event. Roll back callers/workers only; retain history and repair database
+  facts with a forward migration.
 
 ## Review checklist
 
 - [x] A direct mutable-field solution was considered and rejected for concrete
-  history/cycle/durability failures.
+      history/cycle/durability failures.
 - [x] Every selected pattern has a present trigger, boundary, and test plan.
 - [x] Request, user, organization, and session state are never global.
 - [x] Controllers/pages contain no provider query or graph decision.
@@ -186,4 +198,4 @@ supersedes/closes any former impact after re-evaluation.
 - [x] Security-critical graph/audit/outbox facts share a database transaction.
 - [x] M2 does not read or persist finding/SBOM/triage records.
 - [x] Additive rollout, export compatibility, and forward-only rollback are
-  defined.
+      defined.

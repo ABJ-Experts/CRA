@@ -107,6 +107,18 @@
       "types": "./dist/products/types/index.d.ts",
       "default": "./dist/products/types/index.js"
     },
+    "./findings": {
+      "types": "./dist/findings.d.ts",
+      "default": "./dist/findings.js"
+    },
+    "./findings/schemas": {
+      "types": "./dist/findings/schemas/index.d.ts",
+      "default": "./dist/findings/schemas/index.js"
+    },
+    "./findings/types": {
+      "types": "./dist/findings/types/index.d.ts",
+      "default": "./dist/findings/types/index.js"
+    },
     "./permissions/schemas": {
       "types": "./dist/permissions/schemas/index.d.ts",
       "default": "./dist/permissions/schemas/index.js"

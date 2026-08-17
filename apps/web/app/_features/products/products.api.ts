@@ -45,6 +45,8 @@ import {
   softwareBaselineMembershipParamsSchema,
   softwareBaselineMembershipResponseSchema,
   softwareBaselineMembershipsResponseSchema,
+  softwareBaselineListQuerySchema,
+  softwareBaselineListResponseSchema,
   softwareBaselineParamsSchema,
   softwareBaselineResponseSchema,
   softwareBaselinesResponseSchema,
@@ -88,6 +90,7 @@ import {
   type RemoveReleaseMarketAvailabilityInput,
   type ReleaseListQuery,
   type RelationshipPropagationEventsQuery,
+  type SoftwareBaselineListQuery,
   type SupersedeSupportPeriodRequest,
   type SupersedeProductComponentLinkInput,
   type PreviewSupportPeriodChangeRequest,
@@ -606,6 +609,24 @@ export class ProductsApi {
       body: input,
       inputSchema: updateSupportAlertIntervalsRequestSchema,
       schema: supportAlertIntervalsResponseSchema,
+      signal,
+    });
+  }
+
+  async listSoftwareBaselines(
+    input: Partial<SoftwareBaselineListQuery> = {},
+    signal?: AbortSignal,
+  ) {
+    const query = apiClient.parseInput(softwareBaselineListQuerySchema, {
+      ...input,
+      includeArchived:
+        input.includeArchived === undefined
+          ? undefined
+          : String(input.includeArchived),
+    });
+    return authenticatedRequestJson({
+      path: queryPath("/api/v1/products/baselines", query),
+      schema: softwareBaselineListResponseSchema,
       signal,
     });
   }

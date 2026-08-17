@@ -63,6 +63,10 @@ const supportAlertIntervals = Object.freeze([
 const baselineRevisions = Object.freeze((baselineId: string) =>
   Object.freeze(["products", "baselines", baselineId, "revisions"] as const),
 );
+const baselineLists = Object.freeze(["products", "baselines", "list"] as const);
+const baselineList = Object.freeze((query: string) =>
+  Object.freeze([...baselineLists, query] as const),
+);
 const baselineMemberships = Object.freeze((productId: string) =>
   Object.freeze(["products", productId, "baseline-memberships"] as const),
 );
@@ -98,6 +102,8 @@ export const productKeys = Object.freeze({
   supportRetention,
   supportAlerts,
   supportAlertIntervals,
+  baselineLists,
+  baselineList,
   baselineRevisions,
   baselineMemberships,
   variantRelationships,

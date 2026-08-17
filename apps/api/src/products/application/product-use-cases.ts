@@ -38,6 +38,7 @@ import type {
   SupportPeriodChangePreview,
   SupersedeSupportPeriodRequest,
   SoftwareBaseline,
+  SoftwareBaselineListQuery,
   SoftwareBaselineReleaseMembership,
   ProductVariantRelationship,
   AppendSoftwareBaselineRevisionInput,
@@ -254,6 +255,11 @@ export type ProductRepository = Readonly<{
     actorId: string,
     baselineId: string,
   ): Promise<SoftwareBaselineHistoryOutcome>;
+  listSoftwareBaselines(
+    organizationId: string,
+    actorId: string,
+    query: SoftwareBaselineListQuery,
+  ): Promise<SoftwareBaselineListOutcome>;
   archiveSoftwareBaseline(
     organizationId: string,
     actorId: string,
@@ -454,6 +460,13 @@ export type SoftwareBaselineMutationOutcome =
     }>;
 export type SoftwareBaselineHistoryOutcome =
   | Readonly<{ outcome: "found"; baselines: readonly SoftwareBaseline[] }>
+  | Readonly<{ outcome: "not_found" }>;
+export type SoftwareBaselineList = Readonly<{
+  items: readonly SoftwareBaseline[];
+  nextCursor: string | null;
+}>;
+export type SoftwareBaselineListOutcome =
+  | Readonly<{ outcome: "found"; baselines: SoftwareBaselineList }>
   | Readonly<{ outcome: "not_found" }>;
 export type SoftwareBaselineMembershipMutationOutcome =
   | Readonly<{
@@ -1268,6 +1281,34 @@ export class ProductUseCases
       return outcome.outcome === "found"
         ? success(
             Object.freeze({ baselines: Object.freeze([...outcome.baselines]) }),
+          )
+        : this.notFound();
+    } catch (error) {
+      return this.providerFailure(error);
+    }
+  }
+
+  async listSoftwareBaselines(
+    command: Readonly<{
+      organizationId: string;
+      actorId: string;
+      query: SoftwareBaselineListQuery;
+    }>,
+  ): Promise<ProductResult<Readonly<{ baselines: SoftwareBaselineList }>>> {
+    try {
+      const outcome = await this.repository.listSoftwareBaselines(
+        command.organizationId,
+        command.actorId,
+        command.query,
+      );
+      return outcome.outcome === "found"
+        ? success(
+            Object.freeze({
+              baselines: Object.freeze({
+                ...outcome.baselines,
+                items: Object.freeze([...outcome.baselines.items]),
+              }),
+            }),
           )
         : this.notFound();
     } catch (error) {

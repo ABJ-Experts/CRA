@@ -86,6 +86,43 @@ describe("ProductsController", () => {
     );
   });
 
+  it("forwards an obsolete propagation-history filter without changing its response", async () => {
+    const products = {
+      getRelationshipPropagationEvents: jest.fn().mockResolvedValue({
+        events: [
+          {
+            deliveryState: "obsolete",
+          },
+        ],
+        nextCursor: null,
+      }),
+    };
+    const controller = new ProductsController(products as never, {} as never);
+    const user = {
+      id: "00000000-0000-4000-8000-000000000001",
+      organizationId: "00000000-0000-4000-8000-000000000002",
+      role: "admin",
+    } as RequestUser;
+    const productId = "00000000-0000-4000-8000-000000000003";
+
+    await expect(
+      controller.getRelationshipPropagationEvents(
+        { productId },
+        { pageSize: 25, deliveryState: "obsolete" },
+        user,
+      ),
+    ).resolves.toEqual({
+      events: [{ deliveryState: "obsolete" }],
+      nextCursor: null,
+    });
+    expect(products.getRelationshipPropagationEvents).toHaveBeenCalledWith({
+      organizationId: user.organizationId,
+      actorId: user.id,
+      productId,
+      query: { pageSize: 25, deliveryState: "obsolete" },
+    });
+  });
+
   it("requires delete permission only for withdrawal transitions", async () => {
     const products = {
       transitionReleaseLifecycle: jest.fn().mockResolvedValue({}),

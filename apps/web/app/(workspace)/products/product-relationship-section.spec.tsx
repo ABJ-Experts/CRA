@@ -16,6 +16,7 @@ import { ProductRelationshipSection } from "./product-relationship-section";
 
 const PRODUCT_ID = "11111111-1111-4111-8111-111111111111";
 const RELEASE_ID = "22222222-2222-4222-8222-222222222222";
+const COMPONENT_PRODUCT_ID = "33333333-3333-4333-8333-333333333333";
 
 const state = {
   memberships: {
@@ -94,6 +95,45 @@ const baselineRevisionsQuery = vi.fn((baselineId: string, enabled: boolean) => {
 const createBaseline = { isPending: false, mutateAsync: vi.fn() };
 
 vi.mock("../../_features/products/products.queries", () => ({
+  useProductsQuery: () => ({
+    isPending: false,
+    isError: false,
+    error: null,
+    data: {
+      products: {
+        rows: [
+          {
+            id: COMPONENT_PRODUCT_ID,
+            name: "Embedded runtime",
+            internalCode: "RUNTIME-1",
+          },
+        ],
+        total: 1,
+        page: 1,
+        pageSize: 25,
+        pageCount: 1,
+      },
+    },
+    refetch: vi.fn(),
+  }),
+  useProductReleasesQuery: () => ({
+    isPending: false,
+    isError: false,
+    error: null,
+    data: {
+      releases: { rows: [], total: 0, page: 1, pageSize: 100, pageCount: 1 },
+    },
+    refetch: vi.fn(),
+  }),
+  useSoftwareBaselinesQuery: () => ({
+    isPending: false,
+    isError: false,
+    error: null,
+    data: {
+      baselines: { items: [], nextCursor: null },
+    },
+    refetch: vi.fn(),
+  }),
   useSoftwareBaselineMembershipsQuery: () => state.memberships,
   useProductVariantRelationshipsQuery: () => state.variants,
   useProductComponentLinksQuery: () => state.components,
@@ -185,6 +225,79 @@ describe("ProductRelationshipSection", () => {
     ).toBeDisabled();
   });
 
+  it("uses labeled tenant-scoped search and release selectors instead of raw relationship UUID fields", () => {
+    render(
+      <ProductRelationshipSection
+        productId={PRODUCT_ID}
+        releases={[{ id: RELEASE_ID, label: "Sentinel 1.0", version: "1.0.0" }]}
+        canEdit
+        enabled
+        onReload={vi.fn()}
+      />,
+    );
+
+    expect(
+      screen.getByRole("textbox", { name: "Search software baselines" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("combobox", { name: "Software baseline" }),
+    ).toBeDisabled();
+    expect(
+      screen.getByRole("textbox", { name: "Search variant product" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("combobox", { name: "Variant release" }),
+    ).toBeDisabled();
+    expect(
+      screen.getByRole("textbox", { name: "Search component product" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("combobox", { name: "Component release" }),
+    ).toBeDisabled();
+    expect(screen.queryByLabelText("Baseline ID")).not.toBeInTheDocument();
+    expect(
+      screen.queryByLabelText("Baseline revision ID"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByLabelText("Variant product ID"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByLabelText("Component product ID"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("selects the first release once an initially empty product detail query resolves", async () => {
+    const view = render(
+      <ProductRelationshipSection
+        productId={PRODUCT_ID}
+        releases={[]}
+        canEdit
+        enabled
+        onReload={vi.fn()}
+      />,
+    );
+
+    expect(
+      screen.getByRole("combobox", { name: "Relationship release" }),
+    ).toHaveValue("");
+
+    view.rerender(
+      <ProductRelationshipSection
+        productId={PRODUCT_ID}
+        releases={[{ id: RELEASE_ID, label: "Sentinel 1.0", version: "1.0.0" }]}
+        canEdit
+        enabled
+        onReload={vi.fn()}
+      />,
+    );
+
+    await waitFor(() =>
+      expect(
+        screen.getByRole("combobox", { name: "Relationship release" }),
+      ).toHaveValue(RELEASE_ID),
+    );
+  });
+
   it("presents a deterministic cycle rejection with a stale graph reload", async () => {
     createComponent.mutateAsync.mockRejectedValueOnce(
       new ApiClientError("api", "Cycle detected", 409, "cycle_detected"),
@@ -200,8 +313,11 @@ describe("ProductRelationshipSection", () => {
       />,
     );
 
-    fireEvent.change(screen.getByLabelText("Component product ID"), {
-      target: { value: "33333333-3333-4333-8333-333333333333" },
+    fireEvent.change(screen.getByLabelText("Search component product"), {
+      target: { value: "runtime" },
+    });
+    fireEvent.change(screen.getByLabelText("Component product"), {
+      target: { value: COMPONENT_PRODUCT_ID },
     });
     fireEvent.change(screen.getByLabelText("Relationship source"), {
       target: { value: "Product architecture" },
@@ -296,7 +412,7 @@ describe("ProductRelationshipSection", () => {
     expect(baselineRevisionsQuery).toHaveBeenCalledWith("", false);
   });
 
-  it("uses a created baseline identity and revision when assigning membership", async () => {
+  it("uses a created baseline identity and revision without exposing UUID fields", async () => {
     createBaseline.mutateAsync.mockResolvedValueOnce({
       baseline: {
         baselineId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
@@ -337,13 +453,14 @@ describe("ProductRelationshipSection", () => {
     );
 
     await waitFor(() =>
-      expect(screen.getByLabelText("Baseline ID")).toHaveValue(
+      expect(baselineRevisionsQuery).toHaveBeenCalledWith(
         "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        true,
       ),
     );
-    expect(screen.getByLabelText("Baseline revision ID")).toHaveValue(
-      "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
-    );
-    expect(screen.getByLabelText("Baseline version")).toHaveValue("2");
+    expect(screen.queryByLabelText("Baseline ID")).not.toBeInTheDocument();
+    expect(
+      screen.queryByLabelText("Baseline revision ID"),
+    ).not.toBeInTheDocument();
   });
 });

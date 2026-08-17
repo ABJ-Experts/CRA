@@ -223,6 +223,33 @@ describe("presets", () => {
     }
   });
 
+  it("defaults finding read access to every live role, but finding changes to owner and admin", () => {
+    for (const baseRole of BASE_ROLES) {
+      expect(
+        hasPermission(
+          DEFAULT_PERMISSIONS_BY_ROLE[baseRole],
+          "can_view_findings",
+        ),
+      ).toBe(true);
+    }
+    for (const baseRole of ["owner", "admin"] as const) {
+      expect(
+        hasPermission(
+          DEFAULT_PERMISSIONS_BY_ROLE[baseRole],
+          "can_edit_findings",
+        ),
+      ).toBe(true);
+    }
+    for (const baseRole of ["member", "viewer"] as const) {
+      expect(
+        hasPermission(
+          DEFAULT_PERMISSIONS_BY_ROLE[baseRole],
+          "can_edit_findings",
+        ),
+      ).toBe(false);
+    }
+  });
+
   it("privilege is monotonic across the base roles", () => {
     const granted = (r: (typeof BASE_ROLES)[number]) =>
       PERMISSION_KEYS.filter((k) =>

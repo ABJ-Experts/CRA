@@ -130,6 +130,13 @@ export const envSchema = z.object({
     300_000,
     "must not exceed 300000 milliseconds",
   ),
+  // Finding propagation is lease-based and restart-safe. Keeping this bounded
+  // prevents a mistyped deployment value from delaying recovery indefinitely.
+  FINDING_PROPAGATION_LEASE_SECONDS: boundedInt(
+    60,
+    3600,
+    "must not exceed 3600 seconds",
+  ),
   /**
    * With no scanner adapter configured, decoded raster-only inspection remains
    * available in non-strict environments and is recorded in the audit trail.

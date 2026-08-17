@@ -3,6 +3,7 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  Logger,
   NotFoundException,
   ServiceUnavailableException,
 } from "@nestjs/common";
@@ -15,6 +16,8 @@ import {
 
 @Injectable()
 export class ProductsService {
+  private readonly logger = new Logger(ProductsService.name);
+
   constructor(private readonly useCases: ProductUseCases) {}
 
   list(
@@ -151,6 +154,11 @@ export class ProductsService {
   ) {
     return this.unwrap(this.useCases.getSoftwareBaselineHistory(command));
   }
+  listSoftwareBaselines(
+    command: Parameters<ProductUseCases["listSoftwareBaselines"]>[0],
+  ) {
+    return this.unwrap(this.useCases.listSoftwareBaselines(command));
+  }
   archiveSoftwareBaseline(
     command: Parameters<ProductUseCases["archiveSoftwareBaseline"]>[0],
   ) {
@@ -189,7 +197,9 @@ export class ProductsService {
   previewProductComponentLink(
     command: Parameters<ProductUseCases["previewProductComponentLink"]>[0],
   ) {
-    return this.unwrap(this.useCases.previewProductComponentLink(command));
+    return this.unwrapWithCycleMetric(
+      this.useCases.previewProductComponentLink(command),
+    );
   }
   createProductComponentLink(
     command: Parameters<ProductUseCases["createProductComponentLink"]>[0],
@@ -235,8 +245,36 @@ export class ProductsService {
     throw this.httpFailure(result.error);
   }
 
+  private async unwrapWithCycleMetric<
+    T extends Readonly<{
+      preview: { outcome: "allowed" | "cycle_detected" | "depth_exceeded" };
+    }>,
+  >(pending: Promise<Result<T, ProductError>>): Promise<T> {
+    const result = await pending;
+    if (result.ok && result.value.preview.outcome === "cycle_detected") {
+      this.logger.warn(
+        JSON.stringify({
+          event: "product_relationship_measurement",
+          metric: "cycle_rejection",
+          value: 1,
+        }),
+      );
+    }
+    if (result.ok) return result.value;
+    throw this.httpFailure(result.error);
+  }
+
   private httpFailure(error: ProductError): Error {
     const message = "Product registry request could not be completed.";
+    if (error.code === "cycle_detected") {
+      this.logger.warn(
+        JSON.stringify({
+          event: "product_relationship_measurement",
+          metric: "cycle_rejection",
+          value: 1,
+        }),
+      );
+    }
     switch (error.code) {
       case "invalid_request":
         return new BadRequestException({ message, code: error.code });

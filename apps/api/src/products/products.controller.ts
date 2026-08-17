@@ -58,6 +58,8 @@ import {
   supportPeriodIdParamsSchema,
   supportPeriodResponseSchema,
   softwareBaselineResponseSchema,
+  softwareBaselineListQuerySchema,
+  softwareBaselineListResponseSchema,
   softwareBaselinesResponseSchema,
   softwareBaselineMembershipsResponseSchema,
   softwareBaselineMembershipResponseSchema,
@@ -99,6 +101,7 @@ import {
   type UpdateProductInput,
   type UpdateReleaseInput,
   type CreateSoftwareBaselineInput,
+  type SoftwareBaselineListQuery,
   type AppendSoftwareBaselineRevisionInput,
   type ArchiveSoftwareBaselineInput,
   type AssignSoftwareBaselineMembershipInput,
@@ -197,6 +200,21 @@ export class ProductsController {
       organizationId: this.organizationId(user),
       actorId: user.id,
       input,
+    });
+  }
+
+  @RequirePermissions("can_view_products")
+  @Get("baselines")
+  @ZodResponse(softwareBaselineListResponseSchema)
+  listSoftwareBaselines(
+    @Query(zodQuery(softwareBaselineListQuerySchema))
+    query: SoftwareBaselineListQuery,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.products.listSoftwareBaselines({
+      organizationId: this.organizationId(user),
+      actorId: user.id,
+      query,
     });
   }
 

@@ -6,6 +6,7 @@ import { AuthModule } from "./auth/auth.module";
 import { HttpBoundaryModule } from "./common/http/http-boundary.module";
 import { SecurityModule } from "./common/security/security.module";
 import { validateEnv } from "./config/env.validation";
+import { FindingsModule } from "./findings/findings.module";
 import { HealthController } from "./health/health.controller";
 import { MailModule } from "./mail/mail.module";
 import { InvitationsModule } from "./invitations/invitations.module";
@@ -44,6 +45,7 @@ import { UsersModule } from "./users/users.module";
     AuthModule,
     PermissionsModule,
     ProductsModule,
+    FindingsModule,
     SecurityModule,
     UsersModule,
     OrganizationsModule,

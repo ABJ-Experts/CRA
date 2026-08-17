@@ -139,4 +139,15 @@ describe("environment validation", () => {
       }),
     ).toThrow("TENANT_LIFECYCLE_LEASE_SECONDS: must not exceed 3600 seconds");
   });
+
+  it("bounds the durable finding propagation worker lease", () => {
+    expect(
+      validateEnv({ ...required, FINDING_PROPAGATION_LEASE_SECONDS: "3600" }),
+    ).toMatchObject({ FINDING_PROPAGATION_LEASE_SECONDS: 3600 });
+    expect(() =>
+      validateEnv({ ...required, FINDING_PROPAGATION_LEASE_SECONDS: "3601" }),
+    ).toThrow(
+      "FINDING_PROPAGATION_LEASE_SECONDS: must not exceed 3600 seconds",
+    );
+  });
 });

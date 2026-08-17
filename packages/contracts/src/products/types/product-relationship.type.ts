@@ -15,6 +15,9 @@ import type {
   productComponentLinkSchema,
   productComponentLinkParamsSchema,
   productRelationshipGraphQuerySchema,
+  productRelationshipGraphEventCheckpointSchema,
+  productRelationshipGraphEventCursorSchema,
+  productRelationshipGraphEventScopeSchema,
   productRelationshipGraphNodeSchema,
   productRelationshipGraphSchema,
   productRelationshipPreviewSchema,
@@ -37,6 +40,8 @@ import type {
   softwareBaselineRevisionResponseSchema,
   softwareBaselineRevisionsResponseSchema,
   softwareBaselineSchema,
+  softwareBaselineListQuerySchema,
+  softwareBaselineListResponseSchema,
   softwareBaselineParamsSchema,
   softwareBaselineResponseSchema,
   softwareBaselinesResponseSchema,
@@ -70,6 +75,15 @@ export type ProductVariantRelationship = z.output<
 export type ProductComponentLink = z.output<typeof productComponentLinkSchema>;
 export type ProductRelationshipGraphNode = z.output<
   typeof productRelationshipGraphNodeSchema
+>;
+export type ProductRelationshipGraphEventScope = z.output<
+  typeof productRelationshipGraphEventScopeSchema
+>;
+export type ProductRelationshipGraphEventCursor = z.output<
+  typeof productRelationshipGraphEventCursorSchema
+>;
+export type ProductRelationshipGraphEventCheckpoint = z.output<
+  typeof productRelationshipGraphEventCheckpointSchema
 >;
 export type ProductRelationshipGraph = z.output<
   typeof productRelationshipGraphSchema
@@ -134,6 +148,9 @@ export type RequestRelationshipReevaluationInput = z.output<
 export type SoftwareBaselineParams = z.output<
   typeof softwareBaselineParamsSchema
 >;
+export type SoftwareBaselineListQuery = z.output<
+  typeof softwareBaselineListQuerySchema
+>;
 export type SoftwareBaselineMembershipParams = z.output<
   typeof softwareBaselineMembershipParamsSchema
 >;
@@ -151,6 +168,9 @@ export type SoftwareBaselineResponse = z.output<
 >;
 export type SoftwareBaselinesResponse = z.output<
   typeof softwareBaselinesResponseSchema
+>;
+export type SoftwareBaselineListResponse = z.output<
+  typeof softwareBaselineListResponseSchema
 >;
 export type SoftwareBaselineRevisionResponse = z.output<
   typeof softwareBaselineRevisionResponseSchema

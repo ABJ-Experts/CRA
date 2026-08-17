@@ -538,6 +538,14 @@ describe("productsApi", () => {
       retryCount: 0,
     } as const;
     const fetcher = vi.fn(async (path: string, init?: RequestInit) => {
+      if (path.startsWith("/api/v1/products/baselines?")) {
+        return json({
+          baselines: {
+            items: [baseline],
+            nextCursor: null,
+          },
+        });
+      }
       if (path.endsWith("/revisions")) {
         return (init?.method ?? "GET") === "GET"
           ? json({ baselines: [baseline] })
@@ -615,6 +623,18 @@ describe("productsApi", () => {
     };
 
     await productsApi.createSoftwareBaseline(createBaseline);
+    await expect(
+      productsApi.listSoftwareBaselines({
+        q: "runtime",
+        pageSize: 25,
+        includeArchived: false,
+      }),
+    ).resolves.toEqual({
+      baselines: {
+        items: [baseline],
+        nextCursor: null,
+      },
+    });
     await productsApi.listSoftwareBaselineRevisions(baseline.baselineId);
     const appendBaseline = {
       name: createBaseline.name,
@@ -700,6 +720,10 @@ describe("productsApi", () => {
       idempotencyKey: "18181818-1818-4818-8818-181818181818",
     });
 
+    expect(fetcher).toHaveBeenCalledWith(
+      "/api/v1/products/baselines?pageSize=25&q=runtime&includeArchived=false",
+      expect.objectContaining({ method: "GET" }),
+    );
     expect(fetcher).toHaveBeenCalledWith(
       `/api/v1/products/${PRODUCT_ID}/component-links/${component.id}/supersessions`,
       expect.objectContaining({ method: "POST" }),
