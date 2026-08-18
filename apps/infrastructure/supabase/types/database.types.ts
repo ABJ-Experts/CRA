@@ -3984,6 +3984,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "product_releases_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "product_releases_organization_id_legal_entity_id_fkey"
             columns: ["organization_id", "legal_entity_id"]
             isOneToOne: false
@@ -4009,6 +4016,495 @@ export type Database = {
             columns: ["updated_by"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_security_update_artifacts: {
+        Row: {
+          artifact_type: string
+          availability_explanation: Json
+          availability_rule_version: string
+          availability_status: string
+          availability_until: string | null
+          availability_winning_rule: string | null
+          byte_size: number
+          cleanup_scheduled_at: string | null
+          cleanup_scheduled_by: string | null
+          computed_availability_until: string | null
+          content_type: string
+          created_at: string
+          created_by: string
+          distribution_kind: string
+          distribution_reference: string | null
+          file_name: string
+          id: string
+          idempotency_key: string | null
+          idempotency_request_digest: string | null
+          integrity_status: string
+          issued_at: string
+          issued_candidate_at: string | null
+          non_reduction_applied: boolean
+          object_key: string | null
+          organization_id: string
+          product_id: string
+          publication_status: string
+          published_at: string | null
+          published_by: string | null
+          published_external_references: Json
+          release_id: string
+          replaced_at: string | null
+          replaced_by: string | null
+          replacement_artifact_id: string | null
+          replacement_reason: string | null
+          review_reason: string | null
+          review_status: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          sha256: string
+          signature_metadata: Json
+          support_candidate_at: string | null
+          support_period_id: string | null
+          support_period_revision: number | null
+          supported_platform: string
+          title: string
+          update_version: string
+          updated_at: string
+          updated_by: string
+          upload_status: string
+          version: number
+          withdrawal_reason: string | null
+          withdrawn_at: string | null
+          withdrawn_by: string | null
+        }
+        Insert: {
+          artifact_type: string
+          availability_explanation?: Json
+          availability_rule_version?: string
+          availability_status?: string
+          availability_until?: string | null
+          availability_winning_rule?: string | null
+          byte_size: number
+          cleanup_scheduled_at?: string | null
+          cleanup_scheduled_by?: string | null
+          computed_availability_until?: string | null
+          content_type: string
+          created_at?: string
+          created_by: string
+          distribution_kind?: string
+          distribution_reference?: string | null
+          file_name: string
+          id?: string
+          idempotency_key?: string | null
+          idempotency_request_digest?: string | null
+          integrity_status?: string
+          issued_at: string
+          issued_candidate_at?: string | null
+          non_reduction_applied?: boolean
+          object_key?: string | null
+          organization_id: string
+          product_id: string
+          publication_status?: string
+          published_at?: string | null
+          published_by?: string | null
+          published_external_references?: Json
+          release_id: string
+          replaced_at?: string | null
+          replaced_by?: string | null
+          replacement_artifact_id?: string | null
+          replacement_reason?: string | null
+          review_reason?: string | null
+          review_status?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          sha256: string
+          signature_metadata?: Json
+          support_candidate_at?: string | null
+          support_period_id?: string | null
+          support_period_revision?: number | null
+          supported_platform: string
+          title: string
+          update_version: string
+          updated_at?: string
+          updated_by: string
+          upload_status?: string
+          version?: number
+          withdrawal_reason?: string | null
+          withdrawn_at?: string | null
+          withdrawn_by?: string | null
+        }
+        Update: {
+          artifact_type?: string
+          availability_explanation?: Json
+          availability_rule_version?: string
+          availability_status?: string
+          availability_until?: string | null
+          availability_winning_rule?: string | null
+          byte_size?: number
+          cleanup_scheduled_at?: string | null
+          cleanup_scheduled_by?: string | null
+          computed_availability_until?: string | null
+          content_type?: string
+          created_at?: string
+          created_by?: string
+          distribution_kind?: string
+          distribution_reference?: string | null
+          file_name?: string
+          id?: string
+          idempotency_key?: string | null
+          idempotency_request_digest?: string | null
+          integrity_status?: string
+          issued_at?: string
+          issued_candidate_at?: string | null
+          non_reduction_applied?: boolean
+          object_key?: string | null
+          organization_id?: string
+          product_id?: string
+          publication_status?: string
+          published_at?: string | null
+          published_by?: string | null
+          published_external_references?: Json
+          release_id?: string
+          replaced_at?: string | null
+          replaced_by?: string | null
+          replacement_artifact_id?: string | null
+          replacement_reason?: string | null
+          review_reason?: string | null
+          review_status?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          sha256?: string
+          signature_metadata?: Json
+          support_candidate_at?: string | null
+          support_period_id?: string | null
+          support_period_revision?: number | null
+          supported_platform?: string
+          title?: string
+          update_version?: string
+          updated_at?: string
+          updated_by?: string
+          upload_status?: string
+          version?: number
+          withdrawal_reason?: string | null
+          withdrawn_at?: string | null
+          withdrawn_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_security_update_artifact_product_release_fkey"
+            columns: ["organization_id", "product_id", "release_id"]
+            isOneToOne: false
+            referencedRelation: "product_releases"
+            referencedColumns: ["organization_id", "product_id", "id"]
+          },
+          {
+            foreignKeyName: "product_security_update_artifact_replacement_release_fkey"
+            columns: [
+              "organization_id",
+              "product_id",
+              "release_id",
+              "replacement_artifact_id",
+            ]
+            isOneToOne: false
+            referencedRelation: "product_security_update_artifacts"
+            referencedColumns: [
+              "organization_id",
+              "product_id",
+              "release_id",
+              "id",
+            ]
+          },
+          {
+            foreignKeyName: "product_security_update_artifact_support_period_fkey"
+            columns: ["organization_id", "support_period_id"]
+            isOneToOne: false
+            referencedRelation: "product_support_periods"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "product_security_update_artifacts_cleanup_scheduled_by_fkey"
+            columns: ["cleanup_scheduled_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_security_update_artifacts_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_security_update_artifacts_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_security_update_artifacts_published_by_fkey"
+            columns: ["published_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_security_update_artifacts_replaced_by_fkey"
+            columns: ["replaced_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_security_update_artifacts_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_security_update_artifacts_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_security_update_artifacts_withdrawn_by_fkey"
+            columns: ["withdrawn_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_substantial_modification_assessments: {
+        Row: {
+          answers: Json
+          completeness_state: string
+          created_at: string
+          created_by: string
+          description: string | null
+          detected_or_assessed_at: string | null
+          determination: string | null
+          evidence_references: Json
+          id: string
+          idempotency_key: string | null
+          idempotency_request_digest: string | null
+          introduced_at: string | null
+          modification_id: string
+          modification_identifier: string | null
+          organization_id: string
+          override_reason: string | null
+          policy_suggestion: string | null
+          policy_version: string
+          previous_state: string | null
+          product_id: string
+          rationale: string | null
+          required_follow_up_actions: Json | null
+          resulting_state: string | null
+          review_rationale: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          revision: number
+          status: string
+          superseded_at: string | null
+          superseded_by_id: string | null
+          supersedes_id: string | null
+          technical_scope: string | null
+          title: string | null
+          updated_at: string
+          updated_by: string
+          version: number
+        }
+        Insert: {
+          answers?: Json
+          completeness_state?: string
+          created_at?: string
+          created_by: string
+          description?: string | null
+          detected_or_assessed_at?: string | null
+          determination?: string | null
+          evidence_references?: Json
+          id?: string
+          idempotency_key?: string | null
+          idempotency_request_digest?: string | null
+          introduced_at?: string | null
+          modification_id: string
+          modification_identifier?: string | null
+          organization_id: string
+          override_reason?: string | null
+          policy_suggestion?: string | null
+          policy_version?: string
+          previous_state?: string | null
+          product_id: string
+          rationale?: string | null
+          required_follow_up_actions?: Json | null
+          resulting_state?: string | null
+          review_rationale?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          revision: number
+          status?: string
+          superseded_at?: string | null
+          superseded_by_id?: string | null
+          supersedes_id?: string | null
+          technical_scope?: string | null
+          title?: string | null
+          updated_at?: string
+          updated_by: string
+          version?: number
+        }
+        Update: {
+          answers?: Json
+          completeness_state?: string
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          detected_or_assessed_at?: string | null
+          determination?: string | null
+          evidence_references?: Json
+          id?: string
+          idempotency_key?: string | null
+          idempotency_request_digest?: string | null
+          introduced_at?: string | null
+          modification_id?: string
+          modification_identifier?: string | null
+          organization_id?: string
+          override_reason?: string | null
+          policy_suggestion?: string | null
+          policy_version?: string
+          previous_state?: string | null
+          product_id?: string
+          rationale?: string | null
+          required_follow_up_actions?: Json | null
+          resulting_state?: string | null
+          review_rationale?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          revision?: number
+          status?: string
+          superseded_at?: string | null
+          superseded_by_id?: string | null
+          supersedes_id?: string | null
+          technical_scope?: string | null
+          title?: string | null
+          updated_at?: string
+          updated_by?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_substantial_modification_assessmen_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_substantial_modification_assessment_product_fkey"
+            columns: ["organization_id", "product_id"]
+            isOneToOne: false
+            referencedRelation: "product_retention_alert_operations"
+            referencedColumns: ["organization_id", "product_id"]
+          },
+          {
+            foreignKeyName: "product_substantial_modification_assessment_product_fkey"
+            columns: ["organization_id", "product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "product_substantial_modification_assessment_superseded_by_fkey"
+            columns: ["organization_id", "product_id", "superseded_by_id"]
+            isOneToOne: false
+            referencedRelation: "product_substantial_modification_assessments"
+            referencedColumns: ["organization_id", "product_id", "id"]
+          },
+          {
+            foreignKeyName: "product_substantial_modification_assessment_supersedes_fkey"
+            columns: ["organization_id", "product_id", "supersedes_id"]
+            isOneToOne: false
+            referencedRelation: "product_substantial_modification_assessments"
+            referencedColumns: ["organization_id", "product_id", "id"]
+          },
+          {
+            foreignKeyName: "product_substantial_modification_assessments_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_substantial_modification_assessments_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_substantial_modification_assessments_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_substantial_modification_releases: {
+        Row: {
+          assessment_id: string
+          created_at: string
+          created_by: string
+          organization_id: string
+          product_id: string
+          release_id: string
+        }
+        Insert: {
+          assessment_id: string
+          created_at?: string
+          created_by: string
+          organization_id: string
+          product_id: string
+          release_id: string
+        }
+        Update: {
+          assessment_id?: string
+          created_at?: string
+          created_by?: string
+          organization_id?: string
+          product_id?: string
+          release_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_substantial_modification_release_assessment_product_fke"
+            columns: ["organization_id", "product_id", "assessment_id"]
+            isOneToOne: false
+            referencedRelation: "product_substantial_modification_assessments"
+            referencedColumns: ["organization_id", "product_id", "id"]
+          },
+          {
+            foreignKeyName: "product_substantial_modification_release_product_release_fkey"
+            columns: ["organization_id", "product_id", "release_id"]
+            isOneToOne: false
+            referencedRelation: "product_releases"
+            referencedColumns: ["organization_id", "product_id", "id"]
+          },
+          {
+            foreignKeyName: "product_substantial_modification_releases_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_substantial_modification_releases_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
@@ -5343,6 +5839,21 @@ export type Database = {
           retry_count: number
         }[]
       }
+      claim_product_security_update_artifact_work_atomic: {
+        Args: {
+          p_event_type: string
+          p_lease_owner: string
+          p_lease_seconds: number
+          p_organization_id: string
+        }
+        Returns: {
+          artifact: Json
+          checkpoint_version: number
+          delivery_id: string
+          lease_owner: string
+          outcome: string
+        }[]
+      }
       claim_product_support_alert_atomic: {
         Args: {
           p_lease_owner: string
@@ -5485,6 +5996,17 @@ export type Database = {
           outcome: string
           product_id: string
           retry_count: number
+        }[]
+      }
+      complete_product_security_update_artifact_work_atomic: {
+        Args: {
+          p_delivery_id: string
+          p_expected_checkpoint_version: number
+          p_lease_owner: string
+          p_organization_id: string
+        }
+        Returns: {
+          outcome: string
         }[]
       }
       complete_product_support_alert_delivery_atomic: {
@@ -5719,6 +6241,62 @@ export type Database = {
           release: Json
         }[]
       }
+      create_product_substantial_modification_assessment_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_answers: Json
+          p_correlation_id: string
+          p_description: string
+          p_detected_or_assessed_at: string
+          p_evidence_references: Json
+          p_idempotency_key: string
+          p_introduced_at: string
+          p_modification_id: string
+          p_modification_identifier: string
+          p_organization_id: string
+          p_previous_state: string
+          p_product_id: string
+          p_rationale: string
+          p_release_ids: string[]
+          p_required_follow_up_actions: Json
+          p_resulting_state: string
+          p_suggestion: string
+          p_technical_scope: string
+          p_title: string
+        }
+        Returns: {
+          assessment: Json
+          outcome: string
+        }[]
+      }
+      create_product_substantial_modification_assessment_draft_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_answers: Json
+          p_completeness_state: string
+          p_correlation_id: string
+          p_description: string
+          p_detected_or_assessed_at: string
+          p_evidence_references: Json
+          p_idempotency_key: string
+          p_introduced_at: string
+          p_modification_id: string
+          p_modification_identifier: string
+          p_organization_id: string
+          p_previous_state: string
+          p_product_id: string
+          p_rationale: string
+          p_release_ids: string[]
+          p_required_follow_up_actions: Json
+          p_resulting_state: string
+          p_technical_scope: string
+          p_title: string
+        }
+        Returns: {
+          assessment: Json
+          outcome: string
+        }[]
+      }
       create_product_support_period_atomic: {
         Args: {
           p_actor_user_id: string
@@ -5802,6 +6380,18 @@ export type Database = {
         }
         Returns: {
           event: Json
+          outcome: string
+        }[]
+      }
+      download_product_security_update_artifact_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_artifact_id: string
+          p_organization_id: string
+          p_product_id: string
+        }
+        Returns: {
+          artifact: Json
           outcome: string
         }[]
       }
@@ -6015,6 +6605,19 @@ export type Database = {
           retry_count: number
         }[]
       }
+      fail_product_security_update_artifact_work_atomic: {
+        Args: {
+          p_code: string
+          p_delivery_id: string
+          p_expected_checkpoint_version: number
+          p_lease_owner: string
+          p_organization_id: string
+          p_retryable: boolean
+        }
+        Returns: {
+          outcome: string
+        }[]
+      }
       fail_product_support_alert_delivery_atomic: {
         Args: {
           p_code: string
@@ -6057,6 +6660,59 @@ export type Database = {
         Returns: {
           branding: Json
           draft: Json
+          outcome: string
+        }[]
+      }
+      finalize_product_security_update_artifact_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_artifact_id: string
+          p_correlation_id: string
+          p_expected_version: number
+          p_integrity_status: string
+          p_organization_id: string
+          p_product_id: string
+          p_verified_byte_size: number
+          p_verified_content_type: string
+          p_verified_sha256: string
+        }
+        Returns: {
+          artifact: Json
+          outcome: string
+        }[]
+      }
+      finalize_product_security_update_artifact_atomic_base: {
+        Args: {
+          p_actor_user_id: string
+          p_artifact_id: string
+          p_correlation_id: string
+          p_expected_version: number
+          p_integrity_status: string
+          p_organization_id: string
+          p_product_id: string
+          p_verified_byte_size: number
+          p_verified_content_type: string
+          p_verified_sha256: string
+        }
+        Returns: {
+          artifact: Json
+          outcome: string
+        }[]
+      }
+      finalize_product_security_update_artifact_worker_atomic: {
+        Args: {
+          p_artifact_id: string
+          p_correlation_id: string
+          p_expected_version: number
+          p_integrity_status: string
+          p_organization_id: string
+          p_product_id: string
+          p_verified_byte_size: number
+          p_verified_content_type: string
+          p_verified_sha256: string
+        }
+        Returns: {
+          artifact: Json
           outcome: string
         }[]
       }
@@ -6338,6 +6994,18 @@ export type Database = {
           outcome: string
         }[]
       }
+      get_product_security_update_artifact: {
+        Args: {
+          p_actor_user_id: string
+          p_artifact_id: string
+          p_organization_id: string
+          p_product_id: string
+        }
+        Returns: {
+          artifact: Json
+          outcome: string
+        }[]
+      }
       get_product_software_baseline_memberships: {
         Args: {
           p_actor_user_id: string
@@ -6347,6 +7015,18 @@ export type Database = {
         }
         Returns: {
           memberships: Json
+          outcome: string
+        }[]
+      }
+      get_product_substantial_modification_assessment: {
+        Args: {
+          p_actor_user_id: string
+          p_assessment_id: string
+          p_organization_id: string
+          p_product_id: string
+        }
+        Returns: {
+          assessment: Json
           outcome: string
         }[]
       }
@@ -6430,6 +7110,12 @@ export type Database = {
           organization_id: string
         }[]
       }
+      list_due_product_security_update_artifact_organizations: {
+        Args: never
+        Returns: {
+          organization_id: string
+        }[]
+      }
       list_due_product_support_alert_organizations: {
         Args: never
         Returns: {
@@ -6476,6 +7162,36 @@ export type Database = {
         Returns: {
           outcome: string
           releases: Json
+        }[]
+      }
+      list_product_security_update_artifacts: {
+        Args: {
+          p_actor_user_id: string
+          p_organization_id: string
+          p_page: number
+          p_page_size: number
+          p_product_id: string
+          p_publication_status: string
+          p_release_id: string
+        }
+        Returns: {
+          artifacts: Json
+          outcome: string
+        }[]
+      }
+      list_product_substantial_modification_assessments: {
+        Args: {
+          p_actor_user_id: string
+          p_organization_id: string
+          p_page: number
+          p_page_size: number
+          p_product_id: string
+          p_release_id: string
+          p_status: string
+        }
+        Returns: {
+          assessments: Json
+          outcome: string
         }[]
       }
       list_products: {
@@ -6884,6 +7600,70 @@ export type Database = {
         Returns: Json
       }
       m2_utc_z: { Args: { p_value: string }; Returns: string }
+      m2_v2_assessment_json: {
+        Args: {
+          p_assessment: Database["public"]["Tables"]["product_substantial_modification_assessments"]["Row"]
+        }
+        Returns: Json
+      }
+      m2_v2_assessment_payload_complete: {
+        Args: {
+          p_answers: Json
+          p_description: string
+          p_detected_or_assessed_at: string
+          p_introduced_at: string
+          p_modification_identifier: string
+          p_previous_state: string
+          p_rationale: string
+          p_required_follow_up_actions: Json
+          p_resulting_state: string
+          p_technical_scope: string
+          p_title: string
+        }
+        Returns: boolean
+      }
+      m2_v2_availability_candidate: {
+        Args: { p_issued_at: string }
+        Returns: string
+      }
+      m2_v2_command_digest: { Args: { p_payload: Json }; Returns: string }
+      m2_v2_resolve_security_update_artifact_worker_actor: {
+        Args: { p_organization_id: string }
+        Returns: string
+      }
+      m2_v2_security_update_artifact_json: {
+        Args: {
+          p_artifact: Database["public"]["Tables"]["product_security_update_artifacts"]["Row"]
+          p_include_object_key?: boolean
+        }
+        Returns: Json
+      }
+      m2_v2_set_artifact_retention_fact: {
+        Args: {
+          p_artifact: Database["public"]["Tables"]["product_security_update_artifacts"]["Row"]
+        }
+        Returns: undefined
+      }
+      m2_v2_set_lifecycle_dependency_fact: {
+        Args: {
+          p_active: boolean
+          p_actor_user_id: string
+          p_authority_kind: string
+          p_organization_id: string
+          p_product_id: string
+          p_record_id: string
+          p_release_id: string
+        }
+        Returns: undefined
+      }
+      m2_v2_valid_assessment_answers: {
+        Args: { p_answers: Json }
+        Returns: boolean
+      }
+      m2_v2_valid_published_external_references: {
+        Args: { p_references: Json }
+        Returns: boolean
+      }
       m2_valid_support_alert_intervals: {
         Args: { p_values: number[] }
         Returns: boolean
@@ -6924,6 +7704,35 @@ export type Database = {
         }
         Returns: {
           checkpoint_version: number
+          outcome: string
+        }[]
+      }
+      monitor_product_security_update_external_reference_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_artifact_id: string
+          p_correlation_id: string
+          p_expected_version: number
+          p_monitor_outcome: string
+          p_organization_id: string
+          p_product_id: string
+        }
+        Returns: {
+          artifact: Json
+          outcome: string
+        }[]
+      }
+      monitor_security_update_external_reference_worker_atomic: {
+        Args: {
+          p_artifact_id: string
+          p_correlation_id: string
+          p_expected_version: number
+          p_monitor_outcome: string
+          p_organization_id: string
+          p_product_id: string
+        }
+        Returns: {
+          artifact: Json
           outcome: string
         }[]
       }
@@ -7028,6 +7837,90 @@ export type Database = {
         Returns: {
           branding: Json
           idempotent: boolean
+          outcome: string
+        }[]
+      }
+      publish_product_security_update_artifact_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_artifact_id: string
+          p_correlation_id: string
+          p_expected_version: number
+          p_organization_id: string
+          p_product_id: string
+          p_published_external_references: Json
+        }
+        Returns: {
+          artifact: Json
+          outcome: string
+        }[]
+      }
+      publish_product_security_update_artifact_atomic_base: {
+        Args: {
+          p_actor_user_id: string
+          p_artifact_id: string
+          p_correlation_id: string
+          p_expected_version: number
+          p_organization_id: string
+          p_product_id: string
+          p_published_external_references: Json
+        }
+        Returns: {
+          artifact: Json
+          outcome: string
+        }[]
+      }
+      reassess_product_substantial_modification_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_answers: Json
+          p_assessment_id: string
+          p_correlation_id: string
+          p_description: string
+          p_detected_or_assessed_at: string
+          p_evidence_references: Json
+          p_expected_version: number
+          p_idempotency_key: string
+          p_introduced_at: string
+          p_modification_identifier: string
+          p_organization_id: string
+          p_previous_state: string
+          p_product_id: string
+          p_rationale: string
+          p_release_ids: string[]
+          p_required_follow_up_actions: Json
+          p_resulting_state: string
+          p_suggestion: string
+          p_technical_scope: string
+          p_title: string
+        }
+        Returns: {
+          assessment: Json
+          outcome: string
+        }[]
+      }
+      recalc_product_security_update_artifact_availability_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_artifact_id: string
+          p_correlation_id: string
+          p_organization_id: string
+          p_product_id: string
+        }
+        Returns: {
+          artifact: Json
+          outcome: string
+        }[]
+      }
+      recalc_security_update_artifact_availability_worker_atomic: {
+        Args: {
+          p_artifact_id: string
+          p_correlation_id: string
+          p_organization_id: string
+          p_product_id: string
+        }
+        Returns: {
+          artifact: Json
           outcome: string
         }[]
       }
@@ -7228,6 +8121,22 @@ export type Database = {
           release: Json
         }[]
       }
+      replace_product_security_update_artifact_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_artifact_id: string
+          p_correlation_id: string
+          p_expected_version: number
+          p_organization_id: string
+          p_product_id: string
+          p_reason: string
+          p_replacement_artifact_id: string
+        }
+        Returns: {
+          artifact: Json
+          outcome: string
+        }[]
+      }
       request_organization_export_atomic: {
         Args: {
           p_actor_user_id: string
@@ -7317,10 +8226,111 @@ export type Database = {
           outcome: string
         }[]
       }
+      reserve_product_security_update_artifact_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_artifact_type: string
+          p_byte_size: number
+          p_content_type: string
+          p_correlation_id: string
+          p_distribution_kind: string
+          p_file_name: string
+          p_idempotency_key: string
+          p_issued_at: string
+          p_organization_id: string
+          p_product_id: string
+          p_release_id: string
+          p_sha256: string
+          p_signature_metadata: Json
+          p_supported_platform: string
+          p_title: string
+          p_update_version: string
+          p_validated_external_references: Json
+        }
+        Returns: {
+          artifact: Json
+          outcome: string
+        }[]
+      }
+      reserve_product_security_update_artifact_atomic_base: {
+        Args: {
+          p_actor_user_id: string
+          p_artifact_type: string
+          p_byte_size: number
+          p_content_type: string
+          p_correlation_id: string
+          p_distribution_kind: string
+          p_file_name: string
+          p_idempotency_key: string
+          p_issued_at: string
+          p_organization_id: string
+          p_product_id: string
+          p_release_id: string
+          p_sha256: string
+          p_signature_metadata: Json
+          p_supported_platform: string
+          p_title: string
+          p_update_version: string
+          p_validated_external_references: Json
+        }
+        Returns: {
+          artifact: Json
+          outcome: string
+        }[]
+      }
       resolve_active_organization_legal_entity_context: {
         Args: { p_legal_entity_id: string; p_organization_id: string }
         Returns: {
           context: Json
+          outcome: string
+        }[]
+      }
+      review_product_security_update_artifact_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_artifact_id: string
+          p_correlation_id: string
+          p_expected_version: number
+          p_organization_id: string
+          p_product_id: string
+          p_review_decision: string
+          p_review_reason: string
+        }
+        Returns: {
+          artifact: Json
+          outcome: string
+        }[]
+      }
+      review_product_security_update_artifact_atomic_base: {
+        Args: {
+          p_actor_user_id: string
+          p_artifact_id: string
+          p_correlation_id: string
+          p_expected_version: number
+          p_organization_id: string
+          p_product_id: string
+          p_review_decision: string
+          p_review_reason: string
+        }
+        Returns: {
+          artifact: Json
+          outcome: string
+        }[]
+      }
+      review_product_substantial_modification_assessment_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_assessment_id: string
+          p_correlation_id: string
+          p_determination: string
+          p_determination_rationale: string
+          p_expected_version: number
+          p_organization_id: string
+          p_override_reason: string
+          p_product_id: string
+        }
+        Returns: {
+          assessment: Json
           outcome: string
         }[]
       }
@@ -7377,6 +8387,31 @@ export type Database = {
           lifecycle: Json
           outcome: string
           purge_job_id: string
+        }[]
+      }
+      schedule_product_security_update_artifact_cleanup_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_artifact_id: string
+          p_correlation_id: string
+          p_organization_id: string
+          p_product_id: string
+        }
+        Returns: {
+          artifact: Json
+          outcome: string
+        }[]
+      }
+      schedule_security_update_artifact_cleanup_worker_atomic: {
+        Args: {
+          p_artifact_id: string
+          p_correlation_id: string
+          p_organization_id: string
+          p_product_id: string
+        }
+        Returns: {
+          artifact: Json
+          outcome: string
         }[]
       }
       supersede_product_component_link_atomic: {
@@ -7633,6 +8668,21 @@ export type Database = {
           p_user_id: string
         }
         Returns: string
+      }
+      withdraw_product_security_update_artifact_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_artifact_id: string
+          p_correlation_id: string
+          p_expected_version: number
+          p_organization_id: string
+          p_product_id: string
+          p_reason: string
+        }
+        Returns: {
+          artifact: Json
+          outcome: string
+        }[]
       }
     }
     Enums: {

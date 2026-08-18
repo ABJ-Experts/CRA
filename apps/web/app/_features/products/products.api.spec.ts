@@ -71,6 +71,92 @@ const SUPPORT_PERIOD = {
   updatedAt: NOW,
   updatedBy: USER_ID,
 } as const;
+const ASSESSMENT_ID = "77777777-7777-4777-8777-777777777777";
+const ARTIFACT_ID = "88888888-8888-4888-8888-888888888888";
+const IDEMPOTENCY_KEY = "99999999-9999-4999-8999-999999999999";
+const ASSESSMENT = {
+  id: ASSESSMENT_ID,
+  organizationId: ORGANIZATION_ID,
+  productId: PRODUCT_ID,
+  modificationId: ASSESSMENT_ID,
+  supersedesId: null,
+  modificationIdentifier: "SM-2026-001",
+  title: "Trust boundary update",
+  description: "Updates the authenticated relay service.",
+  technicalScope: "Relay authentication and deployment boundary.",
+  introducedAt: NOW,
+  detectedOrAssessedAt: NOW,
+  previousState: "Previous relay trust boundary.",
+  resultingState: "Updated relay trust boundary.",
+  requiredFollowUpActions: ["Review technical file impact."],
+  completenessState: "complete",
+  releaseIds: [RELEASE_ID],
+  policyVersion: "m2.v2.substantial-modification.v1",
+  answers: {
+    changesIntendedPurpose: "no",
+    changesSecurityArchitectureOrTrustBoundary: "yes",
+    changesNetworkInterfaceOrPrivilegedRemoteControl: "no",
+    changesCryptographyOrIdentityAccessControl: "no",
+    changesSafetyOrSecurityRelevantComponent: "no",
+  },
+  rationale: "Changes an authenticated trust boundary.",
+  evidenceReferences: [],
+  suggestion: "potentially_substantial",
+  status: "submitted_for_review",
+  determination: null,
+  determinationRationale: null,
+  overrideReason: null,
+  reviewedAt: null,
+  reviewedBy: null,
+  version: 1,
+  createdAt: NOW,
+  createdBy: USER_ID,
+  updatedAt: NOW,
+  updatedBy: USER_ID,
+} as const;
+const ARTIFACT = {
+  id: ARTIFACT_ID,
+  organizationId: ORGANIZATION_ID,
+  productId: PRODUCT_ID,
+  releaseId: RELEASE_ID,
+  updateVersion: "1.0.1",
+  title: "Sentinel security update 1.0.1",
+  artifactType: "software_update",
+  supportedPlatform: "Linux x86_64",
+  signatureMetadata: null,
+  fileName: "sentinel-1.0.1.tar.gz",
+  contentType: "application/gzip",
+  byteSize: 1024,
+  sha256: "a".repeat(64),
+  uploadStatus: "finalized",
+  integrityStatus: "verified",
+  reviewStatus: "pending_review",
+  publicationStatus: "draft",
+  availabilityStatus: "pending",
+  statusExplanation: { code: "awaiting_approval", message: "Awaiting review." },
+  issuedAt: NOW,
+  supportPeriodId: null,
+  supportPeriodRevision: null,
+  supportEndsAt: null,
+  availabilityRuleVersion: "m2.v2.security-update-availability.v1",
+  issuedCandidate: "2036-08-12T10:00:00.000Z",
+  supportCandidate: null,
+  availabilityWinningRule: null,
+  computedAvailabilityUntil: null,
+  availabilityUntil: null,
+  nonReductionApplied: false,
+  distributionKind: "authenticated_download",
+  distributionReference: null,
+  publishedExternalReferences: [],
+  replacementArtifactId: null,
+  withdrawnAt: null,
+  withdrawnReason: null,
+  version: 1,
+  createdAt: NOW,
+  createdBy: USER_ID,
+  updatedAt: NOW,
+  updatedBy: USER_ID,
+} as const;
 
 function json(value: unknown) {
   return new Response(JSON.stringify(value), { status: 200 });
@@ -795,6 +881,182 @@ describe("productsApi", () => {
     expect(fetcher).toHaveBeenCalledWith(
       `/api/v1/products/${PRODUCT_ID}/relationship-reevaluations`,
       expect.objectContaining({ method: "POST" }),
+    );
+  });
+
+  it("uses typed M2 V2 assessment and security update artifact routes", async () => {
+    const fetcher = vi.fn(async (path: string, init?: RequestInit) => {
+      if (path.endsWith("/reserve")) {
+        return json({
+          artifact: { ...ARTIFACT, uploadStatus: "reserved" },
+          upload: {
+            uploadUrl: "https://storage.example.test/reserved-upload",
+            expiresAt: "2026-08-12T11:00:00.000Z",
+          },
+        });
+      }
+      if (
+        path.includes("modification-assessments") &&
+        !path.includes(ASSESSMENT_ID) &&
+        (init?.method ?? "GET") === "GET"
+      ) {
+        return json({
+          assessments: {
+            rows: [ASSESSMENT],
+            total: 1,
+            page: 1,
+            pageSize: 15,
+            pageCount: 1,
+          },
+        });
+      }
+      if (path.endsWith("/download")) {
+        return json({
+          download: {
+            downloadUrl: "https://storage.example.test/sentinel-1.0.1.tar.gz",
+            expiresAt: "2026-08-12T11:00:00.000Z",
+            fileName: ARTIFACT.fileName,
+            contentType: ARTIFACT.contentType,
+          },
+        });
+      }
+      if (
+        path.includes("security-update-artifacts") &&
+        !path.includes(ARTIFACT_ID) &&
+        (init?.method ?? "GET") === "GET"
+      ) {
+        return json({
+          artifacts: {
+            rows: [ARTIFACT],
+            total: 1,
+            page: 1,
+            pageSize: 15,
+            pageCount: 1,
+          },
+        });
+      }
+      return json(
+        path.includes("modification-assessments")
+          ? { assessment: ASSESSMENT }
+          : { artifact: ARTIFACT },
+      );
+    });
+    vi.stubGlobal("fetch", fetcher);
+    const assessmentInput = {
+      releaseIds: [RELEASE_ID],
+      modificationIdentifier: ASSESSMENT.modificationIdentifier,
+      title: ASSESSMENT.title,
+      description: ASSESSMENT.description,
+      technicalScope: ASSESSMENT.technicalScope,
+      introducedAt: ASSESSMENT.introducedAt,
+      detectedOrAssessedAt: ASSESSMENT.detectedOrAssessedAt,
+      previousState: ASSESSMENT.previousState,
+      resultingState: ASSESSMENT.resultingState,
+      requiredFollowUpActions: [...ASSESSMENT.requiredFollowUpActions],
+      policyVersion: "m2.v2.substantial-modification.v1" as const,
+      answers: ASSESSMENT.answers,
+      rationale: ASSESSMENT.rationale,
+      evidenceReferences: [],
+      idempotencyKey: IDEMPOTENCY_KEY,
+    };
+    const artifactInput = {
+      releaseId: RELEASE_ID,
+      updateVersion: ARTIFACT.updateVersion,
+      title: ARTIFACT.title,
+      artifactType: ARTIFACT.artifactType,
+      supportedPlatform: ARTIFACT.supportedPlatform,
+      distributionKind: "authenticated_download" as const,
+      fileName: ARTIFACT.fileName,
+      contentType: ARTIFACT.contentType,
+      byteSize: ARTIFACT.byteSize,
+      sha256: ARTIFACT.sha256,
+      issuedAt: ARTIFACT.issuedAt,
+      idempotencyKey: IDEMPOTENCY_KEY,
+    };
+
+    await productsApi.listSubstantialModificationAssessments(PRODUCT_ID);
+    await productsApi.createSubstantialModificationAssessmentDraft(PRODUCT_ID, {
+      policyVersion: "m2.v2.substantial-modification.v1",
+      completenessState: "in_progress",
+      modificationIdentifier: "SM-2026-002",
+      title: "Draft trust-boundary update",
+      idempotencyKey: IDEMPOTENCY_KEY,
+    });
+    await productsApi.createSubstantialModificationAssessment(
+      PRODUCT_ID,
+      assessmentInput,
+    );
+    await productsApi.reassessSubstantialModificationAssessment(
+      PRODUCT_ID,
+      ASSESSMENT_ID,
+      {
+        ...assessmentInput,
+        expectedVersion: 1,
+      },
+    );
+    await productsApi.reviewSubstantialModificationAssessment(
+      PRODUCT_ID,
+      ASSESSMENT_ID,
+      {
+        determination: "potentially_substantial",
+        rationale: "Human reviewer agrees with the policy suggestion.",
+        expectedVersion: 1,
+        idempotencyKey: IDEMPOTENCY_KEY,
+      },
+    );
+    await productsApi.listSecurityUpdateArtifacts(PRODUCT_ID);
+    await productsApi.reserveSecurityUpdateArtifact(PRODUCT_ID, artifactInput);
+    await productsApi.finalizeSecurityUpdateArtifact(PRODUCT_ID, ARTIFACT_ID, {
+      expectedVersion: 1,
+      idempotencyKey: IDEMPOTENCY_KEY,
+    });
+    await productsApi.reviewSecurityUpdateArtifact(PRODUCT_ID, ARTIFACT_ID, {
+      decision: "clear",
+      reason: "Integrity checks completed.",
+      expectedVersion: 1,
+      idempotencyKey: IDEMPOTENCY_KEY,
+    });
+    await productsApi.publishSecurityUpdateArtifact(PRODUCT_ID, ARTIFACT_ID, {
+      expectedVersion: 1,
+      idempotencyKey: IDEMPOTENCY_KEY,
+    });
+    await productsApi.replaceSecurityUpdateArtifact(PRODUCT_ID, ARTIFACT_ID, {
+      replacementArtifactId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      reason: "A corrected artifact is published.",
+      expectedVersion: 1,
+      idempotencyKey: IDEMPOTENCY_KEY,
+    });
+    await productsApi.withdrawSecurityUpdateArtifact(PRODUCT_ID, ARTIFACT_ID, {
+      reason: "A replacement is now available.",
+      expectedVersion: 1,
+      idempotencyKey: IDEMPOTENCY_KEY,
+    });
+    await productsApi.downloadSecurityUpdateArtifact(PRODUCT_ID, ARTIFACT_ID);
+
+    expect(fetcher).toHaveBeenCalledWith(
+      `/api/v1/products/${PRODUCT_ID}/modification-assessments/draft`,
+      expect.objectContaining({
+        method: "POST",
+        body: expect.stringContaining('"completenessState":"in_progress"'),
+      }),
+    );
+    expect(fetcher).toHaveBeenCalledWith(
+      `/api/v1/products/${PRODUCT_ID}/modification-assessments`,
+      expect.objectContaining({
+        method: "POST",
+        body: expect.stringContaining('"modificationIdentifier":"SM-2026-001"'),
+      }),
+    );
+    expect(fetcher).toHaveBeenCalledWith(
+      `/api/v1/products/${PRODUCT_ID}/security-update-artifacts/reserve`,
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify(artifactInput),
+      }),
+    );
+    expect(fetcher).toHaveBeenCalledWith(
+      `/api/v1/products/${PRODUCT_ID}/security-update-artifacts/${ARTIFACT_ID}/download`,
+      expect.objectContaining({ method: "GET" }),
     );
   });
 });

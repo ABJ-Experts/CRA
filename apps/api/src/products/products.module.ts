@@ -5,6 +5,7 @@ import { ConfigService } from "@nestjs/config";
 import { MailModule } from "../mail/mail.module";
 import { OrganizationsModule } from "../organizations/organizations.module";
 import { SupabaseModule } from "../supabase/supabase.module";
+import { SupabaseService } from "../supabase/supabase.service";
 import {
   LEGAL_ENTITY_DIRECTORY,
   type LegalEntityDirectory,
@@ -16,6 +17,12 @@ import {
   ProductUseCases,
   type ProductRepository,
 } from "./application/product-use-cases";
+import {
+  PRODUCT_COMPLIANCE_REPOSITORY,
+  ProductComplianceUseCases,
+  type ProductComplianceRepository,
+  type ProductComplianceStoragePort,
+} from "./application/product-compliance-use-cases";
 import {
   RELEASE_MARKET_AVAILABILITY_READER,
   RELEASE_REGULATORY_STATE_READER,
@@ -30,6 +37,9 @@ import {
   PRODUCT_RELATIONSHIP_PROPAGATION_WORKER,
 } from "./application/product-relationship-worker.port";
 import { SupabaseProductRepository } from "./infrastructure/supabase-product.repository";
+import { NodeProductComplianceExternalReferenceValidator } from "./infrastructure/node-product-compliance-external-reference-validator";
+import { SupabaseProductComplianceRepository } from "./infrastructure/supabase-product-compliance.repository";
+import { SupabaseProductComplianceStorageAdapter } from "./infrastructure/supabase-product-compliance-storage.adapter";
 import { SupabaseProductRelationshipWorkerAdapter } from "./infrastructure/supabase-product-relationship-worker.adapter";
 import { ProductImportWorker } from "./imports/product-import-worker";
 import { ProductImportsController } from "./imports/product-imports.controller";
@@ -37,20 +47,47 @@ import { ProductImportsService } from "./imports/product-imports.service";
 import { ProductImportUseCases } from "./imports/product-release-import-use-cases";
 import { SupabaseProductImportRepository } from "./imports/supabase-product-import.repository";
 import { ProductsController } from "./products.controller";
+import { ProductComplianceService } from "./product-compliance.service";
 import { ProductsService } from "./products.service";
 import { ProductRetentionWorker } from "./worker/product-retention-worker";
+import { ProductComplianceWorker } from "./worker/product-compliance-worker";
 import {
   MailProductRetentionDeliveryAdapter,
   SupabaseProductRetentionWorkerRepository,
 } from "./worker/supabase-product-retention-worker.adapter";
+import { SupabaseProductComplianceWorkerAdapter } from "./worker/supabase-product-compliance-worker.adapter";
 
 @Module({
   imports: [SupabaseModule, OrganizationsModule, PermissionsModule, MailModule],
   controllers: [ProductImportsController, ProductsController],
   providers: [
     SupabaseProductRepository,
+    SupabaseProductComplianceRepository,
+    SupabaseProductComplianceStorageAdapter,
+    {
+      provide: SupabaseProductComplianceWorkerAdapter,
+      inject: [
+        SupabaseService,
+        SupabaseProductComplianceStorageAdapter,
+        NodeProductComplianceExternalReferenceValidator,
+      ],
+      useFactory: (
+        supabase: SupabaseService,
+        storage: SupabaseProductComplianceStorageAdapter,
+        externalReferences: NodeProductComplianceExternalReferenceValidator,
+      ) =>
+        new SupabaseProductComplianceWorkerAdapter(
+          supabase,
+          storage,
+          externalReferences,
+        ),
+    },
     SupabaseProductImportRepository,
     { provide: PRODUCT_REPOSITORY, useExisting: SupabaseProductRepository },
+    {
+      provide: PRODUCT_COMPLIANCE_REPOSITORY,
+      useExisting: SupabaseProductComplianceRepository,
+    },
     {
       provide: ProductUseCases,
       inject: [PRODUCT_REPOSITORY, LEGAL_ENTITY_DIRECTORY],
@@ -58,6 +95,52 @@ import {
         repository: ProductRepository,
         legalEntities: LegalEntityDirectory,
       ) => new ProductUseCases(repository, legalEntities),
+    },
+    {
+      provide: NodeProductComplianceExternalReferenceValidator,
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) =>
+        new NodeProductComplianceExternalReferenceValidator({
+          allowedHosts: (
+            config.get<string>(
+              "PRODUCT_SECURITY_UPDATE_EXTERNAL_REFERENCE_ALLOWED_HOSTS",
+            ) ?? ""
+          )
+            .split(",")
+            .map((host) => host.trim())
+            .filter((host) => host.length > 0),
+        }),
+    },
+    {
+      provide: ProductComplianceUseCases,
+      inject: [
+        PRODUCT_COMPLIANCE_REPOSITORY,
+        SupabaseProductComplianceStorageAdapter,
+        NodeProductComplianceExternalReferenceValidator,
+      ],
+      useFactory: (
+        repository: ProductComplianceRepository,
+        storage: ProductComplianceStoragePort,
+        externalReferences: NodeProductComplianceExternalReferenceValidator,
+      ) =>
+        new ProductComplianceUseCases(repository, storage, externalReferences),
+    },
+    ProductComplianceService,
+    {
+      provide: ProductComplianceWorker,
+      inject: [SupabaseProductComplianceWorkerAdapter, ConfigService],
+      useFactory: (
+        adapter: SupabaseProductComplianceWorkerAdapter,
+        config: ConfigService,
+      ) =>
+        new ProductComplianceWorker({
+          workerId: randomUUID(),
+          leaseSeconds: config.getOrThrow<number>(
+            "PRODUCT_COMPLIANCE_LEASE_SECONDS",
+          ),
+          queue: adapter.queue,
+          processor: adapter.processor,
+        }),
     },
     {
       provide: RELEASE_REGULATORY_STATE_READER,
@@ -171,6 +254,7 @@ import {
     PRODUCT_RELATIONSHIP_PROPAGATION_WORKER,
     ProductRetentionWorker,
     ProductImportWorker,
+    ProductComplianceWorker,
   ],
 })
 export class ProductsModule {}

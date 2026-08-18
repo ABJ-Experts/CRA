@@ -1,5 +1,5 @@
-import { PATH_METADATA } from "@nestjs/common/constants";
-import { ForbiddenException } from "@nestjs/common";
+import { ForbiddenException, HttpStatus } from "@nestjs/common";
+import { HTTP_CODE_METADATA, PATH_METADATA } from "@nestjs/common/constants";
 
 import {
   REQUIRE_PERMISSIONS_KEY,
@@ -13,6 +13,31 @@ describe("ProductsController", () => {
     expect(Reflect.getMetadata(PATH_METADATA, ProductsController)).toBe(
       "products",
     );
+  });
+
+  it("returns 200 from every M2 V2 state-transition command while keeping creates at 201", () => {
+    const statusByHandler: Record<string, number> = {
+      createSubstantialModificationAssessment: HttpStatus.CREATED,
+      createSubstantialModificationAssessmentDraft: HttpStatus.CREATED,
+      reserveSecurityUpdateArtifact: HttpStatus.CREATED,
+      reassessSubstantialModificationAssessment: HttpStatus.OK,
+      reviewSubstantialModificationAssessment: HttpStatus.OK,
+      finalizeSecurityUpdateArtifact: HttpStatus.OK,
+      reviewSecurityUpdateArtifact: HttpStatus.OK,
+      publishSecurityUpdateArtifact: HttpStatus.OK,
+      replaceSecurityUpdateArtifact: HttpStatus.OK,
+      withdrawSecurityUpdateArtifact: HttpStatus.OK,
+    };
+
+    for (const [name, expectedStatus] of Object.entries(statusByHandler)) {
+      const handler = Object.getOwnPropertyDescriptor(
+        ProductsController.prototype,
+        name,
+      )?.value as object;
+      expect(Reflect.getMetadata(HTTP_CODE_METADATA, handler)).toBe(
+        expectedStatus,
+      );
+    }
   });
 
   it("declares product permissions on every route and owner-only entity reassignment", () => {
@@ -44,6 +69,21 @@ describe("ProductsController", () => {
       supersedeSupportPeriod: "can_edit_products",
       getProductRetentionCalculation: "can_view_products",
       getSupportAlertHistory: "can_view_products",
+      listSubstantialModificationAssessments: "can_view_products",
+      getSubstantialModificationAssessment: "can_view_products",
+      createSubstantialModificationAssessment: "can_edit_products",
+      createSubstantialModificationAssessmentDraft: "can_edit_products",
+      reassessSubstantialModificationAssessment: "can_edit_products",
+      reviewSubstantialModificationAssessment: "can_approve_products",
+      listSecurityUpdateArtifacts: "can_view_products",
+      getSecurityUpdateArtifact: "can_view_products",
+      reserveSecurityUpdateArtifact: "can_edit_products",
+      finalizeSecurityUpdateArtifact: "can_edit_products",
+      reviewSecurityUpdateArtifact: "can_approve_products",
+      publishSecurityUpdateArtifact: "can_approve_products",
+      replaceSecurityUpdateArtifact: "can_approve_products",
+      withdrawSecurityUpdateArtifact: "can_approve_products",
+      downloadSecurityUpdateArtifact: "can_view_products",
       createSoftwareBaseline: "can_edit_products",
       getSoftwareBaselineHistory: "can_view_products",
       appendSoftwareBaselineRevision: "can_edit_products",
@@ -120,6 +160,64 @@ describe("ProductsController", () => {
       actorId: user.id,
       productId,
       query: { pageSize: 25, deliveryState: "obsolete" },
+    });
+  });
+
+  it("forwards an external reservation candidate only to the compliance application boundary", async () => {
+    const compliance = {
+      reserveArtifact: jest.fn().mockResolvedValue({
+        artifact: { id: "00000000-0000-4000-8000-000000000005" },
+        upload: null,
+      }),
+    };
+    const controller = new ProductsController(
+      {} as never,
+      {} as never,
+      compliance as never,
+    );
+    const user = {
+      id: "00000000-0000-4000-8000-000000000001",
+      organizationId: "00000000-0000-4000-8000-000000000002",
+      role: "admin",
+    } as RequestUser;
+    const input = {
+      releaseId: "00000000-0000-4000-8000-000000000003",
+      updateVersion: "1.2.3",
+      title: "Security update 1.2.3",
+      artifactType: "software_update" as const,
+      supportedPlatform: "CRA test platform",
+      distributionKind: "external_reference" as const,
+      externalReferenceCandidates: [
+        {
+          id: "00000000-0000-4000-8000-000000000004",
+          title: "Vendor package",
+          uri: "https://updates.example.test/release-1.2.3.bin",
+        },
+      ],
+      serverValidationRequired: true as const,
+      fileName: "security-update.bin",
+      contentType: "application/octet-stream",
+      byteSize: 1024,
+      sha256: "a".repeat(64),
+      issuedAt: "2026-08-17T12:00:00.000Z",
+      idempotencyKey: "00000000-0000-4000-8000-000000000006",
+    };
+
+    await expect(
+      controller.reserveSecurityUpdateArtifact(
+        { productId: "00000000-0000-4000-8000-000000000007" },
+        input,
+        user,
+      ),
+    ).resolves.toEqual({
+      artifact: { id: "00000000-0000-4000-8000-000000000005" },
+      upload: null,
+    });
+    expect(compliance.reserveArtifact).toHaveBeenCalledWith({
+      organizationId: user.organizationId,
+      actorId: user.id,
+      productId: "00000000-0000-4000-8000-000000000007",
+      input,
     });
   });
 

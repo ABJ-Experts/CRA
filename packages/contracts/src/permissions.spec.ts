@@ -147,6 +147,23 @@ describe("normalizePermissions", () => {
 });
 
 describe("presets", () => {
+  it("adds product approval only for owners and admins", () => {
+    expect(PERMISSION_MATRIX.products).toContain("approve");
+    expect(isPermissionKey("can_approve_products")).toBe(true);
+    expect(
+      hasPermission(DEFAULT_PERMISSIONS_BY_ROLE.owner, "can_approve_products"),
+    ).toBe(true);
+    expect(
+      hasPermission(DEFAULT_PERMISSIONS_BY_ROLE.admin, "can_approve_products"),
+    ).toBe(true);
+    expect(
+      hasPermission(DEFAULT_PERMISSIONS_BY_ROLE.member, "can_approve_products"),
+    ).toBe(false);
+    expect(
+      hasPermission(DEFAULT_PERMISSIONS_BY_ROLE.viewer, "can_approve_products"),
+    ).toBe(false);
+  });
+
   it("owner has every permission", () => {
     for (const key of PERMISSION_KEYS) {
       expect(hasPermission(DEFAULT_PERMISSIONS_BY_ROLE.owner, key)).toBe(true);

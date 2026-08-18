@@ -93,6 +93,30 @@ const importDetail = Object.freeze((importId: string) =>
 const importRows = Object.freeze((importId: string, query: string) =>
   Object.freeze(["products", "imports", importId, "rows", query] as const),
 );
+const modificationAssessments = Object.freeze((productId: string) =>
+  Object.freeze(["products", productId, "modification-assessments"] as const),
+);
+const modificationAssessment = Object.freeze(
+  (productId: string, assessmentId: string) =>
+    Object.freeze([
+      "products",
+      productId,
+      "modification-assessments",
+      assessmentId,
+    ] as const),
+);
+const securityUpdateArtifacts = Object.freeze((productId: string) =>
+  Object.freeze(["products", productId, "security-update-artifacts"] as const),
+);
+const securityUpdateArtifact = Object.freeze(
+  (productId: string, artifactId: string) =>
+    Object.freeze([
+      "products",
+      productId,
+      "security-update-artifacts",
+      artifactId,
+    ] as const),
+);
 
 export const productKeys = Object.freeze({
   all,
@@ -120,4 +144,8 @@ export const productKeys = Object.freeze({
   imports,
   importDetail,
   importRows,
+  modificationAssessments,
+  modificationAssessment,
+  securityUpdateArtifacts,
+  securityUpdateArtifact,
 });

@@ -79,6 +79,26 @@ import {
   updateSupportAlertIntervalsRequestSchema,
   updateProductInputSchema,
   updateReleaseInputSchema,
+  substantialModificationAssessmentParamsSchema,
+  substantialModificationAssessmentListQuerySchema,
+  createSubstantialModificationAssessmentInputSchema,
+  createSubstantialModificationAssessmentDraftInputSchema,
+  reassessSubstantialModificationAssessmentInputSchema,
+  reviewSubstantialModificationAssessmentInputSchema,
+  substantialModificationAssessmentResponseSchema,
+  substantialModificationAssessmentListResponseSchema,
+  securityUpdateArtifactParamsSchema,
+  securityUpdateArtifactListQuerySchema,
+  reserveSecurityUpdateArtifactInputSchema,
+  finalizeSecurityUpdateArtifactInputSchema,
+  reviewSecurityUpdateArtifactInputSchema,
+  publishSecurityUpdateArtifactInputSchema,
+  replaceSecurityUpdateArtifactInputSchema,
+  withdrawSecurityUpdateArtifactInputSchema,
+  securityUpdateArtifactResponseSchema,
+  securityUpdateArtifactListResponseSchema,
+  securityUpdateArtifactReserveResponseSchema,
+  securityUpdateArtifactDownloadResponseSchema,
   type AddReleaseMarketAvailabilityInput,
   type ArchiveProductInput,
   type ArchiveReleaseInput,
@@ -115,6 +135,20 @@ import {
   type ProductRelationshipGraphQuery,
   type RelationshipPropagationEventsQuery,
   type RequestRelationshipReevaluationInput,
+  type SubstantialModificationAssessmentParams,
+  type SubstantialModificationAssessmentListQuery,
+  type CreateSubstantialModificationAssessmentInput,
+  type CreateSubstantialModificationAssessmentDraftInput,
+  type ReassessSubstantialModificationAssessmentInput,
+  type ReviewSubstantialModificationAssessmentInput,
+  type SecurityUpdateArtifactParams,
+  type SecurityUpdateArtifactListQuery,
+  type ReserveSecurityUpdateArtifactInput,
+  type FinalizeSecurityUpdateArtifactInput,
+  type ReviewSecurityUpdateArtifactInput,
+  type PublishSecurityUpdateArtifactInput,
+  type ReplaceSecurityUpdateArtifactInput,
+  type WithdrawSecurityUpdateArtifactInput,
 } from "@repo/contracts/products";
 
 import {
@@ -130,6 +164,7 @@ import {
   zodQuery,
 } from "../common/pipes/zod-validation.pipe";
 import { PermissionsService } from "../permissions/permissions.service";
+import { ProductComplianceService } from "./product-compliance.service";
 import { ProductsService } from "./products.service";
 
 @Controller("products")
@@ -137,6 +172,7 @@ export class ProductsController {
   constructor(
     private readonly products: ProductsService,
     private readonly permissions: PermissionsService,
+    private readonly compliance?: ProductComplianceService,
   ) {}
 
   @RequirePermissions("can_view_products")
@@ -883,6 +919,282 @@ export class ProductsController {
   }
 
   @RequirePermissions("can_view_products")
+  @Get(":productId/modification-assessments")
+  @ZodResponse(substantialModificationAssessmentListResponseSchema)
+  listSubstantialModificationAssessments(
+    @Param(zodParams(productParamsSchema)) params: ProductParams,
+    @Query(zodQuery(substantialModificationAssessmentListQuerySchema))
+    query: SubstantialModificationAssessmentListQuery,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.complianceService().listAssessments({
+      organizationId: this.organizationId(user),
+      actorId: user.id,
+      productId: params.productId,
+      query,
+    });
+  }
+
+  @RequirePermissions("can_view_products")
+  @Get(":productId/modification-assessments/:assessmentId")
+  @ZodResponse(substantialModificationAssessmentResponseSchema)
+  getSubstantialModificationAssessment(
+    @Param(zodParams(substantialModificationAssessmentParamsSchema))
+    params: SubstantialModificationAssessmentParams,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.complianceService().getAssessment({
+      organizationId: this.organizationId(user),
+      actorId: user.id,
+      productId: params.productId,
+      assessmentId: params.assessmentId,
+    });
+  }
+
+  @RequirePermissions("can_edit_products")
+  @Post(":productId/modification-assessments")
+  @HttpCode(HttpStatus.CREATED)
+  @ZodResponse(substantialModificationAssessmentResponseSchema)
+  createSubstantialModificationAssessment(
+    @Param(zodParams(productParamsSchema)) params: ProductParams,
+    @Body(zodBody(createSubstantialModificationAssessmentInputSchema))
+    input: CreateSubstantialModificationAssessmentInput,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.complianceService().createAssessment({
+      organizationId: this.organizationId(user),
+      actorId: user.id,
+      productId: params.productId,
+      input,
+    });
+  }
+
+  @RequirePermissions("can_edit_products")
+  @Post(":productId/modification-assessments/draft")
+  @HttpCode(HttpStatus.CREATED)
+  @ZodResponse(substantialModificationAssessmentResponseSchema)
+  createSubstantialModificationAssessmentDraft(
+    @Param(zodParams(productParamsSchema)) params: ProductParams,
+    @Body(zodBody(createSubstantialModificationAssessmentDraftInputSchema))
+    input: CreateSubstantialModificationAssessmentDraftInput,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.complianceService().createAssessmentDraft({
+      organizationId: this.organizationId(user),
+      actorId: user.id,
+      productId: params.productId,
+      input,
+    });
+  }
+
+  @RequirePermissions("can_edit_products")
+  @Post(":productId/modification-assessments/:assessmentId/reassess")
+  @HttpCode(HttpStatus.OK)
+  @ZodResponse(substantialModificationAssessmentResponseSchema)
+  reassessSubstantialModificationAssessment(
+    @Param(zodParams(substantialModificationAssessmentParamsSchema))
+    params: SubstantialModificationAssessmentParams,
+    @Body(zodBody(reassessSubstantialModificationAssessmentInputSchema))
+    input: ReassessSubstantialModificationAssessmentInput,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.complianceService().reassessAssessment({
+      organizationId: this.organizationId(user),
+      actorId: user.id,
+      productId: params.productId,
+      assessmentId: params.assessmentId,
+      input,
+    });
+  }
+
+  @RequirePermissions("can_approve_products")
+  @Post(":productId/modification-assessments/:assessmentId/review")
+  @HttpCode(HttpStatus.OK)
+  @ZodResponse(substantialModificationAssessmentResponseSchema)
+  reviewSubstantialModificationAssessment(
+    @Param(zodParams(substantialModificationAssessmentParamsSchema))
+    params: SubstantialModificationAssessmentParams,
+    @Body(zodBody(reviewSubstantialModificationAssessmentInputSchema))
+    input: ReviewSubstantialModificationAssessmentInput,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.complianceService().reviewAssessment({
+      organizationId: this.organizationId(user),
+      actorId: user.id,
+      productId: params.productId,
+      assessmentId: params.assessmentId,
+      input,
+    });
+  }
+
+  @RequirePermissions("can_view_products")
+  @Get(":productId/security-update-artifacts")
+  @ZodResponse(securityUpdateArtifactListResponseSchema)
+  listSecurityUpdateArtifacts(
+    @Param(zodParams(productParamsSchema)) params: ProductParams,
+    @Query(zodQuery(securityUpdateArtifactListQuerySchema))
+    query: SecurityUpdateArtifactListQuery,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.complianceService().listArtifacts({
+      organizationId: this.organizationId(user),
+      actorId: user.id,
+      productId: params.productId,
+      query,
+    });
+  }
+
+  @RequirePermissions("can_edit_products")
+  @Post(":productId/security-update-artifacts/reserve")
+  @HttpCode(HttpStatus.CREATED)
+  @ZodResponse(securityUpdateArtifactReserveResponseSchema)
+  reserveSecurityUpdateArtifact(
+    @Param(zodParams(productParamsSchema)) params: ProductParams,
+    @Body(zodBody(reserveSecurityUpdateArtifactInputSchema))
+    input: ReserveSecurityUpdateArtifactInput,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.complianceService().reserveArtifact({
+      organizationId: this.organizationId(user),
+      actorId: user.id,
+      productId: params.productId,
+      input,
+    });
+  }
+
+  @RequirePermissions("can_view_products")
+  @Get(":productId/security-update-artifacts/:artifactId")
+  @ZodResponse(securityUpdateArtifactResponseSchema)
+  getSecurityUpdateArtifact(
+    @Param(zodParams(securityUpdateArtifactParamsSchema))
+    params: SecurityUpdateArtifactParams,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.complianceService().getArtifact({
+      organizationId: this.organizationId(user),
+      actorId: user.id,
+      productId: params.productId,
+      artifactId: params.artifactId,
+    });
+  }
+
+  @RequirePermissions("can_edit_products")
+  @Post(":productId/security-update-artifacts/:artifactId/finalize")
+  @HttpCode(HttpStatus.OK)
+  @ZodResponse(securityUpdateArtifactResponseSchema)
+  finalizeSecurityUpdateArtifact(
+    @Param(zodParams(securityUpdateArtifactParamsSchema))
+    params: SecurityUpdateArtifactParams,
+    @Body(zodBody(finalizeSecurityUpdateArtifactInputSchema))
+    input: FinalizeSecurityUpdateArtifactInput,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.complianceService().finalizeArtifact({
+      organizationId: this.organizationId(user),
+      actorId: user.id,
+      productId: params.productId,
+      artifactId: params.artifactId,
+      input,
+    });
+  }
+
+  @RequirePermissions("can_approve_products")
+  @Post(":productId/security-update-artifacts/:artifactId/review")
+  @HttpCode(HttpStatus.OK)
+  @ZodResponse(securityUpdateArtifactResponseSchema)
+  reviewSecurityUpdateArtifact(
+    @Param(zodParams(securityUpdateArtifactParamsSchema))
+    params: SecurityUpdateArtifactParams,
+    @Body(zodBody(reviewSecurityUpdateArtifactInputSchema))
+    input: ReviewSecurityUpdateArtifactInput,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.complianceService().reviewArtifact({
+      organizationId: this.organizationId(user),
+      actorId: user.id,
+      productId: params.productId,
+      artifactId: params.artifactId,
+      input,
+    });
+  }
+
+  @RequirePermissions("can_approve_products")
+  @Post(":productId/security-update-artifacts/:artifactId/publish")
+  @HttpCode(HttpStatus.OK)
+  @ZodResponse(securityUpdateArtifactResponseSchema)
+  publishSecurityUpdateArtifact(
+    @Param(zodParams(securityUpdateArtifactParamsSchema))
+    params: SecurityUpdateArtifactParams,
+    @Body(zodBody(publishSecurityUpdateArtifactInputSchema))
+    input: PublishSecurityUpdateArtifactInput,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.complianceService().publishArtifact({
+      organizationId: this.organizationId(user),
+      actorId: user.id,
+      productId: params.productId,
+      artifactId: params.artifactId,
+      input,
+    });
+  }
+
+  @RequirePermissions("can_approve_products")
+  @Post(":productId/security-update-artifacts/:artifactId/replace")
+  @HttpCode(HttpStatus.OK)
+  @ZodResponse(securityUpdateArtifactResponseSchema)
+  replaceSecurityUpdateArtifact(
+    @Param(zodParams(securityUpdateArtifactParamsSchema))
+    params: SecurityUpdateArtifactParams,
+    @Body(zodBody(replaceSecurityUpdateArtifactInputSchema))
+    input: ReplaceSecurityUpdateArtifactInput,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.complianceService().replaceArtifact({
+      organizationId: this.organizationId(user),
+      actorId: user.id,
+      productId: params.productId,
+      artifactId: params.artifactId,
+      input,
+    });
+  }
+
+  @RequirePermissions("can_approve_products")
+  @Post(":productId/security-update-artifacts/:artifactId/withdraw")
+  @HttpCode(HttpStatus.OK)
+  @ZodResponse(securityUpdateArtifactResponseSchema)
+  withdrawSecurityUpdateArtifact(
+    @Param(zodParams(securityUpdateArtifactParamsSchema))
+    params: SecurityUpdateArtifactParams,
+    @Body(zodBody(withdrawSecurityUpdateArtifactInputSchema))
+    input: WithdrawSecurityUpdateArtifactInput,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.complianceService().withdrawArtifact({
+      organizationId: this.organizationId(user),
+      actorId: user.id,
+      productId: params.productId,
+      artifactId: params.artifactId,
+      input,
+    });
+  }
+
+  @RequirePermissions("can_view_products")
+  @Get(":productId/security-update-artifacts/:artifactId/download")
+  @ZodResponse(securityUpdateArtifactDownloadResponseSchema)
+  downloadSecurityUpdateArtifact(
+    @Param(zodParams(securityUpdateArtifactParamsSchema))
+    params: SecurityUpdateArtifactParams,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.complianceService().downloadArtifact({
+      organizationId: this.organizationId(user),
+      actorId: user.id,
+      productId: params.productId,
+      artifactId: params.artifactId,
+    });
+  }
+
+  @RequirePermissions("can_view_products")
   @Get(":productId/retention")
   @ZodResponse(productRetentionResponseSchema)
   getProductRetentionCalculation(
@@ -916,6 +1228,10 @@ export class ProductsController {
       message: "Product registry request could not be completed.",
       code: "not_found",
     });
+  }
+
+  private complianceService(): ProductComplianceService {
+    return this.compliance!;
   }
 
   private async ensureDeletePermissionForWithdrawal(

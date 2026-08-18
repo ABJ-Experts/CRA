@@ -262,6 +262,66 @@ vi.mock("../../_features/products/products.queries", () => ({
   }),
   useProductQuery: () => state.product,
   useProductReleasesQuery: () => state.releases,
+  useSubstantialModificationAssessmentsQuery: () => ({
+    isPending: false,
+    isError: false,
+    data: {
+      assessments: { rows: [], total: 0, page: 1, pageSize: 15, pageCount: 1 },
+    },
+    refetch: vi.fn(),
+  }),
+  useSecurityUpdateArtifactsQuery: () => ({
+    isPending: false,
+    isError: false,
+    data: {
+      artifacts: { rows: [], total: 0, page: 1, pageSize: 15, pageCount: 1 },
+    },
+    refetch: vi.fn(),
+  }),
+  useCreateSubstantialModificationAssessmentMutation: () => ({
+    isPending: false,
+    mutateAsync: vi.fn(),
+  }),
+  useCreateSubstantialModificationAssessmentDraftMutation: () => ({
+    isPending: false,
+    mutateAsync: vi.fn(),
+  }),
+  useReassessSubstantialModificationAssessmentMutation: () => ({
+    isPending: false,
+    mutateAsync: vi.fn(),
+  }),
+  useReviewSubstantialModificationAssessmentMutation: () => ({
+    isPending: false,
+    mutateAsync: vi.fn(),
+  }),
+  useReserveSecurityUpdateArtifactMutation: () => ({
+    isPending: false,
+    mutateAsync: vi.fn(),
+  }),
+  useFinalizeSecurityUpdateArtifactMutation: () => ({
+    isPending: false,
+    mutateAsync: vi.fn(),
+  }),
+  useFinalizeReservedSecurityUpdateArtifactMutation: () => ({
+    isPending: false,
+    mutateAsync: vi.fn(),
+  }),
+  useReviewSecurityUpdateArtifactMutation: () => ({
+    isPending: false,
+    mutateAsync: vi.fn(),
+  }),
+  usePublishSecurityUpdateArtifactMutation: () => ({
+    isPending: false,
+    mutateAsync: vi.fn(),
+  }),
+  useReplaceSecurityUpdateArtifactMutation: () => ({
+    isPending: false,
+    mutateAsync: vi.fn(),
+  }),
+  useWithdrawSecurityUpdateArtifactMutation: () => ({
+    isPending: false,
+    mutateAsync: vi.fn(),
+  }),
   useUpdateProductMutation: () => ({ isPending: false, mutateAsync: vi.fn() }),
   useArchiveProductMutation: () => ({ isPending: false, mutateAsync: vi.fn() }),
   useCreateReleaseMutation: () => ({ isPending: false, mutateAsync: vi.fn() }),

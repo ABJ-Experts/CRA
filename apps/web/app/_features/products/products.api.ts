@@ -6,6 +6,8 @@ import {
   archiveSoftwareBaselineInputSchema,
   assignSoftwareBaselineMembershipInputSchema,
   createProductComponentLinkInputSchema,
+  createSubstantialModificationAssessmentDraftInputSchema,
+  createSubstantialModificationAssessmentInputSchema,
   createProductVariantRelationshipInputSchema,
   correctPlacedOnMarketDateInputSchema,
   correctReleaseMarketAvailabilityInputSchema,
@@ -16,6 +18,7 @@ import {
   endProductComponentLinkInputSchema,
   endProductVariantRelationshipInputSchema,
   endSoftwareBaselineMembershipInputSchema,
+  finalizeSecurityUpdateArtifactInputSchema,
   memberStatesResponseSchema,
   moveProductLegalEntityInputSchema,
   productListQuerySchema,
@@ -71,11 +74,28 @@ import {
   supportPeriodChangePreviewResponseSchema,
   supportPeriodResponseSchema,
   productRetentionResponseSchema,
+  publishSecurityUpdateArtifactInputSchema,
+  reassessSubstantialModificationAssessmentInputSchema,
+  replaceSecurityUpdateArtifactInputSchema,
+  reserveSecurityUpdateArtifactInputSchema,
+  reviewSecurityUpdateArtifactInputSchema,
+  reviewSubstantialModificationAssessmentInputSchema,
+  securityUpdateArtifactDownloadResponseSchema,
+  securityUpdateArtifactListQuerySchema,
+  securityUpdateArtifactListResponseSchema,
+  securityUpdateArtifactParamsSchema,
+  securityUpdateArtifactReserveResponseSchema,
+  securityUpdateArtifactResponseSchema,
+  substantialModificationAssessmentListQuerySchema,
+  substantialModificationAssessmentListResponseSchema,
+  substantialModificationAssessmentParamsSchema,
+  substantialModificationAssessmentResponseSchema,
   supersedeSupportPeriodRequestSchema,
   transitionReleaseLifecycleInputSchema,
   updateSupportAlertIntervalsRequestSchema,
   updateProductInputSchema,
   updateReleaseInputSchema,
+  withdrawSecurityUpdateArtifactInputSchema,
   type AddReleaseMarketAvailabilityInput,
   type AppendSoftwareBaselineRevisionInput,
   type ArchiveProductInput,
@@ -83,6 +103,8 @@ import {
   type ArchiveSoftwareBaselineInput,
   type AssignSoftwareBaselineMembershipInput,
   type CreateProductComponentLinkInput,
+  type CreateSubstantialModificationAssessmentDraftInput,
+  type CreateSubstantialModificationAssessmentInput,
   type CreateProductVariantRelationshipInput,
   type CorrectPlacedOnMarketDateInput,
   type CorrectReleaseMarketAvailabilityInput,
@@ -93,6 +115,7 @@ import {
   type EndProductComponentLinkInput,
   type EndProductVariantRelationshipInput,
   type EndSoftwareBaselineMembershipInput,
+  type FinalizeSecurityUpdateArtifactInput,
   type MoveProductLegalEntityInput,
   type ProductListQuery,
   type ProductImportCancelInput,
@@ -110,6 +133,13 @@ import {
   type RequestRelationshipReevaluationInput,
   type RemoveReleaseMarketAvailabilityInput,
   type ReleaseListQuery,
+  type ReassessSubstantialModificationAssessmentInput,
+  type ReplaceSecurityUpdateArtifactInput,
+  type ReserveSecurityUpdateArtifactInput,
+  type ReviewSecurityUpdateArtifactInput,
+  type ReviewSubstantialModificationAssessmentInput,
+  type SecurityUpdateArtifactListQuery,
+  type SubstantialModificationAssessmentListQuery,
   type RelationshipPropagationEventsQuery,
   type SoftwareBaselineListQuery,
   type SupersedeSupportPeriodRequest,
@@ -119,6 +149,8 @@ import {
   type UpdateSupportAlertIntervalsRequest,
   type UpdateProductInput,
   type UpdateReleaseInput,
+  type PublishSecurityUpdateArtifactInput,
+  type WithdrawSecurityUpdateArtifactInput,
 } from "@repo/contracts/products";
 
 import {
@@ -153,6 +185,44 @@ function releasePath(
     );
   }
   return `/api/v1/products/${parsed.data.productId}/releases/${parsed.data.releaseId}${suffix}`;
+}
+
+function assessmentPath(
+  productId: string,
+  assessmentId: string,
+  suffix = "",
+): `/${string}` {
+  const parsed = substantialModificationAssessmentParamsSchema.safeParse({
+    productId,
+    assessmentId,
+  });
+  if (!parsed.success) {
+    throw new ApiClientError(
+      "invalid_request",
+      "The substantial modification assessment identifier is invalid.",
+      400,
+    );
+  }
+  return `/api/v1/products/${parsed.data.productId}/modification-assessments/${parsed.data.assessmentId}${suffix}`;
+}
+
+function artifactPath(
+  productId: string,
+  artifactId: string,
+  suffix = "",
+): `/${string}` {
+  const parsed = securityUpdateArtifactParamsSchema.safeParse({
+    productId,
+    artifactId,
+  });
+  if (!parsed.success) {
+    throw new ApiClientError(
+      "invalid_request",
+      "The security update artifact identifier is invalid.",
+      400,
+    );
+  }
+  return `/api/v1/products/${parsed.data.productId}/security-update-artifacts/${parsed.data.artifactId}${suffix}`;
 }
 
 function releaseMarketAvailabilityPath(
@@ -273,6 +343,38 @@ function queryPath(
 
 /** Typed browser boundary for the authoritative M2 API, never dashboard mocks. */
 export class ProductsApi {
+  uploadReservedSecurityUpdateArtifact(
+    uploadUrl: string,
+    file: File,
+    onProgress?: (progress: number) => void,
+  ): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const request = new XMLHttpRequest();
+      request.open("PUT", uploadUrl);
+      request.setRequestHeader(
+        "content-type",
+        file.type || "application/octet-stream",
+      );
+      request.upload.onprogress = (event) => {
+        if (event.lengthComputable) onProgress?.(event.loaded / event.total);
+      };
+      request.onerror = () =>
+        reject(new ApiClientError("network", "The artifact upload failed."));
+      request.onload = () => {
+        if (request.status >= 200 && request.status < 300) resolve();
+        else
+          reject(
+            new ApiClientError(
+              "api",
+              "The artifact upload failed.",
+              request.status,
+            ),
+          );
+      };
+      request.send(file);
+    });
+  }
+
   getImportTemplate(
     signal?: AbortSignal,
   ): Promise<ProductImportTemplateResponse> {
@@ -1056,6 +1158,237 @@ export class ProductsApi {
       body: input,
       inputSchema: requestRelationshipReevaluationInputSchema,
       schema: requestRelationshipReevaluationResponseSchema,
+      signal,
+    });
+  }
+
+  async listSubstantialModificationAssessments(
+    productId: string,
+    input: Partial<SubstantialModificationAssessmentListQuery> = {},
+    signal?: AbortSignal,
+  ) {
+    const query = apiClient.parseInput(
+      substantialModificationAssessmentListQuerySchema,
+      input,
+    );
+    return authenticatedRequestJson({
+      path: queryPath(
+        productPath(productId, "/modification-assessments"),
+        query,
+      ),
+      schema: substantialModificationAssessmentListResponseSchema,
+      signal,
+    });
+  }
+
+  async getSubstantialModificationAssessment(
+    productId: string,
+    assessmentId: string,
+    signal?: AbortSignal,
+  ) {
+    return authenticatedRequestJson({
+      path: assessmentPath(productId, assessmentId),
+      schema: substantialModificationAssessmentResponseSchema,
+      signal,
+    });
+  }
+
+  async createSubstantialModificationAssessment(
+    productId: string,
+    input: CreateSubstantialModificationAssessmentInput,
+    signal?: AbortSignal,
+  ) {
+    return authenticatedRequestJson({
+      path: productPath(productId, "/modification-assessments"),
+      method: "POST",
+      body: input,
+      inputSchema: createSubstantialModificationAssessmentInputSchema,
+      schema: substantialModificationAssessmentResponseSchema,
+      signal,
+    });
+  }
+
+  async createSubstantialModificationAssessmentDraft(
+    productId: string,
+    input: CreateSubstantialModificationAssessmentDraftInput,
+    signal?: AbortSignal,
+  ) {
+    return authenticatedRequestJson({
+      path: productPath(productId, "/modification-assessments/draft"),
+      method: "POST",
+      body: input,
+      inputSchema: createSubstantialModificationAssessmentDraftInputSchema,
+      schema: substantialModificationAssessmentResponseSchema,
+      signal,
+    });
+  }
+
+  async reassessSubstantialModificationAssessment(
+    productId: string,
+    assessmentId: string,
+    input: ReassessSubstantialModificationAssessmentInput,
+    signal?: AbortSignal,
+  ) {
+    return authenticatedRequestJson({
+      path: assessmentPath(productId, assessmentId, "/reassess"),
+      method: "POST",
+      body: input,
+      inputSchema: reassessSubstantialModificationAssessmentInputSchema,
+      schema: substantialModificationAssessmentResponseSchema,
+      signal,
+    });
+  }
+
+  async reviewSubstantialModificationAssessment(
+    productId: string,
+    assessmentId: string,
+    input: ReviewSubstantialModificationAssessmentInput,
+    signal?: AbortSignal,
+  ) {
+    return authenticatedRequestJson({
+      path: assessmentPath(productId, assessmentId, "/review"),
+      method: "POST",
+      body: input,
+      inputSchema: reviewSubstantialModificationAssessmentInputSchema,
+      schema: substantialModificationAssessmentResponseSchema,
+      signal,
+    });
+  }
+
+  async listSecurityUpdateArtifacts(
+    productId: string,
+    input: Partial<SecurityUpdateArtifactListQuery> = {},
+    signal?: AbortSignal,
+  ) {
+    const query = apiClient.parseInput(
+      securityUpdateArtifactListQuerySchema,
+      input,
+    );
+    return authenticatedRequestJson({
+      path: queryPath(
+        productPath(productId, "/security-update-artifacts"),
+        query,
+      ),
+      schema: securityUpdateArtifactListResponseSchema,
+      signal,
+    });
+  }
+
+  async getSecurityUpdateArtifact(
+    productId: string,
+    artifactId: string,
+    signal?: AbortSignal,
+  ) {
+    return authenticatedRequestJson({
+      path: artifactPath(productId, artifactId),
+      schema: securityUpdateArtifactResponseSchema,
+      signal,
+    });
+  }
+
+  async reserveSecurityUpdateArtifact(
+    productId: string,
+    input: ReserveSecurityUpdateArtifactInput,
+    signal?: AbortSignal,
+  ) {
+    return authenticatedRequestJson({
+      path: productPath(productId, "/security-update-artifacts/reserve"),
+      method: "POST",
+      body: input,
+      inputSchema: reserveSecurityUpdateArtifactInputSchema,
+      schema: securityUpdateArtifactReserveResponseSchema,
+      signal,
+    });
+  }
+
+  async finalizeSecurityUpdateArtifact(
+    productId: string,
+    artifactId: string,
+    input: FinalizeSecurityUpdateArtifactInput,
+    signal?: AbortSignal,
+  ) {
+    return authenticatedRequestJson({
+      path: artifactPath(productId, artifactId, "/finalize"),
+      method: "POST",
+      body: input,
+      inputSchema: finalizeSecurityUpdateArtifactInputSchema,
+      schema: securityUpdateArtifactResponseSchema,
+      signal,
+    });
+  }
+
+  async reviewSecurityUpdateArtifact(
+    productId: string,
+    artifactId: string,
+    input: ReviewSecurityUpdateArtifactInput,
+    signal?: AbortSignal,
+  ) {
+    return authenticatedRequestJson({
+      path: artifactPath(productId, artifactId, "/review"),
+      method: "POST",
+      body: input,
+      inputSchema: reviewSecurityUpdateArtifactInputSchema,
+      schema: securityUpdateArtifactResponseSchema,
+      signal,
+    });
+  }
+
+  async publishSecurityUpdateArtifact(
+    productId: string,
+    artifactId: string,
+    input: PublishSecurityUpdateArtifactInput,
+    signal?: AbortSignal,
+  ) {
+    return authenticatedRequestJson({
+      path: artifactPath(productId, artifactId, "/publish"),
+      method: "POST",
+      body: input,
+      inputSchema: publishSecurityUpdateArtifactInputSchema,
+      schema: securityUpdateArtifactResponseSchema,
+      signal,
+    });
+  }
+
+  async replaceSecurityUpdateArtifact(
+    productId: string,
+    artifactId: string,
+    input: ReplaceSecurityUpdateArtifactInput,
+    signal?: AbortSignal,
+  ) {
+    return authenticatedRequestJson({
+      path: artifactPath(productId, artifactId, "/replace"),
+      method: "POST",
+      body: input,
+      inputSchema: replaceSecurityUpdateArtifactInputSchema,
+      schema: securityUpdateArtifactResponseSchema,
+      signal,
+    });
+  }
+
+  async withdrawSecurityUpdateArtifact(
+    productId: string,
+    artifactId: string,
+    input: WithdrawSecurityUpdateArtifactInput,
+    signal?: AbortSignal,
+  ) {
+    return authenticatedRequestJson({
+      path: artifactPath(productId, artifactId, "/withdraw"),
+      method: "POST",
+      body: input,
+      inputSchema: withdrawSecurityUpdateArtifactInputSchema,
+      schema: securityUpdateArtifactResponseSchema,
+      signal,
+    });
+  }
+
+  async downloadSecurityUpdateArtifact(
+    productId: string,
+    artifactId: string,
+    signal?: AbortSignal,
+  ) {
+    return authenticatedRequestJson({
+      path: artifactPath(productId, artifactId, "/download"),
+      schema: securityUpdateArtifactDownloadResponseSchema,
       signal,
     });
   }

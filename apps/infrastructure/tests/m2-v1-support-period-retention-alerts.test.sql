@@ -69,6 +69,9 @@ begin
     'M2 V1 support release', '1.0-' || v_release::text,
     'development', v_actor, v_actor
   );
+  update public.organization_settings
+     set support_alert_intervals = array[180, 90, 30]
+   where organization_id = v_org;
 
   select * into v_initial from public.create_product_support_period_atomic(
     v_org, v_product, v_release, v_actor,

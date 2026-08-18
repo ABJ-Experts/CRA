@@ -8,12 +8,14 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { productsApi } from "./products.api";
 import {
   useCreateProductVariantRelationshipMutation,
+  useFinalizeReservedSecurityUpdateArtifactMutation,
   useSoftwareBaselineRevisionsQuery,
 } from "./products.queries";
 
 vi.mock("./products.api", () => ({
   productsApi: {
     createProductVariantRelationship: vi.fn(),
+    finalizeSecurityUpdateArtifact: vi.fn(),
     listSoftwareBaselineRevisions: vi.fn(),
   },
 }));
@@ -82,6 +84,42 @@ describe("product relationship queries", () => {
     });
     expect(invalidateQueries).toHaveBeenCalledWith({
       queryKey: ["products", variantProductId, "variant-relationships"],
+    });
+  });
+
+  it("finalizes a reserved upload and refreshes product compliance keys without a page reload", async () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const invalidateQueries = vi.spyOn(queryClient, "invalidateQueries");
+    const productId = "00000000-0000-4000-8000-000000000001";
+    const artifactId = "00000000-0000-4000-8000-000000000002";
+    const input = {
+      expectedVersion: 1,
+      idempotencyKey: "00000000-0000-4000-8000-000000000003",
+    } as never;
+    vi.mocked(productsApi.finalizeSecurityUpdateArtifact).mockResolvedValue(
+      {} as never,
+    );
+    function Wrapper({ children }: Readonly<{ children: ReactNode }>) {
+      return (
+        <QueryClientProvider client={queryClient}>
+          {children}
+        </QueryClientProvider>
+      );
+    }
+    const { result } = renderHook(
+      () => useFinalizeReservedSecurityUpdateArtifactMutation(productId),
+      { wrapper: Wrapper },
+    );
+    await act(async () => result.current.mutateAsync({ artifactId, input }));
+    expect(productsApi.finalizeSecurityUpdateArtifact).toHaveBeenCalledWith(
+      productId,
+      artifactId,
+      input,
+    );
+    expect(invalidateQueries).toHaveBeenCalledWith({
+      queryKey: ["products", productId, "security-update-artifacts"],
     });
   });
 });

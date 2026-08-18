@@ -34,6 +34,7 @@ describe("environment validation", () => {
       PRODUCT_RETENTION_ALERT_LEASE_SECONDS: 60,
       PRODUCT_RETENTION_MAX_CLOCK_SKEW_MILLISECONDS: 5_000,
       PRODUCT_IMPORT_LEASE_SECONDS: 60,
+      PRODUCT_COMPLIANCE_LEASE_SECONDS: 60,
       BRANDING_SCANNER_STRICT: false,
     });
   });
@@ -63,6 +64,8 @@ describe("environment validation", () => {
         INVITATION_TTL_DAYS: "14",
         SESSION_EPOCH_SKEW_SECONDS: "0",
         BRANDING_SCANNER_STRICT: "true",
+        PRODUCT_SECURITY_UPDATE_EXTERNAL_REFERENCE_ALLOWED_HOSTS:
+          "updates.example.test,downloads.example.test",
       }),
     ).toMatchObject({
       NODE_ENV: "production",
@@ -73,6 +76,8 @@ describe("environment validation", () => {
       LOGIN_MAX_ATTEMPTS: 8,
       SESSION_EPOCH_SKEW_SECONDS: 0,
       BRANDING_SCANNER_STRICT: true,
+      PRODUCT_SECURITY_UPDATE_EXTERNAL_REFERENCE_ALLOWED_HOSTS:
+        "updates.example.test,downloads.example.test",
     });
   });
 

@@ -52,6 +52,7 @@ export const PERMISSION_ACTIONS = [
   "edit",
   "delete",
   "export",
+  "approve",
 ] as const;
 export type PermissionAction = (typeof PERMISSION_ACTIONS)[number];
 
@@ -71,7 +72,7 @@ export const PERMISSION_MATRIX = {
   organization: ["view", "edit", "delete", "export"],
   audit: ["view", "export"],
   // Commerce
-  products: ["view", "create", "edit", "delete", "export"],
+  products: ["view", "create", "edit", "delete", "export", "approve"],
   orders: ["view", "create", "edit", "delete", "export"],
   invoices: ["view", "create", "edit", "delete", "export"],
   // Finding evidence/triage remains owned by its module. The product detail
@@ -202,6 +203,7 @@ export const IMPLICATIONS: Readonly<
   edit: ["view"],
   delete: ["view"],
   export: ["view"],
+  approve: ["view"],
 };
 
 /** Parse `can_<action>_<module>` back into its parts. */

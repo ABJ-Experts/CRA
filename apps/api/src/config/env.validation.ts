@@ -142,6 +142,20 @@ export const envSchema = z.object({
     300,
     "must not exceed 300 seconds",
   ),
+  PRODUCT_COMPLIANCE_LEASE_SECONDS: boundedInt(
+    60,
+    300,
+    "must not exceed 300 seconds",
+  ),
+  /**
+   * Comma-delimited deployment allowlist for externally hosted update
+   * references. An empty value is fail-closed: publication may still use the
+   * private artifact bucket but no external candidate can be approved.
+   */
+  PRODUCT_SECURITY_UPDATE_EXTERNAL_REFERENCE_ALLOWED_HOSTS: z
+    .string()
+    .optional()
+    .default(""),
   /**
    * With no scanner adapter configured, decoded raster-only inspection remains
    * available in non-strict environments and is recorded in the audit trail.

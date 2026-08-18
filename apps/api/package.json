@@ -17,6 +17,7 @@
     "worker:product-retention": "node dist/product-retention-worker.js",
     "worker:finding-propagation": "node dist/finding-propagation-worker.js",
     "worker:product-import": "node dist/product-import-worker.js",
+    "worker:product-compliance": "node dist/product-compliance-worker.js",
     "verify:tenant-export-capacity": "node dist/organizations/tenant-administration/worker/tenant-export-capacity.js"
   },
   "dependencies": {

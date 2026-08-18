@@ -31,6 +31,7 @@ import {
 import { ReleaseRegulatoryControls } from "./release-regulatory-controls";
 import { FindingImpactStatus } from "./finding-impact-status";
 import { ProductRelationshipSection } from "./product-relationship-section";
+import { ProductComplianceSections } from "./product-compliance-sections";
 
 const PRODUCT_TYPE_LABELS = Object.freeze({
   hardware_with_software: "Hardware with software",
@@ -507,6 +508,7 @@ export function ProductDetailContent({ productId }: { productId: string }) {
   const canEdit = permissions.can_edit_products === true;
   const canCreate = permissions.can_create_products === true;
   const canArchive = permissions.can_delete_products === true;
+  const canApprove = permissions.can_approve_products === true;
   const reloadProductData = () => {
     void product.refetch();
     void releases.refetch();
@@ -721,6 +723,19 @@ export function ProductDetailContent({ productId }: { productId: string }) {
             canEdit={canEdit && !product.data.product.archivedAt}
             enabled={enabled}
             onReload={reloadProductData}
+          />
+          <ProductComplianceSections
+            productId={productId}
+            releases={
+              releases.data?.releases.rows.map((release) => ({
+                id: release.id,
+                label: release.label,
+                version: release.version,
+              })) ?? []
+            }
+            canEdit={canEdit && !product.data.product.archivedAt}
+            canApprove={canApprove && !product.data.product.archivedAt}
+            enabled={enabled}
           />
         </>
       ) : null}

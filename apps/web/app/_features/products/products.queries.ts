@@ -8,6 +8,8 @@ import type {
   AppendSoftwareBaselineRevisionInput,
   AssignSoftwareBaselineMembershipInput,
   CreateProductComponentLinkInput,
+  CreateSubstantialModificationAssessmentDraftInput,
+  CreateSubstantialModificationAssessmentInput,
   CreateProductVariantRelationshipInput,
   CorrectPlacedOnMarketDateInput,
   CorrectReleaseMarketAvailabilityInput,
@@ -17,6 +19,7 @@ import type {
   EndProductComponentLinkInput,
   EndProductVariantRelationshipInput,
   EndSoftwareBaselineMembershipInput,
+  FinalizeSecurityUpdateArtifactInput,
   CreateSupportPeriodRequest,
   MoveProductLegalEntityInput,
   ProductListQuery,
@@ -30,11 +33,19 @@ import type {
   ProductImportTemplateResponse,
   ProductImportUploadFields,
   ProductRelationshipGraphQuery,
+  PublishSecurityUpdateArtifactInput,
   PreviewProductComponentLinkInput,
   RequestRelationshipReevaluationInput,
   ReleaseListQuery,
+  ReassessSubstantialModificationAssessmentInput,
+  ReplaceSecurityUpdateArtifactInput,
+  ReserveSecurityUpdateArtifactInput,
+  ReviewSecurityUpdateArtifactInput,
+  ReviewSubstantialModificationAssessmentInput,
   RelationshipPropagationEventsQuery,
   SoftwareBaselineListQuery,
+  SecurityUpdateArtifactListQuery,
+  SubstantialModificationAssessmentListQuery,
   RemoveReleaseMarketAvailabilityInput,
   SupersedeSupportPeriodRequest,
   SupersedeProductComponentLinkInput,
@@ -43,6 +54,7 @@ import type {
   UpdateSupportAlertIntervalsRequest,
   UpdateProductInput,
   UpdateReleaseInput,
+  WithdrawSecurityUpdateArtifactInput,
 } from "@repo/contracts/products";
 import {
   keepPreviousData,
@@ -211,6 +223,46 @@ export function useProductReleasesQuery(
     retry: false,
     placeholderData: keepPreviousData,
     queryFn: ({ signal }) => productsApi.listReleases(productId, query, signal),
+  });
+}
+
+export function useSubstantialModificationAssessmentsQuery(
+  productId: string,
+  query: Partial<SubstantialModificationAssessmentListQuery>,
+  enabled: boolean,
+) {
+  return useQuery({
+    queryKey: [
+      ...productKeys.modificationAssessments(productId),
+      listKey(query),
+    ],
+    enabled: enabled && productId !== "",
+    retry: false,
+    placeholderData: keepPreviousData,
+    queryFn: ({ signal }) =>
+      productsApi.listSubstantialModificationAssessments(
+        productId,
+        query,
+        signal,
+      ),
+  });
+}
+
+export function useSecurityUpdateArtifactsQuery(
+  productId: string,
+  query: Partial<SecurityUpdateArtifactListQuery>,
+  enabled: boolean,
+) {
+  return useQuery({
+    queryKey: [
+      ...productKeys.securityUpdateArtifacts(productId),
+      listKey(query),
+    ],
+    enabled: enabled && productId !== "",
+    retry: false,
+    placeholderData: keepPreviousData,
+    queryFn: ({ signal }) =>
+      productsApi.listSecurityUpdateArtifacts(productId, query, signal),
   });
 }
 
@@ -527,6 +579,171 @@ export function useArchiveReleaseMutation(
   });
 }
 
+function useInvalidateProductCompliance(productId: string) {
+  const client = useQueryClient();
+  return async () => {
+    await Promise.all([
+      client.invalidateQueries({
+        queryKey: productKeys.modificationAssessments(productId),
+      }),
+      client.invalidateQueries({
+        queryKey: productKeys.securityUpdateArtifacts(productId),
+      }),
+      client.invalidateQueries({ queryKey: productKeys.detail(productId) }),
+      client.invalidateQueries({ queryKey: productKeys.releases(productId) }),
+      client.invalidateQueries({
+        queryKey: productKeys.supportPeriods(productId),
+      }),
+      client.invalidateQueries({
+        queryKey: productKeys.supportRetention(productId),
+      }),
+    ]);
+  };
+}
+
+export function useCreateSubstantialModificationAssessmentMutation(
+  productId: string,
+) {
+  const invalidate = useInvalidateProductCompliance(productId);
+  return useMutation({
+    mutationFn: (input: CreateSubstantialModificationAssessmentInput) =>
+      productsApi.createSubstantialModificationAssessment(productId, input),
+    onSuccess: () => invalidate(),
+  });
+}
+
+export function useCreateSubstantialModificationAssessmentDraftMutation(
+  productId: string,
+) {
+  const invalidate = useInvalidateProductCompliance(productId);
+  return useMutation({
+    mutationFn: (input: CreateSubstantialModificationAssessmentDraftInput) =>
+      productsApi.createSubstantialModificationAssessmentDraft(
+        productId,
+        input,
+      ),
+    onSuccess: () => invalidate(),
+  });
+}
+
+export function useReassessSubstantialModificationAssessmentMutation(
+  productId: string,
+  assessmentId: string,
+) {
+  const invalidate = useInvalidateProductCompliance(productId);
+  return useMutation({
+    mutationFn: (input: ReassessSubstantialModificationAssessmentInput) =>
+      productsApi.reassessSubstantialModificationAssessment(
+        productId,
+        assessmentId,
+        input,
+      ),
+    onSuccess: () => invalidate(),
+  });
+}
+
+export function useReviewSubstantialModificationAssessmentMutation(
+  productId: string,
+  assessmentId: string,
+) {
+  const invalidate = useInvalidateProductCompliance(productId);
+  return useMutation({
+    mutationFn: (input: ReviewSubstantialModificationAssessmentInput) =>
+      productsApi.reviewSubstantialModificationAssessment(
+        productId,
+        assessmentId,
+        input,
+      ),
+    onSuccess: () => invalidate(),
+  });
+}
+
+export function useReserveSecurityUpdateArtifactMutation(productId: string) {
+  const invalidate = useInvalidateProductCompliance(productId);
+  return useMutation({
+    mutationFn: (input: ReserveSecurityUpdateArtifactInput) =>
+      productsApi.reserveSecurityUpdateArtifact(productId, input),
+    onSuccess: () => invalidate(),
+  });
+}
+
+export function useFinalizeSecurityUpdateArtifactMutation(
+  productId: string,
+  artifactId: string,
+) {
+  const invalidate = useInvalidateProductCompliance(productId);
+  return useMutation({
+    mutationFn: (input: FinalizeSecurityUpdateArtifactInput) =>
+      productsApi.finalizeSecurityUpdateArtifact(productId, artifactId, input),
+    onSuccess: () => invalidate(),
+  });
+}
+
+export function useFinalizeReservedSecurityUpdateArtifactMutation(
+  productId: string,
+) {
+  const invalidate = useInvalidateProductCompliance(productId);
+  return useMutation({
+    mutationFn: ({
+      artifactId,
+      input,
+    }: Readonly<{
+      artifactId: string;
+      input: FinalizeSecurityUpdateArtifactInput;
+    }>) =>
+      productsApi.finalizeSecurityUpdateArtifact(productId, artifactId, input),
+    onSuccess: () => invalidate(),
+  });
+}
+
+export function useReviewSecurityUpdateArtifactMutation(
+  productId: string,
+  artifactId: string,
+) {
+  const invalidate = useInvalidateProductCompliance(productId);
+  return useMutation({
+    mutationFn: (input: ReviewSecurityUpdateArtifactInput) =>
+      productsApi.reviewSecurityUpdateArtifact(productId, artifactId, input),
+    onSuccess: () => invalidate(),
+  });
+}
+
+export function usePublishSecurityUpdateArtifactMutation(
+  productId: string,
+  artifactId: string,
+) {
+  const invalidate = useInvalidateProductCompliance(productId);
+  return useMutation({
+    mutationFn: (input: PublishSecurityUpdateArtifactInput) =>
+      productsApi.publishSecurityUpdateArtifact(productId, artifactId, input),
+    onSuccess: () => invalidate(),
+  });
+}
+
+export function useReplaceSecurityUpdateArtifactMutation(
+  productId: string,
+  artifactId: string,
+) {
+  const invalidate = useInvalidateProductCompliance(productId);
+  return useMutation({
+    mutationFn: (input: ReplaceSecurityUpdateArtifactInput) =>
+      productsApi.replaceSecurityUpdateArtifact(productId, artifactId, input),
+    onSuccess: () => invalidate(),
+  });
+}
+
+export function useWithdrawSecurityUpdateArtifactMutation(
+  productId: string,
+  artifactId: string,
+) {
+  const invalidate = useInvalidateProductCompliance(productId);
+  return useMutation({
+    mutationFn: (input: WithdrawSecurityUpdateArtifactInput) =>
+      productsApi.withdrawSecurityUpdateArtifact(productId, artifactId, input),
+    onSuccess: () => invalidate(),
+  });
+}
+
 export function useAddReleaseMarketAvailabilityMutation(
   productId: string,
   releaseId: string,
@@ -714,7 +931,10 @@ export function useCreateProductVariantRelationshipMutation(productId: string) {
   const invalidate = useInvalidateProducts();
   return useMutation({
     mutationFn: (input: CreateProductVariantRelationshipInput) =>
-      productsApi.createProductVariantRelationship(input.variantProductId, input),
+      productsApi.createProductVariantRelationship(
+        input.variantProductId,
+        input,
+      ),
     onSuccess: async (_result, input) => {
       await Promise.all([
         invalidate(productId, undefined, { relationships: true }),

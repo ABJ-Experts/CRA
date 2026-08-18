@@ -16,6 +16,7 @@ const SUPABASE_URL = process.env.SUPABASE_URL ?? "http://127.0.0.1:54321";
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const PASSWORD = "Password123";
 const PRODUCT_IMPORT_BUCKET = "product-imports";
+const SECURITY_UPDATE_ARTIFACT_BUCKET = "security-update-artifacts";
 
 const configuredRunId = process.env.E2E_RUN_ID;
 if (configuredRunId && !/^[a-zA-Z0-9-]{8,80}$/.test(configuredRunId)) {
@@ -166,29 +167,41 @@ async function removeImportStorageObjects(
 ): Promise<void> {
   for (const importId of importIds) {
     const prefix = `${organizationId}/${importId}/`;
-    const objects = await listStorageObjects(bucket, prefix);
-    if (objects.some((object) => !object.startsWith(prefix))) {
-      throw new Error(`Refusing to remove storage outside ${bucket}/${prefix}`);
-    }
-    for (let index = 0; index < objects.length; index += 1000) {
-      const prefixes = objects.slice(index, index + 1000);
-      const response = await supabase(`/storage/v1/object/${bucket}`, {
-        method: "DELETE",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ prefixes }),
-      });
-      if (!response.ok) {
-        throw new Error(
-          `Could not remove scoped storage objects for ${bucket}/${prefix}: ${JSON.stringify(await responseBody(response))}`,
-        );
-      }
-    }
-    const remaining = await listStorageObjects(bucket, prefix);
-    if (remaining.length !== 0) {
+    await removeStoragePrefix(bucket, prefix);
+  }
+}
+
+async function removeStoragePrefix(
+  bucket: string,
+  prefix: string,
+): Promise<void> {
+  if (!/^[0-9a-f-]{36}\/$|^[0-9a-f-]{36}\/[0-9a-f-]{36}\/$/i.test(prefix)) {
+    throw new Error(
+      `Refusing to remove storage outside a scoped prefix in ${bucket}`,
+    );
+  }
+  const objects = await listStorageObjects(bucket, prefix);
+  if (objects.some((object) => !object.startsWith(prefix))) {
+    throw new Error(`Refusing to remove storage outside ${bucket}/${prefix}`);
+  }
+  for (let index = 0; index < objects.length; index += 1000) {
+    const prefixes = objects.slice(index, index + 1000);
+    const response = await supabase(`/storage/v1/object/${bucket}`, {
+      method: "DELETE",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ prefixes }),
+    });
+    if (!response.ok) {
       throw new Error(
-        `Scoped storage cleanup assertion failed for ${bucket}/${prefix}`,
+        `Could not remove scoped storage objects for ${bucket}/${prefix}: ${JSON.stringify(await responseBody(response))}`,
       );
     }
+  }
+  const remaining = await listStorageObjects(bucket, prefix);
+  if (remaining.length !== 0) {
+    throw new Error(
+      `Scoped storage cleanup assertion failed for ${bucket}/${prefix}`,
+    );
   }
 }
 
@@ -214,6 +227,7 @@ export class RunScopedAccounts {
   private readonly accounts: TestAccount[] = [];
   private readonly invitationIds = new Set<string>();
   private readonly organizationIds = new Set<string>();
+  private readonly m2V2OrganizationIds = new Set<string>();
   private sequence = 0;
 
   constructor(private readonly testInfo: TestInfo) {}
@@ -300,6 +314,16 @@ export class RunScopedAccounts {
     this.organizationIds.add(id);
   }
 
+  /**
+   * M2 V2 assessment and artifact rows deliberately restrict product deletion.
+   * This opts a run-scoped organization into the existing exact tenant cascade
+   * cleanup after its private artifact prefix has been removed.
+   */
+  trackM2V2Organization(id: string): void {
+    this.trackOrganization(id);
+    this.m2V2OrganizationIds.add(id);
+  }
+
   async invitationToken(email: string): Promise<string> {
     const response = await supabase(
       `/rest/v1/invitations?select=token_hash&email=eq.${encodeURIComponent(email)}&status=eq.pending`,
@@ -347,6 +371,82 @@ export class RunScopedAccounts {
       // run-scoped organization, so seeded and concurrent E2E organizations
       // are never selected.
       await removeImportStorageObjects(PRODUCT_IMPORT_BUCKET, id, importIds);
+      if (this.m2V2OrganizationIds.has(id)) {
+        await removeStoragePrefix(SECURITY_UPDATE_ARTIFACT_BUCKET, `${id}/`);
+        // These pre-date M2 V2 and are mutable service-role cleanup ledgers,
+        // rather than compliance history. Clear only this generated tenant's
+        // rows before its exact organization cascade; the M2 records retain
+        // their no-DELETE grant and are removed by the cascade itself.
+        for (const importId of importIds) {
+          for (const [table, scope] of [
+            [
+              "product_import_rows",
+              `import_id=eq.${encodeURIComponent(importId)}`,
+            ],
+            [
+              "product_import_jobs",
+              `id=eq.${encodeURIComponent(importId)}&organization_id=eq.${encodeURIComponent(id)}`,
+            ],
+          ] as const) {
+            const deletion = await supabase(`/rest/v1/${table}?${scope}`, {
+              method: "DELETE",
+            });
+            if (!deletion.ok) {
+              throw new Error(
+                `Could not clean scoped ${table} fixture ${importId}: ${JSON.stringify(await responseBody(deletion))}`,
+              );
+            }
+          }
+        }
+        const assignments = await supabase(
+          `/rest/v1/product_legal_entity_assignments?organization_id=eq.${encodeURIComponent(id)}`,
+          { method: "DELETE" },
+        );
+        if (!assignments.ok) {
+          throw new Error(
+            `Could not clean scoped legal-entity assignments for ${id}: ${JSON.stringify(await responseBody(assignments))}`,
+          );
+        }
+        // M2 V2 rows deliberately expose no direct DELETE grant: their
+        // immutable history can only disappear as part of the established
+        // exact tenant cascade. The generated organization is the narrowest
+        // possible cleanup boundary and is verified below.
+        const organizationDeletion = await supabase(
+          `/rest/v1/organizations?id=eq.${encodeURIComponent(id)}`,
+          { method: "DELETE" },
+        );
+        if (!organizationDeletion.ok) {
+          throw new Error(
+            `Could not clean M2 V2 organization fixture ${id}: ${JSON.stringify(await responseBody(organizationDeletion))}`,
+          );
+        }
+        for (const table of [
+          "product_substantial_modification_releases",
+          "product_substantial_modification_assessments",
+          "product_security_update_artifacts",
+          "products",
+          "organizations",
+        ]) {
+          const scope =
+            table === "organizations"
+              ? `id=eq.${encodeURIComponent(id)}`
+              : `organization_id=eq.${encodeURIComponent(id)}`;
+          const selectColumn =
+            table === "product_substantial_modification_releases"
+              ? "assessment_id"
+              : "id";
+          const assertion = await supabase(
+            `/rest/v1/${table}?select=${selectColumn}&${scope}`,
+          );
+          const rows = await responseBody(assertion);
+          if (!assertion.ok || !Array.isArray(rows) || rows.length !== 0) {
+            throw new Error(
+              `Scoped M2 V2 cleanup assertion failed for ${table} / ${id}: ${JSON.stringify(rows)}`,
+            );
+          }
+        }
+        continue;
+      }
       for (const importId of importIds) {
         for (const [table, scope] of [
           [

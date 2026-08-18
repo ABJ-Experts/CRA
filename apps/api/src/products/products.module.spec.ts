@@ -14,6 +14,11 @@ import {
   PRODUCT_RELATIONSHIP_PROPAGATION_WORKER,
 } from "./application/product-relationship-worker.port";
 import { ProductUseCases } from "./application/product-use-cases";
+import {
+  PRODUCT_COMPLIANCE_REPOSITORY,
+  ProductComplianceUseCases,
+} from "./application/product-compliance-use-cases";
+import { SupabaseProductComplianceRepository } from "./infrastructure/supabase-product-compliance.repository";
 import { SupabaseProductRelationshipWorkerAdapter } from "./infrastructure/supabase-product-relationship-worker.adapter";
 import { ProductsModule } from "./products.module";
 
@@ -56,6 +61,15 @@ describe("ProductsModule regulatory readers", () => {
       provide: PRODUCT_RELATIONSHIP_PROPAGATION_WORKER,
       useExisting: SupabaseProductRelationshipWorkerAdapter,
     });
+    expect(providers).toContainEqual({
+      provide: PRODUCT_COMPLIANCE_REPOSITORY,
+      useExisting: SupabaseProductComplianceRepository,
+    });
+    expect(providers).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ provide: ProductComplianceUseCases }),
+      ]),
+    );
     expect(exports).toEqual(
       expect.arrayContaining([
         RELEASE_REGULATORY_STATE_READER,

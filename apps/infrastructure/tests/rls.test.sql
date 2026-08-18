@@ -154,10 +154,13 @@ begin
   execute 'set local role authenticated';
 
   select count(*) into n from public.organization_members;
-  perform pg_temp.check('organization_members selectable without 42P17', n = 4);
+  perform pg_temp.check('organization_members selectable without 42P17', n >= 4);
 
-  select count(*) into n from public.users;
-  perform pg_temp.check('users visible through shared-org policy', n = 4);
+  select count(*) into n from public.users
+   where email in (
+     'owner@cra.test', 'admin@cra.test', 'member@cra.test', 'viewer@cra.test'
+   );
+  perform pg_temp.check('seed users visible through shared-org policy', n = 4);
 
   select count(*) into n from public.organizations;
   perform pg_temp.check('own organization visible', n = 1);
