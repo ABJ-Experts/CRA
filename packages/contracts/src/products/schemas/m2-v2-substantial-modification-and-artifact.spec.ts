@@ -11,6 +11,7 @@ import {
   securityUpdateArtifactSchema,
   substantialModificationAssessmentSchema,
   substantialModificationEvidenceReferenceSchema,
+  updateSecurityUpdateArtifactMetadataInputSchema,
   utcZDateTimeSchema,
 } from "./index.js";
 
@@ -445,6 +446,39 @@ describe("M2 V2 substantial-modification contracts", () => {
         updatedBy: id,
       }).status,
     ).toBe("superseded");
+  });
+
+  it("edits metadata without a content-identity field, accepting free-form signature metadata", () => {
+    expect(
+      updateSecurityUpdateArtifactMetadataInputSchema.parse({
+        expectedVersion: 3,
+        title: "Revised security update title",
+        supportedPlatform: "CRA appliance v2",
+        signatureMetadata: { algorithm: "ed25519", signer: "cra-releases" },
+      }),
+    ).toMatchObject({ expectedVersion: 3 });
+    expect(
+      updateSecurityUpdateArtifactMetadataInputSchema.parse({
+        expectedVersion: 3,
+        title: "Revised security update title",
+        supportedPlatform: "CRA appliance v2",
+      }).signatureMetadata,
+    ).toBeUndefined();
+    expect(
+      updateSecurityUpdateArtifactMetadataInputSchema.safeParse({
+        expectedVersion: 3,
+        title: "",
+        supportedPlatform: "CRA appliance v2",
+      }).success,
+    ).toBe(false);
+    expect(
+      updateSecurityUpdateArtifactMetadataInputSchema.safeParse({
+        expectedVersion: 3,
+        title: "Revised security update title",
+        supportedPlatform: "CRA appliance v2",
+        sha256: "b".repeat(64),
+      }).success,
+    ).toBe(false);
   });
 
   it("rejects non-UTC timestamps at the shared boundary", () => {

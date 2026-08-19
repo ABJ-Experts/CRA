@@ -156,6 +156,20 @@ export class SupabaseProductComplianceStorageAdapter implements ProductComplianc
     }
   }
 
+  /** The only place storage bytes are ever deleted; callers never touch storage directly. */
+  async remove(objectKey: string): Promise<void> {
+    this.assertReadableObjectKey(objectKey);
+    try {
+      const result = (await this.supabase
+        .admin()
+        .storage.from(bucket)
+        .remove([objectKey])) as StorageResponse<unknown>;
+      if (result.error) throw new ProductComplianceProviderError("unavailable");
+    } catch (error) {
+      throw this.providerError(error);
+    }
+  }
+
   private async digestAndProbe(
     blob: Blob,
   ): Promise<Readonly<{ sha256: string; byteSize: number; probe: Buffer }>> {

@@ -108,6 +108,55 @@ describe("SupabaseProductComplianceStorageAdapter", () => {
     });
   });
 
+  it("deletes only an org-first content-addressed object key", async () => {
+    const remove = jest
+      .fn()
+      .mockResolvedValue({ data: [{ name: objectKey }], error: null });
+    const storage = new SupabaseProductComplianceStorageAdapter({
+      admin: () => ({ storage: { from: () => ({ remove }) } }),
+    } as never);
+
+    await expect(storage.remove(objectKey)).resolves.toBeUndefined();
+    expect(remove).toHaveBeenCalledWith([objectKey]);
+  });
+
+  it("removes a legacy per-artifact object key during cleanup", async () => {
+    const remove = jest
+      .fn()
+      .mockResolvedValue({ data: [{ name: legacyObjectKey }], error: null });
+    const storage = new SupabaseProductComplianceStorageAdapter({
+      admin: () => ({ storage: { from: () => ({ remove }) } }),
+    } as never);
+
+    await expect(storage.remove(legacyObjectKey)).resolves.toBeUndefined();
+    expect(remove).toHaveBeenCalledWith([legacyObjectKey]);
+  });
+
+  it("rejects deleting a non-content-addressed path before calling storage", async () => {
+    const remove = jest.fn();
+    const storage = new SupabaseProductComplianceStorageAdapter({
+      admin: () => ({ storage: { from: () => ({ remove }) } }),
+    } as never);
+
+    await expect(
+      storage.remove(`${organizationId}/mutable/security-update.bin`),
+    ).rejects.toMatchObject({ code: "malformed" });
+    expect(remove).not.toHaveBeenCalled();
+  });
+
+  it("surfaces a storage removal failure as an unavailable provider error", async () => {
+    const remove = jest
+      .fn()
+      .mockResolvedValue({ data: null, error: { message: "network error" } });
+    const storage = new SupabaseProductComplianceStorageAdapter({
+      admin: () => ({ storage: { from: () => ({ remove }) } }),
+    } as never);
+
+    await expect(storage.remove(objectKey)).rejects.toMatchObject({
+      code: "unavailable",
+    });
+  });
+
   it("accepts a small text artifact when hash and size match but MIME probing is inconclusive", async () => {
     const bytes = Buffer.from("M2 V2 text update artifact\n");
     const download = jest.fn().mockResolvedValue({

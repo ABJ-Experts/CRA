@@ -42,6 +42,7 @@ import type {
   ReserveSecurityUpdateArtifactInput,
   ReviewSecurityUpdateArtifactInput,
   ReviewSubstantialModificationAssessmentInput,
+  UpdateSecurityUpdateArtifactMetadataInput,
   RelationshipPropagationEventsQuery,
   SoftwareBaselineListQuery,
   SecurityUpdateArtifactListQuery,
@@ -245,6 +246,38 @@ export function useSubstantialModificationAssessmentsQuery(
         query,
         signal,
       ),
+  });
+}
+
+/**
+ * The list endpoint already returns every status — including `superseded` —
+ * when no `status` filter is passed, so the full revision chain for one
+ * modification is just a client-side filter over a wide-enough page.
+ * ponytail: caps at 100 rows product-wide; paginate if a chain outgrows that.
+ */
+export function useSubstantialModificationAssessmentHistoryQuery(
+  productId: string,
+  modificationId: string,
+  enabled: boolean,
+) {
+  return useQuery({
+    queryKey: [
+      ...productKeys.modificationAssessments(productId),
+      "history",
+      modificationId,
+    ],
+    enabled: enabled && productId !== "" && modificationId !== "",
+    retry: false,
+    queryFn: async ({ signal }) => {
+      const response = await productsApi.listSubstantialModificationAssessments(
+        productId,
+        { pageSize: 100 },
+        signal,
+      );
+      return response.assessments.rows
+        .filter((row) => row.modificationId === modificationId)
+        .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+    },
   });
 }
 
@@ -740,6 +773,22 @@ export function useWithdrawSecurityUpdateArtifactMutation(
   return useMutation({
     mutationFn: (input: WithdrawSecurityUpdateArtifactInput) =>
       productsApi.withdrawSecurityUpdateArtifact(productId, artifactId, input),
+    onSuccess: () => invalidate(),
+  });
+}
+
+export function useUpdateSecurityUpdateArtifactMetadataMutation(
+  productId: string,
+  artifactId: string,
+) {
+  const invalidate = useInvalidateProductCompliance(productId);
+  return useMutation({
+    mutationFn: (input: UpdateSecurityUpdateArtifactMetadataInput) =>
+      productsApi.updateSecurityUpdateArtifactMetadata(
+        productId,
+        artifactId,
+        input,
+      ),
     onSuccess: () => invalidate(),
   });
 }

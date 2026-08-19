@@ -5,6 +5,7 @@ import {
   createSubstantialModificationAssessmentInputSchema,
   reserveSecurityUpdateArtifactInputSchema,
   reviewSubstantialModificationAssessmentInputSchema,
+  updateSecurityUpdateArtifactMetadataInputSchema,
   type SecurityUpdateArtifact,
   type SubstantialModificationAnswers,
   type SubstantialModificationAssessment,
@@ -25,7 +26,9 @@ import {
   useReviewSecurityUpdateArtifactMutation,
   useReviewSubstantialModificationAssessmentMutation,
   useSecurityUpdateArtifactsQuery,
+  useSubstantialModificationAssessmentHistoryQuery,
   useSubstantialModificationAssessmentsQuery,
+  useUpdateSecurityUpdateArtifactMetadataMutation,
   useWithdrawSecurityUpdateArtifactMutation,
 } from "../../_features/products/products.queries";
 import { productsApi } from "../../_features/products/products.api";
@@ -72,10 +75,73 @@ function errorMessage(error: unknown, fallback: string): string {
   return error instanceof ApiClientError ? error.message : fallback;
 }
 
+/** Same optimistic-lock signal `support-period-retention-section.tsx` reuses. */
+function isConflict(error: unknown): boolean {
+  return error instanceof ApiClientError && error.code === "conflict";
+}
+
+const flaggedOutcomes = new Set(["potentially_substantial", "substantial"]);
+
+/** An assessment is flagged once it has a substantial-leaning outcome and is
+ * still the governing revision — a superseded row's outcome is history. */
+function isFlagged(assessment: SubstantialModificationAssessment): boolean {
+  const outcome = assessment.determination ?? assessment.suggestion;
+  return (
+    assessment.status !== "superseded" &&
+    outcome !== null &&
+    flaggedOutcomes.has(outcome)
+  );
+}
+
+/** Only the states that currently render with no visual distinction from
+ * "everything is fine" get a short, distinct alert; the rest fall through. */
+function integrityAlertMessage(
+  status: SecurityUpdateArtifact["integrityStatus"],
+): string | null {
+  switch (status) {
+    case "hash_mismatch":
+      return "Hash mismatch";
+    case "type_mismatch":
+      return "Content type mismatch";
+    case "corrupt":
+      return "Artifact corrupt";
+    case "unavailable":
+      return "Artifact unavailable";
+    case "provider_unavailable":
+      return "Storage provider unavailable";
+    default:
+      return null;
+  }
+}
+
 function formatStatus(value: string): string {
   return value
     .replaceAll("_", " ")
     .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function winningRuleLabel(rule: string): string {
+  if (rule === "issued_at_plus_10_calendar_years")
+    return "Issued at plus 10 calendar years";
+  if (rule === "support_period_end") return "Support period end";
+  if (rule === "equal") return "Both candidates equal";
+  return formatStatus(rule);
+}
+
+/**
+ * A reassessment must be able to re-select the release it supersedes even
+ * when that release falls outside the page of releases the detail view
+ * loaded; missing ids keep a stable fallback label instead of vanishing.
+ */
+function mergeReleaseOptions(
+  releases: readonly ReleaseOption[],
+  assessmentReleaseIds: readonly string[],
+): readonly ReleaseOption[] {
+  const known = new Set(releases.map((release) => release.id));
+  const missing = assessmentReleaseIds
+    .filter((id) => !known.has(id))
+    .map((id) => ({ id, label: "Previously assessed release", version: "" }));
+  return [...releases, ...missing];
 }
 
 export function productComplianceHeadingId(title: string): string {
@@ -118,16 +184,28 @@ function Section({
   );
 }
 
+/** The `support-period-retention-section.tsx` conflict affordance, reused
+ * verbatim: a stale write only needs a way back to the latest version. */
+function ReloadButton({ onReload }: Readonly<{ onReload: () => void }>) {
+  return (
+    <Button type="button" variant="outline" tone="grey" onClick={onReload}>
+      Reload current data
+    </Button>
+  );
+}
+
 function AssessmentForm({
   productId,
   releases,
   assessment,
   onDone,
+  onReload,
 }: Readonly<{
   productId: string;
   releases: readonly ReleaseOption[];
   assessment?: SubstantialModificationAssessment;
   onDone?: () => void;
+  onReload?: () => void;
 }>) {
   const create = useCreateSubstantialModificationAssessmentMutation(productId);
   const saveDraft =
@@ -136,9 +214,18 @@ function AssessmentForm({
     productId,
     assessment?.id ?? "",
   );
-  const [releaseId, setReleaseId] = useState(
-    assessment?.releaseIds[0] ?? releases[0]?.id ?? "",
+  // The releases query can resolve after this form mounts, so the submitted
+  // release is derived: an explicit selection wins, otherwise the first
+  // release, otherwise empty (and the parse reports it). Initializing state
+  // once from `releases[0]?.id` raced the query and froze an empty selection.
+  const [selectedReleaseId, setSelectedReleaseId] = useState<string | null>(
+    assessment?.releaseIds[0] ?? null,
   );
+  const releaseId =
+    selectedReleaseId &&
+    releases.some((release) => release.id === selectedReleaseId)
+      ? selectedReleaseId
+      : (releases[0]?.id ?? "");
   const [answers, setAnswers] = useState<SubstantialModificationAnswers>(
     assessment &&
       Object.values(assessment.answers).every((answer) => answer !== null)
@@ -172,10 +259,12 @@ function AssessmentForm({
   );
   const [rationale, setRationale] = useState(assessment?.rationale ?? "");
   const [message, setMessage] = useState<string | null>(null);
+  const [staleUpdate, setStaleUpdate] = useState(false);
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setMessage(null);
+    setStaleUpdate(false);
     const base = {
       releaseIds: [releaseId],
       modificationIdentifier,
@@ -215,6 +304,7 @@ function AssessmentForm({
       }
       onDone?.();
     } catch (error) {
+      setStaleUpdate(isConflict(error));
       setMessage(errorMessage(error, "The assessment could not be saved."));
     }
   }
@@ -272,7 +362,7 @@ function AssessmentForm({
           aria-label="Affected release"
           className={fieldClassName}
           value={releaseId}
-          onChange={(event) => setReleaseId(event.target.value)}
+          onChange={(event) => setSelectedReleaseId(event.target.value)}
         >
           {releases.map((release) => (
             <option key={release.id} value={release.id}>
@@ -401,6 +491,7 @@ function AssessmentForm({
           {message}
         </p>
       ) : null}
+      {staleUpdate && onReload ? <ReloadButton onReload={onReload} /> : null}
       <Button
         type="submit"
         loading={create.isPending || reassess.isPending}
@@ -424,27 +515,114 @@ function AssessmentForm({
   );
 }
 
+function AssessmentHistory({
+  productId,
+  modificationId,
+}: Readonly<{ productId: string; modificationId: string }>) {
+  const history = useSubstantialModificationAssessmentHistoryQuery(
+    productId,
+    modificationId,
+    true,
+  );
+  return (
+    <div className="grid gap-2 rounded-xl bg-surface-subtle p-4">
+      <h4 className="text-caption-1-semibold text-fg">Assessment history</h4>
+      {history.isPending ? (
+        <p role="status" className="text-caption-1-regular text-fg-muted">
+          Loading history…
+        </p>
+      ) : history.isError ? (
+        <p role="alert" className="text-caption-1-regular text-danger">
+          {errorMessage(
+            history.error,
+            "Assessment history could not be loaded.",
+          )}
+        </p>
+      ) : (
+        <ul aria-label="Assessment revisions" className="grid gap-2">
+          {(history.data ?? []).map((revision, index) => {
+            const previous = (history.data ?? [])[index - 1];
+            const changed = new Set(
+              questions
+                .map(([key]) => key)
+                .filter(
+                  (key) =>
+                    previous !== undefined &&
+                    revision.answers[key] !== previous.answers[key],
+                ),
+            );
+            return (
+              <li
+                key={revision.id}
+                className="rounded-lg bg-canvas p-3 text-caption-1-regular text-fg"
+              >
+                <p className="text-caption-1-semibold text-fg">
+                  Revision {index + 1} · {formatStatus(revision.status)}
+                  {revision.determination
+                    ? ` · ${formatStatus(revision.determination)}`
+                    : ""}
+                </p>
+                {revision.reviewedBy ? (
+                  <p className="text-fg-muted">
+                    Reviewed by {revision.reviewedBy}
+                  </p>
+                ) : null}
+                <dl className="mt-1 grid gap-1">
+                  {questions.map(([key, label]) => (
+                    <div
+                      key={key}
+                      className={
+                        changed.has(key)
+                          ? "rounded bg-warning-surface px-1 text-warning-fg"
+                          : undefined
+                      }
+                    >
+                      <dt className="inline text-fg-muted">{label}: </dt>
+                      <dd className="inline">
+                        {revision.answers[key] === null
+                          ? "Not recorded"
+                          : formatStatus(revision.answers[key])}
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 function AssessmentRow({
   productId,
+  releases,
   assessment,
   canEdit,
   canApprove,
+  onReload,
 }: Readonly<{
   productId: string;
+  releases: readonly ReleaseOption[];
   assessment: SubstantialModificationAssessment;
   canEdit: boolean;
   canApprove: boolean;
+  onReload: () => void;
 }>) {
   const review = useReviewSubstantialModificationAssessmentMutation(
     productId,
     assessment.id,
   );
   const [showReassess, setShowReassess] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const [determination, setDetermination] = useState("potentially_substantial");
   const [rationale, setRationale] = useState("");
   const [overrideReason, setOverrideReason] = useState("");
   const [message, setMessage] = useState<string | null>(null);
+  const [staleUpdate, setStaleUpdate] = useState(false);
   async function submitReview() {
+    setStaleUpdate(false);
     const parsed = reviewSubstantialModificationAssessmentInputSchema.safeParse(
       {
         determination,
@@ -462,6 +640,7 @@ function AssessmentRow({
       await review.mutateAsync(parsed.data);
       setMessage("Assessment review recorded.");
     } catch (error) {
+      setStaleUpdate(isConflict(error));
       setMessage(errorMessage(error, "The assessment could not be reviewed."));
     }
   }
@@ -474,6 +653,14 @@ function AssessmentRow({
         <span className="rounded-full bg-surface-muted px-2 py-1 text-caption-1-semibold text-fg">
           {formatStatus(assessment.status)}
         </span>
+        {isFlagged(assessment) ? (
+          <span
+            role="alert"
+            className="rounded-full bg-danger-surface px-2 py-1 text-caption-1-semibold text-danger-fg"
+          >
+            Flagged for conformity follow-up
+          </span>
+        ) : null}
       </div>
       <p className="text-caption-1-regular text-fg">
         {assessment.modificationIdentifier ?? "Draft modification identifier"}
@@ -546,12 +733,23 @@ function AssessmentRow({
       {showReassess ? (
         <AssessmentForm
           productId={productId}
-          releases={assessment.releaseIds.map((id) => ({
-            id,
-            label: "Selected release",
-            version: "",
-          }))}
+          releases={mergeReleaseOptions(releases, assessment.releaseIds)}
           assessment={assessment}
+          onReload={onReload}
+        />
+      ) : null}
+      <Button
+        type="button"
+        variant="outline"
+        tone="grey"
+        onClick={() => setShowHistory((current) => !current)}
+      >
+        {showHistory ? "Hide history" : "View history"}
+      </Button>
+      {showHistory ? (
+        <AssessmentHistory
+          productId={productId}
+          modificationId={assessment.modificationId}
         />
       ) : null}
       {canApprove && assessment.status === "submitted_for_review" ? (
@@ -602,6 +800,7 @@ function AssessmentRow({
           {message}
         </p>
       ) : null}
+      {staleUpdate ? <ReloadButton onReload={onReload} /> : null}
     </li>
   );
 }
@@ -609,11 +808,17 @@ function AssessmentRow({
 function ArtifactRow({
   productId,
   artifact,
+  canEdit,
   canApprove,
+  knownArtifactIds,
+  onReload,
 }: Readonly<{
   productId: string;
   artifact: SecurityUpdateArtifact;
+  canEdit: boolean;
   canApprove: boolean;
+  knownArtifactIds: ReadonlySet<string>;
+  onReload: () => void;
 }>) {
   const finalize = useFinalizeSecurityUpdateArtifactMutation(
     productId,
@@ -637,15 +842,21 @@ function ArtifactRow({
   );
   const [reason, setReason] = useState("");
   const [replacementId, setReplacementId] = useState("");
+  const [rejectReason, setRejectReason] = useState("");
+  const [showRejectForm, setShowRejectForm] = useState(false);
+  const [showMetadataForm, setShowMetadataForm] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [staleUpdate, setStaleUpdate] = useState(false);
   const command = async (
     operation: () => Promise<unknown>,
     success: string,
   ) => {
+    setStaleUpdate(false);
     try {
       await operation();
       setMessage(success);
     } catch (error) {
+      setStaleUpdate(isConflict(error));
       setMessage(
         errorMessage(error, "The artifact action could not be completed."),
       );
@@ -663,7 +874,10 @@ function ArtifactRow({
     }
   };
   return (
-    <li className="grid gap-3 border-t border-border pt-4 first:border-t-0 first:pt-0">
+    <li
+      id={`artifact-${artifact.id}`}
+      className="grid gap-3 border-t border-border pt-4 first:border-t-0 first:pt-0"
+    >
       <div className="flex flex-wrap items-center gap-2">
         <h3 className="text-subhead-semibold text-fg">{artifact.title}</h3>
         <span className="rounded-full bg-surface-muted px-2 py-1 text-caption-1-semibold text-fg">
@@ -676,25 +890,79 @@ function ArtifactRow({
           <dd className="break-all">{artifact.sha256}</dd>
         </div>
         <div>
+          <dt className="text-fg-muted">Artifact type</dt>
+          <dd>{formatStatus(artifact.artifactType)}</dd>
+        </div>
+        <div>
           <dt className="text-fg-muted">Integrity</dt>
           <dd>{formatStatus(artifact.integrityStatus)}</dd>
         </div>
         <div>
-          <dt className="text-fg-muted">Availability rule</dt>
-          <dd>{artifact.availabilityRuleVersion}</dd>
+          <dt className="text-fg-muted">Availability until</dt>
+          <dd>
+            {artifact.availabilityUntil ??
+              (artifact.availabilityStatus === "blocked"
+                ? "Availability blocked"
+                : "Awaiting publication")}
+          </dd>
         </div>
         <div>
-          <dt className="text-fg-muted">Availability candidate</dt>
-          <dd>{artifact.availabilityUntil ?? "Availability blocked"}</dd>
+          <dt className="text-fg-muted">
+            Issued candidate (issue date plus 10 calendar years)
+          </dt>
+          <dd>{artifact.issuedCandidate ?? "Awaiting publication"}</dd>
+        </div>
+        <div>
+          <dt className="text-fg-muted">Support period candidate</dt>
+          <dd>{artifact.supportCandidate ?? "Awaiting publication"}</dd>
+        </div>
+        <div>
+          <dt className="text-fg-muted">Winning rule</dt>
+          <dd>
+            {artifact.availabilityWinningRule
+              ? `${winningRuleLabel(artifact.availabilityWinningRule)} · ${artifact.availabilityRuleVersion}`
+              : "Awaiting publication"}
+          </dd>
         </div>
         <div>
           <dt className="text-fg-muted">Distribution</dt>
-          <dd>{formatStatus(artifact.distributionKind)}</dd>
+          <dd>
+            {artifact.distributionKind === "external_reference" &&
+            artifact.distributionReference ? (
+              <>
+                Validated external reference ·{" "}
+                <span className="break-all">
+                  {artifact.distributionReference.title}
+                </span>{" "}
+                <span className="break-all">
+                  ({artifact.distributionReference.uri})
+                </span>
+              </>
+            ) : (
+              formatStatus(artifact.distributionKind)
+            )}
+          </dd>
         </div>
       </dl>
-      {artifact.integrityStatus === "hash_mismatch" ? (
+      {artifact.signatureMetadata ? (
+        <p className="text-caption-1-regular text-fg">
+          Signed with {artifact.signatureMetadata.algorithm} by{" "}
+          {artifact.signatureMetadata.signer}
+          {artifact.signatureMetadata.certificateSha256
+            ? ` (certificate ${artifact.signatureMetadata.certificateSha256})`
+            : ""}
+          .
+        </p>
+      ) : null}
+      {artifact.nonReductionApplied ? (
+        <p role="status" className="text-caption-1-regular text-fg">
+          Availability floor preserved: an earlier, longer availability window
+          was retained during recalculation.
+        </p>
+      ) : null}
+      {integrityAlertMessage(artifact.integrityStatus) ? (
         <p role="alert" className="text-caption-1-regular text-danger">
-          Hash mismatch
+          {integrityAlertMessage(artifact.integrityStatus)}
         </p>
       ) : null}
       {artifact.availabilityStatus === "blocked" ? (
@@ -707,9 +975,29 @@ function ArtifactRow({
           {artifact.statusExplanation.message}
         </p>
       ) : null}
+      {artifact.publicationStatus === "replaced" &&
+      artifact.replacementArtifactId ? (
+        <p className="text-caption-1-regular text-fg">
+          Replaced by artifact{" "}
+          {knownArtifactIds.has(artifact.replacementArtifactId) ? (
+            <a
+              href={`#artifact-${artifact.replacementArtifactId}`}
+              className="break-all underline"
+            >
+              {artifact.replacementArtifactId}
+            </a>
+          ) : (
+            <span className="break-all">
+              {artifact.replacementArtifactId}
+            </span>
+          )}
+        </p>
+      ) : null}
       {canApprove ? (
         <div className="flex flex-wrap gap-2">
-          {artifact.distributionKind === "authenticated_download" ? (
+          {artifact.distributionKind === "authenticated_download" &&
+          artifact.uploadStatus !== "finalized" &&
+          artifact.uploadStatus !== "missing" ? (
             <Button
               type="button"
               variant="outline"
@@ -749,8 +1037,19 @@ function ArtifactRow({
               Clear quarantine
             </Button>
           ) : null}
+          {artifact.reviewStatus === "pending_review" ? (
+            <Button
+              type="button"
+              variant="outline"
+              tone="grey"
+              onClick={() => setShowRejectForm((current) => !current)}
+            >
+              Reject artifact
+            </Button>
+          ) : null}
           {artifact.reviewStatus === "cleared" &&
-          artifact.integrityStatus === "verified" ? (
+          artifact.integrityStatus === "verified" &&
+          artifact.publicationStatus === "draft" ? (
             <Button
               type="button"
               onClick={() =>
@@ -767,6 +1066,39 @@ function ArtifactRow({
               Publish artifact
             </Button>
           ) : null}
+          {artifact.publicationStatus === "published" ? (
+            <Button
+              type="button"
+              variant="outline"
+              tone="grey"
+              onClick={() =>
+                void command(
+                  () =>
+                    withdraw.mutateAsync({
+                      reason:
+                        reason || "Withdrawal requested after replacement.",
+                      expectedVersion: artifact.version,
+                      idempotencyKey: idempotencyKey(),
+                    }),
+                  "Artifact withdrawn.",
+                )
+              }
+            >
+              Withdraw artifact
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
+      {canApprove && showRejectForm && artifact.reviewStatus === "pending_review" ? (
+        <div className="grid gap-2 rounded-xl bg-surface-subtle p-4">
+          <label className="grid gap-1 text-caption-1-semibold text-fg">
+            Rejection reason
+            <input
+              className={fieldClassName}
+              value={rejectReason}
+              onChange={(event) => setRejectReason(event.target.value)}
+            />
+          </label>
           <Button
             type="button"
             variant="outline"
@@ -774,16 +1106,17 @@ function ArtifactRow({
             onClick={() =>
               void command(
                 () =>
-                  withdraw.mutateAsync({
-                    reason: reason || "Withdrawal requested after replacement.",
+                  review.mutateAsync({
+                    decision: "reject",
+                    reason: rejectReason || "Quarantine review rejected.",
                     expectedVersion: artifact.version,
                     idempotencyKey: idempotencyKey(),
                   }),
-                "Artifact withdrawn.",
+                "Artifact rejected.",
               )
             }
           >
-            Withdraw artifact
+            Confirm rejection
           </Button>
         </div>
       ) : null}
@@ -797,7 +1130,24 @@ function ArtifactRow({
           Download artifact
         </Button>
       ) : null}
-      {canApprove ? (
+      {canEdit && artifact.publicationStatus !== "withdrawn" ? (
+        <Button
+          type="button"
+          variant="outline"
+          tone="grey"
+          onClick={() => setShowMetadataForm((current) => !current)}
+        >
+          {showMetadataForm ? "Hide metadata editor" : "Edit metadata"}
+        </Button>
+      ) : null}
+      {showMetadataForm ? (
+        <ArtifactMetadataForm
+          productId={productId}
+          artifact={artifact}
+          onReload={onReload}
+        />
+      ) : null}
+      {canApprove && artifact.publicationStatus === "published" ? (
         <div className="grid gap-2 sm:grid-cols-2">
           <label className="grid gap-1 text-caption-1-semibold text-fg">
             Replacement artifact ID
@@ -841,7 +1191,137 @@ function ArtifactRow({
           {message}
         </p>
       ) : null}
+      {staleUpdate ? <ReloadButton onReload={onReload} /> : null}
     </li>
+  );
+}
+
+function ArtifactMetadataForm({
+  productId,
+  artifact,
+  onDone,
+  onReload,
+}: Readonly<{
+  productId: string;
+  artifact: SecurityUpdateArtifact;
+  onDone?: () => void;
+  onReload: () => void;
+}>) {
+  const update = useUpdateSecurityUpdateArtifactMetadataMutation(
+    productId,
+    artifact.id,
+  );
+  const [title, setTitle] = useState(artifact.title);
+  const [supportedPlatform, setSupportedPlatform] = useState(
+    artifact.supportedPlatform,
+  );
+  const [algorithm, setAlgorithm] = useState(
+    artifact.signatureMetadata?.algorithm ?? "",
+  );
+  const [signer, setSigner] = useState(artifact.signatureMetadata?.signer ?? "");
+  const [certificateSha256, setCertificateSha256] = useState(
+    artifact.signatureMetadata?.certificateSha256 ?? "",
+  );
+  const [message, setMessage] = useState<string | null>(null);
+  const [staleUpdate, setStaleUpdate] = useState(false);
+
+  async function submit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setMessage(null);
+    setStaleUpdate(false);
+    const parsed = updateSecurityUpdateArtifactMetadataInputSchema.safeParse({
+      expectedVersion: artifact.version,
+      title,
+      supportedPlatform,
+      signatureMetadata:
+        algorithm || signer
+          ? {
+              algorithm,
+              signer,
+              certificateSha256: certificateSha256 || undefined,
+            }
+          : undefined,
+    });
+    if (!parsed.success) {
+      setMessage(
+        parsed.error.issues[0]?.message ?? "Check the artifact metadata.",
+      );
+      return;
+    }
+    try {
+      await update.mutateAsync(parsed.data);
+      setMessage("Artifact metadata updated.");
+      onDone?.();
+    } catch (error) {
+      setStaleUpdate(isConflict(error));
+      setMessage(
+        errorMessage(error, "The artifact metadata could not be updated."),
+      );
+    }
+  }
+
+  return (
+    <form
+      onSubmit={(event) => void submit(event)}
+      className="grid gap-3 rounded-xl bg-surface-subtle p-4"
+    >
+      <h4 className="text-subhead-semibold text-fg">Edit artifact metadata</h4>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <label className="grid gap-1 text-caption-1-semibold text-fg">
+          Updated artifact title
+          <input
+            className={fieldClassName}
+            value={title}
+            onChange={(event) => setTitle(event.target.value)}
+          />
+        </label>
+        <label className="grid gap-1 text-caption-1-semibold text-fg">
+          Updated supported platform
+          <input
+            className={fieldClassName}
+            value={supportedPlatform}
+            onChange={(event) => setSupportedPlatform(event.target.value)}
+          />
+        </label>
+        <label className="grid gap-1 text-caption-1-semibold text-fg">
+          Signature algorithm
+          <input
+            className={fieldClassName}
+            value={algorithm}
+            onChange={(event) => setAlgorithm(event.target.value)}
+          />
+        </label>
+        <label className="grid gap-1 text-caption-1-semibold text-fg">
+          Signer
+          <input
+            className={fieldClassName}
+            value={signer}
+            onChange={(event) => setSigner(event.target.value)}
+          />
+        </label>
+        <label className="grid gap-1 text-caption-1-semibold text-fg">
+          Certificate SHA-256
+          <input
+            className={fieldClassName}
+            value={certificateSha256}
+            onChange={(event) => setCertificateSha256(event.target.value)}
+          />
+        </label>
+      </div>
+      {message ? (
+        <p role="status" className="text-caption-1-regular text-fg">
+          {message}
+        </p>
+      ) : null}
+      {staleUpdate ? <ReloadButton onReload={onReload} /> : null}
+      <Button
+        type="submit"
+        loading={update.isPending}
+        loadingLabel="Saving artifact metadata"
+      >
+        Save artifact metadata
+      </Button>
+    </form>
   );
 }
 
@@ -851,12 +1331,32 @@ function ArtifactReservationForm({
 }: Readonly<{ productId: string; releases: readonly ReleaseOption[] }>) {
   const reserve = useReserveSecurityUpdateArtifactMutation(productId);
   const finalize = useFinalizeReservedSecurityUpdateArtifactMutation(productId);
-  const [releaseId, setReleaseId] = useState(releases[0]?.id ?? "");
+  // Same derived-selection rule as the assessment form: the releases query
+  // can resolve after mount, so an initialized empty selection must not win.
+  const [selectedReleaseId, setSelectedReleaseId] = useState<string | null>(
+    null,
+  );
+  const releaseId =
+    selectedReleaseId &&
+    releases.some((release) => release.id === selectedReleaseId)
+      ? selectedReleaseId
+      : (releases[0]?.id ?? "");
   const [file, setFile] = useState<File | null>(null);
   const [sha256, setSha256] = useState("");
   const [title, setTitle] = useState("");
   const [updateVersion, setUpdateVersion] = useState("");
   const [platform, setPlatform] = useState("");
+  const [artifactType, setArtifactType] = useState<
+    "software_update" | "firmware_update" | "security_advisory"
+  >("software_update");
+  const [issuedAt, setIssuedAt] = useState(() =>
+    // datetime-local holds the user's wall clock; seed it with the local
+    // time, not the UTC slice, or an untouched field records a shifted
+    // issue instant across timezones.
+    new Date(Date.now() - new Date().getTimezoneOffset() * 60_000)
+      .toISOString()
+      .slice(0, 16),
+  );
   const [distributionKind, setDistributionKind] = useState<
     "authenticated_download" | "external_reference"
   >("authenticated_download");
@@ -868,6 +1368,24 @@ function ArtifactReservationForm({
   );
   const [progress, setProgress] = useState<number | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  async function selectFile(selected: File | null) {
+    setFile(selected);
+    setSha256("");
+    if (!selected) return;
+    try {
+      const digest = await crypto.subtle.digest(
+        "SHA-256",
+        await selected.arrayBuffer(),
+      );
+      setSha256(
+        Array.from(new Uint8Array(digest), (byte) =>
+          byte.toString(16).padStart(2, "0"),
+        ).join(""),
+      );
+    } catch {
+      // Hashing is a convenience; the field stays editable for manual entry.
+    }
+  }
   async function reserveAndUpload(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setMessage(null);
@@ -875,7 +1393,7 @@ function ArtifactReservationForm({
       releaseId,
       updateVersion,
       title,
-      artifactType: "software_update",
+      artifactType,
       supportedPlatform: platform,
       distributionKind,
       externalReferenceCandidates:
@@ -903,7 +1421,8 @@ function ArtifactReservationForm({
           ? Number(externalByteSize)
           : file?.size,
       sha256,
-      issuedAt: new Date().toISOString(),
+      // An emptied field must reach the schema, not throw here.
+      issuedAt: issuedAt ? new Date(issuedAt).toISOString() : "",
       idempotencyKey: idempotencyKey(),
     });
     if (
@@ -964,7 +1483,7 @@ function ArtifactReservationForm({
         <select
           className={fieldClassName}
           value={releaseId}
-          onChange={(event) => setReleaseId(event.target.value)}
+          onChange={(event) => setSelectedReleaseId(event.target.value)}
         >
           {releases.map((release) => (
             <option key={release.id} value={release.id}>
@@ -991,13 +1510,32 @@ function ArtifactReservationForm({
           </option>
         </select>
       </label>
+      <label className="grid gap-1 text-caption-1-semibold text-fg">
+        Artifact type
+        <select
+          className={fieldClassName}
+          value={artifactType}
+          onChange={(event) =>
+            setArtifactType(
+              event.target.value as
+                "software_update" | "firmware_update" | "security_advisory",
+            )
+          }
+        >
+          <option value="software_update">Software update</option>
+          <option value="firmware_update">Firmware update</option>
+          <option value="security_advisory">Security advisory</option>
+        </select>
+      </label>
       {distributionKind === "authenticated_download" ? (
         <label className="grid gap-1 text-caption-1-semibold text-fg">
           Artifact file
           <input
             className={fieldClassName}
             type="file"
-            onChange={(event) => setFile(event.target.files?.[0] ?? null)}
+            onChange={(event) =>
+              void selectFile(event.target.files?.[0] ?? null)
+            }
           />
         </label>
       ) : (
@@ -1071,7 +1609,22 @@ function ArtifactReservationForm({
             onChange={(event) => setSha256(event.target.value)}
           />
         </label>
+        <label className="grid gap-1 text-caption-1-semibold text-fg">
+          Issued at (local time, stored as UTC)
+          <input
+            className={fieldClassName}
+            type="datetime-local"
+            value={issuedAt}
+            onChange={(event) => setIssuedAt(event.target.value)}
+          />
+        </label>
       </div>
+      {distributionKind === "authenticated_download" ? (
+        <p id="sha256-helper" className="text-caption-1-regular text-fg-muted">
+          Computed automatically from the selected file; edit only when
+          submitting a pre-computed digest.
+        </p>
+      ) : null}
       {progress !== null ? (
         <p role="status" className="text-caption-1-regular text-fg">
           Upload progress {Math.round(progress * 100)}%
@@ -1108,15 +1661,20 @@ export function ProductComplianceSections({
   canApprove: boolean;
   enabled: boolean;
 }>) {
+  const [assessmentPage, setAssessmentPage] = useState(1);
+  const [artifactPage, setArtifactPage] = useState(1);
   const assessments = useSubstantialModificationAssessmentsQuery(
     productId,
-    { page: 1, pageSize: 15 },
+    { page: assessmentPage, pageSize: 15 },
     enabled,
   );
   const artifacts = useSecurityUpdateArtifactsQuery(
     productId,
-    { page: 1, pageSize: 15 },
+    { page: artifactPage, pageSize: 15 },
     enabled,
+  );
+  const knownArtifactIds = new Set(
+    (artifacts.data?.artifacts.rows ?? []).map((artifact) => artifact.id),
   );
   return (
     <div className="grid gap-6">
@@ -1127,7 +1685,10 @@ export function ProductComplianceSections({
           </p>
         ) : assessments.isError ? (
           <p role="alert" className="text-subhead-regular text-danger">
-            Assessments could not be loaded.
+            {errorMessage(
+              assessments.error,
+              "Assessments could not be loaded.",
+            )}
           </p>
         ) : assessments.data?.assessments.rows.length === 0 ? (
           <p className="text-subhead-regular text-fg">
@@ -1139,15 +1700,61 @@ export function ProductComplianceSections({
               <AssessmentRow
                 key={assessment.id}
                 productId={productId}
+                releases={releases}
                 assessment={assessment}
                 canEdit={canEdit}
                 canApprove={canApprove}
+                onReload={() => void assessments.refetch()}
               />
             ))}
           </ul>
         )}
+        {(assessments.data?.assessments.pageCount ?? 1) > 1 ? (
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              tone="grey"
+              disabled={
+                Math.min(
+                  assessmentPage,
+                  assessments.data?.assessments.pageCount ?? 1,
+                ) <= 1
+              }
+              onClick={() => setAssessmentPage((page) => page - 1)}
+            >
+              Previous assessments
+            </Button>
+            <p className="text-caption-1-regular text-fg">
+              Page{" "}
+              {Math.min(
+                assessmentPage,
+                assessments.data?.assessments.pageCount ?? 1,
+              )}{" "}
+              of {assessments.data?.assessments.pageCount}
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              tone="grey"
+              disabled={
+                Math.min(
+                  assessmentPage,
+                  assessments.data?.assessments.pageCount ?? 1,
+                ) >= (assessments.data?.assessments.pageCount ?? 1)
+              }
+              onClick={() => setAssessmentPage((page) => page + 1)}
+            >
+              Next assessments
+            </Button>
+          </div>
+        ) : null}
         {canEdit ? (
-          <AssessmentForm productId={productId} releases={releases} />
+          <AssessmentForm
+            productId={productId}
+            releases={releases}
+            onReload={() => void assessments.refetch()}
+          />
         ) : null}
       </Section>
       <Section title="Security update artifacts">
@@ -1157,7 +1764,10 @@ export function ProductComplianceSections({
           </p>
         ) : artifacts.isError ? (
           <p role="alert" className="text-subhead-regular text-danger">
-            Security update artifacts could not be loaded.
+            {errorMessage(
+              artifacts.error,
+              "Security update artifacts could not be loaded.",
+            )}
           </p>
         ) : artifacts.data?.artifacts.rows.length === 0 ? (
           <p className="text-subhead-regular text-fg">
@@ -1170,11 +1780,51 @@ export function ProductComplianceSections({
                 key={artifact.id}
                 productId={productId}
                 artifact={artifact}
+                canEdit={canEdit}
                 canApprove={canApprove}
+                knownArtifactIds={knownArtifactIds}
+                onReload={() => void artifacts.refetch()}
               />
             ))}
           </ul>
         )}
+        {(artifacts.data?.artifacts.pageCount ?? 1) > 1 ? (
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              tone="grey"
+              disabled={
+                Math.min(
+                  artifactPage,
+                  artifacts.data?.artifacts.pageCount ?? 1,
+                ) <= 1
+              }
+              onClick={() => setArtifactPage((page) => page - 1)}
+            >
+              Previous artifacts
+            </Button>
+            <p className="text-caption-1-regular text-fg">
+              Page{" "}
+              {Math.min(artifactPage, artifacts.data?.artifacts.pageCount ?? 1)}{" "}
+              of {artifacts.data?.artifacts.pageCount}
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              tone="grey"
+              disabled={
+                Math.min(
+                  artifactPage,
+                  artifacts.data?.artifacts.pageCount ?? 1,
+                ) >= (artifacts.data?.artifacts.pageCount ?? 1)
+              }
+              onClick={() => setArtifactPage((page) => page + 1)}
+            >
+              Next artifacts
+            </Button>
+          </div>
+        ) : null}
         {canEdit ? (
           <ArtifactReservationForm productId={productId} releases={releases} />
         ) : null}

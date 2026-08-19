@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import { Injectable } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 import {
   securityUpdateArtifactResponseSchema,
   type SecurityUpdateArtifact,
@@ -12,6 +12,7 @@ import { NodeProductComplianceExternalReferenceValidator } from "../infrastructu
 import { SupabaseProductComplianceStorageAdapter } from "../infrastructure/supabase-product-compliance-storage.adapter";
 import {
   ProductComplianceWorkerFailure,
+  type ProductComplianceMeasurement,
   type ProductComplianceOutboxEvent,
   type ProductComplianceWorkerDependencies,
 } from "./product-compliance-worker";
@@ -30,6 +31,7 @@ const workTypes = [
   "security_update_artifact.availability_recalculate",
   "security_update_artifact.cleanup",
   "security_update_artifact.external_reference_monitor",
+  "security_update_artifact.integrity_reverify",
 ] as const;
 
 type WorkType = (typeof workTypes)[number];
@@ -41,6 +43,10 @@ type WorkType = (typeof workTypes)[number];
  */
 @Injectable()
 export class SupabaseProductComplianceWorkerAdapter {
+  private readonly logger = new Logger(
+    SupabaseProductComplianceWorkerAdapter.name,
+  );
+
   constructor(
     private readonly supabase: SupabaseService,
     private readonly storage: SupabaseProductComplianceStorageAdapter,
@@ -278,15 +284,74 @@ export class SupabaseProductComplianceWorkerAdapter {
           ]),
         );
         this.throwIfWorkerActorUnavailable(outcome);
-        return Object.freeze({
-          outcome:
-            outcome === "scheduled"
-              ? ("cleaned" as const)
-              : outcome === "blocked"
+        if (outcome !== "scheduled") {
+          return Object.freeze({
+            outcome:
+              outcome === "blocked"
                 ? ("blocked" as const)
                 : outcome === "not_found"
                   ? ("not_found" as const)
                   : ("conflict" as const),
+          });
+        }
+        await this.completeArtifactCleanup(
+          organizationId,
+          productId,
+          artifactId,
+        );
+        return Object.freeze({ outcome: "cleaned" as const });
+      },
+      reverify: async ({
+        organizationId,
+        productId,
+        artifactId,
+        expectedVersion,
+        sha256,
+        byteSize,
+        contentType,
+        objectKey,
+      }) => {
+        if (typeof objectKey !== "string") {
+          throw new ProductComplianceWorkerFailure("malformed_provider", false);
+        }
+        const inspection = await this.storage.inspect({
+          objectKey,
+          sha256,
+          byteSize,
+          contentType,
+        });
+        const { p_integrity_status: verifiedOutcome } =
+          inspectionArguments(inspection);
+        const row = await this.one(
+          "reverify_security_update_artifact_worker_atomic",
+          {
+            p_organization_id: organizationId,
+            p_product_id: productId,
+            p_artifact_id: artifactId,
+            p_expected_version: expectedVersion,
+            p_verified_outcome: verifiedOutcome,
+            p_correlation_id: randomUUID(),
+          },
+        );
+        const outcome = this.outcome(
+          row,
+          new Set([
+            "invalid_request",
+            "not_found",
+            "conflict",
+            "invalid_state",
+            "reverified",
+            "retryable_unavailable",
+          ]),
+        );
+        this.throwIfWorkerActorUnavailable(outcome);
+        return Object.freeze({
+          outcome:
+            outcome === "reverified"
+              ? ("reverified" as const)
+              : outcome === "not_found"
+                ? ("not_found" as const)
+                : ("conflict" as const),
         });
       },
       monitorExternalReference: async ({
@@ -378,6 +443,8 @@ export class SupabaseProductComplianceWorkerAdapter {
         return Object.freeze({ kind: "inspect" as const, ...base });
       case "security_update_artifact.cleanup":
         return Object.freeze({ kind: "cleanup" as const, ...base });
+      case "security_update_artifact.integrity_reverify":
+        return Object.freeze({ kind: "integrity_reverify" as const, ...base });
       case "security_update_artifact.external_reference_monitor":
         return Object.freeze({
           kind: "external_reference_monitor" as const,
@@ -390,6 +457,75 @@ export class SupabaseProductComplianceWorkerAdapter {
           byteSize: artifact.byteSize,
           externalReferenceCandidates: externalCandidates(artifact),
         });
+    }
+  }
+
+  /**
+   * Re-checks expiry, legal hold, and object-key sharing at execution time,
+   * then deletes the object and records completion. Every non-`clear`
+   * outcome (already completed, not yet due, held, shared, or a transient
+   * missing worker actor) is an expected deferred state, not a failure: it
+   * is logged by artifact id and outcome code only, never the object key.
+   */
+  private async completeArtifactCleanup(
+    organizationId: string,
+    productId: string,
+    artifactId: string,
+  ): Promise<void> {
+    const beginRow = await this.one(
+      "begin_security_update_artifact_cleanup_worker_atomic",
+      {
+        p_organization_id: organizationId,
+        p_product_id: productId,
+        p_artifact_id: artifactId,
+      },
+    );
+    const beginOutcome = this.outcome(
+      beginRow,
+      new Set([
+        "not_found",
+        "already_completed",
+        "not_due",
+        "legal_hold",
+        "shared_object",
+        "clear",
+        "retryable_unavailable",
+      ]),
+    );
+    if (beginOutcome !== "clear") {
+      this.logger.log(
+        `security_update_artifact_cleanup_deferred artifact=${artifactId} outcome=${beginOutcome}`,
+      );
+      return;
+    }
+    const objectKey =
+      typeof beginRow.object_key === "string" ? beginRow.object_key : null;
+    if (objectKey !== null) {
+      await this.storage.remove(objectKey);
+    }
+    const completeRow = await this.one(
+      "complete_security_update_artifact_cleanup_worker_atomic",
+      {
+        p_organization_id: organizationId,
+        p_product_id: productId,
+        p_artifact_id: artifactId,
+        p_object_removed: objectKey !== null,
+        p_correlation_id: randomUUID(),
+      },
+    );
+    const completeOutcome = this.outcome(
+      completeRow,
+      new Set([
+        "not_found",
+        "already_completed",
+        "completed",
+        "retryable_unavailable",
+      ]),
+    );
+    if (completeOutcome !== "completed") {
+      this.logger.log(
+        `security_update_artifact_cleanup_deferred artifact=${artifactId} outcome=${completeOutcome}`,
+      );
     }
   }
 
@@ -438,6 +574,46 @@ export class SupabaseProductComplianceWorkerAdapter {
       throw new ProductComplianceWorkerFailure("malformed_provider", false);
     }
     return this.record(result.data[0]);
+  }
+
+  /**
+   * Per-organization compliance gauges from the snapshot RPC. Read-only and
+   * audit-free: it observes state for the worker cycle and never mutates it.
+   */
+  async snapshotMetrics(
+    organizationId: string,
+  ): Promise<readonly ProductComplianceMeasurement[]> {
+    const row = await this.one("product_compliance_metrics_snapshot", {
+      p_organization_id: organizationId,
+    });
+    const count = (key: string): number => {
+      const value = row[key];
+      if (typeof value !== "number" || !Number.isFinite(value) || value < 0) {
+        throw new ProductComplianceWorkerFailure("malformed_provider", false);
+      }
+      return value;
+    };
+    return Object.freeze([
+      { metric: "review_backlog", value: count("assessment_backlog") },
+      { metric: "flagged_assessments", value: count("flagged_assessments") },
+      { metric: "quarantine", value: count("artifact_quarantine") },
+      { metric: "hash_mismatch", value: count("artifact_hash_mismatch") },
+      {
+        metric: "missing_object",
+        value:
+          count("artifact_provider_unavailable") +
+          count("artifact_upload_missing"),
+      },
+      { metric: "upload_failed", value: count("artifact_upload_failed") },
+      {
+        metric: "expiring_availability",
+        value: count("artifact_expiring_availability"),
+      },
+      {
+        metric: "availability_blocked",
+        value: count("artifact_availability_blocked"),
+      },
+    ]);
   }
 
   private async rows(

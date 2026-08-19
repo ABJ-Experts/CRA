@@ -27,6 +27,7 @@ describe("ProductsController", () => {
       publishSecurityUpdateArtifact: HttpStatus.OK,
       replaceSecurityUpdateArtifact: HttpStatus.OK,
       withdrawSecurityUpdateArtifact: HttpStatus.OK,
+      updateSecurityUpdateArtifactMetadata: HttpStatus.OK,
     };
 
     for (const [name, expectedStatus] of Object.entries(statusByHandler)) {
@@ -83,6 +84,7 @@ describe("ProductsController", () => {
       publishSecurityUpdateArtifact: "can_approve_products",
       replaceSecurityUpdateArtifact: "can_approve_products",
       withdrawSecurityUpdateArtifact: "can_approve_products",
+      updateSecurityUpdateArtifactMetadata: "can_edit_products",
       downloadSecurityUpdateArtifact: "can_view_products",
       createSoftwareBaseline: "can_edit_products",
       getSoftwareBaselineHistory: "can_view_products",
@@ -137,7 +139,11 @@ describe("ProductsController", () => {
         nextCursor: null,
       }),
     };
-    const controller = new ProductsController(products as never, {} as never);
+    const controller = new ProductsController(
+      products as never,
+      {} as never,
+      {} as never,
+    );
     const user = {
       id: "00000000-0000-4000-8000-000000000001",
       organizationId: "00000000-0000-4000-8000-000000000002",
@@ -221,6 +227,49 @@ describe("ProductsController", () => {
     });
   });
 
+  it("forwards a validated metadata edit to the compliance application boundary", async () => {
+    const compliance = {
+      updateArtifactMetadata: jest.fn().mockResolvedValue({
+        artifact: { id: "00000000-0000-4000-8000-000000000005" },
+      }),
+    };
+    const controller = new ProductsController(
+      {} as never,
+      {} as never,
+      compliance as never,
+    );
+    const user = {
+      id: "00000000-0000-4000-8000-000000000001",
+      organizationId: "00000000-0000-4000-8000-000000000002",
+      role: "admin",
+    } as RequestUser;
+    const input = {
+      expectedVersion: 3,
+      title: "Revised security update title",
+      supportedPlatform: "CRA revised test platform",
+    };
+
+    await expect(
+      controller.updateSecurityUpdateArtifactMetadata(
+        {
+          productId: "00000000-0000-4000-8000-000000000006",
+          artifactId: "00000000-0000-4000-8000-000000000005",
+        },
+        input,
+        user,
+      ),
+    ).resolves.toEqual({
+      artifact: { id: "00000000-0000-4000-8000-000000000005" },
+    });
+    expect(compliance.updateArtifactMetadata).toHaveBeenCalledWith({
+      organizationId: user.organizationId,
+      actorId: user.id,
+      productId: "00000000-0000-4000-8000-000000000006",
+      artifactId: "00000000-0000-4000-8000-000000000005",
+      input,
+    });
+  });
+
   it("requires delete permission only for withdrawal transitions", async () => {
     const products = {
       transitionReleaseLifecycle: jest.fn().mockResolvedValue({}),
@@ -229,6 +278,7 @@ describe("ProductsController", () => {
     const controller = new ProductsController(
       products as never,
       permissions as never,
+      {} as never,
     );
     const user = {
       id: "00000000-0000-4000-8000-000000000001",
@@ -278,6 +328,7 @@ describe("ProductsController", () => {
     const controller = new ProductsController(
       products as never,
       permissions as never,
+      {} as never,
     );
     const user = {
       id: "00000000-0000-4000-8000-000000000001",
@@ -320,6 +371,7 @@ describe("ProductsController", () => {
     const controller = new ProductsController(
       products as never,
       permissions as never,
+      {} as never,
     );
     const user = {
       id: "00000000-0000-4000-8000-000000000001",
@@ -363,7 +415,11 @@ describe("ProductsController", () => {
       getSupportAlertIntervals: jest.fn().mockResolvedValue({ intervals }),
       updateSupportAlertIntervals: jest.fn().mockResolvedValue({ intervals }),
     };
-    const controller = new ProductsController(products as never, {} as never);
+    const controller = new ProductsController(
+      products as never,
+      {} as never,
+      {} as never,
+    );
     const user = {
       id: "00000000-0000-4000-8000-000000000001",
       organizationId: "00000000-0000-4000-8000-000000000002",

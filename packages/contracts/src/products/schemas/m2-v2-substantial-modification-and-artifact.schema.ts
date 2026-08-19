@@ -623,6 +623,19 @@ export const withdrawSecurityUpdateArtifactInputSchema = z
     idempotencyKey: idempotencyKeySchema,
   })
   .strict();
+/**
+ * PATCH is self-idempotent via `expectedVersion`'s optimistic lock, so unlike
+ * every other mutation in this file this one carries no `idempotencyKey`.
+ * Metadata-only edit: never the immutable content-identity columns.
+ */
+export const updateSecurityUpdateArtifactMetadataInputSchema = z
+  .object({
+    expectedVersion: expectedVersionSchema,
+    title: requiredText(200),
+    supportedPlatform: requiredText(500),
+    signatureMetadata: z.record(z.string(), z.unknown()).optional(),
+  })
+  .strict();
 
 /** A signed URL is transient response data and is never part of the artifact. */
 export const securityUpdateArtifactUploadReservationSchema = z

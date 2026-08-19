@@ -99,12 +99,19 @@ export class SupabaseOnboardingEvidenceRecorder extends OnboardingEvidenceRecord
       throw new OrganizationRepositoryError("malformed");
     }
     const row: unknown = result.data[0];
-    if (
-      row === null ||
-      typeof row !== "object" ||
-      Array.isArray(row) ||
-      (row as Readonly<Record<string, unknown>>).outcome !== "recorded"
-    )
+    const outcome =
+      row !== null &&
+      typeof row === "object" &&
+      !Array.isArray(row) &&
+      typeof (row as Readonly<Record<string, unknown>>).outcome === "string"
+        ? ((row as Readonly<Record<string, unknown>>).outcome as string)
+        : null;
+    // Organizations without an onboarding record (seeded or established
+    // before onboarding existed) have no progress to record. The RPC says
+    // so with a graceful not_found; the delivered effect itself already
+    // succeeded, so this is a no-op rather than a provider failure.
+    if (outcome !== "recorded" && outcome !== "not_found") {
       throw new OrganizationRepositoryError("malformed");
+    }
   }
 }

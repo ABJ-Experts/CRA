@@ -85,4 +85,14 @@ describe("SupabaseOnboardingEvidenceRecorder", () => {
       ),
     ).rejects.toMatchObject({ code: "malformed" });
   });
+
+  it("treats a missing onboarding record as a recorded no-op for established organizations", async () => {
+    const missing = harness({
+      data: [{ outcome: "not_found" }],
+      error: null,
+    });
+    await expect(
+      missing.recorder.recordInvitationDelivery("org-1", "invite-1", "actor-1"),
+    ).resolves.toBeUndefined();
+  });
 });

@@ -102,6 +102,12 @@ export class ProductComplianceService {
     return this.unwrap(this.useCases.withdrawArtifact(command));
   }
 
+  updateArtifactMetadata(
+    command: Parameters<ProductComplianceUseCases["updateArtifactMetadata"]>[0],
+  ) {
+    return this.unwrap(this.useCases.updateArtifactMetadata(command));
+  }
+
   downloadArtifact(
     command: Parameters<ProductComplianceUseCases["downloadArtifact"]>[0],
   ) {

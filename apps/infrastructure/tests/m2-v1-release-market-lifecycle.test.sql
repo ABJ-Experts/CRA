@@ -729,6 +729,9 @@ begin
 
   v_failed := false;
   begin
+    -- Flush the deferred tenant-delete FK events queued by earlier fixture
+    -- inserts; ALTER TABLE cannot run while trigger events are pending.
+    set constraints all immediate;
     alter table public.product_releases drop constraint product_releases_lifecycle_check;
     update public.product_releases set lifecycle = 'released' where id = v_other_release;
     perform public.m2_assert_no_legacy_release_lifecycle();

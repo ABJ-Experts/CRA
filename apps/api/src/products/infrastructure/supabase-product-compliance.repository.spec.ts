@@ -243,6 +243,39 @@ describe("SupabaseProductComplianceRepository", () => {
     expect(calls[0]?.args).not.toHaveProperty("p_idempotency_key");
   });
 
+  it("sends a default empty signature-metadata object to the metadata-edit RPC when none is supplied", async () => {
+    const { repository, calls } = harness({
+      outcome: "updated",
+      artifact: artifactJson({ title: "Updated title" }),
+    });
+
+    await repository.updateArtifactMetadata(
+      organizationId,
+      actorId,
+      productId,
+      artifactId,
+      {
+        expectedVersion: 3,
+        title: "Updated title",
+        supportedPlatform: "CRA test platform",
+      },
+    );
+
+    expect(calls[0]).toMatchObject({
+      name: "update_product_security_update_artifact_metadata_atomic",
+      args: {
+        p_organization_id: organizationId,
+        p_product_id: productId,
+        p_artifact_id: artifactId,
+        p_actor_user_id: actorId,
+        p_expected_version: 3,
+        p_title: "Updated title",
+        p_supported_platform: "CRA test platform",
+        p_signature_metadata: {},
+      },
+    });
+  });
+
   it("does not pass client idempotency metadata to RPCs that do not accept it", async () => {
     const { repository, calls } = harness({
       outcome: "reviewed",

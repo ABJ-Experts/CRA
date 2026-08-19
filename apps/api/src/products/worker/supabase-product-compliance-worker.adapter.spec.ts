@@ -282,6 +282,273 @@ describe("SupabaseProductComplianceWorkerAdapter", () => {
       retryable: true,
     });
   });
+
+  it("maps the metrics snapshot RPC into worker gauge measurements", async () => {
+    const adapter = new SupabaseProductComplianceWorkerAdapter(
+      {
+        admin: () => ({
+          rpc: () =>
+            Promise.resolve({
+              data: [
+                {
+                  assessment_backlog: 2,
+                  flagged_assessments: 1,
+                  artifact_quarantine: 1,
+                  artifact_hash_mismatch: 0,
+                  artifact_provider_unavailable: 1,
+                  artifact_upload_missing: 2,
+                  artifact_upload_failed: 4,
+                  artifact_expiring_availability: 0,
+                  artifact_availability_blocked: 0,
+                },
+              ],
+              error: null,
+            }),
+        }),
+      } as never,
+      {} as never,
+      {} as never,
+    );
+
+    await expect(adapter.snapshotMetrics(organizationId)).resolves.toEqual([
+      { metric: "review_backlog", value: 2 },
+      { metric: "flagged_assessments", value: 1 },
+      { metric: "quarantine", value: 1 },
+      { metric: "hash_mismatch", value: 0 },
+      { metric: "missing_object", value: 3 },
+      { metric: "upload_failed", value: 4 },
+      { metric: "expiring_availability", value: 0 },
+      { metric: "availability_blocked", value: 0 },
+    ]);
+  });
+
+  it("reverifies a still-intact private object and forwards the verified outcome", async () => {
+    const calls: Array<
+      Readonly<{ name: string; args: Readonly<Record<string, unknown>> }>
+    > = [];
+    const storage = {
+      inspect: jest.fn().mockResolvedValue({
+        outcome: "verified",
+        sha256: hash,
+        byteSize: 1024,
+        contentType: "application/octet-stream",
+      }),
+    };
+    const adapter = new SupabaseProductComplianceWorkerAdapter(
+      {
+        admin: () => ({
+          rpc: (name: string, args: Readonly<Record<string, unknown>>) => {
+            calls.push(Object.freeze({ name, args }));
+            return Promise.resolve({
+              data: [{ outcome: "reverified", artifact: artifactJson() }],
+              error: null,
+            });
+          },
+        }),
+      } as never,
+      storage as never,
+      {} as never,
+    );
+
+    await expect(
+      adapter.processor.reverify({
+        organizationId,
+        productId,
+        artifactId,
+        actorId,
+        expectedVersion: 3,
+        sha256: hash,
+        byteSize: 1024,
+        contentType: "application/octet-stream",
+        objectKey: `${organizationId}/${hash}`,
+      }),
+    ).resolves.toEqual({ outcome: "reverified" });
+
+    expect(storage.inspect).toHaveBeenCalledWith({
+      objectKey: `${organizationId}/${hash}`,
+      sha256: hash,
+      byteSize: 1024,
+      contentType: "application/octet-stream",
+    });
+    expect(calls[0]).toMatchObject({
+      name: "reverify_security_update_artifact_worker_atomic",
+      args: { p_expected_version: 3, p_verified_outcome: "verified" },
+    });
+  });
+
+  it("reverifies a private object that has gone missing from storage", async () => {
+    const calls: Array<
+      Readonly<{ name: string; args: Readonly<Record<string, unknown>> }>
+    > = [];
+    const storage = {
+      inspect: jest.fn().mockResolvedValue({ outcome: "missing" }),
+    };
+    const adapter = new SupabaseProductComplianceWorkerAdapter(
+      {
+        admin: () => ({
+          rpc: (name: string, args: Readonly<Record<string, unknown>>) => {
+            calls.push(Object.freeze({ name, args }));
+            return Promise.resolve({
+              data: [{ outcome: "reverified", artifact: artifactJson() }],
+              error: null,
+            });
+          },
+        }),
+      } as never,
+      storage as never,
+      {} as never,
+    );
+
+    await expect(
+      adapter.processor.reverify({
+        organizationId,
+        productId,
+        artifactId,
+        actorId,
+        expectedVersion: 3,
+        sha256: hash,
+        byteSize: 1024,
+        contentType: "application/octet-stream",
+        objectKey: `${organizationId}/${hash}`,
+      }),
+    ).resolves.toEqual({ outcome: "reverified" });
+
+    expect(calls[0]).toMatchObject({
+      name: "reverify_security_update_artifact_worker_atomic",
+      args: { p_verified_outcome: "missing" },
+    });
+  });
+
+  it("deletes the shared-free private object and completes cleanup once scheduling succeeds", async () => {
+    const calls: Array<
+      Readonly<{ name: string; args: Readonly<Record<string, unknown>> }>
+    > = [];
+    const storage = { remove: jest.fn().mockResolvedValue(undefined) };
+    const objectKey = `${organizationId}/${hash}`;
+    const adapter = new SupabaseProductComplianceWorkerAdapter(
+      {
+        admin: () => ({
+          rpc: (name: string, args: Readonly<Record<string, unknown>>) => {
+            calls.push(Object.freeze({ name, args }));
+            if (
+              name === "schedule_security_update_artifact_cleanup_worker_atomic"
+            ) {
+              return Promise.resolve({
+                data: [{ outcome: "scheduled", artifact: artifactJson() }],
+                error: null,
+              });
+            }
+            if (
+              name === "begin_security_update_artifact_cleanup_worker_atomic"
+            ) {
+              return Promise.resolve({
+                data: [{ outcome: "clear", object_key: objectKey }],
+                error: null,
+              });
+            }
+            return Promise.resolve({
+              data: [{ outcome: "completed", artifact: artifactJson() }],
+              error: null,
+            });
+          },
+        }),
+      } as never,
+      storage as never,
+      {} as never,
+    );
+
+    await expect(
+      adapter.processor.cleanup({
+        organizationId,
+        productId,
+        artifactId,
+        actorId,
+      }),
+    ).resolves.toEqual({ outcome: "cleaned" });
+
+    expect(storage.remove).toHaveBeenCalledWith(objectKey);
+    expect(calls.map((call) => call.name)).toEqual([
+      "schedule_security_update_artifact_cleanup_worker_atomic",
+      "begin_security_update_artifact_cleanup_worker_atomic",
+      "complete_security_update_artifact_cleanup_worker_atomic",
+    ]);
+    expect(calls[2]).toMatchObject({ args: { p_object_removed: true } });
+  });
+
+  it.each([
+    "shared_object",
+    "legal_hold",
+    "not_due",
+    "already_completed",
+  ] as const)(
+    "defers cleanup without deleting storage or erroring when begin returns %s",
+    async (outcome) => {
+      const calls: string[] = [];
+      const storage = { remove: jest.fn() };
+      const adapter = new SupabaseProductComplianceWorkerAdapter(
+        {
+          admin: () => ({
+            rpc: (name: string) => {
+              calls.push(name);
+              if (
+                name ===
+                "schedule_security_update_artifact_cleanup_worker_atomic"
+              ) {
+                return Promise.resolve({
+                  data: [{ outcome: "scheduled", artifact: artifactJson() }],
+                  error: null,
+                });
+              }
+              return Promise.resolve({
+                data: [{ outcome, object_key: null }],
+                error: null,
+              });
+            },
+          }),
+        } as never,
+        storage as never,
+        {} as never,
+      );
+
+      await expect(
+        adapter.processor.cleanup({
+          organizationId,
+          productId,
+          artifactId,
+          actorId,
+        }),
+      ).resolves.toEqual({ outcome: "cleaned" });
+
+      expect(storage.remove).not.toHaveBeenCalled();
+      expect(calls).toEqual([
+        "schedule_security_update_artifact_cleanup_worker_atomic",
+        "begin_security_update_artifact_cleanup_worker_atomic",
+      ]);
+    },
+  );
+
+  it("rejects a malformed metrics snapshot row as a provider failure", async () => {
+    const adapter = new SupabaseProductComplianceWorkerAdapter(
+      {
+        admin: () => ({
+          rpc: () =>
+            Promise.resolve({
+              data: [{ assessment_backlog: "two" }],
+              error: null,
+            }),
+        }),
+      } as never,
+      {} as never,
+      {} as never,
+    );
+
+    await expect(adapter.snapshotMetrics(organizationId)).rejects.toMatchObject(
+      {
+        code: "malformed_provider",
+        retryable: false,
+      },
+    );
+  });
 });
 
 function artifactJson(overrides: Record<string, unknown> = {}) {

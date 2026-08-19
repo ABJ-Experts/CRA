@@ -157,6 +157,16 @@ export const envSchema = z.object({
     .optional()
     .default(""),
   /**
+   * Upper bound for in-request artifact inspection during finalize. Larger
+   * objects stay pending and are finalized by the durable inspect worker so
+   * the API never buffers them in memory. Capped at the bucket file limit.
+   */
+  PRODUCT_COMPLIANCE_MAX_SYNC_INSPECT_BYTES: boundedInt(
+    67_108_864,
+    2_147_483_647,
+    "must not exceed the artifact bucket file limit",
+  ),
+  /**
    * With no scanner adapter configured, decoded raster-only inspection remains
    * available in non-strict environments and is recorded in the audit trail.
    * Strict deployments quarantine instead, so an invalid value must fail boot.

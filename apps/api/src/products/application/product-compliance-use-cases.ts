@@ -18,6 +18,7 @@ import type {
   SubstantialModificationAssessmentListQuery,
   SubstantialModificationAssessmentListResponse,
   SubstantialModificationAssessmentResponse,
+  UpdateSecurityUpdateArtifactMetadataInput,
   WithdrawSecurityUpdateArtifactInput,
 } from "@repo/contracts/products";
 
@@ -252,6 +253,13 @@ export interface ProductComplianceRepository {
   ): Promise<
     ComplianceMutationOutcome<SecurityUpdateArtifact, "withdrawn" | "replayed">
   >;
+  updateArtifactMetadata(
+    organizationId: string,
+    actorId: string,
+    productId: string,
+    artifactId: string,
+    input: UpdateSecurityUpdateArtifactMetadataInput,
+  ): Promise<ComplianceMutationOutcome<SecurityUpdateArtifact, "updated">>;
   requestArtifactDownload(
     organizationId: string,
     actorId: string,
@@ -293,6 +301,8 @@ export interface ProductComplianceStoragePort {
       contentType: string;
     }>,
   ): Promise<ProductComplianceInspection>;
+  /** The only place storage bytes are ever deleted; callers never touch storage directly. */
+  remove(objectKey: string): Promise<void>;
 }
 
 /** Trust boundary for externally hosted update references. */
@@ -328,6 +338,7 @@ export class ProductComplianceUseCases {
     private readonly repository: ProductComplianceRepository,
     private readonly storage: ProductComplianceStoragePort,
     private readonly externalReferences?: ProductComplianceExternalReferenceValidator,
+    private readonly maxSyncInspectBytes: number = 67_108_864,
   ) {}
 
   async listAssessments(
@@ -663,6 +674,12 @@ export class ProductComplianceUseCases {
       if (current.artifact.distributionKind === "external_reference") {
         return failure(Object.freeze({ code: "invalid_state" as const }));
       }
+      if (current.artifact.byteSize > this.maxSyncInspectBytes) {
+        // Large objects never buffer through the API request. Reservation
+        // already enqueued the durable inspect event, so the worker
+        // finalizes them out of band; return the pending state for polling.
+        return success(Object.freeze({ artifact: current.artifact }));
+      }
       const inspection = await this.storage.inspect({
         objectKey: artifactObjectKey(
           command.organizationId,
@@ -815,6 +832,30 @@ export class ProductComplianceUseCases {
     }
   }
 
+  async updateArtifactMetadata(
+    command: Readonly<{
+      organizationId: string;
+      actorId: string;
+      productId: string;
+      artifactId: string;
+      input: UpdateSecurityUpdateArtifactMetadataInput;
+    }>,
+  ): Promise<ProductComplianceResult<SecurityUpdateArtifactResponse>> {
+    try {
+      return this.artifactMutation(
+        await this.repository.updateArtifactMetadata(
+          command.organizationId,
+          command.actorId,
+          command.productId,
+          command.artifactId,
+          command.input,
+        ),
+      );
+    } catch (error) {
+      return this.providerFailure(error);
+    }
+  }
+
   async downloadArtifact(
     command: Readonly<{
       organizationId: string;
@@ -863,6 +904,7 @@ export class ProductComplianceUseCases {
       | "published"
       | "replaced"
       | "withdrawn"
+      | "updated"
     >,
   ): ProductComplianceResult<SecurityUpdateArtifactResponse> {
     return "value" in result

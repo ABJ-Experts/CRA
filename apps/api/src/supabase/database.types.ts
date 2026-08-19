@@ -4031,6 +4031,8 @@ export type Database = {
           availability_until: string | null
           availability_winning_rule: string | null
           byte_size: number
+          cleanup_completed_at: string | null
+          cleanup_completed_by: string | null
           cleanup_scheduled_at: string | null
           cleanup_scheduled_by: string | null
           computed_availability_until: string | null
@@ -4087,6 +4089,8 @@ export type Database = {
           availability_until?: string | null
           availability_winning_rule?: string | null
           byte_size: number
+          cleanup_completed_at?: string | null
+          cleanup_completed_by?: string | null
           cleanup_scheduled_at?: string | null
           cleanup_scheduled_by?: string | null
           computed_availability_until?: string | null
@@ -4143,6 +4147,8 @@ export type Database = {
           availability_until?: string | null
           availability_winning_rule?: string | null
           byte_size?: number
+          cleanup_completed_at?: string | null
+          cleanup_completed_by?: string | null
           cleanup_scheduled_at?: string | null
           cleanup_scheduled_by?: string | null
           computed_availability_until?: string | null
@@ -4222,6 +4228,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "product_support_periods"
             referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "product_security_update_artifacts_cleanup_completed_by_fkey"
+            columns: ["cleanup_completed_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "product_security_update_artifacts_cleanup_scheduled_by_fkey"
@@ -5664,6 +5677,28 @@ export type Database = {
         }[]
       }
       backfill_organization_legal_entities: { Args: never; Returns: undefined }
+      begin_product_security_update_artifact_cleanup_atomic: {
+        Args: {
+          p_artifact_id: string
+          p_organization_id: string
+          p_product_id: string
+        }
+        Returns: {
+          object_key: string
+          outcome: string
+        }[]
+      }
+      begin_security_update_artifact_cleanup_worker_atomic: {
+        Args: {
+          p_artifact_id: string
+          p_organization_id: string
+          p_product_id: string
+        }
+        Returns: {
+          object_key: string
+          outcome: string
+        }[]
+      }
       bump_session_epoch: { Args: { p_user_id: string }; Returns: undefined }
       cancel_product_import_job: {
         Args: {
@@ -6000,6 +6035,20 @@ export type Database = {
           retry_count: number
         }[]
       }
+      complete_product_security_update_artifact_cleanup_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_artifact_id: string
+          p_correlation_id: string
+          p_object_removed: boolean
+          p_organization_id: string
+          p_product_id: string
+        }
+        Returns: {
+          artifact: Json
+          outcome: string
+        }[]
+      }
       complete_product_security_update_artifact_work_atomic: {
         Args: {
           p_delivery_id: string
@@ -6033,6 +6082,19 @@ export type Database = {
         }
         Returns: {
           checkpoint_version: number
+          outcome: string
+        }[]
+      }
+      complete_security_update_artifact_cleanup_worker_atomic: {
+        Args: {
+          p_artifact_id: string
+          p_correlation_id: string
+          p_object_removed: boolean
+          p_organization_id: string
+          p_product_id: string
+        }
+        Returns: {
+          artifact: Json
           outcome: string
         }[]
       }
@@ -6666,24 +6728,6 @@ export type Database = {
         }[]
       }
       finalize_product_security_update_artifact_atomic: {
-        Args: {
-          p_actor_user_id: string
-          p_artifact_id: string
-          p_correlation_id: string
-          p_expected_version: number
-          p_integrity_status: string
-          p_organization_id: string
-          p_product_id: string
-          p_verified_byte_size: number
-          p_verified_content_type: string
-          p_verified_sha256: string
-        }
-        Returns: {
-          artifact: Json
-          outcome: string
-        }[]
-      }
-      finalize_product_security_update_artifact_atomic_base: {
         Args: {
           p_actor_user_id: string
           p_artifact_id: string
@@ -7629,6 +7673,17 @@ export type Database = {
         Returns: string
       }
       m2_v2_command_digest: { Args: { p_payload: Json }; Returns: string }
+      m2_v2_record_security_update_artifact_worker_effect: {
+        Args: {
+          p_artifact_id: string
+          p_correlation_id: string
+          p_operation: string
+          p_organization_id: string
+          p_source_updated_by: string
+          p_worker_actor: string
+        }
+        Returns: undefined
+      }
       m2_v2_resolve_security_update_artifact_worker_actor: {
         Args: { p_organization_id: string }
         Returns: string
@@ -7643,6 +7698,12 @@ export type Database = {
       m2_v2_set_artifact_retention_fact: {
         Args: {
           p_artifact: Database["public"]["Tables"]["product_security_update_artifacts"]["Row"]
+        }
+        Returns: undefined
+      }
+      m2_v2_set_assessment_retention_fact: {
+        Args: {
+          p_assessment: Database["public"]["Tables"]["product_substantial_modification_assessments"]["Row"]
         }
         Returns: undefined
       }
@@ -7806,6 +7867,20 @@ export type Database = {
           preview: Json
         }[]
       }
+      product_compliance_metrics_snapshot: {
+        Args: { p_organization_id: string }
+        Returns: {
+          artifact_availability_blocked: number
+          artifact_expiring_availability: number
+          artifact_hash_mismatch: number
+          artifact_provider_unavailable: number
+          artifact_quarantine: number
+          artifact_upload_failed: number
+          artifact_upload_missing: number
+          assessment_backlog: number
+          flagged_assessments: number
+        }[]
+      }
       product_import_commit_references_valid: {
         Args: { p_import_id: string; p_organization_id: string }
         Returns: boolean
@@ -7843,21 +7918,6 @@ export type Database = {
         }[]
       }
       publish_product_security_update_artifact_atomic: {
-        Args: {
-          p_actor_user_id: string
-          p_artifact_id: string
-          p_correlation_id: string
-          p_expected_version: number
-          p_organization_id: string
-          p_product_id: string
-          p_published_external_references: Json
-        }
-        Returns: {
-          artifact: Json
-          outcome: string
-        }[]
-      }
-      publish_product_security_update_artifact_atomic_base: {
         Args: {
           p_actor_user_id: string
           p_artifact_id: string
@@ -8254,32 +8314,6 @@ export type Database = {
           outcome: string
         }[]
       }
-      reserve_product_security_update_artifact_atomic_base: {
-        Args: {
-          p_actor_user_id: string
-          p_artifact_type: string
-          p_byte_size: number
-          p_content_type: string
-          p_correlation_id: string
-          p_distribution_kind: string
-          p_file_name: string
-          p_idempotency_key: string
-          p_issued_at: string
-          p_organization_id: string
-          p_product_id: string
-          p_release_id: string
-          p_sha256: string
-          p_signature_metadata: Json
-          p_supported_platform: string
-          p_title: string
-          p_update_version: string
-          p_validated_external_references: Json
-        }
-        Returns: {
-          artifact: Json
-          outcome: string
-        }[]
-      }
       resolve_active_organization_legal_entity_context: {
         Args: { p_legal_entity_id: string; p_organization_id: string }
         Returns: {
@@ -8287,7 +8321,7 @@ export type Database = {
           outcome: string
         }[]
       }
-      review_product_security_update_artifact_atomic: {
+      reverify_product_security_update_artifact_atomic: {
         Args: {
           p_actor_user_id: string
           p_artifact_id: string
@@ -8295,15 +8329,28 @@ export type Database = {
           p_expected_version: number
           p_organization_id: string
           p_product_id: string
-          p_review_decision: string
-          p_review_reason: string
+          p_verified_outcome: string
         }
         Returns: {
           artifact: Json
           outcome: string
         }[]
       }
-      review_product_security_update_artifact_atomic_base: {
+      reverify_security_update_artifact_worker_atomic: {
+        Args: {
+          p_artifact_id: string
+          p_correlation_id: string
+          p_expected_version: number
+          p_organization_id: string
+          p_product_id: string
+          p_verified_outcome: string
+        }
+        Returns: {
+          artifact: Json
+          outcome: string
+        }[]
+      }
+      review_product_security_update_artifact_atomic: {
         Args: {
           p_actor_user_id: string
           p_artifact_id: string
@@ -8657,6 +8704,23 @@ export type Database = {
         Returns: {
           outcome: string
           release: Json
+        }[]
+      }
+      update_product_security_update_artifact_metadata_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_artifact_id: string
+          p_correlation_id: string
+          p_expected_version: number
+          p_organization_id: string
+          p_product_id: string
+          p_signature_metadata: Json
+          p_supported_platform: string
+          p_title: string
+        }
+        Returns: {
+          artifact: Json
+          outcome: string
         }[]
       }
       user_is_member_of: { Args: { p_org_id: string }; Returns: boolean }

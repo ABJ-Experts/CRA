@@ -104,6 +104,9 @@ Supabase or decide legal state.
   generated types, API/workers, then UI. RLS is enabled but not forced; browser
   roles and `PUBLIC` are revoked and `service_role` is explicitly granted. Each
   security-definer function pins `search_path = public, pg_temp`.
+- Tenant-export note: artifact BYTES export remains a deferred follow-up; the
+  `UnavailableTenantExportArtifactSnapshotAdapter` still fails closed, and only
+  table rows are registered in the export source registry.
 
 ## Lifecycle and failure behavior
 
@@ -162,10 +165,14 @@ Supabase or decide legal state.
   hash/type failure, stale reservation recovery, replacement/withdrawal race,
   legal-hold cleanup race, export inclusion, and the existing helper's revoked
   `PUBLIC` execute privilege.
-- Worker measurements include review backlog, flagged assessments, upload and
-  inspection failures, quarantine, hash mismatch, expiring availability,
-  missing objects, and blocked cleanup. They expose counts/identifiers, not
-  bytes, URLs, or confidential content.
+- The worker emits failure and retry measurements (upload/inspection failure,
+  retry count, blocked cleanup) plus per-cycle per-organization gauge
+  snapshots: `review_backlog`, `flagged_assessments`, `quarantine`,
+  `hash_mismatch`, `missing_object` (provider-unavailable plus upload-missing),
+  `expiring_availability` within 30 days, and `availability_blocked`. Gauges
+  come from the `product_compliance_metrics_snapshot` RPC and reach operations
+  through a structured-log observer wired in ProductsModule; logs contain
+  identifiers and counts only, never bytes, URLs, or confidential content.
 - Browser and live-stack tests use only unique run-scoped records and delete
   only records created by that run. No database reset, existing test-artifact
   deletion, stash mutation, or remote project mutation is part of verification.

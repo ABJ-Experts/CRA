@@ -95,6 +95,7 @@ import {
   publishSecurityUpdateArtifactInputSchema,
   replaceSecurityUpdateArtifactInputSchema,
   withdrawSecurityUpdateArtifactInputSchema,
+  updateSecurityUpdateArtifactMetadataInputSchema,
   securityUpdateArtifactResponseSchema,
   securityUpdateArtifactListResponseSchema,
   securityUpdateArtifactReserveResponseSchema,
@@ -149,6 +150,7 @@ import {
   type PublishSecurityUpdateArtifactInput,
   type ReplaceSecurityUpdateArtifactInput,
   type WithdrawSecurityUpdateArtifactInput,
+  type UpdateSecurityUpdateArtifactMetadataInput,
 } from "@repo/contracts/products";
 
 import {
@@ -172,7 +174,7 @@ export class ProductsController {
   constructor(
     private readonly products: ProductsService,
     private readonly permissions: PermissionsService,
-    private readonly compliance?: ProductComplianceService,
+    private readonly compliance: ProductComplianceService,
   ) {}
 
   @RequirePermissions("can_view_products")
@@ -927,7 +929,7 @@ export class ProductsController {
     query: SubstantialModificationAssessmentListQuery,
     @CurrentUser() user: RequestUser,
   ) {
-    return this.complianceService().listAssessments({
+    return this.compliance.listAssessments({
       organizationId: this.organizationId(user),
       actorId: user.id,
       productId: params.productId,
@@ -943,7 +945,7 @@ export class ProductsController {
     params: SubstantialModificationAssessmentParams,
     @CurrentUser() user: RequestUser,
   ) {
-    return this.complianceService().getAssessment({
+    return this.compliance.getAssessment({
       organizationId: this.organizationId(user),
       actorId: user.id,
       productId: params.productId,
@@ -961,7 +963,7 @@ export class ProductsController {
     input: CreateSubstantialModificationAssessmentInput,
     @CurrentUser() user: RequestUser,
   ) {
-    return this.complianceService().createAssessment({
+    return this.compliance.createAssessment({
       organizationId: this.organizationId(user),
       actorId: user.id,
       productId: params.productId,
@@ -979,7 +981,7 @@ export class ProductsController {
     input: CreateSubstantialModificationAssessmentDraftInput,
     @CurrentUser() user: RequestUser,
   ) {
-    return this.complianceService().createAssessmentDraft({
+    return this.compliance.createAssessmentDraft({
       organizationId: this.organizationId(user),
       actorId: user.id,
       productId: params.productId,
@@ -998,7 +1000,7 @@ export class ProductsController {
     input: ReassessSubstantialModificationAssessmentInput,
     @CurrentUser() user: RequestUser,
   ) {
-    return this.complianceService().reassessAssessment({
+    return this.compliance.reassessAssessment({
       organizationId: this.organizationId(user),
       actorId: user.id,
       productId: params.productId,
@@ -1018,7 +1020,7 @@ export class ProductsController {
     input: ReviewSubstantialModificationAssessmentInput,
     @CurrentUser() user: RequestUser,
   ) {
-    return this.complianceService().reviewAssessment({
+    return this.compliance.reviewAssessment({
       organizationId: this.organizationId(user),
       actorId: user.id,
       productId: params.productId,
@@ -1036,7 +1038,7 @@ export class ProductsController {
     query: SecurityUpdateArtifactListQuery,
     @CurrentUser() user: RequestUser,
   ) {
-    return this.complianceService().listArtifacts({
+    return this.compliance.listArtifacts({
       organizationId: this.organizationId(user),
       actorId: user.id,
       productId: params.productId,
@@ -1054,7 +1056,7 @@ export class ProductsController {
     input: ReserveSecurityUpdateArtifactInput,
     @CurrentUser() user: RequestUser,
   ) {
-    return this.complianceService().reserveArtifact({
+    return this.compliance.reserveArtifact({
       organizationId: this.organizationId(user),
       actorId: user.id,
       productId: params.productId,
@@ -1070,7 +1072,7 @@ export class ProductsController {
     params: SecurityUpdateArtifactParams,
     @CurrentUser() user: RequestUser,
   ) {
-    return this.complianceService().getArtifact({
+    return this.compliance.getArtifact({
       organizationId: this.organizationId(user),
       actorId: user.id,
       productId: params.productId,
@@ -1089,7 +1091,7 @@ export class ProductsController {
     input: FinalizeSecurityUpdateArtifactInput,
     @CurrentUser() user: RequestUser,
   ) {
-    return this.complianceService().finalizeArtifact({
+    return this.compliance.finalizeArtifact({
       organizationId: this.organizationId(user),
       actorId: user.id,
       productId: params.productId,
@@ -1109,7 +1111,7 @@ export class ProductsController {
     input: ReviewSecurityUpdateArtifactInput,
     @CurrentUser() user: RequestUser,
   ) {
-    return this.complianceService().reviewArtifact({
+    return this.compliance.reviewArtifact({
       organizationId: this.organizationId(user),
       actorId: user.id,
       productId: params.productId,
@@ -1129,7 +1131,7 @@ export class ProductsController {
     input: PublishSecurityUpdateArtifactInput,
     @CurrentUser() user: RequestUser,
   ) {
-    return this.complianceService().publishArtifact({
+    return this.compliance.publishArtifact({
       organizationId: this.organizationId(user),
       actorId: user.id,
       productId: params.productId,
@@ -1149,7 +1151,7 @@ export class ProductsController {
     input: ReplaceSecurityUpdateArtifactInput,
     @CurrentUser() user: RequestUser,
   ) {
-    return this.complianceService().replaceArtifact({
+    return this.compliance.replaceArtifact({
       organizationId: this.organizationId(user),
       actorId: user.id,
       productId: params.productId,
@@ -1169,7 +1171,27 @@ export class ProductsController {
     input: WithdrawSecurityUpdateArtifactInput,
     @CurrentUser() user: RequestUser,
   ) {
-    return this.complianceService().withdrawArtifact({
+    return this.compliance.withdrawArtifact({
+      organizationId: this.organizationId(user),
+      actorId: user.id,
+      productId: params.productId,
+      artifactId: params.artifactId,
+      input,
+    });
+  }
+
+  @RequirePermissions("can_edit_products")
+  @Patch(":productId/security-update-artifacts/:artifactId/metadata")
+  @HttpCode(HttpStatus.OK)
+  @ZodResponse(securityUpdateArtifactResponseSchema)
+  updateSecurityUpdateArtifactMetadata(
+    @Param(zodParams(securityUpdateArtifactParamsSchema))
+    params: SecurityUpdateArtifactParams,
+    @Body(zodBody(updateSecurityUpdateArtifactMetadataInputSchema))
+    input: UpdateSecurityUpdateArtifactMetadataInput,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.compliance.updateArtifactMetadata({
       organizationId: this.organizationId(user),
       actorId: user.id,
       productId: params.productId,
@@ -1186,7 +1208,7 @@ export class ProductsController {
     params: SecurityUpdateArtifactParams,
     @CurrentUser() user: RequestUser,
   ) {
-    return this.complianceService().downloadArtifact({
+    return this.compliance.downloadArtifact({
       organizationId: this.organizationId(user),
       actorId: user.id,
       productId: params.productId,
@@ -1228,10 +1250,6 @@ export class ProductsController {
       message: "Product registry request could not be completed.",
       code: "not_found",
     });
-  }
-
-  private complianceService(): ProductComplianceService {
-    return this.compliance!;
   }
 
   private async ensureDeletePermissionForWithdrawal(

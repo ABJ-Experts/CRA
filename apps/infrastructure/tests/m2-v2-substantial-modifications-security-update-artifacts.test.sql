@@ -247,6 +247,30 @@ select pg_temp.check(
   )
 );
 
+select pg_temp.check(
+  'M2 V2 final RPC surface drops wrapper-era base functions and scopes the metrics snapshot',
+  (
+    select count(*) = 0
+    from pg_proc functions
+    join pg_namespace namespaces on namespaces.oid = functions.pronamespace
+    where namespaces.nspname = 'public'
+      and functions.proname like '%_atomic_base'
+  )
+  and has_function_privilege(
+    'service_role', 'public.product_compliance_metrics_snapshot(uuid)', 'execute')
+  and not has_function_privilege(
+    'public', 'public.product_compliance_metrics_snapshot(uuid)', 'execute')
+  and not has_function_privilege(
+    'anon', 'public.product_compliance_metrics_snapshot(uuid)', 'execute')
+  and (
+    select proconfig = array['search_path=public, pg_temp']
+    from pg_proc functions
+    join pg_namespace namespaces on namespaces.oid = functions.pronamespace
+    where namespaces.nspname = 'public'
+      and functions.proname = 'product_compliance_metrics_snapshot'
+  )
+);
+
 begin;
 do $$
 declare
@@ -290,6 +314,9 @@ declare
   v_worker_effect record;
   v_worker_unavailable record;
   v_external_version integer;
+  v_metrics_pending_id uuid;
+  v_metrics_flagged_id uuid;
+  v_snapshot record;
   v_direct_legal_entity_delete_blocked boolean := false;
   v_direct_product_delete_blocked boolean := false;
   v_validated_external_references jsonb := jsonb_build_array(jsonb_build_object(
@@ -657,6 +684,207 @@ begin
     )
   );
 
+  -- Edge case: reserving an artifact whose issue date falls outside the
+  -- active support period is blocked before any storage work happens.
+  select * into v_result
+  from public.reserve_product_security_update_artifact_atomic(
+    v_org, v_product, v_release, v_actor, '1.9.0-outside-window',
+    'Outside support window update', 'software_update', 'all', '{}'::jsonb,
+    'authenticated_download', '[]'::jsonb,
+    'outside-window.bin', 'application/octet-stream', 64, repeat('0', 64),
+    clock_timestamp() + interval '13 years', gen_random_uuid(), gen_random_uuid()
+  );
+  perform pg_temp.check(
+    'an issue date outside the support period reserves as availability-blocked',
+    v_result.outcome = 'reserved'
+    and v_result.artifact ->> 'availabilityStatus' = 'blocked'
+    and v_result.artifact ->> 'supportPeriodId' is null
+  );
+  insert into storage.objects(bucket_id, name)
+  values ('security-update-artifacts', v_result.artifact ->> 'objectKey');
+  perform * from public.finalize_product_security_update_artifact_atomic(
+    v_org, v_product, (v_result.artifact ->> 'id')::uuid, v_actor, 1,
+    repeat('0', 64), 64, 'application/octet-stream', 'verified', gen_random_uuid()
+  );
+  perform * from public.review_product_security_update_artifact_atomic(
+    v_org, v_product, (v_result.artifact ->> 'id')::uuid, v_actor, 2, 'cleared',
+    'Cleared before probing the support window gate.', gen_random_uuid()
+  );
+  select * into v_result
+  from public.publish_product_security_update_artifact_atomic(
+    v_org, v_product, (v_result.artifact ->> 'id')::uuid, v_actor, 3,
+    '[]'::jsonb, gen_random_uuid()
+  );
+  perform pg_temp.check(
+    'publishing an artifact issued outside the support period is blocked',
+    v_result.outcome = 'blocked'
+  );
+
+  -- Edge case: finalizing an authenticated download with no stored object
+  -- degrades integrity to unavailable instead of claiming verification.
+  select * into v_reservation
+  from public.reserve_product_security_update_artifact_atomic(
+    v_org, v_product, v_release, v_actor, '1.0.4-missing-object',
+    'Missing object update', 'software_update', 'all', '{}'::jsonb,
+    'authenticated_download', '[]'::jsonb,
+    'missing-object.bin', 'application/octet-stream', 64, repeat('1', 64),
+    clock_timestamp(), gen_random_uuid(), gen_random_uuid()
+  );
+  select * into v_finalized
+  from public.finalize_product_security_update_artifact_atomic(
+    v_org, v_product, (v_reservation.artifact ->> 'id')::uuid, v_actor, 1,
+    repeat('1', 64), 64, 'application/octet-stream', 'verified', gen_random_uuid()
+  );
+  perform pg_temp.check(
+    'finalizing a missing storage object records unavailable integrity',
+    v_finalized.outcome = 'finalized'
+    and v_finalized.artifact ->> 'integrityStatus' = 'unavailable'
+    and v_finalized.artifact ->> 'uploadStatus' = 'failed'
+  );
+
+  -- Edge case: the same update version with different content is a distinct
+  -- immutable record; version strings are not uniqueness keys.
+  select * into v_result
+  from public.reserve_product_security_update_artifact_atomic(
+    v_org, v_product, v_release, v_actor, '1.0.1',
+    'Same version republish', 'software_update', 'all', '{}'::jsonb,
+    'authenticated_download', '[]'::jsonb,
+    'same-version-rebuild.bin', 'application/octet-stream', 36, repeat('2', 64),
+    clock_timestamp(), gen_random_uuid(), gen_random_uuid()
+  );
+  perform pg_temp.check(
+    'a same-version artifact with different content reserves as its own record',
+    v_result.outcome = 'reserved'
+    and v_result.artifact ->> 'id' <> v_artifact_id::text
+    and v_result.artifact ->> 'sha256' = repeat('2', 64)
+  );
+
+  -- Edge case: two assessments claiming the same active modification
+  -- converge through the unique active-modification index, not duplicates.
+  select * into v_result
+  from public.create_product_substantial_modification_assessment_atomic(
+    v_org, v_product, v_actor, v_reassessment_id, 'M2-V2-CHANGE-DUPLICATE',
+    'Duplicate modification claim', 'A second analyst assesses the same change.',
+    'The scope matches an already active modification.',
+    clock_timestamp() - interval '10 minutes', clock_timestamp(),
+    'The prior state stands.', 'The claimed state stands.',
+    jsonb_build_array('Resolve the duplicate claim.'),
+    v_answers, 'Duplicate claim rationale.',
+    '[]'::jsonb,
+    'not_substantial', array[v_release], gen_random_uuid(), gen_random_uuid()
+  );
+  select * into v_result
+  from public.create_product_substantial_modification_assessment_atomic(
+    v_org, v_product, v_actor, v_reassessment_id, 'M2-V2-CHANGE-DUPLICATE',
+    'Duplicate modification claim', 'A second analyst assesses the same change.',
+    'The scope matches an already active modification.',
+    clock_timestamp() - interval '10 minutes', clock_timestamp(),
+    'The prior state stands.', 'The claimed state stands.',
+    jsonb_build_array('Resolve the duplicate claim.'),
+    v_answers, 'Duplicate claim rationale.',
+    '[]'::jsonb,
+    'not_substantial', array[v_release], gen_random_uuid(), gen_random_uuid()
+  );
+  perform pg_temp.check(
+    'a concurrent duplicate active modification collapses to a conflict outcome',
+    v_result.outcome = 'conflict'
+    and (
+      select count(*) = 1
+      from public.product_substantial_modification_assessments
+      where organization_id = v_org
+        and modification_identifier = 'M2-V2-CHANGE-DUPLICATE'
+        and superseded_at is null
+    )
+  );
+
+  -- Metrics coverage: one assessment left awaiting review, one reviewed
+  -- substantial determination with a mandatory override, and one corrupt
+  -- inspection make every gauge family observable.
+  select * into v_reservation
+  from public.reserve_product_security_update_artifact_atomic(
+    v_org, v_product, v_release, v_actor, '1.0.3-quarantined', 'Quarantined update',
+    'software_update', 'all', '{}'::jsonb, 'authenticated_download',
+    '[]'::jsonb,
+    'security-update-quarantined.bin', 'application/octet-stream', 40, repeat('f', 64),
+    clock_timestamp(), gen_random_uuid(), gen_random_uuid()
+  );
+  insert into storage.objects(bucket_id, name)
+  values ('security-update-artifacts', v_reservation.artifact ->> 'objectKey');
+  perform * from public.finalize_product_security_update_artifact_atomic(
+    v_org, v_product, (v_reservation.artifact ->> 'id')::uuid, v_actor, 1,
+    null, null, null, 'corrupt', gen_random_uuid()
+  );
+
+  select * into v_result
+  from public.create_product_substantial_modification_assessment_atomic(
+    v_org, v_product, v_actor, gen_random_uuid(), 'M2-V2-CHANGE-002',
+    'M2 V2 assessment awaiting review',
+    'A modification awaiting conformity review for gauge coverage.',
+    'The scope affects the update distribution path.',
+    clock_timestamp() - interval '30 minutes', clock_timestamp(),
+    'The prior release shipped the existing distribution path.',
+    'The revised release adjusts the distribution path.',
+    jsonb_build_array('Complete the conformity review.'),
+    v_answers, 'Pending review rationale recorded for metrics coverage.',
+    '[]'::jsonb,
+    'potentially_substantial', array[v_release], gen_random_uuid(), gen_random_uuid()
+  );
+  v_metrics_pending_id := (v_result.assessment ->> 'id')::uuid;
+
+  select * into v_result
+  from public.create_product_substantial_modification_assessment_atomic(
+    v_org, v_product, v_actor, gen_random_uuid(), 'M2-V2-CHANGE-003',
+    'M2 V2 reviewed substantial modification',
+    'A reviewed substantial modification for gauge coverage.',
+    'The privileged remote control surface changed materially.',
+    clock_timestamp() - interval '45 minutes', clock_timestamp(),
+    'The prior release exposed the existing control surface.',
+    'The revised release reworks the control surface.',
+    jsonb_build_array('Trigger conformity reassessment.'),
+    v_answers, 'Reviewed substantial rationale recorded for metrics coverage.',
+    '[]'::jsonb,
+    'potentially_substantial', array[v_release], gen_random_uuid(), gen_random_uuid()
+  );
+  v_metrics_flagged_id := (v_result.assessment ->> 'id')::uuid;
+  perform * from public.review_product_substantial_modification_assessment_atomic(
+    v_org, v_product, v_metrics_flagged_id, v_actor, 1,
+    'substantial', 'Human reviewer escalated beyond the policy suggestion.',
+    'Escalation follows a recorded engineering decision.', gen_random_uuid()
+  );
+
+  select * into v_snapshot
+  from public.product_compliance_metrics_snapshot(v_org);
+  perform pg_temp.check(
+    'metrics snapshot counts backlog, flagged determinations, and quarantine without false positives',
+    -- Three rows await review: the pending CHANGE-002 assessment, the
+    -- reassessment itself (inserted as submitted_for_review even though it
+    -- carries a requested determination), and the surviving duplicate claim.
+    -- The missing-object finalize contributes provider-unavailable and the
+    -- outside-support-window artifact is the blocked availability gauge.
+    -- The external artifact is expired rather than blocked because its final
+    -- verified monitor run restored integrity while preserving the expiry,
+    -- and a published artifact can never expire inside 30 days of a fresh
+    -- fixture because of its ten calendar year floor.
+    v_snapshot.assessment_backlog = 3
+    and v_snapshot.flagged_assessments = 1
+    and v_snapshot.artifact_quarantine = 1
+    and v_snapshot.artifact_hash_mismatch = 0
+    and v_snapshot.artifact_provider_unavailable = 1
+    and v_snapshot.artifact_upload_missing = 0
+    and v_snapshot.artifact_expiring_availability = 0
+    and v_snapshot.artifact_availability_blocked = 1
+    and exists (
+      select 1 from public.product_substantial_modification_assessments
+       where organization_id = v_org and id = v_metrics_pending_id
+         and status = 'submitted_for_review' and superseded_at is null
+    )
+    and exists (
+      select 1 from public.product_substantial_modification_assessments
+       where organization_id = v_org and id = v_metrics_flagged_id
+         and status = 'reviewed' and determination = 'substantial'
+    )
+  );
+
   update public.users set is_active = false
   where id in (
     select member.user_id from public.organization_members member
@@ -758,6 +986,342 @@ begin
       select 1 from public.product_security_update_artifacts
       where organization_id = v_org
     )
+  );
+end;
+$$;
+rollback;
+
+-- ===========================================================================
+-- Gap-closing coverage: assessment retention-authority wiring, real cleanup
+-- completion, metrics extensions, and artifact metadata edit.
+-- ===========================================================================
+
+select pg_temp.check(
+  'new cleanup and metadata-edit RPCs are service-role only with pinned search_path',
+  (select count(*) = 7 from pg_proc functions
+    join pg_namespace namespaces on namespaces.oid = functions.pronamespace
+    where namespaces.nspname = 'public'
+      and functions.proname in (
+        'm2_v2_set_assessment_retention_fact',
+        'begin_product_security_update_artifact_cleanup_atomic',
+        'complete_product_security_update_artifact_cleanup_atomic',
+        'begin_security_update_artifact_cleanup_worker_atomic',
+        'complete_security_update_artifact_cleanup_worker_atomic',
+        'reverify_product_security_update_artifact_atomic',
+        'update_product_security_update_artifact_metadata_atomic'
+      )
+      and functions.prosecdef
+      and functions.proconfig = array['search_path=public, pg_temp'])
+  and not exists (
+    select 1 from information_schema.routine_privileges privileges
+    where privileges.routine_schema = 'public'
+      and privileges.routine_name in (
+        'm2_v2_set_assessment_retention_fact',
+        'begin_product_security_update_artifact_cleanup_atomic',
+        'complete_product_security_update_artifact_cleanup_atomic',
+        'begin_security_update_artifact_cleanup_worker_atomic',
+        'complete_security_update_artifact_cleanup_worker_atomic',
+        'reverify_product_security_update_artifact_atomic',
+        'update_product_security_update_artifact_metadata_atomic'
+      )
+      and privileges.grantee in ('public', 'anon', 'authenticated')
+  )
+);
+
+select pg_temp.check(
+  'cleanup completion columns exist and are service-role updatable only',
+  (select count(*) = 2 from information_schema.columns columns
+    where columns.table_schema = 'public'
+      and columns.table_name = 'product_security_update_artifacts'
+      and columns.column_name in ('cleanup_completed_at', 'cleanup_completed_by'))
+  and not exists (
+    select 1 from information_schema.column_privileges privileges
+    where privileges.table_schema = 'public'
+      and privileges.table_name = 'product_security_update_artifacts'
+      and privileges.column_name in ('cleanup_completed_at', 'cleanup_completed_by')
+      and privileges.privilege_type = 'UPDATE'
+      and privileges.grantee in ('public', 'anon', 'authenticated')
+  )
+);
+
+select pg_temp.check(
+  'product_compliance_metrics_snapshot reports an upload-failure gauge',
+  exists (
+    select 1 from pg_proc functions
+    where functions.proname = 'product_compliance_metrics_snapshot'
+      and 'artifact_upload_failed' = any(functions.proargnames)
+  )
+);
+
+begin;
+do $$
+declare
+  v_org uuid := '00000000-0000-4000-8000-0000000000ca';
+  v_actor uuid;
+  v_entity uuid;
+  v_product uuid := gen_random_uuid();
+  v_release_a uuid := gen_random_uuid();
+  v_release_b uuid := gen_random_uuid();
+  v_release_c uuid := gen_random_uuid();
+  v_answers jsonb := jsonb_build_object(
+    'changesIntendedPurpose', 'no',
+    'changesSecurityArchitectureOrTrustBoundary', 'yes',
+    'changesNetworkInterfaceOrPrivilegedRemoteControl', 'unknown',
+    'changesCryptographyOrIdentityAccessControl', 'yes',
+    'changesSafetyOrSecurityRelevantComponent', 'no'
+  );
+  v_result record;
+  v_reviewed record;
+  v_reassessed record;
+  v_artifact_a record;
+  v_artifact_b record;
+  v_artifact_c record;
+  v_begin record;
+  v_complete record;
+  v_metadata record;
+  v_conflict record;
+  v_sha256 text := encode(sha256('m2-v2-gap-closing-fixture-bytes'), 'hex');
+begin
+  select id into v_actor from public.users where email = 'owner@cra.test';
+  select id into v_entity from public.organization_legal_entities
+   where organization_id = v_org and is_default;
+
+  insert into public.products(
+    id, organization_id, legal_entity_id, legal_entity_version, legal_entity_snapshot,
+    name, internal_code, product_type, responsible_owner_id, created_by, updated_by
+  ) values (
+    v_product, v_org, v_entity, 0, '{}'::jsonb,
+    'M2 V2 gap-closing test', 'M2-V2-GAP-' || v_product::text,
+    'standalone_software', v_actor, v_actor, v_actor
+  );
+  insert into public.product_releases(
+    id, organization_id, product_id, legal_entity_id, legal_entity_version,
+    legal_entity_snapshot, label, release_version, lifecycle, placed_on_market_at,
+    created_by, updated_by
+  ) values
+    (v_release_a, v_org, v_product, v_entity, 0, '{}'::jsonb,
+      'Release A', '1.0-' || v_release_a::text, 'placed_on_market', clock_timestamp(), v_actor, v_actor),
+    (v_release_b, v_org, v_product, v_entity, 0, '{}'::jsonb,
+      'Release B', '1.0-' || v_release_b::text, 'placed_on_market', clock_timestamp(), v_actor, v_actor),
+    (v_release_c, v_org, v_product, v_entity, 0, '{}'::jsonb,
+      'Release C', '1.0-' || v_release_c::text, 'placed_on_market', clock_timestamp(), v_actor, v_actor);
+
+  -- Assessment retention-authority wiring: a substantial determination
+  -- activates a retention_authoritative_facts row; reassessing (superseding)
+  -- it deactivates the superseded row's fact.
+  select * into v_result
+  from public.create_product_substantial_modification_assessment_atomic(
+    v_org, v_product, v_actor, gen_random_uuid(), 'GAP-MOD-1', 'Gap-closing modification',
+    'Description of the modification.', 'Technical scope of the modification.',
+    clock_timestamp() - interval '1 day', clock_timestamp(),
+    'Previous product state.', 'Resulting product state.',
+    '[]'::jsonb, v_answers, 'Rationale for the modification.', '[]'::jsonb,
+    'potentially_substantial', array[v_release_a], gen_random_uuid(), gen_random_uuid()
+  );
+  select * into v_reviewed
+  from public.review_product_substantial_modification_assessment_atomic(
+    v_org, v_product, (v_result.assessment ->> 'id')::uuid, v_actor,
+    (v_result.assessment ->> 'version')::integer, 'substantial',
+    'Confirmed substantial on review.',
+    'Escalated above the policy suggestion after manual review of the trust boundary impact.',
+    gen_random_uuid()
+  );
+  perform pg_temp.check(
+    'reviewing above the policy suggestion succeeds once a mandatory override reason is given',
+    v_reviewed.outcome = 'reviewed'
+  );
+  perform pg_temp.check(
+    'a substantial determination activates an assessment retention-authority fact',
+    exists (
+      select 1 from public.retention_authoritative_facts facts
+      where facts.organization_id = v_org
+        and facts.evidence_class = 'substantial_modification'
+        and facts.reason_kind = 'obligation'
+        and facts.source_record_id = (v_result.assessment ->> 'id')::uuid
+        and facts.active
+        and facts.protect_through = 'infinity'::timestamptz
+    )
+  );
+
+  select * into v_reassessed
+  from public.reassess_product_substantial_modification_atomic(
+    v_org, v_product, (v_result.assessment ->> 'id')::uuid, v_actor,
+    (v_reviewed.assessment ->> 'version')::integer, 'GAP-MOD-1', 'Gap-closing modification',
+    'Updated description.', 'Technical scope of the modification.',
+    clock_timestamp() - interval '1 day', clock_timestamp(),
+    'Previous product state.', 'Resulting product state.',
+    '[]'::jsonb, v_answers, 'Updated rationale.', '[]'::jsonb,
+    'potentially_substantial', array[v_release_a], gen_random_uuid(), gen_random_uuid()
+  );
+  perform pg_temp.check(
+    'reassessing a substantial assessment deactivates the superseded fact',
+    v_reassessed.outcome = 'reassessed'
+    and not exists (
+      select 1 from public.retention_authoritative_facts facts
+      where facts.organization_id = v_org
+        and facts.evidence_class = 'substantial_modification'
+        and facts.reason_kind = 'obligation'
+        and facts.source_record_id = (v_result.assessment ->> 'id')::uuid
+        and facts.active
+    )
+  );
+
+  -- Real cleanup completion: not-due, shared-object-key, clear, complete,
+  -- already-completed, and legal-hold blocking.
+  select * into v_artifact_a from public.reserve_product_security_update_artifact_atomic(
+    v_org, v_product, v_release_a, v_actor, '1.0.0', 'Gap-closing artifact A',
+    'software_update', 'linux-x86_64', '{}'::jsonb, 'authenticated_download',
+    '[]'::jsonb, 'update-a.bin', 'application/octet-stream', 2048, v_sha256,
+    clock_timestamp(), gen_random_uuid(), gen_random_uuid()
+  );
+  select * into v_artifact_b from public.reserve_product_security_update_artifact_atomic(
+    v_org, v_product, v_release_b, v_actor, '1.0.0', 'Gap-closing artifact B',
+    'software_update', 'linux-x86_64', '{}'::jsonb, 'authenticated_download',
+    '[]'::jsonb, 'update-b.bin', 'application/octet-stream', 2048, v_sha256,
+    clock_timestamp(), gen_random_uuid(), gen_random_uuid()
+  );
+  select * into v_artifact_c from public.reserve_product_security_update_artifact_atomic(
+    v_org, v_product, v_release_c, v_actor, '1.0.0', 'Gap-closing artifact C',
+    'software_update', 'linux-x86_64', '{}'::jsonb, 'authenticated_download',
+    '[]'::jsonb, 'update-c.bin', 'application/octet-stream', 2048,
+    encode(sha256('m2-v2-gap-closing-fixture-bytes-c'), 'hex'),
+    clock_timestamp(), gen_random_uuid(), gen_random_uuid()
+  );
+  perform pg_temp.check(
+    'artifacts sharing byte-identical content share the same content-addressed object key',
+    (v_artifact_a.artifact ->> 'id') is not null
+    and (select object_key from public.product_security_update_artifacts
+          where organization_id = v_org and id = (v_artifact_a.artifact ->> 'id')::uuid)
+      = (select object_key from public.product_security_update_artifacts
+          where organization_id = v_org and id = (v_artifact_b.artifact ->> 'id')::uuid)
+  );
+
+  select * into v_begin from public.begin_product_security_update_artifact_cleanup_atomic(
+    v_org, v_product, (v_artifact_a.artifact ->> 'id')::uuid
+  );
+  perform pg_temp.check(
+    'cleanup is not due before the artifact is expired or withdrawn',
+    v_begin.outcome = 'not_due'
+  );
+
+  update public.product_security_update_artifacts set
+    availability_status = 'expired', cleanup_scheduled_at = now(), cleanup_scheduled_by = v_actor,
+    version = version + 1, updated_by = v_actor
+  where organization_id = v_org and id = (v_artifact_a.artifact ->> 'id')::uuid;
+
+  select * into v_begin from public.begin_product_security_update_artifact_cleanup_atomic(
+    v_org, v_product, (v_artifact_a.artifact ->> 'id')::uuid
+  );
+  perform pg_temp.check(
+    'cleanup defers deleting bytes while a live sibling still references the shared object key',
+    v_begin.outcome = 'shared_object'
+  );
+
+  update public.product_security_update_artifacts set
+    availability_status = 'expired', cleanup_scheduled_at = now(), cleanup_scheduled_by = v_actor,
+    version = version + 1, updated_by = v_actor
+  where organization_id = v_org and id = (v_artifact_b.artifact ->> 'id')::uuid;
+
+  select * into v_begin from public.begin_product_security_update_artifact_cleanup_atomic(
+    v_org, v_product, (v_artifact_a.artifact ->> 'id')::uuid
+  );
+  perform pg_temp.check(
+    'cleanup clears once no live sibling references the shared object key',
+    v_begin.outcome = 'clear'
+    and v_begin.object_key is not null
+  );
+
+  select * into v_complete from public.complete_product_security_update_artifact_cleanup_atomic(
+    v_org, v_product, (v_artifact_a.artifact ->> 'id')::uuid, v_actor, true, gen_random_uuid()
+  );
+  perform pg_temp.check(
+    'cleanup completion is durably recorded with an audit fact',
+    v_complete.outcome = 'completed'
+    and (v_complete.artifact ->> 'id') is not null
+    and exists (
+      select 1 from public.audit_logs
+      where organization_id = v_org and entity_id = (v_artifact_a.artifact ->> 'id')
+        and action = 'product.security_update_artifact_cleanup_completed'
+        and changes ->> 'objectRemoved' = 'true'
+    )
+    and (select cleanup_completed_at is not null and cleanup_completed_by = v_actor
+      from public.product_security_update_artifacts
+      where organization_id = v_org and id = (v_artifact_a.artifact ->> 'id')::uuid)
+  );
+
+  select * into v_begin from public.begin_product_security_update_artifact_cleanup_atomic(
+    v_org, v_product, (v_artifact_a.artifact ->> 'id')::uuid
+  );
+  perform pg_temp.check(
+    'cleanup is idempotent once already completed',
+    v_begin.outcome = 'already_completed'
+  );
+
+  update public.product_security_update_artifacts set
+    availability_status = 'expired', cleanup_scheduled_at = now(), cleanup_scheduled_by = v_actor,
+    version = version + 1, updated_by = v_actor
+  where organization_id = v_org and id = (v_artifact_c.artifact ->> 'id')::uuid;
+  insert into public.retention_authoritative_facts(
+    organization_id, evidence_class, reason_kind, source_record_id,
+    required_retention_days, protect_through, active, last_observed_at
+  ) values (
+    v_org, 'security_update_artifact', 'legal_hold', (v_artifact_c.artifact ->> 'id')::uuid,
+    0, null, true, now()
+  );
+  select * into v_begin from public.begin_product_security_update_artifact_cleanup_atomic(
+    v_org, v_product, (v_artifact_c.artifact ->> 'id')::uuid
+  );
+  perform pg_temp.check(
+    'cleanup is blocked while the organization has an active legal hold',
+    v_begin.outcome = 'legal_hold'
+  );
+  delete from public.retention_authoritative_facts
+  where organization_id = v_org and reason_kind = 'legal_hold'
+    and source_record_id = (v_artifact_c.artifact ->> 'id')::uuid;
+
+  -- Metadata edit: mutable fields update with an audit trail and optimistic
+  -- locking, content-identity columns never change.
+  select * into v_metadata
+  from public.update_product_security_update_artifact_metadata_atomic(
+    v_org, v_product, (v_artifact_c.artifact ->> 'id')::uuid, v_actor,
+    (select version from public.product_security_update_artifacts
+      where organization_id = v_org and id = (v_artifact_c.artifact ->> 'id')::uuid),
+    'Renamed gap-closing artifact C',
+    'linux-arm64', jsonb_build_object('algorithm', 'ed25519'), gen_random_uuid()
+  );
+  perform pg_temp.check(
+    'metadata edit updates mutable fields, bumps version, and writes an audit fact',
+    v_metadata.outcome = 'updated'
+    and (v_metadata.artifact ->> 'title') = 'Renamed gap-closing artifact C'
+    and (v_metadata.artifact ->> 'supportedPlatform') = 'linux-arm64'
+    and (v_metadata.artifact ->> 'sha256')
+      = (select sha256 from public.product_security_update_artifacts
+          where organization_id = v_org and id = (v_artifact_c.artifact ->> 'id')::uuid)
+    and exists (
+      select 1 from public.audit_logs
+      where organization_id = v_org and entity_id = (v_artifact_c.artifact ->> 'id')
+        and action = 'product.security_update_artifact_metadata_updated'
+        and changes -> 'before' ->> 'title' = 'Gap-closing artifact C'
+        and changes -> 'after' ->> 'title' = 'Renamed gap-closing artifact C'
+    )
+  );
+
+  select * into v_conflict
+  from public.update_product_security_update_artifact_metadata_atomic(
+    v_org, v_product, (v_artifact_c.artifact ->> 'id')::uuid, v_actor,
+    (v_artifact_c.artifact ->> 'version')::integer, 'Stale write', 'linux-arm64',
+    '{}'::jsonb, gen_random_uuid()
+  );
+  perform pg_temp.check(
+    'metadata edit rejects a stale expected version as a conflict, not a silent overwrite',
+    v_conflict.outcome = 'conflict'
+    and (v_conflict.artifact ->> 'title') = 'Renamed gap-closing artifact C'
+  );
+
+  select * into v_conflict from public.product_compliance_metrics_snapshot(v_org);
+  perform pg_temp.check(
+    'metrics snapshot exposes the upload-failure gauge alongside the existing gauges',
+    v_conflict is not null
   );
 end;
 $$;

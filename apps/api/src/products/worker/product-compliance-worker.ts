@@ -14,12 +14,14 @@ export type ProductComplianceMeasurement = Readonly<{
     | "review_backlog"
     | "flagged_assessments"
     | "upload_failure"
+    | "upload_failed"
     | "inspection_failure"
     | "quarantine"
     | "hash_mismatch"
     | "expiring_availability"
     | "missing_object"
     | "blocked_cleanup"
+    | "availability_blocked"
     | "retry_count";
   value: number;
 }>;
@@ -35,7 +37,7 @@ type RecalculationEvent = Readonly<{
   existingAvailabilityUntil: string | null;
 }>;
 type ArtifactEvent = Readonly<{
-  kind: "inspect" | "cleanup";
+  kind: "inspect" | "cleanup" | "integrity_reverify";
   organizationId: string;
   productId: string;
   artifactId: string;
@@ -148,6 +150,19 @@ export interface ProductComplianceWorkerDependencies {
     ): Promise<
       Readonly<{ outcome: "cleaned" | "blocked" | "conflict" | "not_found" }>
     >;
+    reverify(
+      command: Readonly<{
+        organizationId: string;
+        productId: string;
+        artifactId: string;
+        actorId: string;
+        expectedVersion: number;
+        sha256: string;
+        byteSize: number;
+        contentType: string;
+        objectKey?: string;
+      }>,
+    ): Promise<Readonly<{ outcome: "reverified" | "conflict" | "not_found" }>>;
     monitorExternalReference(
       command: Readonly<{
         organizationId: string;
@@ -162,6 +177,13 @@ export interface ProductComplianceWorkerDependencies {
     ): Promise<Readonly<{ outcome: "monitored" | "conflict" | "not_found" }>>;
   }>;
   observe?: (measurement: ProductComplianceMeasurement) => void;
+  /**
+   * Optional per-organization gauge provider. Observability only: a gauge
+   * failure never interrupts claim processing.
+   */
+  gauges?: (
+    organizationId: string,
+  ) => Promise<readonly ProductComplianceMeasurement[]>;
 }
 
 export class ProductComplianceWorkerFailure extends Error {
@@ -200,6 +222,7 @@ export class ProductComplianceWorker {
     const due = await this.dependencies.queue.dueOrganizationIds();
     let remaining = maximumClaimsPerCycle;
     for (const organizationId of uniqueOrganizationIds(due)) {
+      await this.emitGauges(organizationId);
       while (remaining > 0) {
         const claimed = await this.dependencies.queue.claim({
           organizationId,
@@ -293,6 +316,27 @@ export class ProductComplianceWorker {
         this.ensureActiveActorResult(outcome);
         return;
       }
+      case "integrity_reverify": {
+        if (typeof event.objectKey !== "string") {
+          throw new ProductComplianceWorkerFailure("malformed_provider", false);
+        }
+        const outcome = await this.dependencies.processor.reverify(event);
+        this.ensureActiveActorResult(outcome);
+        return;
+      }
+    }
+  }
+
+  private async emitGauges(organizationId: string): Promise<void> {
+    if (!this.dependencies.gauges) return;
+    try {
+      for (const measurement of await this.dependencies.gauges(
+        organizationId,
+      )) {
+        this.observe(measurement.metric, measurement.value);
+      }
+    } catch {
+      // Observability must never fail a compliance cycle.
     }
   }
 
@@ -310,6 +354,8 @@ export class ProductComplianceWorker {
   ): ProductComplianceMeasurement["metric"] {
     switch (event.kind) {
       case "inspect":
+        return "inspection_failure";
+      case "integrity_reverify":
         return "inspection_failure";
       case "cleanup":
         return "blocked_cleanup";

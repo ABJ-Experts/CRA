@@ -249,12 +249,28 @@ export class RunScopedAccounts {
     label: string,
   ): Promise<TestAccount> {
     const identity = this.identity(label);
-    const signUp = await context.request.post(
+    // The API throttles sign-up to five requests per minute. Consecutive
+    // specs each create several run-scoped accounts, so a burst can land
+    // inside one rolling window; wait it out instead of failing the run.
+    let signUp = await context.request.post(
       `${API_ORIGIN}${API_PREFIX}/auth/sign-up`,
       {
         data: { ...identity, password: PASSWORD },
       },
     );
+    for (
+      let attempt = 1;
+      signUp.status() === 429 && attempt <= 4;
+      attempt += 1
+    ) {
+      await new Promise((resolve) => setTimeout(resolve, 15_000));
+      signUp = await context.request.post(
+        `${API_ORIGIN}${API_PREFIX}/auth/sign-up`,
+        {
+          data: { ...identity, password: PASSWORD },
+        },
+      );
+    }
     if (signUp.status() !== 201) {
       throw new Error(
         `Sign-up failed (${signUp.status()}): ${await signUp.text()}`,

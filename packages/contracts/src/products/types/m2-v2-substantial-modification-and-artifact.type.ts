@@ -23,6 +23,7 @@ import type {
   substantialModificationAssessmentParamsSchema,
   substantialModificationAssessmentResponseSchema,
   substantialModificationAssessmentSchema,
+  updateSecurityUpdateArtifactMetadataInputSchema,
   withdrawSecurityUpdateArtifactInputSchema,
 } from "../schemas/index.js";
 
@@ -88,6 +89,9 @@ export type ReplaceSecurityUpdateArtifactInput = z.output<
 >;
 export type WithdrawSecurityUpdateArtifactInput = z.output<
   typeof withdrawSecurityUpdateArtifactInputSchema
+>;
+export type UpdateSecurityUpdateArtifactMetadataInput = z.output<
+  typeof updateSecurityUpdateArtifactMetadataInputSchema
 >;
 export type SecurityUpdateArtifactReserveResponse = z.output<
   typeof securityUpdateArtifactReserveResponseSchema

@@ -80,6 +80,7 @@ import {
   reserveSecurityUpdateArtifactInputSchema,
   reviewSecurityUpdateArtifactInputSchema,
   reviewSubstantialModificationAssessmentInputSchema,
+  updateSecurityUpdateArtifactMetadataInputSchema,
   securityUpdateArtifactDownloadResponseSchema,
   securityUpdateArtifactListQuerySchema,
   securityUpdateArtifactListResponseSchema,
@@ -138,6 +139,7 @@ import {
   type ReserveSecurityUpdateArtifactInput,
   type ReviewSecurityUpdateArtifactInput,
   type ReviewSubstantialModificationAssessmentInput,
+  type UpdateSecurityUpdateArtifactMetadataInput,
   type SecurityUpdateArtifactListQuery,
   type SubstantialModificationAssessmentListQuery,
   type RelationshipPropagationEventsQuery,
@@ -1376,6 +1378,22 @@ export class ProductsApi {
       method: "POST",
       body: input,
       inputSchema: withdrawSecurityUpdateArtifactInputSchema,
+      schema: securityUpdateArtifactResponseSchema,
+      signal,
+    });
+  }
+
+  async updateSecurityUpdateArtifactMetadata(
+    productId: string,
+    artifactId: string,
+    input: UpdateSecurityUpdateArtifactMetadataInput,
+    signal?: AbortSignal,
+  ) {
+    return authenticatedRequestJson({
+      path: artifactPath(productId, artifactId, "/metadata"),
+      method: "PATCH",
+      body: input,
+      inputSchema: updateSecurityUpdateArtifactMetadataInputSchema,
       schema: securityUpdateArtifactResponseSchema,
       signal,
     });

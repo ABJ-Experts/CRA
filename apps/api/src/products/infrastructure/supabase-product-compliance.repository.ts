@@ -439,6 +439,30 @@ export class SupabaseProductComplianceRepository implements ProductComplianceRep
     return this.artifactMutation(row, new Set(["withdrawn", "replayed"]));
   }
 
+  async updateArtifactMetadata(
+    organizationId: string,
+    actorId: string,
+    productId: string,
+    artifactId: string,
+    input: Parameters<ProductComplianceRepository["updateArtifactMetadata"]>[4],
+  ): ReturnType<ProductComplianceRepository["updateArtifactMetadata"]> {
+    const row = await this.singleRpc(
+      "update_product_security_update_artifact_metadata_atomic",
+      {
+        p_organization_id: organizationId,
+        p_product_id: productId,
+        p_artifact_id: artifactId,
+        p_actor_user_id: actorId,
+        p_expected_version: input.expectedVersion,
+        p_title: input.title,
+        p_supported_platform: input.supportedPlatform,
+        p_signature_metadata: input.signatureMetadata ?? {},
+        p_correlation_id: randomUUID(),
+      },
+    );
+    return this.artifactMutation(row, new Set(["updated"]));
+  }
+
   async requestArtifactDownload(
     organizationId: string,
     actorId: string,

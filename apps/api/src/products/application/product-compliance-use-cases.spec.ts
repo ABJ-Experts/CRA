@@ -442,6 +442,44 @@ describe("ProductComplianceUseCases", () => {
     expect(repository.finalizeArtifact).not.toHaveBeenCalled();
   });
 
+  it("defers oversized artifacts to the durable inspect worker instead of buffering them in the request", async () => {
+    const artifact = {
+      distributionKind: "authenticated_download",
+      byteSize: 134_217_728,
+      integrityStatus: "pending",
+      uploadStatus: "uploaded",
+    };
+    const repository = {
+      getArtifact: jest.fn().mockResolvedValue({
+        outcome: "found",
+        artifact,
+      }),
+      finalizeArtifact: jest.fn(),
+    };
+    const storage = { inspect: jest.fn() };
+    const useCases = new ProductComplianceUseCases(
+      repository as never,
+      storage as never,
+      undefined,
+      67_108_864,
+    );
+
+    await expect(
+      useCases.finalizeArtifact({
+        organizationId,
+        actorId,
+        productId,
+        artifactId,
+        input: {
+          expectedVersion: 1,
+          idempotencyKey: "00000000-0000-4000-8000-000000000013",
+        },
+      }),
+    ).resolves.toEqual({ ok: true, value: { artifact } });
+    expect(storage.inspect).not.toHaveBeenCalled();
+    expect(repository.finalizeArtifact).not.toHaveBeenCalled();
+  });
+
   it("publishes a verified authenticated download without external candidates or a validator", async () => {
     const repository = {
       getArtifact: jest.fn().mockResolvedValue({
@@ -532,6 +570,100 @@ describe("ProductComplianceUseCases", () => {
       contentType: "application/octet-stream",
     });
     expect(repository.finalizeArtifact).toHaveBeenCalledTimes(1);
+  });
+
+  it("updates title, supported platform, and signature metadata while leaving the content identity untouched", async () => {
+    const updated = {
+      id: artifactId,
+      title: "Revised security update title",
+      supportedPlatform: "CRA revised test platform",
+      signatureMetadata: { algorithm: "ed25519", signer: "cra-releases" },
+      sha256: "a".repeat(64),
+      version: 4,
+    };
+    const repository = {
+      updateArtifactMetadata: jest
+        .fn()
+        .mockResolvedValue({ outcome: "updated", value: updated }),
+    };
+    const useCases = new ProductComplianceUseCases(
+      repository as never,
+      {} as never,
+    );
+
+    await expect(
+      useCases.updateArtifactMetadata({
+        organizationId,
+        actorId,
+        productId,
+        artifactId,
+        input: {
+          expectedVersion: 3,
+          title: "Revised security update title",
+          supportedPlatform: "CRA revised test platform",
+          signatureMetadata: { algorithm: "ed25519", signer: "cra-releases" },
+        },
+      }),
+    ).resolves.toEqual({ ok: true, value: { artifact: updated } });
+    expect(repository.updateArtifactMetadata).toHaveBeenCalledWith(
+      organizationId,
+      actorId,
+      productId,
+      artifactId,
+      expect.objectContaining({ expectedVersion: 3 }),
+    );
+  });
+
+  it("reports a conflict when the metadata edit targets a stale artifact version", async () => {
+    const repository = {
+      updateArtifactMetadata: jest
+        .fn()
+        .mockResolvedValue({ outcome: "conflict" }),
+    };
+    const useCases = new ProductComplianceUseCases(
+      repository as never,
+      {} as never,
+    );
+
+    await expect(
+      useCases.updateArtifactMetadata({
+        organizationId,
+        actorId,
+        productId,
+        artifactId,
+        input: {
+          expectedVersion: 1,
+          title: "Revised security update title",
+          supportedPlatform: "CRA revised test platform",
+        },
+      }),
+    ).resolves.toEqual({ ok: false, error: { code: "conflict" } });
+  });
+
+  it("refuses to edit metadata on a withdrawn artifact", async () => {
+    const repository = {
+      updateArtifactMetadata: jest
+        .fn()
+        .mockResolvedValue({ outcome: "invalid_state" }),
+    };
+    const useCases = new ProductComplianceUseCases(
+      repository as never,
+      {} as never,
+    );
+
+    await expect(
+      useCases.updateArtifactMetadata({
+        organizationId,
+        actorId,
+        productId,
+        artifactId,
+        input: {
+          expectedVersion: 3,
+          title: "Revised security update title",
+          supportedPlatform: "CRA revised test platform",
+        },
+      }),
+    ).resolves.toEqual({ ok: false, error: { code: "invalid_state" } });
   });
 
   it("linearizes a concurrent withdrawal at the atomic download decision before issuing a short-lived attachment URL", async () => {

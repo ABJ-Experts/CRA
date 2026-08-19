@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { Module } from "@nestjs/common";
+import { Logger, Module } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 
 import { MailModule } from "../mail/mail.module";
@@ -56,6 +56,8 @@ import {
   SupabaseProductRetentionWorkerRepository,
 } from "./worker/supabase-product-retention-worker.adapter";
 import { SupabaseProductComplianceWorkerAdapter } from "./worker/supabase-product-compliance-worker.adapter";
+
+const complianceMetricsLogger = new Logger(ProductComplianceWorker.name);
 
 @Module({
   imports: [SupabaseModule, OrganizationsModule, PermissionsModule, MailModule],
@@ -117,13 +119,22 @@ import { SupabaseProductComplianceWorkerAdapter } from "./worker/supabase-produc
         PRODUCT_COMPLIANCE_REPOSITORY,
         SupabaseProductComplianceStorageAdapter,
         NodeProductComplianceExternalReferenceValidator,
+        ConfigService,
       ],
       useFactory: (
         repository: ProductComplianceRepository,
         storage: ProductComplianceStoragePort,
         externalReferences: NodeProductComplianceExternalReferenceValidator,
+        config: ConfigService,
       ) =>
-        new ProductComplianceUseCases(repository, storage, externalReferences),
+        new ProductComplianceUseCases(
+          repository,
+          storage,
+          externalReferences,
+          config.getOrThrow<number>(
+            "PRODUCT_COMPLIANCE_MAX_SYNC_INSPECT_BYTES",
+          ),
+        ),
     },
     ProductComplianceService,
     {
@@ -140,6 +151,11 @@ import { SupabaseProductComplianceWorkerAdapter } from "./worker/supabase-produc
           ),
           queue: adapter.queue,
           processor: adapter.processor,
+          observe: (measurement) =>
+            complianceMetricsLogger.log(
+              `product_compliance_metric ${measurement.metric}=${measurement.value}`,
+            ),
+          gauges: (organizationId) => adapter.snapshotMetrics(organizationId),
         }),
     },
     {

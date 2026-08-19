@@ -187,7 +187,11 @@ test("an owner opens tenant administration and persists catalog-backed settings"
         exact: true,
       }),
     ).toBeVisible();
-    await expect(page.getByText(legalName, { exact: true })).toBeVisible();
+    // The name legitimately renders in several landmarks on this page, so
+    // scope to the page heading instead of a bare text match.
+    await expect(
+      page.getByRole("heading", { name: legalName, exact: true }),
+    ).toBeVisible();
     await expect(
       page.getByRole("button", { name: "Request export", exact: true }),
     ).toBeVisible();

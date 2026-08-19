@@ -40,6 +40,7 @@ describe("ProductComplianceWorker", () => {
       recalculate: jest.fn().mockResolvedValue({ outcome: "recalculated" }),
       cleanup: jest.fn(),
       inspect: jest.fn(),
+      reverify: jest.fn(),
       monitorExternalReference: jest.fn(),
     };
     const worker = new ProductComplianceWorker({
@@ -97,6 +98,7 @@ describe("ProductComplianceWorker", () => {
         recalculate: jest.fn(),
         cleanup: jest.fn(),
         inspect: jest.fn().mockRejectedValue(new Error("provider unavailable")),
+        reverify: jest.fn(),
         monitorExternalReference: jest.fn(),
       },
       observe: (measurement: ProductComplianceMeasurement) =>
@@ -113,6 +115,56 @@ describe("ProductComplianceWorker", () => {
       value: 1,
     });
     expect(JSON.stringify(measurements)).not.toContain("provider unavailable");
+  });
+
+  it("dispatches a periodic integrity reverification claim to the reverify processor", async () => {
+    const queue = {
+      dueOrganizationIds: jest.fn().mockResolvedValue([organizationId]),
+      claim: jest
+        .fn()
+        .mockResolvedValueOnce({
+          outcome: "claimed",
+          deliveryId: "00000000-0000-4000-8000-000000000005",
+          leaseOwner: workerId,
+          checkpointVersion: 1,
+          event: {
+            kind: "integrity_reverify",
+            organizationId,
+            productId,
+            artifactId,
+            actorId,
+            expectedVersion: 1,
+            sha256: "a".repeat(64),
+            byteSize: 1024,
+            contentType: "application/octet-stream",
+            objectKey: `${organizationId}/${"a".repeat(64)}`,
+          },
+        })
+        .mockResolvedValue({ outcome: "none_available" }),
+      complete: jest.fn().mockResolvedValue({ outcome: "completed" }),
+      fail: jest.fn(),
+    };
+    const processor = {
+      recalculate: jest.fn(),
+      cleanup: jest.fn(),
+      inspect: jest.fn(),
+      reverify: jest.fn().mockResolvedValue({ outcome: "reverified" }),
+      monitorExternalReference: jest.fn(),
+    };
+    const worker = new ProductComplianceWorker({
+      workerId,
+      leaseSeconds: 60,
+      queue,
+      processor,
+    });
+
+    await worker.runOnce();
+
+    expect(processor.reverify).toHaveBeenCalledWith(
+      expect.objectContaining({ organizationId, productId, artifactId }),
+    );
+    expect(queue.complete).toHaveBeenCalledTimes(1);
+    expect(queue.fail).not.toHaveBeenCalled();
   });
 
   it("retries instead of completing when a worker transition cannot resolve an active audit actor", async () => {
@@ -149,6 +201,7 @@ describe("ProductComplianceWorker", () => {
         recalculate: jest.fn().mockResolvedValue({ outcome: "not_found" }),
         inspect: jest.fn(),
         cleanup: jest.fn(),
+        reverify: jest.fn(),
         monitorExternalReference: jest.fn(),
       },
       observe: (measurement) => measurements.push(measurement),
@@ -174,6 +227,56 @@ describe("ProductComplianceWorker", () => {
       () => new ProductComplianceWorker(dependencies({ leaseSeconds: 0 })),
     ).toThrow("invalid product compliance worker lease");
   });
+
+  it("emits per-organization gauges each cycle and never fails on gauge errors", async () => {
+    const measurements: ProductComplianceMeasurement[] = [];
+    const gauges = jest
+      .fn()
+      .mockResolvedValueOnce([
+        { metric: "review_backlog", value: 2 } as const,
+        { metric: "quarantine", value: 1 } as const,
+      ])
+      .mockRejectedValueOnce(new Error("snapshot unavailable"));
+    const worker = new ProductComplianceWorker(
+      dependencies({
+        observe: (measurement) => measurements.push(measurement),
+        gauges,
+      }),
+    );
+
+    await worker.runOnce();
+    await worker.runOnce();
+
+    expect(gauges).not.toHaveBeenCalled();
+    const withDueOrg = new ProductComplianceWorker({
+      workerId,
+      leaseSeconds: 60,
+      queue: {
+        dueOrganizationIds: () => Promise.resolve([organizationId]),
+        claim: () => Promise.resolve({ outcome: "none_available" }),
+        complete: () => Promise.resolve({ outcome: "completed" }),
+        fail: () => Promise.resolve({ outcome: "failed" }),
+      },
+      processor: {
+        recalculate: () => Promise.resolve({ outcome: "recalculated" }),
+        cleanup: () => Promise.resolve({ outcome: "cleaned" }),
+        inspect: () => Promise.resolve({ outcome: "inspected" }),
+        reverify: () => Promise.resolve({ outcome: "reverified" }),
+        monitorExternalReference: () =>
+          Promise.resolve({ outcome: "monitored" }),
+      },
+      observe: (measurement) => measurements.push(measurement),
+      gauges,
+    });
+    await withDueOrg.runOnce();
+    await withDueOrg.runOnce();
+
+    expect(gauges).toHaveBeenCalledWith(organizationId);
+    expect(measurements).toContainEqual({ metric: "review_backlog", value: 2 });
+    expect(measurements).toContainEqual({ metric: "quarantine", value: 1 });
+    // The rejected second cycle must not surface: gauges are observability
+    // only and never break claim processing.
+  });
 });
 
 function dependencies(
@@ -192,6 +295,7 @@ function dependencies(
       recalculate: () => Promise.resolve({ outcome: "recalculated" }),
       cleanup: () => Promise.resolve({ outcome: "cleaned" }),
       inspect: () => Promise.resolve({ outcome: "inspected" }),
+      reverify: () => Promise.resolve({ outcome: "reverified" }),
       monitorExternalReference: () => Promise.resolve({ outcome: "monitored" }),
     },
     ...overrides,
