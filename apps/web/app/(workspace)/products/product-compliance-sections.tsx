@@ -987,9 +987,7 @@ function ArtifactRow({
               {artifact.replacementArtifactId}
             </a>
           ) : (
-            <span className="break-all">
-              {artifact.replacementArtifactId}
-            </span>
+            <span className="break-all">{artifact.replacementArtifactId}</span>
           )}
         </p>
       ) : null}
@@ -1089,7 +1087,9 @@ function ArtifactRow({
           ) : null}
         </div>
       ) : null}
-      {canApprove && showRejectForm && artifact.reviewStatus === "pending_review" ? (
+      {canApprove &&
+      showRejectForm &&
+      artifact.reviewStatus === "pending_review" ? (
         <div className="grid gap-2 rounded-xl bg-surface-subtle p-4">
           <label className="grid gap-1 text-caption-1-semibold text-fg">
             Rejection reason
@@ -1218,7 +1218,9 @@ function ArtifactMetadataForm({
   const [algorithm, setAlgorithm] = useState(
     artifact.signatureMetadata?.algorithm ?? "",
   );
-  const [signer, setSigner] = useState(artifact.signatureMetadata?.signer ?? "");
+  const [signer, setSigner] = useState(
+    artifact.signatureMetadata?.signer ?? "",
+  );
   const [certificateSha256, setCertificateSha256] = useState(
     artifact.signatureMetadata?.certificateSha256 ?? "",
   );
@@ -1647,6 +1649,8 @@ function ArtifactReservationForm({
 }
 
 type ReleaseOption = Readonly<{ id: string; label: string; version: string }>;
+type ComplianceSection = "all" | "assessments" | "artifacts";
+type ComplianceView = "all" | "history" | "create";
 
 export function ProductComplianceSections({
   productId,
@@ -1654,181 +1658,204 @@ export function ProductComplianceSections({
   canEdit,
   canApprove,
   enabled,
+  section = "all",
+  view = "all",
 }: Readonly<{
   productId: string;
   releases: readonly ReleaseOption[];
   canEdit: boolean;
   canApprove: boolean;
   enabled: boolean;
+  section?: ComplianceSection;
+  view?: ComplianceView;
 }>) {
   const [assessmentPage, setAssessmentPage] = useState(1);
   const [artifactPage, setArtifactPage] = useState(1);
+  const showAssessments = section !== "artifacts";
+  const showArtifacts = section !== "assessments";
+  const showAssessmentHistory = showAssessments && view !== "create";
+  const showArtifactHistory = showArtifacts && view !== "create";
+  const showCreate = view !== "history";
   const assessments = useSubstantialModificationAssessmentsQuery(
     productId,
     { page: assessmentPage, pageSize: 15 },
-    enabled,
+    enabled && showAssessmentHistory,
   );
   const artifacts = useSecurityUpdateArtifactsQuery(
     productId,
     { page: artifactPage, pageSize: 15 },
-    enabled,
+    enabled && showArtifactHistory,
   );
   const knownArtifactIds = new Set(
     (artifacts.data?.artifacts.rows ?? []).map((artifact) => artifact.id),
   );
   return (
     <div className="grid gap-6">
-      <Section title="Substantial modifications">
-        {assessments.isPending ? (
-          <p role="status" className="text-subhead-regular text-fg-muted">
-            Loading assessments…
-          </p>
-        ) : assessments.isError ? (
-          <p role="alert" className="text-subhead-regular text-danger">
-            {errorMessage(
-              assessments.error,
-              "Assessments could not be loaded.",
-            )}
-          </p>
-        ) : assessments.data?.assessments.rows.length === 0 ? (
-          <p className="text-subhead-regular text-fg">
-            No substantial modification assessments have been recorded.
-          </p>
-        ) : (
-          <ul className="grid gap-4">
-            {assessments.data?.assessments.rows.map((assessment) => (
-              <AssessmentRow
-                key={assessment.id}
-                productId={productId}
-                releases={releases}
-                assessment={assessment}
-                canEdit={canEdit}
-                canApprove={canApprove}
-                onReload={() => void assessments.refetch()}
-              />
-            ))}
-          </ul>
-        )}
-        {(assessments.data?.assessments.pageCount ?? 1) > 1 ? (
-          <div className="flex items-center gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              tone="grey"
-              disabled={
-                Math.min(
+      {showAssessments ? (
+        <Section title="Substantial modifications">
+          {showAssessmentHistory && assessments.isPending ? (
+            <p role="status" className="text-subhead-regular text-fg-muted">
+              Loading assessments…
+            </p>
+          ) : showAssessmentHistory && assessments.isError ? (
+            <p role="alert" className="text-subhead-regular text-danger">
+              {errorMessage(
+                assessments.error,
+                "Assessments could not be loaded.",
+              )}
+            </p>
+          ) : showAssessmentHistory &&
+            assessments.data?.assessments.rows.length === 0 ? (
+            <p className="text-subhead-regular text-fg">
+              No substantial modification assessments have been recorded.
+            </p>
+          ) : showAssessmentHistory ? (
+            <ul className="grid gap-4">
+              {assessments.data?.assessments.rows.map((assessment) => (
+                <AssessmentRow
+                  key={assessment.id}
+                  productId={productId}
+                  releases={releases}
+                  assessment={assessment}
+                  canEdit={canEdit}
+                  canApprove={canApprove}
+                  onReload={() => void assessments.refetch()}
+                />
+              ))}
+            </ul>
+          ) : null}
+          {showAssessmentHistory &&
+          (assessments.data?.assessments.pageCount ?? 1) > 1 ? (
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                tone="grey"
+                disabled={
+                  Math.min(
+                    assessmentPage,
+                    assessments.data?.assessments.pageCount ?? 1,
+                  ) <= 1
+                }
+                onClick={() => setAssessmentPage((page) => page - 1)}
+              >
+                Previous assessments
+              </Button>
+              <p className="text-caption-1-regular text-fg">
+                Page{" "}
+                {Math.min(
                   assessmentPage,
                   assessments.data?.assessments.pageCount ?? 1,
-                ) <= 1
-              }
-              onClick={() => setAssessmentPage((page) => page - 1)}
-            >
-              Previous assessments
-            </Button>
-            <p className="text-caption-1-regular text-fg">
-              Page{" "}
-              {Math.min(
-                assessmentPage,
-                assessments.data?.assessments.pageCount ?? 1,
-              )}{" "}
-              of {assessments.data?.assessments.pageCount}
+                )}{" "}
+                of {assessments.data?.assessments.pageCount}
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                tone="grey"
+                disabled={
+                  Math.min(
+                    assessmentPage,
+                    assessments.data?.assessments.pageCount ?? 1,
+                  ) >= (assessments.data?.assessments.pageCount ?? 1)
+                }
+                onClick={() => setAssessmentPage((page) => page + 1)}
+              >
+                Next assessments
+              </Button>
+            </div>
+          ) : null}
+          {canEdit && showCreate ? (
+            <AssessmentForm
+              productId={productId}
+              releases={releases}
+              onReload={() => void assessments.refetch()}
+            />
+          ) : null}
+        </Section>
+      ) : null}
+      {showArtifacts ? (
+        <Section title="Security update artifacts">
+          {showArtifactHistory && artifacts.isPending ? (
+            <p role="status" className="text-subhead-regular text-fg-muted">
+              Loading security update artifacts…
             </p>
-            <Button
-              type="button"
-              variant="outline"
-              tone="grey"
-              disabled={
-                Math.min(
-                  assessmentPage,
-                  assessments.data?.assessments.pageCount ?? 1,
-                ) >= (assessments.data?.assessments.pageCount ?? 1)
-              }
-              onClick={() => setAssessmentPage((page) => page + 1)}
-            >
-              Next assessments
-            </Button>
-          </div>
-        ) : null}
-        {canEdit ? (
-          <AssessmentForm
-            productId={productId}
-            releases={releases}
-            onReload={() => void assessments.refetch()}
-          />
-        ) : null}
-      </Section>
-      <Section title="Security update artifacts">
-        {artifacts.isPending ? (
-          <p role="status" className="text-subhead-regular text-fg-muted">
-            Loading security update artifacts…
-          </p>
-        ) : artifacts.isError ? (
-          <p role="alert" className="text-subhead-regular text-danger">
-            {errorMessage(
-              artifacts.error,
-              "Security update artifacts could not be loaded.",
-            )}
-          </p>
-        ) : artifacts.data?.artifacts.rows.length === 0 ? (
-          <p className="text-subhead-regular text-fg">
-            No security update artifacts have been recorded.
-          </p>
-        ) : (
-          <ul className="grid gap-4">
-            {artifacts.data?.artifacts.rows.map((artifact) => (
-              <ArtifactRow
-                key={artifact.id}
-                productId={productId}
-                artifact={artifact}
-                canEdit={canEdit}
-                canApprove={canApprove}
-                knownArtifactIds={knownArtifactIds}
-                onReload={() => void artifacts.refetch()}
-              />
-            ))}
-          </ul>
-        )}
-        {(artifacts.data?.artifacts.pageCount ?? 1) > 1 ? (
-          <div className="flex items-center gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              tone="grey"
-              disabled={
-                Math.min(
+          ) : showArtifactHistory && artifacts.isError ? (
+            <p role="alert" className="text-subhead-regular text-danger">
+              {errorMessage(
+                artifacts.error,
+                "Security update artifacts could not be loaded.",
+              )}
+            </p>
+          ) : showArtifactHistory &&
+            artifacts.data?.artifacts.rows.length === 0 ? (
+            <p className="text-subhead-regular text-fg">
+              No security update artifacts have been recorded.
+            </p>
+          ) : showArtifactHistory ? (
+            <ul className="grid gap-4">
+              {artifacts.data?.artifacts.rows.map((artifact) => (
+                <ArtifactRow
+                  key={artifact.id}
+                  productId={productId}
+                  artifact={artifact}
+                  canEdit={canEdit}
+                  canApprove={canApprove}
+                  knownArtifactIds={knownArtifactIds}
+                  onReload={() => void artifacts.refetch()}
+                />
+              ))}
+            </ul>
+          ) : null}
+          {showArtifactHistory &&
+          (artifacts.data?.artifacts.pageCount ?? 1) > 1 ? (
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                tone="grey"
+                disabled={
+                  Math.min(
+                    artifactPage,
+                    artifacts.data?.artifacts.pageCount ?? 1,
+                  ) <= 1
+                }
+                onClick={() => setArtifactPage((page) => page - 1)}
+              >
+                Previous artifacts
+              </Button>
+              <p className="text-caption-1-regular text-fg">
+                Page{" "}
+                {Math.min(
                   artifactPage,
                   artifacts.data?.artifacts.pageCount ?? 1,
-                ) <= 1
-              }
-              onClick={() => setArtifactPage((page) => page - 1)}
-            >
-              Previous artifacts
-            </Button>
-            <p className="text-caption-1-regular text-fg">
-              Page{" "}
-              {Math.min(artifactPage, artifacts.data?.artifacts.pageCount ?? 1)}{" "}
-              of {artifacts.data?.artifacts.pageCount}
-            </p>
-            <Button
-              type="button"
-              variant="outline"
-              tone="grey"
-              disabled={
-                Math.min(
-                  artifactPage,
-                  artifacts.data?.artifacts.pageCount ?? 1,
-                ) >= (artifacts.data?.artifacts.pageCount ?? 1)
-              }
-              onClick={() => setArtifactPage((page) => page + 1)}
-            >
-              Next artifacts
-            </Button>
-          </div>
-        ) : null}
-        {canEdit ? (
-          <ArtifactReservationForm productId={productId} releases={releases} />
-        ) : null}
-      </Section>
+                )}{" "}
+                of {artifacts.data?.artifacts.pageCount}
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                tone="grey"
+                disabled={
+                  Math.min(
+                    artifactPage,
+                    artifacts.data?.artifacts.pageCount ?? 1,
+                  ) >= (artifacts.data?.artifacts.pageCount ?? 1)
+                }
+                onClick={() => setArtifactPage((page) => page + 1)}
+              >
+                Next artifacts
+              </Button>
+            </div>
+          ) : null}
+          {canEdit && showCreate ? (
+            <ArtifactReservationForm
+              productId={productId}
+              releases={releases}
+            />
+          ) : null}
+        </Section>
+      ) : null}
     </div>
   );
 }

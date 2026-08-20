@@ -82,6 +82,7 @@ export function ReleaseRegulatoryControls({
   canCorrectPlacedDate,
   enabled,
   onReload,
+  section = "all",
 }: {
   productId: string;
   release: Release;
@@ -89,17 +90,20 @@ export function ReleaseRegulatoryControls({
   canCorrectPlacedDate: boolean;
   enabled: boolean;
   onReload: () => void;
+  section?: "all" | "lifecycle" | "support";
 }) {
-  const memberStates = useMemberStatesQuery(enabled);
+  const showLifecycle = section !== "support";
+  const showSupport = section !== "lifecycle";
+  const memberStates = useMemberStatesQuery(enabled && showLifecycle);
   const availability = useReleaseMarketAvailabilityQuery(
     productId,
     release.id,
-    enabled,
+    enabled && showLifecycle,
   );
   const timeline = useReleaseLifecycleTimelineQuery(
     productId,
     release.id,
-    enabled,
+    enabled && showLifecycle,
   );
   const addAvailability = useAddReleaseMarketAvailabilityMutation(
     productId,
@@ -276,425 +280,450 @@ export function ReleaseRegulatoryControls({
 
   return (
     <div className="mt-5 grid gap-4 border-t border-border pt-5">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <p className="text-subhead-semibold text-fg">Release compliance</p>
-          <p className="mt-1 max-w-3xl text-caption-1-regular text-fg-muted">
-            Manage market availability and lifecycle before recording the
-            product support commitment.
-          </p>
-        </div>
-        <span className="rounded-full bg-surface-muted px-3 py-1 text-caption-1-semibold text-fg-muted">
-          {lifecycleLabel(release.lifecycle)}
-        </span>
-      </div>
-      <div className="grid gap-4 lg:grid-cols-2">
-        <section
-          aria-label={`Market availability for ${release.label}`}
-          className="min-w-0 rounded-xl bg-surface-subtle p-4"
-        >
-          <h3 className="text-subhead-semibold text-fg">Market availability</h3>
-          {availability.isPending ? (
-            <p
-              role="status"
-              className="mt-2 text-caption-1-regular text-fg-muted"
-            >
-              Loading Member State availability…
-            </p>
-          ) : availability.isError ? (
-            <div
-              role="alert"
-              className="mt-2 flex flex-wrap items-center gap-2"
-            >
-              <p className="text-caption-1-regular text-danger">
-                {errorMessage(
-                  availability.error,
-                  "Availability could not be loaded.",
-                )}
+      {showLifecycle ? (
+        <>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className="text-subhead-semibold text-fg">
+                Release compliance
               </p>
-              <Button
-                type="button"
-                variant="outline"
-                tone="grey"
-                onClick={() => void availability.refetch()}
-              >
-                Try again
-              </Button>
+              <p className="mt-1 max-w-3xl text-caption-1-regular text-fg-muted">
+                Manage market availability and lifecycle before recording the
+                product support commitment.
+              </p>
             </div>
-          ) : activeAvailability.length === 0 ? (
-            <p role="alert" className="mt-2 text-caption-1-regular text-danger">
-              No Member State availability has been recorded.
-            </p>
-          ) : (
-            <ul
-              className="mt-2 flex flex-wrap gap-2"
-              aria-label="Available Member States"
+            <span className="rounded-full bg-surface-muted px-3 py-1 text-caption-1-semibold text-fg-muted">
+              {lifecycleLabel(release.lifecycle)}
+            </span>
+          </div>
+          <div className="grid gap-4 lg:grid-cols-2">
+            <section
+              aria-label={`Market availability for ${release.label}`}
+              className="min-w-0 rounded-xl bg-surface-subtle p-4"
             >
-              {activeAvailability.map((item) => (
-                <li
-                  key={item.countryCode}
-                  className="flex min-w-0 flex-wrap items-center gap-2 rounded-lg border border-border bg-canvas px-3 py-2 text-caption-1-regular text-fg"
-                >
-                  <span className="min-w-0 break-words">
-                    {item.memberStateName} ({item.countryCode})
-                  </span>
-                  {canEdit ? (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      tone="grey"
-                      className="w-full sm:w-auto"
-                      loading={removeAvailability.isPending}
-                      loadingLabel="Removing Member State"
-                      onClick={() => void removeMarket(item.countryCode)}
-                    >
-                      Remove
-                    </Button>
-                  ) : null}
-                </li>
-              ))}
-            </ul>
-          )}
-          {canEdit && postMarket ? (
-            <label className="mt-3 block text-caption-1-regular text-fg">
-              Market change reason
-              <input
-                aria-label="Market change reason"
-                value={marketReason}
-                onChange={(event) => setMarketReason(event.target.value)}
-                className="mt-1 h-10 w-full rounded-xl border border-border bg-canvas px-3 text-caption-1-regular text-fg"
-              />
-            </label>
-          ) : null}
-          {canEdit ? (
-            <>
-              {memberStates.isPending ? (
+              <h3 className="text-subhead-semibold text-fg">
+                Market availability
+              </h3>
+              {availability.isPending ? (
                 <p
                   role="status"
-                  className="mt-3 text-caption-1-regular text-fg-muted"
+                  className="mt-2 text-caption-1-regular text-fg-muted"
                 >
-                  Loading Member States…
+                  Loading Member State availability…
                 </p>
-              ) : memberStates.isError ? (
+              ) : availability.isError ? (
                 <div
                   role="alert"
-                  className="mt-3 flex flex-wrap items-center gap-2"
+                  className="mt-2 flex flex-wrap items-center gap-2"
                 >
                   <p className="text-caption-1-regular text-danger">
                     {errorMessage(
-                      memberStates.error,
-                      "Member States could not be loaded.",
+                      availability.error,
+                      "Availability could not be loaded.",
                     )}
                   </p>
                   <Button
                     type="button"
                     variant="outline"
                     tone="grey"
-                    onClick={() => void memberStates.refetch()}
+                    onClick={() => void availability.refetch()}
                   >
                     Try again
                   </Button>
                 </div>
+              ) : activeAvailability.length === 0 ? (
+                <p
+                  role="alert"
+                  className="mt-2 text-caption-1-regular text-danger"
+                >
+                  No Member State availability has been recorded.
+                </p>
               ) : (
+                <ul
+                  className="mt-2 flex flex-wrap gap-2"
+                  aria-label="Available Member States"
+                >
+                  {activeAvailability.map((item) => (
+                    <li
+                      key={item.countryCode}
+                      className="flex min-w-0 flex-wrap items-center gap-2 rounded-lg border border-border bg-canvas px-3 py-2 text-caption-1-regular text-fg"
+                    >
+                      <span className="min-w-0 break-words">
+                        {item.memberStateName} ({item.countryCode})
+                      </span>
+                      {canEdit ? (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          tone="grey"
+                          className="w-full sm:w-auto"
+                          loading={removeAvailability.isPending}
+                          loadingLabel="Removing Member State"
+                          onClick={() => void removeMarket(item.countryCode)}
+                        >
+                          Remove
+                        </Button>
+                      ) : null}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {canEdit && postMarket ? (
+                <label className="mt-3 block text-caption-1-regular text-fg">
+                  Market change reason
+                  <input
+                    aria-label="Market change reason"
+                    value={marketReason}
+                    onChange={(event) => setMarketReason(event.target.value)}
+                    className="mt-1 h-10 w-full rounded-xl border border-border bg-canvas px-3 text-caption-1-regular text-fg"
+                  />
+                </label>
+              ) : null}
+              {canEdit ? (
+                <>
+                  {memberStates.isPending ? (
+                    <p
+                      role="status"
+                      className="mt-3 text-caption-1-regular text-fg-muted"
+                    >
+                      Loading Member States…
+                    </p>
+                  ) : memberStates.isError ? (
+                    <div
+                      role="alert"
+                      className="mt-3 flex flex-wrap items-center gap-2"
+                    >
+                      <p className="text-caption-1-regular text-danger">
+                        {errorMessage(
+                          memberStates.error,
+                          "Member States could not be loaded.",
+                        )}
+                      </p>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        tone="grey"
+                        onClick={() => void memberStates.refetch()}
+                      >
+                        Try again
+                      </Button>
+                    </div>
+                  ) : (
+                    <form
+                      className="mt-3 grid gap-2"
+                      noValidate
+                      onSubmit={(event) => void addMarket(event)}
+                    >
+                      <label className="text-caption-1-regular text-fg">
+                        Add Member State
+                        <select
+                          aria-label="Add Member State"
+                          value={countryCode}
+                          onChange={(event) =>
+                            setCountryCode(event.target.value)
+                          }
+                          className="mt-1 h-10 w-full rounded-xl border border-border bg-canvas px-3 text-caption-1-regular text-fg"
+                        >
+                          <option value="">Select a Member State</option>
+                          {memberStates.data?.memberStates
+                            .filter(
+                              (state) =>
+                                state.active &&
+                                !activeAvailability.some(
+                                  (item) =>
+                                    item.countryCode === state.countryCode,
+                                ),
+                            )
+                            .map((state) => (
+                              <option
+                                key={state.countryCode}
+                                value={state.countryCode}
+                              >
+                                {state.name}
+                              </option>
+                            ))}
+                        </select>
+                      </label>
+                      <Button
+                        type="submit"
+                        className="w-full sm:w-auto"
+                        loading={addAvailability.isPending}
+                        loadingLabel="Adding Member State"
+                      >
+                        Add Member State
+                      </Button>
+                    </form>
+                  )}
+                  {activeAvailability.length > 0 ? (
+                    <details className="mt-3">
+                      <summary className="flex h-10 cursor-pointer items-center rounded-xl border border-border px-3 text-caption-1-regular text-fg-muted transition-colors hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-active-500 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas">
+                        Correct a Member State
+                      </summary>
+                      <form
+                        className="mt-2 grid gap-2"
+                        noValidate
+                        onSubmit={(event) => void correctMarket(event)}
+                      >
+                        <label className="text-caption-1-regular text-fg">
+                          Replace
+                          <select
+                            aria-label="Replace Member State"
+                            value={fromCountryCode}
+                            onChange={(event) =>
+                              setFromCountryCode(event.target.value)
+                            }
+                            className="mt-1 h-10 w-full rounded-xl border border-border bg-canvas px-3 text-caption-1-regular text-fg"
+                          >
+                            <option value="">
+                              Select recorded Member State
+                            </option>
+                            {activeAvailability.map((item) => (
+                              <option
+                                key={item.countryCode}
+                                value={item.countryCode}
+                              >
+                                {item.memberStateName}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                        <label className="text-caption-1-regular text-fg">
+                          With
+                          <select
+                            aria-label="Replacement Member State"
+                            value={toCountryCode}
+                            onChange={(event) =>
+                              setToCountryCode(event.target.value)
+                            }
+                            className="mt-1 h-10 w-full rounded-xl border border-border bg-canvas px-3 text-caption-1-regular text-fg"
+                          >
+                            <option value="">
+                              Select replacement Member State
+                            </option>
+                            {memberStates.data?.memberStates
+                              .filter((state) => state.active)
+                              .map((state) => (
+                                <option
+                                  key={state.countryCode}
+                                  value={state.countryCode}
+                                >
+                                  {state.name}
+                                </option>
+                              ))}
+                          </select>
+                        </label>
+                        <Button
+                          type="submit"
+                          className="w-full sm:w-auto"
+                          loading={correctAvailability.isPending}
+                          loadingLabel="Correcting Member State"
+                        >
+                          Correct availability
+                        </Button>
+                      </form>
+                    </details>
+                  ) : null}
+                </>
+              ) : null}
+            </section>
+            <section
+              aria-label={`Lifecycle for ${release.label}`}
+              className="min-w-0 rounded-xl bg-surface-subtle p-4"
+            >
+              <h3 className="text-subhead-semibold text-fg">Lifecycle</h3>
+              <p className="mt-2 text-caption-1-regular text-fg-muted">
+                Current state:{" "}
+                <span className="text-fg">
+                  {lifecycleLabel(release.lifecycle)}
+                </span>
+                {release.placedOnMarketAt
+                  ? ` · placed on market ${release.placedOnMarketAt}`
+                  : ""}
+              </p>
+              {canEdit && targets.length > 0 ? (
                 <form
                   className="mt-3 grid gap-2"
                   noValidate
-                  onSubmit={(event) => void addMarket(event)}
+                  onSubmit={(event) => void transitionLifecycle(event)}
                 >
                   <label className="text-caption-1-regular text-fg">
-                    Add Member State
+                    Transition to
                     <select
-                      aria-label="Add Member State"
-                      value={countryCode}
-                      onChange={(event) => setCountryCode(event.target.value)}
+                      aria-label={`Lifecycle target for ${release.label}`}
+                      value={targetState}
+                      onChange={(event) =>
+                        setTargetState(
+                          event.target.value as ReleaseLifecycleState,
+                        )
+                      }
                       className="mt-1 h-10 w-full rounded-xl border border-border bg-canvas px-3 text-caption-1-regular text-fg"
                     >
-                      <option value="">Select a Member State</option>
-                      {memberStates.data?.memberStates
-                        .filter(
-                          (state) =>
-                            state.active &&
-                            !activeAvailability.some(
-                              (item) => item.countryCode === state.countryCode,
-                            ),
-                        )
-                        .map((state) => (
-                          <option
-                            key={state.countryCode}
-                            value={state.countryCode}
-                          >
-                            {state.name}
-                          </option>
-                        ))}
+                      {targets.map((target) => (
+                        <option key={target} value={target}>
+                          {lifecycleLabel(target)}
+                        </option>
+                      ))}
                     </select>
                   </label>
+                  {targetState === "placed_on_market" ? (
+                    <label className="text-caption-1-regular text-fg">
+                      Placed on market at (UTC)
+                      <input
+                        aria-label="Placed on market at (UTC)"
+                        placeholder="2026-08-12T10:00:00.000Z"
+                        value={placedOnMarketAt}
+                        onChange={(event) =>
+                          setPlacedOnMarketAt(event.target.value)
+                        }
+                        className="mt-1 h-10 w-full rounded-xl border border-border bg-canvas px-3 text-caption-1-regular text-fg"
+                      />
+                    </label>
+                  ) : null}
+                  {targetState === "withdrawn" ? (
+                    <label className="text-caption-1-regular text-fg">
+                      Withdrawal reason
+                      <input
+                        aria-label="Withdrawal reason"
+                        value={lifecycleReason}
+                        onChange={(event) =>
+                          setLifecycleReason(event.target.value)
+                        }
+                        className="mt-1 h-10 w-full rounded-xl border border-border bg-canvas px-3 text-caption-1-regular text-fg"
+                      />
+                    </label>
+                  ) : null}
                   <Button
                     type="submit"
                     className="w-full sm:w-auto"
-                    loading={addAvailability.isPending}
-                    loadingLabel="Adding Member State"
+                    loading={transition.isPending}
+                    loadingLabel="Recording lifecycle transition"
                   >
-                    Add Member State
+                    Transition lifecycle
                   </Button>
                 </form>
-              )}
-              {activeAvailability.length > 0 ? (
+              ) : targets.length === 0 ? (
+                <p className="mt-3 text-caption-1-regular text-fg-muted">
+                  This release is withdrawn and has no permitted lifecycle
+                  transition.
+                </p>
+              ) : null}
+              {canCorrectPlacedDate && release.placedOnMarketAt ? (
                 <details className="mt-3">
                   <summary className="flex h-10 cursor-pointer items-center rounded-xl border border-border px-3 text-caption-1-regular text-fg-muted transition-colors hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-active-500 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas">
-                    Correct a Member State
+                    Correct placed-on-market date
                   </summary>
                   <form
                     className="mt-2 grid gap-2"
                     noValidate
-                    onSubmit={(event) => void correctMarket(event)}
+                    onSubmit={(event) => void correctDate(event)}
                   >
                     <label className="text-caption-1-regular text-fg">
-                      Replace
-                      <select
-                        aria-label="Replace Member State"
-                        value={fromCountryCode}
+                      Corrected UTC timestamp
+                      <input
+                        aria-label="Corrected UTC timestamp"
+                        value={correctedPlacedOnMarketAt}
                         onChange={(event) =>
-                          setFromCountryCode(event.target.value)
+                          setCorrectedPlacedOnMarketAt(event.target.value)
                         }
                         className="mt-1 h-10 w-full rounded-xl border border-border bg-canvas px-3 text-caption-1-regular text-fg"
-                      >
-                        <option value="">Select recorded Member State</option>
-                        {activeAvailability.map((item) => (
-                          <option
-                            key={item.countryCode}
-                            value={item.countryCode}
-                          >
-                            {item.memberStateName}
-                          </option>
-                        ))}
-                      </select>
+                      />
                     </label>
                     <label className="text-caption-1-regular text-fg">
-                      With
-                      <select
-                        aria-label="Replacement Member State"
-                        value={toCountryCode}
+                      Correction reason
+                      <input
+                        aria-label="Correction reason"
+                        value={correctionReason}
                         onChange={(event) =>
-                          setToCountryCode(event.target.value)
+                          setCorrectionReason(event.target.value)
                         }
                         className="mt-1 h-10 w-full rounded-xl border border-border bg-canvas px-3 text-caption-1-regular text-fg"
-                      >
-                        <option value="">
-                          Select replacement Member State
-                        </option>
-                        {memberStates.data?.memberStates
-                          .filter((state) => state.active)
-                          .map((state) => (
-                            <option
-                              key={state.countryCode}
-                              value={state.countryCode}
-                            >
-                              {state.name}
-                            </option>
-                          ))}
-                      </select>
+                      />
                     </label>
                     <Button
                       type="submit"
                       className="w-full sm:w-auto"
-                      loading={correctAvailability.isPending}
-                      loadingLabel="Correcting Member State"
+                      loading={correctPlacedDate.isPending}
+                      loadingLabel="Correcting placed-on-market date"
                     >
-                      Correct availability
+                      Correct date
                     </Button>
                   </form>
                 </details>
               ) : null}
-            </>
-          ) : null}
-        </section>
-        <section
-          aria-label={`Lifecycle for ${release.label}`}
-          className="min-w-0 rounded-xl bg-surface-subtle p-4"
-        >
-          <h3 className="text-subhead-semibold text-fg">Lifecycle</h3>
-          <p className="mt-2 text-caption-1-regular text-fg-muted">
-            Current state:{" "}
-            <span className="text-fg">{lifecycleLabel(release.lifecycle)}</span>
-            {release.placedOnMarketAt
-              ? ` · placed on market ${release.placedOnMarketAt}`
-              : ""}
-          </p>
-          {canEdit && targets.length > 0 ? (
-            <form
-              className="mt-3 grid gap-2"
-              noValidate
-              onSubmit={(event) => void transitionLifecycle(event)}
-            >
-              <label className="text-caption-1-regular text-fg">
-                Transition to
-                <select
-                  aria-label={`Lifecycle target for ${release.label}`}
-                  value={targetState}
-                  onChange={(event) =>
-                    setTargetState(event.target.value as ReleaseLifecycleState)
-                  }
-                  className="mt-1 h-10 w-full rounded-xl border border-border bg-canvas px-3 text-caption-1-regular text-fg"
+              {timeline.isPending ? (
+                <p
+                  role="status"
+                  className="mt-3 text-caption-1-regular text-fg-muted"
                 >
-                  {targets.map((target) => (
-                    <option key={target} value={target}>
-                      {lifecycleLabel(target)}
-                    </option>
+                  Loading lifecycle timeline…
+                </p>
+              ) : timeline.isError ? (
+                <div
+                  role="alert"
+                  className="mt-3 flex flex-wrap items-center gap-2"
+                >
+                  <p className="text-caption-1-regular text-danger">
+                    {errorMessage(
+                      timeline.error,
+                      "Lifecycle history could not be loaded.",
+                    )}
+                  </p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    tone="grey"
+                    onClick={() => void timeline.refetch()}
+                  >
+                    Try again
+                  </Button>
+                </div>
+              ) : timeline.data?.timeline.length === 0 ? (
+                <p className="mt-3 text-caption-1-regular text-fg-muted">
+                  No lifecycle events have been recorded.
+                </p>
+              ) : (
+                <ol
+                  className="mt-3 space-y-1 text-caption-1-regular text-fg-muted"
+                  aria-label="Lifecycle timeline"
+                >
+                  {timeline.data?.timeline.map((event) => (
+                    <li key={event.id}>
+                      {event.eventType.replaceAll("_", " ")} ·{" "}
+                      {event.occurredAt}
+                    </li>
                   ))}
-                </select>
-              </label>
-              {targetState === "placed_on_market" ? (
-                <label className="text-caption-1-regular text-fg">
-                  Placed on market at (UTC)
-                  <input
-                    aria-label="Placed on market at (UTC)"
-                    placeholder="2026-08-12T10:00:00.000Z"
-                    value={placedOnMarketAt}
-                    onChange={(event) =>
-                      setPlacedOnMarketAt(event.target.value)
-                    }
-                    className="mt-1 h-10 w-full rounded-xl border border-border bg-canvas px-3 text-caption-1-regular text-fg"
-                  />
-                </label>
-              ) : null}
-              {targetState === "withdrawn" ? (
-                <label className="text-caption-1-regular text-fg">
-                  Withdrawal reason
-                  <input
-                    aria-label="Withdrawal reason"
-                    value={lifecycleReason}
-                    onChange={(event) => setLifecycleReason(event.target.value)}
-                    className="mt-1 h-10 w-full rounded-xl border border-border bg-canvas px-3 text-caption-1-regular text-fg"
-                  />
-                </label>
-              ) : null}
-              <Button
-                type="submit"
-                className="w-full sm:w-auto"
-                loading={transition.isPending}
-                loadingLabel="Recording lifecycle transition"
-              >
-                Transition lifecycle
-              </Button>
-            </form>
-          ) : targets.length === 0 ? (
-            <p className="mt-3 text-caption-1-regular text-fg-muted">
-              This release is withdrawn and has no permitted lifecycle
-              transition.
-            </p>
-          ) : null}
-          {canCorrectPlacedDate && release.placedOnMarketAt ? (
-            <details className="mt-3">
-              <summary className="flex h-10 cursor-pointer items-center rounded-xl border border-border px-3 text-caption-1-regular text-fg-muted transition-colors hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-active-500 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas">
-                Correct placed-on-market date
-              </summary>
-              <form
-                className="mt-2 grid gap-2"
-                noValidate
-                onSubmit={(event) => void correctDate(event)}
-              >
-                <label className="text-caption-1-regular text-fg">
-                  Corrected UTC timestamp
-                  <input
-                    aria-label="Corrected UTC timestamp"
-                    value={correctedPlacedOnMarketAt}
-                    onChange={(event) =>
-                      setCorrectedPlacedOnMarketAt(event.target.value)
-                    }
-                    className="mt-1 h-10 w-full rounded-xl border border-border bg-canvas px-3 text-caption-1-regular text-fg"
-                  />
-                </label>
-                <label className="text-caption-1-regular text-fg">
-                  Correction reason
-                  <input
-                    aria-label="Correction reason"
-                    value={correctionReason}
-                    onChange={(event) =>
-                      setCorrectionReason(event.target.value)
-                    }
-                    className="mt-1 h-10 w-full rounded-xl border border-border bg-canvas px-3 text-caption-1-regular text-fg"
-                  />
-                </label>
-                <Button
-                  type="submit"
-                  className="w-full sm:w-auto"
-                  loading={correctPlacedDate.isPending}
-                  loadingLabel="Correcting placed-on-market date"
-                >
-                  Correct date
-                </Button>
-              </form>
-            </details>
-          ) : null}
-          {timeline.isPending ? (
-            <p
-              role="status"
-              className="mt-3 text-caption-1-regular text-fg-muted"
-            >
-              Loading lifecycle timeline…
-            </p>
-          ) : timeline.isError ? (
-            <div
-              role="alert"
-              className="mt-3 flex flex-wrap items-center gap-2"
-            >
-              <p className="text-caption-1-regular text-danger">
-                {errorMessage(
-                  timeline.error,
-                  "Lifecycle history could not be loaded.",
-                )}
+                </ol>
+              )}
+            </section>
+          </div>
+          {message ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <p role="alert" className="text-caption-1-regular text-danger">
+                {message}
               </p>
-              <Button
-                type="button"
-                variant="outline"
-                tone="grey"
-                onClick={() => void timeline.refetch()}
-              >
-                Try again
-              </Button>
+              {staleUpdate ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  tone="grey"
+                  onClick={onReload}
+                >
+                  Reload current data
+                </Button>
+              ) : null}
             </div>
-          ) : timeline.data?.timeline.length === 0 ? (
-            <p className="mt-3 text-caption-1-regular text-fg-muted">
-              No lifecycle events have been recorded.
-            </p>
-          ) : (
-            <ol
-              className="mt-3 space-y-1 text-caption-1-regular text-fg-muted"
-              aria-label="Lifecycle timeline"
-            >
-              {timeline.data?.timeline.map((event) => (
-                <li key={event.id}>
-                  {event.eventType.replaceAll("_", " ")} · {event.occurredAt}
-                </li>
-              ))}
-            </ol>
-          )}
-        </section>
-      </div>
-      {message ? (
-        <div className="flex flex-wrap items-center gap-2">
-          <p role="alert" className="text-caption-1-regular text-danger">
-            {message}
-          </p>
-          {staleUpdate ? (
-            <Button
-              type="button"
-              variant="outline"
-              tone="grey"
-              onClick={onReload}
-            >
-              Reload current data
-            </Button>
           ) : null}
-        </div>
+        </>
       ) : null}
-      <SupportPeriodRetentionSection
-        productId={productId}
-        release={release}
-        canEdit={canEdit}
-        enabled={enabled}
-        onReload={onReload}
-      />
+      {showSupport ? (
+        <SupportPeriodRetentionSection
+          productId={productId}
+          release={release}
+          canEdit={canEdit}
+          enabled={enabled}
+          onReload={onReload}
+        />
+      ) : null}
     </div>
   );
 }

@@ -1,6 +1,12 @@
 import { randomUUID } from "node:crypto";
 
-import { expect, test, type BrowserContext, type Page } from "@playwright/test";
+import {
+  expect,
+  test,
+  type BrowserContext,
+  type Locator,
+  type Page,
+} from "@playwright/test";
 
 import {
   LIVE_API_ORIGIN,
@@ -48,7 +54,7 @@ function labelize(value: string): string {
 }
 
 async function selectCatalogValue(
-  page: Page,
+  page: Page | Locator,
   label: string,
   value: string,
 ): Promise<void> {
@@ -124,13 +130,6 @@ async function waitForAdministrationReads(page: Page): Promise<void> {
       responsePath(response) === "/api/v1/organizations/current/lifecycle" &&
       response.request().method() === "GET",
   );
-  const latestExport = page.waitForResponse(
-    (response) =>
-      responsePath(response) ===
-        "/api/v1/organizations/current/exports/latest" &&
-      response.request().method() === "GET",
-  );
-
   await page.goto("/organization");
   for (const response of await Promise.all([
     current,
@@ -138,7 +137,6 @@ async function waitForAdministrationReads(page: Page): Promise<void> {
     catalog,
     retention,
     lifecycle,
-    latestExport,
   ])) {
     expect(response.status()).toBe(200);
   }
@@ -192,23 +190,37 @@ test("an owner opens tenant administration and persists catalog-backed settings"
     await expect(
       page.getByRole("heading", { name: legalName, exact: true }),
     ).toBeVisible();
+    await page
+      .getByRole("button", { name: "Organization settings", exact: true })
+      .click();
+    const settingsDialog = page.getByRole("dialog", {
+      name: "Organization settings",
+      exact: true,
+    });
+    await expect(settingsDialog).toBeVisible();
     await expect(
-      page.getByRole("button", { name: "Request export", exact: true }),
-    ).toBeVisible();
-    await expect(
-      page.getByRole("button", { name: "Reauthenticate", exact: true }),
+      settingsDialog.getByRole("button", {
+        name: "Save settings",
+        exact: true,
+      }),
     ).toBeVisible();
 
-    await selectCatalogValue(page, "IANA timezone", timezone);
-    await page
+    await selectCatalogValue(settingsDialog, "IANA timezone", timezone);
+    await settingsDialog
       .getByRole("spinbutton", {
         name: "Maximum session age minutes",
         exact: true,
       })
       .fill(String(catalog.minimumSessionAgeMinutes));
-    await selectCatalogValue(page, "AI provider", aiProvider);
-    await selectCatalogValue(page, "Data residency indicator", residency);
-    await page.getByRole("checkbox", { name: "Monday", exact: true }).click();
+    await selectCatalogValue(settingsDialog, "AI provider", aiProvider);
+    await selectCatalogValue(
+      settingsDialog,
+      "Data residency indicator",
+      residency,
+    );
+    await settingsDialog
+      .getByRole("checkbox", { name: "Monday", exact: true })
+      .click();
 
     const persisted = page.waitForResponse(
       (response) =>
@@ -220,7 +232,7 @@ test("an owner opens tenant administration and persists catalog-backed settings"
         responsePath(response) === "/api/v1/organizations/current/settings" &&
         response.request().method() === "GET",
     );
-    await page
+    await settingsDialog
       .getByRole("button", { name: "Save settings", exact: true })
       .click();
 
@@ -240,27 +252,45 @@ test("an owner opens tenant administration and persists catalog-backed settings"
       },
     });
     expect((await refreshed).status()).toBe(200);
-    await expect(page.getByText("Version 1", { exact: true })).toBeVisible();
+    await expect(
+      settingsDialog.getByText("Version 1", { exact: true }),
+    ).toBeVisible();
+
+    await settingsDialog
+      .getByRole("tab", { name: "Exports", exact: true })
+      .click();
 
     const requested = page.waitForResponse(
       (response) =>
         responsePath(response) === "/api/v1/organizations/current/exports" &&
         response.request().method() === "POST",
     );
-    await page
+    await settingsDialog
       .getByRole("button", { name: "Request export", exact: true })
       .click();
     expect((await requested).status()).toBe(201);
 
+    await page.reload();
     const restoredLatest = page.waitForResponse(
       (response) =>
         responsePath(response) ===
           "/api/v1/organizations/current/exports/latest" &&
         response.request().method() === "GET",
     );
-    await page.reload();
+    await page
+      .getByRole("button", { name: "Organization settings", exact: true })
+      .click();
     expect((await restoredLatest).status()).toBe(200);
-    await expect(page.getByText("Status: Queued", { exact: true })).toBeVisible();
+    const restoredSettingsDialog = page.getByRole("dialog", {
+      name: "Organization settings",
+      exact: true,
+    });
+    await restoredSettingsDialog
+      .getByRole("tab", { name: "Exports", exact: true })
+      .click();
+    await expect(
+      restoredSettingsDialog.getByText("Status: Queued", { exact: true }),
+    ).toBeVisible();
   } finally {
     await context.close();
     await fixtures.cleanup();

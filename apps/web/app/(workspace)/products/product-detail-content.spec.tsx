@@ -22,6 +22,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiClientError } from "../../_lib/http/api-client";
 import { ProductDetailContent } from "./product-detail-content";
 
+class ResizeObserverMock {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+
+vi.stubGlobal("ResizeObserver", ResizeObserverMock);
+
 vi.mock("../../_features/organizations/organizations.queries", () => ({
   useOrganizationSettingsQuery: () => ({ data: undefined }),
 }));
@@ -488,6 +496,12 @@ vi.mock("../../_providers/session-provider", () => ({
 }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
 
+function openReleaseWorkspace(): void {
+  fireEvent.click(
+    screen.getByRole("button", { name: "Releases and compliance" }),
+  );
+}
+
 describe("ProductDetailContent", () => {
   const previous = process.env.NEXT_PUBLIC_ENABLE_MOCKS;
 
@@ -568,12 +582,50 @@ describe("ProductDetailContent", () => {
     process.env.NEXT_PUBLIC_ENABLE_MOCKS = previous;
   });
 
-  it("shows the legal-entity provenance, editable details, and the empty release state", () => {
+  it("keeps the overview concise and opens product work in focused dialogs", async () => {
     render(<ProductDetailContent productId={PRODUCT.id} />);
 
     expect(screen.getByText("CRA Ltd")).toBeInTheDocument();
     expect(
+      screen.getByRole("heading", { name: "Product workbench" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Finding impact" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Save changes" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Edit product" }),
+    ).toHaveAccessibleDescription("Update product identity and ownership.");
+
+    fireEvent.click(screen.getByRole("button", { name: "Edit product" }));
+
+    expect(
+      screen.getByRole("dialog", { name: "Edit product" }),
+    ).toBeInTheDocument();
+    expect(
       screen.getByRole("button", { name: "Save changes" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Identity" })).toHaveAttribute(
+      "data-state",
+      "active",
+    );
+    expect(screen.getByRole("tab", { name: "Ownership" })).toBeInTheDocument();
+    fireEvent.keyDown(document, { key: "Escape" });
+
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("dialog", { name: "Edit product" }),
+      ).not.toBeInTheDocument(),
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Releases and compliance" }),
+    );
+
+    expect(
+      screen.getByRole("dialog", { name: "Releases and compliance" }),
     ).toBeInTheDocument();
     expect(
       screen.getByText("No releases have been added yet."),
@@ -581,9 +633,129 @@ describe("ProductDetailContent", () => {
     expect(
       screen.getByRole("button", { name: "Add release" }),
     ).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Releases" })).toHaveAttribute(
+      "data-state",
+      "active",
+    );
+    expect(screen.getByRole("tab", { name: "Lifecycle" })).toBeInTheDocument();
     expect(
-      screen.getByRole("heading", { name: "Finding impact" }),
+      screen.getByRole("tab", { name: "Support and retention" }),
     ).toBeInTheDocument();
+
+    fireEvent.keyDown(document, { key: "Escape" });
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("dialog", { name: "Releases and compliance" }),
+      ).not.toBeInTheDocument(),
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Modifications" }));
+    expect(
+      screen.getByRole("dialog", { name: "Modifications" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Substantial modifications" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "History" })).toHaveAttribute(
+      "data-state",
+      "active",
+    );
+    expect(
+      screen.getByRole("tab", { name: "Record assessment" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: "Security update artifacts" }),
+    ).not.toBeInTheDocument();
+
+    fireEvent.keyDown(document, { key: "Escape" });
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("dialog", { name: "Modifications" }),
+      ).not.toBeInTheDocument(),
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Security artifacts" }));
+    expect(
+      screen.getByRole("dialog", { name: "Security artifacts" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Security update artifacts" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Artifacts" })).toHaveAttribute(
+      "data-state",
+      "active",
+    );
+    expect(
+      screen.getByRole("tab", { name: "Reserve artifact" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: "Substantial modifications" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("removes an open product editor when edit access is no longer available", () => {
+    const view = render(<ProductDetailContent productId={PRODUCT.id} />);
+    fireEvent.click(screen.getByRole("button", { name: "Edit product" }));
+    expect(
+      screen.getByRole("dialog", { name: "Edit product" }),
+    ).toBeInTheDocument();
+
+    state.session.permissions = {
+      can_view_products: true,
+      can_create_products: true,
+      can_edit_products: false,
+      can_delete_products: true,
+    };
+    view.rerender(<ProductDetailContent productId={PRODUCT.id} />);
+
+    expect(
+      screen.queryByRole("dialog", { name: "Edit product" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Save changes" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("keeps read-only product workspaces on review tabs", async () => {
+    state.session.permissions = {
+      can_view_products: true,
+      can_create_products: false,
+      can_edit_products: false,
+      can_delete_products: false,
+    };
+    render(<ProductDetailContent productId={PRODUCT.id} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Relationships" }));
+    expect(screen.getByRole("tab", { name: "Overview" })).toBeInTheDocument();
+    expect(
+      screen.queryByRole("tab", { name: "Record change" }),
+    ).not.toBeInTheDocument();
+
+    fireEvent.keyDown(document, { key: "Escape" });
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("dialog", { name: "Relationships" }),
+      ).not.toBeInTheDocument(),
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Modifications" }));
+    expect(screen.getByRole("tab", { name: "History" })).toBeInTheDocument();
+    expect(
+      screen.queryByRole("tab", { name: "Record assessment" }),
+    ).not.toBeInTheDocument();
+
+    fireEvent.keyDown(document, { key: "Escape" });
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("dialog", { name: "Modifications" }),
+      ).not.toBeInTheDocument(),
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Security artifacts" }));
+    expect(screen.getByRole("tab", { name: "Artifacts" })).toBeInTheDocument();
+    expect(
+      screen.queryByRole("tab", { name: "Reserve artifact" }),
+    ).not.toBeInTheDocument();
   });
 
   it("shows a retryable unavailable state for tenant-safe product misses", () => {
@@ -624,6 +796,8 @@ describe("ProductDetailContent", () => {
       },
     };
     render(<ProductDetailContent productId={PRODUCT.id} />);
+    openReleaseWorkspace();
+    fireEvent.click(screen.getByRole("tab", { name: "Lifecycle" }));
 
     expect(
       screen.getByText("No Member State availability has been recorded."),
@@ -631,7 +805,9 @@ describe("ProductDetailContent", () => {
     expect(
       screen.getByRole("button", { name: "Transition lifecycle" }),
     ).toBeInTheDocument();
-    expect(screen.queryByLabelText("Lifecycle")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("tabpanel", { name: "Lifecycle" }),
+    ).toBeInTheDocument();
   });
 
   it("groups each release into an accessible workspace with its compliance controls", () => {
@@ -651,6 +827,8 @@ describe("ProductDetailContent", () => {
     };
 
     render(<ProductDetailContent productId={PRODUCT.id} />);
+    openReleaseWorkspace();
+    fireEvent.click(screen.getByRole("tab", { name: "Support and retention" }));
 
     const releaseWorkspace = screen.getByLabelText(
       "Release workspace for Sentinel 1.0",
@@ -687,6 +865,8 @@ describe("ProductDetailContent", () => {
       ),
     );
     render(<ProductDetailContent productId={PRODUCT.id} />);
+    openReleaseWorkspace();
+    fireEvent.click(screen.getByRole("tab", { name: "Lifecycle" }));
 
     fireEvent.change(screen.getByLabelText("Placed on market at (UTC)"), {
       target: { value: "2026-08-12T10:00:00.000Z" },
@@ -716,6 +896,8 @@ describe("ProductDetailContent", () => {
       },
     };
     const view = render(<ProductDetailContent productId={PRODUCT.id} />);
+    openReleaseWorkspace();
+    fireEvent.click(screen.getByRole("tab", { name: "Lifecycle" }));
     expect(
       screen.getByRole("combobox", {
         name: `Lifecycle target for ${RELEASE.label}`,
@@ -815,8 +997,12 @@ describe("ProductDetailContent", () => {
     };
 
     render(<ProductDetailContent productId={PRODUCT.id} />);
+    openReleaseWorkspace();
+    fireEvent.click(screen.getByRole("tab", { name: "Support and retention" }));
 
-    expect(screen.getByText("Support and retention")).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Support and retention" }),
+    ).toBeInTheDocument();
     expect(screen.getByText(/12 Aug 2026.*12 Aug 2029/)).toBeInTheDocument();
     expect(screen.getByText("Legal retention outcome")).toBeInTheDocument();
     expect(screen.getByText(/Retained until 12 Aug 2036/)).toBeInTheDocument();
@@ -836,6 +1022,8 @@ describe("ProductDetailContent", () => {
       },
     };
     render(<ProductDetailContent productId={PRODUCT.id} />);
+    openReleaseWorkspace();
+    fireEvent.click(screen.getByRole("tab", { name: "Support and retention" }));
 
     fireEvent.change(screen.getByLabelText(/Support starts/), {
       target: { value: "2026-08-12T10:00" },
@@ -877,6 +1065,8 @@ describe("ProductDetailContent", () => {
       supportPeriods: [SUPPORT_PERIOD],
     };
     render(<ProductDetailContent productId={PRODUCT.id} />);
+    openReleaseWorkspace();
+    fireEvent.click(screen.getByRole("tab", { name: "Support and retention" }));
 
     fireEvent.change(screen.getByLabelText(/Support ends/), {
       target: { value: "2030-08-12T10:00" },

@@ -91,9 +91,7 @@ test("an organization owner creates a product and sees its empty release registr
     await page
       .getByRole("button", { name: "Create product", exact: true })
       .click();
-    await page
-      .getByLabel("Product name", { exact: true })
-      .fill("E2E Sentinel");
+    await page.getByLabel("Product name", { exact: true }).fill("E2E Sentinel");
     await page
       .getByLabel("Internal code", { exact: true })
       .fill(`E2E-${Date.now()}`);
@@ -119,7 +117,7 @@ test("an organization owner creates a product and sees its empty release registr
       page.getByRole("heading", { name: "E2E Sentinel", exact: true }),
     ).toBeVisible();
     await expect(
-      page.getByText("No releases have been added yet.", { exact: true }),
+      page.getByRole("heading", { name: "Product workbench", exact: true }),
     ).toBeVisible();
   } finally {
     await context.close();

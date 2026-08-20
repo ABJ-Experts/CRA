@@ -178,8 +178,10 @@ function defaultHistoryResult() {
 }
 
 vi.mock("../../_features/products/products.queries", () => ({
-  useSubstantialModificationAssessmentsQuery: () => assessmentsQueryResult(),
-  useSecurityUpdateArtifactsQuery: () => artifactsQueryResult(),
+  useSubstantialModificationAssessmentsQuery: (...args: unknown[]) =>
+    assessmentsQueryResult(...args),
+  useSecurityUpdateArtifactsQuery: (...args: unknown[]) =>
+    artifactsQueryResult(...args),
   useSubstantialModificationAssessmentHistoryQuery: () => historyQueryResult(),
   useCreateSubstantialModificationAssessmentMutation: () => ({
     isPending: false,
@@ -236,6 +238,7 @@ function renderSections(
     canEdit: boolean;
     canApprove: boolean;
     releases: readonly { id: string; label: string; version: string }[];
+    section: "all" | "assessments" | "artifacts";
   }> = {},
 ) {
   return render(
@@ -247,12 +250,16 @@ function renderSections(
       canEdit={props.canEdit ?? true}
       canApprove={props.canApprove ?? true}
       enabled
+      section={props.section}
     />,
   );
 }
 
 describe("ProductComplianceSections", () => {
   beforeEach(() => {
+    assessmentsQueryResult.mockClear();
+    artifactsQueryResult.mockClear();
+    historyQueryResult.mockClear();
     assessmentsQueryResult.mockReturnValue(defaultAssessmentsResult());
     artifactsQueryResult.mockReturnValue(defaultArtifactsResult());
     historyQueryResult.mockReturnValue(defaultHistoryResult());
@@ -292,6 +299,24 @@ describe("ProductComplianceSections", () => {
       "id",
       productComplianceHeadingId("Substantial modifications"),
     );
+  });
+
+  it("only enables the query for the selected compliance workspace", () => {
+    renderSections({ section: "assessments" });
+
+    expect(assessmentsQueryResult).toHaveBeenLastCalledWith(
+      productId,
+      { page: 1, pageSize: 15 },
+      true,
+    );
+    expect(artifactsQueryResult).toHaveBeenLastCalledWith(
+      productId,
+      { page: 1, pageSize: 15 },
+      false,
+    );
+    expect(
+      screen.queryByRole("heading", { name: "Security update artifacts" }),
+    ).not.toBeInTheDocument();
   });
 
   it("explains the availability calculation and hides lifecycle actions the state does not allow", () => {

@@ -365,8 +365,19 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+async function openOrganizationWorkspace(
+  name: "Organization settings" | "Organization identity" | "Tenant lifecycle",
+) {
+  fireEvent.click(await screen.findByRole("button", { name }));
+  return screen.findByRole("dialog", { name });
+}
+
+function selectOrganizationWorkspaceTab(name: string) {
+  fireEvent.click(screen.getByRole("tab", { name }));
+}
+
 describe("OrganizationAdministrationPage", () => {
-  it("renders settings, retention, export, and lifecycle controls for owners", async () => {
+  it("opens organization controls in focused workbench dialogs for owners", async () => {
     render(<OrganizationAdministrationPage />);
 
     expect(await screen.findByText("Organization administration")).toBeTruthy();
@@ -377,43 +388,152 @@ describe("OrganizationAdministrationPage", () => {
       screen.getByRole("region", { name: "Organization workspace" }),
     ).toBeTruthy();
     expect(
-      screen.getByRole("heading", { name: "Organization configuration" }),
+      screen.getByRole("heading", { name: "Organization workbench" }),
+    ).toBeTruthy();
+    expect(screen.queryByText("Evidence retention")).toBeNull();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Organization settings" }),
+    );
+
+    expect(
+      screen.getByRole("dialog", { name: "Organization settings" }),
     ).toBeTruthy();
     expect(
-      screen.getByRole("heading", { name: "Identity and presentation" }),
+      screen.getByRole("tab", { name: "Evidence retention" }),
     ).toBeTruthy();
-    expect(
-      screen.getByRole("heading", { name: "Tenant lifecycle" }),
-    ).toBeTruthy();
-    expect(
-      screen.getByRole("heading", { name: "Evidence retention" }),
-    ).toBeTruthy();
-    expect(
-      screen.getByRole("heading", { name: "Legal entities" }),
-    ).toBeTruthy();
-    expect(
-      screen.getByRole("heading", { name: "Organization branding" }),
-    ).toBeTruthy();
-    expect(screen.getByText("Analytical Engines UK")).toBeTruthy();
-    expect(screen.getByText("CRA Sentinel fallback active")).toBeTruthy();
-    expect(screen.getByText("Full tenant export")).toBeTruthy();
-    expect(screen.getByText("Deactivation and deletion")).toBeTruthy();
+    selectOrganizationWorkspaceTab("Evidence retention");
     const retentionButtons = screen.getAllByRole("button", {
       name: "Save retention",
     });
     expect(retentionButtons).toHaveLength(1);
     expect(retentionButtons[0]).toHaveClass("lg:self-end");
+    selectOrganizationWorkspaceTab("Exports");
+    expect(screen.getByText("Full tenant export")).toBeTruthy();
     const requestExportButton = screen.getByRole("button", {
       name: "Request export",
     });
     expect(requestExportButton).toBeEnabled();
     expect(requestExportButton.parentElement).toHaveClass("mt-auto");
+
+    fireEvent.keyDown(document, { key: "Escape" });
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Organization identity" }),
+    );
+    expect(
+      screen.getByRole("dialog", { name: "Organization identity" }),
+    ).toBeTruthy();
+    expect(screen.getByText("Analytical Engines UK")).toBeTruthy();
+    selectOrganizationWorkspaceTab("Branding");
+    expect(screen.getByText("CRA Sentinel fallback active")).toBeTruthy();
+
+    fireEvent.keyDown(document, { key: "Escape" });
+
+    fireEvent.click(screen.getByRole("button", { name: "Tenant lifecycle" }));
+    expect(
+      screen.getByRole("dialog", { name: "Tenant lifecycle" }),
+    ).toBeTruthy();
+    expect(screen.getByText("Deactivation and deletion")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Reauthenticate" })).toHaveClass(
       "lg:self-end",
     );
-    expect(screen.getByRole("button", { name: "Deactivate tenant" })).toHaveClass(
-      "lg:self-end",
+    expect(
+      screen.getByRole("button", { name: "Deactivate tenant" }),
+    ).toHaveClass("lg:self-end");
+  });
+
+  it("resets to the first tab and closes the organization workbench with Escape", async () => {
+    render(<OrganizationAdministrationPage />);
+
+    const opener = await screen.findByRole("button", {
+      name: "Organization settings",
+    });
+    fireEvent.click(opener);
+    await screen.findByRole("dialog", { name: "Organization settings" });
+    selectOrganizationWorkspaceTab("Exports");
+    expect(screen.getByRole("tab", { name: "Exports" })).toHaveAttribute(
+      "data-state",
+      "active",
     );
+
+    fireEvent.keyDown(document, { key: "Escape" });
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("dialog", { name: "Organization settings" }),
+      ).toBeNull(),
+    );
+    await waitFor(() => expect(opener).toHaveFocus());
+
+    await openOrganizationWorkspace("Organization settings");
+    expect(screen.getByRole("tab", { name: "Settings" })).toHaveAttribute(
+      "data-state",
+      "active",
+    );
+  });
+
+  it("preserves an unsaved settings draft while switching workbench tabs", async () => {
+    render(<OrganizationAdministrationPage />);
+
+    await openOrganizationWorkspace("Organization settings");
+    const timezone = screen.getByLabelText("IANA timezone");
+    fireEvent.change(timezone, { target: { value: "America/New_York" } });
+
+    selectOrganizationWorkspaceTab("Evidence retention");
+    selectOrganizationWorkspaceTab("Settings");
+
+    expect(screen.getByLabelText("IANA timezone")).toHaveValue(
+      "America/New_York",
+    );
+  });
+
+  it("does not request organization data for a user without view permission", async () => {
+    session.value = {
+      ...session.value,
+      permissions: {
+        can_view_organization: false,
+        can_edit_organization: false,
+        can_export_organization: false,
+        can_delete_organization: false,
+      },
+      role: "viewer",
+    };
+
+    render(<OrganizationAdministrationPage />);
+
+    expect(
+      await screen.findByText(
+        "You do not have permission to view organization administration.",
+      ),
+    ).toBeTruthy();
+    expect(queries.useCurrentOrganizationQuery).toHaveBeenCalledWith(false);
+    expect(queries.useOrganizationSettingsQuery).toHaveBeenCalledWith(false);
+    expect(queries.useOrganizationSettingsCatalogQuery).toHaveBeenCalledWith(
+      false,
+    );
+    expect(queries.useOrganizationRetentionQuery).toHaveBeenCalledWith(false);
+    expect(queries.useOrganizationLifecycleQuery).toHaveBeenCalledWith(false);
+    expect(queries.useLegalEntitiesQuery).toHaveBeenCalledWith(false);
+    expect(queries.useOrganizationBrandingQuery).toHaveBeenCalledWith(false);
+    expect(queries.useOrganizationBrandingPreviewQuery).toHaveBeenCalledWith(
+      false,
+    );
+  });
+
+  it("keeps unaffected workspaces available when a secondary panel is unavailable", async () => {
+    queries.useOrganizationBrandingQuery.mockReturnValue({
+      ...okQuery(undefined),
+      isError: true,
+      error: new Error("branding unavailable"),
+    });
+
+    render(<OrganizationAdministrationPage />);
+
+    expect(
+      await screen.findByRole("heading", { name: "Organization workbench" }),
+    ).toBeTruthy();
+    await openOrganizationWorkspace("Organization settings");
+    expect(screen.getByLabelText("IANA timezone")).toBeEnabled();
   });
 
   it("reuses the same export idempotency key when a browser retry follows a failed request", async () => {
@@ -435,6 +555,8 @@ describe("OrganizationAdministrationPage", () => {
         idempotent: true,
       });
     render(<OrganizationAdministrationPage />);
+    await openOrganizationWorkspace("Organization settings");
+    selectOrganizationWorkspaceTab("Exports");
 
     const requestButton = await screen.findByRole("button", {
       name: "Request export",
@@ -469,6 +591,8 @@ describe("OrganizationAdministrationPage", () => {
       },
     });
     render(<OrganizationAdministrationPage />);
+    await openOrganizationWorkspace("Organization settings");
+    selectOrganizationWorkspaceTab("Exports");
 
     expect(await screen.findByText("Status: Running")).toBeTruthy();
     expect(screen.getByText("Progress: 2/5 parts")).toBeTruthy();
@@ -481,6 +605,7 @@ describe("OrganizationAdministrationPage", () => {
   it("submits settings with the current version and selected server-catalog values", async () => {
     updateSettings.mutateAsync.mockResolvedValue(SETTINGS);
     render(<OrganizationAdministrationPage />);
+    await openOrganizationWorkspace("Organization settings");
 
     fireEvent.change(
       await screen.findByLabelText(/Maximum session age minutes/),
@@ -518,17 +643,14 @@ describe("OrganizationAdministrationPage", () => {
     };
 
     render(<OrganizationAdministrationPage />);
+    await openOrganizationWorkspace("Organization settings");
 
-    expect(await screen.findByText("Evidence retention")).toBeTruthy();
+    expect(
+      screen.getByRole("dialog", { name: "Organization settings" }),
+    ).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Save settings" })).toBeNull();
-    expect(
-      screen.queryByRole("button", { name: "Create legal entity" }),
-    ).toBeNull();
-    expect(
-      screen.queryByRole("button", { name: "Publish branding" }),
-    ).toBeNull();
+    selectOrganizationWorkspaceTab("Exports");
     expect(screen.queryByRole("button", { name: "Request export" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Reauthenticate" })).toBeNull();
     expect(
       screen.getByText(/Only organization owners with export permission/),
     ).toBeTruthy();
@@ -543,6 +665,7 @@ describe("OrganizationAdministrationPage", () => {
       },
     });
     render(<OrganizationAdministrationPage />);
+    await openOrganizationWorkspace("Organization identity");
 
     fireEvent.click(
       await screen.findByRole("button", {
@@ -579,6 +702,7 @@ describe("OrganizationAdministrationPage", () => {
       },
     });
     render(<OrganizationAdministrationPage />);
+    await openOrganizationWorkspace("Organization identity");
 
     fireEvent.click(
       await screen.findByRole("button", {
@@ -655,6 +779,8 @@ describe("OrganizationAdministrationPage", () => {
       },
     });
     render(<OrganizationAdministrationPage />);
+    await openOrganizationWorkspace("Organization identity");
+    selectOrganizationWorkspaceTab("Branding");
 
     fireEvent.change(await screen.findByLabelText(/Brand display name/), {
       target: { value: "Analytical Engines" },
@@ -721,6 +847,8 @@ describe("OrganizationAdministrationPage", () => {
       },
     });
     render(<OrganizationAdministrationPage />);
+    await openOrganizationWorkspace("Organization identity");
+    selectOrganizationWorkspaceTab("Branding");
 
     const draftLogo = await screen.findByRole("img", { name: "AE logo" });
     expect(draftLogo).toHaveAttribute(
@@ -743,6 +871,8 @@ describe("OrganizationAdministrationPage", () => {
 
   it("hides an unavailable draft logo instead of rendering a broken private asset", async () => {
     render(<OrganizationAdministrationPage />);
+    await openOrganizationWorkspace("Organization identity");
+    selectOrganizationWorkspaceTab("Branding");
 
     fireEvent.error(await screen.findByRole("img", { name: "AE logo" }));
 
@@ -767,6 +897,8 @@ describe("OrganizationAdministrationPage", () => {
     const revokeObjectURL = vi.mocked(URL.revokeObjectURL);
     uploadBrandingLogo.mutateAsync.mockResolvedValue(BRANDING_DRAFT_RESPONSE);
     const { unmount } = render(<OrganizationAdministrationPage />);
+    await openOrganizationWorkspace("Organization identity");
+    selectOrganizationWorkspaceTab("Branding");
 
     const input = await screen.findByLabelText(/Logo image/);
     fireEvent.change(input, {
@@ -814,6 +946,7 @@ describe("OrganizationAdministrationPage", () => {
     });
     deactivate.mutateAsync.mockResolvedValue(LIFECYCLE);
     render(<OrganizationAdministrationPage />);
+    await openOrganizationWorkspace("Tenant lifecycle");
 
     fireEvent.change(
       await screen.findByLabelText(/Fresh password confirmation/),
@@ -849,6 +982,7 @@ describe("OrganizationAdministrationPage", () => {
       okQuery({ lifecycle: { ...LIFECYCLE.lifecycle, status: "deactivated" } }),
     );
     render(<OrganizationAdministrationPage />);
+    await openOrganizationWorkspace("Tenant lifecycle");
 
     fireEvent.change(
       await screen.findByLabelText(/Fresh password confirmation/),
@@ -899,6 +1033,7 @@ describe("OrganizationAdministrationPage", () => {
       new ApiClientError("api", "Settings changed", 409, "conflict"),
     );
     render(<OrganizationAdministrationPage />);
+    await openOrganizationWorkspace("Organization settings");
 
     const maximumAge = await screen.findByLabelText(
       /Maximum session age minutes/,
@@ -922,12 +1057,14 @@ describe("OrganizationAdministrationPage", () => {
       }),
     );
     render(<OrganizationAdministrationPage />);
+    await openOrganizationWorkspace("Tenant lifecycle");
 
     expect(await screen.findByText(/Changed .* UTC/)).toBeTruthy();
   });
 
   it("resets administration-only drafts when the server-selected organization changes", async () => {
     const view = render(<OrganizationAdministrationPage />);
+    await openOrganizationWorkspace("Organization settings");
     expect(
       await screen.findByLabelText(/Maximum session age minutes/),
     ).toHaveValue(480);
@@ -968,6 +1105,7 @@ describe("OrganizationAdministrationPage", () => {
       }),
     );
     render(<OrganizationAdministrationPage />);
+    await openOrganizationWorkspace("Tenant lifecycle");
     expect(
       await screen.findByRole("button", { name: "Recover tenant" }),
     ).toBeVisible();
@@ -977,6 +1115,7 @@ describe("OrganizationAdministrationPage", () => {
       okQuery({ lifecycle: { ...LIFECYCLE.lifecycle, status: "purging" } }),
     );
     render(<OrganizationAdministrationPage />);
+    await openOrganizationWorkspace("Tenant lifecycle");
     expect(await screen.findByText(/restoration is unavailable/i)).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Recover tenant" })).toBeNull();
   });

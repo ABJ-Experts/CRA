@@ -110,6 +110,7 @@ async function savePolicy(
     (response) =>
       new URL(response.url()).pathname.endsWith("/mapping/preview") &&
       response.request().method() === "POST",
+    { timeout: 15_000 },
   );
   await page
     .getByRole("button", { name: "Preview impact", exact: true })
@@ -124,6 +125,7 @@ async function savePolicy(
       /\/api\/v1\/connectors\/[^/]+\/mapping$/.test(
         new URL(response.url()).pathname,
       ) && response.request().method() === "POST",
+    { timeout: 15_000 },
   );
   await page.getByRole("button", { name: "Save", exact: true }).click();
   expect((await save).status()).toBe(200);

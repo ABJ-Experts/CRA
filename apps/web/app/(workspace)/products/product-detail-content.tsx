@@ -8,8 +8,26 @@ import {
   type Release,
 } from "@repo/contracts/products";
 import { Button } from "@repo/ui/button";
+import {
+  ModalBody,
+  ModalContent,
+  ModalDescription,
+  ModalHeader,
+  ModalRoot,
+  ModalTitle,
+  type ModalSize,
+} from "@repo/ui/modal";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/tabs";
+import {
+  Boxes,
+  FilePenLine,
+  GitBranch,
+  ShieldCheck,
+  Wrench,
+  type LucideIcon,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 import {
   useArchiveProductMutation,
@@ -39,6 +57,109 @@ const PRODUCT_TYPE_LABELS = Object.freeze({
   component: "Component",
   remote_data_processing: "Remote data processing",
 } satisfies Record<ProductType, string>);
+
+type WorkbenchPanel =
+  | "edit-product"
+  | "releases"
+  | "relationships"
+  | "modifications"
+  | "security-artifacts";
+
+type WorkbenchTab =
+  | "identity"
+  | "ownership"
+  | "releases"
+  | "lifecycle"
+  | "support"
+  | "overview"
+  | "manage"
+  | "history"
+  | "record-assessment"
+  | "artifacts"
+  | "reserve-artifact";
+
+type WorkbenchItem = Readonly<{
+  id: WorkbenchPanel;
+  title: string;
+  description: string;
+  icon: LucideIcon;
+}>;
+
+const WORKBENCH_ITEMS = Object.freeze([
+  {
+    id: "edit-product",
+    title: "Edit product",
+    description: "Update product identity and ownership.",
+    icon: FilePenLine,
+  },
+  {
+    id: "releases",
+    title: "Releases and compliance",
+    description: "Manage releases, lifecycle, and retention.",
+    icon: ShieldCheck,
+  },
+  {
+    id: "relationships",
+    title: "Relationships",
+    description: "Review baselines, variants, and components.",
+    icon: GitBranch,
+  },
+  {
+    id: "modifications",
+    title: "Modifications",
+    description: "Assess substantial product changes.",
+    icon: Wrench,
+  },
+  {
+    id: "security-artifacts",
+    title: "Security artifacts",
+    description: "Manage security update evidence.",
+    icon: Boxes,
+  },
+] satisfies readonly WorkbenchItem[]);
+
+const WORKBENCH_TABS = Object.freeze({
+  "edit-product": [
+    { value: "identity", label: "Identity" },
+    { value: "ownership", label: "Ownership" },
+  ],
+  releases: [
+    { value: "releases", label: "Releases" },
+    { value: "lifecycle", label: "Lifecycle" },
+    { value: "support", label: "Support and retention" },
+  ],
+  relationships: [
+    { value: "overview", label: "Overview" },
+    { value: "manage", label: "Record change" },
+  ],
+  modifications: [
+    { value: "history", label: "History" },
+    { value: "record-assessment", label: "Record assessment" },
+  ],
+  "security-artifacts": [
+    { value: "artifacts", label: "Artifacts" },
+    { value: "reserve-artifact", label: "Reserve artifact" },
+  ],
+} as const satisfies Record<
+  WorkbenchPanel,
+  readonly { value: WorkbenchTab; label: string }[]
+>);
+
+const WORKBENCH_MODAL_SIZES = Object.freeze({
+  "edit-product": "md",
+  releases: "xl",
+  relationships: "xl",
+  modifications: "xl",
+  "security-artifacts": "lg",
+} as const satisfies Record<WorkbenchPanel, ModalSize>);
+
+function requiresEditPermission(tab: WorkbenchTab): boolean {
+  return (
+    tab === "manage" ||
+    tab === "record-assessment" ||
+    tab === "reserve-artifact"
+  );
+}
 
 function formatProductDate(instant: string): string {
   try {
@@ -71,7 +192,13 @@ function errorMessage(error: unknown, fallback: string): string {
   return fallback;
 }
 
-function ProductEditor({ product }: { product: Product }) {
+function ProductEditor({
+  product,
+  tab,
+}: {
+  product: Product;
+  tab: "identity" | "ownership";
+}) {
   const update = useUpdateProductMutation(product.id);
   const [name, setName] = useState(product.name);
   const [internalCode, setInternalCode] = useState(product.internalCode);
@@ -110,86 +237,208 @@ function ProductEditor({ product }: { product: Product }) {
   }
 
   return (
-    <SectionCard title="Product details">
-      <form
-        className="grid gap-5 sm:grid-cols-2"
-        noValidate
-        onSubmit={(event) => void submit(event)}
-      >
-        <label className="flex flex-col gap-2 text-caption-1-regular text-fg">
-          Product name
-          <input
-            required
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            className="h-10 rounded-xl border border-border bg-canvas px-3 text-subhead-regular text-fg"
-          />
-        </label>
-        <label className="flex flex-col gap-2 text-caption-1-regular text-fg">
-          Internal code
-          <input
-            required
-            value={internalCode}
-            onChange={(event) => setInternalCode(event.target.value)}
-            className="h-10 rounded-xl border border-border bg-canvas px-3 text-subhead-regular text-fg"
-          />
-        </label>
-        <label className="flex flex-col gap-2 text-caption-1-regular text-fg">
-          Product type
-          <select
-            value={productType}
-            onChange={(event) =>
-              setProductType(event.target.value as ProductType)
-            }
-            className="h-10 rounded-xl border border-border bg-canvas px-3 text-subhead-regular text-fg"
-          >
-            <option value="hardware_with_software">
-              Hardware with software
-            </option>
-            <option value="standalone_software">Standalone software</option>
-            <option value="component">Component</option>
-            <option value="remote_data_processing">
-              Remote data processing
-            </option>
-          </select>
-        </label>
-        <label className="flex flex-col gap-2 text-caption-1-regular text-fg">
-          Responsible owner ID
-          <input
-            required
-            value={responsibleOwnerId}
-            onChange={(event) => setResponsibleOwnerId(event.target.value)}
-            className="h-10 rounded-xl border border-border bg-canvas px-3 text-subhead-regular text-fg"
-          />
-        </label>
-        <label className="flex flex-col gap-2 text-caption-1-regular text-fg sm:col-span-2">
-          Description
-          <textarea
-            value={description}
-            onChange={(event) => setDescription(event.target.value)}
-            className="min-h-28 rounded-xl border border-border bg-canvas px-3 py-2 text-subhead-regular text-fg"
-          />
-        </label>
-        {message ? (
-          <p
-            role="status"
-            className="sm:col-span-2 text-subhead-regular text-fg-muted"
-          >
-            {message}
-          </p>
-        ) : null}
-        <div className="flex flex-wrap gap-3 border-t border-border pt-5 sm:col-span-2">
-          <Button
-            type="submit"
-            className="w-full sm:w-auto"
-            loading={update.isPending}
-            loadingLabel="Saving product"
-          >
-            Save changes
-          </Button>
-        </div>
-      </form>
+    <form
+      className="grid gap-5 sm:grid-cols-2"
+      noValidate
+      onSubmit={(event) => void submit(event)}
+    >
+      {tab === "identity" ? (
+        <>
+          <label className="flex flex-col gap-2 text-caption-1-regular text-fg">
+            Product name
+            <input
+              required
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              className="h-10 rounded-xl border border-border bg-canvas px-3 text-subhead-regular text-fg"
+            />
+          </label>
+          <label className="flex flex-col gap-2 text-caption-1-regular text-fg">
+            Internal code
+            <input
+              required
+              value={internalCode}
+              onChange={(event) => setInternalCode(event.target.value)}
+              className="h-10 rounded-xl border border-border bg-canvas px-3 text-subhead-regular text-fg"
+            />
+          </label>
+          <label className="flex flex-col gap-2 text-caption-1-regular text-fg sm:col-span-2">
+            Product type
+            <select
+              value={productType}
+              onChange={(event) =>
+                setProductType(event.target.value as ProductType)
+              }
+              className="h-10 rounded-xl border border-border bg-canvas px-3 text-subhead-regular text-fg"
+            >
+              <option value="hardware_with_software">
+                Hardware with software
+              </option>
+              <option value="standalone_software">Standalone software</option>
+              <option value="component">Component</option>
+              <option value="remote_data_processing">
+                Remote data processing
+              </option>
+            </select>
+          </label>
+        </>
+      ) : (
+        <>
+          <label className="flex flex-col gap-2 text-caption-1-regular text-fg sm:col-span-2">
+            Responsible owner ID
+            <input
+              required
+              value={responsibleOwnerId}
+              onChange={(event) => setResponsibleOwnerId(event.target.value)}
+              className="h-10 rounded-xl border border-border bg-canvas px-3 text-subhead-regular text-fg"
+            />
+          </label>
+          <label className="flex flex-col gap-2 text-caption-1-regular text-fg sm:col-span-2">
+            Description
+            <textarea
+              value={description}
+              onChange={(event) => setDescription(event.target.value)}
+              className="min-h-28 rounded-xl border border-border bg-canvas px-3 py-2 text-subhead-regular text-fg"
+            />
+          </label>
+        </>
+      )}
+      {message ? (
+        <p
+          role="status"
+          className="sm:col-span-2 text-subhead-regular text-fg-muted"
+        >
+          {message}
+        </p>
+      ) : null}
+      <div className="flex flex-wrap gap-3 border-t border-border pt-5 sm:col-span-2">
+        <Button
+          type="submit"
+          className="w-full sm:w-auto"
+          loading={update.isPending}
+          loadingLabel="Saving product"
+        >
+          Save changes
+        </Button>
+      </div>
+    </form>
+  );
+}
+
+function ProductWorkbench({
+  canEditProduct,
+  onOpen,
+}: Readonly<{
+  canEditProduct: boolean;
+  onOpen: (panel: WorkbenchPanel) => void;
+}>) {
+  const items = WORKBENCH_ITEMS.filter(
+    (item) => item.id !== "edit-product" || canEditProduct,
+  );
+
+  return (
+    <SectionCard title="Product workbench">
+      <p className="max-w-3xl text-subhead-regular text-fg-muted">
+        Open one focused workspace at a time. Product history remains available
+        while you work.
+      </p>
+      <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+        {items.map((item) => {
+          const Icon = item.icon;
+          const descriptionId = `product-workbench-${item.id}-description`;
+          return (
+            <button
+              key={item.id}
+              type="button"
+              aria-label={item.title}
+              aria-describedby={descriptionId}
+              aria-haspopup="dialog"
+              className="group flex min-h-28 flex-col items-start rounded-xl border border-border bg-canvas p-4 text-left transition-colors duration-150 hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-active-500 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas motion-reduce:transition-none"
+              onClick={() => onOpen(item.id)}
+            >
+              <Icon
+                aria-hidden="true"
+                className="size-5 text-fg-muted transition-colors duration-150 group-hover:text-fg motion-reduce:transition-none"
+              />
+              <span className="mt-4 text-subhead-semibold text-fg">
+                {item.title}
+              </span>
+              <span
+                id={descriptionId}
+                className="mt-1 text-caption-1-regular text-fg-muted"
+              >
+                {item.description}
+              </span>
+            </button>
+          );
+        })}
+      </div>
     </SectionCard>
+  );
+}
+
+function ProductWorkbenchDialog({
+  panel,
+  tab,
+  canEdit,
+  onTabChange,
+  onClose,
+  children,
+}: Readonly<{
+  panel: WorkbenchPanel;
+  tab: WorkbenchTab;
+  canEdit: boolean;
+  onTabChange: (tab: WorkbenchTab) => void;
+  onClose: () => void;
+  children: ReactNode;
+}>) {
+  const item = WORKBENCH_ITEMS.find((candidate) => candidate.id === panel);
+  const tabs = WORKBENCH_TABS[panel].filter(
+    (itemTab) => canEdit || !requiresEditPermission(itemTab.value),
+  );
+  if (!item) return null;
+
+  return (
+    <Tabs
+      value={tab}
+      onValueChange={(value) => onTabChange(value as WorkbenchTab)}
+    >
+      <ModalRoot
+        open
+        onOpenChange={(open) => {
+          if (!open) onClose();
+        }}
+      >
+        <ModalContent
+          size={WORKBENCH_MODAL_SIZES[panel]}
+          aria-label={item.title}
+        >
+          <ModalHeader className="items-start pr-16">
+            <ModalTitle>{item.title}</ModalTitle>
+            <ModalDescription>{item.description}</ModalDescription>
+            <TabsList
+              aria-label={`${item.title} sections`}
+              className="mt-2 w-full"
+            >
+              {tabs.map((itemTab) => (
+                <TabsTrigger
+                  key={itemTab.value}
+                  value={itemTab.value}
+                  onClick={() => onTabChange(itemTab.value)}
+                >
+                  {itemTab.label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </ModalHeader>
+          <ModalBody className="pb-6">
+            <TabsContent value={tab} className="min-w-0">
+              {children}
+            </TabsContent>
+          </ModalBody>
+        </ModalContent>
+      </ModalRoot>
+    </Tabs>
   );
 }
 
@@ -299,6 +548,7 @@ function ReleaseRow({
   canCorrectPlacedDate,
   enabled,
   onReload,
+  workspace = "all",
 }: {
   productId: string;
   release: Release;
@@ -307,6 +557,7 @@ function ReleaseRow({
   canCorrectPlacedDate: boolean;
   enabled: boolean;
   onReload: () => void;
+  workspace?: "all" | "releases" | "lifecycle" | "support";
 }) {
   const archive = useArchiveReleaseMutation(productId, release.id);
   const update = useUpdateReleaseMutation(productId, release.id);
@@ -372,7 +623,8 @@ function ReleaseRow({
             </p>
           ) : null}
         </div>
-        {!release.archivedAt ? (
+        {!release.archivedAt &&
+        (workspace === "all" || workspace === "releases") ? (
           <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:justify-end">
             {canEdit ? (
               <details className="min-w-0 w-full sm:w-auto">
@@ -436,7 +688,7 @@ function ReleaseRow({
           </div>
         ) : null}
       </div>
-      <div>
+      {workspace !== "releases" ? (
         <ReleaseRegulatoryControls
           productId={productId}
           release={release}
@@ -444,8 +696,9 @@ function ReleaseRow({
           canCorrectPlacedDate={canCorrectPlacedDate && !release.archivedAt}
           enabled={enabled}
           onReload={onReload}
+          section={workspace === "all" ? "all" : workspace}
         />
-      </div>
+      ) : null}
     </li>
   );
 }
@@ -509,9 +762,34 @@ export function ProductDetailContent({ productId }: { productId: string }) {
   const canCreate = permissions.can_create_products === true;
   const canArchive = permissions.can_delete_products === true;
   const canApprove = permissions.can_approve_products === true;
+  const [activePanel, setActivePanel] = useState<WorkbenchPanel | null>(null);
+  const [activeTab, setActiveTab] = useState<WorkbenchTab>("identity");
+  const canEditCurrentProduct = canEdit && !product.data?.product.archivedAt;
+  const visiblePanel =
+    activePanel === "edit-product" && !canEditCurrentProduct
+      ? null
+      : activePanel;
+  useEffect(() => {
+    if (activePanel === "edit-product" && !canEditCurrentProduct) {
+      setActivePanel(null);
+    }
+  }, [activePanel, canEditCurrentProduct]);
+  useEffect(() => {
+    if (
+      activePanel &&
+      requiresEditPermission(activeTab) &&
+      !canEditCurrentProduct
+    ) {
+      setActiveTab(WORKBENCH_TABS[activePanel][0].value);
+    }
+  }, [activePanel, activeTab, canEditCurrentProduct]);
   const reloadProductData = () => {
     void product.refetch();
     void releases.refetch();
+  };
+  const openWorkbench = (panel: WorkbenchPanel) => {
+    setActiveTab(WORKBENCH_TABS[panel][0].value);
+    setActivePanel(panel);
   };
 
   return (
@@ -654,89 +932,150 @@ export function ProductDetailContent({ productId }: { productId: string }) {
                 remain available for authorized review.
               </p>
             </SectionCard>
-          ) : canEdit ? (
-            <ProductEditor product={product.data.product} />
           ) : null}
-          <SectionCard title="Releases" bodyClassName="pt-3">
-            {releases.isPending ? (
-              <p role="status" className="text-subhead-regular text-fg-muted">
-                Loading releases…
-              </p>
-            ) : releases.isError ? (
-              <div role="alert" className="flex flex-wrap items-center gap-3">
-                <p className="text-subhead-regular text-danger">
-                  {errorMessage(
-                    releases.error,
-                    "Releases could not be loaded.",
-                  )}
-                </p>
-                <Button
-                  type="button"
-                  variant="outline"
-                  tone="grey"
-                  onClick={() => void releases.refetch()}
-                >
-                  Try again
-                </Button>
-              </div>
-            ) : releases.data?.releases.rows.length === 0 ? (
-              <p className="text-subhead-regular text-fg-muted">
-                No releases have been added yet.
-              </p>
-            ) : (
-              <ul
-                aria-label="Product releases"
-                className="divide-y divide-border"
-              >
-                {releases.data?.releases.rows.map((release) => (
-                  <ReleaseRow
-                    key={release.id}
-                    productId={productId}
-                    release={release}
-                    canEdit={canEdit && !product.data.product.archivedAt}
-                    canArchive={canArchive && !product.data.product.archivedAt}
-                    canCorrectPlacedDate={
-                      canEdit &&
-                      role === "owner" &&
-                      !product.data.product.archivedAt
-                    }
-                    enabled={enabled}
-                    onReload={reloadProductData}
-                  />
-                ))}
-              </ul>
-            )}
-            {canCreate && !product.data.product.archivedAt ? (
-              <ReleaseCreateForm productId={productId} />
-            ) : null}
-          </SectionCard>
+          <ProductWorkbench
+            canEditProduct={canEditCurrentProduct}
+            onOpen={openWorkbench}
+          />
           <FindingImpactStatus productId={productId} enabled={enabled} />
-          <ProductRelationshipSection
-            productId={productId}
-            releases={
-              releases.data?.releases.rows.map((release) => ({
-                id: release.id,
-                label: release.label,
-                version: release.version,
-              })) ?? []
-            }
-            canEdit={canEdit && !product.data.product.archivedAt}
-            enabled={enabled}
-            onReload={reloadProductData}
-          />
-          <ProductComplianceSections
-            productId={productId}
-            releases={
-              releases.data?.releases.rows.map((release) => ({
-                id: release.id,
-                label: release.label,
-                version: release.version,
-              })) ?? []
-            }
-            canEdit={canEdit && !product.data.product.archivedAt}
-            canApprove={canApprove && !product.data.product.archivedAt}
-            enabled={enabled}
-          />
+          {visiblePanel ? (
+            <ProductWorkbenchDialog
+              panel={visiblePanel}
+              tab={activeTab}
+              canEdit={canEditCurrentProduct}
+              onTabChange={setActiveTab}
+              onClose={() => setActivePanel(null)}
+            >
+              {visiblePanel === "edit-product" ? (
+                <ProductEditor
+                  product={product.data.product}
+                  tab={activeTab === "ownership" ? "ownership" : "identity"}
+                />
+              ) : null}
+              {visiblePanel === "releases" ? (
+                <>
+                  {releases.isPending ? (
+                    <p
+                      role="status"
+                      className="text-subhead-regular text-fg-muted"
+                    >
+                      Loading releases…
+                    </p>
+                  ) : releases.isError ? (
+                    <div
+                      role="alert"
+                      className="flex flex-wrap items-center gap-3"
+                    >
+                      <p className="text-subhead-regular text-danger">
+                        {errorMessage(
+                          releases.error,
+                          "Releases could not be loaded.",
+                        )}
+                      </p>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        tone="grey"
+                        onClick={() => void releases.refetch()}
+                      >
+                        Try again
+                      </Button>
+                    </div>
+                  ) : releases.data?.releases.rows.length === 0 ? (
+                    <p className="text-subhead-regular text-fg-muted">
+                      No releases have been added yet.
+                    </p>
+                  ) : (
+                    <ul
+                      aria-label="Product releases"
+                      className="divide-y divide-border"
+                    >
+                      {releases.data?.releases.rows.map((release) => (
+                        <ReleaseRow
+                          key={release.id}
+                          productId={productId}
+                          release={release}
+                          canEdit={canEdit && !product.data.product.archivedAt}
+                          canArchive={
+                            canArchive && !product.data.product.archivedAt
+                          }
+                          canCorrectPlacedDate={
+                            canEdit &&
+                            role === "owner" &&
+                            !product.data.product.archivedAt
+                          }
+                          enabled={enabled}
+                          onReload={reloadProductData}
+                          workspace={
+                            activeTab === "lifecycle" || activeTab === "support"
+                              ? activeTab
+                              : "releases"
+                          }
+                        />
+                      ))}
+                    </ul>
+                  )}
+                  {activeTab === "releases" &&
+                  canCreate &&
+                  !product.data.product.archivedAt ? (
+                    <ReleaseCreateForm productId={productId} />
+                  ) : null}
+                </>
+              ) : null}
+              {visiblePanel === "relationships" ? (
+                <ProductRelationshipSection
+                  productId={productId}
+                  releases={
+                    releases.data?.releases.rows.map((release) => ({
+                      id: release.id,
+                      label: release.label,
+                      version: release.version,
+                    })) ?? []
+                  }
+                  canEdit={canEdit && !product.data.product.archivedAt}
+                  enabled={enabled}
+                  onReload={reloadProductData}
+                  view={activeTab === "manage" ? "manage" : "overview"}
+                />
+              ) : null}
+              {visiblePanel === "modifications" ? (
+                <ProductComplianceSections
+                  productId={productId}
+                  releases={
+                    releases.data?.releases.rows.map((release) => ({
+                      id: release.id,
+                      label: release.label,
+                      version: release.version,
+                    })) ?? []
+                  }
+                  canEdit={canEdit && !product.data.product.archivedAt}
+                  canApprove={canApprove && !product.data.product.archivedAt}
+                  enabled={enabled}
+                  section="assessments"
+                  view={
+                    activeTab === "record-assessment" ? "create" : "history"
+                  }
+                />
+              ) : null}
+              {visiblePanel === "security-artifacts" ? (
+                <ProductComplianceSections
+                  productId={productId}
+                  releases={
+                    releases.data?.releases.rows.map((release) => ({
+                      id: release.id,
+                      label: release.label,
+                      version: release.version,
+                    })) ?? []
+                  }
+                  canEdit={canEdit && !product.data.product.archivedAt}
+                  canApprove={canApprove && !product.data.product.archivedAt}
+                  enabled={enabled}
+                  section="artifacts"
+                  view={activeTab === "reserve-artifact" ? "create" : "history"}
+                />
+              ) : null}
+            </ProductWorkbenchDialog>
+          ) : null}
         </>
       ) : null}
     </div>
