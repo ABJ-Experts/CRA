@@ -303,6 +303,8 @@ export type Database = {
           commit_policy: string
           connection_config: Json
           connector_type: string
+          create_idempotency_key: string | null
+          create_request_digest: string | null
           created_at: string
           created_by: string
           display_name: string
@@ -326,6 +328,8 @@ export type Database = {
           commit_policy?: string
           connection_config?: Json
           connector_type: string
+          create_idempotency_key?: string | null
+          create_request_digest?: string | null
           created_at?: string
           created_by: string
           display_name: string
@@ -349,6 +353,8 @@ export type Database = {
           commit_policy?: string
           connection_config?: Json
           connector_type?: string
+          create_idempotency_key?: string | null
+          create_request_digest?: string | null
           created_at?: string
           created_by?: string
           display_name?: string
@@ -5544,6 +5550,345 @@ export type Database = {
           },
         ]
       }
+      sbom_ci_credentials: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          label: string
+          last_used_at: string | null
+          organization_id: string
+          revoked_at: string | null
+          revoked_by: string | null
+          status: string
+          token_hash: string
+          token_prefix: string
+          token_salt: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id: string
+          label: string
+          last_used_at?: string | null
+          organization_id: string
+          revoked_at?: string | null
+          revoked_by?: string | null
+          status?: string
+          token_hash: string
+          token_prefix: string
+          token_salt: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          label?: string
+          last_used_at?: string | null
+          organization_id?: string
+          revoked_at?: string | null
+          revoked_by?: string | null
+          status?: string
+          token_hash?: string
+          token_prefix?: string
+          token_salt?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sbom_ci_credentials_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sbom_ci_credentials_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sbom_ci_credentials_revoked_by_fkey"
+            columns: ["revoked_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sbom_ingest_jobs: {
+        Row: {
+          actor_credential_id: string | null
+          actor_user_id: string | null
+          attempt_count: number
+          completed_at: string | null
+          correlation_id: string
+          created_at: string
+          dead_lettered_at: string | null
+          error_code: string | null
+          id: string
+          idempotency_key: string
+          input_sha256: string
+          lease_expires_at: string | null
+          lease_owner: string | null
+          max_attempts: number
+          next_attempt_at: string
+          organization_id: string
+          progress_percent: number
+          progress_stage: string
+          release_id: string
+          replay_idempotency_key: string | null
+          replayed_at: string | null
+          replayed_by: string | null
+          source_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          actor_credential_id?: string | null
+          actor_user_id?: string | null
+          attempt_count?: number
+          completed_at?: string | null
+          correlation_id: string
+          created_at?: string
+          dead_lettered_at?: string | null
+          error_code?: string | null
+          id?: string
+          idempotency_key: string
+          input_sha256: string
+          lease_expires_at?: string | null
+          lease_owner?: string | null
+          max_attempts?: number
+          next_attempt_at?: string
+          organization_id: string
+          progress_percent?: number
+          progress_stage?: string
+          release_id: string
+          replay_idempotency_key?: string | null
+          replayed_at?: string | null
+          replayed_by?: string | null
+          source_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          actor_credential_id?: string | null
+          actor_user_id?: string | null
+          attempt_count?: number
+          completed_at?: string | null
+          correlation_id?: string
+          created_at?: string
+          dead_lettered_at?: string | null
+          error_code?: string | null
+          id?: string
+          idempotency_key?: string
+          input_sha256?: string
+          lease_expires_at?: string | null
+          lease_owner?: string | null
+          max_attempts?: number
+          next_attempt_at?: string
+          organization_id?: string
+          progress_percent?: number
+          progress_stage?: string
+          release_id?: string
+          replay_idempotency_key?: string | null
+          replayed_at?: string | null
+          replayed_by?: string | null
+          source_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sbom_ingest_jobs_actor_credential_fkey"
+            columns: ["organization_id", "actor_credential_id"]
+            isOneToOne: false
+            referencedRelation: "sbom_ci_credentials"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "sbom_ingest_jobs_actor_user_id_fkey"
+            columns: ["actor_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sbom_ingest_jobs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sbom_ingest_jobs_replayed_by_fkey"
+            columns: ["replayed_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sbom_ingest_jobs_source_fkey"
+            columns: ["organization_id", "source_id"]
+            isOneToOne: true
+            referencedRelation: "sbom_sources"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      sbom_raw_objects: {
+        Row: {
+          byte_size: number
+          created_at: string
+          id: string
+          media_type: string
+          organization_id: string
+          sha256: string
+          storage_bucket: string
+          storage_key: string
+        }
+        Insert: {
+          byte_size: number
+          created_at?: string
+          id?: string
+          media_type: string
+          organization_id: string
+          sha256: string
+          storage_bucket?: string
+          storage_key: string
+        }
+        Update: {
+          byte_size?: number
+          created_at?: string
+          id?: string
+          media_type?: string
+          organization_id?: string
+          sha256?: string
+          storage_bucket?: string
+          storage_key?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sbom_raw_objects_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sbom_sources: {
+        Row: {
+          actor_credential_id: string | null
+          actor_user_id: string | null
+          correlation_id: string
+          created_at: string
+          declared_byte_size: number
+          declared_media_type: string
+          declared_sha256: string
+          id: string
+          idempotency_key: string
+          organization_id: string
+          original_filename: string
+          product_id: string
+          raw_object_id: string | null
+          rejected_at: string | null
+          rejection_code: string | null
+          release_id: string
+          request_digest: string
+          source_kind: string
+          staging_storage_key: string
+          status: string
+          upload_expires_at: string
+          verified_at: string | null
+        }
+        Insert: {
+          actor_credential_id?: string | null
+          actor_user_id?: string | null
+          correlation_id: string
+          created_at?: string
+          declared_byte_size: number
+          declared_media_type: string
+          declared_sha256: string
+          id: string
+          idempotency_key: string
+          organization_id: string
+          original_filename: string
+          product_id: string
+          raw_object_id?: string | null
+          rejected_at?: string | null
+          rejection_code?: string | null
+          release_id: string
+          request_digest: string
+          source_kind: string
+          staging_storage_key: string
+          status?: string
+          upload_expires_at: string
+          verified_at?: string | null
+        }
+        Update: {
+          actor_credential_id?: string | null
+          actor_user_id?: string | null
+          correlation_id?: string
+          created_at?: string
+          declared_byte_size?: number
+          declared_media_type?: string
+          declared_sha256?: string
+          id?: string
+          idempotency_key?: string
+          organization_id?: string
+          original_filename?: string
+          product_id?: string
+          raw_object_id?: string | null
+          rejected_at?: string | null
+          rejection_code?: string | null
+          release_id?: string
+          request_digest?: string
+          source_kind?: string
+          staging_storage_key?: string
+          status?: string
+          upload_expires_at?: string
+          verified_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sbom_sources_actor_credential_fkey"
+            columns: ["organization_id", "actor_credential_id"]
+            isOneToOne: false
+            referencedRelation: "sbom_ci_credentials"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "sbom_sources_actor_user_id_fkey"
+            columns: ["actor_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sbom_sources_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sbom_sources_raw_object_fkey"
+            columns: ["organization_id", "raw_object_id"]
+            isOneToOne: false
+            referencedRelation: "sbom_raw_objects"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "sbom_sources_release_fkey"
+            columns: ["organization_id", "product_id", "release_id"]
+            isOneToOne: false
+            referencedRelation: "product_releases"
+            referencedColumns: ["organization_id", "product_id", "id"]
+          },
+        ]
+      }
       software_baseline_release_memberships: {
         Row: {
           assigned_at: string
@@ -5783,7 +6128,7 @@ export type Database = {
           detected_at: string
           entity_id: string | null
           entity_type: string
-          external_identity_id: string
+          external_identity_id: string | null
           external_value: Json
           external_value_hash: string
           external_value_observed_at: string
@@ -5791,6 +6136,7 @@ export type Database = {
           id: string
           organization_id: string
           permitted_actions: string[]
+          plan_item_id: string | null
           resolution_chosen_action: string | null
           resolution_reason: string | null
           resolution_status: string
@@ -5816,7 +6162,7 @@ export type Database = {
           detected_at?: string
           entity_id?: string | null
           entity_type: string
-          external_identity_id: string
+          external_identity_id?: string | null
           external_value: Json
           external_value_hash: string
           external_value_observed_at: string
@@ -5824,6 +6170,7 @@ export type Database = {
           id?: string
           organization_id: string
           permitted_actions?: string[]
+          plan_item_id?: string | null
           resolution_chosen_action?: string | null
           resolution_reason?: string | null
           resolution_status?: string
@@ -5849,7 +6196,7 @@ export type Database = {
           detected_at?: string
           entity_id?: string | null
           entity_type?: string
-          external_identity_id?: string
+          external_identity_id?: string | null
           external_value?: Json
           external_value_hash?: string
           external_value_observed_at?: string
@@ -5857,6 +6204,7 @@ export type Database = {
           id?: string
           organization_id?: string
           permitted_actions?: string[]
+          plan_item_id?: string | null
           resolution_chosen_action?: string | null
           resolution_reason?: string | null
           resolution_status?: string
@@ -5910,6 +6258,13 @@ export type Database = {
             columns: ["organization_id", "sync_run_id"]
             isOneToOne: false
             referencedRelation: "sync_runs"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "sync_conflicts_plan_item_fkey"
+            columns: ["organization_id", "plan_item_id"]
+            isOneToOne: false
+            referencedRelation: "sync_run_plan_items"
             referencedColumns: ["organization_id", "id"]
           },
           {
@@ -6670,6 +7025,20 @@ export type Database = {
           retry_count: number
         }[]
       }
+      checkpoint_sbom_ingest_job: {
+        Args: {
+          p_job_id: string
+          p_lease_seconds: number
+          p_organization_id: string
+          p_progress_percent: number
+          p_progress_stage: string
+          p_worker_id: string
+        }
+        Returns: {
+          job: Json
+          outcome: string
+        }[]
+      }
       claim_finding_propagation_job_atomic: {
         Args: {
           p_lease_owner: string
@@ -6824,8 +7193,24 @@ export type Database = {
           outcome: string
         }[]
       }
+      claim_sbom_ingest_job: {
+        Args: {
+          p_lease_seconds: number
+          p_organization_id: string
+          p_worker_id: string
+        }
+        Returns: {
+          job: Json
+          outcome: string
+          work: Json
+        }[]
+      }
       claim_sync_run: {
-        Args: { p_lease_seconds: number; p_worker_id: string }
+        Args: {
+          p_lease_seconds: number
+          p_organization_id: string
+          p_worker_id: string
+        }
         Returns: {
           outcome: string
           run: Json
@@ -7008,6 +7393,17 @@ export type Database = {
         }
         Returns: {
           checkpoint_version: number
+          outcome: string
+        }[]
+      }
+      complete_sbom_ingest_job: {
+        Args: {
+          p_job_id: string
+          p_organization_id: string
+          p_worker_id: string
+        }
+        Returns: {
+          job: Json
           outcome: string
         }[]
       }
@@ -7355,6 +7751,21 @@ export type Database = {
           relationship: Json
         }[]
       }
+      create_sbom_ci_credential_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_credential_id: string
+          p_label: string
+          p_organization_id: string
+          p_token_hash: string
+          p_token_prefix: string
+          p_token_salt: string
+        }
+        Returns: {
+          credential: Json
+          outcome: string
+        }[]
+      }
       create_software_baseline_atomic: {
         Args: {
           p_actor_user_id: string
@@ -7664,6 +8075,18 @@ export type Database = {
           status: string
         }[]
       }
+      fail_sbom_ingest_job: {
+        Args: {
+          p_error_code: string
+          p_job_id: string
+          p_organization_id: string
+          p_worker_id: string
+        }
+        Returns: {
+          job: Json
+          outcome: string
+        }[]
+      }
       fail_sync_run_atomic: {
         Args: {
           p_error_code: string
@@ -7728,6 +8151,42 @@ export type Database = {
           outcome: string
         }[]
       }
+      finalize_sbom_source_atomic:
+        | {
+            Args: {
+              p_actor_credential_id: string
+              p_actor_user_id: string
+              p_actual_byte_size: number
+              p_actual_media_type: string
+              p_actual_sha256: string
+              p_correlation_id: string
+              p_organization_id: string
+              p_source_id: string
+            }
+            Returns: {
+              job: Json
+              outcome: string
+              source: Json
+            }[]
+          }
+        | {
+            Args: {
+              p_actor_credential_id: string
+              p_actor_user_id: string
+              p_actual_byte_size: number
+              p_actual_media_type: string
+              p_actual_sha256: string
+              p_correlation_id: string
+              p_idempotency_key: string
+              p_organization_id: string
+              p_source_id: string
+            }
+            Returns: {
+              job: Json
+              outcome: string
+              source: Json
+            }[]
+          }
       get_current_user_id: { Args: never; Returns: string }
       get_finding_product_impact_summary: {
         Args: {
@@ -8090,6 +8549,45 @@ export type Database = {
           relationships: Json
         }[]
       }
+      get_sbom_ingest_job: {
+        Args: {
+          p_actor_user_id: string
+          p_job_id: string
+          p_organization_id: string
+        }
+        Returns: {
+          job: Json
+          outcome: string
+        }[]
+      }
+      get_sbom_source_download: {
+        Args: {
+          p_actor_user_id: string
+          p_correlation_id: string
+          p_organization_id: string
+          p_source_id: string
+        }
+        Returns: {
+          outcome: string
+          storage_bucket: string
+          storage_key: string
+        }[]
+      }
+      get_sbom_source_for_completion: {
+        Args: {
+          p_actor_credential_id: string
+          p_actor_user_id: string
+          p_idempotency_key: string
+          p_organization_id: string
+          p_source_id: string
+        }
+        Returns: {
+          outcome: string
+          source: Json
+          storage_bucket: string
+          storage_key: string
+        }[]
+      }
       get_software_baseline_history: {
         Args: {
           p_actor_user_id: string
@@ -8148,6 +8646,13 @@ export type Database = {
       list_due_product_support_alert_organizations: {
         Args: never
         Returns: {
+          organization_id: string
+        }[]
+      }
+      list_due_sbom_ingest_organizations: {
+        Args: { p_limit: number }
+        Returns: {
+          oldest_due_at: string
           organization_id: string
         }[]
       }
@@ -8684,6 +9189,18 @@ export type Database = {
         }
         Returns: Json
       }
+      m2_v2_field_authority_policy_preview_digest: {
+        Args: {
+          p_connector_id: string
+          p_entity_type: string
+          p_field_name: string
+          p_organization_id: string
+          p_policy_value: string
+          p_protected: boolean
+          p_protected_reason: string
+        }
+        Returns: string
+      }
       m2_v2_record_security_update_artifact_worker_effect: {
         Args: {
           p_artifact_id: string
@@ -8736,9 +9253,17 @@ export type Database = {
         }
         Returns: Json
       }
+      m2_v2_sync_field_external_value: {
+        Args: { p_field_diffs: Json; p_field_name: string }
+        Returns: Json
+      }
       m2_v2_sync_run_json: {
         Args: { p_run: Database["public"]["Tables"]["sync_runs"]["Row"] }
         Returns: Json
+      }
+      m2_v2_sync_text_field_value: {
+        Args: { p_allow_null: boolean; p_field_name: string; p_value: Json }
+        Returns: string
       }
       m2_v2_valid_assessment_answers: {
         Args: { p_answers: Json }
@@ -8750,6 +9275,10 @@ export type Database = {
       }
       m2_v2_valid_published_external_references: {
         Args: { p_references: Json }
+        Returns: boolean
+      }
+      m2_v2_valid_sync_field_diffs: {
+        Args: { p_field_diffs: Json }
         Returns: boolean
       }
       m2_valid_support_alert_intervals: {
@@ -8865,6 +9394,22 @@ export type Database = {
           processed_count: number
           superseded_count: number
           upserted_count: number
+        }[]
+      }
+      preview_field_authority_policy: {
+        Args: {
+          p_actor_user_id: string
+          p_connector_id: string
+          p_entity_type: string
+          p_field_name: string
+          p_organization_id: string
+          p_policy_value: string
+          p_protected: boolean
+          p_protected_reason: string
+        }
+        Returns: {
+          outcome: string
+          preview: Json
         }[]
       }
       preview_product_component_link: {
@@ -9159,6 +9704,12 @@ export type Database = {
           outcome: string
         }[]
       }
+      record_sbom_ci_credential_use: {
+        Args: { p_credential_id: string; p_organization_id: string }
+        Returns: {
+          outcome: string
+        }[]
+      }
       recover_organization_atomic: {
         Args: {
           p_actor_user_id: string
@@ -9204,6 +9755,40 @@ export type Database = {
           outcome: string
         }[]
       }
+      reject_sbom_source_integrity_atomic:
+        | {
+            Args: {
+              p_actor_credential_id: string
+              p_actor_user_id: string
+              p_actual_byte_size: number
+              p_actual_media_type: string
+              p_actual_sha256: string
+              p_correlation_id: string
+              p_organization_id: string
+              p_source_id: string
+            }
+            Returns: {
+              outcome: string
+              source: Json
+            }[]
+          }
+        | {
+            Args: {
+              p_actor_credential_id: string
+              p_actor_user_id: string
+              p_actual_byte_size: number
+              p_actual_media_type: string
+              p_actual_sha256: string
+              p_correlation_id: string
+              p_idempotency_key: string
+              p_organization_id: string
+              p_source_id: string
+            }
+            Returns: {
+              outcome: string
+              source: Json
+            }[]
+          }
       remove_organization_branding_logo_atomic: {
         Args: {
           p_actor_user_id: string
@@ -9250,6 +9835,32 @@ export type Database = {
           outcome: string
         }[]
       }
+      replay_sbom_ingest_job_atomic:
+        | {
+            Args: {
+              p_actor_user_id: string
+              p_correlation_id: string
+              p_job_id: string
+              p_organization_id: string
+            }
+            Returns: {
+              job: Json
+              outcome: string
+            }[]
+          }
+        | {
+            Args: {
+              p_actor_user_id: string
+              p_correlation_id: string
+              p_idempotency_key: string
+              p_job_id: string
+              p_organization_id: string
+            }
+            Returns: {
+              job: Json
+              outcome: string
+            }[]
+          }
       request_organization_export_atomic: {
         Args: {
           p_actor_user_id: string
@@ -9377,6 +9988,30 @@ export type Database = {
           outcome: string
         }[]
       }
+      reserve_sbom_source_atomic: {
+        Args: {
+          p_actor_credential_id: string
+          p_actor_user_id: string
+          p_correlation_id: string
+          p_declared_byte_size: number
+          p_declared_media_type: string
+          p_declared_sha256: string
+          p_idempotency_key: string
+          p_organization_id: string
+          p_original_filename: string
+          p_product_id: string
+          p_release_id: string
+          p_request_digest: string
+          p_source_id: string
+          p_source_kind: string
+          p_staging_storage_key: string
+          p_upload_expires_at: string
+        }
+        Returns: {
+          outcome: string
+          source: Json
+        }[]
+      }
       resolve_active_organization_legal_entity_context: {
         Args: { p_legal_entity_id: string; p_organization_id: string }
         Returns: {
@@ -9396,6 +10031,15 @@ export type Database = {
         Args: { p_organization_id: string }
         Returns: string
       }
+      resolve_sbom_ci_credential: {
+        Args: { p_credential_id: string; p_organization_id: string }
+        Returns: {
+          credential_id: string
+          outcome: string
+          token_hash: string
+          token_salt: string
+        }[]
+      }
       resolve_sync_conflict_atomic: {
         Args: {
           p_actor_user_id: string
@@ -9410,6 +10054,17 @@ export type Database = {
         Returns: {
           conflict: Json
           outcome: string
+        }[]
+      }
+      retry_sync_run_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_organization_id: string
+          p_sync_run_id: string
+        }
+        Returns: {
+          outcome: string
+          run: Json
         }[]
       }
       reverify_product_security_update_artifact_atomic: {
@@ -9483,6 +10138,16 @@ export type Database = {
         }
         Returns: string
       }
+      revoke_sbom_ci_credential_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_credential_id: string
+          p_organization_id: string
+        }
+        Returns: {
+          outcome: string
+        }[]
+      }
       save_organization_branding_draft_atomic: {
         Args: {
           p_actor_user_id: string
@@ -9528,6 +10193,14 @@ export type Database = {
           outcome: string
           run: Json
         }[]
+      }
+      sbom_ingest_job_json: {
+        Args: { p_job_id: string; p_organization_id: string }
+        Returns: Json
+      }
+      sbom_source_json: {
+        Args: { p_organization_id: string; p_source_id: string }
+        Returns: Json
       }
       schedule_organization_purge_atomic: {
         Args: {
@@ -9877,6 +10550,7 @@ export type Database = {
           p_field_name: string
           p_organization_id: string
           p_policy_value: string
+          p_preview_digest: string
           p_protected: boolean
           p_protected_reason: string
         }

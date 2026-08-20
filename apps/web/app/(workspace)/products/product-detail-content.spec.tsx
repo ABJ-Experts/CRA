@@ -33,6 +33,13 @@ vi.stubGlobal("ResizeObserver", ResizeObserverMock);
 vi.mock("../../_features/organizations/organizations.queries", () => ({
   useOrganizationSettingsQuery: () => ({ data: undefined }),
 }));
+vi.mock("../../_features/sboms/sboms.queries", () => ({
+  useSbomJobQuery: () => ({
+    data: undefined,
+    isPending: false,
+    isError: false,
+  }),
+}));
 
 const PRODUCT = {
   id: "11111111-1111-4111-8111-111111111111",
@@ -159,7 +166,7 @@ const state = {
       can_create_products: true,
       can_edit_products: true,
       can_delete_products: true,
-    },
+    } as Record<string, boolean>,
     isLoading: false,
     role: "owner",
   },
@@ -808,6 +815,32 @@ describe("ProductDetailContent", () => {
     expect(
       screen.getByRole("tabpanel", { name: "Lifecycle" }),
     ).toBeInTheDocument();
+  });
+
+  it("adds the release-bound SBOM evidence surface only when the explicit view permission is present", () => {
+    state.session.permissions = {
+      can_view_products: true,
+      can_create_products: true,
+      can_edit_products: true,
+      can_delete_products: true,
+      can_view_sboms: true,
+      can_upload_sboms: true,
+    };
+    state.releases.data = {
+      releases: {
+        rows: [RELEASE],
+        total: 1,
+        page: 1,
+        pageSize: 50,
+        pageCount: 1,
+      },
+    };
+    render(<ProductDetailContent productId={PRODUCT.id} />);
+
+    expect(
+      screen.getByRole("heading", { name: "SBOM evidence" }),
+    ).toBeVisible();
+    expect(screen.getByLabelText("Release")).toHaveValue(RELEASE.id);
   });
 
   it("groups each release into an accessible workspace with its compliance controls", () => {

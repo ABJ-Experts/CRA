@@ -48,6 +48,7 @@ export function coerceBaseRole(value: unknown): BaseRole {
 
 export const PERMISSION_ACTIONS = [
   "view",
+  "upload",
   "create",
   "edit",
   "delete",
@@ -94,6 +95,9 @@ export const PERMISSION_MATRIX = {
   // and conflict resolution; secret rotation and authority-policy commits are
   // additionally owner-role-gated in the controller, not by a separate action.
   connectors: ["view", "create", "edit", "delete", "export", "approve"],
+  // Immutable SBOM evidence is visible to the same roles that may inspect a
+  // release. Upload remains explicit instead of piggybacking on product edit.
+  sboms: ["view", "upload"],
 } as const satisfies Record<string, readonly PermissionAction[]>;
 
 export type PermissionModule = keyof typeof PERMISSION_MATRIX;
@@ -203,6 +207,7 @@ export const IMPLICATIONS: Readonly<
   Record<PermissionAction, readonly PermissionAction[]>
 > = {
   view: [],
+  upload: ["view"],
   create: ["view"],
   edit: ["view"],
   delete: ["view"],
@@ -316,6 +321,7 @@ const VIEWER_MODULES: readonly PermissionModule[] = [
   "analytics",
   "findings",
   "connectors",
+  "sboms",
 ];
 
 /** Modules a member may also create/edit in — day-to-day operational work. */
@@ -356,6 +362,7 @@ function memberPreset(): PermissionSet {
   ] as const) {
     out[`can_export_${module}` as PermissionKey] = true;
   }
+  out.can_upload_sboms = true;
   return out;
 }
 

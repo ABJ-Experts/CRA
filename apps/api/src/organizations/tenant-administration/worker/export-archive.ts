@@ -186,6 +186,14 @@ export const exportSourceExclusions: Readonly<Record<string, string>> =
       "Historical M2 projection copied into product_lifecycle_dependency_facts and dropped by the forward consolidation migration.",
     connector_secrets:
       "Ciphertext-encrypted connector credential material, not portable tenant record data.",
+    sbom_ci_credentials:
+      "Contains salted CI credential verifiers and token identifiers; credential-security material is never exported.",
+    sbom_raw_objects:
+      "References private immutable evidence objects; exporting this security-sensitive locator without its authorized retrieval workflow is unsafe.",
+    sbom_sources:
+      "Contains unverified staging-object locations and upload reservation metadata; export must not disclose security-sensitive upload state.",
+    sbom_ingest_jobs:
+      "Contains active worker leases and retry state; exporting operational security state would make a restored job ambiguous.",
   });
 
 const crcTable = (() => {

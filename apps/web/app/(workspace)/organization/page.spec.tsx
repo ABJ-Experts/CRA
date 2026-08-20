@@ -48,6 +48,23 @@ const api = vi.hoisted(() => ({
   },
 }));
 const mocks = vi.hoisted(() => ({ ready: true }));
+const sbomQueries = vi.hoisted(() => ({
+  useSbomCiCredentialsQuery: () => ({
+    data: { credentials: [] },
+    isPending: false,
+    isError: false,
+    error: null,
+    refetch: vi.fn(),
+  }),
+  useCreateSbomCiCredentialMutation: () => ({
+    isPending: false,
+    mutateAsync: vi.fn(),
+  }),
+  useRevokeSbomCiCredentialMutation: () => ({
+    isPending: false,
+    mutateAsync: vi.fn(),
+  }),
+}));
 const session = vi.hoisted(() => ({
   value: {
     session: {
@@ -78,6 +95,7 @@ vi.mock("../../_providers/providers", () => ({
 vi.mock("../../_providers/session-provider", () => ({
   useSession: () => session.value,
 }));
+vi.mock("../../_features/sboms/sboms.queries", () => sbomQueries);
 
 const ORGANIZATION = {
   id: "11111111-1111-4111-8111-111111111111",

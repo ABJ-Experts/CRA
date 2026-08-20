@@ -9,3 +9,4 @@ export * from "./roles.js";
 export * from "./organizations.js";
 export * from "./products.js";
 export * from "./findings.js";
+export * from "./sboms.js";

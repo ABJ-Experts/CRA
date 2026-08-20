@@ -40,6 +40,7 @@ import { OrganizationExportSection } from "./organization-export-section";
 import { OrganizationBrandingSection } from "./organization-branding-section";
 import { OrganizationLegalEntitiesSection } from "./organization-legal-entities-section";
 import { OrganizationLifecycleSection } from "./organization-lifecycle-section";
+import { OrganizationSbomCiCredentialsSection } from "./organization-sbom-ci-credentials-section";
 import {
   administrationLoadError,
   ReadonlyNotice,
@@ -431,6 +432,12 @@ export function OrganizationAdministrationContent() {
             lifecycleStatus={lifecycle.data.lifecycle.status}
           />
           <OrganizationWorkbench onOpen={openWorkbench} />
+          {role === "owner" ? (
+            <OrganizationSbomCiCredentialsSection
+              enabled={enabled}
+              canManage={role === "owner"}
+            />
+          ) : null}
           {activePanel ? (
             <OrganizationWorkbenchDialog
               panel={activePanel}

@@ -1,0 +1,167 @@
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+import { ApiClientError } from "../../_lib/http/api-client";
+import { sbomsApi } from "./sboms.api";
+
+const PRODUCT_ID = "11111111-1111-4111-8111-111111111111";
+const RELEASE_ID = "22222222-2222-4222-8222-222222222222";
+const UPLOAD_ID = "33333333-3333-4333-8333-333333333333";
+const SOURCE_ID = "44444444-4444-4444-8444-444444444444";
+const JOB_ID = "55555555-5555-4555-8555-555555555555";
+const CREDENTIAL_ID = "66666666-6666-4666-8666-666666666666";
+const NOW = "2026-08-20T12:00:00.000Z";
+const IDEMPOTENCY_KEY = "77777777-7777-4777-8777-777777777777";
+
+const SOURCE = {
+  id: SOURCE_ID,
+  organizationId: "88888888-8888-4888-8888-888888888888",
+  productId: PRODUCT_ID,
+  releaseId: RELEASE_ID,
+  source: "manual_upload",
+  fileName: "firmware.cdx.json",
+  mediaType: "application/vnd.cyclonedx+json",
+  byteSize: 42,
+  sha256: "a".repeat(64),
+  status: "upload_pending",
+  createdAt: NOW,
+  completedAt: null,
+} as const;
+
+const JOB = {
+  id: JOB_ID,
+  organizationId: SOURCE.organizationId,
+  sourceId: SOURCE_ID,
+  releaseId: RELEASE_ID,
+  inputSha256: SOURCE.sha256,
+  correlationId: "99999999-9999-4999-8999-999999999999",
+  status: "queued",
+  progress: { stage: "queued", percent: 0, message: "Queued" },
+  attempts: 0,
+  maxAttempts: 5,
+  error: null,
+  result: null,
+  createdAt: NOW,
+  updatedAt: NOW,
+  completedAt: null,
+} as const;
+const JOB_RESPONSE = {
+  job: JOB,
+  progressUrl: `/api/v1/sbom-jobs/${JOB_ID}`,
+} as const;
+
+function json(value: unknown, status = 200) {
+  return new Response(JSON.stringify(value), { status });
+}
+
+describe("sbomsApi", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("initializes a release-bound upload only through the parsed versioned route", async () => {
+    const fetcher = vi.fn(async () =>
+      json({
+        source: SOURCE,
+        upload: {
+          uploadUrl: "https://storage.test/upload",
+          expiresAt: NOW,
+        },
+      }),
+    );
+    vi.stubGlobal("fetch", fetcher);
+
+    await expect(
+      sbomsApi.initializeUpload({
+        productId: PRODUCT_ID,
+        releaseId: RELEASE_ID,
+        fileName: SOURCE.fileName,
+        mediaType: SOURCE.mediaType,
+        byteSize: SOURCE.byteSize,
+        sha256: SOURCE.sha256,
+        idempotencyKey: IDEMPOTENCY_KEY,
+      }),
+    ).resolves.toMatchObject({ source: SOURCE });
+
+    expect(fetcher).toHaveBeenCalledWith(
+      `/api/v1/products/${PRODUCT_ID}/releases/${RELEASE_ID}/sbom-uploads`,
+      expect.objectContaining({
+        method: "POST",
+        credentials: "same-origin",
+        cache: "no-store",
+      }),
+    );
+  });
+
+  it("rejects invalid client metadata before transport", async () => {
+    const fetcher = vi.fn();
+    vi.stubGlobal("fetch", fetcher);
+
+    expect(() =>
+      sbomsApi.initializeUpload({
+        productId: PRODUCT_ID,
+        releaseId: RELEASE_ID,
+        fileName: "../outside.json",
+        mediaType: SOURCE.mediaType,
+        byteSize: 0,
+        sha256: SOURCE.sha256,
+        idempotencyKey: IDEMPOTENCY_KEY,
+      }),
+    ).toThrow(ApiClientError);
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+
+  it("completes and reads durable jobs through opaque parsed identifiers", async () => {
+    const fetcher = vi.fn(async (path: string) => {
+      if (path.endsWith("/complete")) return json(JOB_RESPONSE, 202);
+      return json(JOB_RESPONSE);
+    });
+    vi.stubGlobal("fetch", fetcher);
+
+    await expect(
+      sbomsApi.completeUpload(UPLOAD_ID, { idempotencyKey: IDEMPOTENCY_KEY }),
+    ).resolves.toEqual(JOB_RESPONSE);
+    await expect(sbomsApi.getJob(JOB_ID)).resolves.toEqual(JOB_RESPONSE);
+
+    expect(fetcher.mock.calls.map(([path]) => path)).toEqual([
+      `/api/v1/sbom-uploads/${UPLOAD_ID}/complete`,
+      `/api/v1/sbom-jobs/${JOB_ID}`,
+    ]);
+  });
+
+  it("creates, lists, and revokes CI credentials through owner routes", async () => {
+    const credential = {
+      id: CREDENTIAL_ID,
+      organizationId: SOURCE.organizationId,
+      label: "GitHub Actions",
+      tokenPrefix: "cra_sbom_abcdefgh",
+      createdAt: NOW,
+      createdBy: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      revokedAt: null,
+      revokedBy: null,
+      lastUsedAt: null,
+    };
+    const fetcher = vi.fn(async (path: string, init?: RequestInit) => {
+      if (init?.method === "POST" && path.endsWith("/revoke")) {
+        return json({ credential: { ...credential, revokedAt: NOW } });
+      }
+      if (init?.method === "POST") {
+        return json({ credential, secret: `cra_sbom_${"s".repeat(32)}` }, 201);
+      }
+      return json({ credentials: [credential] });
+    });
+    vi.stubGlobal("fetch", fetcher);
+
+    await expect(sbomsApi.listCiCredentials()).resolves.toEqual({
+      credentials: [credential],
+    });
+    await expect(
+      sbomsApi.createCiCredential({
+        label: "GitHub Actions",
+        idempotencyKey: IDEMPOTENCY_KEY,
+      }),
+    ).resolves.toMatchObject({ secret: `cra_sbom_${"s".repeat(32)}` });
+    await expect(
+      sbomsApi.revokeCiCredential(CREDENTIAL_ID, {
+        idempotencyKey: IDEMPOTENCY_KEY,
+      }),
+    ).resolves.toMatchObject({ credential: { revokedAt: NOW } });
+  });
+});

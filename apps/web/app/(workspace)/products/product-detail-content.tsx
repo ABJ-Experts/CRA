@@ -50,6 +50,7 @@ import { ReleaseRegulatoryControls } from "./release-regulatory-controls";
 import { FindingImpactStatus } from "./finding-impact-status";
 import { ProductRelationshipSection } from "./product-relationship-section";
 import { ProductComplianceSections } from "./product-compliance-sections";
+import { SbomIntakeSection } from "./sbom-intake-section";
 
 const PRODUCT_TYPE_LABELS = Object.freeze({
   hardware_with_software: "Hardware with software",
@@ -762,6 +763,8 @@ export function ProductDetailContent({ productId }: { productId: string }) {
   const canCreate = permissions.can_create_products === true;
   const canArchive = permissions.can_delete_products === true;
   const canApprove = permissions.can_approve_products === true;
+  const canViewSboms = permissions.can_view_sboms === true;
+  const canUploadSboms = permissions.can_upload_sboms === true;
   const [activePanel, setActivePanel] = useState<WorkbenchPanel | null>(null);
   const [activeTab, setActiveTab] = useState<WorkbenchTab>("identity");
   const canEditCurrentProduct = canEdit && !product.data?.product.archivedAt;
@@ -938,6 +941,22 @@ export function ProductDetailContent({ productId }: { productId: string }) {
             onOpen={openWorkbench}
           />
           <FindingImpactStatus productId={productId} enabled={enabled} />
+          {canViewSboms ? (
+            <SbomIntakeSection
+              productId={productId}
+              releases={
+                releases.data?.releases.rows.map((release) => ({
+                  id: release.id,
+                  label: release.label,
+                  version: release.version,
+                })) ?? []
+              }
+              canView={canViewSboms}
+              canUpload={canUploadSboms && !product.data.product.archivedAt}
+              canReplay={role === "owner"}
+              enabled={enabled}
+            />
+          ) : null}
           {visiblePanel ? (
             <ProductWorkbenchDialog
               panel={visiblePanel}

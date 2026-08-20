@@ -47,6 +47,10 @@ const ALLOWED_PUBLIC: Record<string, string> = {
   "POST auth/forgot-password":
     "By definition the caller cannot sign in. Always returns ok to avoid account enumeration.",
   "POST auth/reset-password": "The emailed single-use token is the credential.",
+  "POST ci/sbom-uploads":
+    "CI cannot have a browser session; the dedicated SBOM CI credential guard authenticates this narrow intake route.",
+  "POST ci/sbom-uploads/:sourceId/complete":
+    "Continuation of the CI direct-upload protocol, guarded by the same organization-scoped credential.",
 };
 
 interface RouteInfo {

@@ -19,6 +19,7 @@
     "worker:product-import": "node dist/product-import-worker.js",
     "worker:product-compliance": "node dist/product-compliance-worker.js",
     "worker:connector-sync": "node dist/connector-sync-worker.js",
+    "worker:sbom-ingest": "node dist/sbom-ingest-worker.js",
     "verify:tenant-export-capacity": "node dist/organizations/tenant-administration/worker/tenant-export-capacity.js"
   },
   "dependencies": {

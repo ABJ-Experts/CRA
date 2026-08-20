@@ -15,6 +15,7 @@ import { OrganizationsModule } from "./organizations/organizations.module";
 import { PermissionsModule } from "./permissions/permissions.module";
 import { ProductsModule } from "./products/products.module";
 import { SupabaseModule } from "./supabase/supabase.module";
+import { SbomModule } from "./sboms/sbom.module";
 import { UsersModule } from "./users/users.module";
 
 @Module({
@@ -52,6 +53,7 @@ import { UsersModule } from "./users/users.module";
     UsersModule,
     OrganizationsModule,
     InvitationsModule,
+    SbomModule,
   ],
   controllers: [HealthController],
 })
