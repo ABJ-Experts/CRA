@@ -32,6 +32,7 @@ type AssessmentResponse = Readonly<{ assessment: Assessment }>;
 type Artifact = Readonly<{
   id: string;
   version: number;
+  title: string;
   uploadStatus: string;
   integrityStatus: string;
   reviewStatus: string;

@@ -90,6 +90,10 @@ export const PERMISSION_MATRIX = {
   dashboards: ["view", "export"],
   tables: ["view", "export"],
   analytics: ["view", "export"],
+  // Integrations: PLM/ALM connector sync. "approve" gates commit-to-production
+  // and conflict resolution; secret rotation and authority-policy commits are
+  // additionally owner-role-gated in the controller, not by a separate action.
+  connectors: ["view", "create", "edit", "delete", "export", "approve"],
 } as const satisfies Record<string, readonly PermissionAction[]>;
 
 export type PermissionModule = keyof typeof PERMISSION_MATRIX;
@@ -311,6 +315,7 @@ const VIEWER_MODULES: readonly PermissionModule[] = [
   "tables",
   "analytics",
   "findings",
+  "connectors",
 ];
 
 /** Modules a member may also create/edit in — day-to-day operational work. */

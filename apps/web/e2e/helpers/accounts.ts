@@ -423,6 +423,15 @@ export class RunScopedAccounts {
             `Could not clean scoped legal-entity assignments for ${id}: ${JSON.stringify(await responseBody(assignments))}`,
           );
         }
+        const legalProfiles = await supabase(
+          `/rest/v1/organization_legal_profiles?organization_id=eq.${encodeURIComponent(id)}`,
+          { method: "DELETE" },
+        );
+        if (!legalProfiles.ok) {
+          throw new Error(
+            `Could not clean scoped legal profile for ${id}: ${JSON.stringify(await responseBody(legalProfiles))}`,
+          );
+        }
         // M2 V2 rows deliberately expose no direct DELETE grant: their
         // immutable history can only disappear as part of the established
         // exact tenant cascade. The generated organization is the narrowest
@@ -494,6 +503,10 @@ export class RunScopedAccounts {
         }
       }
       for (const table of [
+        // This profile retains creation/update actors and does not cascade
+        // through organization deletion. Remove only the exact test tenant's
+        // row before its generated owner is deleted below.
+        "organization_legal_profiles",
         "finding_product_impact_overrides",
         "finding_impact_associations",
         "finding_propagation_jobs",
@@ -539,6 +552,7 @@ export class RunScopedAccounts {
         "software_baselines",
         "product_relationships",
         "products",
+        "organization_legal_profiles",
         "organizations",
       ]) {
         const scope =

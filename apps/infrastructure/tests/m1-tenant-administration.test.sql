@@ -1017,7 +1017,8 @@ select pg_temp.check(
       'organization_export_parts', 'organization_export_snapshots',
       'organization_purge_jobs', 'organization_purge_work_items',
       'organization_permissions_version', 'legal_entities',
-      'organization_branding', 'product_registry', 'finding_propagation'
+      'organization_branding', 'product_registry', 'finding_propagation',
+      'connector_sync'
     ]::text[]
 );
 

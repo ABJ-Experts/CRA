@@ -86,6 +86,12 @@ export const envSchema = z.object({
   REFRESH_TOKEN_MAX_AGE: int(7 * 24 * 60 * 60), // 7d
   /** HMAC key for the signed active-organization cookie. */
   COOKIE_SIGNING_SECRET: z.string().min(16),
+  /**
+   * pgcrypto pgp_sym_encrypt/decrypt key for connector_secrets.ciphertext.
+   * Postgres functions can't read env vars, so this is threaded in as an RPC
+   * parameter on every call -- never logged, never returned to a browser.
+   */
+  CONNECTOR_SECRET_ENCRYPTION_KEY: z.string().min(32),
 
   // --- Mail -------------------------------------------------------------
   /**

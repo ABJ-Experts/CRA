@@ -4,6 +4,7 @@ import { ThrottlerModule } from "@nestjs/throttler";
 
 import { AuthModule } from "./auth/auth.module";
 import { HttpBoundaryModule } from "./common/http/http-boundary.module";
+import { ConnectorsModule } from "./connectors/connectors.module";
 import { SecurityModule } from "./common/security/security.module";
 import { validateEnv } from "./config/env.validation";
 import { FindingsModule } from "./findings/findings.module";
@@ -45,6 +46,7 @@ import { UsersModule } from "./users/users.module";
     AuthModule,
     PermissionsModule,
     ProductsModule,
+    ConnectorsModule,
     FindingsModule,
     SecurityModule,
     UsersModule,

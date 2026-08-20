@@ -29,6 +29,7 @@ const PROTECTED = [
   "/management",
   "/organization",
   "/products",
+  "/connectors",
   "/account",
   "/security",
   "/roles",

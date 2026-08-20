@@ -6,6 +6,7 @@ const required = Object.freeze({
   SUPABASE_SERVICE_ROLE_KEY: "service-role-key",
   SUPABASE_JWT_SECRET: "j".repeat(32),
   COOKIE_SIGNING_SECRET: "c".repeat(16),
+  CONNECTOR_SECRET_ENCRYPTION_KEY: "k".repeat(32),
 });
 
 describe("environment validation", () => {

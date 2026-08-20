@@ -12,6 +12,7 @@ import { useState } from "react";
 import { z } from "zod";
 import { signIn } from "../_components/auth-actions";
 import { AuthDivider, AuthTitle } from "../_components/auth-chrome";
+import { navigateToDashboard } from "../_components/auth-navigation";
 import { SocialButtons } from "../_components/social-buttons";
 
 /**
@@ -54,9 +55,11 @@ export default function SignInPage() {
             setFormError(result.message ?? "Could not sign you in.");
             return;
           }
-          router.push(
-            result.next === "two-factor" ? "/two-factor" : "/dashboard",
-          );
+          if (result.next === "two-factor") {
+            router.push("/two-factor");
+            return;
+          }
+          navigateToDashboard();
         }}
         data-testid="sign-in-form"
       >

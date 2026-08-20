@@ -156,6 +156,7 @@ describe("SessionProvider", () => {
     );
   });
 
+
   it("keeps the menu complete while the initial live session requests load", async () => {
     const releases = new Map<string, (response: Response) => void>();
     const fetcher = vi.fn(

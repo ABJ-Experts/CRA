@@ -247,6 +247,8 @@ describe("middleware integration", () => {
   it.each([
     ["/management", "/management"],
     ["/organization", "/organization"],
+    ["/connectors", "/connectors"],
+    ["/connectors/00000000-0000-4000-8000-000000000001", "/connectors/00000000-0000-4000-8000-000000000001"],
     ["/products", "/products"],
     ["/products/product-123", "/products/product-123"],
     ["/account", "/account"],

@@ -141,6 +141,18 @@ export const exportSourceRegistry: readonly ExportSourceRegistration[] =
         "finding_propagation_jobs",
       ],
     },
+    {
+      sourceId: "connector_sync",
+      tables: [
+        "connectors",
+        "product_external_identities",
+        "field_authority_policies",
+        "sync_runs",
+        "sync_run_plan_items",
+        "sync_conflicts",
+        "sync_connector_cursors",
+      ],
+    },
   ]);
 
 /** Explicit omissions are security objects, never an accidental omission. */
@@ -172,6 +184,8 @@ export const exportSourceExclusions: Readonly<Record<string, string>> =
       "Release idempotency keys and request digests are request-security material.",
     software_baseline_lifecycle_dependency_facts:
       "Historical M2 projection copied into product_lifecycle_dependency_facts and dropped by the forward consolidation migration.",
+    connector_secrets:
+      "Ciphertext-encrypted connector credential material, not portable tenant record data.",
   });
 
 const crcTable = (() => {

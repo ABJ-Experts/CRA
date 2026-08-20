@@ -1,5 +1,6 @@
 import {
   Building2,
+  Cable,
   LayoutGrid,
   Package,
   Settings2,
@@ -56,6 +57,12 @@ export const NAV: NavSection[] = [
         href: "/products",
         icon: Package,
         menuKey: "products",
+      },
+      {
+        label: "Connectors",
+        href: "/connectors",
+        icon: Cable,
+        menuKey: "connectors",
       },
     ],
   },

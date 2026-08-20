@@ -244,6 +244,166 @@ export type Database = {
           },
         ]
       }
+      connector_secrets: {
+        Row: {
+          ciphertext: string
+          connector_id: string
+          created_at: string
+          id: string
+          organization_id: string
+          rotated_at: string
+          rotated_by: string
+        }
+        Insert: {
+          ciphertext: string
+          connector_id: string
+          created_at?: string
+          id?: string
+          organization_id: string
+          rotated_at?: string
+          rotated_by: string
+        }
+        Update: {
+          ciphertext?: string
+          connector_id?: string
+          created_at?: string
+          id?: string
+          organization_id?: string
+          rotated_at?: string
+          rotated_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "connector_secrets_organization_id_connector_id_fkey"
+            columns: ["organization_id", "connector_id"]
+            isOneToOne: false
+            referencedRelation: "connectors"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "connector_secrets_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "connector_secrets_rotated_by_fkey"
+            columns: ["rotated_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      connectors: {
+        Row: {
+          adapter_version: string
+          archived_at: string | null
+          archived_by: string | null
+          archived_reason: string | null
+          commit_policy: string
+          connection_config: Json
+          connector_type: string
+          created_at: string
+          created_by: string
+          display_name: string
+          enabled: boolean
+          id: string
+          last_test_error_code: string | null
+          last_test_outcome: string | null
+          last_tested_at: string | null
+          mapping_version: string
+          organization_id: string
+          secret_ref: string | null
+          updated_at: string
+          updated_by: string
+          version: number
+        }
+        Insert: {
+          adapter_version: string
+          archived_at?: string | null
+          archived_by?: string | null
+          archived_reason?: string | null
+          commit_policy?: string
+          connection_config?: Json
+          connector_type: string
+          created_at?: string
+          created_by: string
+          display_name: string
+          enabled?: boolean
+          id?: string
+          last_test_error_code?: string | null
+          last_test_outcome?: string | null
+          last_tested_at?: string | null
+          mapping_version: string
+          organization_id: string
+          secret_ref?: string | null
+          updated_at?: string
+          updated_by: string
+          version?: number
+        }
+        Update: {
+          adapter_version?: string
+          archived_at?: string | null
+          archived_by?: string | null
+          archived_reason?: string | null
+          commit_policy?: string
+          connection_config?: Json
+          connector_type?: string
+          created_at?: string
+          created_by?: string
+          display_name?: string
+          enabled?: boolean
+          id?: string
+          last_test_error_code?: string | null
+          last_test_outcome?: string | null
+          last_tested_at?: string | null
+          mapping_version?: string
+          organization_id?: string
+          secret_ref?: string | null
+          updated_at?: string
+          updated_by?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "connectors_archived_by_fkey"
+            columns: ["archived_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "connectors_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "connectors_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "connectors_secret_ref_fkey"
+            columns: ["organization_id", "secret_ref"]
+            isOneToOne: false
+            referencedRelation: "connector_secrets"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "connectors_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       custom_roles: {
         Row: {
           base_role: string
@@ -396,6 +556,109 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      field_authority_policies: {
+        Row: {
+          connector_id: string
+          created_at: string
+          created_by: string
+          effective_from: string
+          entity_type: string
+          field_name: string
+          id: string
+          organization_id: string
+          policy_value: string
+          policy_version: number
+          protected: boolean
+          protected_reason: string | null
+          superseded_at: string | null
+          superseded_by_id: string | null
+          supersedes_id: string | null
+          updated_at: string
+          updated_by: string
+        }
+        Insert: {
+          connector_id: string
+          created_at?: string
+          created_by: string
+          effective_from?: string
+          entity_type: string
+          field_name: string
+          id?: string
+          organization_id: string
+          policy_value: string
+          policy_version?: number
+          protected?: boolean
+          protected_reason?: string | null
+          superseded_at?: string | null
+          superseded_by_id?: string | null
+          supersedes_id?: string | null
+          updated_at?: string
+          updated_by: string
+        }
+        Update: {
+          connector_id?: string
+          created_at?: string
+          created_by?: string
+          effective_from?: string
+          entity_type?: string
+          field_name?: string
+          id?: string
+          organization_id?: string
+          policy_value?: string
+          policy_version?: number
+          protected?: boolean
+          protected_reason?: string | null
+          superseded_at?: string | null
+          superseded_by_id?: string | null
+          supersedes_id?: string | null
+          updated_at?: string
+          updated_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "field_authority_policies_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "field_authority_policies_organization_id_connector_id_fkey"
+            columns: ["organization_id", "connector_id"]
+            isOneToOne: false
+            referencedRelation: "connectors"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "field_authority_policies_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "field_authority_policies_organization_id_superseded_by_id_fkey"
+            columns: ["organization_id", "superseded_by_id"]
+            isOneToOne: false
+            referencedRelation: "field_authority_policies"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "field_authority_policies_organization_id_supersedes_id_fkey"
+            columns: ["organization_id", "supersedes_id"]
+            isOneToOne: false
+            referencedRelation: "field_authority_policies"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "field_authority_policies_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
@@ -3069,6 +3332,168 @@ export type Database = {
           },
         ]
       }
+      product_external_identities: {
+        Row: {
+          connector_id: string
+          cra_product_id: string
+          cra_release_id: string | null
+          created_at: string
+          created_by: string
+          entity_type: string
+          external_display_label: string | null
+          external_id: string
+          external_id_normalized: string | null
+          id: string
+          linked_at: string
+          linked_by: string
+          match_confidence: string
+          match_method: string
+          organization_id: string
+          superseded_at: string | null
+          superseded_by_id: string | null
+          supersedes_id: string | null
+          supersession_reason: string | null
+          unlink_reason: string | null
+          unlinked_at: string | null
+          unlinked_by: string | null
+          updated_at: string
+          updated_by: string
+          version: number
+        }
+        Insert: {
+          connector_id: string
+          cra_product_id: string
+          cra_release_id?: string | null
+          created_at?: string
+          created_by: string
+          entity_type: string
+          external_display_label?: string | null
+          external_id: string
+          external_id_normalized?: string | null
+          id?: string
+          linked_at?: string
+          linked_by: string
+          match_confidence: string
+          match_method: string
+          organization_id: string
+          superseded_at?: string | null
+          superseded_by_id?: string | null
+          supersedes_id?: string | null
+          supersession_reason?: string | null
+          unlink_reason?: string | null
+          unlinked_at?: string | null
+          unlinked_by?: string | null
+          updated_at?: string
+          updated_by: string
+          version?: number
+        }
+        Update: {
+          connector_id?: string
+          cra_product_id?: string
+          cra_release_id?: string | null
+          created_at?: string
+          created_by?: string
+          entity_type?: string
+          external_display_label?: string | null
+          external_id?: string
+          external_id_normalized?: string | null
+          id?: string
+          linked_at?: string
+          linked_by?: string
+          match_confidence?: string
+          match_method?: string
+          organization_id?: string
+          superseded_at?: string | null
+          superseded_by_id?: string | null
+          supersedes_id?: string | null
+          supersession_reason?: string | null
+          unlink_reason?: string | null
+          unlinked_at?: string | null
+          unlinked_by?: string | null
+          updated_at?: string
+          updated_by?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_external_identities_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_external_identities_linked_by_fkey"
+            columns: ["linked_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_external_identities_organization_id_connector_id_fkey"
+            columns: ["organization_id", "connector_id"]
+            isOneToOne: false
+            referencedRelation: "connectors"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "product_external_identities_organization_id_cra_product_id_fkey"
+            columns: ["organization_id", "cra_product_id"]
+            isOneToOne: false
+            referencedRelation: "product_retention_alert_operations"
+            referencedColumns: ["organization_id", "product_id"]
+          },
+          {
+            foreignKeyName: "product_external_identities_organization_id_cra_product_id_fkey"
+            columns: ["organization_id", "cra_product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "product_external_identities_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_external_identities_organization_id_superseded_by__fkey"
+            columns: ["organization_id", "superseded_by_id"]
+            isOneToOne: false
+            referencedRelation: "product_external_identities"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "product_external_identities_organization_id_supersedes_id_fkey"
+            columns: ["organization_id", "supersedes_id"]
+            isOneToOne: false
+            referencedRelation: "product_external_identities"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "product_external_identities_unlinked_by_fkey"
+            columns: ["unlinked_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_external_identities_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_external_identity_release_fkey"
+            columns: ["organization_id", "cra_product_id", "cra_release_id"]
+            isOneToOne: false
+            referencedRelation: "product_releases"
+            referencedColumns: ["organization_id", "product_id", "id"]
+          },
+        ]
+      }
       product_import_jobs: {
         Row: {
           actor_user_id: string
@@ -5346,6 +5771,449 @@ export type Database = {
           },
         ]
       }
+      sync_conflicts: {
+        Row: {
+          authority_policy_id: string | null
+          authority_policy_snapshot: Json
+          conflict_kind: string
+          connector_id: string
+          correlation_id: string
+          cra_value: Json
+          cra_value_observed_at: string
+          cra_value_source: string
+          created_at: string
+          detected_at: string
+          entity_id: string | null
+          entity_type: string
+          external_identity_id: string
+          external_value: Json
+          external_value_hash: string
+          external_value_observed_at: string
+          field_path: string
+          id: string
+          organization_id: string
+          permitted_actions: string[]
+          resolution_chosen_action: string | null
+          resolution_reason: string | null
+          resolution_status: string
+          resolution_value: Json | null
+          resolved_against_external_value_hash: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          supersedes_conflict_id: string | null
+          sync_run_id: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          authority_policy_id?: string | null
+          authority_policy_snapshot: Json
+          conflict_kind?: string
+          connector_id: string
+          correlation_id: string
+          cra_value: Json
+          cra_value_observed_at: string
+          cra_value_source: string
+          created_at?: string
+          detected_at?: string
+          entity_id?: string | null
+          entity_type: string
+          external_identity_id: string
+          external_value: Json
+          external_value_hash: string
+          external_value_observed_at: string
+          field_path: string
+          id?: string
+          organization_id: string
+          permitted_actions?: string[]
+          resolution_chosen_action?: string | null
+          resolution_reason?: string | null
+          resolution_status?: string
+          resolution_value?: Json | null
+          resolved_against_external_value_hash?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          supersedes_conflict_id?: string | null
+          sync_run_id: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          authority_policy_id?: string | null
+          authority_policy_snapshot?: Json
+          conflict_kind?: string
+          connector_id?: string
+          correlation_id?: string
+          cra_value?: Json
+          cra_value_observed_at?: string
+          cra_value_source?: string
+          created_at?: string
+          detected_at?: string
+          entity_id?: string | null
+          entity_type?: string
+          external_identity_id?: string
+          external_value?: Json
+          external_value_hash?: string
+          external_value_observed_at?: string
+          field_path?: string
+          id?: string
+          organization_id?: string
+          permitted_actions?: string[]
+          resolution_chosen_action?: string | null
+          resolution_reason?: string | null
+          resolution_status?: string
+          resolution_value?: Json | null
+          resolved_against_external_value_hash?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          supersedes_conflict_id?: string | null
+          sync_run_id?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sync_conflicts_organization_id_authority_policy_id_fkey"
+            columns: ["organization_id", "authority_policy_id"]
+            isOneToOne: false
+            referencedRelation: "field_authority_policies"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "sync_conflicts_organization_id_connector_id_fkey"
+            columns: ["organization_id", "connector_id"]
+            isOneToOne: false
+            referencedRelation: "connectors"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "sync_conflicts_organization_id_external_identity_id_fkey"
+            columns: ["organization_id", "external_identity_id"]
+            isOneToOne: false
+            referencedRelation: "product_external_identities"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "sync_conflicts_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sync_conflicts_organization_id_supersedes_conflict_id_fkey"
+            columns: ["organization_id", "supersedes_conflict_id"]
+            isOneToOne: false
+            referencedRelation: "sync_conflicts"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "sync_conflicts_organization_id_sync_run_id_fkey"
+            columns: ["organization_id", "sync_run_id"]
+            isOneToOne: false
+            referencedRelation: "sync_runs"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "sync_conflicts_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sync_connector_cursors: {
+        Row: {
+          circuit_opened_at: string | null
+          circuit_state: string
+          connector_id: string
+          consecutive_failure_count: number
+          cursor: string | null
+          cursor_issued_at: string | null
+          last_committed_at: string | null
+          last_committed_run_id: string | null
+          last_full_reconciliation_at: string | null
+          organization_id: string
+          updated_at: string
+        }
+        Insert: {
+          circuit_opened_at?: string | null
+          circuit_state?: string
+          connector_id: string
+          consecutive_failure_count?: number
+          cursor?: string | null
+          cursor_issued_at?: string | null
+          last_committed_at?: string | null
+          last_committed_run_id?: string | null
+          last_full_reconciliation_at?: string | null
+          organization_id: string
+          updated_at?: string
+        }
+        Update: {
+          circuit_opened_at?: string | null
+          circuit_state?: string
+          connector_id?: string
+          consecutive_failure_count?: number
+          cursor?: string | null
+          cursor_issued_at?: string | null
+          last_committed_at?: string | null
+          last_committed_run_id?: string | null
+          last_full_reconciliation_at?: string | null
+          organization_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sync_connector_cursors_organization_id_connector_id_fkey"
+            columns: ["organization_id", "connector_id"]
+            isOneToOne: true
+            referencedRelation: "connectors"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "sync_connector_cursors_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sync_connector_cursors_organization_id_last_committed_run__fkey"
+            columns: ["organization_id", "last_committed_run_id"]
+            isOneToOne: false
+            referencedRelation: "sync_runs"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      sync_run_plan_items: {
+        Row: {
+          applied_at: string | null
+          cra_product_id: string | null
+          cra_release_id: string | null
+          created_at: string
+          entity_type: string
+          expected_version: number | null
+          external_id: string
+          field_diffs: Json
+          id: string
+          issues: Json
+          organization_id: string
+          proposed_action: string
+          sync_run_id: string
+        }
+        Insert: {
+          applied_at?: string | null
+          cra_product_id?: string | null
+          cra_release_id?: string | null
+          created_at?: string
+          entity_type: string
+          expected_version?: number | null
+          external_id: string
+          field_diffs?: Json
+          id?: string
+          issues?: Json
+          organization_id: string
+          proposed_action: string
+          sync_run_id: string
+        }
+        Update: {
+          applied_at?: string | null
+          cra_product_id?: string | null
+          cra_release_id?: string | null
+          created_at?: string
+          entity_type?: string
+          expected_version?: number | null
+          external_id?: string
+          field_diffs?: Json
+          id?: string
+          issues?: Json
+          organization_id?: string
+          proposed_action?: string
+          sync_run_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sync_run_plan_items_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sync_run_plan_items_organization_id_sync_run_id_fkey"
+            columns: ["organization_id", "sync_run_id"]
+            isOneToOne: false
+            referencedRelation: "sync_runs"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      sync_runs: {
+        Row: {
+          actor_kind: string
+          actor_user_id: string | null
+          adapter_version: string
+          canceled_at: string | null
+          cancellation_reason: string | null
+          checkpoint_cursor: string | null
+          commit_actor_user_id: string | null
+          commit_idempotency_key: string | null
+          commit_request_digest: string | null
+          committed_at: string | null
+          conflict_count: number
+          connector_id: string
+          correlation_id: string
+          create_count: number
+          created_at: string
+          cursor_from: string | null
+          cursor_to: string | null
+          cycle_blocked_count: number
+          error_code: string | null
+          estimated_graph_impact: Json
+          expires_at: string
+          fetch_content_hash: string | null
+          id: string
+          lease_expires_at: string | null
+          lease_owner: string | null
+          mapping_version: string
+          next_attempt_at: string
+          organization_id: string
+          plan_basis_digest: string | null
+          processed_count: number
+          reconciliation_kind: string
+          retry_count: number
+          row_count: number
+          skip_count: number
+          status: string
+          tombstone_count: number
+          trigger_idempotency_key: string
+          trigger_request_digest: string
+          unchanged_count: number
+          update_count: number
+          updated_at: string
+          work_kind: string
+        }
+        Insert: {
+          actor_kind: string
+          actor_user_id?: string | null
+          adapter_version: string
+          canceled_at?: string | null
+          cancellation_reason?: string | null
+          checkpoint_cursor?: string | null
+          commit_actor_user_id?: string | null
+          commit_idempotency_key?: string | null
+          commit_request_digest?: string | null
+          committed_at?: string | null
+          conflict_count?: number
+          connector_id: string
+          correlation_id: string
+          create_count?: number
+          created_at?: string
+          cursor_from?: string | null
+          cursor_to?: string | null
+          cycle_blocked_count?: number
+          error_code?: string | null
+          estimated_graph_impact?: Json
+          expires_at?: string
+          fetch_content_hash?: string | null
+          id?: string
+          lease_expires_at?: string | null
+          lease_owner?: string | null
+          mapping_version: string
+          next_attempt_at?: string
+          organization_id: string
+          plan_basis_digest?: string | null
+          processed_count?: number
+          reconciliation_kind: string
+          retry_count?: number
+          row_count?: number
+          skip_count?: number
+          status?: string
+          tombstone_count?: number
+          trigger_idempotency_key: string
+          trigger_request_digest: string
+          unchanged_count?: number
+          update_count?: number
+          updated_at?: string
+          work_kind?: string
+        }
+        Update: {
+          actor_kind?: string
+          actor_user_id?: string | null
+          adapter_version?: string
+          canceled_at?: string | null
+          cancellation_reason?: string | null
+          checkpoint_cursor?: string | null
+          commit_actor_user_id?: string | null
+          commit_idempotency_key?: string | null
+          commit_request_digest?: string | null
+          committed_at?: string | null
+          conflict_count?: number
+          connector_id?: string
+          correlation_id?: string
+          create_count?: number
+          created_at?: string
+          cursor_from?: string | null
+          cursor_to?: string | null
+          cycle_blocked_count?: number
+          error_code?: string | null
+          estimated_graph_impact?: Json
+          expires_at?: string
+          fetch_content_hash?: string | null
+          id?: string
+          lease_expires_at?: string | null
+          lease_owner?: string | null
+          mapping_version?: string
+          next_attempt_at?: string
+          organization_id?: string
+          plan_basis_digest?: string | null
+          processed_count?: number
+          reconciliation_kind?: string
+          retry_count?: number
+          row_count?: number
+          skip_count?: number
+          status?: string
+          tombstone_count?: number
+          trigger_idempotency_key?: string
+          trigger_request_digest?: string
+          unchanged_count?: number
+          update_count?: number
+          updated_at?: string
+          work_kind?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sync_runs_actor_user_id_fkey"
+            columns: ["actor_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sync_runs_commit_actor_user_id_fkey"
+            columns: ["commit_actor_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sync_runs_organization_id_connector_id_fkey"
+            columns: ["organization_id", "connector_id"]
+            isOneToOne: false
+            referencedRelation: "connectors"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "sync_runs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tenant_settings_catalog: {
         Row: {
           category: string
@@ -5600,6 +6468,19 @@ export type Database = {
           outcome: string
         }[]
       }
+      archive_connector_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_connector_id: string
+          p_expected_version: number
+          p_organization_id: string
+          p_reason: string
+        }
+        Returns: {
+          connector: Json
+          outcome: string
+        }[]
+      }
       archive_product_atomic: {
         Args: {
           p_actor_user_id: string
@@ -5699,6 +6580,20 @@ export type Database = {
           outcome: string
         }[]
       }
+      begin_sync_run_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_connector_id: string
+          p_correlation_id: string
+          p_idempotency_key: string
+          p_organization_id: string
+          p_reconciliation_kind: string
+        }
+        Returns: {
+          outcome: string
+          run: Json
+        }[]
+      }
       bump_session_epoch: { Args: { p_user_id: string }; Returns: undefined }
       cancel_product_import_job: {
         Args: {
@@ -5710,6 +6605,18 @@ export type Database = {
         Returns: {
           job: Json
           outcome: string
+        }[]
+      }
+      cancel_sync_run_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_organization_id: string
+          p_reason: string
+          p_sync_run_id: string
+        }
+        Returns: {
+          outcome: string
+          run: Json
         }[]
       }
       checkpoint_organization_export_atomic: {
@@ -5919,6 +6826,13 @@ export type Database = {
           outcome: string
         }[]
       }
+      claim_sync_run: {
+        Args: { p_lease_seconds: number; p_worker_id: string }
+        Returns: {
+          outcome: string
+          run: Json
+        }[]
+      }
       clear_login_attempts: { Args: { p_email: string }; Returns: undefined }
       commit_product_import_atomic: {
         Args: {
@@ -5944,6 +6858,20 @@ export type Database = {
         Returns: {
           job: Json
           outcome: string
+        }[]
+      }
+      commit_sync_run_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_correlation_id: string
+          p_fetch_content_hash: string
+          p_idempotency_key: string
+          p_organization_id: string
+          p_sync_run_id: string
+        }
+        Returns: {
+          outcome: string
+          run: Json
         }[]
       }
       complete_mfa_recovery: {
@@ -6098,6 +7026,17 @@ export type Database = {
           outcome: string
         }[]
       }
+      connector_compliance_metrics_snapshot: {
+        Args: { p_organization_id: string }
+        Returns: {
+          connector_circuit_open_count: number
+          connector_count: number
+          connector_dead_letter_count: number
+          connector_open_conflict_count: number
+          connector_retry_count: number
+          connector_stale_count: number
+        }[]
+      }
       consume_destructive_reauth_grant_atomic: {
         Args: {
           p_actor_user_id: string
@@ -6148,6 +7087,23 @@ export type Database = {
         Returns: {
           outcome: string
           release: Json
+        }[]
+      }
+      create_connector_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_adapter_version: string
+          p_commit_policy: string
+          p_connection_config: Json
+          p_connector_type: string
+          p_display_name: string
+          p_idempotency_key: string
+          p_mapping_version: string
+          p_organization_id: string
+        }
+        Returns: {
+          connector: Json
+          outcome: string
         }[]
       }
       create_destructive_reauth_grant_atomic: {
@@ -6710,6 +7666,18 @@ export type Database = {
           status: string
         }[]
       }
+      fail_sync_run_atomic: {
+        Args: {
+          p_error_code: string
+          p_organization_id: string
+          p_sync_run_id: string
+          p_worker_id: string
+        }
+        Returns: {
+          outcome: string
+          run: Json
+        }[]
+      }
       finalize_organization_branding_asset_upload_atomic: {
         Args: {
           p_actor_user_id: string
@@ -7137,6 +8105,23 @@ export type Database = {
       }
       is_iso_3166_alpha_2: { Args: { p_country: string }; Returns: boolean }
       is_login_locked: { Args: { p_email: string }; Returns: string }
+      link_external_identity_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_connector_id: string
+          p_cra_product_id: string
+          p_cra_release_id: string
+          p_entity_type: string
+          p_external_display_label: string
+          p_external_id: string
+          p_match_method: string
+          p_organization_id: string
+        }
+        Returns: {
+          mapping: Json
+          outcome: string
+        }[]
+      }
       list_due_finding_propagation_job_organizations: {
         Args: never
         Returns: {
@@ -7166,6 +8151,24 @@ export type Database = {
         Args: never
         Returns: {
           organization_id: string
+        }[]
+      }
+      list_due_sync_run_organizations: {
+        Args: { p_limit: number }
+        Returns: {
+          oldest_due_at: string
+          organization_id: string
+        }[]
+      }
+      list_field_authority_policies: {
+        Args: {
+          p_actor_user_id: string
+          p_connector_id: string
+          p_organization_id: string
+        }
+        Returns: {
+          outcome: string
+          policies: Json
         }[]
       }
       list_product_import_jobs: {
@@ -7673,6 +8676,16 @@ export type Database = {
         Returns: string
       }
       m2_v2_command_digest: { Args: { p_payload: Json }; Returns: string }
+      m2_v2_connector_json: {
+        Args: { p_connector: Database["public"]["Tables"]["connectors"]["Row"] }
+        Returns: Json
+      }
+      m2_v2_external_identity_json: {
+        Args: {
+          p_identity: Database["public"]["Tables"]["product_external_identities"]["Row"]
+        }
+        Returns: Json
+      }
       m2_v2_record_security_update_artifact_worker_effect: {
         Args: {
           p_artifact_id: string
@@ -7719,8 +8732,22 @@ export type Database = {
         }
         Returns: undefined
       }
+      m2_v2_sync_conflict_json: {
+        Args: {
+          p_conflict: Database["public"]["Tables"]["sync_conflicts"]["Row"]
+        }
+        Returns: Json
+      }
+      m2_v2_sync_run_json: {
+        Args: { p_run: Database["public"]["Tables"]["sync_runs"]["Row"] }
+        Returns: Json
+      }
       m2_v2_valid_assessment_answers: {
         Args: { p_answers: Json }
+        Returns: boolean
+      }
+      m2_v2_valid_field_authority_field: {
+        Args: { p_entity_type: string; p_field_name: string }
         Returns: boolean
       }
       m2_v2_valid_published_external_references: {
@@ -7767,6 +8794,18 @@ export type Database = {
         }
         Returns: {
           checkpoint_version: number
+          outcome: string
+        }[]
+      }
+      merge_external_identities_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_keep_mapping_id: string
+          p_merge_from_mapping_id: string
+          p_organization_id: string
+          p_reason: string
+        }
+        Returns: {
           outcome: string
         }[]
       }
@@ -8016,6 +9055,20 @@ export type Database = {
           policies: Json
         }[]
       }
+      record_connector_test_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_connector_id: string
+          p_error_code: string
+          p_latency_ms: number
+          p_organization_id: string
+          p_outcome: string
+        }
+        Returns: {
+          connector: Json
+          outcome: string
+        }[]
+      }
       record_invitation_delivery_onboarding_atomic: {
         Args: {
           p_actor_user_id: string
@@ -8244,6 +9297,18 @@ export type Database = {
           outcome: string
         }[]
       }
+      request_sync_run_commit_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_expected_row_count: number
+          p_organization_id: string
+          p_sync_run_id: string
+        }
+        Returns: {
+          outcome: string
+          run: Json
+        }[]
+      }
       resend_invitation_atomic: {
         Args: {
           p_actor_email: string
@@ -8318,6 +9383,34 @@ export type Database = {
         Args: { p_legal_entity_id: string; p_organization_id: string }
         Returns: {
           context: Json
+          outcome: string
+        }[]
+      }
+      resolve_connector_secret: {
+        Args: {
+          p_connector_id: string
+          p_encryption_key: string
+          p_organization_id: string
+        }
+        Returns: string
+      }
+      resolve_connector_sync_worker_actor: {
+        Args: { p_organization_id: string }
+        Returns: string
+      }
+      resolve_sync_conflict_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_chosen_action: string
+          p_conflict_id: string
+          p_correlation_id: string
+          p_expected_version: number
+          p_manual_value: Json
+          p_organization_id: string
+          p_reason: string
+        }
+        Returns: {
+          conflict: Json
           outcome: string
         }[]
       }
@@ -8423,6 +9516,21 @@ export type Database = {
           saved_count: number
         }[]
       }
+      save_sync_run_plan_atomic: {
+        Args: {
+          p_conflicts: Json
+          p_cursor_to: string
+          p_fetch_content_hash: string
+          p_organization_id: string
+          p_plan_items: Json
+          p_sync_run_id: string
+          p_worker_id: string
+        }
+        Returns: {
+          outcome: string
+          run: Json
+        }[]
+      }
       schedule_organization_purge_atomic: {
         Args: {
           p_actor_user_id: string
@@ -8460,6 +9568,19 @@ export type Database = {
         }
         Returns: {
           artifact: Json
+          outcome: string
+        }[]
+      }
+      set_connector_secret_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_connector_id: string
+          p_encryption_key: string
+          p_organization_id: string
+          p_secret_value: string
+        }
+        Returns: {
+          connector: Json
           outcome: string
         }[]
       }
@@ -8545,6 +9666,33 @@ export type Database = {
         Returns: {
           outcome: string
           release: Json
+        }[]
+      }
+      unlink_external_identity_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_mapping_id: string
+          p_organization_id: string
+          p_reason: string
+        }
+        Returns: {
+          outcome: string
+        }[]
+      }
+      update_connector_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_commit_policy: string
+          p_connection_config: Json
+          p_connector_id: string
+          p_display_name: string
+          p_expected_version: number
+          p_mapping_version: string
+          p_organization_id: string
+        }
+        Returns: {
+          connector: Json
+          outcome: string
         }[]
       }
       update_finding_propagation_source_atomic: {
@@ -8721,6 +9869,22 @@ export type Database = {
         Returns: {
           artifact: Json
           outcome: string
+        }[]
+      }
+      upsert_field_authority_policy_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_connector_id: string
+          p_entity_type: string
+          p_field_name: string
+          p_organization_id: string
+          p_policy_value: string
+          p_protected: boolean
+          p_protected_reason: string
+        }
+        Returns: {
+          outcome: string
+          policy: Json
         }[]
       }
       user_is_member_of: { Args: { p_org_id: string }; Returns: boolean }
