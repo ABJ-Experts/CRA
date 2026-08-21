@@ -11,7 +11,10 @@ import {
   sbomJobParamsSchema,
   sbomJobResponseSchema,
   sbomOriginalDownloadResponseSchema,
+  sbomSourceHistoryQuerySchema,
+  sbomSourceHistoryResponseSchema,
   sbomSourceParamsSchema,
+  sbomValidationReportResponseSchema,
   sbomUploadInitializationResponseSchema,
   sbomUploadParamsSchema,
   type CompleteSbomUploadInput,
@@ -19,6 +22,7 @@ import {
   type InitializeSbomUploadInput,
   type ReplaySbomJobInput,
   type RevokeSbomCiCredentialInput,
+  type SbomSourceHistoryQuery,
 } from "@repo/contracts/sboms";
 
 import { authenticatedRequestJson } from "../../_lib/http/authenticated-request";
@@ -40,6 +44,24 @@ function uploadPath(productId: string, releaseId: string): `/${string}` {
   if (!parsed.success)
     throw invalidIdentifier("The release identifier is invalid.");
   return `/api/v1/products/${parsed.data.productId}/releases/${parsed.data.releaseId}/sbom-uploads`;
+}
+
+function sourceHistoryPath(
+  productId: string,
+  releaseId: string,
+  query: Readonly<Partial<SbomSourceHistoryQuery>>,
+): `/${string}` {
+  const parsed = sbomUploadParamsSchema.safeParse({
+    productId,
+    releaseId,
+    sourceId: "00000000-0000-4000-8000-000000000000",
+  });
+  if (!parsed.success)
+    throw invalidIdentifier("The release identifier is invalid.");
+  const parsedQuery = apiClient.parseInput(sbomSourceHistoryQuerySchema, query);
+  const search = new URLSearchParams({ limit: String(parsedQuery.limit) });
+  if (parsedQuery.cursor) search.set("cursor", parsedQuery.cursor);
+  return `/api/v1/products/${parsed.data.productId}/releases/${parsed.data.releaseId}/sbom-sources?${search.toString()}`;
 }
 
 function sourcePath(sourceId: string, suffix = ""): `/${string}` {
@@ -118,10 +140,31 @@ export class SbomsApi {
     });
   }
 
+  listSourcesForRelease(
+    productId: string,
+    releaseId: string,
+    query: Readonly<Partial<SbomSourceHistoryQuery>> = {},
+    signal?: AbortSignal,
+  ) {
+    return authenticatedRequestJson<typeof sbomSourceHistoryResponseSchema>({
+      path: sourceHistoryPath(productId, releaseId, query),
+      schema: sbomSourceHistoryResponseSchema,
+      signal,
+    });
+  }
+
   downloadOriginal(sourceId: string, signal?: AbortSignal) {
     return authenticatedRequestJson<typeof sbomOriginalDownloadResponseSchema>({
       path: sourcePath(sourceId, "/download"),
       schema: sbomOriginalDownloadResponseSchema,
+      signal,
+    });
+  }
+
+  getValidationReport(sourceId: string, signal?: AbortSignal) {
+    return authenticatedRequestJson<typeof sbomValidationReportResponseSchema>({
+      path: sourcePath(sourceId, "/validation-report"),
+      schema: sbomValidationReportResponseSchema,
       signal,
     });
   }

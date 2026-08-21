@@ -43,6 +43,18 @@ export class SbomService {
     );
   }
 
+  listSourcesForRelease(
+    command: Parameters<SbomIntakeUseCases["listSourcesForRelease"]>[0],
+  ) {
+    return this.unwrap(this.useCases.listSourcesForRelease(command));
+  }
+
+  validationReport(
+    command: Parameters<SbomIntakeUseCases["validationReport"]>[0],
+  ) {
+    return this.unwrap(this.useCases.validationReport(command));
+  }
+
   replay(command: Parameters<SbomIntakeUseCases["replay"]>[0]) {
     return this.unwrap(this.useCases.replay(command));
   }

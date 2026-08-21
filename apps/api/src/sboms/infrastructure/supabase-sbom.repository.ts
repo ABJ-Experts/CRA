@@ -7,7 +7,12 @@ import {
 } from "node:crypto";
 
 import { Injectable } from "@nestjs/common";
-import { sbomJobSchema, sbomSourceSchema } from "@repo/contracts/sboms";
+import {
+  sbomJobSchema,
+  sbomSourceHistoryResponseSchema,
+  sbomSourceSchema,
+  sbomValidationReportResponseSchema,
+} from "@repo/contracts/sboms";
 import { z } from "zod";
 
 import { SupabaseService } from "../../supabase/supabase.service";
@@ -108,6 +113,9 @@ export class SupabaseSbomRepository
       p_staging_storage_key: objectKey,
       p_upload_expires_at: expiresAt,
       p_correlation_id: input.correlationId,
+      p_declared_format: input.declaredFormat ?? null,
+      p_declared_spec_version: input.declaredSpecVersion ?? null,
+      p_supersedes_source_id: input.supersedesSourceId ?? null,
     });
     const outcome = this.outcome(
       row,
@@ -136,7 +144,7 @@ export class SupabaseSbomRepository
       const result = await this.tables()
         .from("sbom_sources")
         .select(
-          "id, organization_id, product_id, release_id, source_kind, original_filename, declared_media_type, declared_byte_size, declared_sha256, status, staging_storage_key, upload_expires_at, created_at, verified_at",
+          "id, organization_id, product_id, release_id, source_kind, original_filename, declared_media_type, declared_byte_size, declared_sha256, status, staging_storage_key, upload_expires_at, declared_format, declared_spec_version, supersedes_source_id, created_at, verified_at",
         )
         .eq("organization_id", organizationId)
         .eq("id", sourceId)
@@ -154,6 +162,18 @@ export class SupabaseSbomRepository
         byteSize: row.declared_byte_size,
         sha256: row.declared_sha256,
         status: row.status,
+        declaredFormat:
+          typeof row.declared_format === "string"
+            ? row.declared_format
+            : undefined,
+        declaredSpecVersion:
+          typeof row.declared_spec_version === "string"
+            ? row.declared_spec_version
+            : undefined,
+        supersedesSourceId:
+          typeof row.supersedes_source_id === "string"
+            ? row.supersedes_source_id
+            : undefined,
         createdAt: row.created_at,
         completedAt: row.verified_at,
         objectKey: row.staging_storage_key,
@@ -341,6 +361,61 @@ export class SupabaseSbomRepository
         };
   }
 
+  async listSourcesForRelease(
+    organizationId: string,
+    input: Parameters<SbomIntakeRepository["listSourcesForRelease"]>[1],
+  ): Promise<
+    Awaited<ReturnType<SbomIntakeRepository["listSourcesForRelease"]>>
+  > {
+    const row = await this.one("list_sbom_sources_for_release", {
+      p_organization_id: organizationId,
+      p_actor_user_id: input.actorId,
+      p_product_id: input.productId,
+      p_release_id: input.releaseId,
+      p_limit: input.limit,
+      p_cursor: input.cursor ?? null,
+    });
+    const outcome = this.outcome(
+      row,
+      new Set<"found" | "not_found" | "invalid_request">([
+        "found",
+        "not_found",
+        "invalid_request",
+      ]),
+    );
+    if (outcome !== "found") return { outcome };
+    return {
+      outcome,
+      response: sbomSourceHistoryResponseSchema.parse({
+        sources: row.sources,
+        nextCursor: row.next_cursor,
+      }),
+    };
+  }
+
+  async getValidationReport(
+    organizationId: string,
+    input: Parameters<SbomIntakeRepository["getValidationReport"]>[1],
+  ): Promise<Awaited<ReturnType<SbomIntakeRepository["getValidationReport"]>>> {
+    const row = await this.one("get_sbom_validation_report", {
+      p_organization_id: organizationId,
+      p_actor_user_id: input.actorId,
+      p_source_id: input.sourceId,
+    });
+    const outcome = this.outcome(
+      row,
+      new Set<"found" | "not_found">(["found", "not_found"]),
+    );
+    if (outcome !== "found") return { outcome };
+    return {
+      outcome,
+      response: sbomValidationReportResponseSchema.parse({
+        source: row.source,
+        report: row.report,
+      }),
+    };
+  }
+
   async dueOrganizationIds(): Promise<readonly string[]> {
     const rows = await this.rows("list_due_sbom_ingest_organizations", {
       p_limit: 500,
@@ -379,6 +454,9 @@ export class SupabaseSbomRepository
       byteSize: source.byteSize,
       mediaType: source.mediaType,
       retryCount: number(this.record(row.job).attempts, 0),
+      fileName: source.filename,
+      declaredFormat: source.declaredFormat ?? null,
+      declaredSpecVersion: source.declaredSpecVersion ?? null,
     };
   }
 
@@ -395,15 +473,21 @@ export class SupabaseSbomRepository
       p_lease_seconds: 60,
     });
   }
-  async markComplete(
+  async completeWithValidation(
     organizationId: string,
-    input: Parameters<SbomIngestQueue["markComplete"]>[1],
+    input: Parameters<SbomIngestQueue["completeWithValidation"]>[1],
   ): Promise<void> {
-    await this.one("complete_sbom_ingest_job", {
+    const row = await this.one("record_sbom_validation_atomic", {
       p_organization_id: organizationId,
       p_job_id: input.jobId,
       p_worker_id: input.workerId,
+      p_report: input.report,
     });
+    const outcome = this.outcome(
+      row,
+      new Set(["completed", "not_found", "invalid_request", "invalid_state"]),
+    );
+    if (outcome !== "completed") throw new SbomRepositoryError("unavailable");
   }
   async fail(
     organizationId: string,
@@ -569,6 +653,13 @@ export class SupabaseSbomRepository
       expiresAt: new Date(Date.now() + 10 * 60 * 1_000).toISOString(),
       createdAt: row.createdAt,
       completedAt: row.completedAt,
+      ...(row.declaredFormat ? { declaredFormat: row.declaredFormat } : {}),
+      ...(row.declaredSpecVersion
+        ? { declaredSpecVersion: row.declaredSpecVersion }
+        : {}),
+      ...(row.supersedesSourceId
+        ? { supersedesSourceId: row.supersedesSourceId }
+        : {}),
     };
   }
   private job(value: unknown): SbomJob {
@@ -635,6 +726,9 @@ export function sbomRequestDigest(
     | "sha256"
     | "source"
     | "idempotencyKey"
+    | "declaredFormat"
+    | "declaredSpecVersion"
+    | "supersedesSourceId"
   >,
 ): string {
   // The idempotency request fingerprint is client-visible intake metadata only.
@@ -651,6 +745,9 @@ export function sbomRequestDigest(
         sha256: input.sha256,
         source: input.source,
         idempotencyKey: input.idempotencyKey,
+        declaredFormat: input.declaredFormat ?? null,
+        declaredSpecVersion: input.declaredSpecVersion ?? null,
+        supersedesSourceId: input.supersedesSourceId ?? null,
       }),
     )
     .digest("hex");

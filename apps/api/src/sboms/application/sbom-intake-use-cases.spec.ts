@@ -17,6 +17,8 @@ describe("SbomIntakeUseCases", () => {
     getSourceForCompletion: jest.fn(),
     getDownloadSource: jest.fn(),
     replay: jest.fn(),
+    listSourcesForRelease: jest.fn(),
+    getValidationReport: jest.fn(),
   };
   const storage = {
     createSignedUpload: jest.fn(),

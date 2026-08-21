@@ -48,6 +48,56 @@ const JOB_RESPONSE = {
   job: JOB,
   progressUrl: `/api/v1/sbom-jobs/${JOB_ID}`,
 } as const;
+const SOURCE_HISTORY_RESPONSE = {
+  sources: [
+    {
+      source: {
+        ...SOURCE,
+        status: "verified",
+        declaredFormat: "cyclonedx",
+        declaredSpecVersion: "1.6",
+        completedAt: NOW,
+      },
+      validation: {
+        status: "valid_with_warnings",
+        errorCount: 0,
+        warningCount: 1,
+        omittedDiagnosticCount: 0,
+        completedAt: NOW,
+      },
+    },
+  ],
+  nextCursor: null,
+} as const;
+const VALIDATION_REPORT_RESPONSE = {
+  source: SOURCE_HISTORY_RESPONSE.sources[0].source,
+  report: {
+    status: "valid_with_warnings",
+    detected: {
+      format: "cyclonedx",
+      serialization: "json",
+      specificationVersion: "1.6",
+    },
+    validator: {
+      name: "CRA SBOM validator",
+      version: "1.0.0",
+      schemaAssetSha256: "a".repeat(64),
+    },
+    diagnostics: [
+      {
+        severity: "warning",
+        code: "missing-license",
+        location: "components[0].licenses",
+        message: "The component is missing license metadata.",
+        remediation: "Add a declared license to the component entry.",
+      },
+    ],
+    errorCount: 0,
+    warningCount: 1,
+    omittedDiagnosticCount: 0,
+    completedAt: NOW,
+  },
+} as const;
 
 function json(value: unknown, status = 200) {
   return new Response(JSON.stringify(value), { status });
@@ -124,6 +174,57 @@ describe("sbomsApi", () => {
       `/api/v1/sbom-uploads/${UPLOAD_ID}/complete`,
       `/api/v1/sbom-jobs/${JOB_ID}`,
     ]);
+  });
+
+  it("lists release source history and reads validation reports through parsed GET routes", async () => {
+    const fetcher = vi.fn(async (path: string) => {
+      if (path.includes("/sbom-sources?")) {
+        return json(SOURCE_HISTORY_RESPONSE);
+      }
+      return json(VALIDATION_REPORT_RESPONSE);
+    });
+    vi.stubGlobal("fetch", fetcher);
+
+    await expect(
+      sbomsApi.listSourcesForRelease(PRODUCT_ID, RELEASE_ID, {
+        limit: 10,
+        cursor: "next/page",
+      }),
+    ).resolves.toEqual(SOURCE_HISTORY_RESPONSE);
+    await expect(sbomsApi.getValidationReport(SOURCE_ID)).resolves.toEqual(
+      VALIDATION_REPORT_RESPONSE,
+    );
+
+    expect(fetcher.mock.calls.map(([path]) => path)).toEqual([
+      `/api/v1/products/${PRODUCT_ID}/releases/${RELEASE_ID}/sbom-sources?limit=10&cursor=next%2Fpage`,
+      `/api/v1/sbom-sources/${SOURCE_ID}/validation-report`,
+    ]);
+  });
+
+  it("declares unknown browser file types as octet-stream for storage upload", async () => {
+    const headers = new Map<string, string>();
+    class FakeXmlHttpRequest {
+      status = 200;
+      upload = {};
+      onerror: (() => void) | null = null;
+      onload: (() => void) | null = null;
+      open = vi.fn();
+      setRequestHeader(name: string, value: string) {
+        headers.set(name, value);
+      }
+      send() {
+        this.onload?.();
+      }
+    }
+    vi.stubGlobal("XMLHttpRequest", FakeXmlHttpRequest);
+
+    await expect(
+      sbomsApi.uploadOriginal(
+        "https://storage.test/upload",
+        new File(["{}"], "vendor.sbom", { type: "" }),
+      ),
+    ).resolves.toBeUndefined();
+    expect(headers.get("content-type")).toBe("application/octet-stream");
   });
 
   it("creates, lists, and revokes CI credentials through owner routes", async () => {

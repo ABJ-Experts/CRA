@@ -23,6 +23,7 @@
     "verify:tenant-export-capacity": "node dist/organizations/tenant-administration/worker/tenant-export-capacity.js"
   },
   "dependencies": {
+    "@cyclonedx/cyclonedx-library": "10.2.0",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.4",
     "@nestjs/core": "^11.0.1",
@@ -30,15 +31,19 @@
     "@nestjs/throttler": "^6.5.0",
     "@repo/contracts": "workspace:*",
     "@supabase/supabase-js": "^2.112.2",
+    "ajv": "8.20.0",
+    "ajv-formats": "3.0.1",
     "cookie-parser": "^1.4.7",
     "csv-parse": "^6.2.1",
     "file-type": "^16.5.4",
     "helmet": "^8.3.0",
     "jose": "^5.10.0",
+    "libxmljs2": "0.35.0",
     "multer": "^2.2.0",
     "nodemailer": "^9.0.5",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
+    "saxes": "6.0.0",
     "sharp": "^0.35.3",
     "zod": "^4.4.3"
   },

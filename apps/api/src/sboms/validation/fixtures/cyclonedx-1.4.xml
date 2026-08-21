@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bom xmlns="http://cyclonedx.org/schema/bom/1.4" version="1">
+  <metadata>
+    <timestamp>2026-08-21T00:00:00Z</timestamp>
+  </metadata>
+  <components>
+    <component type="library" bom-ref="pkg:npm/example@1.0.0">
+      <name>example</name>
+      <version>1.0.0</version>
+    </component>
+  </components>
+</bom>

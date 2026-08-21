@@ -39,6 +39,7 @@
     "onlyBuiltDependencies": [
       "@tailwindcss/oxide",
       "esbuild",
+      "libxmljs2",
       "msw",
       "sharp",
       "unrs-resolver"

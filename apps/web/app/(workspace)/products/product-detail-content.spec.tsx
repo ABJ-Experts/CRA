@@ -39,6 +39,19 @@ vi.mock("../../_features/sboms/sboms.queries", () => ({
     isPending: false,
     isError: false,
   }),
+  useSbomSourceHistoryQuery: () => ({
+    data: { sources: [], nextCursor: null },
+    isPending: false,
+    isError: false,
+    error: null,
+    refetch: vi.fn(),
+  }),
+  useSbomValidationReportQuery: () => ({
+    data: undefined,
+    isPending: false,
+    isError: false,
+    error: null,
+  }),
 }));
 
 const PRODUCT = {
@@ -840,7 +853,7 @@ describe("ProductDetailContent", () => {
     expect(
       screen.getByRole("heading", { name: "SBOM evidence" }),
     ).toBeVisible();
-    expect(screen.getByLabelText("Release")).toHaveValue(RELEASE.id);
+    expect(screen.getByLabelText("Release")).toHaveTextContent(RELEASE.label);
   });
 
   it("groups each release into an accessible workspace with its compliance controls", () => {

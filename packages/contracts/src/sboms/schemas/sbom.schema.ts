@@ -17,6 +17,7 @@ export const sbomMediaTypeSchema = z.enum([
   "application/json",
   "application/xml",
   "text/xml",
+  "text/plain",
   "application/octet-stream",
   "application/vnd.cyclonedx+json",
   "application/vnd.cyclonedx+xml",
@@ -38,6 +39,8 @@ export const sbomSourceStatusSchema = z.enum([
   "rejected",
   "expired",
 ]);
+
+export const sbomDeclaredFormatSchema = z.enum(["cyclonedx", "spdx"]);
 
 export const sbomJobStatusSchema = z.enum([
   "queued",
@@ -79,6 +82,8 @@ const normalizedSbomMediaTypeSchema = z
   .toLowerCase()
   .pipe(sbomMediaTypeSchema);
 
+const declaredSbomSpecVersionSchema = requiredText(40);
+
 const signedStorageUrlSchema = z
   .string()
   .trim()
@@ -116,6 +121,9 @@ const initializeSbomUploadFieldsSchema = z
     byteSize: z.number().int().min(1).max(SBOM_MAX_UPLOAD_BYTES),
     sha256: sha256Schema,
     idempotencyKey: idempotencyKeySchema,
+    declaredFormat: sbomDeclaredFormatSchema.optional(),
+    declaredSpecVersion: declaredSbomSpecVersionSchema.optional(),
+    supersedesSourceId: z.uuid().optional(),
   })
   .strict();
 
@@ -166,6 +174,9 @@ export const sbomSourceSchema = z
     byteSize: z.number().int().min(1).max(SBOM_MAX_UPLOAD_BYTES),
     sha256: sha256Schema,
     status: sbomSourceStatusSchema,
+    declaredFormat: sbomDeclaredFormatSchema.optional(),
+    declaredSpecVersion: declaredSbomSpecVersionSchema.optional(),
+    supersedesSourceId: z.uuid().optional(),
     createdAt: utcDateTimeSchema,
     completedAt: utcDateTimeSchema.nullable(),
   })

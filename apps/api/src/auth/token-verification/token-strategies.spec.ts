@@ -201,6 +201,36 @@ describe("token verification strategies", () => {
       ).resolves.toMatchObject({ ok: true });
     });
 
+    it("preserves SBOM request identity claims from ES256 JWKS tokens", async () => {
+      const { privateKey, publicKey } = await generateKeyPair("ES256");
+      const getKey: JWTVerifyGetKey = () => publicKey;
+      const strategy = new JwksTokenVerifierStrategy(getKey, ISSUER);
+      const token = await new SignJWT({
+        email: "owner@cra.test",
+        role: "authenticated",
+        aal: "aal2",
+        session_id: "sbom-session-1",
+      })
+        .setProtectedHeader({ alg: "ES256", kid: "sbom-key" })
+        .setIssuer(ISSUER)
+        .setSubject("owner-user-1")
+        .setAudience("sbom-validation-e2e")
+        .setExpirationTime("5m")
+        .sign(privateKey);
+
+      await expect(strategy.verify(token)).resolves.toMatchObject({
+        ok: true,
+        claims: {
+          sub: "owner-user-1",
+          email: "owner@cra.test",
+          role: "authenticated",
+          aal: "aal2",
+          session_id: "sbom-session-1",
+          aud: "sbom-validation-e2e",
+        },
+      });
+    });
+
     it("verifies RS256 tokens from the asymmetric key source", async () => {
       const { privateKey, publicKey } = await generateKeyPair("RS256");
       const publicJwk = await exportJWK(publicKey);

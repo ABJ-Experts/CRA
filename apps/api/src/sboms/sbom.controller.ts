@@ -9,6 +9,7 @@ import {
   NotFoundException,
   Param,
   Post,
+  Query,
   Req,
   UseGuards,
 } from "@nestjs/common";
@@ -21,8 +22,11 @@ import {
   sbomJobParamsSchema,
   sbomJobResponseSchema,
   sbomOriginalDownloadResponseSchema,
+  sbomSourceHistoryQuerySchema,
+  sbomSourceHistoryResponseSchema,
   sbomReleaseParamsSchema,
   sbomSourceParamsSchema,
+  sbomValidationReportResponseSchema,
   sbomUploadInitializationResponseSchema,
   type CiCompleteSbomUploadInput,
   type CiInitializeSbomUploadInput,
@@ -31,6 +35,7 @@ import {
   type ReplaySbomJobInput,
   type SbomJobParams,
   type SbomReleaseParams,
+  type SbomSourceHistoryQuery,
   type SbomSourceParams,
 } from "@repo/contracts/sboms";
 
@@ -42,19 +47,23 @@ import {
   type RequestUser,
 } from "../auth/auth.types";
 import { ZodResponse } from "../common/http/zod-response.interceptor";
-import { zodBody, zodParams } from "../common/pipes/zod-validation.pipe";
+import {
+  zodBody,
+  zodParams,
+  zodQuery,
+} from "../common/pipes/zod-validation.pipe";
 import {
   SbomCiCredentialGuard,
   type SbomCiRequest,
 } from "./sbom-ci-credential.guard";
 import { SbomService } from "./sbom.service";
 
-@Controller("products/:productId/releases/:releaseId/sbom-uploads")
+@Controller("products/:productId/releases/:releaseId")
 export class ProductReleaseSbomController {
   constructor(private readonly sboms: SbomService) {}
 
   @RequirePermissions("can_upload_sboms")
-  @Post()
+  @Post("sbom-uploads")
   @ZodResponse(sbomUploadInitializationResponseSchema)
   async initialize(
     @Param(zodParams(sbomReleaseParamsSchema)) params: SbomReleaseParams,
@@ -81,9 +90,31 @@ export class ProductReleaseSbomController {
       sha256: input.sha256,
       source: "manual_upload",
       idempotencyKey: input.idempotencyKey,
+      declaredFormat: input.declaredFormat,
+      declaredSpecVersion: input.declaredSpecVersion,
+      supersedesSourceId: input.supersedesSourceId,
       correlationId: randomUUID(),
     });
     return { source: publicSource(result.reservation), upload: result.upload };
+  }
+
+  @RequirePermissions("can_view_sboms")
+  @Get("sbom-sources")
+  @ZodResponse(sbomSourceHistoryResponseSchema)
+  async sources(
+    @Param(zodParams(sbomReleaseParamsSchema)) params: SbomReleaseParams,
+    @Query(zodQuery(sbomSourceHistoryQuerySchema))
+    query: SbomSourceHistoryQuery,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.sboms.listSourcesForRelease({
+      organizationId: organizationId(user),
+      actorId: user.id,
+      productId: params.productId,
+      releaseId: params.releaseId,
+      limit: query.limit,
+      cursor: query.cursor,
+    });
   }
 }
 
@@ -169,6 +200,20 @@ export class SbomSourcesController {
       },
     };
   }
+
+  @RequirePermissions("can_view_sboms")
+  @Get(":sourceId/validation-report")
+  @ZodResponse(sbomValidationReportResponseSchema)
+  async validationReport(
+    @Param(zodParams(sbomSourceParamsSchema)) params: SbomSourceParams,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.sboms.validationReport({
+      organizationId: organizationId(user),
+      actorId: user.id,
+      sourceId: params.sourceId,
+    });
+  }
 }
 
 @Controller("ci/sbom-uploads")
@@ -197,6 +242,9 @@ export class SbomCiController {
       source: "ci_upload",
       idempotencyKey: input.idempotencyKey,
       correlationId: randomUUID(),
+      declaredFormat: input.declaredFormat,
+      declaredSpecVersion: input.declaredSpecVersion,
+      supersedesSourceId: input.supersedesSourceId,
     });
     return { source: publicSource(result.reservation), upload: result.upload };
   }
@@ -252,6 +300,13 @@ function publicSource(
     byteSize: source.byteSize,
     sha256: source.sha256,
     status: source.status,
+    ...(source.declaredFormat ? { declaredFormat: source.declaredFormat } : {}),
+    ...(source.declaredSpecVersion
+      ? { declaredSpecVersion: source.declaredSpecVersion }
+      : {}),
+    ...(source.supersedesSourceId
+      ? { supersedesSourceId: source.supersedesSourceId }
+      : {}),
     createdAt: source.createdAt,
     completedAt: source.completedAt,
   };

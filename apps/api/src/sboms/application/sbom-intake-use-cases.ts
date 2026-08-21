@@ -1,4 +1,9 @@
 import type { Result } from "../../common/domain/result";
+import type {
+  SbomDetectedFormat,
+  SbomSourceHistoryResponse,
+  SbomValidationReportResponse,
+} from "@repo/contracts/sboms";
 import { randomUUID } from "node:crypto";
 import { failure, success } from "../../common/domain/result";
 
@@ -21,6 +26,9 @@ export type SbomReservation = Readonly<{
   byteSize: number;
   mediaType: string;
   sha256: string;
+  declaredFormat?: SbomDetectedFormat;
+  declaredSpecVersion?: string;
+  supersedesSourceId?: string;
   expiresAt: string;
   status: "upload_pending" | "verified" | "rejected" | "expired";
   createdAt: string;
@@ -80,6 +88,9 @@ export interface SbomIntakeRepository {
       source: SbomSourceKind;
       idempotencyKey: string;
       correlationId: string;
+      declaredFormat?: SbomDetectedFormat;
+      declaredSpecVersion?: string;
+      supersedesSourceId?: string;
       ciCredentialId?: string;
     }>,
   ): Promise<
@@ -166,6 +177,26 @@ export interface SbomIntakeRepository {
       outcome: "queued" | "replayed" | "not_found" | "conflict";
       job?: SbomJob;
     }>
+  >;
+  listSourcesForRelease(
+    organizationId: string,
+    input: Readonly<{
+      actorId: string;
+      productId: string;
+      releaseId: string;
+      limit: number;
+      cursor?: string;
+    }>,
+  ): Promise<
+    | Readonly<{ outcome: "found"; response: SbomSourceHistoryResponse }>
+    | Readonly<{ outcome: "not_found" | "invalid_request" }>
+  >;
+  getValidationReport(
+    organizationId: string,
+    input: Readonly<{ actorId: string; sourceId: string }>,
+  ): Promise<
+    | Readonly<{ outcome: "found"; response: SbomValidationReportResponse }>
+    | Readonly<{ outcome: "not_found" }>
   >;
 }
 
@@ -428,6 +459,54 @@ export class SbomIntakeUseCases {
         });
       }
       return success(replayed.job);
+    } catch {
+      return failure({ code: "unavailable" });
+    }
+  }
+
+  async listSourcesForRelease(
+    command: Readonly<{
+      organizationId: string;
+      actorId: string;
+      productId: string;
+      releaseId: string;
+      limit: number;
+      cursor?: string;
+    }>,
+  ): Promise<Result<SbomSourceHistoryResponse, SbomIntakeError>> {
+    try {
+      const listed = await this.repository.listSourcesForRelease(
+        command.organizationId,
+        command,
+      );
+      return listed.outcome === "found"
+        ? success(listed.response)
+        : failure({
+            code:
+              listed.outcome === "invalid_request"
+                ? "invalid_request"
+                : "not_found",
+          });
+    } catch {
+      return failure({ code: "unavailable" });
+    }
+  }
+
+  async validationReport(
+    command: Readonly<{
+      organizationId: string;
+      actorId: string;
+      sourceId: string;
+    }>,
+  ): Promise<Result<SbomValidationReportResponse, SbomIntakeError>> {
+    try {
+      const report = await this.repository.getValidationReport(
+        command.organizationId,
+        command,
+      );
+      return report.outcome === "found"
+        ? success(report.response)
+        : failure({ code: "not_found" });
     } catch {
       return failure({ code: "unavailable" });
     }

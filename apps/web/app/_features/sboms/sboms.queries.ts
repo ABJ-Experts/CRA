@@ -4,6 +4,9 @@ import type {
   CreateSbomCiCredentialInput,
   RevokeSbomCiCredentialInput,
   SbomJobResponse,
+  SbomSourceHistoryQuery,
+  SbomSourceHistoryResponse,
+  SbomValidationReportResponse,
 } from "@repo/contracts/sboms";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -25,6 +28,40 @@ export function useSbomJobQuery(jobId: string | null, enabled: boolean) {
       if (jobId === null)
         throw new Error("An SBOM job identifier is required.");
       return sbomsApi.getJob(jobId, signal);
+    },
+  });
+}
+
+export function useSbomSourceHistoryQuery(
+  productId: string,
+  releaseId: string,
+  query: Readonly<Partial<SbomSourceHistoryQuery>>,
+  enabled: boolean,
+) {
+  return useQuery<SbomSourceHistoryResponse>({
+    queryKey: sbomKeys.sourceHistory(productId, releaseId, query),
+    enabled: enabled && productId !== "" && releaseId !== "",
+    retry: false,
+    queryFn: ({ signal }) =>
+      sbomsApi.listSourcesForRelease(productId, releaseId, query, signal),
+  });
+}
+
+export function useSbomValidationReportQuery(
+  sourceId: string | null,
+  enabled: boolean,
+) {
+  return useQuery<SbomValidationReportResponse>({
+    queryKey:
+      sourceId === null
+        ? sbomKeys.validationReports
+        : sbomKeys.validationReport(sourceId),
+    enabled: enabled && sourceId !== null,
+    retry: false,
+    queryFn: ({ signal }) => {
+      if (sourceId === null)
+        throw new Error("An SBOM source identifier is required.");
+      return sbomsApi.getValidationReport(sourceId, signal);
     },
   });
 }

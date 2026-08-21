@@ -19,6 +19,7 @@ import {
   SbomUploadsController,
 } from "./sbom.controller";
 import { SbomService } from "./sbom.service";
+import { validateSbomInWorker } from "./validation/sbom-validation-worker";
 import { SbomIngestWorker } from "./worker/sbom-ingest-worker";
 
 @Module({
@@ -58,6 +59,7 @@ import { SbomIngestWorker } from "./worker/sbom-ingest-worker";
           leaseSeconds: 60,
           queue,
           storage,
+          validate: validateSbomInWorker,
         }),
     },
   ],

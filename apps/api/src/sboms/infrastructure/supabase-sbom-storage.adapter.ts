@@ -17,6 +17,7 @@ const mediaTypes = new Set([
   "application/json",
   "application/xml",
   "text/xml",
+  "text/plain",
   "application/octet-stream",
   "application/vnd.cyclonedx+json",
   "application/vnd.cyclonedx+xml",
@@ -156,6 +157,54 @@ export class SupabaseSbomStorageAdapter implements SbomStoragePort {
     }
   }
 
+  async readVerified(
+    input: Readonly<{
+      objectKey: string;
+      sha256: string;
+      byteSize: number;
+      contentType: string;
+    }>,
+  ) {
+    this.assertMetadata(input);
+    if (!objectKey.test(input.objectKey) || !sha256.test(input.sha256))
+      throw new SbomStorageError("malformed");
+    try {
+      const result = (await this.supabase
+        .admin()
+        .storage.from(bucket)
+        .download(input.objectKey)) as StorageResponse<Blob>;
+      if (result.error || !result.data)
+        return isNotFound(result.error)
+          ? Object.freeze({ outcome: "missing" as const })
+          : Object.freeze({ outcome: "unavailable" as const });
+      const measured = await digest(result.data, { collectBytes: true });
+      if (measured.byteSize !== input.byteSize)
+        return Object.freeze({
+          outcome: "corrupt" as const,
+          sha256: measured.sha256,
+          byteSize: measured.byteSize,
+          contentType: input.contentType,
+        });
+      if (measured.sha256 !== input.sha256)
+        return Object.freeze({
+          outcome: "hash_mismatch" as const,
+          sha256: measured.sha256,
+          byteSize: measured.byteSize,
+          contentType: input.contentType,
+        });
+      return Object.freeze({
+        outcome: "verified" as const,
+        bytes: measured.bytes,
+        sha256: measured.sha256,
+        byteSize: measured.byteSize,
+        contentType: input.contentType,
+      });
+    } catch (error) {
+      if (error instanceof SbomStorageError) throw error;
+      return Object.freeze({ outcome: "unavailable" as const });
+    }
+  }
+
   private assertMetadata(
     input: Readonly<{ contentType: string; byteSize: number }>,
   ): void {
@@ -184,25 +233,36 @@ export class SbomStorageError extends Error {
 
 async function digest(
   blob: Blob,
-): Promise<Readonly<{ sha256: string; byteSize: number; probe: Buffer }>> {
+  options: Readonly<{ collectBytes?: boolean }> = {},
+): Promise<
+  Readonly<{
+    sha256: string;
+    byteSize: number;
+    probe: Buffer;
+    bytes: Buffer;
+  }>
+> {
   const hash = createHash("sha256");
-  const chunks: Buffer[] = [];
+  const probeChunks: Buffer[] = [];
+  const byteChunks: Buffer[] = [];
   let byteSize = 0;
   let probeRemaining = 8_192;
   for await (const value of Readable.fromWeb(blob.stream() as never)) {
     const chunk = Buffer.isBuffer(value) ? value : Buffer.from(value);
     hash.update(chunk);
     byteSize += chunk.byteLength;
+    if (options.collectBytes) byteChunks.push(Buffer.from(chunk));
     if (probeRemaining > 0) {
       const probe = Buffer.from(chunk.subarray(0, probeRemaining));
-      chunks.push(probe);
+      probeChunks.push(probe);
       probeRemaining -= probe.byteLength;
     }
   }
   return Object.freeze({
     sha256: hash.digest("hex"),
     byteSize,
-    probe: Buffer.concat(chunks),
+    probe: Buffer.concat(probeChunks),
+    bytes: Buffer.concat(byteChunks),
   });
 }
 

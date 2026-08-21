@@ -178,6 +178,26 @@ describe("route guard coverage", () => {
     expect(session?.isPublic).toBe(false);
   });
 
+  it("keeps human SBOM routes behind the session guard while CI uses only the credential guard", () => {
+    const sbomRoutes = Object.fromEntries(
+      routes
+        .filter((r) => r.path.includes("sbom"))
+        .map((r) => [`${r.method} ${r.path}`, r.isPublic] as const),
+    );
+
+    expect(sbomRoutes).toMatchObject({
+      "POST products/:productId/releases/:releaseId/sbom-uploads": false,
+      "GET products/:productId/releases/:releaseId/sbom-sources": false,
+      "POST sbom-uploads/:sourceId/complete": false,
+      "GET sbom-jobs/:jobId": false,
+      "POST sbom-jobs/:jobId/replay": false,
+      "GET sbom-sources/:sourceId/download": false,
+      "GET sbom-sources/:sourceId/validation-report": false,
+      "POST ci/sbom-uploads": true,
+      "POST ci/sbom-uploads/:sourceId/complete": true,
+    });
+  });
+
   it("keeps sign-out authenticated", () => {
     const signOut = routes.find((r) => r.path === "auth/sign-out");
     expect(signOut?.isPublic).toBe(false);

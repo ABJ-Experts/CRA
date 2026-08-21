@@ -61,6 +61,7 @@ select pg_temp.check(
 select pg_temp.check(
   'SBOM evidence media types and CI token identifiers align with the shared contracts',
   (select array_position(allowed_mime_types, 'application/spdx+xml') is not null
+    and array_position(allowed_mime_types, 'text/plain') is not null
     from storage.buckets where id = 'sbom-originals')
   and exists (select 1 from pg_constraint where conrelid = 'public.sbom_ci_credentials'::regclass
     and conname = 'sbom_ci_credentials_token_prefix_check'
@@ -161,6 +162,416 @@ begin
   exception when object_not_in_prerequisite_state then
     null;
   end;
+end $$;
+rollback;
+
+begin;
+do $$
+declare
+  v_org uuid := '00000000-0000-4000-8000-0000000000ca';
+  v_actor uuid;
+  v_product uuid;
+  v_release uuid;
+  v_source uuid := gen_random_uuid();
+  v_rejected_source uuid := gen_random_uuid();
+  v_key uuid := gen_random_uuid();
+  v_reject_key uuid := gen_random_uuid();
+  v_hash text := repeat('7', 64);
+  v_reject_hash text := repeat('8', 64);
+  v_reservation record;
+  v_completion record;
+  v_claim record;
+  v_rejected record;
+begin
+  select id into v_actor from public.users where email = 'owner@cra.test';
+  select p.id, r.id into v_product, v_release
+    from public.products p join public.product_releases r
+      on r.organization_id = p.organization_id and r.product_id = p.id
+   where p.organization_id = v_org
+   order by r.created_at
+   limit 1;
+
+  select * into v_reservation from public.reserve_sbom_source_atomic(
+    v_org, v_product, v_release, v_actor, null, v_source, 'manual_upload', v_key,
+    encode(extensions.digest('spdx-tag-value-reservation', 'sha256'), 'hex'),
+    'release.spdx', 'text/plain', 64, v_hash,
+    v_org::text || '/' || v_source::text || '/' || v_hash,
+    now() + interval '10 minutes', gen_random_uuid(), 'spdx', '2.3', null
+  );
+  if v_reservation.outcome <> 'created' then
+    raise exception 'text/plain SPDX tag-value reservation failed: %', v_reservation.outcome;
+  end if;
+
+  select * into v_completion from public.finalize_sbom_source_atomic(
+    v_org, v_source, v_actor, null, v_hash, 64, 'text/plain', v_key, gen_random_uuid()
+  );
+  if v_completion.outcome <> 'queued'
+     or (v_completion.source ->> 'mediaType') <> 'text/plain'
+     or (v_completion.job ->> 'status') <> 'queued' then
+    raise exception 'text/plain SPDX tag-value completion did not queue a job: %', v_completion.outcome;
+  end if;
+
+  select * into v_claim from public.claim_sbom_ingest_job(v_org, 'sql-tag-value-worker', 60);
+  if v_claim.outcome <> 'claimed'
+    or (v_claim.work ->> 'sourceId')::uuid <> v_source then
+    raise exception 'text/plain SPDX tag-value queued job was not claimable';
+  end if;
+
+  select * into v_reservation from public.reserve_sbom_source_atomic(
+    v_org, v_product, v_release, v_actor, null, v_rejected_source, 'manual_upload', v_reject_key,
+    encode(extensions.digest('spdx-tag-value-reject', 'sha256'), 'hex'),
+    'reject.spdx', 'text/plain', 64, v_reject_hash,
+    v_org::text || '/' || v_rejected_source::text || '/' || v_reject_hash,
+    now() + interval '10 minutes', gen_random_uuid(), 'spdx', '2.3', null
+  );
+  if v_reservation.outcome <> 'created' then
+    raise exception 'text/plain reject fixture reservation failed: %', v_reservation.outcome;
+  end if;
+
+  select * into v_rejected from public.reject_sbom_source_integrity_atomic(
+    v_org, v_rejected_source, v_actor, null, repeat('9', 64), 64, 'text/plain',
+    v_reject_key, gen_random_uuid()
+  );
+  if v_rejected.outcome <> 'rejected' then
+    raise exception 'text/plain integrity rejection did not preserve compatible completion semantics: %',
+      v_rejected.outcome;
+  end if;
+end $$;
+rollback;
+
+select pg_temp.check(
+  'M3 validation adds no normalized SBOM component, finding, or report tables',
+  not exists (
+    select 1
+    from pg_class tables
+    join pg_namespace namespaces on namespaces.oid = tables.relnamespace
+    where namespaces.nspname = 'public'
+      and tables.relkind = 'r'
+      and (
+        tables.relname in ('sbom_validation_reports', 'sbom_components', 'sbom_findings')
+        or tables.relname like 'sbom_%component%'
+        or tables.relname like 'sbom_%finding%'
+        or tables.relname like 'sbom_%report%'
+      )
+  )
+);
+
+select pg_temp.check(
+  'browser roles cannot call SBOM validation persistence and report RPCs',
+  not has_function_privilege('authenticated',
+    'public.record_sbom_validation_atomic(uuid,uuid,text,jsonb)', 'execute')
+  and not has_function_privilege('authenticated',
+    'public.list_sbom_sources_for_release(uuid,uuid,uuid,uuid,integer,text)', 'execute')
+  and not has_function_privilege('authenticated',
+    'public.get_sbom_validation_report(uuid,uuid,uuid)', 'execute')
+  and has_function_privilege('service_role',
+    'public.record_sbom_validation_atomic(uuid,uuid,text,jsonb)', 'execute')
+  and has_function_privilege('service_role',
+    'public.list_sbom_sources_for_release(uuid,uuid,uuid,uuid,integer,text)', 'execute')
+  and has_function_privilege('service_role',
+    'public.get_sbom_validation_report(uuid,uuid,uuid)', 'execute')
+);
+
+begin;
+do $$
+declare
+  v_org uuid := '00000000-0000-4000-8000-0000000000ca';
+  v_actor uuid;
+  v_product uuid;
+  v_release uuid;
+  v_original_source uuid := gen_random_uuid();
+  v_corrected_source uuid := gen_random_uuid();
+  v_missing_link_source uuid := gen_random_uuid();
+  v_key uuid := gen_random_uuid();
+  v_hash text := repeat('d', 64);
+  v_report jsonb;
+  v_reservation record;
+  v_completion record;
+  v_claim record;
+  v_recorded record;
+  v_report_result record;
+  v_list_result record;
+begin
+  select id into v_actor from public.users where email = 'owner@cra.test';
+  select p.id, r.id into v_product, v_release
+    from public.products p join public.product_releases r
+      on r.organization_id = p.organization_id and r.product_id = p.id
+   where p.organization_id = v_org
+   order by r.created_at
+   limit 1;
+
+  select * into v_reservation from public.reserve_sbom_source_atomic(
+    v_org, v_product, v_release, v_actor, null, v_original_source, 'manual_upload', v_key,
+    encode(extensions.digest('validation-original', 'sha256'), 'hex'), 'invalid.spdx.json',
+    'application/json', 27, v_hash, v_org::text || '/' || v_original_source::text || '/' || v_hash,
+    now() + interval '10 minutes', gen_random_uuid(), 'spdx', '2.3', null
+  );
+  if v_reservation.outcome <> 'created'
+    or (v_reservation.source ->> 'declaredFormat') <> 'spdx'
+    or (v_reservation.source ->> 'declaredSpecVersion') <> '2.3'
+    or v_reservation.source ? 'storageKey' then
+    raise exception 'declared metadata crossed the source boundary incorrectly: %', v_reservation.source;
+  end if;
+
+  select * into v_completion from public.finalize_sbom_source_atomic(
+    v_org, v_original_source, v_actor, null, v_hash, 27, 'application/json', v_key, gen_random_uuid()
+  );
+  if v_completion.outcome <> 'queued' then
+    raise exception 'validation fixture completion did not queue a job: %', v_completion.outcome;
+  end if;
+
+  select * into v_reservation from public.reserve_sbom_source_atomic(
+    v_org, v_product, v_release, v_actor, null, v_corrected_source, 'manual_upload', gen_random_uuid(),
+    encode(extensions.digest('validation-corrected', 'sha256'), 'hex'), 'corrected.spdx.json',
+    'application/json', 27, repeat('e', 64),
+    v_org::text || '/' || v_corrected_source::text || '/' || repeat('e', 64),
+    now() + interval '10 minutes', gen_random_uuid(), 'spdx', '2.3', v_original_source
+  );
+  if v_reservation.outcome <> 'created'
+    or (v_reservation.source ->> 'supersedesSourceId')::uuid <> v_original_source then
+    raise exception 'same-release corrected source did not link to its immutable predecessor';
+  end if;
+
+  select * into v_reservation from public.reserve_sbom_source_atomic(
+    v_org, v_product, v_release, v_actor, null, v_missing_link_source, 'manual_upload', gen_random_uuid(),
+    encode(extensions.digest('validation-missing-link', 'sha256'), 'hex'), 'missing-link.spdx.json',
+    'application/json', 27, repeat('f', 64),
+    v_org::text || '/' || v_missing_link_source::text || '/' || repeat('f', 64),
+    now() + interval '10 minutes', gen_random_uuid(), 'spdx', '2.3', gen_random_uuid()
+  );
+  if v_reservation.outcome <> 'not_found' then
+    raise exception 'missing or foreign superseded source was disclosed: %', v_reservation.outcome;
+  end if;
+
+  select * into v_claim from public.claim_sbom_ingest_job(v_org, 'sql-validator', 60);
+  if v_claim.outcome <> 'claimed'
+    or (v_claim.work ->> 'sourceId')::uuid <> v_original_source then
+    raise exception 'validation job was not claimable';
+  end if;
+
+  v_report := jsonb_build_object(
+    'status', 'invalid',
+    'detected', jsonb_build_object(
+      'format', 'spdx',
+      'serialization', 'json',
+      'specificationVersion', '2.3'
+    ),
+    'validator', jsonb_build_object(
+      'name', 'CRA deterministic SBOM validator',
+      'version', 'm3-test',
+      'schemaAssetSha256', repeat('a', 64)
+    ),
+    'diagnostics', jsonb_build_array(jsonb_build_object(
+      'severity', 'error',
+      'code', 'missing_required_field',
+      'location', '$',
+      'message', 'The SBOM is missing a required field.',
+      'remediation', 'Add the required SPDX field.'
+    )),
+    'errorCount', 1,
+    'warningCount', 0,
+    'omittedDiagnosticCount', 0,
+    'completedAt', '2026-08-21T00:00:00.000Z'
+  );
+
+  select * into v_recorded from public.record_sbom_validation_atomic(
+    v_org, (v_completion.job ->> 'id')::uuid, 'sql-validator',
+    v_report || jsonb_build_object('storageKey', 'private/raw/key')
+  );
+  if v_recorded.outcome <> 'invalid_request' then
+    raise exception 'validation report accepted unexpected top-level private field: %',
+      v_recorded.outcome;
+  end if;
+
+  select * into v_recorded from public.record_sbom_validation_atomic(
+    v_org, (v_completion.job ->> 'id')::uuid, 'sql-validator',
+    jsonb_set(
+      v_report,
+      '{validator}',
+      (v_report -> 'validator') || jsonb_build_object('token', 'secret-token-value'),
+      false
+    )
+  );
+  if v_recorded.outcome <> 'invalid_request' then
+    raise exception 'validation report accepted unexpected validator private field: %',
+      v_recorded.outcome;
+  end if;
+
+  select * into v_recorded from public.record_sbom_validation_atomic(
+    v_org, (v_completion.job ->> 'id')::uuid, 'sql-validator',
+    jsonb_set(
+      v_report,
+      '{diagnostics,0}',
+      (v_report -> 'diagnostics' -> 0) || jsonb_build_object('credentialId', gen_random_uuid()),
+      false
+    )
+  );
+  if v_recorded.outcome <> 'invalid_request' then
+    raise exception 'validation report accepted unexpected diagnostic private field: %',
+      v_recorded.outcome;
+  end if;
+
+  select * into v_recorded from public.record_sbom_validation_atomic(
+    v_org, (v_completion.job ->> 'id')::uuid, 'sql-validator',
+    jsonb_set(
+      v_report,
+      '{errorCount}',
+      to_jsonb('one'::text),
+      false
+    )
+  );
+  if v_recorded.outcome <> 'invalid_request' then
+    raise exception 'validation report accepted malformed errorCount field: %',
+      v_recorded.outcome;
+  end if;
+
+  select * into v_recorded from public.record_sbom_validation_atomic(
+    v_org, (v_completion.job ->> 'id')::uuid, 'sql-validator',
+    jsonb_set(v_report, '{detected,specificationVersion}', to_jsonb(23), false)
+  );
+  if v_recorded.outcome <> 'invalid_request' then
+    raise exception 'validation report accepted numeric detectedSpecVersion scalar: %',
+      v_recorded.outcome;
+  end if;
+
+  select * into v_recorded from public.record_sbom_validation_atomic(
+    v_org, (v_completion.job ->> 'id')::uuid, 'sql-validator',
+    jsonb_set(v_report, '{validator,name}', to_jsonb(123), false)
+  );
+  if v_recorded.outcome <> 'invalid_request' then
+    raise exception 'validation report accepted numeric validator name scalar: %',
+      v_recorded.outcome;
+  end if;
+
+  select * into v_recorded from public.record_sbom_validation_atomic(
+    v_org, (v_completion.job ->> 'id')::uuid, 'sql-validator',
+    jsonb_set(v_report, '{diagnostics,0,code}', to_jsonb(true), false)
+  );
+  if v_recorded.outcome <> 'invalid_request' then
+    raise exception 'validation report accepted boolean diagnostic code scalar: %',
+      v_recorded.outcome;
+  end if;
+
+  select * into v_recorded from public.record_sbom_validation_atomic(
+    v_org, (v_completion.job ->> 'id')::uuid, 'sql-validator',
+    jsonb_set(v_report, '{warningCount}', to_jsonb(false), false)
+  );
+  if v_recorded.outcome <> 'invalid_request' then
+    raise exception 'validation report accepted boolean diagnostic count scalar: %',
+      v_recorded.outcome;
+  end if;
+
+  select * into v_recorded from public.record_sbom_validation_atomic(
+    v_org, (v_completion.job ->> 'id')::uuid, 'sql-validator',
+    jsonb_set(v_report, '{validator,name}', to_jsonb('secret-token-value'::text), false)
+  );
+  if v_recorded.outcome = 'recorded'
+    and exists (
+      select 1 from public.audit_logs
+      where organization_id = v_org
+        and action = 'sbom.validation_recorded'
+        and entity_id = v_completion.job ->> 'id'
+        and changes::text ~* 'secret-token-value'
+    ) then
+    raise exception 'validation report accepted and audited sensitive validator string';
+  end if;
+  if v_recorded.outcome <> 'invalid_request' then
+    raise exception 'validation report accepted sensitive validator string: %',
+      v_recorded.outcome;
+  end if;
+
+  select * into v_recorded from public.record_sbom_validation_atomic(
+    v_org, (v_completion.job ->> 'id')::uuid, 'sql-validator', v_report
+  );
+  if v_recorded.outcome <> 'completed'
+    or v_recorded.job -> 'result' ->> 'outcome' <> 'original_evidence_captured' then
+    raise exception 'validation report and legacy evidence completion were not atomic';
+  end if;
+
+  begin
+    update public.sbom_ingest_jobs
+       set validation_status = 'valid', validation_report = null
+     where organization_id = v_org and id = (v_completion.job ->> 'id')::uuid;
+    raise exception 'terminal validation status accepted a missing report';
+  exception when check_violation then
+    null;
+  end;
+
+  select * into v_recorded from public.record_sbom_validation_atomic(
+    v_org, (v_completion.job ->> 'id')::uuid, 'sql-validator', v_report
+  );
+  if v_recorded.outcome <> 'completed'
+    or v_recorded.job ->> 'completedAt' is null
+    or v_recorded.job -> 'result' ->> 'outcome' <> 'original_evidence_captured' then
+    raise exception 'same terminal validation report was not idempotently completed';
+  end if;
+
+  -- Simulate the former report-then-complete crash window.  A reclaimed worker
+  -- must finish legacy evidence using the already-immutable report, not stamp a
+  -- fresh validation completion or produce a second audit fact.
+  update public.sbom_ingest_jobs
+     set status = 'processing', progress_stage = 'recording_evidence', progress_percent = 90,
+         lease_owner = 'reclaimed-validator', lease_expires_at = now() + interval '60 seconds',
+         completed_at = null
+   where organization_id = v_org and id = (v_completion.job ->> 'id')::uuid;
+  select * into v_recorded from public.record_sbom_validation_atomic(
+    v_org, (v_completion.job ->> 'id')::uuid, 'reclaimed-validator',
+    jsonb_set(v_report, '{completedAt}', to_jsonb('2027-01-01T00:00:00.000Z'::text))
+  );
+  if v_recorded.outcome <> 'completed'
+    or exists (
+      select 1 from public.sbom_ingest_jobs
+      where organization_id = v_org and id = (v_completion.job ->> 'id')::uuid
+        and validation_report ->> 'completedAt' <> v_report ->> 'completedAt'
+    )
+    or (select count(*) from public.audit_logs
+        where organization_id = v_org and action = 'sbom.validation_recorded'
+          and entity_id = v_completion.job ->> 'id') <> 1 then
+    raise exception 'reclaimed report-only job did not preserve its immutable report and single audit fact';
+  end if;
+  if not exists (
+    select 1 from public.sbom_ingest_jobs
+    where organization_id = v_org
+      and id = (v_completion.job ->> 'id')::uuid
+      and status = 'completed'
+      and validation_status = 'invalid'
+      and validation_report ->> 'status' = 'invalid'
+      and validation_completed_at is not null
+  ) then
+    raise exception 'invalid terminal validation report did not coexist with completed legacy job';
+  end if;
+
+  if not exists (
+    select 1 from public.audit_logs
+    where organization_id = v_org
+      and action = 'sbom.validation_recorded'
+      and entity_id = v_completion.job ->> 'id'
+      and changes ->> 'status' = 'invalid'
+      and changes ? 'diagnosticCounts'
+      and changes::text !~* 'storage|signed|credential|token|secret|rawBytes|raw_bytes'
+  ) then
+    raise exception 'validation audit fact was absent or included private material';
+  end if;
+
+  select * into v_report_result from public.get_sbom_validation_report(
+    v_org, v_actor, v_original_source
+  );
+  if v_report_result.outcome <> 'found'
+    or v_report_result.report ->> 'status' <> 'invalid'
+    or v_report_result.report::text ~* 'storage|signed|credential|token|secret|rawBytes|raw_bytes'
+    or v_report_result.source::text ~* 'storage|signed|credential|token|secret|rawBytes|raw_bytes' then
+    raise exception 'validation report RPC leaked private material or missed the report';
+  end if;
+
+  select * into v_list_result from public.list_sbom_sources_for_release(
+    v_org, v_actor, v_product, v_release, 25, null
+  );
+  if v_list_result.outcome <> 'found'
+    or jsonb_array_length(v_list_result.sources) < 2
+    or v_list_result.sources::text !~ 'invalid'
+    or v_list_result.sources::text ~* 'storage|signed|credential|token|secret|rawBytes|raw_bytes' then
+    raise exception 'source list RPC did not return redacted validation summaries';
+  end if;
 end $$;
 rollback;
 
