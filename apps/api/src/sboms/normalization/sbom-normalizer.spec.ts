@@ -62,6 +62,11 @@ describe("normalizeSbomStream", () => {
               name: "Example",
               version: " 1.0.0 ",
               purl: "pkg:npm/example@1.0.0",
+              supplier: { name: "Example supplier" },
+              licenses: [
+                { license: { expression: "MIT" } },
+                { license: { name: "Apache-2.0" } },
+              ],
             },
             { "bom-ref": "b", name: "child", version: "2" },
           ],
@@ -80,6 +85,8 @@ describe("normalizeSbomStream", () => {
         normalizedVersion: "1.0.0",
         canonicalPurl: "pkg:npm/example@1.0.0",
         ecosystem: "npm",
+        supplierValues: ["Example supplier"],
+        licenseValues: ["MIT", "Apache-2.0"],
       }),
       expect.objectContaining({ localRef: "b", rawName: "child" }),
     ]);

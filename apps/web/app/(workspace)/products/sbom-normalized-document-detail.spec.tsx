@@ -19,6 +19,13 @@ const state = vi.hoisted(() => ({
   },
   search: { isPending: false, isError: false, error: null as unknown },
   tree: { isPending: false, isError: false, error: null as unknown },
+  quality: {
+    isPending: false,
+    isError: false,
+    error: null as unknown,
+    refetch: vi.fn(),
+  },
+  findings: { isPending: false, isError: false, error: null as unknown },
 }));
 
 const document = {
@@ -57,13 +64,20 @@ const component = {
   hashes: [],
   depth: 0,
   parentComponentId: null,
-  sourceLocation: { path: "/components/0", byteStart: 0, byteEnd: 120, line: 1 },
+  sourceLocation: {
+    path: "/components/0",
+    byteStart: 0,
+    byteEnd: 120,
+    line: 1,
+  },
 } as const;
 
 const queries = vi.hoisted(() => ({
   useSbomDocumentDetailQuery: vi.fn(),
   useSbomComponentSearchQuery: vi.fn(),
   useSbomDependencyTreeChildrenQueries: vi.fn(),
+  useSbomQualityReportQuery: vi.fn(),
+  useSbomQualityFindingsQuery: vi.fn(),
 }));
 
 vi.mock("../../_features/sboms/sboms.queries", () => queries);
@@ -95,6 +109,115 @@ function primeQueries() {
       data: { items: [{ component, childCount: 1 }], nextCursor: null },
     },
   ]);
+  queries.useSbomQualityReportQuery.mockReturnValue({
+    ...state.quality,
+    data: {
+      report: {
+        id: "55555555-5555-4555-8555-555555555555",
+        sourceId: document.sourceId,
+        releaseId: "66666666-6666-4666-8666-666666666666",
+        documentId: DOCUMENT_ID,
+        state: "completed",
+        assessmentStatus: "regression",
+        formulaVersion: "sbom-quality.v1",
+        rulesetVersion: "bsi-tr-03183-2.v2.0.0",
+        configurationVersion: 1,
+        inputs: {
+          componentCount: 2,
+          componentsWithCanonicalPurl: 1,
+          componentsWithValidHash: 2,
+          componentsWithSupplier: 0,
+          componentsWithLicense: 1,
+          primaryComponentIdentified: true,
+          primaryComponentDirectDependencyCount: 1,
+          maximumDepth: 1,
+        },
+        dimensions: [
+          {
+            id: "purl",
+            eligibleCount: 2,
+            satisfiedCount: 1,
+            coveragePercent: 50,
+            score: 50,
+            weight: 20,
+            weightedScore: 10,
+            status: "partial",
+          },
+          {
+            id: "top_level_dependency",
+            eligibleCount: 1,
+            satisfiedCount: 1,
+            coveragePercent: 100,
+            score: 100,
+            weight: 20,
+            weightedScore: 20,
+            status: "complete",
+          },
+          {
+            id: "transitive_depth",
+            eligibleCount: 1,
+            satisfiedCount: 1,
+            coveragePercent: 100,
+            score: 100,
+            weight: 10,
+            weightedScore: 10,
+            status: "complete",
+          },
+        ],
+        totalScore: 65,
+        bsiProfile: {
+          enabled: true,
+          status: "warning",
+          rulesetVersion: "bsi-tr-03183-2.v2.0.0",
+          findingCount: 1,
+        },
+        baseline: {
+          status: "available",
+          reportId: "77777777-7777-4777-8777-777777777777",
+          sourceId: "88888888-8888-4888-8888-888888888888",
+          totalScore: 80,
+          completedAt: NOW,
+        },
+        regression: {
+          status: "regression",
+          totalScoreDelta: -15,
+          changedDimensions: ["purl"],
+        },
+        progress: {
+          stage: "completed",
+          percent: 100,
+          message: "Quality report completed.",
+        },
+        error: null,
+        completedAt: NOW,
+        createdAt: NOW,
+        updatedAt: NOW,
+      },
+    },
+  });
+  queries.useSbomQualityFindingsQuery.mockReturnValue({
+    ...state.findings,
+    data: {
+      findings: [
+        {
+          id: "99999999-9999-4999-8999-999999999999",
+          reportId: "55555555-5555-4555-8555-555555555555",
+          kind: "coverage_gap",
+          severity: "warning",
+          code: "missing_supplier",
+          ruleId: null,
+          dimension: "supplier",
+          sourcePath: "/components/0/supplier",
+          expected: "A supplier",
+          actual: "Missing",
+          remediation: "Add supplier evidence to the component.",
+          componentId: COMPONENT_ID,
+          createdAt: NOW,
+        },
+      ],
+      nextCursor: null,
+    },
+  });
 }
 
 describe("SbomNormalizedDocumentDetail", () => {
@@ -116,13 +239,27 @@ describe("SbomNormalizedDocumentDetail", () => {
       />,
     );
 
-    expect(screen.getByRole("heading", { name: "Normalized SBOM" })).toBeVisible();
+    expect(
+      screen.getByRole("heading", { name: "Normalized SBOM" }),
+    ).toBeVisible();
     expect(screen.getByText("CycloneDX 1.6")).toBeVisible();
     expect(screen.getByText("CRA streaming parser 1.0.0")).toBeVisible();
     expect(screen.getByText("invalid_purl")).toBeVisible();
     expect(screen.getByRole("tree", { name: "Dependency tree" })).toBeVisible();
-    expect(screen.getByRole("treeitem", { name: /Example/i })).toHaveAttribute("aria-level", "1");
-    expect(screen.getByRole("searchbox", { name: "Search components" })).toBeVisible();
+    expect(screen.getByRole("treeitem", { name: /Example/i })).toHaveAttribute(
+      "aria-level",
+      "1",
+    );
+    expect(
+      screen.getByRole("searchbox", { name: "Search components" }),
+    ).toBeVisible();
+    expect(
+      screen.getByRole("heading", { name: "SBOM quality report" }),
+    ).toBeVisible();
+    expect(screen.getByText("CRA legal floor")).toBeVisible();
+    expect(
+      screen.getByRole("heading", { name: "Remediation guidance" }),
+    ).toBeVisible();
   });
 
   it("expands a tree node with keyboard input and retains visible focus semantics", () => {
@@ -188,6 +325,54 @@ describe("SbomNormalizedDocumentDetail", () => {
       "Retryable: The component ceiling was exceeded.",
     );
     expect(screen.queryByRole("tree")).not.toBeInTheDocument();
+  });
+
+  it("keeps an in-progress quality calculation separate from the completed normalized graph", () => {
+    primeQueries();
+    queries.useSbomQualityReportQuery.mockReturnValue({
+      ...state.quality,
+      data: {
+        report: {
+          id: "55555555-5555-4555-8555-555555555555",
+          sourceId: document.sourceId,
+          releaseId: "66666666-6666-4666-8666-666666666666",
+          documentId: DOCUMENT_ID,
+          state: "processing",
+          assessmentStatus: null,
+          formulaVersion: "sbom-quality.v1",
+          rulesetVersion: "bsi-tr-03183-2.v2.0.0",
+          configurationVersion: 1,
+          inputs: null,
+          dimensions: [],
+          totalScore: null,
+          bsiProfile: null,
+          baseline: null,
+          regression: null,
+          progress: {
+            stage: "scoring",
+            percent: 60,
+            message: "Calculating explainable coverage.",
+          },
+          error: null,
+          completedAt: null,
+          createdAt: NOW,
+          updatedAt: NOW,
+        },
+      },
+    });
+    render(
+      <SbomNormalizedDocumentDetail
+        productId="44444444-4444-4444-8444-444444444444"
+        documentId={DOCUMENT_ID}
+        canView
+        enabled
+      />,
+    );
+
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Quality report is processing.",
+    );
+    expect(screen.getByRole("tree", { name: "Dependency tree" })).toBeVisible();
   });
 
   it("offers a retry when normalized-document data is temporarily degraded", () => {

@@ -8,7 +8,8 @@ import { SbomNormalizedDocumentDetail } from "./sbom-normalized-document-detail"
 export function SbomNormalizedDocumentRouteContent({
   productId,
   documentId,
-}: Readonly<{ productId: string; documentId: string }>) {
+  sourceId,
+}: Readonly<{ productId: string; documentId: string; sourceId?: string }>) {
   const { permissions, isLoading } = useSession();
   const mocksReady = useMocksReady();
 
@@ -17,6 +18,7 @@ export function SbomNormalizedDocumentRouteContent({
       <SbomNormalizedDocumentDetail
         productId={productId}
         documentId={documentId}
+        sourceId={sourceId}
         canView={permissions.can_view_sboms === true}
         enabled={!isLoading && mocksReady}
       />

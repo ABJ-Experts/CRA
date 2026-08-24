@@ -1,6 +1,9 @@
 import { RequestMethod } from "@nestjs/common";
 import { METHOD_METADATA, PATH_METADATA } from "@nestjs/common/constants";
 import {
+  sbomQualityFindingsResponseSchema,
+  sbomQualityReportResponseSchema,
+  sbomQualitySettingsResponseSchema,
   sbomSourceHistoryResponseSchema,
   sbomDocumentListResponseSchema,
   sbomValidationReportResponseSchema,
@@ -14,6 +17,7 @@ import {
   ProductReleaseSbomController,
   SbomDocumentsController,
   SbomCiController,
+  SbomQualitySettingsController,
   SbomSourcesController,
 } from "./sbom.controller";
 
@@ -331,6 +335,117 @@ describe("SBOM report controllers", () => {
       organizationId,
       actorId,
       sourceId,
+    });
+  });
+
+  it("reads source-scoped quality reports with view permission and parsed success output", async () => {
+    const quality = { report: { id: "quality-report" } };
+    const service = {
+      qualityReport: jest.fn().mockResolvedValue(quality),
+    };
+    const controller = new SbomSourcesController(service as never);
+    const routeHandler = handler(controller, "qualityReport");
+
+    expect(Reflect.getMetadata(PATH_METADATA, routeHandler)).toBe(
+      ":sourceId/quality-report",
+    );
+    expect(Reflect.getMetadata(METHOD_METADATA, routeHandler)).toBe(
+      RequestMethod.GET,
+    );
+    expect(Reflect.getMetadata(REQUIRE_PERMISSIONS_KEY, routeHandler)).toEqual([
+      "can_view_sboms",
+    ]);
+    expect(Reflect.getMetadata(ZOD_RESPONSE_SCHEMA, routeHandler)).toBe(
+      sbomQualityReportResponseSchema,
+    );
+
+    await expect(controller.qualityReport({ sourceId }, user)).resolves.toBe(
+      quality,
+    );
+    expect(service.qualityReport).toHaveBeenCalledWith({
+      organizationId,
+      actorId,
+      sourceId,
+    });
+  });
+
+  it("keeps paged quality findings source-scoped and server-filtered", async () => {
+    const findings = { findings: [], nextCursor: null };
+    const service = {
+      qualityFindings: jest.fn().mockResolvedValue(findings),
+    };
+    const controller = new SbomSourcesController(service as never);
+    const routeHandler = handler(controller, "qualityFindings");
+
+    expect(Reflect.getMetadata(PATH_METADATA, routeHandler)).toBe(
+      ":sourceId/quality-findings",
+    );
+    expect(Reflect.getMetadata(REQUIRE_PERMISSIONS_KEY, routeHandler)).toEqual([
+      "can_view_sboms",
+    ]);
+    expect(Reflect.getMetadata(ZOD_RESPONSE_SCHEMA, routeHandler)).toBe(
+      sbomQualityFindingsResponseSchema,
+    );
+
+    await expect(
+      controller.qualityFindings(
+        { sourceId },
+        { limit: 25, severity: "warning", kind: "coverage_gap" },
+        user,
+      ),
+    ).resolves.toBe(findings);
+    expect(service.qualityFindings).toHaveBeenCalledWith({
+      organizationId,
+      actorId,
+      sourceId,
+      limit: 25,
+      cursor: undefined,
+      severity: "warning",
+      kind: "coverage_gap",
+    });
+  });
+
+  it("keeps BSI quality settings owner-only and authenticated from the request", async () => {
+    const settings = { settings: { version: 2 } };
+    const service = {
+      qualitySettings: jest.fn().mockResolvedValue(settings),
+      updateQualitySettings: jest.fn().mockResolvedValue(settings),
+    };
+    const controller = new SbomQualitySettingsController(service as never);
+    const getHandler = handler(controller, "settings");
+    const patchHandler = handler(controller, "updateSettings");
+
+    expect(Reflect.getMetadata(PATH_METADATA, controller.constructor)).toBe(
+      "sbom-quality-settings",
+    );
+    expect(Reflect.getMetadata(ZOD_RESPONSE_SCHEMA, getHandler)).toBe(
+      sbomQualitySettingsResponseSchema,
+    );
+    expect(Reflect.getMetadata(ZOD_RESPONSE_SCHEMA, patchHandler)).toBe(
+      sbomQualitySettingsResponseSchema,
+    );
+
+    await expect(controller.settings(user)).resolves.toBe(settings);
+    await expect(
+      controller.updateSettings(
+        {
+          expectedVersion: 2,
+          bsiProfileEnabled: true,
+          idempotencyKey: "00000000-0000-4000-8000-000000000010",
+        },
+        user,
+      ),
+    ).resolves.toBe(settings);
+    expect(service.qualitySettings).toHaveBeenCalledWith({
+      organizationId,
+      actorId,
+    });
+    expect(service.updateQualitySettings).toHaveBeenCalledWith({
+      organizationId,
+      actorId,
+      expectedVersion: 2,
+      bsiProfileEnabled: true,
+      idempotencyKey: "00000000-0000-4000-8000-000000000010",
     });
   });
 });

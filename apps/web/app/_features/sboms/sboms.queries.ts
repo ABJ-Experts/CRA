@@ -11,17 +11,31 @@ import type {
   SbomDocumentDetailResponse,
   SbomDocumentListQuery,
   SbomDocumentListResponse,
+  SbomQualityFindingsQuery,
+  SbomQualityFindingsResponse,
+  SbomQualityReportResponse,
   SbomSourceHistoryQuery,
   SbomSourceHistoryResponse,
   SbomValidationReportResponse,
 } from "@repo/contracts/sboms";
-import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useMutation,
+  useQueries,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 
 import { sbomsApi } from "./sboms.api";
 import { sbomKeys } from "./sboms.keys";
 
 function shouldPoll(status: SbomJobResponse["job"]["status"] | undefined) {
   return status === "queued" || status === "processing" || status === "failed";
+}
+
+function shouldPollQuality(
+  status: SbomQualityReportResponse["report"]["state"] | undefined,
+) {
+  return status === "queued" || status === "processing";
 }
 
 export function useSbomJobQuery(jobId: string | null, enabled: boolean) {
@@ -88,14 +102,60 @@ export function useSbomDocumentsForReleaseQuery(
   });
 }
 
-export function useSbomDocumentDetailQuery(documentId: string | null, enabled: boolean) {
+export function useSbomDocumentDetailQuery(
+  documentId: string | null,
+  enabled: boolean,
+) {
   return useQuery<SbomDocumentDetailResponse>({
-    queryKey: documentId === null ? sbomKeys.documents : sbomKeys.document(documentId),
+    queryKey:
+      documentId === null ? sbomKeys.documents : sbomKeys.document(documentId),
     enabled: enabled && documentId !== null,
     retry: false,
     queryFn: ({ signal }) => {
-      if (documentId === null) throw new Error("An SBOM document identifier is required.");
+      if (documentId === null)
+        throw new Error("An SBOM document identifier is required.");
       return sbomsApi.getDocument(documentId, signal);
+    },
+  });
+}
+
+export function useSbomQualityReportQuery(
+  sourceId: string | null,
+  enabled: boolean,
+) {
+  return useQuery<SbomQualityReportResponse>({
+    queryKey:
+      sourceId === null
+        ? sbomKeys.qualityReports
+        : sbomKeys.qualityReport(sourceId),
+    enabled: enabled && sourceId !== null,
+    retry: false,
+    refetchInterval: (query) =>
+      shouldPollQuality(query.state.data?.report.state) ? 2_000 : false,
+    queryFn: ({ signal }) => {
+      if (sourceId === null)
+        throw new Error("An SBOM source identifier is required.");
+      return sbomsApi.getQualityReport(sourceId, signal);
+    },
+  });
+}
+
+export function useSbomQualityFindingsQuery(
+  sourceId: string | null,
+  query: Readonly<Partial<SbomQualityFindingsQuery>>,
+  enabled: boolean,
+) {
+  return useQuery<SbomQualityFindingsResponse>({
+    queryKey:
+      sourceId === null
+        ? sbomKeys.qualityReports
+        : sbomKeys.qualityFindings(sourceId, query),
+    enabled: enabled && sourceId !== null,
+    retry: false,
+    queryFn: ({ signal }) => {
+      if (sourceId === null)
+        throw new Error("An SBOM source identifier is required.");
+      return sbomsApi.listQualityFindings(sourceId, query, signal);
     },
   });
 }
@@ -106,11 +166,15 @@ export function useSbomComponentSearchQuery(
   enabled: boolean,
 ) {
   return useQuery<SbomComponentSearchResponse>({
-    queryKey: documentId === null ? sbomKeys.componentSearches : sbomKeys.componentSearch(documentId, query),
+    queryKey:
+      documentId === null
+        ? sbomKeys.componentSearches
+        : sbomKeys.componentSearch(documentId, query),
     enabled: enabled && documentId !== null,
     retry: false,
     queryFn: ({ signal }) => {
-      if (documentId === null) throw new Error("An SBOM document identifier is required.");
+      if (documentId === null)
+        throw new Error("An SBOM document identifier is required.");
       return sbomsApi.searchComponents(documentId, query, signal);
     },
   });
@@ -122,11 +186,15 @@ export function useSbomDependencyTreeChildrenQuery(
   enabled: boolean,
 ) {
   return useQuery<SbomDependencyTreeResponse>({
-    queryKey: documentId === null ? sbomKeys.documents : sbomKeys.dependencyTreeChildren(documentId, query),
+    queryKey:
+      documentId === null
+        ? sbomKeys.documents
+        : sbomKeys.dependencyTreeChildren(documentId, query),
     enabled: enabled && documentId !== null,
     retry: false,
     queryFn: ({ signal }) => {
-      if (documentId === null) throw new Error("An SBOM document identifier is required.");
+      if (documentId === null)
+        throw new Error("An SBOM document identifier is required.");
       return sbomsApi.listDependencyTreeChildren(documentId, query, signal);
     },
   });

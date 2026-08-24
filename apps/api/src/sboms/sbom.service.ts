@@ -12,6 +12,7 @@ import {
   type SbomIntakeError,
 } from "./application/sbom-intake-use-cases";
 import { SbomNormalizationUseCases } from "./application/sbom-normalization-use-cases";
+import { SbomQualityUseCases } from "./application/sbom-quality-use-cases";
 import {
   SBOM_CI_CREDENTIALS,
   type SbomCiCredentialPort,
@@ -23,6 +24,7 @@ export class SbomService {
   constructor(
     private readonly useCases: SbomIntakeUseCases,
     private readonly normalization: SbomNormalizationUseCases,
+    private readonly quality: SbomQualityUseCases,
     @Inject(SBOM_CI_CREDENTIALS)
     private readonly credentials: SbomCiCredentialPort,
   ) {}
@@ -77,6 +79,24 @@ export class SbomService {
     command: Parameters<SbomNormalizationUseCases["dependencyTree"]>[0],
   ) {
     return this.unwrap(this.normalization.dependencyTree(command));
+  }
+
+  qualityReport(command: Parameters<SbomQualityUseCases["report"]>[0]) {
+    return this.unwrap(this.quality.report(command));
+  }
+
+  qualityFindings(command: Parameters<SbomQualityUseCases["findings"]>[0]) {
+    return this.unwrap(this.quality.findings(command));
+  }
+
+  qualitySettings(command: Parameters<SbomQualityUseCases["settings"]>[0]) {
+    return this.unwrap(this.quality.settings(command));
+  }
+
+  updateQualitySettings(
+    command: Parameters<SbomQualityUseCases["updateSettings"]>[0],
+  ) {
+    return this.unwrap(this.quality.updateSettings(command));
   }
 
   replay(command: Parameters<SbomIntakeUseCases["replay"]>[0]) {

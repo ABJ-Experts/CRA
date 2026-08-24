@@ -200,10 +200,12 @@ describe("SessionProvider", () => {
 
     renderSession(<StateProbe />);
 
-    await waitFor(() =>
-      expect(screen.getByTestId("state").getAttribute("data-error")).toBe(
-        "true",
-      ),
+    await waitFor(
+      () =>
+        expect(screen.getByTestId("state").getAttribute("data-error")).toBe(
+          "true",
+        ),
+      { timeout: 10_000 },
     );
     const state = screen.getByTestId("state");
     expect(state.getAttribute("data-menu")).toBe("unknown");

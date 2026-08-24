@@ -161,6 +161,9 @@ export const exportSourceRegistry: readonly ExportSourceRegistration[] =
         "sbom_components",
         "sbom_component_identities",
         "sbom_component_dependencies",
+        "organization_sbom_quality_settings",
+        "sbom_quality_reports",
+        "sbom_quality_findings",
       ],
     },
   ]);

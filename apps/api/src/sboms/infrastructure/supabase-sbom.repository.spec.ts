@@ -416,6 +416,159 @@ describe("SupabaseSbomRepository normalized graph reads", () => {
   });
 });
 
+describe("SupabaseSbomRepository quality reads", () => {
+  const organizationId = "11111111-1111-4111-8111-111111111111";
+  const actorId = "22222222-2222-4222-8222-222222222222";
+  const sourceId = "33333333-3333-4333-8333-333333333333";
+  const rpc = jest.fn();
+  const subject = () =>
+    new SupabaseSbomRepository({
+      admin: () => ({ rpc }),
+    } as unknown as SupabaseService);
+
+  beforeEach(() => rpc.mockReset());
+
+  it("reads a source-scoped quality report through the canonical contract", async () => {
+    const report = qualityReport();
+    rpc.mockResolvedValue({
+      data: [{ outcome: "found", result: { report } }],
+      error: null,
+    });
+
+    await expect(
+      subject().getQualityReport(organizationId, { actorId, sourceId }),
+    ).resolves.toEqual({ report });
+    expect(rpc).toHaveBeenCalledWith("get_sbom_quality_report", {
+      p_organization_id: organizationId,
+      p_actor_user_id: actorId,
+      p_source_id: sourceId,
+    });
+  });
+
+  it("passes findings filters to the tenant-scoped quality RPC", async () => {
+    rpc.mockResolvedValue({
+      data: [{ outcome: "found", result: { findings: [], nextCursor: null } }],
+      error: null,
+    });
+
+    await expect(
+      subject().listQualityFindings(organizationId, {
+        actorId,
+        sourceId,
+        limit: 25,
+        severity: "warning",
+        kind: "bsi_rule",
+      }),
+    ).resolves.toEqual({ findings: [], nextCursor: null });
+    expect(rpc).toHaveBeenCalledWith("list_sbom_quality_findings", {
+      p_organization_id: organizationId,
+      p_actor_user_id: actorId,
+      p_source_id: sourceId,
+      p_limit: 25,
+      p_cursor: null,
+      p_severity: "warning",
+      p_kind: "bsi_rule",
+    });
+  });
+
+  it("uses owner-scoped settings RPCs without trusting browser state", async () => {
+    const result = {
+      settings: {
+        version: 2,
+        bsiProfileEnabled: true,
+        rulesetVersion: "bsi-tr-03183-2.v2.0.0",
+        updatedAt: "2026-08-24T00:00:00.000Z",
+      },
+    };
+    rpc.mockResolvedValueOnce({
+      data: [{ outcome: "found", result }],
+      error: null,
+    });
+    rpc.mockResolvedValueOnce({
+      data: [{ outcome: "updated", result }],
+      error: null,
+    });
+
+    await expect(
+      subject().getQualitySettings(organizationId, { actorId }),
+    ).resolves.toEqual(result);
+    await expect(
+      subject().updateQualitySettings(organizationId, {
+        actorId,
+        expectedVersion: 2,
+        bsiProfileEnabled: true,
+        idempotencyKey: "44444444-4444-4444-8444-444444444444",
+      }),
+    ).resolves.toEqual({ outcome: "updated", response: result });
+    expect(rpc).toHaveBeenNthCalledWith(1, "get_sbom_quality_settings", {
+      p_organization_id: organizationId,
+      p_actor_user_id: actorId,
+    });
+    expect(rpc).toHaveBeenNthCalledWith(
+      2,
+      "update_sbom_quality_settings_atomic",
+      {
+        p_organization_id: organizationId,
+        p_actor_user_id: actorId,
+        p_expected_version: 2,
+        p_bsi_profile_enabled: true,
+        p_idempotency_key: "44444444-4444-4444-8444-444444444444",
+      },
+    );
+  });
+
+  it("forwards supplier and license raw arrays in normalization batches", async () => {
+    rpc.mockResolvedValue({
+      data: [{ outcome: "persisted" }],
+      error: null,
+    });
+
+    await expect(
+      subject().persistNormalizationBatch(organizationId, {
+        jobId: "55555555-5555-4555-8555-555555555555",
+        workerId: "sbom-worker",
+        documentId: "66666666-6666-4666-8666-666666666666",
+        diagnostics: [],
+        sourceOffset: 0,
+        batch: {
+          edges: [],
+          components: [
+            {
+              localRef: "pkg:one",
+              rawName: "One",
+              normalizedName: "one",
+              rawVersion: "1.0.0",
+              normalizedVersion: "1.0.0",
+              rawPurl: null,
+              canonicalPurl: null,
+              rawCpe: null,
+              ecosystem: "npm",
+              scope: null,
+              supplier: "Supplier One",
+              supplierValues: ["Supplier One", "NOASSERTION"],
+              licenseExpression: "MIT",
+              licenseValues: ["MIT", "Apache-2.0"],
+              hashes: [],
+              source: { offset: 12, path: "$.components[0]", line: 3 },
+            },
+          ],
+        },
+      }),
+    ).resolves.toBeUndefined();
+    expect(rpc).toHaveBeenCalledWith(
+      "persist_sbom_normalization_batch_atomic",
+      expect.objectContaining({
+        p_components: [
+          expect.objectContaining({
+            supplier_values: ["Supplier One", "NOASSERTION"],
+            license_values: ["MIT", "Apache-2.0"],
+          }),
+        ],
+      }),
+    );
+  });
+});
+
 function validationReport(status: "valid_with_warnings" | "invalid") {
   return {
     status,
@@ -443,5 +596,64 @@ function validationReport(status: "valid_with_warnings" | "invalid") {
     warningCount: status === "invalid" ? 0 : 1,
     omittedDiagnosticCount: 0,
     completedAt: "2026-08-21T00:00:00.000Z",
+  };
+}
+
+function qualityReport() {
+  const now = "2026-08-24T00:00:00.000Z";
+  return {
+    id: "77777777-7777-4777-8777-777777777777",
+    sourceId: "33333333-3333-4333-8333-333333333333",
+    releaseId: "88888888-8888-4888-8888-888888888888",
+    documentId: "99999999-9999-4999-8999-999999999999",
+    state: "completed",
+    assessmentStatus: "valid",
+    formulaVersion: "sbom-quality.v1",
+    rulesetVersion: "bsi-tr-03183-2.v2.0.0",
+    configurationVersion: 1,
+    inputs: {
+      componentCount: 0,
+      componentsWithCanonicalPurl: 0,
+      componentsWithValidHash: 0,
+      componentsWithSupplier: 0,
+      componentsWithLicense: 0,
+      primaryComponentIdentified: false,
+      primaryComponentDirectDependencyCount: 0,
+      maximumDepth: 0,
+    },
+    dimensions: [
+      {
+        id: "purl",
+        eligibleCount: 0,
+        satisfiedCount: 0,
+        coveragePercent: 0,
+        score: 0,
+        weight: 20,
+        weightedScore: 0,
+        status: "not_assessable",
+      },
+    ],
+    totalScore: 0,
+    bsiProfile: {
+      enabled: false,
+      status: "disabled",
+      rulesetVersion: "bsi-tr-03183-2.v2.0.0",
+      findingCount: 0,
+    },
+    baseline: { status: "first_document" },
+    regression: {
+      status: "none",
+      totalScoreDelta: 0,
+      changedDimensions: [],
+    },
+    progress: {
+      stage: "completed",
+      percent: 100,
+      message: "Quality report completed.",
+    },
+    error: null,
+    completedAt: now,
+    createdAt: now,
+    updatedAt: now,
   };
 }

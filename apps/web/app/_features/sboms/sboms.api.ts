@@ -19,6 +19,9 @@ import {
   sbomJobParamsSchema,
   sbomJobResponseSchema,
   sbomOriginalDownloadResponseSchema,
+  sbomQualityFindingsQuerySchema,
+  sbomQualityFindingsResponseSchema,
+  sbomQualityReportResponseSchema,
   sbomSourceHistoryQuerySchema,
   sbomSourceHistoryResponseSchema,
   sbomSourceParamsSchema,
@@ -34,6 +37,7 @@ import {
   type SbomComponentSearchQuery,
   type SbomDependencyTreeQuery,
   type SbomDocumentListQuery,
+  type SbomQualityFindingsQuery,
 } from "@repo/contracts/sboms";
 
 import { authenticatedRequestJson } from "../../_lib/http/authenticated-request";
@@ -219,6 +223,34 @@ export class SbomsApi {
     });
   }
 
+  getQualityReport(sourceId: string, signal?: AbortSignal) {
+    return authenticatedRequestJson<typeof sbomQualityReportResponseSchema>({
+      path: sourcePath(sourceId, "/quality-report"),
+      schema: sbomQualityReportResponseSchema,
+      signal,
+    });
+  }
+
+  listQualityFindings(
+    sourceId: string,
+    query: Readonly<Partial<SbomQualityFindingsQuery>> = {},
+    signal?: AbortSignal,
+  ) {
+    const parsedQuery = apiClient.parseInput(
+      sbomQualityFindingsQuerySchema,
+      query,
+    );
+    const search = new URLSearchParams({ limit: String(parsedQuery.limit) });
+    if (parsedQuery.cursor) search.set("cursor", parsedQuery.cursor);
+    if (parsedQuery.severity) search.set("severity", parsedQuery.severity);
+    if (parsedQuery.kind) search.set("kind", parsedQuery.kind);
+    return authenticatedRequestJson<typeof sbomQualityFindingsResponseSchema>({
+      path: sourcePath(sourceId, `/quality-findings?${search.toString()}`),
+      schema: sbomQualityFindingsResponseSchema,
+      signal,
+    });
+  }
+
   listDocumentsForRelease(
     productId: string,
     releaseId: string,
@@ -245,7 +277,10 @@ export class SbomsApi {
     query: Readonly<Partial<SbomComponentSearchQuery>> = {},
     signal?: AbortSignal,
   ) {
-    const parsedQuery = apiClient.parseInput(sbomComponentSearchQuerySchema, query);
+    const parsedQuery = apiClient.parseInput(
+      sbomComponentSearchQuerySchema,
+      query,
+    );
     return authenticatedRequestJson<typeof sbomComponentSearchResponseSchema>({
       path: documentQueryPath(documentId, "/components", parsedQuery),
       schema: sbomComponentSearchResponseSchema,
@@ -258,7 +293,10 @@ export class SbomsApi {
     query: Readonly<Partial<SbomDependencyTreeQuery>> = {},
     signal?: AbortSignal,
   ) {
-    const parsedQuery = apiClient.parseInput(sbomDependencyTreeQuerySchema, query);
+    const parsedQuery = apiClient.parseInput(
+      sbomDependencyTreeQuerySchema,
+      query,
+    );
     return authenticatedRequestJson<typeof sbomDependencyTreeResponseSchema>({
       path: documentQueryPath(documentId, "/dependency-tree", parsedQuery),
       schema: sbomDependencyTreeResponseSchema,

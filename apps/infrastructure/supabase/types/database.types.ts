@@ -3078,6 +3078,61 @@ export type Database = {
           },
         ]
       }
+      organization_sbom_quality_settings: {
+        Row: {
+          bsi_profile_enabled: boolean
+          bsi_ruleset_version: string
+          config_version: number
+          created_at: string
+          created_by: string | null
+          organization_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          bsi_profile_enabled?: boolean
+          bsi_ruleset_version?: string
+          config_version?: number
+          created_at?: string
+          created_by?: string | null
+          organization_id: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          bsi_profile_enabled?: boolean
+          bsi_ruleset_version?: string
+          config_version?: number
+          created_at?: string
+          created_by?: string | null
+          organization_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_sbom_quality_settings_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_sbom_quality_settings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_sbom_quality_settings_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organization_session_bindings: {
         Row: {
           issued_at: string
@@ -5767,6 +5822,7 @@ export type Database = {
           hashes: Json
           id: string
           license_expression: string | null
+          license_values: Json
           normalized_name: string
           normalized_version: string | null
           organization_id: string
@@ -5779,6 +5835,7 @@ export type Database = {
           source_offset: number
           source_path: string
           supplier: string | null
+          supplier_values: Json
           updated_at: string
         }
         Insert: {
@@ -5793,6 +5850,7 @@ export type Database = {
           hashes?: Json
           id?: string
           license_expression?: string | null
+          license_values?: Json
           normalized_name: string
           normalized_version?: string | null
           organization_id: string
@@ -5805,6 +5863,7 @@ export type Database = {
           source_offset: number
           source_path: string
           supplier?: string | null
+          supplier_values?: Json
           updated_at?: string
         }
         Update: {
@@ -5819,6 +5878,7 @@ export type Database = {
           hashes?: Json
           id?: string
           license_expression?: string | null
+          license_values?: Json
           normalized_name?: string
           normalized_version?: string | null
           organization_id?: string
@@ -5831,6 +5891,7 @@ export type Database = {
           source_offset?: number
           source_path?: string
           supplier?: string | null
+          supplier_values?: Json
           updated_at?: string
         }
         Relationships: [
@@ -6196,6 +6257,231 @@ export type Database = {
             foreignKeyName: "sbom_ingest_jobs_source_fkey"
             columns: ["organization_id", "source_id"]
             isOneToOne: true
+            referencedRelation: "sbom_sources"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      sbom_quality_findings: {
+        Row: {
+          actual_condition: string | null
+          category: string
+          code: string
+          component_id: string | null
+          created_at: string
+          dimension: string | null
+          document_id: string
+          expected_condition: string | null
+          finding_key: string
+          id: string
+          organization_id: string
+          remediation: string
+          report_id: string
+          rule_id: string | null
+          severity: string
+          source_offset: number | null
+          source_path: string | null
+          updated_at: string
+        }
+        Insert: {
+          actual_condition?: string | null
+          category: string
+          code: string
+          component_id?: string | null
+          created_at?: string
+          dimension?: string | null
+          document_id: string
+          expected_condition?: string | null
+          finding_key: string
+          id?: string
+          organization_id: string
+          remediation: string
+          report_id: string
+          rule_id?: string | null
+          severity: string
+          source_offset?: number | null
+          source_path?: string | null
+          updated_at?: string
+        }
+        Update: {
+          actual_condition?: string | null
+          category?: string
+          code?: string
+          component_id?: string | null
+          created_at?: string
+          dimension?: string | null
+          document_id?: string
+          expected_condition?: string | null
+          finding_key?: string
+          id?: string
+          organization_id?: string
+          remediation?: string
+          report_id?: string
+          rule_id?: string | null
+          severity?: string
+          source_offset?: number | null
+          source_path?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sbom_quality_findings_component_fkey"
+            columns: ["organization_id", "document_id", "component_id"]
+            isOneToOne: false
+            referencedRelation: "sbom_components"
+            referencedColumns: ["organization_id", "document_id", "id"]
+          },
+          {
+            foreignKeyName: "sbom_quality_findings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sbom_quality_findings_report_fkey"
+            columns: ["organization_id", "report_id"]
+            isOneToOne: false
+            referencedRelation: "sbom_quality_reports"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      sbom_quality_reports: {
+        Row: {
+          attempt_count: number
+          baseline: Json | null
+          baseline_report_id: string | null
+          bsi_ruleset_version: string
+          completed_at: string | null
+          config_version: number
+          created_at: string
+          dimension_scores: Json | null
+          document_id: string
+          error_code: string | null
+          error_message: string | null
+          formula_version: string
+          id: string
+          lease_expires_at: string | null
+          lease_owner: string | null
+          max_attempts: number
+          next_attempt_at: string
+          organization_id: string
+          profile_enabled: boolean
+          profile_summary: Json | null
+          progress_finding_count: number
+          progress_message: string
+          progress_percent: number
+          progress_stage: string
+          quality_status: string | null
+          raw_inputs: Json | null
+          regression_state: string
+          regression_summary: Json | null
+          release_id: string
+          source_id: string
+          state: string
+          total_score: number | null
+          updated_at: string
+          weights: Json | null
+        }
+        Insert: {
+          attempt_count?: number
+          baseline?: Json | null
+          baseline_report_id?: string | null
+          bsi_ruleset_version: string
+          completed_at?: string | null
+          config_version: number
+          created_at?: string
+          dimension_scores?: Json | null
+          document_id: string
+          error_code?: string | null
+          error_message?: string | null
+          formula_version: string
+          id?: string
+          lease_expires_at?: string | null
+          lease_owner?: string | null
+          max_attempts?: number
+          next_attempt_at?: string
+          organization_id: string
+          profile_enabled: boolean
+          profile_summary?: Json | null
+          progress_finding_count?: number
+          progress_message?: string
+          progress_percent?: number
+          progress_stage?: string
+          quality_status?: string | null
+          raw_inputs?: Json | null
+          regression_state?: string
+          regression_summary?: Json | null
+          release_id: string
+          source_id: string
+          state?: string
+          total_score?: number | null
+          updated_at?: string
+          weights?: Json | null
+        }
+        Update: {
+          attempt_count?: number
+          baseline?: Json | null
+          baseline_report_id?: string | null
+          bsi_ruleset_version?: string
+          completed_at?: string | null
+          config_version?: number
+          created_at?: string
+          dimension_scores?: Json | null
+          document_id?: string
+          error_code?: string | null
+          error_message?: string | null
+          formula_version?: string
+          id?: string
+          lease_expires_at?: string | null
+          lease_owner?: string | null
+          max_attempts?: number
+          next_attempt_at?: string
+          organization_id?: string
+          profile_enabled?: boolean
+          profile_summary?: Json | null
+          progress_finding_count?: number
+          progress_message?: string
+          progress_percent?: number
+          progress_stage?: string
+          quality_status?: string | null
+          raw_inputs?: Json | null
+          regression_state?: string
+          regression_summary?: Json | null
+          release_id?: string
+          source_id?: string
+          state?: string
+          total_score?: number | null
+          updated_at?: string
+          weights?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sbom_quality_reports_baseline_fkey"
+            columns: ["organization_id", "baseline_report_id"]
+            isOneToOne: false
+            referencedRelation: "sbom_quality_reports"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "sbom_quality_reports_document_source_fkey"
+            columns: ["organization_id", "document_id", "source_id"]
+            isOneToOne: false
+            referencedRelation: "sbom_document_sources"
+            referencedColumns: ["organization_id", "document_id", "source_id"]
+          },
+          {
+            foreignKeyName: "sbom_quality_reports_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sbom_quality_reports_source_fkey"
+            columns: ["organization_id", "source_id"]
+            isOneToOne: false
             referencedRelation: "sbom_sources"
             referencedColumns: ["organization_id", "id"]
           },
@@ -7704,6 +7990,17 @@ export type Database = {
           work: Json
         }[]
       }
+      claim_sbom_quality_report: {
+        Args: {
+          p_lease_seconds: number
+          p_organization_id: string
+          p_worker_id: string
+        }
+        Returns: {
+          outcome: string
+          work: Json
+        }[]
+      }
       claim_sync_run: {
         Args: {
           p_lease_seconds: number
@@ -8428,6 +8725,29 @@ export type Database = {
           source_count: number
         }[]
       }
+      enqueue_sbom_quality_assessment_atomic: {
+        Args: {
+          p_document_id: string
+          p_job_id: string
+          p_organization_id: string
+          p_worker_id: string
+        }
+        Returns: {
+          outcome: string
+          report: Json
+        }[]
+      }
+      enqueue_sbom_quality_report_atomic: {
+        Args: {
+          p_document_id: string
+          p_organization_id: string
+          p_source_id: string
+        }
+        Returns: {
+          outcome: string
+          report: Json
+        }[]
+      }
       ensure_organization_branding_draft: {
         Args: { p_actor_user_id: string; p_organization_id: string }
         Returns: undefined
@@ -8602,6 +8922,18 @@ export type Database = {
         }
         Returns: {
           job: Json
+          outcome: string
+        }[]
+      }
+      fail_sbom_quality_report: {
+        Args: {
+          p_error_code: string
+          p_error_message: string
+          p_organization_id: string
+          p_report_id: string
+          p_worker_id: string
+        }
+        Returns: {
           outcome: string
         }[]
       }
@@ -8816,6 +9148,13 @@ export type Database = {
         Returns: {
           outcome: string
           policies: Json
+        }[]
+      }
+      get_organization_sbom_quality_settings: {
+        Args: { p_actor_user_id: string; p_organization_id: string }
+        Returns: {
+          outcome: string
+          result: Json
         }[]
       }
       get_organization_settings: {
@@ -9101,6 +9440,24 @@ export type Database = {
           outcome: string
         }[]
       }
+      get_sbom_quality_report: {
+        Args: {
+          p_actor_user_id: string
+          p_organization_id: string
+          p_source_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      get_sbom_quality_settings: {
+        Args: { p_actor_user_id: string; p_organization_id: string }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
       get_sbom_source_download: {
         Args: {
           p_actor_user_id: string
@@ -9206,6 +9563,12 @@ export type Database = {
         Args: { p_limit: number }
         Returns: {
           oldest_due_at: string
+          organization_id: string
+        }[]
+      }
+      list_due_sbom_quality_organizations: {
+        Args: { p_limit: number }
+        Returns: {
           organization_id: string
         }[]
       }
@@ -9338,6 +9701,34 @@ export type Database = {
           p_organization_id: string
           p_product_id: string
           p_release_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      list_sbom_quality_component_facts: {
+        Args: {
+          p_cursor: string
+          p_document_id: string
+          p_limit: number
+          p_organization_id: string
+          p_report_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      list_sbom_quality_findings: {
+        Args: {
+          p_actor_user_id: string
+          p_cursor: string
+          p_kind: string
+          p_limit: number
+          p_organization_id: string
+          p_severity: string
+          p_source_id: string
         }
         Returns: {
           outcome: string
@@ -10006,6 +10397,20 @@ export type Database = {
         }
         Returns: {
           outcome: string
+        }[]
+      }
+      persist_sbom_quality_report_atomic: {
+        Args: {
+          p_complete: boolean
+          p_findings: Json
+          p_organization_id: string
+          p_report: Json
+          p_report_id: string
+          p_worker_id: string
+        }
+        Returns: {
+          outcome: string
+          report: Json
         }[]
       }
       preview_field_authority_policy: {
@@ -10868,6 +11273,14 @@ export type Database = {
         Returns: boolean
       }
       sbom_json_has_sensitive_key: { Args: { p_value: Json }; Returns: boolean }
+      sbom_quality_cursor_encode: {
+        Args: { p_id: string; p_sort_value: string }
+        Returns: string
+      }
+      sbom_quality_report_json: {
+        Args: { p_organization_id: string; p_report_id: string }
+        Returns: Json
+      }
       sbom_source_json: {
         Args: { p_organization_id: string; p_source_id: string }
         Returns: Json
@@ -11148,6 +11561,17 @@ export type Database = {
           policy: Json
         }[]
       }
+      update_organization_sbom_quality_settings_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_bsi_profile_enabled: boolean
+          p_organization_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
       update_organization_settings_atomic: {
         Args: {
           p_actor_user_id: string
@@ -11232,6 +11656,19 @@ export type Database = {
         Returns: {
           artifact: Json
           outcome: string
+        }[]
+      }
+      update_sbom_quality_settings_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_bsi_profile_enabled: boolean
+          p_expected_version: number
+          p_idempotency_key: string
+          p_organization_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
         }[]
       }
       upsert_field_authority_policy_atomic: {

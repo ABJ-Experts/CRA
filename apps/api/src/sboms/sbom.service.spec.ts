@@ -33,6 +33,7 @@ function harness(result: unknown = success) {
     service: new SbomService(
       useCases as never,
       useCases as never,
+      useCases as never,
       credentials as never,
     ),
     useCases,

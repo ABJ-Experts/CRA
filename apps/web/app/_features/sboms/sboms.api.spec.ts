@@ -100,6 +100,30 @@ const VALIDATION_REPORT_RESPONSE = {
     completedAt: NOW,
   },
 } as const;
+const QUALITY_REPORT_RESPONSE = {
+  report: {
+    id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+    sourceId: SOURCE_ID,
+    releaseId: RELEASE_ID,
+    documentId: DOCUMENT_ID,
+    state: "queued",
+    assessmentStatus: null,
+    formulaVersion: "sbom-quality.v1",
+    rulesetVersion: "bsi-tr-03183-2.v2.0.0",
+    configurationVersion: 0,
+    inputs: null,
+    dimensions: [],
+    totalScore: null,
+    bsiProfile: null,
+    baseline: null,
+    regression: null,
+    progress: { stage: "queued", percent: 0, message: "Queued" },
+    error: null,
+    completedAt: null,
+    createdAt: NOW,
+    updatedAt: NOW,
+  },
+} as const;
 
 function json(value: unknown, status = 200) {
   return new Response(JSON.stringify(value), { status });
@@ -240,11 +264,19 @@ describe("sbomsApi", () => {
       hashes: [],
       depth: 0,
       parentComponentId: null,
-      sourceLocation: { path: "/components/0", byteStart: 0, byteEnd: 1, line: 1 },
+      sourceLocation: {
+        path: "/components/0",
+        byteStart: 0,
+        byteEnd: 1,
+        line: 1,
+      },
     } as const;
     const fetcher = vi.fn(async (path: string) => {
       if (path.includes("dependency-tree")) {
-        return json({ items: [{ component, childCount: 0 }], nextCursor: null });
+        return json({
+          items: [{ component, childCount: 0 }],
+          nextCursor: null,
+        });
       }
       if (path.includes("/components")) {
         return json({ components: [component], nextCursor: null });
@@ -284,6 +316,33 @@ describe("sbomsApi", () => {
       `/api/v1/sbom-documents/${DOCUMENT_ID}`,
       `/api/v1/sbom-documents/${DOCUMENT_ID}/components?q=example&limit=10`,
       `/api/v1/sbom-documents/${DOCUMENT_ID}/dependency-tree?parentComponentId=${COMPONENT_ID}&limit=10`,
+    ]);
+  });
+
+  it("reads source-scoped quality reports and cursor-paginated guidance through parsed routes", async () => {
+    const fetcher = vi.fn(async (path: string) => {
+      if (path.includes("quality-findings")) {
+        return json({ findings: [], nextCursor: null });
+      }
+      return json(QUALITY_REPORT_RESPONSE);
+    });
+    vi.stubGlobal("fetch", fetcher);
+
+    await expect(sbomsApi.getQualityReport(SOURCE_ID)).resolves.toEqual(
+      QUALITY_REPORT_RESPONSE,
+    );
+    await expect(
+      sbomsApi.listQualityFindings(SOURCE_ID, {
+        limit: 10,
+        cursor: "guidance-next",
+        severity: "warning",
+        kind: "coverage_gap",
+      }),
+    ).resolves.toEqual({ findings: [], nextCursor: null });
+
+    expect(fetcher.mock.calls.map(([path]) => path)).toEqual([
+      `/api/v1/sbom-sources/${SOURCE_ID}/quality-report`,
+      `/api/v1/sbom-sources/${SOURCE_ID}/quality-findings?limit=10&cursor=guidance-next&severity=warning&kind=coverage_gap`,
     ]);
   });
 

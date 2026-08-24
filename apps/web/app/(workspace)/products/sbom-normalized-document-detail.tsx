@@ -20,6 +20,7 @@ import {
   useSbomDependencyTreeChildrenQueries,
   useSbomDocumentDetailQuery,
 } from "../../_features/sboms/sboms.queries";
+import { SbomQualityReport } from "./sbom-quality-report";
 
 const SEARCH_DEBOUNCE_MS = 250;
 const TREE_ROW_HEIGHT = 44;
@@ -98,7 +99,10 @@ function useDebouncedValue(value: string, delay: number): string {
 }
 
 function flattenTree(
-  rootItems: readonly Readonly<{ component: SbomComponent; childCount: number }>[],
+  rootItems: readonly Readonly<{
+    component: SbomComponent;
+    childCount: number;
+  }>[],
   childrenByParent: ReadonlyMap<
     string,
     readonly Readonly<{ component: SbomComponent; childCount: number }>[]
@@ -106,9 +110,7 @@ function flattenTree(
   expandedIds: ReadonlySet<string>,
 ): readonly FlatTreeRow[] {
   const rows: FlatTreeRow[] = [];
-  const stack = [...rootItems]
-    .reverse()
-    .map((item) => ({ item, level: 1 }));
+  const stack = [...rootItems].reverse().map((item) => ({ item, level: 1 }));
 
   while (stack.length > 0) {
     const next = stack.pop();
@@ -246,12 +248,7 @@ function ComponentSearch({
       const appended = search.data.components.filter(
         (component) => !known.has(component.id),
       );
-      return appended.length === 0
-        ? current
-        : [
-        ...current,
-        ...appended,
-      ];
+      return appended.length === 0 ? current : [...current, ...appended];
     });
   }, [cursor, search.data]);
 
@@ -262,7 +259,10 @@ function ComponentSearch({
           <p className="text-caption-1-semibold text-fg-muted">
             Component index
           </p>
-          <h2 id="sbom-component-search-heading" className="text-title-3-semibold text-fg">
+          <h2
+            id="sbom-component-search-heading"
+            className="text-title-3-semibold text-fg"
+          >
             Search components
           </h2>
         </div>
@@ -291,12 +291,20 @@ function ComponentSearch({
           No components match this search.
         </p>
       ) : (
-        <ul aria-label="Normalized components" className="mt-3 grid max-h-72 gap-2 overflow-y-auto pr-1">
+        <ul
+          aria-label="Normalized components"
+          className="mt-3 grid max-h-72 gap-2 overflow-y-auto pr-1"
+        >
           {components.map((component) => (
-            <li key={component.id} className="rounded-lg border border-border bg-canvas p-3">
+            <li
+              key={component.id}
+              className="rounded-lg border border-border bg-canvas p-3"
+            >
               <p className="truncate text-caption-1-semibold text-fg">
                 {component.originalName}
-                {component.originalVersion ? ` ${component.originalVersion}` : ""}
+                {component.originalVersion
+                  ? ` ${component.originalVersion}`
+                  : ""}
               </p>
               <p className="mt-1 truncate font-mono text-caption-2-regular text-fg-muted">
                 {component.canonicalPurl ?? component.documentLocalRef}
@@ -328,7 +336,9 @@ function DependencyTree({
   const [expandedIds, setExpandedIds] = useState<ReadonlySet<string>>(
     () => new Set(),
   );
-  const [cursors, setCursors] = useState<Readonly<Record<string, string | undefined>>>({});
+  const [cursors, setCursors] = useState<
+    Readonly<Record<string, string | undefined>>
+  >({});
   const [pages, setPages] = useState<Readonly<Record<string, TreePage>>>({});
   const [scrollTop, setScrollTop] = useState(0);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -338,7 +348,11 @@ function DependencyTree({
       { key: ROOT_KEY, query: { limit: 50, cursor: cursors[ROOT_KEY] } },
       ...[...expandedIds].map((parentComponentId) => ({
         key: parentComponentId,
-        query: { parentComponentId, limit: 50, cursor: cursors[parentComponentId] },
+        query: {
+          parentComponentId,
+          limit: 50,
+          cursor: cursors[parentComponentId],
+        },
       })),
     ],
     [cursors, expandedIds],
@@ -361,7 +375,11 @@ function DependencyTree({
           items: result.data.items,
           nextCursor: result.data.nextCursor,
         };
-        const merged = mergePage(current[request.key], request.query.cursor, page);
+        const merged = mergePage(
+          current[request.key],
+          request.query.cursor,
+          page,
+        );
         if (merged !== current[request.key]) {
           next[request.key] = merged;
           changed = true;
@@ -373,18 +391,28 @@ function DependencyTree({
 
   const rootItems = useMemo(() => pages[ROOT_KEY]?.items ?? [], [pages]);
   const childrenByParent = useMemo(
-    () => new Map(Object.entries(pages).filter(([key]) => key !== ROOT_KEY).map(([key, page]) => [key, page.items])),
+    () =>
+      new Map(
+        Object.entries(pages)
+          .filter(([key]) => key !== ROOT_KEY)
+          .map(([key, page]) => [key, page.items]),
+      ),
     [pages],
   );
   const rows = useMemo(
     () => flattenTree(rootItems, childrenByParent, expandedIds),
     [childrenByParent, expandedIds, rootItems],
   );
-  const firstIndex = Math.max(0, Math.floor(scrollTop / TREE_ROW_HEIGHT) - TREE_OVERSCAN_ROWS);
-  const visibleCount = Math.ceil(TREE_VIEWPORT_HEIGHT / TREE_ROW_HEIGHT) + TREE_OVERSCAN_ROWS * 2;
+  const firstIndex = Math.max(
+    0,
+    Math.floor(scrollTop / TREE_ROW_HEIGHT) - TREE_OVERSCAN_ROWS,
+  );
+  const visibleCount =
+    Math.ceil(TREE_VIEWPORT_HEIGHT / TREE_ROW_HEIGHT) + TREE_OVERSCAN_ROWS * 2;
   const visibleRows = rows.slice(firstIndex, firstIndex + visibleCount);
   const treeError = treeQueries.find((query) => query.isError);
-  const treePending = treeQueries.some((query) => query.isPending) && rootItems.length === 0;
+  const treePending =
+    treeQueries.some((query) => query.isPending) && rootItems.length === 0;
 
   useEffect(() => {
     if (activeId === null) return;
@@ -433,8 +461,13 @@ function DependencyTree({
     <section aria-labelledby="sbom-dependency-tree-heading">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <p className="text-caption-1-semibold text-fg-muted">Graph traversal</p>
-          <h2 id="sbom-dependency-tree-heading" className="text-title-3-semibold text-fg">
+          <p className="text-caption-1-semibold text-fg-muted">
+            Graph traversal
+          </p>
+          <h2
+            id="sbom-dependency-tree-heading"
+            className="text-title-3-semibold text-fg"
+          >
             Dependency tree
           </h2>
         </div>
@@ -462,8 +495,17 @@ function DependencyTree({
             className="mt-3 overflow-y-auto rounded-xl border border-border bg-canvas outline-none focus-visible:ring-2 focus-visible:ring-active-500 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas"
             style={{ height: TREE_VIEWPORT_HEIGHT }}
           >
-            <div style={{ height: rows.length * TREE_ROW_HEIGHT, position: "relative" }}>
-              <div style={{ transform: `translateY(${firstIndex * TREE_ROW_HEIGHT}px)` }}>
+            <div
+              style={{
+                height: rows.length * TREE_ROW_HEIGHT,
+                position: "relative",
+              }}
+            >
+              <div
+                style={{
+                  transform: `translateY(${firstIndex * TREE_ROW_HEIGHT}px)`,
+                }}
+              >
                 {visibleRows.map((row, index) => {
                   const expanded = expandedIds.has(row.component.id);
                   const hasChildren = row.childCount > 0;
@@ -475,7 +517,15 @@ function DependencyTree({
                       role="treeitem"
                       aria-level={row.level}
                       aria-expanded={hasChildren ? expanded : undefined}
-                      tabIndex={activeId === null ? (firstIndex + index === 0 ? 0 : -1) : activeId === row.component.id ? 0 : -1}
+                      tabIndex={
+                        activeId === null
+                          ? firstIndex + index === 0
+                            ? 0
+                            : -1
+                          : activeId === row.component.id
+                            ? 0
+                            : -1
+                      }
                       onFocus={() => setActiveId(row.component.id)}
                       onClick={() => hasChildren && toggle(row.component.id)}
                       onKeyDown={(event) => {
@@ -488,10 +538,17 @@ function DependencyTree({
                         } else if (event.key === "ArrowRight" && hasChildren) {
                           event.preventDefault();
                           if (!expanded) toggle(row.component.id);
-                        } else if (event.key === "ArrowLeft" && hasChildren && expanded) {
+                        } else if (
+                          event.key === "ArrowLeft" &&
+                          hasChildren &&
+                          expanded
+                        ) {
                           event.preventDefault();
                           toggle(row.component.id);
-                        } else if ((event.key === "Enter" || event.key === " ") && hasChildren) {
+                        } else if (
+                          (event.key === "Enter" || event.key === " ") &&
+                          hasChildren
+                        ) {
                           event.preventDefault();
                           toggle(row.component.id);
                         }
@@ -500,11 +557,21 @@ function DependencyTree({
                       style={{ paddingInlineStart: 12 + (row.level - 1) * 20 }}
                     >
                       {hasChildren ? (
-                        <ChevronRight aria-hidden="true" className={cn("size-4 shrink-0 transition-transform motion-reduce:transition-none", expanded && "rotate-90")} />
-                      ) : <span aria-hidden="true" className="size-4 shrink-0" />}
+                        <ChevronRight
+                          aria-hidden="true"
+                          className={cn(
+                            "size-4 shrink-0 transition-transform motion-reduce:transition-none",
+                            expanded && "rotate-90",
+                          )}
+                        />
+                      ) : (
+                        <span aria-hidden="true" className="size-4 shrink-0" />
+                      )}
                       <span className="truncate text-caption-1-semibold text-fg">
                         {row.component.originalName}
-                        {row.component.originalVersion ? ` ${row.component.originalVersion}` : ""}
+                        {row.component.originalVersion
+                          ? ` ${row.component.originalVersion}`
+                          : ""}
                       </span>
                     </button>
                   );
@@ -513,7 +580,14 @@ function DependencyTree({
             </div>
           </div>
           {pages[ROOT_KEY]?.nextCursor ? (
-            <Button type="button" size="sm" variant="outline" tone="grey" className="mt-3" onClick={() => loadMore(ROOT_KEY)}>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              tone="grey"
+              className="mt-3"
+              onClick={() => loadMore(ROOT_KEY)}
+            >
               Load more roots
             </Button>
           ) : null}
@@ -542,11 +616,13 @@ function DependencyTree({
 export function SbomNormalizedDocumentDetail({
   productId,
   documentId,
+  sourceId,
   canView,
   enabled,
 }: Readonly<{
   productId: string;
   documentId: string;
+  sourceId?: string;
   canView: boolean;
   enabled: boolean;
 }>) {
@@ -554,30 +630,57 @@ export function SbomNormalizedDocumentDetail({
   const document = detail.data?.document;
 
   if (!canView) {
-    return <p role="alert" className="text-subhead-regular text-danger">You do not have permission to view normalized SBOM data.</p>;
+    return (
+      <p role="alert" className="text-subhead-regular text-danger">
+        You do not have permission to view normalized SBOM data.
+      </p>
+    );
   }
   if (detail.isPending) {
-    return <p role="status" className="text-subhead-regular text-fg-muted">Loading normalized SBOM document...</p>;
+    return (
+      <p role="status" className="text-subhead-regular text-fg-muted">
+        Loading normalized SBOM document...
+      </p>
+    );
   }
   if (detail.isError || !document) {
     return (
-      <div role="alert" className="rounded-xl border border-border bg-surface-subtle p-4">
-        <p className="text-subhead-regular text-danger">{requestErrorMessage(detail.error)}</p>
-        <Button type="button" variant="outline" tone="grey" className="mt-3" onClick={() => void detail.refetch()}>Try again</Button>
+      <div
+        role="alert"
+        className="rounded-xl border border-border bg-surface-subtle p-4"
+      >
+        <p className="text-subhead-regular text-danger">
+          {requestErrorMessage(detail.error)}
+        </p>
+        <Button
+          type="button"
+          variant="outline"
+          tone="grey"
+          className="mt-3"
+          onClick={() => void detail.refetch()}
+        >
+          Try again
+        </Button>
       </div>
     );
   }
   if (document.state !== "completed") {
     return (
       <div className="rounded-xl border border-border bg-surface-subtle p-4">
-        <Tag variant="dot" tone={documentTone(document.state)} size="sm">{titleCase(document.state)}</Tag>
-        <p className="mt-3 text-subhead-semibold text-fg">Normalization is {document.state}.</p>
+        <Tag variant="dot" tone={documentTone(document.state)} size="sm">
+          {titleCase(document.state)}
+        </Tag>
+        <p className="mt-3 text-subhead-semibold text-fg">
+          Normalization is {document.state}.
+        </p>
         <p className="mt-1 text-caption-1-regular text-fg-muted">
-          Components and graph data remain unavailable until this immutable document completes atomically.
+          Components and graph data remain unavailable until this immutable
+          document completes atomically.
         </p>
         {document.state === "failed" && document.error ? (
           <p role="alert" className="mt-3 text-caption-1-regular text-danger">
-            {document.error.retryable ? "Retryable: " : ""}{document.error.message}
+            {document.error.retryable ? "Retryable: " : ""}
+            {document.error.message}
           </p>
         ) : null}
       </div>
@@ -587,39 +690,79 @@ export function SbomNormalizedDocumentDetail({
   return (
     <section aria-label="Normalized SBOM document" className="grid gap-4">
       <header className="rounded-xl border border-border bg-surface-subtle p-4">
-        <Link href={`/products/${productId}`} className="text-caption-1-semibold text-active-600 underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-active-500">
+        <Link
+          href={`/products/${productId}`}
+          className="text-caption-1-semibold text-active-600 underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-active-500"
+        >
           Back to product evidence
         </Link>
         <div className="mt-3 flex flex-wrap items-start justify-between gap-3">
           <div>
-            <p className="text-caption-1-semibold text-fg-muted">Immutable normalized graph</p>
-            <h1 className="mt-1 text-title-2-semibold text-fg">Normalized SBOM</h1>
-            <p className="mt-1 text-caption-1-regular text-fg-muted">{document.format === "cyclonedx" ? "CycloneDX" : "SPDX"} {document.specificationVersion}</p>
+            <p className="text-caption-1-semibold text-fg-muted">
+              Immutable normalized graph
+            </p>
+            <h1 className="mt-1 text-title-2-semibold text-fg">
+              Normalized SBOM
+            </h1>
+            <p className="mt-1 text-caption-1-regular text-fg-muted">
+              {document.format === "cyclonedx" ? "CycloneDX" : "SPDX"}{" "}
+              {document.specificationVersion}
+            </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Tag variant="dot" tone={documentTone(document.state)} size="sm">{titleCase(document.state)}</Tag>
-            <Tag variant="dot" tone={validationTone(document.validationStatus)} size="sm">{titleCase(document.validationStatus)}</Tag>
+            <Tag variant="dot" tone={documentTone(document.state)} size="sm">
+              {titleCase(document.state)}
+            </Tag>
+            <Tag
+              variant="dot"
+              tone={validationTone(document.validationStatus)}
+              size="sm"
+            >
+              {titleCase(document.validationStatus)}
+            </Tag>
           </div>
         </div>
         <dl className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <DocumentFact label="Components" value={document.componentCount} />
           <DocumentFact label="Maximum depth" value={document.maximumDepth} />
           <DocumentFact label="Dependencies" value={document.dependencyCount} />
-          <DocumentFact label="Completed" value={formatInstant(document.completedAt)} />
-          <DocumentFact label="Parser" value={`${document.parser.name} ${document.parser.version}`} />
-          <DocumentFact label="Normalizer" value={`${document.normalizer.name} ${document.normalizer.version}`} />
+          <DocumentFact
+            label="Completed"
+            value={formatInstant(document.completedAt)}
+          />
+          <DocumentFact
+            label="Parser"
+            value={`${document.parser.name} ${document.parser.version}`}
+          />
+          <DocumentFact
+            label="Normalizer"
+            value={`${document.normalizer.name} ${document.normalizer.version}`}
+          />
           <DocumentFact label="Source provenance" value={document.sourceId} />
           <DocumentFact label="Warnings" value={document.warningCount} />
         </dl>
       </header>
+      <SbomQualityReport
+        sourceId={sourceId ?? document.sourceId}
+        enabled={enabled}
+      />
       <div className="grid gap-4 xl:grid-cols-2">
         <div className="rounded-xl border border-border bg-surface-subtle p-4">
-          <div className="flex items-center gap-2"><CircleAlert aria-hidden="true" className="size-5 text-fg-muted" /><h2 className="text-title-3-semibold text-fg">Normalization warnings</h2></div>
+          <div className="flex items-center gap-2">
+            <CircleAlert aria-hidden="true" className="size-5 text-fg-muted" />
+            <h2 className="text-title-3-semibold text-fg">
+              Normalization warnings
+            </h2>
+          </div>
           <Diagnostics diagnostics={detail.data.diagnostics} />
         </div>
-        <div className="rounded-xl border border-border bg-surface-subtle p-4"><ComponentSearch documentId={document.id} enabled={enabled} /></div>
+        <div className="rounded-xl border border-border bg-surface-subtle p-4">
+          <ComponentSearch documentId={document.id} enabled={enabled} />
+        </div>
       </div>
-      <div className="rounded-xl border border-border bg-surface-subtle p-4"><DependencyTree documentId={document.id} enabled={enabled} /></div>
+      <div className="rounded-xl border border-border bg-surface-subtle p-4">
+        <DependencyTree documentId={document.id} enabled={enabled} />
+      </div>
     </section>
   );
 }

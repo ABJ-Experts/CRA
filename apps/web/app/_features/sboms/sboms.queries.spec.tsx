@@ -10,6 +10,8 @@ import {
   useSbomDependencyTreeChildrenQuery,
   useSbomDocumentDetailQuery,
   useSbomDocumentsForReleaseQuery,
+  useSbomQualityFindingsQuery,
+  useSbomQualityReportQuery,
   useSbomSourceHistoryQuery,
   useSbomValidationReportQuery,
 } from "./sboms.queries";
@@ -21,6 +23,8 @@ const api = vi.hoisted(() => ({
   listDependencyTreeChildren: vi.fn(),
   listSourcesForRelease: vi.fn(),
   getValidationReport: vi.fn(),
+  getQualityReport: vi.fn(),
+  listQualityFindings: vi.fn(),
 }));
 
 vi.mock("./sboms.api", () => ({
@@ -176,11 +180,22 @@ describe("SBOM queries", () => {
       hashes: [],
       depth: 0,
       parentComponentId: null,
-      sourceLocation: { path: "/components/0", byteStart: 0, byteEnd: 1, line: 1 },
+      sourceLocation: {
+        path: "/components/0",
+        byteStart: 0,
+        byteEnd: 1,
+        line: 1,
+      },
     } as const;
-    api.listDocumentsForRelease.mockResolvedValue({ documents: [document], nextCursor: null });
+    api.listDocumentsForRelease.mockResolvedValue({
+      documents: [document],
+      nextCursor: null,
+    });
     api.getDocument.mockResolvedValue({ document, diagnostics: [] });
-    api.searchComponents.mockResolvedValue({ components: [component], nextCursor: null });
+    api.searchComponents.mockResolvedValue({
+      components: [component],
+      nextCursor: null,
+    });
     api.listDependencyTreeChildren.mockResolvedValue({
       items: [{ component, childCount: 0 }],
       nextCursor: null,
@@ -188,18 +203,98 @@ describe("SBOM queries", () => {
 
     const { result } = renderHook(
       () => ({
-        documents: useSbomDocumentsForReleaseQuery(PRODUCT_ID, RELEASE_ID, { limit: 10 }, true),
+        documents: useSbomDocumentsForReleaseQuery(
+          PRODUCT_ID,
+          RELEASE_ID,
+          { limit: 10 },
+          true,
+        ),
         detail: useSbomDocumentDetailQuery(documentId, true),
-        components: useSbomComponentSearchQuery(documentId, { q: "example", limit: 10 }, true),
-        children: useSbomDependencyTreeChildrenQuery(documentId, { parentComponentId: componentId, limit: 10 }, true),
+        components: useSbomComponentSearchQuery(
+          documentId,
+          { q: "example", limit: 10 },
+          true,
+        ),
+        children: useSbomDependencyTreeChildrenQuery(
+          documentId,
+          { parentComponentId: componentId, limit: 10 },
+          true,
+        ),
       }),
       { wrapper },
     );
 
     await waitFor(() => expect(result.current.children.isSuccess).toBe(true));
-    expect(api.listDocumentsForRelease).toHaveBeenCalledWith(PRODUCT_ID, RELEASE_ID, { limit: 10 }, expect.any(AbortSignal));
-    expect(api.getDocument).toHaveBeenCalledWith(documentId, expect.any(AbortSignal));
-    expect(api.searchComponents).toHaveBeenCalledWith(documentId, { q: "example", limit: 10 }, expect.any(AbortSignal));
-    expect(api.listDependencyTreeChildren).toHaveBeenCalledWith(documentId, { parentComponentId: componentId, limit: 10 }, expect.any(AbortSignal));
+    expect(api.listDocumentsForRelease).toHaveBeenCalledWith(
+      PRODUCT_ID,
+      RELEASE_ID,
+      { limit: 10 },
+      expect.any(AbortSignal),
+    );
+    expect(api.getDocument).toHaveBeenCalledWith(
+      documentId,
+      expect.any(AbortSignal),
+    );
+    expect(api.searchComponents).toHaveBeenCalledWith(
+      documentId,
+      { q: "example", limit: 10 },
+      expect.any(AbortSignal),
+    );
+    expect(api.listDependencyTreeChildren).toHaveBeenCalledWith(
+      documentId,
+      { parentComponentId: componentId, limit: 10 },
+      expect.any(AbortSignal),
+    );
+  });
+
+  it("polls an incomplete source-scoped quality report and pages its guidance", async () => {
+    const quality = {
+      report: {
+        id: "77777777-7777-4777-8777-777777777777",
+        sourceId: SOURCE_ID,
+        releaseId: RELEASE_ID,
+        documentId: "88888888-8888-4888-8888-888888888888",
+        state: "queued",
+        assessmentStatus: null,
+        formulaVersion: "sbom-quality.v1",
+        rulesetVersion: "bsi-tr-03183-2.v2.0.0",
+        configurationVersion: 0,
+        inputs: null,
+        dimensions: [],
+        totalScore: null,
+        bsiProfile: null,
+        baseline: null,
+        regression: null,
+        progress: { stage: "queued", percent: 0, message: "Queued" },
+        error: null,
+        completedAt: null,
+        createdAt: NOW,
+        updatedAt: NOW,
+      },
+    } as const;
+    api.getQualityReport.mockResolvedValue(quality);
+    api.listQualityFindings.mockResolvedValue({
+      findings: [],
+      nextCursor: null,
+    });
+
+    const { result } = renderHook(
+      () => ({
+        quality: useSbomQualityReportQuery(SOURCE_ID, true),
+        findings: useSbomQualityFindingsQuery(SOURCE_ID, { limit: 10 }, true),
+      }),
+      { wrapper },
+    );
+
+    await waitFor(() => expect(result.current.findings.isSuccess).toBe(true));
+    expect(api.getQualityReport).toHaveBeenCalledWith(
+      SOURCE_ID,
+      expect.any(AbortSignal),
+    );
+    expect(api.listQualityFindings).toHaveBeenCalledWith(
+      SOURCE_ID,
+      { limit: 10 },
+      expect.any(AbortSignal),
+    );
   });
 });

@@ -33,7 +33,9 @@ export type NormalizedComponent = Readonly<{
   ecosystem: string | null;
   scope: string | null;
   supplier: string | null;
+  supplierValues: readonly string[];
   licenseExpression: string | null;
+  licenseValues: readonly string[];
   hashes: readonly Readonly<{ algorithm: string; value: string }>[];
   source: SbomSourceLocation;
 }>;
@@ -604,7 +606,7 @@ async function normalizeXml(
   const activeComponents: Array<{
     attributes: Readonly<Record<string, string>>;
     startDepth: number;
-    values: Record<string, string>;
+    values: Record<string, string[]>;
     hashes: Array<{ algorithm: string; value: string }>;
     source: SbomSourceLocation;
   }> = [];
@@ -679,8 +681,10 @@ async function normalizeXml(
           algorithm: element.attributes.alg ?? "",
           value: element.text.trim(),
         });
-      else if (element.text.trim().length > 0 && path.length > 0)
-        activeComponent.values[path] = element.text.trim();
+      else if (element.text.trim().length > 0 && path.length > 0) {
+        const values = activeComponent.values[path] ?? [];
+        activeComponent.values[path] = [...values, element.text.trim()];
+      }
       if (element.name === "component") {
         const component = componentFromCycloneDxXml(activeComponent);
         assertUniqueLocalReference(localReferences, component);
@@ -827,7 +831,9 @@ function componentFromCycloneDx(
     rawCpe: stringAt(value, "cpe"),
     scope: stringAt(value, "scope"),
     supplier: nestedString(value, ["supplier", "name"]),
+    supplierValues: textValues([nestedString(value, ["supplier", "name"])]),
     licenseExpression: licenseFromCycloneDx(value),
+    licenseValues: licenseValuesFromCycloneDx(value),
     hashes: hashesFromJson(value),
     source: location,
   });
@@ -845,8 +851,13 @@ function componentFromSpdx2(
     rawCpe: null,
     scope: null,
     supplier: stringAt(value, "supplier"),
+    supplierValues: textValues([stringAt(value, "supplier")]),
     licenseExpression:
       stringAt(value, "licenseConcluded") ?? stringAt(value, "licenseDeclared"),
+    licenseValues: textValues([
+      stringAt(value, "licenseConcluded"),
+      stringAt(value, "licenseDeclared"),
+    ]),
     hashes: hashesFromSpdx2(value),
     source: location,
   });
@@ -866,7 +877,9 @@ function componentFromSpdx3(
     rawCpe: null,
     scope: null,
     supplier: stringAt(value, "software_supplier"),
+    supplierValues: textValues([stringAt(value, "software_supplier")]),
     licenseExpression: stringAt(value, "software_licenseConcluded"),
+    licenseValues: textValues([stringAt(value, "software_licenseConcluded")]),
     hashes: [],
     source: location,
   });
@@ -874,20 +887,27 @@ function componentFromSpdx3(
 
 function componentFromCycloneDxXml(active: {
   attributes: Readonly<Record<string, string>>;
-  values: Record<string, string>;
+  values: Record<string, string[]>;
   hashes: Array<{ algorithm: string; value: string }>;
   source: SbomSourceLocation;
 }): NormalizedComponent {
   const values = active.values;
+  const first = (path: string) => values[path]?.[0] ?? null;
   return normalizedComponent({
     localRef: active.attributes["bom-ref"] ?? null,
-    rawName: values.name ?? null,
-    rawVersion: values.version ?? null,
-    rawPurl: values.purl ?? null,
-    rawCpe: values.cpe ?? null,
-    scope: values.scope ?? null,
-    supplier: values["supplier.name"] ?? null,
-    licenseExpression: values["licenses.license.expression"] ?? null,
+    rawName: first("name"),
+    rawVersion: first("version"),
+    rawPurl: first("purl"),
+    rawCpe: first("cpe"),
+    scope: first("scope"),
+    supplier: first("supplier.name"),
+    supplierValues: textValues(values["supplier.name"] ?? []),
+    licenseExpression:
+      first("licenses.license.expression") ?? first("licenses.license.name"),
+    licenseValues: textValues([
+      ...(values["licenses.license.expression"] ?? []),
+      ...(values["licenses.license.name"] ?? []),
+    ]),
     hashes: active.hashes,
     source: active.source,
   });
@@ -906,8 +926,13 @@ function componentFromSpdxTagValue(
     rawCpe: null,
     scope: null,
     supplier: value.PackageSupplier ?? null,
+    supplierValues: textValues([value.PackageSupplier ?? null]),
     licenseExpression:
       value.PackageLicenseConcluded ?? value.PackageLicenseDeclared ?? null,
+    licenseValues: textValues([
+      value.PackageLicenseConcluded ?? null,
+      value.PackageLicenseDeclared ?? null,
+    ]),
     hashes: [],
     source: location,
   });
@@ -930,6 +955,8 @@ function normalizedComponent(
     rawPurl: purl.rawPurl,
     canonicalPurl: purl.canonicalPurl,
     ecosystem,
+    supplierValues: Object.freeze(textValues(input.supplierValues)),
+    licenseValues: Object.freeze(textValues(input.licenseValues)),
     hashes: Object.freeze(
       input.hashes.map((item) => Object.freeze({ ...item })),
     ),
@@ -1073,18 +1100,32 @@ function purlFromSpdx2(value: JsonObject): string | null {
   );
 }
 function licenseFromCycloneDx(value: JsonObject): string | null {
+  return licenseValuesFromCycloneDx(value)[0] ?? null;
+}
+function licenseValuesFromCycloneDx(value: JsonObject): readonly string[] {
   const licenses = arrayAt(value, "licenses");
+  const values: Array<string | null> = [];
   for (const entry of licenses) {
     if (!entry || typeof entry !== "object" || Array.isArray(entry)) continue;
     const license = (entry as JsonObject).license;
     if (!license || typeof license !== "object" || Array.isArray(license))
       continue;
-    return (
+    values.push(
       stringAt(license as JsonObject, "expression") ??
-      stringAt(license as JsonObject, "name")
+        stringAt(license as JsonObject, "name"),
     );
   }
-  return null;
+  return textValues(values);
+}
+function textValues(values: readonly (string | null | undefined)[]): string[] {
+  return [
+    ...new Set(
+      values.flatMap((value) => {
+        const trimmed = value?.trim();
+        return trimmed ? [trimmed] : [];
+      }),
+    ),
+  ];
 }
 function xmlPath(elements: readonly { name: string }[]): string {
   return elements.map((element) => element.name).join(".");

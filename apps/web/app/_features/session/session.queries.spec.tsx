@@ -12,6 +12,7 @@ import {
   sessionMenuQueryOptions,
   sessionPermissionsQueryOptions,
 } from "./session.queries";
+import { ApiClientError } from "../../_lib/http/api-client";
 import { Providers } from "../../_providers/providers";
 
 const session = {
@@ -150,13 +151,20 @@ describe("session query option factories", () => {
     [sessionMenuQueryOptions, sessionKeys.menu],
   ] as const)("retains the session cache and retry policy", (factory, key) => {
     const options = factory(false);
+    const retry = options.retry;
 
     expect(options).toMatchObject({
       queryKey: key,
       enabled: false,
-      retry: false,
       staleTime: SESSION_STALE_TIME_MS,
     });
+    expect(retry).toBeTypeOf("function");
+    if (typeof retry !== "function") throw new Error("missing retry policy");
+    expect(retry(0, new ApiClientError("api", "provider unavailable", 503))).toBe(
+      true,
+    );
+    expect(retry(0, new ApiClientError("api", "forbidden", 403))).toBe(false);
+    expect(retry(3, new ApiClientError("network", "network"))).toBe(false);
   });
 
   it("keeps independent clients from sharing cached session identity", async () => {

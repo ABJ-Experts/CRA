@@ -82,6 +82,30 @@ const dependencyTreeChildren = Object.freeze(
       query.cursor ?? null,
     ] as const),
 );
+const qualityReports = Object.freeze(["sboms", "quality-reports"] as const);
+const qualityReport = Object.freeze((sourceId: string) =>
+  Object.freeze([...qualityReports, sourceId] as const),
+);
+const qualityFindings = Object.freeze(
+  (
+    sourceId: string,
+    query: Readonly<{
+      limit?: number;
+      cursor?: string;
+      severity?: string;
+      kind?: string;
+    }>,
+  ) =>
+    Object.freeze([
+      ...qualityReports,
+      sourceId,
+      "findings",
+      query.limit ?? 50,
+      query.cursor ?? null,
+      query.severity ?? null,
+      query.kind ?? null,
+    ] as const),
+);
 
 export const sbomKeys = Object.freeze({
   all,
@@ -98,4 +122,7 @@ export const sbomKeys = Object.freeze({
   componentSearches,
   componentSearch,
   dependencyTreeChildren,
+  qualityReports,
+  qualityReport,
+  qualityFindings,
 });

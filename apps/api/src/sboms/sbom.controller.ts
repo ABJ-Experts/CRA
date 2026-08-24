@@ -8,6 +8,7 @@ import {
   HttpStatus,
   NotFoundException,
   Param,
+  Patch,
   Post,
   Query,
   Req,
@@ -26,6 +27,11 @@ import {
   sbomDocumentListQuerySchema,
   sbomDocumentListResponseSchema,
   sbomDocumentParamsSchema,
+  sbomQualityFindingsQuerySchema,
+  sbomQualityFindingsResponseSchema,
+  sbomQualityReportResponseSchema,
+  sbomQualitySettingsResponseSchema,
+  sbomSourceQualityParamsSchema,
   replaySbomJobInputSchema,
   sbomJobParamsSchema,
   sbomJobResponseSchema,
@@ -36,6 +42,7 @@ import {
   sbomSourceParamsSchema,
   sbomValidationReportResponseSchema,
   sbomUploadInitializationResponseSchema,
+  updateSbomQualitySettingsInputSchema,
   type CiCompleteSbomUploadInput,
   type CiInitializeSbomUploadInput,
   type CompleteSbomUploadInput,
@@ -49,6 +56,9 @@ import {
   type SbomDependencyTreeQuery,
   type SbomDocumentListQuery,
   type SbomDocumentParams,
+  type SbomQualityFindingsQuery,
+  type SbomSourceQualityParams,
+  type UpdateSbomQualitySettingsInput,
 } from "@repo/contracts/sboms";
 
 import {
@@ -300,6 +310,74 @@ export class SbomSourcesController {
       organizationId: organizationId(user),
       actorId: user.id,
       sourceId: params.sourceId,
+    });
+  }
+
+  @RequirePermissions("can_view_sboms")
+  @Get(":sourceId/quality-report")
+  @ZodResponse(sbomQualityReportResponseSchema)
+  async qualityReport(
+    @Param(zodParams(sbomSourceQualityParamsSchema))
+    params: SbomSourceQualityParams,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.sboms.qualityReport({
+      organizationId: organizationId(user),
+      actorId: user.id,
+      sourceId: params.sourceId,
+    });
+  }
+
+  @RequirePermissions("can_view_sboms")
+  @Get(":sourceId/quality-findings")
+  @ZodResponse(sbomQualityFindingsResponseSchema)
+  async qualityFindings(
+    @Param(zodParams(sbomSourceQualityParamsSchema))
+    params: SbomSourceQualityParams,
+    @Query(zodQuery(sbomQualityFindingsQuerySchema))
+    query: SbomQualityFindingsQuery,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.sboms.qualityFindings({
+      organizationId: organizationId(user),
+      actorId: user.id,
+      sourceId: params.sourceId,
+      limit: query.limit,
+      cursor: query.cursor,
+      severity: query.severity,
+      kind: query.kind,
+    });
+  }
+}
+
+@Controller("sbom-quality-settings")
+export class SbomQualitySettingsController {
+  constructor(private readonly sboms: SbomService) {}
+
+  @RequireRole("owner")
+  @Get()
+  @ZodResponse(sbomQualitySettingsResponseSchema)
+  async settings(@CurrentUser() user: RequestUser) {
+    return this.sboms.qualitySettings({
+      organizationId: organizationId(user),
+      actorId: user.id,
+    });
+  }
+
+  @RequireRole("owner")
+  @Patch()
+  @ZodResponse(sbomQualitySettingsResponseSchema)
+  async updateSettings(
+    @Body(zodBody(updateSbomQualitySettingsInputSchema))
+    input: UpdateSbomQualitySettingsInput,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.sboms.updateQualitySettings({
+      organizationId: organizationId(user),
+      actorId: user.id,
+      expectedVersion: input.expectedVersion,
+      bsiProfileEnabled: input.bsiProfileEnabled,
+      idempotencyKey: input.idempotencyKey,
     });
   }
 }

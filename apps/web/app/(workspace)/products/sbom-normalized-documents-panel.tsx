@@ -86,12 +86,7 @@ export function SbomNormalizedDocumentsPanel({
       const appended = documents.data.documents.filter(
         (document) => !known.has(document.id),
       );
-      return appended.length === 0
-        ? current
-        : [
-        ...current,
-        ...appended,
-      ];
+      return appended.length === 0 ? current : [...current, ...appended];
     });
   }, [cursor, documents.data]);
 
@@ -142,7 +137,10 @@ export function SbomNormalizedDocumentsPanel({
       ) : (
         <ul aria-label="Normalized SBOM documents" className="mt-3 grid gap-2">
           {rows.map((document) => (
-            <li key={document.id} className="rounded-lg border border-border bg-canvas p-3">
+            <li
+              key={document.id}
+              className="rounded-lg border border-border bg-canvas p-3"
+            >
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div className="min-w-0">
                   <p className="text-caption-1-semibold text-fg">
@@ -150,7 +148,8 @@ export function SbomNormalizedDocumentsPanel({
                     {document.specificationVersion}
                   </p>
                   <p className="mt-1 text-caption-2-regular text-fg-muted">
-                    {document.componentCount} components · depth {document.maximumDepth}
+                    {document.componentCount} components · depth{" "}
+                    {document.maximumDepth}
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -167,13 +166,16 @@ export function SbomNormalizedDocumentsPanel({
                 </div>
               </div>
               {document.state === "failed" && document.error ? (
-                <p role="alert" className="mt-2 text-caption-2-regular text-danger">
+                <p
+                  role="alert"
+                  className="mt-2 text-caption-2-regular text-danger"
+                >
                   {document.error.retryable ? "Retryable: " : ""}
                   {document.error.message}
                 </p>
               ) : null}
               <Link
-                href={`/products/${productId}/sboms/${document.id}`}
+                href={`/products/${productId}/sboms/${document.id}?sourceId=${encodeURIComponent(document.sourceId)}`}
                 className="mt-3 inline-flex text-caption-1-semibold text-active-600 underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-active-500"
               >
                 Open normalized graph

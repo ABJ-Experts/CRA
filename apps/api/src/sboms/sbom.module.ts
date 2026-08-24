@@ -12,6 +12,10 @@ import {
   SBOM_NORMALIZATION_REPOSITORY,
   SbomNormalizationUseCases,
 } from "./application/sbom-normalization-use-cases";
+import {
+  SBOM_QUALITY_REPOSITORY,
+  SbomQualityUseCases,
+} from "./application/sbom-quality-use-cases";
 import { SupabaseSbomRepository } from "./infrastructure/supabase-sbom.repository";
 import { SupabaseSbomStorageAdapter } from "./infrastructure/supabase-sbom-storage.adapter";
 import { SbomCiCredentialsController } from "./sbom-ci-credentials.controller";
@@ -21,12 +25,14 @@ import {
   SbomCiController,
   SbomDocumentsController,
   SbomJobsController,
+  SbomQualitySettingsController,
   SbomSourcesController,
   SbomUploadsController,
 } from "./sbom.controller";
 import { SbomService } from "./sbom.service";
 import { validateSbomInWorker } from "./validation/sbom-validation-worker";
 import { SbomIngestWorker } from "./worker/sbom-ingest-worker";
+import { SbomQualityWorker } from "./worker/sbom-quality-worker";
 
 @Module({
   imports: [SupabaseModule],
@@ -36,6 +42,7 @@ import { SbomIngestWorker } from "./worker/sbom-ingest-worker";
     SbomUploadsController,
     SbomJobsController,
     SbomSourcesController,
+    SbomQualitySettingsController,
     SbomCiController,
     SbomCiCredentialsController,
   ],
@@ -47,6 +54,7 @@ import { SbomIngestWorker } from "./worker/sbom-ingest-worker";
       provide: SBOM_NORMALIZATION_REPOSITORY,
       useExisting: SupabaseSbomRepository,
     },
+    { provide: SBOM_QUALITY_REPOSITORY, useExisting: SupabaseSbomRepository },
     { provide: SBOM_CI_CREDENTIALS, useExisting: SupabaseSbomRepository },
     {
       provide: SbomIntakeUseCases,
@@ -61,6 +69,12 @@ import { SbomIngestWorker } from "./worker/sbom-ingest-worker";
       inject: [SBOM_NORMALIZATION_REPOSITORY],
       useFactory: (repository: SupabaseSbomRepository) =>
         new SbomNormalizationUseCases(repository),
+    },
+    {
+      provide: SbomQualityUseCases,
+      inject: [SBOM_QUALITY_REPOSITORY],
+      useFactory: (repository: SupabaseSbomRepository) =>
+        new SbomQualityUseCases(repository),
     },
     SbomService,
     SbomCiCredentialGuard,
@@ -90,7 +104,20 @@ import { SbomIngestWorker } from "./worker/sbom-ingest-worker";
           ),
         }),
     },
+    {
+      provide: SbomQualityWorker,
+      inject: [SupabaseSbomRepository, ConfigService],
+      useFactory: (queue: SupabaseSbomRepository, config: ConfigService) =>
+        new SbomQualityWorker({
+          workerId: randomUUID(),
+          leaseSeconds: 60,
+          queue,
+          pageSize: config.get<number>("SBOM_QUALITY_PAGE_SIZE") ?? 1_000,
+          maximumComponents:
+            config.get<number>("SBOM_NORMALIZATION_MAX_COMPONENTS") ?? 50_000,
+        }),
+    },
   ],
-  exports: [SbomIngestWorker],
+  exports: [SbomIngestWorker, SbomQualityWorker],
 })
 export class SbomModule {}

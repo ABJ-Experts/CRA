@@ -13,6 +13,11 @@ import {
   sbomDocumentDetailResponseSchema,
   sbomDocumentListResponseSchema,
   sbomJobSchema,
+  sbomQualityDimensionSchema,
+  sbomQualityFindingsResponseSchema,
+  sbomQualityInputsSchema,
+  sbomQualityReportResponseSchema,
+  sbomQualitySettingsResponseSchema,
   sbomSourceHistoryResponseSchema,
   sbomSourceSchema,
   sbomValidationReportResponseSchema,
@@ -30,10 +35,18 @@ import type {
   SbomSource,
 } from "../application/sbom-intake-use-cases";
 import type { SbomNormalizationRepository } from "../application/sbom-normalization-use-cases";
+import type { SbomQualityRepository } from "../application/sbom-quality-use-cases";
 import type {
   SbomIngestClaim,
   SbomIngestQueue,
 } from "../worker/sbom-ingest-worker";
+import type {
+  SbomQualityClaim,
+  SbomQualityFactPage,
+  SbomQualityFindingDraft,
+  SbomQualityQueue,
+  SbomQualityReportDraft,
+} from "../worker/sbom-quality-worker";
 import type { SbomNormalizationBatch } from "../normalization/sbom-normalizer";
 
 type ProviderRow = Readonly<Record<string, unknown>>;
@@ -87,6 +100,67 @@ const credentialRowSchema = z
     status: z.string().optional(),
   })
   .strict();
+const qualityClaimSchema = z
+  .object({
+    id: z.uuid(),
+    sourceId: z.uuid(),
+    releaseId: z.uuid(),
+    documentId: z.uuid(),
+    configurationVersion: z.number().int().nonnegative().optional(),
+    configVersion: z.number().int().nonnegative().optional(),
+    bsiProfile: z
+      .object({
+        enabled: z.boolean(),
+        rulesetVersion: z.string().min(1),
+      })
+      .partial()
+      .optional(),
+    profile: z
+      .object({
+        enabled: z.boolean(),
+        rulesetVersion: z.string().min(1),
+      })
+      .partial()
+      .optional(),
+    baseline: z.unknown().optional(),
+  })
+  .passthrough();
+const qualityFactPageSchema = z
+  .object({
+    components: z.array(
+      z
+        .object({
+          canonicalPurl: z.string().nullable(),
+          hashes: z.array(
+            z.object({ algorithm: z.string(), value: z.string() }).strict(),
+          ),
+          supplier: z.string().nullable().optional(),
+          supplierValues: z.array(z.string()).optional(),
+          licenseExpression: z.string().nullable().optional(),
+          licenseValues: z.array(z.string()).optional(),
+          depth: z.number().int().nonnegative(),
+        })
+        .strict(),
+    ),
+    primaryComponent: z
+      .object({
+        id: z.uuid(),
+        directDependencyCount: z.number().int().nonnegative(),
+      })
+      .strict()
+      .nullable(),
+    maximumDepth: z.number().int().nonnegative(),
+    nextCursor: z.string().min(1).nullable(),
+  })
+  .strict();
+const qualityResultSchema = z
+  .object({
+    formulaVersion: z.literal("sbom-quality.v1"),
+    inputs: sbomQualityInputsSchema,
+    dimensions: z.array(sbomQualityDimensionSchema),
+    totalScore: z.number().min(0).max(100),
+  })
+  .passthrough();
 
 /** Service-role adapter: every access starts with organizationId and parses provider JSON. */
 @Injectable()
@@ -94,8 +168,10 @@ export class SupabaseSbomRepository
   implements
     SbomIntakeRepository,
     SbomNormalizationRepository,
+    SbomQualityRepository,
     SbomCiCredentialPort,
-    SbomIngestQueue
+    SbomIngestQueue,
+    SbomQualityQueue
 {
   constructor(private readonly supabase: SupabaseService) {}
 
@@ -498,6 +574,81 @@ export class SupabaseSbomRepository
     return sbomDependencyTreeResponseSchema.parse(row.result);
   }
 
+  async getQualityReport(
+    organizationId: string,
+    input: Parameters<SbomQualityRepository["getQualityReport"]>[1],
+  ): Promise<Awaited<ReturnType<SbomQualityRepository["getQualityReport"]>>> {
+    const row = await this.one("get_sbom_quality_report", {
+      p_organization_id: organizationId,
+      p_actor_user_id: input.actorId,
+      p_source_id: input.sourceId,
+    });
+    if (this.outcome(row, new Set(["found", "not_found"])) !== "found")
+      return null;
+    return sbomQualityReportResponseSchema.parse(row.result);
+  }
+
+  async listQualityFindings(
+    organizationId: string,
+    input: Parameters<SbomQualityRepository["listQualityFindings"]>[1],
+  ): Promise<
+    Awaited<ReturnType<SbomQualityRepository["listQualityFindings"]>>
+  > {
+    const row = await this.one("list_sbom_quality_findings", {
+      p_organization_id: organizationId,
+      p_actor_user_id: input.actorId,
+      p_source_id: input.sourceId,
+      p_limit: input.limit,
+      p_cursor: input.cursor ?? null,
+      p_severity: input.severity ?? null,
+      p_kind: input.kind ?? null,
+    });
+    if (this.outcome(row, new Set(["found", "not_found"])) !== "found")
+      return null;
+    return sbomQualityFindingsResponseSchema.parse(row.result);
+  }
+
+  async getQualitySettings(
+    organizationId: string,
+    input: Parameters<SbomQualityRepository["getQualitySettings"]>[1],
+  ): Promise<Awaited<ReturnType<SbomQualityRepository["getQualitySettings"]>>> {
+    const row = await this.one("get_sbom_quality_settings", {
+      p_organization_id: organizationId,
+      p_actor_user_id: input.actorId,
+    });
+    if (this.outcome(row, new Set(["found", "not_found"])) !== "found")
+      return null;
+    return sbomQualitySettingsResponseSchema.parse(row.result);
+  }
+
+  async updateQualitySettings(
+    organizationId: string,
+    input: Parameters<SbomQualityRepository["updateQualitySettings"]>[1],
+  ): Promise<
+    Awaited<ReturnType<SbomQualityRepository["updateQualitySettings"]>>
+  > {
+    const row = await this.one("update_sbom_quality_settings_atomic", {
+      p_organization_id: organizationId,
+      p_actor_user_id: input.actorId,
+      p_expected_version: input.expectedVersion,
+      p_bsi_profile_enabled: input.bsiProfileEnabled,
+      p_idempotency_key: input.idempotencyKey ?? null,
+    });
+    const outcome = this.outcome(
+      row,
+      new Set<"updated" | "not_found" | "conflict">([
+        "updated",
+        "not_found",
+        "conflict",
+      ]),
+    );
+    if (outcome !== "updated") return { outcome };
+    return {
+      outcome,
+      response: sbomQualitySettingsResponseSchema.parse(row.result),
+    };
+  }
+
   async dueOrganizationIds(): Promise<readonly string[]> {
     const rows = await this.rows("list_due_sbom_ingest_organizations", {
       p_limit: 500,
@@ -507,6 +658,81 @@ export class SupabaseSbomRepository
         typeof row.organization_id === "string" ? [row.organization_id] : [],
       ),
     );
+  }
+
+  async dueQualityOrganizationIds(): Promise<readonly string[]> {
+    const rows = await this.rows("list_due_sbom_quality_organizations", {
+      p_limit: 500,
+    });
+    return Object.freeze(
+      rows.flatMap((row) =>
+        typeof row.organization_id === "string" ? [row.organization_id] : [],
+      ),
+    );
+  }
+
+  async claimQualityReport(
+    organizationId: string,
+    input: Parameters<SbomQualityQueue["claimQualityReport"]>[1],
+  ): Promise<SbomQualityClaim> {
+    const row = await this.one("claim_sbom_quality_report", {
+      p_organization_id: organizationId,
+      p_worker_id: input.workerId,
+      p_lease_seconds: input.leaseSeconds,
+    });
+    const outcome = this.outcome(
+      row,
+      new Set(["claimed", "empty", "invalid_request"]),
+    );
+    if (outcome !== "claimed") return { outcome: "none_available" };
+    return qualityClaim(organizationId, row.work);
+  }
+
+  async readQualityFactPage(
+    organizationId: string,
+    input: Parameters<SbomQualityQueue["readQualityFactPage"]>[1],
+  ): Promise<SbomQualityFactPage> {
+    const row = await this.one("list_sbom_quality_component_facts", {
+      p_organization_id: organizationId,
+      p_report_id: input.reportId,
+      p_document_id: input.documentId,
+      p_limit: input.limit,
+      p_cursor: input.cursor ?? null,
+    });
+    if (this.outcome(row, new Set(["found"])) !== "found")
+      throw new SbomRepositoryError("unavailable");
+    return qualityFactPage(row.result);
+  }
+
+  async persistQualityReport(
+    organizationId: string,
+    input: Parameters<SbomQualityQueue["persistQualityReport"]>[1],
+  ): Promise<void> {
+    const row = await this.one("persist_sbom_quality_report_atomic", {
+      p_organization_id: organizationId,
+      p_report_id: input.reportId,
+      p_worker_id: input.workerId,
+      p_report: persistableQualityReport(input.report),
+      p_findings: input.findings.map(persistableQualityFinding),
+      p_complete: true,
+    });
+    if (this.outcome(row, new Set(["completed"])) !== "completed")
+      throw new SbomRepositoryError("unavailable");
+  }
+
+  async failQualityReport(
+    organizationId: string,
+    input: Parameters<SbomQualityQueue["failQualityReport"]>[1],
+  ): Promise<void> {
+    const row = await this.one("fail_sbom_quality_report", {
+      p_organization_id: organizationId,
+      p_report_id: input.reportId,
+      p_worker_id: input.workerId,
+      p_error_code: input.errorCode,
+      p_error_message: input.message,
+    });
+    if (this.outcome(row, new Set(["failed"])) !== "failed")
+      throw new SbomRepositoryError("unavailable");
   }
 
   async claim(
@@ -923,7 +1149,9 @@ function batchComponents(
     ecosystem: component.ecosystem,
     scope: component.scope,
     supplier: component.supplier,
+    supplier_values: component.supplierValues,
     license_expression: component.licenseExpression,
+    license_values: component.licenseValues,
     hashes: component.hashes,
   }));
 }
@@ -939,6 +1167,103 @@ function batchEdges(
     source_path: edge.source.path,
     source_line: edge.source.line,
   }));
+}
+
+function qualityClaim(
+  organizationId: string,
+  value: unknown,
+): Extract<SbomQualityClaim, { outcome: "claimed" }> {
+  const row = qualityClaimSchema.parse(value);
+  const profile = row.bsiProfile ?? row.profile;
+  return {
+    outcome: "claimed",
+    organizationId,
+    reportId: row.id,
+    sourceId: row.sourceId,
+    releaseId: row.releaseId,
+    documentId: row.documentId,
+    profileEnabled: profile?.enabled ?? false,
+    rulesetVersion: profile?.rulesetVersion ?? "bsi-tr-03183-2.v2.0.0",
+    configurationVersion: row.configurationVersion ?? row.configVersion ?? 0,
+    baseline: qualityBaseline(row.baseline),
+  };
+}
+
+function qualityBaseline(
+  value: unknown,
+): Extract<SbomQualityClaim, { outcome: "claimed" }>["baseline"] {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return { status: "no_baseline" };
+  }
+  const row = value as Record<string, unknown>;
+  if (row.status === "first_document") return { status: "first_document" };
+  if (row.status !== "available") return { status: "no_baseline" };
+  const quality = qualityResultSchema.parse(row.quality);
+  return {
+    status: "available",
+    reportId: string(row.reportId),
+    sourceId: string(row.sourceId),
+    totalScore: number(row.totalScore, 0),
+    completedAt: string(row.completedAt),
+    quality,
+  };
+}
+
+function qualityFactPage(value: unknown): SbomQualityFactPage {
+  return qualityFactPageSchema.parse(value);
+}
+
+function persistableQualityReport(
+  report: SbomQualityReportDraft,
+): Record<string, unknown> {
+  return {
+    assessmentStatus: report.assessmentStatus,
+    inputs: report.quality.inputs,
+    dimensions: report.quality.dimensions,
+    weights: Object.fromEntries(
+      report.quality.dimensions.map((dimension) => [
+        dimension.id,
+        dimension.weight,
+      ]),
+    ),
+    totalScore: report.quality.totalScore,
+    bsiProfile: report.bsiProfile,
+    baseline: report.baseline,
+    regression: {
+      status: report.regression.status,
+      totalScoreDelta: report.regression.totalScoreDelta,
+      changedDimensions: report.regression.changedDimensions,
+    },
+  };
+}
+
+function persistableQualityFinding(
+  finding: SbomQualityFindingDraft,
+): Record<string, unknown> {
+  return {
+    component_id: finding.componentId,
+    finding_key: [
+      finding.kind,
+      finding.code,
+      finding.dimension ?? "document",
+      finding.componentId ?? "document",
+    ].join(":"),
+    category:
+      finding.kind === "coverage_gap"
+        ? "coverage"
+        : finding.kind === "bsi_rule"
+          ? "profile"
+          : "regression",
+    code: finding.code,
+    rule_id: finding.ruleId,
+    severity: finding.severity,
+    dimension: finding.dimension,
+    source_path: finding.sourcePath,
+    source_offset: null,
+    expected_condition: finding.expected,
+    actual_condition: finding.actual,
+    remediation: finding.remediation,
+  };
 }
 
 export class SbomRepositoryError extends Error {

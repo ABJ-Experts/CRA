@@ -52,11 +52,15 @@ describe("SbomNormalizedDocumentsPanel", () => {
       />,
     );
 
-    expect(screen.getByRole("link", { name: "Open normalized graph" })).toHaveAttribute(
+    expect(
+      screen.getByRole("link", { name: "Open normalized graph" }),
+    ).toHaveAttribute(
       "href",
-      `/products/${PRODUCT_ID}/sboms/${document.id}`,
+      `/products/${PRODUCT_ID}/sboms/${document.id}?sourceId=${document.sourceId}`,
     );
-    fireEvent.click(screen.getByRole("button", { name: "Load more documents" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Load more documents" }),
+    );
     expect(query).toHaveBeenLastCalledWith(
       PRODUCT_ID,
       RELEASE_ID,
