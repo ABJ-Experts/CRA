@@ -8,6 +8,14 @@ import {
   sbomCiCredentialListResponseSchema,
   sbomCiCredentialParamsSchema,
   sbomCiCredentialResponseSchema,
+  sbomComponentSearchQuerySchema,
+  sbomComponentSearchResponseSchema,
+  sbomDependencyTreeQuerySchema,
+  sbomDependencyTreeResponseSchema,
+  sbomDocumentDetailResponseSchema,
+  sbomDocumentListQuerySchema,
+  sbomDocumentListResponseSchema,
+  sbomDocumentParamsSchema,
   sbomJobParamsSchema,
   sbomJobResponseSchema,
   sbomOriginalDownloadResponseSchema,
@@ -23,6 +31,9 @@ import {
   type ReplaySbomJobInput,
   type RevokeSbomCiCredentialInput,
   type SbomSourceHistoryQuery,
+  type SbomComponentSearchQuery,
+  type SbomDependencyTreeQuery,
+  type SbomDocumentListQuery,
 } from "@repo/contracts/sboms";
 
 import { authenticatedRequestJson } from "../../_lib/http/authenticated-request";
@@ -91,6 +102,45 @@ function credentialPath(credentialId: string, suffix = ""): `/${string}` {
     throw invalidIdentifier("The CI credential identifier is invalid.");
   }
   return `/api/v1/organizations/current/sbom-ci-credentials/${parsed.data.credentialId}${suffix}`;
+}
+
+function documentPath(documentId: string, suffix = ""): `/${string}` {
+  const parsed = sbomDocumentParamsSchema.safeParse({ documentId });
+  if (!parsed.success) {
+    throw invalidIdentifier("The SBOM document identifier is invalid.");
+  }
+  return `/api/v1/sbom-documents/${parsed.data.documentId}${suffix}`;
+}
+
+function documentListPath(
+  productId: string,
+  releaseId: string,
+  query: Readonly<Partial<SbomDocumentListQuery>>,
+): `/${string}` {
+  const parsed = sbomUploadParamsSchema.safeParse({
+    productId,
+    releaseId,
+    sourceId: "00000000-0000-4000-8000-000000000000",
+  });
+  if (!parsed.success) {
+    throw invalidIdentifier("The release identifier is invalid.");
+  }
+  const parsedQuery = apiClient.parseInput(sbomDocumentListQuerySchema, query);
+  const search = new URLSearchParams({ limit: String(parsedQuery.limit) });
+  if (parsedQuery.cursor) search.set("cursor", parsedQuery.cursor);
+  return `/api/v1/products/${parsed.data.productId}/releases/${parsed.data.releaseId}/sbom-documents?${search.toString()}`;
+}
+
+function documentQueryPath(
+  documentId: string,
+  suffix: "/components" | "/dependency-tree",
+  query: Readonly<Record<string, string | number | undefined>>,
+): `/${string}` {
+  const search = new URLSearchParams();
+  for (const [key, value] of Object.entries(query)) {
+    if (value !== undefined) search.set(key, String(value));
+  }
+  return `${documentPath(documentId, suffix)}?${search.toString()}`;
 }
 
 /**
@@ -165,6 +215,53 @@ export class SbomsApi {
     return authenticatedRequestJson<typeof sbomValidationReportResponseSchema>({
       path: sourcePath(sourceId, "/validation-report"),
       schema: sbomValidationReportResponseSchema,
+      signal,
+    });
+  }
+
+  listDocumentsForRelease(
+    productId: string,
+    releaseId: string,
+    query: Readonly<Partial<SbomDocumentListQuery>> = {},
+    signal?: AbortSignal,
+  ) {
+    return authenticatedRequestJson<typeof sbomDocumentListResponseSchema>({
+      path: documentListPath(productId, releaseId, query),
+      schema: sbomDocumentListResponseSchema,
+      signal,
+    });
+  }
+
+  getDocument(documentId: string, signal?: AbortSignal) {
+    return authenticatedRequestJson<typeof sbomDocumentDetailResponseSchema>({
+      path: documentPath(documentId),
+      schema: sbomDocumentDetailResponseSchema,
+      signal,
+    });
+  }
+
+  searchComponents(
+    documentId: string,
+    query: Readonly<Partial<SbomComponentSearchQuery>> = {},
+    signal?: AbortSignal,
+  ) {
+    const parsedQuery = apiClient.parseInput(sbomComponentSearchQuerySchema, query);
+    return authenticatedRequestJson<typeof sbomComponentSearchResponseSchema>({
+      path: documentQueryPath(documentId, "/components", parsedQuery),
+      schema: sbomComponentSearchResponseSchema,
+      signal,
+    });
+  }
+
+  listDependencyTreeChildren(
+    documentId: string,
+    query: Readonly<Partial<SbomDependencyTreeQuery>> = {},
+    signal?: AbortSignal,
+  ) {
+    const parsedQuery = apiClient.parseInput(sbomDependencyTreeQuerySchema, query);
+    return authenticatedRequestJson<typeof sbomDependencyTreeResponseSchema>({
+      path: documentQueryPath(documentId, "/dependency-tree", parsedQuery),
+      schema: sbomDependencyTreeResponseSchema,
       signal,
     });
   }

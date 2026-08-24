@@ -172,6 +172,17 @@ export const envSchema = z.object({
     2_147_483_647,
     "must not exceed the artifact bucket file limit",
   ),
+  /** Streaming worker ceilings: deployment may tighten, never exceed intake. */
+  SBOM_NORMALIZATION_MAX_BYTES: boundedInt(
+    100 * 1024 * 1024,
+    100 * 1024 * 1024,
+    "must not exceed the immutable SBOM upload limit",
+  ),
+  SBOM_NORMALIZATION_MAX_COMPONENTS: boundedInt(
+    50_000,
+    50_000,
+    "must not exceed 50000 components",
+  ),
   /**
    * With no scanner adapter configured, decoded raster-only inspection remains
    * available in non-strict environments and is recorded in the audit trail.

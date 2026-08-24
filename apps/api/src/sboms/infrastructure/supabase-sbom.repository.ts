@@ -8,6 +8,10 @@ import {
 
 import { Injectable } from "@nestjs/common";
 import {
+  sbomComponentSearchResponseSchema,
+  sbomDependencyTreeResponseSchema,
+  sbomDocumentDetailResponseSchema,
+  sbomDocumentListResponseSchema,
   sbomJobSchema,
   sbomSourceHistoryResponseSchema,
   sbomSourceSchema,
@@ -25,10 +29,12 @@ import type {
   SbomJob,
   SbomSource,
 } from "../application/sbom-intake-use-cases";
+import type { SbomNormalizationRepository } from "../application/sbom-normalization-use-cases";
 import type {
   SbomIngestClaim,
   SbomIngestQueue,
 } from "../worker/sbom-ingest-worker";
+import type { SbomNormalizationBatch } from "../normalization/sbom-normalizer";
 
 type ProviderRow = Readonly<Record<string, unknown>>;
 type ProviderResult = Readonly<{ data: unknown; error: unknown }>;
@@ -85,7 +91,11 @@ const credentialRowSchema = z
 /** Service-role adapter: every access starts with organizationId and parses provider JSON. */
 @Injectable()
 export class SupabaseSbomRepository
-  implements SbomIntakeRepository, SbomCiCredentialPort, SbomIngestQueue
+  implements
+    SbomIntakeRepository,
+    SbomNormalizationRepository,
+    SbomCiCredentialPort,
+    SbomIngestQueue
 {
   constructor(private readonly supabase: SupabaseService) {}
 
@@ -416,6 +426,78 @@ export class SupabaseSbomRepository
     };
   }
 
+  async listDocuments(
+    organizationId: string,
+    input: Parameters<SbomNormalizationRepository["listDocuments"]>[1],
+  ): Promise<
+    Awaited<ReturnType<SbomNormalizationRepository["listDocuments"]>>
+  > {
+    const row = await this.one("list_sbom_documents_for_release", {
+      p_organization_id: organizationId,
+      p_actor_user_id: input.actorId,
+      p_product_id: input.productId,
+      p_release_id: input.releaseId,
+      p_limit: input.limit,
+      p_cursor: input.cursor ?? null,
+    });
+    if (this.outcome(row, new Set(["found", "not_found"])) !== "found")
+      return null;
+    return sbomDocumentListResponseSchema.parse(row.result);
+  }
+
+  async getDocument(
+    organizationId: string,
+    input: Parameters<SbomNormalizationRepository["getDocument"]>[1],
+  ): Promise<Awaited<ReturnType<SbomNormalizationRepository["getDocument"]>>> {
+    const row = await this.one("get_sbom_document", {
+      p_organization_id: organizationId,
+      p_actor_user_id: input.actorId,
+      p_document_id: input.documentId,
+    });
+    if (this.outcome(row, new Set(["found", "not_found"])) !== "found")
+      return null;
+    return sbomDocumentDetailResponseSchema.parse(row.result);
+  }
+
+  async searchComponents(
+    organizationId: string,
+    input: Parameters<SbomNormalizationRepository["searchComponents"]>[1],
+  ): Promise<
+    Awaited<ReturnType<SbomNormalizationRepository["searchComponents"]>>
+  > {
+    const row = await this.one("search_sbom_components", {
+      p_organization_id: organizationId,
+      p_actor_user_id: input.actorId,
+      p_document_id: input.documentId,
+      p_q: input.q ?? null,
+      p_limit: input.limit,
+      p_cursor: input.cursor ?? null,
+    });
+    if (this.outcome(row, new Set(["found", "not_found"])) !== "found")
+      return null;
+    return sbomComponentSearchResponseSchema.parse(row.result);
+  }
+
+  async listDependencyTree(
+    organizationId: string,
+    input: Parameters<SbomNormalizationRepository["listDependencyTree"]>[1],
+  ): Promise<
+    Awaited<ReturnType<SbomNormalizationRepository["listDependencyTree"]>>
+  > {
+    const row = await this.one("list_sbom_dependency_tree", {
+      p_organization_id: organizationId,
+      p_actor_user_id: input.actorId,
+      p_document_id: input.documentId,
+      p_parent_component_id: input.parentComponentId ?? null,
+      p_q: input.q ?? null,
+      p_limit: input.limit,
+      p_cursor: input.cursor ?? null,
+    });
+    if (this.outcome(row, new Set(["found", "not_found"])) !== "found")
+      return null;
+    return sbomDependencyTreeResponseSchema.parse(row.result);
+  }
+
   async dueOrganizationIds(): Promise<readonly string[]> {
     const rows = await this.rows("list_due_sbom_ingest_organizations", {
       p_limit: 500,
@@ -464,7 +546,7 @@ export class SupabaseSbomRepository
     organizationId: string,
     input: Parameters<SbomIngestQueue["checkpoint"]>[1],
   ): Promise<void> {
-    await this.one("checkpoint_sbom_ingest_job", {
+    const row = await this.one("checkpoint_sbom_ingest_job", {
       p_organization_id: organizationId,
       p_job_id: input.jobId,
       p_worker_id: input.workerId,
@@ -472,6 +554,13 @@ export class SupabaseSbomRepository
       p_progress_percent: input.percent,
       p_lease_seconds: 60,
     });
+    if (
+      this.outcome(
+        row,
+        new Set(["checkpointed", "invalid_request", "not_found"]),
+      ) !== "checkpointed"
+    )
+      throw new SbomRepositoryError("unavailable");
   }
   async completeWithValidation(
     organizationId: string,
@@ -489,6 +578,92 @@ export class SupabaseSbomRepository
     );
     if (outcome !== "completed") throw new SbomRepositoryError("unavailable");
   }
+  async beginNormalization(
+    organizationId: string,
+    input: Parameters<NonNullable<SbomIngestQueue["beginNormalization"]>>[1],
+  ): Promise<
+    Readonly<{
+      outcome: "ready" | "complete" | "deferred" | "failed";
+      documentId?: string;
+    }>
+  > {
+    const row = await this.one("begin_sbom_document_normalization_atomic", {
+      p_organization_id: organizationId,
+      p_job_id: input.jobId,
+      p_worker_id: input.workerId,
+      p_parser_name: "CRA streaming SBOM parser",
+      p_parser_version: input.report.validator?.version ?? "unknown",
+      p_normalizer_name: "CRA SBOM normalizer",
+      p_normalizer_version: "m3-03.1",
+      p_format: input.format,
+      p_serialization: input.serialization,
+      p_specification_version: input.specificationVersion,
+      p_validation_report: input.report,
+    });
+    const outcome = this.outcome(
+      row,
+      new Set([
+        "created",
+        "resumed",
+        "replayed",
+        "in_progress",
+        "failed",
+        "invalid_state",
+        "not_found",
+      ]),
+    );
+    if (outcome === "failed") return { outcome: "failed" };
+    if (outcome === "in_progress") {
+      const document = this.record(row.document);
+      return { outcome: "deferred", documentId: string(document.id) };
+    }
+    if (
+      outcome !== "created" &&
+      outcome !== "resumed" &&
+      outcome !== "replayed"
+    )
+      throw new SbomRepositoryError("unavailable");
+    const document = this.record(row.document);
+    return {
+      outcome:
+        outcome === "replayed" && string(document.state) === "completed"
+          ? "complete"
+          : "ready",
+      documentId: string(document.id),
+    };
+  }
+  async persistNormalizationBatch(
+    organizationId: string,
+    input: Parameters<
+      NonNullable<SbomIngestQueue["persistNormalizationBatch"]>
+    >[1],
+  ): Promise<void> {
+    const row = await this.one("persist_sbom_normalization_batch_atomic", {
+      p_organization_id: organizationId,
+      p_job_id: input.jobId,
+      p_worker_id: input.workerId,
+      p_document_id: input.documentId,
+      p_components: batchComponents(input.batch),
+      p_edges: batchEdges(input.batch),
+      p_diagnostics: input.diagnostics,
+      p_source_offset: input.sourceOffset,
+    });
+    if (this.outcome(row, new Set(["persisted", "failed"])) !== "persisted")
+      throw new SbomRepositoryError("unavailable");
+  }
+  async finalizeNormalization(
+    organizationId: string,
+    input: Parameters<NonNullable<SbomIngestQueue["finalizeNormalization"]>>[1],
+  ): Promise<void> {
+    const row = await this.one("finalize_sbom_document_normalization_atomic", {
+      p_organization_id: organizationId,
+      p_job_id: input.jobId,
+      p_worker_id: input.workerId,
+      p_document_id: input.documentId,
+    });
+    if (this.outcome(row, new Set(["completed"])) !== "completed")
+      throw new SbomRepositoryError("unavailable");
+  }
   async fail(
     organizationId: string,
     input: Parameters<SbomIngestQueue["fail"]>[1],
@@ -496,11 +671,15 @@ export class SupabaseSbomRepository
     const code =
       input.errorCode === "unavailable"
         ? "provider_unavailable"
-        : input.errorCode === "content_hash_mismatch"
-          ? "content_hash_mismatch"
-          : input.errorCode === "source_missing"
-            ? "source_missing"
-            : "unknown_failure";
+        : input.errorCode === "normalization_byte_limit_exceeded"
+          ? "normalization_byte_limit_exceeded"
+          : input.errorCode === "normalization_component_limit_exceeded"
+            ? "normalization_component_limit_exceeded"
+            : input.errorCode === "content_hash_mismatch"
+              ? "content_hash_mismatch"
+              : input.errorCode === "source_missing"
+                ? "source_missing"
+                : "unknown_failure";
     await this.one("fail_sbom_ingest_job", {
       p_organization_id: organizationId,
       p_job_id: input.jobId,
@@ -684,7 +863,14 @@ export class SupabaseSbomRepository
         args,
       );
       if (result.error || !Array.isArray(result.data))
-        throw new SbomRepositoryError("unavailable");
+        throw new SbomRepositoryError(
+          "unavailable",
+          result.error &&
+            typeof result.error === "object" &&
+            "code" in result.error
+            ? String(result.error.code)
+            : null,
+        );
       return result.data.map((value) => this.record(value));
     } catch (error) {
       if (error instanceof SbomRepositoryError) throw error;
@@ -710,8 +896,56 @@ export class SupabaseSbomRepository
   }
 }
 
+function batchComponents(
+  batch: SbomNormalizationBatch,
+): readonly Record<string, unknown>[] {
+  return batch.components.map((component) => ({
+    document_local_ref:
+      component.localRef ?? `component-${component.source.offset}`,
+    source_offset: component.source.offset,
+    source_byte_end: component.source.offset,
+    source_path: component.source.path,
+    source_line: component.source.line,
+    original_name:
+      component.rawName ??
+      component.localRef ??
+      `component-${component.source.offset}`,
+    normalized_name:
+      component.normalizedName ??
+      component.rawName?.trim().toLowerCase() ??
+      component.localRef ??
+      `component-${component.source.offset}`,
+    original_version: component.rawVersion,
+    normalized_version: component.normalizedVersion,
+    original_purl: component.rawPurl,
+    canonical_purl: component.canonicalPurl,
+    cpe: component.rawCpe,
+    ecosystem: component.ecosystem,
+    scope: component.scope,
+    supplier: component.supplier,
+    license_expression: component.licenseExpression,
+    hashes: component.hashes,
+  }));
+}
+
+function batchEdges(
+  batch: SbomNormalizationBatch,
+): readonly Record<string, unknown>[] {
+  return batch.edges.map((edge) => ({
+    parent_reference: edge.fromRef,
+    child_reference: edge.toRef,
+    source_offset: edge.source.offset,
+    source_byte_end: edge.source.offset,
+    source_path: edge.source.path,
+    source_line: edge.source.line,
+  }));
+}
+
 export class SbomRepositoryError extends Error {
-  constructor(readonly code: "malformed" | "unavailable") {
+  constructor(
+    readonly code: "malformed" | "unavailable",
+    readonly providerCode: string | null = null,
+  ) {
     super(code);
   }
 }

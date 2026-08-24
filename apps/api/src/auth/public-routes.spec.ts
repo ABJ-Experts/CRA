@@ -188,11 +188,15 @@ describe("route guard coverage", () => {
     expect(sbomRoutes).toMatchObject({
       "POST products/:productId/releases/:releaseId/sbom-uploads": false,
       "GET products/:productId/releases/:releaseId/sbom-sources": false,
+      "GET products/:productId/releases/:releaseId/sbom-documents": false,
       "POST sbom-uploads/:sourceId/complete": false,
       "GET sbom-jobs/:jobId": false,
       "POST sbom-jobs/:jobId/replay": false,
       "GET sbom-sources/:sourceId/download": false,
       "GET sbom-sources/:sourceId/validation-report": false,
+      "GET sbom-documents/:documentId": false,
+      "GET sbom-documents/:documentId/components": false,
+      "GET sbom-documents/:documentId/dependency-tree": false,
       "POST ci/sbom-uploads": true,
       "POST ci/sbom-uploads/:sourceId/complete": true,
     });

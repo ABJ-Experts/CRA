@@ -3,8 +3,7 @@
   "plugin": ["@dietrichgebert/ponytail", "superpowers@git+https://github.com/obra/superpowers.git"],
   "mcp": {
     "playwright": {
-      "type": "local",
-      "command": ["npx", "-y", "@playwright/mcp"],
+      "type": "local", "command": ["pnpm", "dlx", "@playwright/mcp"],
       "enabled": true
     },
     "supabase": {

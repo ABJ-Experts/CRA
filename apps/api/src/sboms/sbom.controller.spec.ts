@@ -2,6 +2,7 @@ import { RequestMethod } from "@nestjs/common";
 import { METHOD_METADATA, PATH_METADATA } from "@nestjs/common/constants";
 import {
   sbomSourceHistoryResponseSchema,
+  sbomDocumentListResponseSchema,
   sbomValidationReportResponseSchema,
   type SbomSourceHistoryResponse,
   type SbomValidationReportResponse,
@@ -11,6 +12,7 @@ import { REQUIRE_PERMISSIONS_KEY, type RequestUser } from "../auth/auth.types";
 import { ZOD_RESPONSE_SCHEMA } from "../common/http/zod-response.interceptor";
 import {
   ProductReleaseSbomController,
+  SbomDocumentsController,
   SbomCiController,
   SbomSourcesController,
 } from "./sbom.controller";
@@ -110,6 +112,55 @@ function handler<T extends object>(controller: T, name: keyof T): object {
 }
 
 describe("SBOM report controllers", () => {
+  it("keeps completed document reads tenant-scoped and permission-gated", async () => {
+    const documents = { documents: [], nextCursor: null };
+    const service = { listDocuments: jest.fn().mockResolvedValue(documents) };
+    const controller = new ProductReleaseSbomController(service as never);
+    const routeHandler = handler(controller, "documents");
+
+    expect(Reflect.getMetadata(PATH_METADATA, routeHandler)).toBe(
+      "sbom-documents",
+    );
+    expect(Reflect.getMetadata(REQUIRE_PERMISSIONS_KEY, routeHandler)).toEqual([
+      "can_view_sboms",
+    ]);
+    expect(Reflect.getMetadata(ZOD_RESPONSE_SCHEMA, routeHandler)).toBe(
+      sbomDocumentListResponseSchema,
+    );
+    await expect(
+      controller.documents({ productId, releaseId }, { limit: 25 }, user),
+    ).resolves.toEqual(documents);
+    expect(service.listDocuments).toHaveBeenCalledWith({
+      organizationId,
+      actorId,
+      productId,
+      releaseId,
+      limit: 25,
+      cursor: undefined,
+    });
+  });
+
+  it("passes only the authenticated organization into document component reads", async () => {
+    const service = {
+      searchComponents: jest
+        .fn()
+        .mockResolvedValue({ components: [], nextCursor: null }),
+    };
+    const controller = new SbomDocumentsController(service as never);
+
+    await expect(
+      controller.components({ documentId: sourceId }, { limit: 50 }, user),
+    ).resolves.toEqual({ components: [], nextCursor: null });
+    expect(service.searchComponents).toHaveBeenCalledWith({
+      organizationId,
+      actorId,
+      documentId: sourceId,
+      q: undefined,
+      limit: 50,
+      cursor: undefined,
+    });
+  });
+
   it("forwards untrusted CI declaration and correction metadata to the intake use case", async () => {
     const service = {
       initialize: jest.fn().mockResolvedValue({

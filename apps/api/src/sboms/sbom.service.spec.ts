@@ -30,7 +30,11 @@ function harness(result: unknown = success) {
     revoke: jest.fn(),
   };
   return {
-    service: new SbomService(useCases as never, credentials as never),
+    service: new SbomService(
+      useCases as never,
+      useCases as never,
+      credentials as never,
+    ),
     useCases,
     credentials,
   };

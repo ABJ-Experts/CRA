@@ -12,6 +12,7 @@ const queryHooks = vi.hoisted(() => ({
   useSbomJobQuery: vi.fn(),
   useSbomSourceHistoryQuery: vi.fn(),
   useSbomValidationReportQuery: vi.fn(),
+  useSbomDocumentsForReleaseQuery: vi.fn(),
 }));
 
 const sbomsApi = vi.hoisted(() => ({
@@ -145,6 +146,13 @@ function useDefaultQueries() {
     isPending: false,
     isError: false,
     error: null,
+  });
+  queryHooks.useSbomDocumentsForReleaseQuery.mockReturnValue({
+    data: { documents: [], nextCursor: null },
+    isPending: false,
+    isError: false,
+    error: null,
+    refetch: vi.fn(),
   });
 }
 

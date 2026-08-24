@@ -9,6 +9,8 @@ const UPLOAD_ID = "33333333-3333-4333-8333-333333333333";
 const SOURCE_ID = "44444444-4444-4444-8444-444444444444";
 const JOB_ID = "55555555-5555-4555-8555-555555555555";
 const CREDENTIAL_ID = "66666666-6666-4666-8666-666666666666";
+const DOCUMENT_ID = "77777777-7777-4777-8777-777777777777";
+const COMPONENT_ID = "88888888-8888-4888-8888-888888888888";
 const NOW = "2026-08-20T12:00:00.000Z";
 const IDEMPOTENCY_KEY = "77777777-7777-4777-8777-777777777777";
 
@@ -198,6 +200,90 @@ describe("sbomsApi", () => {
     expect(fetcher.mock.calls.map(([path]) => path)).toEqual([
       `/api/v1/products/${PRODUCT_ID}/releases/${RELEASE_ID}/sbom-sources?limit=10&cursor=next%2Fpage`,
       `/api/v1/sbom-sources/${SOURCE_ID}/validation-report`,
+    ]);
+  });
+
+  it("reads normalized documents, components, and dependency children only through parsed versioned routes", async () => {
+    const document = {
+      id: DOCUMENT_ID,
+      sourceId: SOURCE_ID,
+      format: "cyclonedx",
+      specificationVersion: "1.6",
+      parser: { name: "CRA parser", version: "1.0.0" },
+      normalizer: { name: "CRA normalizer", version: "1.0.0" },
+      state: "completed",
+      validationStatus: "valid",
+      componentCount: 1,
+      dependencyCount: 0,
+      maximumDepth: 0,
+      warningCount: 0,
+      error: null,
+      completedAt: NOW,
+      createdAt: NOW,
+      updatedAt: NOW,
+    } as const;
+    const component = {
+      id: COMPONENT_ID,
+      documentId: DOCUMENT_ID,
+      documentLocalRef: "pkg:npm/example@1.0.0",
+      originalName: "Example",
+      normalizedName: "example",
+      originalVersion: "1.0.0",
+      normalizedVersion: "1.0.0",
+      originalPurl: "pkg:npm/example@1.0.0",
+      canonicalPurl: "pkg:npm/example@1.0.0",
+      cpe: null,
+      ecosystem: "npm",
+      scope: null,
+      supplier: null,
+      licenseExpression: null,
+      hashes: [],
+      depth: 0,
+      parentComponentId: null,
+      sourceLocation: { path: "/components/0", byteStart: 0, byteEnd: 1, line: 1 },
+    } as const;
+    const fetcher = vi.fn(async (path: string) => {
+      if (path.includes("dependency-tree")) {
+        return json({ items: [{ component, childCount: 0 }], nextCursor: null });
+      }
+      if (path.includes("/components")) {
+        return json({ components: [component], nextCursor: null });
+      }
+      if (path === `/api/v1/sbom-documents/${DOCUMENT_ID}`) {
+        return json({ document, diagnostics: [] });
+      }
+      return json({ documents: [document], nextCursor: null });
+    });
+    vi.stubGlobal("fetch", fetcher);
+
+    await expect(
+      sbomsApi.listDocumentsForRelease(PRODUCT_ID, RELEASE_ID, {
+        limit: 10,
+        cursor: "next/page",
+      }),
+    ).resolves.toEqual({ documents: [document], nextCursor: null });
+    await expect(sbomsApi.getDocument(DOCUMENT_ID)).resolves.toEqual({
+      document,
+      diagnostics: [],
+    });
+    await expect(
+      sbomsApi.searchComponents(DOCUMENT_ID, { q: "example", limit: 10 }),
+    ).resolves.toEqual({ components: [component], nextCursor: null });
+    await expect(
+      sbomsApi.listDependencyTreeChildren(DOCUMENT_ID, {
+        parentComponentId: COMPONENT_ID,
+        limit: 10,
+      }),
+    ).resolves.toEqual({
+      items: [{ component, childCount: 0 }],
+      nextCursor: null,
+    });
+
+    expect(fetcher.mock.calls.map(([path]) => path)).toEqual([
+      `/api/v1/products/${PRODUCT_ID}/releases/${RELEASE_ID}/sbom-documents?limit=10&cursor=next%2Fpage`,
+      `/api/v1/sbom-documents/${DOCUMENT_ID}`,
+      `/api/v1/sbom-documents/${DOCUMENT_ID}/components?q=example&limit=10`,
+      `/api/v1/sbom-documents/${DOCUMENT_ID}/dependency-tree?parentComponentId=${COMPONENT_ID}&limit=10`,
     ]);
   });
 

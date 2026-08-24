@@ -4,11 +4,18 @@ import type {
   CreateSbomCiCredentialInput,
   RevokeSbomCiCredentialInput,
   SbomJobResponse,
+  SbomComponentSearchQuery,
+  SbomComponentSearchResponse,
+  SbomDependencyTreeQuery,
+  SbomDependencyTreeResponse,
+  SbomDocumentDetailResponse,
+  SbomDocumentListQuery,
+  SbomDocumentListResponse,
   SbomSourceHistoryQuery,
   SbomSourceHistoryResponse,
   SbomValidationReportResponse,
 } from "@repo/contracts/sboms";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { sbomsApi } from "./sboms.api";
 import { sbomKeys } from "./sboms.keys";
@@ -63,6 +70,84 @@ export function useSbomValidationReportQuery(
         throw new Error("An SBOM source identifier is required.");
       return sbomsApi.getValidationReport(sourceId, signal);
     },
+  });
+}
+
+export function useSbomDocumentsForReleaseQuery(
+  productId: string,
+  releaseId: string,
+  query: Readonly<Partial<SbomDocumentListQuery>>,
+  enabled: boolean,
+) {
+  return useQuery<SbomDocumentListResponse>({
+    queryKey: sbomKeys.documentsForRelease(productId, releaseId, query),
+    enabled: enabled && productId !== "" && releaseId !== "",
+    retry: false,
+    queryFn: ({ signal }) =>
+      sbomsApi.listDocumentsForRelease(productId, releaseId, query, signal),
+  });
+}
+
+export function useSbomDocumentDetailQuery(documentId: string | null, enabled: boolean) {
+  return useQuery<SbomDocumentDetailResponse>({
+    queryKey: documentId === null ? sbomKeys.documents : sbomKeys.document(documentId),
+    enabled: enabled && documentId !== null,
+    retry: false,
+    queryFn: ({ signal }) => {
+      if (documentId === null) throw new Error("An SBOM document identifier is required.");
+      return sbomsApi.getDocument(documentId, signal);
+    },
+  });
+}
+
+export function useSbomComponentSearchQuery(
+  documentId: string | null,
+  query: Readonly<Partial<SbomComponentSearchQuery>>,
+  enabled: boolean,
+) {
+  return useQuery<SbomComponentSearchResponse>({
+    queryKey: documentId === null ? sbomKeys.componentSearches : sbomKeys.componentSearch(documentId, query),
+    enabled: enabled && documentId !== null,
+    retry: false,
+    queryFn: ({ signal }) => {
+      if (documentId === null) throw new Error("An SBOM document identifier is required.");
+      return sbomsApi.searchComponents(documentId, query, signal);
+    },
+  });
+}
+
+export function useSbomDependencyTreeChildrenQuery(
+  documentId: string | null,
+  query: Readonly<Partial<SbomDependencyTreeQuery>>,
+  enabled: boolean,
+) {
+  return useQuery<SbomDependencyTreeResponse>({
+    queryKey: documentId === null ? sbomKeys.documents : sbomKeys.dependencyTreeChildren(documentId, query),
+    enabled: enabled && documentId !== null,
+    retry: false,
+    queryFn: ({ signal }) => {
+      if (documentId === null) throw new Error("An SBOM document identifier is required.");
+      return sbomsApi.listDependencyTreeChildren(documentId, query, signal);
+    },
+  });
+}
+
+export function useSbomDependencyTreeChildrenQueries(
+  documentId: string | null,
+  parents: readonly Readonly<Partial<SbomDependencyTreeQuery>>[],
+  enabled: boolean,
+) {
+  return useQueries({
+    queries:
+      documentId === null
+        ? []
+        : parents.map((query) => ({
+            queryKey: sbomKeys.dependencyTreeChildren(documentId, query),
+            enabled,
+            retry: false,
+            queryFn: ({ signal }: { signal: AbortSignal }) =>
+              sbomsApi.listDependencyTreeChildren(documentId, query, signal),
+          })),
   });
 }
 

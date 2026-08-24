@@ -153,6 +153,16 @@ export const exportSourceRegistry: readonly ExportSourceRegistration[] =
         "sync_connector_cursors",
       ],
     },
+    {
+      sourceId: "sbom_normalized_graph",
+      tables: [
+        "sbom_documents",
+        "sbom_document_sources",
+        "sbom_components",
+        "sbom_component_identities",
+        "sbom_component_dependencies",
+      ],
+    },
   ]);
 
 /** Explicit omissions are security objects, never an accidental omission. */

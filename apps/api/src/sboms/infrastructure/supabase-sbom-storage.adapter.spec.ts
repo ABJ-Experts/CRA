@@ -64,4 +64,30 @@ describe("SupabaseSbomStorageAdapter", () => {
     });
     expect(download).toHaveBeenCalledTimes(1);
   });
+
+  it("opens a verified SBOM as a guarded stream without collecting its chunks", async () => {
+    const bytes = Buffer.from('{"bomFormat":"CycloneDX"}');
+    const download = jest.fn().mockResolvedValue({
+      data: new Blob([bytes], { type: "application/json" }),
+      error: null,
+    });
+    const adapter = new SupabaseSbomStorageAdapter({
+      admin: () => ({ storage: { from: () => ({ download }) } }),
+    } as unknown as SupabaseService);
+
+    const opened = await adapter.openVerified({
+      objectKey,
+      contentType: "application/json",
+      byteSize: bytes.byteLength,
+      sha256: createHash("sha256").update(bytes).digest("hex"),
+    });
+
+    expect(opened.outcome).toBe("verified");
+    if (opened.outcome !== "verified") throw new Error("expected stream");
+    let output = Buffer.alloc(0);
+    for await (const chunk of opened.stream)
+      output = Buffer.concat([output, Buffer.from(chunk)]);
+    expect(output).toEqual(bytes);
+    expect(download).toHaveBeenCalledTimes(1);
+  });
 });

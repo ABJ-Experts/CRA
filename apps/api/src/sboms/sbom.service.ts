@@ -11,6 +11,7 @@ import {
   SbomIntakeUseCases,
   type SbomIntakeError,
 } from "./application/sbom-intake-use-cases";
+import { SbomNormalizationUseCases } from "./application/sbom-normalization-use-cases";
 import {
   SBOM_CI_CREDENTIALS,
   type SbomCiCredentialPort,
@@ -21,6 +22,7 @@ import { Inject } from "@nestjs/common";
 export class SbomService {
   constructor(
     private readonly useCases: SbomIntakeUseCases,
+    private readonly normalization: SbomNormalizationUseCases,
     @Inject(SBOM_CI_CREDENTIALS)
     private readonly credentials: SbomCiCredentialPort,
   ) {}
@@ -53,6 +55,28 @@ export class SbomService {
     command: Parameters<SbomIntakeUseCases["validationReport"]>[0],
   ) {
     return this.unwrap(this.useCases.validationReport(command));
+  }
+
+  listDocuments(
+    command: Parameters<SbomNormalizationUseCases["listDocuments"]>[0],
+  ) {
+    return this.unwrap(this.normalization.listDocuments(command));
+  }
+
+  document(command: Parameters<SbomNormalizationUseCases["document"]>[0]) {
+    return this.unwrap(this.normalization.document(command));
+  }
+
+  searchComponents(
+    command: Parameters<SbomNormalizationUseCases["searchComponents"]>[0],
+  ) {
+    return this.unwrap(this.normalization.searchComponents(command));
+  }
+
+  dependencyTree(
+    command: Parameters<SbomNormalizationUseCases["dependencyTree"]>[0],
+  ) {
+    return this.unwrap(this.normalization.dependencyTree(command));
   }
 
   replay(command: Parameters<SbomIntakeUseCases["replay"]>[0]) {

@@ -26,6 +26,62 @@ const validationReport = Object.freeze((sourceId: string) =>
   Object.freeze([...validationReports, sourceId] as const),
 );
 const ciCredentials = Object.freeze(["sboms", "ci-credentials"] as const);
+const documents = Object.freeze(["sboms", "documents"] as const);
+const documentsForRelease = Object.freeze(
+  (
+    productId: string,
+    releaseId: string,
+    query: Readonly<{ limit?: number; cursor?: string }>,
+  ) =>
+    Object.freeze([
+      ...documents,
+      "release",
+      productId,
+      releaseId,
+      query.limit ?? 25,
+      query.cursor ?? null,
+    ] as const),
+);
+const document = Object.freeze((documentId: string) =>
+  Object.freeze([...documents, documentId] as const),
+);
+const componentSearches = Object.freeze([
+  "sboms",
+  "component-searches",
+] as const);
+const componentSearch = Object.freeze(
+  (
+    documentId: string,
+    query: Readonly<{ q?: string; limit?: number; cursor?: string }>,
+  ) =>
+    Object.freeze([
+      ...componentSearches,
+      documentId,
+      query.q ?? null,
+      query.limit ?? 50,
+      query.cursor ?? null,
+    ] as const),
+);
+const dependencyTreeChildren = Object.freeze(
+  (
+    documentId: string,
+    query: Readonly<{
+      parentComponentId?: string;
+      q?: string;
+      limit?: number;
+      cursor?: string;
+    }>,
+  ) =>
+    Object.freeze([
+      ...documents,
+      documentId,
+      "dependency-tree",
+      query.parentComponentId ?? null,
+      query.q ?? null,
+      query.limit ?? 50,
+      query.cursor ?? null,
+    ] as const),
+);
 
 export const sbomKeys = Object.freeze({
   all,
@@ -36,4 +92,10 @@ export const sbomKeys = Object.freeze({
   validationReports,
   validationReport,
   ciCredentials,
+  documents,
+  documentsForRelease,
+  document,
+  componentSearches,
+  componentSearch,
+  dependencyTreeChildren,
 });

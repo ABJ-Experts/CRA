@@ -5617,6 +5617,443 @@ export type Database = {
           },
         ]
       }
+      sbom_component_dependencies: {
+        Row: {
+          child_component_id: string | null
+          child_reference: string
+          created_at: string
+          document_id: string
+          edge_state: string
+          id: string
+          omission_code: string | null
+          omission_message: string | null
+          organization_id: string
+          parent_component_id: string | null
+          parent_reference: string
+          source_byte_end: number
+          source_line: number | null
+          source_offset: number
+          source_path: string
+          updated_at: string
+        }
+        Insert: {
+          child_component_id?: string | null
+          child_reference: string
+          created_at?: string
+          document_id: string
+          edge_state?: string
+          id?: string
+          omission_code?: string | null
+          omission_message?: string | null
+          organization_id: string
+          parent_component_id?: string | null
+          parent_reference: string
+          source_byte_end: number
+          source_line?: number | null
+          source_offset: number
+          source_path: string
+          updated_at?: string
+        }
+        Update: {
+          child_component_id?: string | null
+          child_reference?: string
+          created_at?: string
+          document_id?: string
+          edge_state?: string
+          id?: string
+          omission_code?: string | null
+          omission_message?: string | null
+          organization_id?: string
+          parent_component_id?: string | null
+          parent_reference?: string
+          source_byte_end?: number
+          source_line?: number | null
+          source_offset?: number
+          source_path?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sbom_component_dependencies_child_fkey"
+            columns: ["organization_id", "document_id", "child_component_id"]
+            isOneToOne: false
+            referencedRelation: "sbom_components"
+            referencedColumns: ["organization_id", "document_id", "id"]
+          },
+          {
+            foreignKeyName: "sbom_component_dependencies_document_fkey"
+            columns: ["organization_id", "document_id"]
+            isOneToOne: false
+            referencedRelation: "sbom_documents"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "sbom_component_dependencies_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sbom_component_dependencies_parent_fkey"
+            columns: ["organization_id", "document_id", "parent_component_id"]
+            isOneToOne: false
+            referencedRelation: "sbom_components"
+            referencedColumns: ["organization_id", "document_id", "id"]
+          },
+        ]
+      }
+      sbom_component_identities: {
+        Row: {
+          canonical_value: string | null
+          component_id: string
+          created_at: string
+          document_id: string
+          id: string
+          identity_type: string
+          organization_id: string
+          original_value: string
+          updated_at: string
+        }
+        Insert: {
+          canonical_value?: string | null
+          component_id: string
+          created_at?: string
+          document_id: string
+          id?: string
+          identity_type: string
+          organization_id: string
+          original_value: string
+          updated_at?: string
+        }
+        Update: {
+          canonical_value?: string | null
+          component_id?: string
+          created_at?: string
+          document_id?: string
+          id?: string
+          identity_type?: string
+          organization_id?: string
+          original_value?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sbom_component_identities_component_fkey"
+            columns: ["organization_id", "document_id", "component_id"]
+            isOneToOne: false
+            referencedRelation: "sbom_components"
+            referencedColumns: ["organization_id", "document_id", "id"]
+          },
+          {
+            foreignKeyName: "sbom_component_identities_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sbom_components: {
+        Row: {
+          canonical_parent_component_id: string | null
+          canonical_purl: string | null
+          cpe: string | null
+          created_at: string
+          depth: number
+          document_id: string
+          document_local_ref: string
+          ecosystem: string | null
+          hashes: Json
+          id: string
+          license_expression: string | null
+          normalized_name: string
+          normalized_version: string | null
+          organization_id: string
+          original_name: string
+          original_purl: string | null
+          original_version: string | null
+          scope: string | null
+          source_byte_end: number
+          source_line: number | null
+          source_offset: number
+          source_path: string
+          supplier: string | null
+          updated_at: string
+        }
+        Insert: {
+          canonical_parent_component_id?: string | null
+          canonical_purl?: string | null
+          cpe?: string | null
+          created_at?: string
+          depth?: number
+          document_id: string
+          document_local_ref: string
+          ecosystem?: string | null
+          hashes?: Json
+          id?: string
+          license_expression?: string | null
+          normalized_name: string
+          normalized_version?: string | null
+          organization_id: string
+          original_name: string
+          original_purl?: string | null
+          original_version?: string | null
+          scope?: string | null
+          source_byte_end: number
+          source_line?: number | null
+          source_offset: number
+          source_path: string
+          supplier?: string | null
+          updated_at?: string
+        }
+        Update: {
+          canonical_parent_component_id?: string | null
+          canonical_purl?: string | null
+          cpe?: string | null
+          created_at?: string
+          depth?: number
+          document_id?: string
+          document_local_ref?: string
+          ecosystem?: string | null
+          hashes?: Json
+          id?: string
+          license_expression?: string | null
+          normalized_name?: string
+          normalized_version?: string | null
+          organization_id?: string
+          original_name?: string
+          original_purl?: string | null
+          original_version?: string | null
+          scope?: string | null
+          source_byte_end?: number
+          source_line?: number | null
+          source_offset?: number
+          source_path?: string
+          supplier?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sbom_components_document_fkey"
+            columns: ["organization_id", "document_id"]
+            isOneToOne: false
+            referencedRelation: "sbom_documents"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "sbom_components_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sbom_components_parent_fkey"
+            columns: [
+              "organization_id",
+              "document_id",
+              "canonical_parent_component_id",
+            ]
+            isOneToOne: false
+            referencedRelation: "sbom_components"
+            referencedColumns: ["organization_id", "document_id", "id"]
+          },
+        ]
+      }
+      sbom_document_sources: {
+        Row: {
+          created_at: string
+          document_id: string
+          id: string
+          organization_id: string
+          raw_object_id: string
+          release_id: string
+          source_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          document_id: string
+          id?: string
+          organization_id: string
+          raw_object_id: string
+          release_id: string
+          source_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          document_id?: string
+          id?: string
+          organization_id?: string
+          raw_object_id?: string
+          release_id?: string
+          source_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sbom_document_sources_document_fkey"
+            columns: ["organization_id", "document_id"]
+            isOneToOne: false
+            referencedRelation: "sbom_documents"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "sbom_document_sources_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sbom_document_sources_raw_object_fkey"
+            columns: ["organization_id", "raw_object_id"]
+            isOneToOne: false
+            referencedRelation: "sbom_raw_objects"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "sbom_document_sources_source_fkey"
+            columns: ["organization_id", "source_id"]
+            isOneToOne: false
+            referencedRelation: "sbom_sources"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      sbom_documents: {
+        Row: {
+          checkpoint_batch: number
+          checkpoint_source_offset: number
+          completed_at: string | null
+          component_count: number
+          created_at: string
+          dependency_count: number
+          diagnostics: Json
+          document_sha256: string
+          error_code: string | null
+          error_message: string | null
+          format: string
+          id: string
+          ingest_job_id: string
+          maximum_depth: number
+          normalizer_name: string
+          normalizer_version: string
+          omitted_diagnostic_count: number
+          organization_id: string
+          parser_name: string
+          parser_version: string
+          progress_component_count: number
+          progress_dependency_count: number
+          progress_stage: string
+          raw_object_id: string
+          serialization: string
+          source_id: string
+          specification_version: string
+          state: string
+          updated_at: string
+          validation_status: string
+          warning_count: number
+        }
+        Insert: {
+          checkpoint_batch?: number
+          checkpoint_source_offset?: number
+          completed_at?: string | null
+          component_count?: number
+          created_at?: string
+          dependency_count?: number
+          diagnostics?: Json
+          document_sha256: string
+          error_code?: string | null
+          error_message?: string | null
+          format: string
+          id?: string
+          ingest_job_id: string
+          maximum_depth?: number
+          normalizer_name: string
+          normalizer_version: string
+          omitted_diagnostic_count?: number
+          organization_id: string
+          parser_name: string
+          parser_version: string
+          progress_component_count?: number
+          progress_dependency_count?: number
+          progress_stage?: string
+          raw_object_id: string
+          serialization: string
+          source_id: string
+          specification_version: string
+          state?: string
+          updated_at?: string
+          validation_status: string
+          warning_count?: number
+        }
+        Update: {
+          checkpoint_batch?: number
+          checkpoint_source_offset?: number
+          completed_at?: string | null
+          component_count?: number
+          created_at?: string
+          dependency_count?: number
+          diagnostics?: Json
+          document_sha256?: string
+          error_code?: string | null
+          error_message?: string | null
+          format?: string
+          id?: string
+          ingest_job_id?: string
+          maximum_depth?: number
+          normalizer_name?: string
+          normalizer_version?: string
+          omitted_diagnostic_count?: number
+          organization_id?: string
+          parser_name?: string
+          parser_version?: string
+          progress_component_count?: number
+          progress_dependency_count?: number
+          progress_stage?: string
+          raw_object_id?: string
+          serialization?: string
+          source_id?: string
+          specification_version?: string
+          state?: string
+          updated_at?: string
+          validation_status?: string
+          warning_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sbom_documents_job_fkey"
+            columns: ["organization_id", "ingest_job_id"]
+            isOneToOne: false
+            referencedRelation: "sbom_ingest_jobs"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "sbom_documents_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sbom_documents_raw_object_fkey"
+            columns: ["organization_id", "raw_object_id"]
+            isOneToOne: false
+            referencedRelation: "sbom_raw_objects"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "sbom_documents_source_fkey"
+            columns: ["organization_id", "source_id"]
+            isOneToOne: false
+            referencedRelation: "sbom_sources"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
       sbom_ingest_jobs: {
         Row: {
           actor_credential_id: string | null
@@ -6965,6 +7402,25 @@ export type Database = {
           outcome: string
         }[]
       }
+      begin_sbom_document_normalization_atomic: {
+        Args: {
+          p_format: string
+          p_job_id: string
+          p_normalizer_name: string
+          p_normalizer_version: string
+          p_organization_id: string
+          p_parser_name: string
+          p_parser_version: string
+          p_serialization: string
+          p_specification_version: string
+          p_validation_report: Json
+          p_worker_id: string
+        }
+        Returns: {
+          document: Json
+          outcome: string
+        }[]
+      }
       begin_security_update_artifact_cleanup_worker_atomic: {
         Args: {
           p_artifact_id: string
@@ -7576,6 +8032,25 @@ export type Database = {
         Returns: {
           outcome: string
           override: Json
+        }[]
+      }
+      create_or_resume_sbom_document_normalization_atomic: {
+        Args: {
+          p_document_id: string
+          p_format: string
+          p_job_id: string
+          p_normalizer_name: string
+          p_normalizer_version: string
+          p_organization_id: string
+          p_parser_name: string
+          p_parser_version: string
+          p_serialization: string
+          p_specification_version: string
+          p_worker_id: string
+        }
+        Returns: {
+          document: Json
+          outcome: string
         }[]
       }
       create_organization_atomic: {
@@ -8194,6 +8669,18 @@ export type Database = {
           outcome: string
         }[]
       }
+      finalize_sbom_document_normalization_atomic: {
+        Args: {
+          p_document_id: string
+          p_job_id: string
+          p_organization_id: string
+          p_worker_id: string
+        }
+        Returns: {
+          document: Json
+          outcome: string
+        }[]
+      }
       finalize_sbom_source_atomic:
         | {
             Args: {
@@ -8592,6 +9079,17 @@ export type Database = {
           relationships: Json
         }[]
       }
+      get_sbom_document: {
+        Args: {
+          p_actor_user_id: string
+          p_document_id: string
+          p_organization_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
       get_sbom_ingest_job: {
         Args: {
           p_actor_user_id: string
@@ -8815,6 +9313,35 @@ export type Database = {
         Returns: {
           outcome: string
           products: Json
+        }[]
+      }
+      list_sbom_dependency_tree: {
+        Args: {
+          p_actor_user_id: string
+          p_cursor: string
+          p_document_id: string
+          p_limit: number
+          p_organization_id: string
+          p_parent_component_id: string
+          p_q: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      list_sbom_documents_for_release: {
+        Args: {
+          p_actor_user_id: string
+          p_cursor: string
+          p_limit: number
+          p_organization_id: string
+          p_product_id: string
+          p_release_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
         }[]
       }
       list_sbom_sources_for_release: {
@@ -9464,6 +9991,21 @@ export type Database = {
           processed_count: number
           superseded_count: number
           upserted_count: number
+        }[]
+      }
+      persist_sbom_normalization_batch_atomic: {
+        Args: {
+          p_components: Json
+          p_diagnostics: Json
+          p_document_id: string
+          p_edges: Json
+          p_job_id: string
+          p_organization_id: string
+          p_source_offset: number
+          p_worker_id: string
+        }
+        Returns: {
+          outcome: string
         }[]
       }
       preview_field_authority_policy: {
@@ -10304,7 +10846,19 @@ export type Database = {
           run: Json
         }[]
       }
+      sbom_actor_can_view: {
+        Args: { p_actor_user_id: string; p_organization_id: string }
+        Returns: boolean
+      }
       sbom_allowed_media_type: { Args: { p_value: string }; Returns: boolean }
+      sbom_component_json: {
+        Args: { p_component_id: string; p_organization_id: string }
+        Returns: Json
+      }
+      sbom_document_json: {
+        Args: { p_document_id: string; p_organization_id: string }
+        Returns: Json
+      }
       sbom_ingest_job_json: {
         Args: { p_job_id: string; p_organization_id: string }
         Returns: Json
@@ -10364,6 +10918,20 @@ export type Database = {
         Returns: {
           artifact: Json
           outcome: string
+        }[]
+      }
+      search_sbom_components: {
+        Args: {
+          p_actor_user_id: string
+          p_cursor: string
+          p_document_id: string
+          p_limit: number
+          p_organization_id: string
+          p_q: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
         }[]
       }
       set_connector_secret_atomic: {

@@ -52,6 +52,13 @@ vi.mock("../../_features/sboms/sboms.queries", () => ({
     isError: false,
     error: null,
   }),
+  useSbomDocumentsForReleaseQuery: () => ({
+    data: { documents: [], nextCursor: null },
+    isPending: false,
+    isError: false,
+    error: null,
+    refetch: vi.fn(),
+  }),
 }));
 
 const PRODUCT = {

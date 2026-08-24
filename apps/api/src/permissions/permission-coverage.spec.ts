@@ -183,6 +183,11 @@ describe("permission coverage", () => {
         ?.permissions,
     ).toEqual(["can_view_sboms"]);
     expect(
+      sbomRoutes.get(
+        "GET products/:productId/releases/:releaseId/sbom-documents",
+      )?.permissions,
+    ).toEqual(["can_view_sboms"]);
+    expect(
       sbomRoutes.get("POST sbom-uploads/:sourceId/complete")?.permissions,
     ).toEqual(["can_upload_sboms"]);
     expect(sbomRoutes.get("GET sbom-jobs/:jobId")?.permissions).toEqual([
@@ -194,6 +199,16 @@ describe("permission coverage", () => {
     ).toEqual(["can_view_sboms"]);
     expect(
       sbomRoutes.get("GET sbom-sources/:sourceId/validation-report")
+        ?.permissions,
+    ).toEqual(["can_view_sboms"]);
+    expect(
+      sbomRoutes.get("GET sbom-documents/:documentId")?.permissions,
+    ).toEqual(["can_view_sboms"]);
+    expect(
+      sbomRoutes.get("GET sbom-documents/:documentId/components")?.permissions,
+    ).toEqual(["can_view_sboms"]);
+    expect(
+      sbomRoutes.get("GET sbom-documents/:documentId/dependency-tree")
         ?.permissions,
     ).toEqual(["can_view_sboms"]);
   });

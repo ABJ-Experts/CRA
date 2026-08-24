@@ -6,11 +6,19 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
+  useSbomComponentSearchQuery,
+  useSbomDependencyTreeChildrenQuery,
+  useSbomDocumentDetailQuery,
+  useSbomDocumentsForReleaseQuery,
   useSbomSourceHistoryQuery,
   useSbomValidationReportQuery,
 } from "./sboms.queries";
 
 const api = vi.hoisted(() => ({
+  listDocumentsForRelease: vi.fn(),
+  getDocument: vi.fn(),
+  searchComponents: vi.fn(),
+  listDependencyTreeChildren: vi.fn(),
   listSourcesForRelease: vi.fn(),
   getValidationReport: vi.fn(),
 }));
@@ -127,5 +135,71 @@ describe("SBOM queries", () => {
       SOURCE_ID,
       expect.any(AbortSignal),
     );
+  });
+
+  it("uses document-scoped keys for the normalized graph views and forwards parsed cursors", async () => {
+    const documentId = "55555555-5555-4555-8555-555555555555";
+    const componentId = "66666666-6666-4666-8666-666666666666";
+    const document = {
+      id: documentId,
+      sourceId: SOURCE_ID,
+      format: "cyclonedx",
+      specificationVersion: "1.6",
+      parser: { name: "CRA parser", version: "1.0.0" },
+      normalizer: { name: "CRA normalizer", version: "1.0.0" },
+      state: "completed",
+      validationStatus: "valid",
+      componentCount: 1,
+      dependencyCount: 0,
+      maximumDepth: 0,
+      warningCount: 0,
+      error: null,
+      completedAt: NOW,
+      createdAt: NOW,
+      updatedAt: NOW,
+    } as const;
+    const component = {
+      id: componentId,
+      documentId,
+      documentLocalRef: "pkg:npm/example@1.0.0",
+      originalName: "Example",
+      normalizedName: "example",
+      originalVersion: "1.0.0",
+      normalizedVersion: "1.0.0",
+      originalPurl: null,
+      canonicalPurl: null,
+      cpe: null,
+      ecosystem: null,
+      scope: null,
+      supplier: null,
+      licenseExpression: null,
+      hashes: [],
+      depth: 0,
+      parentComponentId: null,
+      sourceLocation: { path: "/components/0", byteStart: 0, byteEnd: 1, line: 1 },
+    } as const;
+    api.listDocumentsForRelease.mockResolvedValue({ documents: [document], nextCursor: null });
+    api.getDocument.mockResolvedValue({ document, diagnostics: [] });
+    api.searchComponents.mockResolvedValue({ components: [component], nextCursor: null });
+    api.listDependencyTreeChildren.mockResolvedValue({
+      items: [{ component, childCount: 0 }],
+      nextCursor: null,
+    });
+
+    const { result } = renderHook(
+      () => ({
+        documents: useSbomDocumentsForReleaseQuery(PRODUCT_ID, RELEASE_ID, { limit: 10 }, true),
+        detail: useSbomDocumentDetailQuery(documentId, true),
+        components: useSbomComponentSearchQuery(documentId, { q: "example", limit: 10 }, true),
+        children: useSbomDependencyTreeChildrenQuery(documentId, { parentComponentId: componentId, limit: 10 }, true),
+      }),
+      { wrapper },
+    );
+
+    await waitFor(() => expect(result.current.children.isSuccess).toBe(true));
+    expect(api.listDocumentsForRelease).toHaveBeenCalledWith(PRODUCT_ID, RELEASE_ID, { limit: 10 }, expect.any(AbortSignal));
+    expect(api.getDocument).toHaveBeenCalledWith(documentId, expect.any(AbortSignal));
+    expect(api.searchComponents).toHaveBeenCalledWith(documentId, { q: "example", limit: 10 }, expect.any(AbortSignal));
+    expect(api.listDependencyTreeChildren).toHaveBeenCalledWith(documentId, { parentComponentId: componentId, limit: 10 }, expect.any(AbortSignal));
   });
 });

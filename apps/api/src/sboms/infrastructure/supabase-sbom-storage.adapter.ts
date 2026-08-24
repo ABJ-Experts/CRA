@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { Readable } from "node:stream";
+import { Readable, Transform } from "node:stream";
 
 import { Injectable } from "@nestjs/common";
 import { fromBuffer as fileTypeFromBuffer } from "file-type";
@@ -205,6 +205,50 @@ export class SupabaseSbomStorageAdapter implements SbomStoragePort {
     }
   }
 
+  /**
+   * Opens immutable evidence as a guarded stream. Integrity is checked when
+   * the consumer drains it, so a large SBOM is never assembled in memory.
+   */
+  async openVerified(
+    input: Readonly<{
+      objectKey: string;
+      sha256: string;
+      byteSize: number;
+      contentType: string;
+    }>,
+  ) {
+    this.assertMetadata(input);
+    if (!objectKey.test(input.objectKey) || !sha256.test(input.sha256))
+      throw new SbomStorageError("malformed");
+    try {
+      const result = (await this.supabase
+        .admin()
+        .storage.from(bucket)
+        .download(input.objectKey)) as StorageResponse<Blob>;
+      if (result.error || !result.data)
+        return isNotFound(result.error)
+          ? Object.freeze({ outcome: "missing" as const })
+          : Object.freeze({ outcome: "unavailable" as const });
+      if (result.data.size !== input.byteSize)
+        return Object.freeze({
+          outcome: "corrupt" as const,
+          sha256: null,
+          byteSize: result.data.size,
+          contentType: input.contentType,
+        });
+      return Object.freeze({
+        outcome: "verified" as const,
+        stream: guardedStream(result.data, input),
+        sha256: input.sha256,
+        byteSize: input.byteSize,
+        contentType: input.contentType,
+      });
+    } catch (error) {
+      if (error instanceof SbomStorageError) throw error;
+      return Object.freeze({ outcome: "unavailable" as const });
+    }
+  }
+
   private assertMetadata(
     input: Readonly<{ contentType: string; byteSize: number }>,
   ): void {
@@ -223,6 +267,34 @@ export class SupabaseSbomStorageAdapter implements SbomStoragePort {
       ? error
       : new SbomStorageError("unavailable");
   }
+}
+
+function guardedStream(
+  blob: Blob,
+  input: Readonly<{ sha256: string; byteSize: number }>,
+): Readable {
+  const hash = createHash("sha256");
+  let byteSize = 0;
+  const guard = new Transform({
+    transform(chunk: Buffer, _encoding, callback) {
+      const bytes = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+      byteSize += bytes.byteLength;
+      if (byteSize > input.byteSize) {
+        callback(new SbomStorageError("malformed"));
+        return;
+      }
+      hash.update(bytes);
+      callback(null, bytes);
+    },
+    flush(callback) {
+      if (byteSize !== input.byteSize || hash.digest("hex") !== input.sha256) {
+        callback(new SbomStorageError("malformed"));
+        return;
+      }
+      callback();
+    },
+  });
+  return Readable.fromWeb(blob.stream() as never).pipe(guard);
 }
 
 export class SbomStorageError extends Error {

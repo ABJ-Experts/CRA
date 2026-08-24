@@ -18,6 +18,14 @@ import {
   ciInitializeSbomUploadInputSchema,
   completeSbomUploadInputSchema,
   initializeSbomUploadInputSchema,
+  sbomComponentSearchQuerySchema,
+  sbomComponentSearchResponseSchema,
+  sbomDependencyTreeQuerySchema,
+  sbomDependencyTreeResponseSchema,
+  sbomDocumentDetailResponseSchema,
+  sbomDocumentListQuerySchema,
+  sbomDocumentListResponseSchema,
+  sbomDocumentParamsSchema,
   replaySbomJobInputSchema,
   sbomJobParamsSchema,
   sbomJobResponseSchema,
@@ -37,6 +45,10 @@ import {
   type SbomReleaseParams,
   type SbomSourceHistoryQuery,
   type SbomSourceParams,
+  type SbomComponentSearchQuery,
+  type SbomDependencyTreeQuery,
+  type SbomDocumentListQuery,
+  type SbomDocumentParams,
 } from "@repo/contracts/sboms";
 
 import {
@@ -112,6 +124,82 @@ export class ProductReleaseSbomController {
       actorId: user.id,
       productId: params.productId,
       releaseId: params.releaseId,
+      limit: query.limit,
+      cursor: query.cursor,
+    });
+  }
+
+  @RequirePermissions("can_view_sboms")
+  @Get("sbom-documents")
+  @ZodResponse(sbomDocumentListResponseSchema)
+  async documents(
+    @Param(zodParams(sbomReleaseParamsSchema)) params: SbomReleaseParams,
+    @Query(zodQuery(sbomDocumentListQuerySchema)) query: SbomDocumentListQuery,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.sboms.listDocuments({
+      organizationId: organizationId(user),
+      actorId: user.id,
+      productId: params.productId,
+      releaseId: params.releaseId,
+      limit: query.limit,
+      cursor: query.cursor,
+    });
+  }
+}
+
+@Controller("sbom-documents")
+export class SbomDocumentsController {
+  constructor(private readonly sboms: SbomService) {}
+
+  @RequirePermissions("can_view_sboms")
+  @Get(":documentId")
+  @ZodResponse(sbomDocumentDetailResponseSchema)
+  async document(
+    @Param(zodParams(sbomDocumentParamsSchema)) params: SbomDocumentParams,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.sboms.document({
+      organizationId: organizationId(user),
+      actorId: user.id,
+      documentId: params.documentId,
+    });
+  }
+
+  @RequirePermissions("can_view_sboms")
+  @Get(":documentId/components")
+  @ZodResponse(sbomComponentSearchResponseSchema)
+  async components(
+    @Param(zodParams(sbomDocumentParamsSchema)) params: SbomDocumentParams,
+    @Query(zodQuery(sbomComponentSearchQuerySchema))
+    query: SbomComponentSearchQuery,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.sboms.searchComponents({
+      organizationId: organizationId(user),
+      actorId: user.id,
+      documentId: params.documentId,
+      q: query.q,
+      limit: query.limit,
+      cursor: query.cursor,
+    });
+  }
+
+  @RequirePermissions("can_view_sboms")
+  @Get(":documentId/dependency-tree")
+  @ZodResponse(sbomDependencyTreeResponseSchema)
+  async dependencyTree(
+    @Param(zodParams(sbomDocumentParamsSchema)) params: SbomDocumentParams,
+    @Query(zodQuery(sbomDependencyTreeQuerySchema))
+    query: SbomDependencyTreeQuery,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.sboms.dependencyTree({
+      organizationId: organizationId(user),
+      actorId: user.id,
+      documentId: params.documentId,
+      parentComponentId: query.parentComponentId,
+      q: query.q,
       limit: query.limit,
       cursor: query.cursor,
     });

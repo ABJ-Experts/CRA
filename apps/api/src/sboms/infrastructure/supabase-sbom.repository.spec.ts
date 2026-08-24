@@ -274,6 +274,148 @@ describe("SupabaseSbomRepository validation persistence", () => {
   }
 });
 
+describe("SupabaseSbomRepository worker checkpoints", () => {
+  const organizationId = "11111111-1111-4111-8111-111111111111";
+  const jobId = "22222222-2222-4222-8222-222222222222";
+  const rpc = jest.fn();
+  const repository = () =>
+    new SupabaseSbomRepository({
+      admin: () => ({ rpc }),
+    } as unknown as SupabaseService);
+
+  beforeEach(() => {
+    rpc.mockReset();
+  });
+
+  it("requires the durable checkpoint RPC to accept the requested worker stage", async () => {
+    rpc.mockResolvedValueOnce({
+      data: [{ outcome: "invalid_request", job: null }],
+      error: null,
+    });
+
+    await expect(
+      repository().checkpoint(organizationId, {
+        jobId,
+        workerId: "sbom-worker",
+        stage: "parsing",
+        percent: 30,
+        message: "Streaming SBOM components",
+      }),
+    ).rejects.toThrow("unavailable");
+  });
+
+  it("maps a completed immutable-hash replay to a no-rewrite worker outcome", async () => {
+    rpc.mockResolvedValueOnce({
+      data: [
+        {
+          outcome: "replayed",
+          document: {
+            id: "33333333-3333-4333-8333-333333333333",
+            state: "completed",
+          },
+        },
+      ],
+      error: null,
+    });
+
+    await expect(
+      repository().beginNormalization(organizationId, {
+        jobId,
+        workerId: "sbom-worker",
+        format: "cyclonedx",
+        serialization: "json",
+        specificationVersion: "1.6",
+        report: validationReport("valid_with_warnings"),
+      }),
+    ).resolves.toEqual({
+      outcome: "complete",
+      documentId: "33333333-3333-4333-8333-333333333333",
+    });
+  });
+});
+
+describe("SupabaseSbomRepository normalized graph reads", () => {
+  const organizationId = "11111111-1111-4111-8111-111111111111";
+  const actorId = "22222222-2222-4222-8222-222222222222";
+  const documentId = "33333333-3333-4333-8333-333333333333";
+  const rpc = jest.fn();
+  const subject = () =>
+    new SupabaseSbomRepository({
+      admin: () => ({ rpc }),
+    } as unknown as SupabaseService);
+  const document = Object.freeze({
+    id: documentId,
+    sourceId: "44444444-4444-4444-8444-444444444444",
+    format: "cyclonedx",
+    specificationVersion: "1.6",
+    parser: { name: "CRA streaming parser", version: "1.0.0" },
+    normalizer: { name: "CRA SBOM normalizer", version: "1.0.0" },
+    state: "completed",
+    validationStatus: "valid",
+    componentCount: 0,
+    dependencyCount: 0,
+    maximumDepth: 0,
+    warningCount: 0,
+    error: null,
+    completedAt: "2026-08-24T00:00:00.000Z",
+    createdAt: "2026-08-24T00:00:00.000Z",
+    updatedAt: "2026-08-24T00:00:00.000Z",
+  });
+
+  beforeEach(() => rpc.mockReset());
+
+  it("parses only the completed document RPC envelope", async () => {
+    rpc.mockResolvedValue({
+      data: [
+        {
+          outcome: "found",
+          result: { documents: [document], nextCursor: null },
+        },
+      ],
+      error: null,
+    });
+
+    await expect(
+      subject().listDocuments(organizationId, {
+        actorId,
+        productId: "55555555-5555-4555-8555-555555555555",
+        releaseId: "66666666-6666-4666-8666-666666666666",
+        limit: 25,
+      }),
+    ).resolves.toEqual({ documents: [document], nextCursor: null });
+    expect(rpc).toHaveBeenCalledWith("list_sbom_documents_for_release", {
+      p_organization_id: organizationId,
+      p_actor_user_id: actorId,
+      p_product_id: "55555555-5555-4555-8555-555555555555",
+      p_release_id: "66666666-6666-4666-8666-666666666666",
+      p_limit: 25,
+      p_cursor: null,
+    });
+  });
+
+  it("treats a foreign document as absent before parsing its response", async () => {
+    rpc.mockResolvedValue({
+      data: [{ outcome: "not_found", result: null }],
+      error: null,
+    });
+    await expect(
+      subject().searchComponents(organizationId, {
+        actorId,
+        documentId,
+        limit: 50,
+      }),
+    ).resolves.toBeNull();
+    expect(rpc).toHaveBeenCalledWith("search_sbom_components", {
+      p_organization_id: organizationId,
+      p_actor_user_id: actorId,
+      p_document_id: documentId,
+      p_q: null,
+      p_limit: 50,
+      p_cursor: null,
+    });
+  });
+});
+
 function validationReport(status: "valid_with_warnings" | "invalid") {
   return {
     status,

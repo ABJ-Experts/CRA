@@ -26,6 +26,7 @@ import {
   useSbomSourceHistoryQuery,
   useSbomValidationReportQuery,
 } from "../../_features/sboms/sboms.queries";
+import { SbomNormalizedDocumentsPanel } from "./sbom-normalized-documents-panel";
 
 type ReleaseOption = Readonly<{ id: string; label: string; version: string }>;
 type UploadPhase =
@@ -619,6 +620,11 @@ export function SbomIntakeSection({
               correctionSourceId={correctionSourceId}
             />
           </div>
+          <SbomNormalizedDocumentsPanel
+            productId={productId}
+            releaseId={releaseId}
+            enabled={enabled}
+          />
         </div>
       )}
     </section>

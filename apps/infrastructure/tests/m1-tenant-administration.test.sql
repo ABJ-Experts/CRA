@@ -1018,7 +1018,7 @@ select pg_temp.check(
       'organization_purge_jobs', 'organization_purge_work_items',
       'organization_permissions_version', 'legal_entities',
       'organization_branding', 'product_registry', 'finding_propagation',
-      'connector_sync'
+      'connector_sync', 'sbom_normalized_graph'
     ]::text[]
 );
 
