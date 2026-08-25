@@ -164,6 +164,8 @@ export const exportSourceRegistry: readonly ExportSourceRegistration[] =
         "organization_sbom_quality_settings",
         "sbom_quality_reports",
         "sbom_quality_findings",
+        "sbom_diff_reports",
+        "sbom_diff_component_changes",
       ],
     },
   ]);

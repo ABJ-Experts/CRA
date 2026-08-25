@@ -346,6 +346,68 @@ describe("sbomsApi", () => {
     ]);
   });
 
+  it("looks up an existing source-scoped diff through a parsed read-only route", async () => {
+    const fetcher = vi.fn(async () =>
+      json({
+        status: "no_comparable_version",
+        sourceId: SOURCE_ID,
+        reason: "No completed, comparable predecessor exists.",
+      }),
+    );
+    vi.stubGlobal("fetch", fetcher);
+
+    await expect(
+      sbomsApi.getSourceDiff(SOURCE_ID, { baseSourceId: UPLOAD_ID }),
+    ).resolves.toMatchObject({ status: "no_comparable_version" });
+
+    expect(fetcher).toHaveBeenCalledWith(
+      `/api/v1/sbom-sources/${SOURCE_ID}/diff?baseSourceId=${UPLOAD_ID}`,
+      expect.objectContaining({ method: "GET" }),
+    );
+  });
+
+  it("retries a diff through the queued start-response contract", async () => {
+    const diff = {
+      id: "99999999-9999-4999-8999-999999999999",
+      releaseId: RELEASE_ID,
+      sourceId: SOURCE_ID,
+      baselineSourceId: UPLOAD_ID,
+      documentId: DOCUMENT_ID,
+      baselineDocumentId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      state: "queued",
+      comparisonStatus: "ready",
+      comparatorVersion: "m4-unavailable.v1",
+      counts: { componentChanges: 0 },
+      findingDelta: {
+        status: "partial_integration_unavailable",
+        reason: "Finding delta requires the M4 advisory integration.",
+        summary: null,
+      },
+      progress: {
+        stage: "queued",
+        percent: 0,
+        message: "Waiting to compare the release lineage.",
+      },
+      error: null,
+      completedAt: null,
+      createdAt: NOW,
+      updatedAt: NOW,
+    } as const;
+    const fetcher = vi.fn(async () =>
+      json({ status: "queued", report: diff, replayed: false }, 202),
+    );
+    vi.stubGlobal("fetch", fetcher);
+
+    await expect(
+      sbomsApi.retryDiff(diff.id, { idempotencyKey: IDEMPOTENCY_KEY }),
+    ).resolves.toEqual({ status: "queued", report: diff, replayed: false });
+
+    expect(fetcher).toHaveBeenCalledWith(
+      `/api/v1/sbom-diffs/${diff.id}/retry`,
+      expect.objectContaining({ method: "POST" }),
+    );
+  });
+
   it("declares unknown browser file types as octet-stream for storage upload", async () => {
     const headers = new Map<string, string>();
     class FakeXmlHttpRequest {

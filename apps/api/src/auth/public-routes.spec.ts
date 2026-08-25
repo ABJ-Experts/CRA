@@ -197,6 +197,12 @@ describe("route guard coverage", () => {
       "GET sbom-documents/:documentId": false,
       "GET sbom-documents/:documentId/components": false,
       "GET sbom-documents/:documentId/dependency-tree": false,
+      "POST sbom-sources/:sourceId/diff": false,
+      "GET sbom-sources/:sourceId/diff": false,
+      "GET sbom-diffs/:diffId": false,
+      "GET sbom-diffs/:diffId/components": false,
+      "GET sbom-diffs/:diffId/findings": false,
+      "POST sbom-diffs/:diffId/retry": false,
       "POST ci/sbom-uploads": true,
       "POST ci/sbom-uploads/:sourceId/complete": true,
     });

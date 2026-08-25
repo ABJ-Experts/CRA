@@ -164,7 +164,7 @@ describe("SbomIntakeUseCases", () => {
 
     expect(result).toEqual({
       ok: true,
-      value: { job: job(), replayed: false },
+      value: { job: job(), outcome: "queued" },
     });
     expect(repository.complete).toHaveBeenCalledWith(
       organizationId,
@@ -175,6 +175,37 @@ describe("SbomIntakeUseCases", () => {
         actualByteSize: 12,
       }),
     );
+  });
+
+  it("returns the canonical job for a byte-exact deduplicated source without queueing another job", async () => {
+    repository.getSourceForCompletion.mockResolvedValue({
+      outcome: "ready",
+      source: reservation(),
+    });
+    storage.inspect.mockResolvedValue({
+      outcome: "verified",
+      sha256: hash,
+      byteSize: 12,
+      contentType: "application/json",
+    });
+    repository.complete.mockResolvedValue({
+      outcome: "deduplicated",
+      job: job(),
+    });
+
+    await expect(
+      subject().complete({
+        organizationId,
+        actorId,
+        sourceId,
+        idempotencyKey: "complete-key",
+        correlationId: "66666666-6666-4666-8666-666666666666",
+      }),
+    ).resolves.toEqual({
+      ok: true,
+      value: { job: job(), outcome: "deduplicated" },
+    });
+    expect(repository.complete).toHaveBeenCalledTimes(1);
   });
 
   function subject() {

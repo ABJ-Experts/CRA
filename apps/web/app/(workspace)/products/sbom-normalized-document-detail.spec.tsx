@@ -260,6 +260,12 @@ describe("SbomNormalizedDocumentDetail", () => {
     expect(
       screen.getByRole("heading", { name: "Remediation guidance" }),
     ).toBeVisible();
+    expect(
+      screen.getByRole("link", { name: "Compare release lineage" }),
+    ).toHaveAttribute(
+      "href",
+      `/products/44444444-4444-4444-8444-444444444444/sboms/${DOCUMENT_ID}/diff?sourceId=${document.sourceId}`,
+    );
   });
 
   it("expands a tree node with keyboard input and retains visible focus semantics", () => {

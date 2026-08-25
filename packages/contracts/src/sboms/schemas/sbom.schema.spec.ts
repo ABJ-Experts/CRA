@@ -9,6 +9,7 @@ import {
   sbomJobSchema,
   sbomOriginalDownloadResponseSchema,
   sbomUploadInitializationResponseSchema,
+  sbomUploadCompletionResponseSchema,
 } from "./index.js";
 
 const idempotencyKey = "11111111-1111-4111-8111-111111111111";
@@ -136,6 +137,44 @@ describe("SBOM intake contracts", () => {
         progressUrl: `/api/v1/sbom-jobs/${jobId}`,
       }).progressUrl,
     ).toBe(`/api/v1/sbom-jobs/${jobId}`);
+  });
+
+  it("keeps the legacy job envelope while making deduplicated completion explicit", () => {
+    const parsed = sbomUploadCompletionResponseSchema.parse({
+      job: {
+        id: jobId,
+        organizationId: "66666666-6666-4666-8666-666666666666",
+        sourceId,
+        releaseId,
+        inputSha256: "a".repeat(64),
+        correlationId: "77777777-7777-4777-8777-777777777777",
+        status: "completed",
+        progress: { stage: "completed", percent: 100, message: "Completed" },
+        attempts: 1,
+        maxAttempts: 5,
+        error: null,
+        result: {
+          outcome: "original_evidence_captured",
+          sourceId,
+          sha256: "a".repeat(64),
+        },
+        createdAt: now,
+        updatedAt: now,
+        completedAt: now,
+      },
+      progressUrl: `/api/v1/sbom-jobs/${jobId}`,
+      completion: {
+        outcome: "deduplicated",
+        sourceId: "88888888-8888-4888-8888-888888888888",
+        canonicalSourceId: sourceId,
+      },
+    });
+
+    expect(parsed.completion).toMatchObject({
+      outcome: "deduplicated",
+      sourceId: "88888888-8888-4888-8888-888888888888",
+    });
+    expect(parsed.job.id).toBe(jobId);
   });
 
   it("requires a bounded human-safe CI credential label", () => {

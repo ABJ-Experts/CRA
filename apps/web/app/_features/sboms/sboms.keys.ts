@@ -106,6 +106,52 @@ const qualityFindings = Object.freeze(
       query.kind ?? null,
     ] as const),
 );
+const diffReports = Object.freeze(["sboms", "diff-reports"] as const);
+const sourceDiffReports = Object.freeze([
+  "sboms",
+  "source-diff-reports",
+] as const);
+const sourceDiffReport = Object.freeze(
+  (sourceId: string, query: Readonly<{ baseSourceId?: string }>) =>
+    Object.freeze([
+      ...sourceDiffReports,
+      sourceId,
+      query.baseSourceId ?? null,
+    ] as const),
+);
+const diffReport = Object.freeze((diffId: string) =>
+  Object.freeze([...diffReports, diffId] as const),
+);
+const diffComponents = Object.freeze(
+  (
+    diffId: string,
+    query: Readonly<{
+      limit?: number;
+      cursor?: string;
+      change?: string;
+      ecosystem?: string;
+      q?: string;
+    }>,
+  ) =>
+    Object.freeze([
+      ...diffReport(diffId),
+      "components",
+      query.limit ?? 50,
+      query.cursor ?? null,
+      query.change ?? null,
+      query.ecosystem ?? null,
+      query.q ?? null,
+    ] as const),
+);
+const diffFindings = Object.freeze(
+  (diffId: string, query: Readonly<{ limit?: number; cursor?: string }>) =>
+    Object.freeze([
+      ...diffReport(diffId),
+      "findings",
+      query.limit ?? 50,
+      query.cursor ?? null,
+    ] as const),
+);
 
 export const sbomKeys = Object.freeze({
   all,
@@ -125,4 +171,10 @@ export const sbomKeys = Object.freeze({
   qualityReports,
   qualityReport,
   qualityFindings,
+  sourceDiffReports,
+  sourceDiffReport,
+  diffReports,
+  diffReport,
+  diffComponents,
+  diffFindings,
 });

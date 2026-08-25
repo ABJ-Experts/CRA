@@ -177,6 +177,8 @@ export const sbomSourceSchema = z
     declaredFormat: sbomDeclaredFormatSchema.optional(),
     declaredSpecVersion: declaredSbomSpecVersionSchema.optional(),
     supersedesSourceId: z.uuid().optional(),
+    /** An immutable alias of the canonical source that supplied its graph. */
+    deduplicatedFromSourceId: z.uuid().optional(),
     createdAt: utcDateTimeSchema,
     completedAt: utcDateTimeSchema.nullable(),
   })
@@ -272,6 +274,34 @@ export const sbomUploadInitializationResponseSchema = z
   .strict();
 export const sbomJobResponseSchema = z
   .object({ job: sbomJobSchema, progressUrl: sbomJobProgressUrlSchema })
+  .strict();
+
+/** Completion keeps the legacy job envelope and makes content reuse explicit. */
+export const sbomUploadCompletionSchema = z.discriminatedUnion("outcome", [
+  z
+    .object({
+      outcome: z.literal("queued"),
+      sourceId: z.uuid(),
+      canonicalSourceId: z.uuid(),
+    })
+    .strict(),
+  z
+    .object({
+      outcome: z.literal("replayed"),
+      sourceId: z.uuid(),
+      canonicalSourceId: z.uuid(),
+    })
+    .strict(),
+  z
+    .object({
+      outcome: z.literal("deduplicated"),
+      sourceId: z.uuid(),
+      canonicalSourceId: z.uuid(),
+    })
+    .strict(),
+]);
+export const sbomUploadCompletionResponseSchema = sbomJobResponseSchema
+  .extend({ completion: sbomUploadCompletionSchema })
   .strict();
 export const sbomOriginalDownloadResponseSchema = z
   .object({

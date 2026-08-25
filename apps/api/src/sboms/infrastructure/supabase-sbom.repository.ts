@@ -10,6 +10,11 @@ import { Injectable } from "@nestjs/common";
 import {
   sbomComponentSearchResponseSchema,
   sbomDependencyTreeResponseSchema,
+  sbomDiffComponentsResponseSchema,
+  sbomDiffFindingsResponseSchema,
+  sbomDiffReportSchema,
+  sbomDiffReportResponseSchema,
+  sbomDiffStartResponseSchema,
   sbomDocumentDetailResponseSchema,
   sbomDocumentListResponseSchema,
   sbomJobSchema,
@@ -36,6 +41,7 @@ import type {
 } from "../application/sbom-intake-use-cases";
 import type { SbomNormalizationRepository } from "../application/sbom-normalization-use-cases";
 import type { SbomQualityRepository } from "../application/sbom-quality-use-cases";
+import type { SbomDiffRepository } from "../application/sbom-diff-use-cases";
 import type {
   SbomIngestClaim,
   SbomIngestQueue,
@@ -47,6 +53,13 @@ import type {
   SbomQualityQueue,
   SbomQualityReportDraft,
 } from "../worker/sbom-quality-worker";
+import type {
+  SbomDiffClaim,
+  SbomDiffComponentFact,
+  SbomDiffFactPage,
+  SbomDiffQueue,
+  SbomDiffChangeDraft,
+} from "../worker/sbom-diff-worker";
 import type { SbomNormalizationBatch } from "../normalization/sbom-normalizer";
 
 type ProviderRow = Readonly<Record<string, unknown>>;
@@ -161,6 +174,33 @@ const qualityResultSchema = z
     totalScore: z.number().min(0).max(100),
   })
   .passthrough();
+const diffClaimSchema = z
+  .object({
+    id: z.uuid(),
+    sourceId: z.uuid(),
+    baselineSourceId: z.uuid(),
+    documentId: z.uuid(),
+    baselineDocumentId: z.uuid(),
+    checkpoint: z.record(z.string(), z.string()).optional(),
+  })
+  .passthrough();
+const diffFactPageSchema = z
+  .object({
+    items: z.array(
+      z
+        .object({
+          componentId: z.uuid(),
+          packageIdentity: z.string().min(1).nullable(),
+          canonicalPurl: z.string().min(1).nullable(),
+          normalizedVersion: z.string().nullable(),
+          ecosystem: z.string().nullable(),
+          sourceOffset: z.number().int().nonnegative(),
+        })
+        .passthrough(),
+    ),
+    nextCursor: z.string().min(1).nullable(),
+  })
+  .strict();
 
 /** Service-role adapter: every access starts with organizationId and parses provider JSON. */
 @Injectable()
@@ -169,9 +209,11 @@ export class SupabaseSbomRepository
     SbomIntakeRepository,
     SbomNormalizationRepository,
     SbomQualityRepository,
+    SbomDiffRepository,
     SbomCiCredentialPort,
     SbomIngestQueue,
-    SbomQualityQueue
+    SbomQualityQueue,
+    SbomDiffQueue
 {
   constructor(private readonly supabase: SupabaseService) {}
 
@@ -230,7 +272,7 @@ export class SupabaseSbomRepository
       const result = await this.tables()
         .from("sbom_sources")
         .select(
-          "id, organization_id, product_id, release_id, source_kind, original_filename, declared_media_type, declared_byte_size, declared_sha256, status, staging_storage_key, upload_expires_at, declared_format, declared_spec_version, supersedes_source_id, created_at, verified_at",
+          "id, organization_id, product_id, release_id, source_kind, original_filename, declared_media_type, declared_byte_size, declared_sha256, status, staging_storage_key, upload_expires_at, declared_format, declared_spec_version, supersedes_source_id, deduplicated_from_source_id, created_at, verified_at",
         )
         .eq("organization_id", organizationId)
         .eq("id", sourceId)
@@ -259,6 +301,10 @@ export class SupabaseSbomRepository
         supersedesSourceId:
           typeof row.supersedes_source_id === "string"
             ? row.supersedes_source_id
+            : undefined,
+        deduplicatedFromSourceId:
+          typeof row.deduplicated_from_source_id === "string"
+            ? row.deduplicated_from_source_id
             : undefined,
         createdAt: row.created_at,
         completedAt: row.verified_at,
@@ -330,7 +376,7 @@ export class SupabaseSbomRepository
     organizationId: string,
     input: Parameters<SbomIntakeRepository["complete"]>[1],
   ): Promise<Awaited<ReturnType<SbomIntakeRepository["complete"]>>> {
-    const row = await this.one("finalize_sbom_source_atomic", {
+    const row = await this.one("finalize_sbom_source_deduplicated_atomic", {
       p_organization_id: organizationId,
       p_source_id: input.sourceId,
       p_actor_user_id: input.ciCredentialId ? null : input.actorId,
@@ -345,6 +391,7 @@ export class SupabaseSbomRepository
       row,
       new Set([
         "queued",
+        "deduplicated",
         "replayed",
         "not_found",
         "conflict",
@@ -354,7 +401,11 @@ export class SupabaseSbomRepository
         "integrity_mismatch",
       ]),
     );
-    if (outcome !== "queued" && outcome !== "replayed")
+    if (
+      outcome !== "queued" &&
+      outcome !== "deduplicated" &&
+      outcome !== "replayed"
+    )
       return {
         outcome:
           outcome === "not_found"
@@ -735,6 +786,276 @@ export class SupabaseSbomRepository
       throw new SbomRepositoryError("unavailable");
   }
 
+  async createDiff(
+    organizationId: string,
+    input: Parameters<SbomDiffRepository["createDiff"]>[1],
+  ): Promise<Awaited<ReturnType<SbomDiffRepository["createDiff"]>>> {
+    let baselineSourceId = input.baseSourceId;
+    if (!baselineSourceId) {
+      const baseline = await this.one("resolve_sbom_diff_baseline", {
+        p_organization_id: organizationId,
+        p_actor_user_id: input.actorId,
+        p_source_id: input.sourceId,
+      });
+      const baselineOutcome = this.outcome(
+        baseline,
+        new Set(["found", "no_comparable_version", "not_found"]),
+      );
+      if (baselineOutcome === "no_comparable_version") {
+        return { outcome: "no_comparable_version" };
+      }
+      if (baselineOutcome === "not_found") return { outcome: "not_found" };
+      const result = this.record(baseline.result);
+      baselineSourceId =
+        typeof result.baselineSourceId === "string"
+          ? result.baselineSourceId
+          : undefined;
+      if (!baselineSourceId) return { outcome: "no_comparable_version" };
+    }
+    const row = await this.one("enqueue_sbom_diff_report_atomic", {
+      p_organization_id: organizationId,
+      p_source_id: input.sourceId,
+      p_baseline_source_id: baselineSourceId,
+    });
+    const outcome = this.outcome(
+      row,
+      new Set(["queued", "completed", "no_comparable_version", "not_found"]),
+    );
+    if (outcome === "no_comparable_version") return { outcome };
+    if (outcome === "not_found") return { outcome };
+    const response = sbomDiffStartResponseSchema.parse({
+      status: "queued",
+      report: diffReport(row.report),
+      replayed: outcome === "completed",
+    });
+    return {
+      outcome: outcome === "completed" ? "replayed" : "created",
+      response,
+    };
+  }
+
+  async getSourceDiff(
+    organizationId: string,
+    input: Parameters<SbomDiffRepository["getSourceDiff"]>[1],
+  ): Promise<Awaited<ReturnType<SbomDiffRepository["getSourceDiff"]>>> {
+    const row = await this.one("get_sbom_source_diff_report", {
+      p_organization_id: organizationId,
+      p_actor_user_id: input.actorId,
+      p_source_id: input.sourceId,
+      p_baseline_source_id: input.baseSourceId ?? null,
+    });
+    const outcome = this.outcome(
+      row,
+      new Set(["found", "not_started", "no_comparable_version", "not_found"]),
+    );
+    if (outcome === "not_found") return null;
+    if (outcome === "no_comparable_version") {
+      return {
+        status: "no_comparable_version",
+        sourceId: input.sourceId,
+        reason:
+          "No completed, comparable predecessor exists in this release lineage.",
+      };
+    }
+    if (outcome === "not_started") {
+      const result = this.record(row.result);
+      return {
+        status: "not_started",
+        sourceId: input.sourceId,
+        baselineSourceId: string(result.baselineSourceId),
+      };
+    }
+    const report = row.report ?? this.record(row.result).report;
+    return { status: "found", report: diffReport(report) };
+  }
+
+  async getDiff(
+    organizationId: string,
+    input: Parameters<SbomDiffRepository["getDiff"]>[1],
+  ): Promise<Awaited<ReturnType<SbomDiffRepository["getDiff"]>>> {
+    const row = await this.one("get_sbom_diff_report", {
+      p_organization_id: organizationId,
+      p_actor_user_id: input.actorId,
+      p_report_id: input.diffId,
+    });
+    if (this.outcome(row, new Set(["found", "not_found"])) !== "found")
+      return null;
+    return sbomDiffReportResponseSchema.parse({
+      report: diffReport(this.record(row.result).report),
+    });
+  }
+
+  async listComponentChanges(
+    organizationId: string,
+    input: Parameters<SbomDiffRepository["listComponentChanges"]>[1],
+  ): Promise<Awaited<ReturnType<SbomDiffRepository["listComponentChanges"]>>> {
+    const row = await this.one("list_sbom_diff_component_changes", {
+      p_organization_id: organizationId,
+      p_actor_user_id: input.actorId,
+      p_report_id: input.diffId,
+      p_limit: input.limit,
+      p_cursor: input.cursor ?? null,
+      p_change_type: input.change ?? null,
+      p_ecosystem: input.ecosystem ?? null,
+      p_q: input.q ?? null,
+    });
+    if (this.outcome(row, new Set(["found", "not_found"])) !== "found")
+      return null;
+    return sbomDiffComponentsResponseSchema.parse(this.record(row.result));
+  }
+
+  async getFindingDelta(
+    organizationId: string,
+    input: Parameters<SbomDiffRepository["getFindingDelta"]>[1],
+  ): Promise<Awaited<ReturnType<SbomDiffRepository["getFindingDelta"]>>> {
+    const row = await this.one("get_sbom_diff_findings", {
+      p_organization_id: organizationId,
+      p_actor_user_id: input.actorId,
+      p_report_id: input.diffId,
+      p_limit: input.limit,
+      p_cursor: input.cursor ?? null,
+    });
+    if (this.outcome(row, new Set(["found", "not_found"])) !== "found")
+      return null;
+    const result = this.record(row.result);
+    return sbomDiffFindingsResponseSchema.parse({
+      status: result.state,
+      reason:
+        result.state === "partial_integration_unavailable"
+          ? "Finding delta requires the M4 advisory integration."
+          : null,
+      findings: result.items,
+      nextCursor:
+        typeof result.nextCursor === "string" ? result.nextCursor : null,
+    });
+  }
+
+  async retryDiff(
+    organizationId: string,
+    input: Parameters<SbomDiffRepository["retryDiff"]>[1],
+  ): Promise<Awaited<ReturnType<SbomDiffRepository["retryDiff"]>>> {
+    const row = await this.one("retry_sbom_diff_report_atomic", {
+      p_organization_id: organizationId,
+      p_actor_user_id: input.actorId,
+      p_report_id: input.diffId,
+      p_idempotency_key: input.idempotencyKey,
+    });
+    const outcome = this.outcome(
+      row,
+      new Set(["queued", "completed", "not_found"]),
+    );
+    if (outcome === "not_found") return { outcome };
+    const response = sbomDiffStartResponseSchema.parse({
+      status: "queued",
+      report: diffReport(row.report),
+      replayed: outcome === "completed",
+    });
+    return {
+      outcome: outcome === "completed" ? "replayed" : "queued",
+      response,
+    };
+  }
+
+  async dueDiffOrganizationIds(): Promise<readonly string[]> {
+    const rows = await this.rows("list_due_sbom_diff_organizations", {
+      p_limit: 500,
+    });
+    return Object.freeze(
+      rows.flatMap((row) =>
+        typeof row.organization_id === "string" ? [row.organization_id] : [],
+      ),
+    );
+  }
+
+  async claimDiffReport(
+    organizationId: string,
+    input: Parameters<SbomDiffQueue["claimDiffReport"]>[1],
+  ): Promise<SbomDiffClaim> {
+    const row = await this.one("claim_sbom_diff_report", {
+      p_organization_id: organizationId,
+      p_worker_id: input.workerId,
+      p_lease_seconds: input.leaseSeconds,
+    });
+    if (
+      this.outcome(row, new Set(["claimed", "empty", "invalid_request"])) !==
+      "claimed"
+    ) {
+      return { outcome: "none_available" };
+    }
+    const work = diffClaimSchema.parse(row.work);
+    return {
+      outcome: "claimed",
+      organizationId,
+      reportId: work.id,
+      sourceId: work.sourceId,
+      baselineSourceId: work.baselineSourceId,
+      documentId: work.documentId,
+      baselineDocumentId: work.baselineDocumentId,
+      checkpoint: Object.freeze({
+        currentCursor: work.checkpoint?.currentCursor,
+        baselineCursor: work.checkpoint?.baselineCursor,
+      }),
+    };
+  }
+
+  async readDiffFactPage(
+    organizationId: string,
+    input: Parameters<SbomDiffQueue["readDiffFactPage"]>[1],
+  ): Promise<SbomDiffFactPage> {
+    const row = await this.one("list_sbom_diff_component_facts", {
+      p_organization_id: organizationId,
+      p_report_id: input.reportId,
+      p_worker_id: input.workerId,
+      p_side: input.side,
+      p_limit: input.limit,
+      p_cursor: input.cursor ?? null,
+    });
+    if (this.outcome(row, new Set(["found"])) !== "found") {
+      throw new SbomRepositoryError("unavailable");
+    }
+    const page = diffFactPageSchema.parse(row.result);
+    return Object.freeze({
+      facts: Object.freeze(page.items.map(diffFact)),
+      nextCursor: page.nextCursor,
+    });
+  }
+
+  async persistDiffBatch(
+    organizationId: string,
+    input: Parameters<SbomDiffQueue["persistDiffBatch"]>[1],
+  ): Promise<void> {
+    const row = await this.one("persist_sbom_diff_batch_atomic", {
+      p_organization_id: organizationId,
+      p_report_id: input.reportId,
+      p_worker_id: input.workerId,
+      p_changes: input.changes.map(persistableDiffChange),
+      p_checkpoint: input.checkpoint,
+      p_complete: input.complete,
+    });
+    if (
+      this.outcome(row, new Set(["persisted", "completed"])) === "persisted" ||
+      input.complete
+    )
+      return;
+    throw new SbomRepositoryError("unavailable");
+  }
+
+  async failDiffReport(
+    organizationId: string,
+    input: Parameters<SbomDiffQueue["failDiffReport"]>[1],
+  ): Promise<void> {
+    const row = await this.one("fail_sbom_diff_report", {
+      p_organization_id: organizationId,
+      p_report_id: input.reportId,
+      p_worker_id: input.workerId,
+      p_error_code: input.errorCode,
+      p_error_message: input.message,
+    });
+    if (this.outcome(row, new Set(["failed"])) !== "failed") {
+      throw new SbomRepositoryError("unavailable");
+    }
+  }
+
   async claim(
     organizationId: string,
     input: Readonly<{ workerId: string; leaseSeconds: number }>,
@@ -1065,6 +1386,9 @@ export class SupabaseSbomRepository
       ...(row.supersedesSourceId
         ? { supersedesSourceId: row.supersedesSourceId }
         : {}),
+      ...(row.deduplicatedFromSourceId
+        ? { deduplicatedFromSourceId: row.deduplicatedFromSourceId }
+        : {}),
     };
   }
   private job(value: unknown): SbomJob {
@@ -1264,6 +1588,129 @@ function persistableQualityFinding(
     actual_condition: finding.actual,
     remediation: finding.remediation,
   };
+}
+
+function diffReport(value: unknown) {
+  const raw = z
+    .object({
+      id: z.uuid(),
+      sourceId: z.uuid(),
+      baselineSourceId: z.uuid(),
+      releaseId: z.uuid(),
+      documentId: z.uuid(),
+      baselineDocumentId: z.uuid(),
+      state: z.enum(["queued", "processing", "completed", "failed"]),
+      comparisonStatus: z.enum([
+        "ready",
+        "identical",
+        "no_comparable_version",
+        "partial_integration_unavailable",
+        "failed",
+      ]),
+      comparatorVersion: z.string().min(1).max(120),
+      findingDelta: z
+        .object({ state: z.enum(["partial_integration_unavailable", "ready"]) })
+        .strict(),
+      counts: z
+        .object({ componentChanges: z.number().int().nonnegative() })
+        .strict(),
+      progress: z
+        .object({
+          stage: z.enum([
+            "queued",
+            "projecting_identities",
+            "comparing",
+            "recording_changes",
+            "completed",
+            "failed",
+          ]),
+          percent: z.number().int().min(0).max(100),
+        })
+        .strict(),
+      error: z
+        .object({
+          code: z.string().min(1),
+          message: z.string().min(1),
+          retryable: z.boolean(),
+        })
+        .strict()
+        .nullable(),
+      completedAt: z.string().datetime({ offset: true }).nullable(),
+      createdAt: z.string().datetime({ offset: true }),
+      updatedAt: z.string().datetime({ offset: true }),
+    })
+    .strict()
+    .parse(value);
+  return sbomDiffReportSchema.parse({
+    ...raw,
+    findingDelta: {
+      status: raw.findingDelta.state,
+      reason:
+        raw.findingDelta.state === "partial_integration_unavailable"
+          ? "Finding delta requires the M4 advisory integration."
+          : null,
+      summary:
+        raw.findingDelta.state === "ready"
+          ? { new: 0, removed: 0, resolved: 0, unchanged: 0 }
+          : null,
+    },
+    progress: {
+      ...raw.progress,
+      message: diffProgressMessage(raw.progress.stage),
+    },
+  });
+}
+
+function diffFact(
+  value: z.output<typeof diffFactPageSchema>["items"][number],
+): SbomDiffComponentFact {
+  return Object.freeze({
+    componentId: value.componentId,
+    identity: value.packageIdentity,
+    ecosystem: value.ecosystem,
+    canonicalPurl: value.canonicalPurl,
+    normalizedVersion: value.normalizedVersion,
+    sourceOffset: value.sourceOffset,
+  });
+}
+
+function persistableDiffChange(change: SbomDiffChangeDraft) {
+  return {
+    change_key: change.changeKey,
+    change_type: change.changeType,
+    canonical_package_identity: change.identity,
+    ecosystem: change.ecosystem,
+    current_component_id: change.currentComponentId,
+    baseline_component_id: change.baselineComponentId,
+    current_version: change.currentVersion,
+    baseline_version: change.baselineVersion,
+    explanation: change.explanation,
+  };
+}
+
+function diffProgressMessage(
+  stage:
+    | "queued"
+    | "projecting_identities"
+    | "comparing"
+    | "recording_changes"
+    | "completed"
+    | "failed",
+): string {
+  switch (stage) {
+    case "queued":
+      return "Waiting to compare the release lineage.";
+    case "projecting_identities":
+      return "Preparing canonical component identities.";
+    case "comparing":
+      return "Comparing canonical component identities.";
+    case "recording_changes":
+      return "Saving deterministic component changes.";
+    case "completed":
+      return "Component comparison completed.";
+    case "failed":
+      return "Component comparison failed.";
+  }
 }
 
 export class SbomRepositoryError extends Error {

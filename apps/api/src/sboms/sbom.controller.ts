@@ -23,6 +23,18 @@ import {
   sbomComponentSearchResponseSchema,
   sbomDependencyTreeQuerySchema,
   sbomDependencyTreeResponseSchema,
+  createSbomDiffInputSchema,
+  retrySbomDiffInputSchema,
+  sbomDiffComponentsQuerySchema,
+  sbomDiffComponentsResponseSchema,
+  sbomDiffFindingsQuerySchema,
+  sbomDiffFindingsResponseSchema,
+  sbomDiffParamsSchema,
+  sbomDiffReportResponseSchema,
+  sbomDiffStartResponseSchema,
+  sbomSourceDiffQuerySchema,
+  sbomSourceDiffResponseSchema,
+  sbomSourceDiffParamsSchema,
   sbomDocumentDetailResponseSchema,
   sbomDocumentListQuerySchema,
   sbomDocumentListResponseSchema,
@@ -42,6 +54,7 @@ import {
   sbomSourceParamsSchema,
   sbomValidationReportResponseSchema,
   sbomUploadInitializationResponseSchema,
+  sbomUploadCompletionResponseSchema,
   updateSbomQualitySettingsInputSchema,
   type CiCompleteSbomUploadInput,
   type CiInitializeSbomUploadInput,
@@ -56,6 +69,13 @@ import {
   type SbomDependencyTreeQuery,
   type SbomDocumentListQuery,
   type SbomDocumentParams,
+  type CreateSbomDiffInput,
+  type RetrySbomDiffInput,
+  type SbomDiffComponentsQuery,
+  type SbomDiffFindingsQuery,
+  type SbomDiffParams,
+  type SbomSourceDiffParams,
+  type SbomSourceDiffQuery,
   type SbomQualityFindingsQuery,
   type SbomSourceQualityParams,
   type UpdateSbomQualitySettingsInput,
@@ -222,7 +242,7 @@ export class SbomUploadsController {
   @RequirePermissions("can_upload_sboms")
   @Post(":sourceId/complete")
   @HttpCode(HttpStatus.ACCEPTED)
-  @ZodResponse(sbomJobResponseSchema)
+  @ZodResponse(sbomUploadCompletionResponseSchema)
   async complete(
     @Param(zodParams(sbomSourceParamsSchema)) params: SbomSourceParams,
     @Body(zodBody(completeSbomUploadInputSchema))
@@ -236,7 +256,7 @@ export class SbomUploadsController {
       idempotencyKey: input.idempotencyKey,
       correlationId: randomUUID(),
     });
-    return jobResponse(result.job);
+    return completionResponse(result, params.sourceId);
   }
 }
 
@@ -348,6 +368,114 @@ export class SbomSourcesController {
       kind: query.kind,
     });
   }
+
+  @RequirePermissions("can_upload_sboms")
+  @Post(":sourceId/diff")
+  @HttpCode(HttpStatus.ACCEPTED)
+  @ZodResponse(sbomDiffStartResponseSchema)
+  async createDiff(
+    @Param(zodParams(sbomSourceDiffParamsSchema)) params: SbomSourceDiffParams,
+    @Body(zodBody(createSbomDiffInputSchema)) input: CreateSbomDiffInput,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.sboms.createDiff({
+      organizationId: organizationId(user),
+      actorId: user.id,
+      sourceId: params.sourceId,
+      baseSourceId: input.baseSourceId,
+      idempotencyKey: input.idempotencyKey,
+    });
+  }
+
+  @RequirePermissions("can_view_sboms")
+  @Get(":sourceId/diff")
+  @ZodResponse(sbomSourceDiffResponseSchema)
+  async sourceDiff(
+    @Param(zodParams(sbomSourceDiffParamsSchema)) params: SbomSourceDiffParams,
+    @Query(zodQuery(sbomSourceDiffQuerySchema)) query: SbomSourceDiffQuery,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.sboms.sourceDiff({
+      organizationId: organizationId(user),
+      actorId: user.id,
+      sourceId: params.sourceId,
+      baseSourceId: query.baseSourceId,
+    });
+  }
+}
+
+@Controller("sbom-diffs")
+export class SbomDiffsController {
+  constructor(private readonly sboms: SbomService) {}
+
+  @RequirePermissions("can_view_sboms")
+  @Get(":diffId")
+  @ZodResponse(sbomDiffReportResponseSchema)
+  async report(
+    @Param(zodParams(sbomDiffParamsSchema)) params: SbomDiffParams,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.sboms.diffReport({
+      organizationId: organizationId(user),
+      actorId: user.id,
+      diffId: params.diffId,
+    });
+  }
+
+  @RequirePermissions("can_view_sboms")
+  @Get(":diffId/components")
+  @ZodResponse(sbomDiffComponentsResponseSchema)
+  async components(
+    @Param(zodParams(sbomDiffParamsSchema)) params: SbomDiffParams,
+    @Query(zodQuery(sbomDiffComponentsQuerySchema))
+    query: SbomDiffComponentsQuery,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.sboms.diffComponents({
+      organizationId: organizationId(user),
+      actorId: user.id,
+      diffId: params.diffId,
+      limit: query.limit,
+      cursor: query.cursor,
+      change: query.change,
+      ecosystem: query.ecosystem,
+      q: query.q,
+    });
+  }
+
+  @RequirePermissions("can_view_sboms")
+  @Get(":diffId/findings")
+  @ZodResponse(sbomDiffFindingsResponseSchema)
+  async findings(
+    @Param(zodParams(sbomDiffParamsSchema)) params: SbomDiffParams,
+    @Query(zodQuery(sbomDiffFindingsQuerySchema)) query: SbomDiffFindingsQuery,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.sboms.diffFindings({
+      organizationId: organizationId(user),
+      actorId: user.id,
+      diffId: params.diffId,
+      limit: query.limit,
+      cursor: query.cursor,
+    });
+  }
+
+  @RequireRole("owner")
+  @Post(":diffId/retry")
+  @HttpCode(HttpStatus.ACCEPTED)
+  @ZodResponse(sbomDiffStartResponseSchema)
+  async retry(
+    @Param(zodParams(sbomDiffParamsSchema)) params: SbomDiffParams,
+    @Body(zodBody(retrySbomDiffInputSchema)) input: RetrySbomDiffInput,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.sboms.retryDiff({
+      organizationId: organizationId(user),
+      actorId: user.id,
+      diffId: params.diffId,
+      idempotencyKey: input.idempotencyKey,
+    });
+  }
 }
 
 @Controller("sbom-quality-settings")
@@ -418,7 +546,7 @@ export class SbomCiController {
   @UseGuards(SbomCiCredentialGuard)
   @Post(":sourceId/complete")
   @HttpCode(HttpStatus.ACCEPTED)
-  @ZodResponse(sbomJobResponseSchema)
+  @ZodResponse(sbomUploadCompletionResponseSchema)
   async complete(
     @Param(zodParams(sbomSourceParamsSchema)) params: SbomSourceParams,
     @Body(zodBody(ciCompleteSbomUploadInputSchema))
@@ -434,7 +562,7 @@ export class SbomCiController {
       idempotencyKey: input.idempotencyKey,
       correlationId: randomUUID(),
     });
-    return jobResponse(result.job);
+    return completionResponse(result, params.sourceId);
   }
 }
 
@@ -480,4 +608,21 @@ function publicSource(
 
 function jobResponse(job: Readonly<{ id: string }>) {
   return { job, progressUrl: `/api/v1/sbom-jobs/${job.id}` };
+}
+
+function completionResponse(
+  result: Readonly<{
+    job: Readonly<{ id: string; sourceId: string }>;
+    outcome: "queued" | "replayed" | "deduplicated";
+  }>,
+  sourceId: string,
+) {
+  return {
+    ...jobResponse(result.job),
+    completion: {
+      outcome: result.outcome,
+      sourceId,
+      canonicalSourceId: result.job.sourceId,
+    },
+  };
 }

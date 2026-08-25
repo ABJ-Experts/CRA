@@ -23,6 +23,8 @@ import type {
   sbomReleaseParamsSchema,
   sbomSourceSchema,
   sbomUploadInitializationResponseSchema,
+  sbomUploadCompletionResponseSchema,
+  sbomUploadCompletionSchema,
   sbomUploadParamsSchema,
 } from "../schemas/index.js";
 
@@ -52,6 +54,10 @@ export type SbomUploadInitializationResponse = z.output<
   typeof sbomUploadInitializationResponseSchema
 >;
 export type SbomJobResponse = z.output<typeof sbomJobResponseSchema>;
+export type SbomUploadCompletion = z.output<typeof sbomUploadCompletionSchema>;
+export type SbomUploadCompletionResponse = z.output<
+  typeof sbomUploadCompletionResponseSchema
+>;
 export type SbomOriginalDownloadResponse = z.output<
   typeof sbomOriginalDownloadResponseSchema
 >;

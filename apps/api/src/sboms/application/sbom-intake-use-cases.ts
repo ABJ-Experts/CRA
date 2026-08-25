@@ -29,6 +29,7 @@ export type SbomReservation = Readonly<{
   declaredFormat?: SbomDetectedFormat;
   declaredSpecVersion?: string;
   supersedesSourceId?: string;
+  deduplicatedFromSourceId?: string;
   expiresAt: string;
   status: "upload_pending" | "verified" | "rejected" | "expired";
   createdAt: string;
@@ -138,7 +139,10 @@ export interface SbomIntakeRepository {
       ciCredentialId?: string;
     }>,
   ): Promise<
-    | Readonly<{ outcome: "queued" | "replayed"; job: SbomJob }>
+    | Readonly<{
+        outcome: "queued" | "replayed" | "deduplicated";
+        job: SbomJob;
+      }>
     | Readonly<{ outcome: "not_found" | "conflict" | "idempotency_mismatch" }>
   >;
   rejectIntegrity(
@@ -299,7 +303,13 @@ export class SbomIntakeUseCases {
       ciCredentialId?: string;
     }>,
   ): Promise<
-    Result<Readonly<{ job: SbomJob; replayed: boolean }>, SbomIntakeError>
+    Result<
+      Readonly<{
+        job: SbomJob;
+        outcome: "queued" | "replayed" | "deduplicated";
+      }>,
+      SbomIntakeError
+    >
   > {
     try {
       const authorized = await this.repository.getSourceForCompletion(
@@ -323,7 +333,9 @@ export class SbomIntakeUseCases {
           },
         );
         if (!("job" in completed)) return failure({ code: completed.outcome });
-        return success(Object.freeze({ job: completed.job, replayed: true }));
+        return success(
+          Object.freeze({ job: completed.job, outcome: "replayed" }),
+        );
       }
       if (authorized.outcome !== "ready") {
         return failure({ code: "unavailable" });
@@ -383,7 +395,7 @@ export class SbomIntakeUseCases {
       return success(
         Object.freeze({
           job: completed.job,
-          replayed: completed.outcome === "replayed",
+          outcome: completed.outcome,
         }),
       );
     } catch {

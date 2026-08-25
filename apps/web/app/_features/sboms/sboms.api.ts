@@ -1,9 +1,11 @@
 import {
   completeSbomUploadInputSchema,
+  createSbomDiffInputSchema,
   createSbomCiCredentialInputSchema,
   createSbomCiCredentialResponseSchema,
   initializeSbomUploadInputSchema,
   replaySbomJobInputSchema,
+  retrySbomDiffInputSchema,
   revokeSbomCiCredentialInputSchema,
   sbomCiCredentialListResponseSchema,
   sbomCiCredentialParamsSchema,
@@ -12,6 +14,13 @@ import {
   sbomComponentSearchResponseSchema,
   sbomDependencyTreeQuerySchema,
   sbomDependencyTreeResponseSchema,
+  sbomDiffComponentsQuerySchema,
+  sbomDiffComponentsResponseSchema,
+  sbomDiffFindingsQuerySchema,
+  sbomDiffFindingsResponseSchema,
+  sbomDiffParamsSchema,
+  sbomDiffReportResponseSchema,
+  sbomDiffStartResponseSchema,
   sbomDocumentDetailResponseSchema,
   sbomDocumentListQuerySchema,
   sbomDocumentListResponseSchema,
@@ -22,6 +31,8 @@ import {
   sbomQualityFindingsQuerySchema,
   sbomQualityFindingsResponseSchema,
   sbomQualityReportResponseSchema,
+  sbomSourceDiffQuerySchema,
+  sbomSourceDiffResponseSchema,
   sbomSourceHistoryQuerySchema,
   sbomSourceHistoryResponseSchema,
   sbomSourceParamsSchema,
@@ -29,15 +40,20 @@ import {
   sbomUploadInitializationResponseSchema,
   sbomUploadParamsSchema,
   type CompleteSbomUploadInput,
+  type CreateSbomDiffInput,
   type CreateSbomCiCredentialInput,
   type InitializeSbomUploadInput,
   type ReplaySbomJobInput,
+  type RetrySbomDiffInput,
   type RevokeSbomCiCredentialInput,
   type SbomSourceHistoryQuery,
   type SbomComponentSearchQuery,
   type SbomDependencyTreeQuery,
+  type SbomDiffComponentsQuery,
+  type SbomDiffFindingsQuery,
   type SbomDocumentListQuery,
   type SbomQualityFindingsQuery,
+  type SbomSourceDiffQuery,
 } from "@repo/contracts/sboms";
 
 import { authenticatedRequestJson } from "../../_lib/http/authenticated-request";
@@ -114,6 +130,13 @@ function documentPath(documentId: string, suffix = ""): `/${string}` {
     throw invalidIdentifier("The SBOM document identifier is invalid.");
   }
   return `/api/v1/sbom-documents/${parsed.data.documentId}${suffix}`;
+}
+
+function diffPath(diffId: string, suffix = ""): `/${string}` {
+  const parsed = sbomDiffParamsSchema.safeParse({ diffId });
+  if (!parsed.success)
+    throw invalidIdentifier("The SBOM diff identifier is invalid.");
+  return `/api/v1/sbom-diffs/${parsed.data.diffId}${suffix}`;
 }
 
 function documentListPath(
@@ -227,6 +250,103 @@ export class SbomsApi {
     return authenticatedRequestJson<typeof sbomQualityReportResponseSchema>({
       path: sourcePath(sourceId, "/quality-report"),
       schema: sbomQualityReportResponseSchema,
+      signal,
+    });
+  }
+
+  startDiff(
+    sourceId: string,
+    input: CreateSbomDiffInput,
+    signal?: AbortSignal,
+  ) {
+    return authenticatedRequestJson<
+      typeof sbomDiffStartResponseSchema,
+      typeof createSbomDiffInputSchema
+    >({
+      path: sourcePath(sourceId, "/diff"),
+      method: "POST",
+      body: input,
+      inputSchema: createSbomDiffInputSchema,
+      schema: sbomDiffStartResponseSchema,
+      signal,
+    });
+  }
+
+  getSourceDiff(
+    sourceId: string,
+    query: Readonly<Partial<SbomSourceDiffQuery>> = {},
+    signal?: AbortSignal,
+  ) {
+    const parsedQuery = apiClient.parseInput(sbomSourceDiffQuerySchema, query);
+    const search = new URLSearchParams();
+    if (parsedQuery.baseSourceId) {
+      search.set("baseSourceId", parsedQuery.baseSourceId);
+    }
+    const suffix = search.size === 0 ? "/diff" : `/diff?${search.toString()}`;
+    return authenticatedRequestJson<typeof sbomSourceDiffResponseSchema>({
+      path: sourcePath(sourceId, suffix),
+      schema: sbomSourceDiffResponseSchema,
+      signal,
+    });
+  }
+
+  getDiff(diffId: string, signal?: AbortSignal) {
+    return authenticatedRequestJson<typeof sbomDiffReportResponseSchema>({
+      path: diffPath(diffId),
+      schema: sbomDiffReportResponseSchema,
+      signal,
+    });
+  }
+
+  listDiffComponents(
+    diffId: string,
+    query: Readonly<Partial<SbomDiffComponentsQuery>> = {},
+    signal?: AbortSignal,
+  ) {
+    const parsedQuery = apiClient.parseInput(
+      sbomDiffComponentsQuerySchema,
+      query,
+    );
+    const search = new URLSearchParams({ limit: String(parsedQuery.limit) });
+    if (parsedQuery.cursor) search.set("cursor", parsedQuery.cursor);
+    if (parsedQuery.change) search.set("change", parsedQuery.change);
+    if (parsedQuery.ecosystem) search.set("ecosystem", parsedQuery.ecosystem);
+    if (parsedQuery.q) search.set("q", parsedQuery.q);
+    return authenticatedRequestJson<typeof sbomDiffComponentsResponseSchema>({
+      path: diffPath(diffId, `/components?${search.toString()}`),
+      schema: sbomDiffComponentsResponseSchema,
+      signal,
+    });
+  }
+
+  listDiffFindings(
+    diffId: string,
+    query: Readonly<Partial<SbomDiffFindingsQuery>> = {},
+    signal?: AbortSignal,
+  ) {
+    const parsedQuery = apiClient.parseInput(
+      sbomDiffFindingsQuerySchema,
+      query,
+    );
+    const search = new URLSearchParams({ limit: String(parsedQuery.limit) });
+    if (parsedQuery.cursor) search.set("cursor", parsedQuery.cursor);
+    return authenticatedRequestJson<typeof sbomDiffFindingsResponseSchema>({
+      path: diffPath(diffId, `/findings?${search.toString()}`),
+      schema: sbomDiffFindingsResponseSchema,
+      signal,
+    });
+  }
+
+  retryDiff(diffId: string, input: RetrySbomDiffInput, signal?: AbortSignal) {
+    return authenticatedRequestJson<
+      typeof sbomDiffStartResponseSchema,
+      typeof retrySbomDiffInputSchema
+    >({
+      path: diffPath(diffId, "/retry"),
+      method: "POST",
+      body: input,
+      inputSchema: retrySbomDiffInputSchema,
+      schema: sbomDiffStartResponseSchema,
       signal,
     });
   }

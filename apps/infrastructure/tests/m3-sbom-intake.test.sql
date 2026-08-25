@@ -25,7 +25,7 @@ select pg_temp.check(
   and to_regclass('public.sbom_components') is not null
   and to_regclass('public.sbom_component_identities') is not null
   and to_regclass('public.sbom_component_dependencies') is not null
-  and (select count(*) = 11 from pg_class tables
+  and (select count(*) = 13 from pg_class tables
     join pg_namespace namespaces on namespaces.oid = tables.relnamespace
     where namespaces.nspname = 'public' and tables.relkind = 'r'
       and tables.relname like 'sbom_%')

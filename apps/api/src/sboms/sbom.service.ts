@@ -13,6 +13,7 @@ import {
 } from "./application/sbom-intake-use-cases";
 import { SbomNormalizationUseCases } from "./application/sbom-normalization-use-cases";
 import { SbomQualityUseCases } from "./application/sbom-quality-use-cases";
+import { SbomDiffUseCases } from "./application/sbom-diff-use-cases";
 import {
   SBOM_CI_CREDENTIALS,
   type SbomCiCredentialPort,
@@ -25,6 +26,7 @@ export class SbomService {
     private readonly useCases: SbomIntakeUseCases,
     private readonly normalization: SbomNormalizationUseCases,
     private readonly quality: SbomQualityUseCases,
+    private readonly diffs: SbomDiffUseCases,
     @Inject(SBOM_CI_CREDENTIALS)
     private readonly credentials: SbomCiCredentialPort,
   ) {}
@@ -97,6 +99,30 @@ export class SbomService {
     command: Parameters<SbomQualityUseCases["updateSettings"]>[0],
   ) {
     return this.unwrap(this.quality.updateSettings(command));
+  }
+
+  createDiff(command: Parameters<SbomDiffUseCases["create"]>[0]) {
+    return this.unwrap(this.diffs.create(command));
+  }
+
+  sourceDiff(command: Parameters<SbomDiffUseCases["sourceDiff"]>[0]) {
+    return this.unwrap(this.diffs.sourceDiff(command));
+  }
+
+  diffReport(command: Parameters<SbomDiffUseCases["report"]>[0]) {
+    return this.unwrap(this.diffs.report(command));
+  }
+
+  diffComponents(command: Parameters<SbomDiffUseCases["components"]>[0]) {
+    return this.unwrap(this.diffs.components(command));
+  }
+
+  diffFindings(command: Parameters<SbomDiffUseCases["findings"]>[0]) {
+    return this.unwrap(this.diffs.findings(command));
+  }
+
+  retryDiff(command: Parameters<SbomDiffUseCases["retry"]>[0]) {
+    return this.unwrap(this.diffs.retry(command));
   }
 
   replay(command: Parameters<SbomIntakeUseCases["replay"]>[0]) {

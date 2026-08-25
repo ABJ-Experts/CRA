@@ -211,5 +211,21 @@ describe("permission coverage", () => {
       sbomRoutes.get("GET sbom-documents/:documentId/dependency-tree")
         ?.permissions,
     ).toEqual(["can_view_sboms"]);
+    expect(
+      sbomRoutes.get("POST sbom-sources/:sourceId/diff")?.permissions,
+    ).toEqual(["can_upload_sboms"]);
+    expect(
+      sbomRoutes.get("GET sbom-sources/:sourceId/diff")?.permissions,
+    ).toEqual(["can_view_sboms"]);
+    expect(sbomRoutes.get("GET sbom-diffs/:diffId")?.permissions).toEqual([
+      "can_view_sboms",
+    ]);
+    expect(
+      sbomRoutes.get("GET sbom-diffs/:diffId/components")?.permissions,
+    ).toEqual(["can_view_sboms"]);
+    expect(
+      sbomRoutes.get("GET sbom-diffs/:diffId/findings")?.permissions,
+    ).toEqual(["can_view_sboms"]);
+    expect(sbomRoutes.get("POST sbom-diffs/:diffId/retry")?.role).toBe("owner");
   });
 });

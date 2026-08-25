@@ -4,6 +4,8 @@ import {
   sbomQualityFindingsResponseSchema,
   sbomQualityReportResponseSchema,
   sbomQualitySettingsResponseSchema,
+  sbomUploadCompletionResponseSchema,
+  sbomSourceDiffResponseSchema,
   sbomSourceHistoryResponseSchema,
   sbomDocumentListResponseSchema,
   sbomValidationReportResponseSchema,
@@ -19,6 +21,7 @@ import {
   SbomCiController,
   SbomQualitySettingsController,
   SbomSourcesController,
+  SbomUploadsController,
 } from "./sbom.controller";
 
 const organizationId = "00000000-0000-4000-8000-000000000001";
@@ -366,6 +369,77 @@ describe("SBOM report controllers", () => {
       organizationId,
       actorId,
       sourceId,
+    });
+  });
+
+  it("returns an explicit deduplicated completion while preserving the job envelope", async () => {
+    const canonicalSourceId = "00000000-0000-4000-8000-000000000010";
+    const service = {
+      complete: jest.fn().mockResolvedValue({
+        outcome: "deduplicated",
+        job: {
+          id: "00000000-0000-4000-8000-000000000011",
+          sourceId: canonicalSourceId,
+        },
+      }),
+    };
+    const controller = new SbomUploadsController(service as never);
+    const routeHandler = handler(controller, "complete");
+
+    expect(Reflect.getMetadata(ZOD_RESPONSE_SCHEMA, routeHandler)).toBe(
+      sbomUploadCompletionResponseSchema,
+    );
+    await expect(
+      controller.complete(
+        { sourceId },
+        { idempotencyKey: "00000000-0000-4000-8000-000000000012" },
+        user,
+      ),
+    ).resolves.toEqual({
+      job: {
+        id: "00000000-0000-4000-8000-000000000011",
+        sourceId: canonicalSourceId,
+      },
+      progressUrl: "/api/v1/sbom-jobs/00000000-0000-4000-8000-000000000011",
+      completion: { outcome: "deduplicated", sourceId, canonicalSourceId },
+    });
+  });
+
+  it("looks up an existing source diff with view permission without starting work", async () => {
+    const diff = {
+      status: "not_started" as const,
+      sourceId,
+      baselineSourceId: supersededSourceId,
+    };
+    const service = { sourceDiff: jest.fn().mockResolvedValue(diff) };
+    const controller = new SbomSourcesController(service as never);
+    const routeHandler = handler(controller, "sourceDiff");
+
+    expect(Reflect.getMetadata(PATH_METADATA, routeHandler)).toBe(
+      ":sourceId/diff",
+    );
+    expect(Reflect.getMetadata(METHOD_METADATA, routeHandler)).toBe(
+      RequestMethod.GET,
+    );
+    expect(Reflect.getMetadata(REQUIRE_PERMISSIONS_KEY, routeHandler)).toEqual([
+      "can_view_sboms",
+    ]);
+    expect(Reflect.getMetadata(ZOD_RESPONSE_SCHEMA, routeHandler)).toBe(
+      sbomSourceDiffResponseSchema,
+    );
+
+    await expect(
+      controller.sourceDiff(
+        { sourceId },
+        { baseSourceId: supersededSourceId },
+        user,
+      ),
+    ).resolves.toBe(diff);
+    expect(service.sourceDiff).toHaveBeenCalledWith({
+      organizationId,
+      actorId,
+      sourceId,
+      baseSourceId: supersededSourceId,
     });
   });
 

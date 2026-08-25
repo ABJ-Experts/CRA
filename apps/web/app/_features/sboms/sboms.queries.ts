@@ -2,18 +2,27 @@
 
 import type {
   CreateSbomCiCredentialInput,
+  CreateSbomDiffInput,
   RevokeSbomCiCredentialInput,
   SbomJobResponse,
   SbomComponentSearchQuery,
   SbomComponentSearchResponse,
   SbomDependencyTreeQuery,
   SbomDependencyTreeResponse,
+  SbomDiffComponentsQuery,
+  SbomDiffComponentsResponse,
+  SbomDiffFindingsQuery,
+  SbomDiffFindingsResponse,
+  SbomDiffReportResponse,
   SbomDocumentDetailResponse,
   SbomDocumentListQuery,
   SbomDocumentListResponse,
   SbomQualityFindingsQuery,
   SbomQualityFindingsResponse,
   SbomQualityReportResponse,
+  RetrySbomDiffInput,
+  SbomSourceDiffQuery,
+  SbomSourceDiffResponse,
   SbomSourceHistoryQuery,
   SbomSourceHistoryResponse,
   SbomValidationReportResponse,
@@ -36,6 +45,12 @@ function shouldPollQuality(
   status: SbomQualityReportResponse["report"]["state"] | undefined,
 ) {
   return status === "queued" || status === "processing";
+}
+
+function shouldPollDiff(
+  state: SbomDiffReportResponse["report"]["state"] | undefined,
+) {
+  return state === "queued" || state === "processing";
 }
 
 export function useSbomJobQuery(jobId: string | null, enabled: boolean) {
@@ -156,6 +171,125 @@ export function useSbomQualityFindingsQuery(
       if (sourceId === null)
         throw new Error("An SBOM source identifier is required.");
       return sbomsApi.listQualityFindings(sourceId, query, signal);
+    },
+  });
+}
+
+export function useSbomDiffReportQuery(
+  diffId: string | null,
+  enabled: boolean,
+) {
+  return useQuery<SbomDiffReportResponse>({
+    queryKey:
+      diffId === null ? sbomKeys.diffReports : sbomKeys.diffReport(diffId),
+    enabled: enabled && diffId !== null,
+    retry: false,
+    refetchInterval: (query) =>
+      shouldPollDiff(query.state.data?.report.state) ? 2_000 : false,
+    queryFn: ({ signal }) => {
+      if (diffId === null)
+        throw new Error("An SBOM diff identifier is required.");
+      return sbomsApi.getDiff(diffId, signal);
+    },
+  });
+}
+
+export function useSbomSourceDiffQuery(
+  sourceId: string | null,
+  query: Readonly<Partial<SbomSourceDiffQuery>>,
+  enabled: boolean,
+) {
+  return useQuery<SbomSourceDiffResponse>({
+    queryKey:
+      sourceId === null
+        ? sbomKeys.sourceDiffReports
+        : sbomKeys.sourceDiffReport(sourceId, query),
+    enabled: enabled && sourceId !== null,
+    retry: false,
+    queryFn: ({ signal }) => {
+      if (sourceId === null)
+        throw new Error("An SBOM source identifier is required.");
+      return sbomsApi.getSourceDiff(sourceId, query, signal);
+    },
+  });
+}
+
+export function useSbomDiffComponentsQuery(
+  diffId: string | null,
+  query: Readonly<Partial<SbomDiffComponentsQuery>>,
+  enabled: boolean,
+) {
+  return useQuery<SbomDiffComponentsResponse>({
+    queryKey:
+      diffId === null
+        ? sbomKeys.diffReports
+        : sbomKeys.diffComponents(diffId, query),
+    enabled: enabled && diffId !== null,
+    retry: false,
+    queryFn: ({ signal }) => {
+      if (diffId === null)
+        throw new Error("An SBOM diff identifier is required.");
+      return sbomsApi.listDiffComponents(diffId, query, signal);
+    },
+  });
+}
+
+export function useSbomDiffFindingsQuery(
+  diffId: string | null,
+  query: Readonly<Partial<SbomDiffFindingsQuery>>,
+  enabled: boolean,
+) {
+  return useQuery<SbomDiffFindingsResponse>({
+    queryKey:
+      diffId === null
+        ? sbomKeys.diffReports
+        : sbomKeys.diffFindings(diffId, query),
+    enabled: enabled && diffId !== null,
+    retry: false,
+    queryFn: ({ signal }) => {
+      if (diffId === null)
+        throw new Error("An SBOM diff identifier is required.");
+      return sbomsApi.listDiffFindings(diffId, query, signal);
+    },
+  });
+}
+
+export function useStartSbomDiffMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      sourceId,
+      input,
+    }: {
+      sourceId: string;
+      input: CreateSbomDiffInput;
+    }) => sbomsApi.startDiff(sourceId, input),
+    onSuccess: (response) => {
+      if (response.status === "queued") {
+        queryClient.setQueryData(sbomKeys.diffReport(response.report.id), {
+          report: response.report,
+        });
+      }
+    },
+  });
+}
+
+export function useRetrySbomDiffMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      diffId,
+      input,
+    }: {
+      diffId: string;
+      input: RetrySbomDiffInput;
+    }) => sbomsApi.retryDiff(diffId, input),
+    onSuccess: (response) => {
+      if (response.status === "queued") {
+        queryClient.setQueryData(sbomKeys.diffReport(response.report.id), {
+          report: response.report,
+        });
+      }
     },
   });
 }

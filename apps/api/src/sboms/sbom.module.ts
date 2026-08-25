@@ -16,6 +16,10 @@ import {
   SBOM_QUALITY_REPOSITORY,
   SbomQualityUseCases,
 } from "./application/sbom-quality-use-cases";
+import {
+  SBOM_DIFF_REPOSITORY,
+  SbomDiffUseCases,
+} from "./application/sbom-diff-use-cases";
 import { SupabaseSbomRepository } from "./infrastructure/supabase-sbom.repository";
 import { SupabaseSbomStorageAdapter } from "./infrastructure/supabase-sbom-storage.adapter";
 import { SbomCiCredentialsController } from "./sbom-ci-credentials.controller";
@@ -24,6 +28,7 @@ import {
   ProductReleaseSbomController,
   SbomCiController,
   SbomDocumentsController,
+  SbomDiffsController,
   SbomJobsController,
   SbomQualitySettingsController,
   SbomSourcesController,
@@ -33,12 +38,14 @@ import { SbomService } from "./sbom.service";
 import { validateSbomInWorker } from "./validation/sbom-validation-worker";
 import { SbomIngestWorker } from "./worker/sbom-ingest-worker";
 import { SbomQualityWorker } from "./worker/sbom-quality-worker";
+import { SbomDiffWorker } from "./worker/sbom-diff-worker";
 
 @Module({
   imports: [SupabaseModule],
   controllers: [
     ProductReleaseSbomController,
     SbomDocumentsController,
+    SbomDiffsController,
     SbomUploadsController,
     SbomJobsController,
     SbomSourcesController,
@@ -55,6 +62,7 @@ import { SbomQualityWorker } from "./worker/sbom-quality-worker";
       useExisting: SupabaseSbomRepository,
     },
     { provide: SBOM_QUALITY_REPOSITORY, useExisting: SupabaseSbomRepository },
+    { provide: SBOM_DIFF_REPOSITORY, useExisting: SupabaseSbomRepository },
     { provide: SBOM_CI_CREDENTIALS, useExisting: SupabaseSbomRepository },
     {
       provide: SbomIntakeUseCases,
@@ -75,6 +83,12 @@ import { SbomQualityWorker } from "./worker/sbom-quality-worker";
       inject: [SBOM_QUALITY_REPOSITORY],
       useFactory: (repository: SupabaseSbomRepository) =>
         new SbomQualityUseCases(repository),
+    },
+    {
+      provide: SbomDiffUseCases,
+      inject: [SBOM_DIFF_REPOSITORY],
+      useFactory: (repository: SupabaseSbomRepository) =>
+        new SbomDiffUseCases(repository),
     },
     SbomService,
     SbomCiCredentialGuard,
@@ -117,7 +131,19 @@ import { SbomQualityWorker } from "./worker/sbom-quality-worker";
             config.get<number>("SBOM_NORMALIZATION_MAX_COMPONENTS") ?? 50_000,
         }),
     },
+    {
+      provide: SbomDiffWorker,
+      inject: [SupabaseSbomRepository, ConfigService],
+      useFactory: (queue: SupabaseSbomRepository, config: ConfigService) =>
+        new SbomDiffWorker({
+          workerId: randomUUID(),
+          leaseSeconds: 60,
+          queue,
+          pageSize: config.get<number>("SBOM_DIFF_PAGE_SIZE") ?? 1_000,
+          batchSize: config.get<number>("SBOM_DIFF_BATCH_SIZE") ?? 250,
+        }),
+    },
   ],
-  exports: [SbomIngestWorker, SbomQualityWorker],
+  exports: [SbomIngestWorker, SbomQualityWorker, SbomDiffWorker],
 })
 export class SbomModule {}

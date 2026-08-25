@@ -6,12 +6,14 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
+  useRetrySbomDiffMutation,
   useSbomComponentSearchQuery,
   useSbomDependencyTreeChildrenQuery,
   useSbomDocumentDetailQuery,
   useSbomDocumentsForReleaseQuery,
   useSbomQualityFindingsQuery,
   useSbomQualityReportQuery,
+  useSbomSourceDiffQuery,
   useSbomSourceHistoryQuery,
   useSbomValidationReportQuery,
 } from "./sboms.queries";
@@ -25,6 +27,8 @@ const api = vi.hoisted(() => ({
   getValidationReport: vi.fn(),
   getQualityReport: vi.fn(),
   listQualityFindings: vi.fn(),
+  getSourceDiff: vi.fn(),
+  retryDiff: vi.fn(),
 }));
 
 vi.mock("./sboms.api", () => ({
@@ -34,6 +38,7 @@ vi.mock("./sboms.api", () => ({
 const PRODUCT_ID = "11111111-1111-4111-8111-111111111111";
 const RELEASE_ID = "22222222-2222-4222-8222-222222222222";
 const SOURCE_ID = "33333333-3333-4333-8333-333333333333";
+const DIFF_ID = "99999999-9999-4999-8999-999999999999";
 const NOW = "2026-08-21T04:00:00.000Z";
 
 const source = {
@@ -296,5 +301,78 @@ describe("SBOM queries", () => {
       { limit: 10 },
       expect.any(AbortSignal),
     );
+  });
+
+  it("looks up source-scoped diff state without invoking a write mutation", async () => {
+    api.getSourceDiff.mockResolvedValue({
+      status: "not_started",
+      sourceId: SOURCE_ID,
+      baselineSourceId: "77777777-7777-4777-8777-777777777777",
+    });
+
+    const { result } = renderHook(
+      () =>
+        useSbomSourceDiffQuery(
+          SOURCE_ID,
+          { baseSourceId: "77777777-7777-4777-8777-777777777777" },
+          true,
+        ),
+      { wrapper },
+    );
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.data).toMatchObject({ status: "not_started" });
+    expect(api.getSourceDiff).toHaveBeenCalledWith(
+      SOURCE_ID,
+      { baseSourceId: "77777777-7777-4777-8777-777777777777" },
+      expect.any(AbortSignal),
+    );
+  });
+
+  it("caches the queued report returned by a retry mutation", async () => {
+    const diff = {
+      id: DIFF_ID,
+      releaseId: RELEASE_ID,
+      sourceId: SOURCE_ID,
+      baselineSourceId: "77777777-7777-4777-8777-777777777777",
+      documentId: "88888888-8888-4888-8888-888888888888",
+      baselineDocumentId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      state: "queued",
+      comparisonStatus: "ready",
+      comparatorVersion: "m4-unavailable.v1",
+      counts: { componentChanges: 0 },
+      findingDelta: {
+        status: "partial_integration_unavailable",
+        reason: "Finding delta requires the M4 advisory integration.",
+        summary: null,
+      },
+      progress: {
+        stage: "queued",
+        percent: 0,
+        message: "Waiting to compare the release lineage.",
+      },
+      error: null,
+      completedAt: null,
+      createdAt: NOW,
+      updatedAt: NOW,
+    } as const;
+    api.retryDiff.mockResolvedValue({
+      status: "queued",
+      report: diff,
+      replayed: false,
+    });
+
+    const { result } = renderHook(() => useRetrySbomDiffMutation(), {
+      wrapper,
+    });
+
+    await result.current.mutateAsync({
+      diffId: DIFF_ID,
+      input: { idempotencyKey: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb" },
+    });
+
+    expect(api.retryDiff).toHaveBeenCalledWith(DIFF_ID, {
+      idempotencyKey: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+    });
   });
 });

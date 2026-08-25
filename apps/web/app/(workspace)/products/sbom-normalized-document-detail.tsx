@@ -722,6 +722,12 @@ export function SbomNormalizedDocumentDetail({
             </Tag>
           </div>
         </div>
+        <Link
+          href={`/products/${productId}/sboms/${document.id}/diff?sourceId=${encodeURIComponent(sourceId ?? document.sourceId)}`}
+          className="mt-3 inline-flex text-caption-1-semibold text-active-600 underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-active-500"
+        >
+          Compare release lineage
+        </Link>
         <dl className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <DocumentFact label="Components" value={document.componentCount} />
           <DocumentFact label="Maximum depth" value={document.maximumDepth} />

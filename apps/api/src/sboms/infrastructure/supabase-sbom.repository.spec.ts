@@ -101,6 +101,162 @@ describe("SupabaseSbomRepository replay mapping", () => {
   );
 });
 
+describe("SupabaseSbomRepository deduplicated completion", () => {
+  const organizationId = "11111111-1111-4111-8111-111111111111";
+  const sourceId = "22222222-2222-4222-8222-222222222222";
+  const jobId = "33333333-3333-4333-8333-333333333333";
+  const actorId = "44444444-4444-4444-8444-444444444444";
+  const rpc = jest.fn();
+  const repository = () =>
+    new SupabaseSbomRepository({
+      admin: () => ({ rpc }),
+    } as unknown as SupabaseService);
+
+  beforeEach(() => rpc.mockReset());
+
+  it("uses the atomic content-addressed finalizer and returns its canonical job", async () => {
+    rpc.mockResolvedValue({
+      data: [{ outcome: "deduplicated", job: queuedJob() }],
+      error: null,
+    });
+
+    await expect(
+      repository().complete(organizationId, {
+        sourceId,
+        actorId,
+        idempotencyKey: "55555555-5555-4555-8555-555555555555",
+        actualHash: "a".repeat(64),
+        actualByteSize: 42,
+        actualMediaType: "application/json",
+        correlationId: "66666666-6666-4666-8666-666666666666",
+      }),
+    ).resolves.toMatchObject({ outcome: "deduplicated", job: { id: jobId } });
+
+    expect(rpc).toHaveBeenCalledWith(
+      "finalize_sbom_source_deduplicated_atomic",
+      {
+        p_organization_id: organizationId,
+        p_source_id: sourceId,
+        p_actor_user_id: actorId,
+        p_actor_credential_id: null,
+        p_actual_sha256: "a".repeat(64),
+        p_actual_byte_size: 42,
+        p_actual_media_type: "application/json",
+        p_idempotency_key: "55555555-5555-4555-8555-555555555555",
+        p_correlation_id: "66666666-6666-4666-8666-666666666666",
+      },
+    );
+  });
+
+  function queuedJob() {
+    return {
+      id: jobId,
+      organizationId,
+      releaseId: "77777777-7777-4777-8777-777777777777",
+      sourceId,
+      inputSha256: "a".repeat(64),
+      correlationId: "66666666-6666-4666-8666-666666666666",
+      status: "queued",
+      progress: { stage: "queued", percent: 0, message: "Queued" },
+      attempts: 0,
+      maxAttempts: 5,
+      error: null,
+      result: null,
+      createdAt: "2026-08-25T00:00:00.000Z",
+      updatedAt: "2026-08-25T00:00:00.000Z",
+      completedAt: null,
+    };
+  }
+});
+
+describe("SupabaseSbomRepository source diff lookup", () => {
+  const organizationId = "11111111-1111-4111-8111-111111111111";
+  const actorId = "22222222-2222-4222-8222-222222222222";
+  const sourceId = "33333333-3333-4333-8333-333333333333";
+  const baselineSourceId = "44444444-4444-4444-8444-444444444444";
+  const reportId = "55555555-5555-4555-8555-555555555555";
+  const rpc = jest.fn();
+  const repository = () =>
+    new SupabaseSbomRepository({
+      admin: () => ({ rpc }),
+    } as unknown as SupabaseService);
+
+  beforeEach(() => rpc.mockReset());
+
+  it("returns a read-only not-started result for a valid comparable lineage", async () => {
+    rpc.mockResolvedValue({
+      data: [
+        {
+          outcome: "not_started",
+          result: { baselineSourceId },
+        },
+      ],
+      error: null,
+    });
+
+    await expect(
+      repository().getSourceDiff(organizationId, { actorId, sourceId }),
+    ).resolves.toEqual({
+      status: "not_started",
+      sourceId,
+      baselineSourceId,
+    });
+    expect(rpc).toHaveBeenCalledWith("get_sbom_source_diff_report", {
+      p_organization_id: organizationId,
+      p_actor_user_id: actorId,
+      p_source_id: sourceId,
+      p_baseline_source_id: null,
+    });
+  });
+
+  it("parses explicit comparison status instead of inferring identical from a zero count", async () => {
+    rpc.mockResolvedValue({
+      data: [
+        {
+          outcome: "found",
+          report: diffReport(),
+        },
+      ],
+      error: null,
+    });
+
+    await expect(
+      repository().getSourceDiff(organizationId, {
+        actorId,
+        sourceId,
+        baseSourceId: baselineSourceId,
+      }),
+    ).resolves.toMatchObject({
+      status: "found",
+      report: {
+        id: reportId,
+        comparisonStatus: "partial_integration_unavailable",
+      },
+    });
+  });
+
+  function diffReport() {
+    return {
+      id: reportId,
+      sourceId,
+      baselineSourceId,
+      releaseId: "66666666-6666-4666-8666-666666666666",
+      documentId: "77777777-7777-4777-8777-777777777777",
+      baselineDocumentId: "88888888-8888-4888-8888-888888888888",
+      state: "completed",
+      comparisonStatus: "partial_integration_unavailable",
+      comparatorVersion: "m4-unavailable.v1",
+      findingDelta: { state: "partial_integration_unavailable" },
+      counts: { componentChanges: 0 },
+      progress: { stage: "completed", percent: 100 },
+      error: null,
+      completedAt: "2026-08-25T00:00:00.000Z",
+      createdAt: "2026-08-25T00:00:00.000Z",
+      updatedAt: "2026-08-25T00:00:00.000Z",
+    };
+  }
+});
+
 describe("SupabaseSbomRepository validation persistence", () => {
   const organizationId = "11111111-1111-4111-8111-111111111111";
   const actorId = "22222222-2222-4222-8222-222222222222";
