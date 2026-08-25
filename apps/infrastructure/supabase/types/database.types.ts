@@ -5922,6 +5922,738 @@ export type Database = {
           },
         ]
       }
+      sbom_composite_component_provenance: {
+        Row: {
+          composite_component_ref: string
+          created_at: string
+          field_name: string | null
+          id: string
+          merge_timestamp: string
+          organization_id: string
+          review_conflict_id: string | null
+          review_id: string
+          source_component_id: string | null
+          source_component_ref: string | null
+          source_document_id: string
+          source_id: string
+          supplier_submission_id: string | null
+        }
+        Insert: {
+          composite_component_ref: string
+          created_at?: string
+          field_name?: string | null
+          id?: string
+          merge_timestamp?: string
+          organization_id: string
+          review_conflict_id?: string | null
+          review_id: string
+          source_component_id?: string | null
+          source_component_ref?: string | null
+          source_document_id: string
+          source_id: string
+          supplier_submission_id?: string | null
+        }
+        Update: {
+          composite_component_ref?: string
+          created_at?: string
+          field_name?: string | null
+          id?: string
+          merge_timestamp?: string
+          organization_id?: string
+          review_conflict_id?: string | null
+          review_id?: string
+          source_component_id?: string | null
+          source_component_ref?: string | null
+          source_document_id?: string
+          source_id?: string
+          supplier_submission_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sbom_composite_component_prov_organization_id_review_confl_fkey"
+            columns: ["organization_id", "review_conflict_id"]
+            isOneToOne: false
+            referencedRelation: "sbom_composite_conflicts"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "sbom_composite_component_prov_organization_id_source_compo_fkey"
+            columns: ["organization_id", "source_component_id"]
+            isOneToOne: false
+            referencedRelation: "sbom_components"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "sbom_composite_component_prov_organization_id_source_docum_fkey"
+            columns: ["organization_id", "source_document_id"]
+            isOneToOne: false
+            referencedRelation: "sbom_documents"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "sbom_composite_component_prov_organization_id_supplier_sub_fkey"
+            columns: ["organization_id", "supplier_submission_id"]
+            isOneToOne: false
+            referencedRelation: "sbom_supplier_submissions"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "sbom_composite_component_provena_organization_id_review_id_fkey"
+            columns: ["organization_id", "review_id"]
+            isOneToOne: false
+            referencedRelation: "sbom_composite_reviews"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "sbom_composite_component_provena_organization_id_source_id_fkey"
+            columns: ["organization_id", "source_id"]
+            isOneToOne: false
+            referencedRelation: "sbom_sources"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "sbom_composite_component_provenance_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sbom_composite_conflicts: {
+        Row: {
+          candidates: Json
+          conflict_type: string
+          created_at: string
+          field_name: string | null
+          id: string
+          identity_key: string
+          organization_id: string
+          resolution_reason: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          review_id: string
+          selected_source_component_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          candidates: Json
+          conflict_type: string
+          created_at?: string
+          field_name?: string | null
+          id?: string
+          identity_key: string
+          organization_id: string
+          resolution_reason?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          review_id: string
+          selected_source_component_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          candidates?: Json
+          conflict_type?: string
+          created_at?: string
+          field_name?: string | null
+          id?: string
+          identity_key?: string
+          organization_id?: string
+          resolution_reason?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          review_id?: string
+          selected_source_component_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sbom_composite_conflicts_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sbom_composite_conflicts_organization_id_review_id_fkey"
+            columns: ["organization_id", "review_id"]
+            isOneToOne: false
+            referencedRelation: "sbom_composite_reviews"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "sbom_composite_conflicts_organization_id_selected_source_c_fkey"
+            columns: ["organization_id", "selected_source_component_id"]
+            isOneToOne: false
+            referencedRelation: "sbom_components"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "sbom_composite_conflicts_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sbom_composite_dependency_provenance: {
+        Row: {
+          composite_child_ref: string
+          composite_parent_ref: string
+          created_at: string
+          id: string
+          merge_timestamp: string
+          organization_id: string
+          review_id: string
+          review_relationship_id: string | null
+          source_dependency_id: string
+          source_document_id: string
+          source_id: string
+          supplier_submission_id: string | null
+        }
+        Insert: {
+          composite_child_ref: string
+          composite_parent_ref: string
+          created_at?: string
+          id?: string
+          merge_timestamp?: string
+          organization_id: string
+          review_id: string
+          review_relationship_id?: string | null
+          source_dependency_id: string
+          source_document_id: string
+          source_id: string
+          supplier_submission_id?: string | null
+        }
+        Update: {
+          composite_child_ref?: string
+          composite_parent_ref?: string
+          created_at?: string
+          id?: string
+          merge_timestamp?: string
+          organization_id?: string
+          review_id?: string
+          review_relationship_id?: string | null
+          source_dependency_id?: string
+          source_document_id?: string
+          source_id?: string
+          supplier_submission_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sbom_composite_dependency_pro_organization_id_review_relat_fkey"
+            columns: ["organization_id", "review_relationship_id"]
+            isOneToOne: false
+            referencedRelation: "sbom_composite_unresolved_relationships"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "sbom_composite_dependency_pro_organization_id_source_depen_fkey"
+            columns: ["organization_id", "source_dependency_id"]
+            isOneToOne: false
+            referencedRelation: "sbom_component_dependencies"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "sbom_composite_dependency_pro_organization_id_source_docum_fkey"
+            columns: ["organization_id", "source_document_id"]
+            isOneToOne: false
+            referencedRelation: "sbom_documents"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "sbom_composite_dependency_pro_organization_id_supplier_sub_fkey"
+            columns: ["organization_id", "supplier_submission_id"]
+            isOneToOne: false
+            referencedRelation: "sbom_supplier_submissions"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "sbom_composite_dependency_proven_organization_id_review_id_fkey"
+            columns: ["organization_id", "review_id"]
+            isOneToOne: false
+            referencedRelation: "sbom_composite_reviews"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "sbom_composite_dependency_proven_organization_id_source_id_fkey"
+            columns: ["organization_id", "source_id"]
+            isOneToOne: false
+            referencedRelation: "sbom_sources"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "sbom_composite_dependency_provenance_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sbom_composite_review_inputs: {
+        Row: {
+          created_at: string
+          document_id: string
+          id: string
+          organization_id: string
+          release_id: string
+          review_id: string
+          source_id: string
+          source_sha256: string
+          supplier_submission_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          document_id: string
+          id?: string
+          organization_id: string
+          release_id: string
+          review_id: string
+          source_id: string
+          source_sha256: string
+          supplier_submission_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          document_id?: string
+          id?: string
+          organization_id?: string
+          release_id?: string
+          review_id?: string
+          source_id?: string
+          source_sha256?: string
+          supplier_submission_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sbom_composite_review_inputs_organization_id_document_id_s_fkey"
+            columns: ["organization_id", "document_id", "source_id"]
+            isOneToOne: false
+            referencedRelation: "sbom_document_sources"
+            referencedColumns: ["organization_id", "document_id", "source_id"]
+          },
+          {
+            foreignKeyName: "sbom_composite_review_inputs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sbom_composite_review_inputs_organization_id_review_id_fkey"
+            columns: ["organization_id", "review_id"]
+            isOneToOne: false
+            referencedRelation: "sbom_composite_reviews"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "sbom_composite_review_inputs_organization_id_source_id_fkey"
+            columns: ["organization_id", "source_id"]
+            isOneToOne: false
+            referencedRelation: "sbom_sources"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "sbom_composite_review_inputs_organization_id_supplier_subm_fkey"
+            columns: ["organization_id", "supplier_submission_id"]
+            isOneToOne: false
+            referencedRelation: "sbom_supplier_submissions"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      sbom_composite_reviews: {
+        Row: {
+          attempt_count: number
+          completed_at: string | null
+          created_at: string
+          created_by: string
+          failure_code: string | null
+          failure_message: string | null
+          generated_at: string | null
+          generated_document_id: string | null
+          generated_source_id: string | null
+          id: string
+          input_set_digest: string
+          lease_expires_at: string | null
+          lease_owner: string | null
+          merge_rules_version: string
+          organization_id: string
+          product_id: string
+          provenance_manifest_sha256: string | null
+          release_id: string
+          resolution_digest: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          attempt_count?: number
+          completed_at?: string | null
+          created_at?: string
+          created_by: string
+          failure_code?: string | null
+          failure_message?: string | null
+          generated_at?: string | null
+          generated_document_id?: string | null
+          generated_source_id?: string | null
+          id: string
+          input_set_digest: string
+          lease_expires_at?: string | null
+          lease_owner?: string | null
+          merge_rules_version: string
+          organization_id: string
+          product_id: string
+          provenance_manifest_sha256?: string | null
+          release_id: string
+          resolution_digest?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          attempt_count?: number
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string
+          failure_code?: string | null
+          failure_message?: string | null
+          generated_at?: string | null
+          generated_document_id?: string | null
+          generated_source_id?: string | null
+          id?: string
+          input_set_digest?: string
+          lease_expires_at?: string | null
+          lease_owner?: string | null
+          merge_rules_version?: string
+          organization_id?: string
+          product_id?: string
+          provenance_manifest_sha256?: string | null
+          release_id?: string
+          resolution_digest?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sbom_composite_reviews_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sbom_composite_reviews_lease_owner_fkey"
+            columns: ["lease_owner"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sbom_composite_reviews_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sbom_composite_reviews_organization_id_generated_document__fkey"
+            columns: ["organization_id", "generated_document_id"]
+            isOneToOne: false
+            referencedRelation: "sbom_documents"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "sbom_composite_reviews_organization_id_generated_source_id_fkey"
+            columns: ["organization_id", "generated_source_id"]
+            isOneToOne: false
+            referencedRelation: "sbom_sources"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "sbom_composite_reviews_organization_id_product_id_release__fkey"
+            columns: ["organization_id", "product_id", "release_id"]
+            isOneToOne: false
+            referencedRelation: "product_releases"
+            referencedColumns: ["organization_id", "product_id", "id"]
+          },
+        ]
+      }
+      sbom_composite_unresolved_relationships: {
+        Row: {
+          created_at: string
+          detail: Json
+          disposition: string | null
+          id: string
+          organization_id: string
+          relationship_key: string
+          resolution_reason: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          review_id: string
+          source_dependency_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          detail: Json
+          disposition?: string | null
+          id?: string
+          organization_id: string
+          relationship_key: string
+          resolution_reason?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          review_id: string
+          source_dependency_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          detail?: Json
+          disposition?: string | null
+          id?: string
+          organization_id?: string
+          relationship_key?: string
+          resolution_reason?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          review_id?: string
+          source_dependency_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sbom_composite_unresolved_rel_organization_id_source_depen_fkey"
+            columns: ["organization_id", "source_dependency_id"]
+            isOneToOne: false
+            referencedRelation: "sbom_component_dependencies"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "sbom_composite_unresolved_relati_organization_id_review_id_fkey"
+            columns: ["organization_id", "review_id"]
+            isOneToOne: false
+            referencedRelation: "sbom_composite_reviews"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "sbom_composite_unresolved_relationships_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sbom_composite_unresolved_relationships_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sbom_diff_component_changes: {
+        Row: {
+          baseline_component_id: string | null
+          baseline_version: string | null
+          canonical_package_identity: string | null
+          change_key: string
+          change_type: string
+          created_at: string
+          current_component_id: string | null
+          current_version: string | null
+          ecosystem: string | null
+          explanation: string
+          id: string
+          organization_id: string
+          report_id: string
+          updated_at: string
+        }
+        Insert: {
+          baseline_component_id?: string | null
+          baseline_version?: string | null
+          canonical_package_identity?: string | null
+          change_key: string
+          change_type: string
+          created_at?: string
+          current_component_id?: string | null
+          current_version?: string | null
+          ecosystem?: string | null
+          explanation: string
+          id?: string
+          organization_id: string
+          report_id: string
+          updated_at?: string
+        }
+        Update: {
+          baseline_component_id?: string | null
+          baseline_version?: string | null
+          canonical_package_identity?: string | null
+          change_key?: string
+          change_type?: string
+          created_at?: string
+          current_component_id?: string | null
+          current_version?: string | null
+          ecosystem?: string | null
+          explanation?: string
+          id?: string
+          organization_id?: string
+          report_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sbom_diff_component_changes_organization_id_baseline_compo_fkey"
+            columns: ["organization_id", "baseline_component_id"]
+            isOneToOne: false
+            referencedRelation: "sbom_components"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "sbom_diff_component_changes_organization_id_current_compon_fkey"
+            columns: ["organization_id", "current_component_id"]
+            isOneToOne: false
+            referencedRelation: "sbom_components"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "sbom_diff_component_changes_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sbom_diff_component_changes_organization_id_report_id_fkey"
+            columns: ["organization_id", "report_id"]
+            isOneToOne: false
+            referencedRelation: "sbom_diff_reports"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      sbom_diff_reports: {
+        Row: {
+          attempt_count: number
+          baseline_document_id: string
+          baseline_source_id: string
+          checkpoint: Json
+          comparator_version: string
+          completed_at: string | null
+          created_at: string
+          document_id: string
+          error_code: string | null
+          error_message: string | null
+          finding_delta_state: string
+          id: string
+          lease_expires_at: string | null
+          lease_owner: string | null
+          max_attempts: number
+          next_attempt_at: string
+          organization_id: string
+          progress_change_count: number
+          progress_percent: number
+          progress_stage: string
+          release_id: string
+          source_id: string
+          state: string
+          updated_at: string
+        }
+        Insert: {
+          attempt_count?: number
+          baseline_document_id: string
+          baseline_source_id: string
+          checkpoint?: Json
+          comparator_version?: string
+          completed_at?: string | null
+          created_at?: string
+          document_id: string
+          error_code?: string | null
+          error_message?: string | null
+          finding_delta_state?: string
+          id?: string
+          lease_expires_at?: string | null
+          lease_owner?: string | null
+          max_attempts?: number
+          next_attempt_at?: string
+          organization_id: string
+          progress_change_count?: number
+          progress_percent?: number
+          progress_stage?: string
+          release_id: string
+          source_id: string
+          state?: string
+          updated_at?: string
+        }
+        Update: {
+          attempt_count?: number
+          baseline_document_id?: string
+          baseline_source_id?: string
+          checkpoint?: Json
+          comparator_version?: string
+          completed_at?: string | null
+          created_at?: string
+          document_id?: string
+          error_code?: string | null
+          error_message?: string | null
+          finding_delta_state?: string
+          id?: string
+          lease_expires_at?: string | null
+          lease_owner?: string | null
+          max_attempts?: number
+          next_attempt_at?: string
+          organization_id?: string
+          progress_change_count?: number
+          progress_percent?: number
+          progress_stage?: string
+          release_id?: string
+          source_id?: string
+          state?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sbom_diff_reports_organization_id_baseline_document_id_bas_fkey"
+            columns: [
+              "organization_id",
+              "baseline_document_id",
+              "baseline_source_id",
+            ]
+            isOneToOne: false
+            referencedRelation: "sbom_document_sources"
+            referencedColumns: ["organization_id", "document_id", "source_id"]
+          },
+          {
+            foreignKeyName: "sbom_diff_reports_organization_id_baseline_source_id_fkey"
+            columns: ["organization_id", "baseline_source_id"]
+            isOneToOne: false
+            referencedRelation: "sbom_sources"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "sbom_diff_reports_organization_id_document_id_source_id_fkey"
+            columns: ["organization_id", "document_id", "source_id"]
+            isOneToOne: false
+            referencedRelation: "sbom_document_sources"
+            referencedColumns: ["organization_id", "document_id", "source_id"]
+          },
+          {
+            foreignKeyName: "sbom_diff_reports_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sbom_diff_reports_organization_id_source_id_fkey"
+            columns: ["organization_id", "source_id"]
+            isOneToOne: false
+            referencedRelation: "sbom_sources"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
       sbom_document_sources: {
         Row: {
           created_at: string
@@ -6539,6 +7271,7 @@ export type Database = {
           declared_media_type: string
           declared_sha256: string
           declared_spec_version: string | null
+          deduplicated_from_source_id: string | null
           id: string
           idempotency_key: string
           organization_id: string
@@ -6566,6 +7299,7 @@ export type Database = {
           declared_media_type: string
           declared_sha256: string
           declared_spec_version?: string | null
+          deduplicated_from_source_id?: string | null
           id: string
           idempotency_key: string
           organization_id: string
@@ -6593,6 +7327,7 @@ export type Database = {
           declared_media_type?: string
           declared_sha256?: string
           declared_spec_version?: string | null
+          deduplicated_from_source_id?: string | null
           id?: string
           idempotency_key?: string
           organization_id?: string
@@ -6626,6 +7361,17 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "sbom_sources_deduplicated_same_release_fkey"
+            columns: [
+              "organization_id",
+              "release_id",
+              "deduplicated_from_source_id",
+            ]
+            isOneToOne: false
+            referencedRelation: "sbom_sources"
+            referencedColumns: ["organization_id", "release_id", "id"]
+          },
+          {
             foreignKeyName: "sbom_sources_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
@@ -6652,6 +7398,259 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "sbom_sources"
             referencedColumns: ["organization_id", "release_id", "id"]
+          },
+        ]
+      }
+      sbom_supplier_invitations: {
+        Row: {
+          consumed_at: string | null
+          created_at: string
+          created_by: string
+          expires_at: string
+          id: string
+          idempotency_key: string
+          organization_id: string
+          request_digest: string
+          request_id: string
+          revoked_at: string | null
+          session_expires_at: string | null
+          session_token_hash: string | null
+          status: string
+          token_hash: string
+          token_prefix: string
+        }
+        Insert: {
+          consumed_at?: string | null
+          created_at?: string
+          created_by: string
+          expires_at: string
+          id: string
+          idempotency_key: string
+          organization_id: string
+          request_digest: string
+          request_id: string
+          revoked_at?: string | null
+          session_expires_at?: string | null
+          session_token_hash?: string | null
+          status?: string
+          token_hash: string
+          token_prefix: string
+        }
+        Update: {
+          consumed_at?: string | null
+          created_at?: string
+          created_by?: string
+          expires_at?: string
+          id?: string
+          idempotency_key?: string
+          organization_id?: string
+          request_digest?: string
+          request_id?: string
+          revoked_at?: string | null
+          session_expires_at?: string | null
+          session_token_hash?: string | null
+          status?: string
+          token_hash?: string
+          token_prefix?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sbom_supplier_invitations_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sbom_supplier_invitations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sbom_supplier_invitations_organization_id_request_id_fkey"
+            columns: ["organization_id", "request_id"]
+            isOneToOne: false
+            referencedRelation: "sbom_supplier_requests"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      sbom_supplier_requests: {
+        Row: {
+          allowed_component_ref: string
+          closed_at: string | null
+          closed_by: string | null
+          created_at: string
+          created_by: string
+          expires_at: string
+          id: string
+          idempotency_key: string
+          organization_id: string
+          product_id: string
+          release_id: string
+          request_digest: string
+          status: string
+          supplier_display_name: string
+          updated_at: string
+        }
+        Insert: {
+          allowed_component_ref: string
+          closed_at?: string | null
+          closed_by?: string | null
+          created_at?: string
+          created_by: string
+          expires_at: string
+          id: string
+          idempotency_key: string
+          organization_id: string
+          product_id: string
+          release_id: string
+          request_digest: string
+          status?: string
+          supplier_display_name: string
+          updated_at?: string
+        }
+        Update: {
+          allowed_component_ref?: string
+          closed_at?: string | null
+          closed_by?: string | null
+          created_at?: string
+          created_by?: string
+          expires_at?: string
+          id?: string
+          idempotency_key?: string
+          organization_id?: string
+          product_id?: string
+          release_id?: string
+          request_digest?: string
+          status?: string
+          supplier_display_name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sbom_supplier_requests_closed_by_fkey"
+            columns: ["closed_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sbom_supplier_requests_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sbom_supplier_requests_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sbom_supplier_requests_organization_id_product_id_release__fkey"
+            columns: ["organization_id", "product_id", "release_id"]
+            isOneToOne: false
+            referencedRelation: "product_releases"
+            referencedColumns: ["organization_id", "product_id", "id"]
+          },
+        ]
+      }
+      sbom_supplier_submissions: {
+        Row: {
+          created_at: string
+          decision_reason: string | null
+          id: string
+          idempotency_key: string
+          invitation_id: string
+          organization_id: string
+          request_digest: string
+          request_id: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          source_id: string
+          status: string
+          superseded_by_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          decision_reason?: string | null
+          id: string
+          idempotency_key: string
+          invitation_id: string
+          organization_id: string
+          request_digest: string
+          request_id: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          source_id: string
+          status?: string
+          superseded_by_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          decision_reason?: string | null
+          id?: string
+          idempotency_key?: string
+          invitation_id?: string
+          organization_id?: string
+          request_digest?: string
+          request_id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          source_id?: string
+          status?: string
+          superseded_by_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sbom_supplier_submissions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sbom_supplier_submissions_organization_id_invitation_id_fkey"
+            columns: ["organization_id", "invitation_id"]
+            isOneToOne: false
+            referencedRelation: "sbom_supplier_invitations"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "sbom_supplier_submissions_organization_id_request_id_fkey"
+            columns: ["organization_id", "request_id"]
+            isOneToOne: false
+            referencedRelation: "sbom_supplier_requests"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "sbom_supplier_submissions_organization_id_source_id_fkey"
+            columns: ["organization_id", "source_id"]
+            isOneToOne: true
+            referencedRelation: "sbom_sources"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "sbom_supplier_submissions_organization_id_superseded_by_id_fkey"
+            columns: ["organization_id", "superseded_by_id"]
+            isOneToOne: false
+            referencedRelation: "sbom_supplier_submissions"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "sbom_supplier_submissions_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -7676,6 +8675,17 @@ export type Database = {
           outcome: string
         }[]
       }
+      attach_sbom_composite_generated_source_atomic: {
+        Args: {
+          p_organization_id: string
+          p_review_id: string
+          p_source_id: string
+          p_worker_id: string
+        }
+        Returns: {
+          outcome: string
+        }[]
+      }
       backfill_organization_legal_entities: { Args: never; Returns: undefined }
       begin_product_security_update_artifact_cleanup_atomic: {
         Args: {
@@ -7978,6 +8988,28 @@ export type Database = {
           outcome: string
         }[]
       }
+      claim_sbom_composite_generation: {
+        Args: {
+          p_lease_seconds: number
+          p_organization_id: string
+          p_worker_id: string
+        }
+        Returns: {
+          outcome: string
+          work: Json
+        }[]
+      }
+      claim_sbom_diff_report: {
+        Args: {
+          p_lease_seconds: number
+          p_organization_id: string
+          p_worker_id: string
+        }
+        Returns: {
+          outcome: string
+          work: Json
+        }[]
+      }
       claim_sbom_ingest_job: {
         Args: {
           p_lease_seconds: number
@@ -8244,6 +9276,17 @@ export type Database = {
           auth_user_id: string | null
           outcome: string
           user_id: string | null
+        }[]
+      }
+      consume_supplier_sbom_invitation_atomic: {
+        Args: {
+          p_session_expires_at: string
+          p_session_token_hash: string
+          p_token_hash: string
+        }
+        Returns: {
+          outcome: string
+          session: Json
         }[]
       }
       correct_product_release_market_availability_atomic: {
@@ -8581,6 +9624,23 @@ export type Database = {
           outcome: string
         }[]
       }
+      create_sbom_composite_review_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_correlation_id: string
+          p_input_set_digest: string
+          p_inputs: Json
+          p_merge_rules_version: string
+          p_organization_id: string
+          p_product_id: string
+          p_release_id: string
+          p_review_id: string
+        }
+        Returns: {
+          outcome: string
+          review: Json
+        }[]
+      }
       create_software_baseline_atomic: {
         Args: {
           p_actor_user_id: string
@@ -8599,6 +9659,42 @@ export type Database = {
         Returns: {
           baseline: Json
           outcome: string
+        }[]
+      }
+      create_supplier_sbom_invitation_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_correlation_id: string
+          p_expires_at: string
+          p_idempotency_key: string
+          p_invitation_id: string
+          p_organization_id: string
+          p_request_digest: string
+          p_request_id: string
+          p_token_hash: string
+        }
+        Returns: {
+          invitation: Json
+          outcome: string
+        }[]
+      }
+      create_supplier_sbom_request_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_allowed_component_ref: string
+          p_correlation_id: string
+          p_expires_at: string
+          p_idempotency_key: string
+          p_organization_id: string
+          p_product_id: string
+          p_release_id: string
+          p_request_digest: string
+          p_request_id: string
+          p_supplier_display_name: string
+        }
+        Returns: {
+          outcome: string
+          request: Json
         }[]
       }
       deactivate_organization_atomic: {
@@ -8725,6 +9821,17 @@ export type Database = {
           source_count: number
         }[]
       }
+      enqueue_sbom_diff_report_atomic: {
+        Args: {
+          p_baseline_source_id: string
+          p_organization_id: string
+          p_source_id: string
+        }
+        Returns: {
+          outcome: string
+          report: Json
+        }[]
+      }
       enqueue_sbom_quality_assessment_atomic: {
         Args: {
           p_document_id: string
@@ -8751,6 +9858,17 @@ export type Database = {
       ensure_organization_branding_draft: {
         Args: { p_actor_user_id: string; p_organization_id: string }
         Returns: undefined
+      }
+      ensure_sbom_component_diff_identities_atomic: {
+        Args: {
+          p_document_id: string
+          p_limit: number
+          p_organization_id: string
+        }
+        Returns: {
+          inserted_count: number
+          outcome: string
+        }[]
       }
       expire_product_import_jobs: {
         Args: { p_batch_size: number; p_organization_id: string }
@@ -8913,6 +10031,30 @@ export type Database = {
           status: string
         }[]
       }
+      fail_sbom_composite_generation_atomic: {
+        Args: {
+          p_error_code: string
+          p_message: string
+          p_organization_id: string
+          p_review_id: string
+          p_worker_id: string
+        }
+        Returns: {
+          outcome: string
+        }[]
+      }
+      fail_sbom_diff_report: {
+        Args: {
+          p_error_code: string
+          p_error_message: string
+          p_organization_id: string
+          p_report_id: string
+          p_worker_id: string
+        }
+        Returns: {
+          outcome: string
+        }[]
+      }
       fail_sbom_ingest_job: {
         Args: {
           p_error_code: string
@@ -9049,6 +10191,54 @@ export type Database = {
               source: Json
             }[]
           }
+      finalize_sbom_source_deduplicated_atomic: {
+        Args: {
+          p_actor_credential_id: string
+          p_actor_user_id: string
+          p_actual_byte_size: number
+          p_actual_media_type: string
+          p_actual_sha256: string
+          p_correlation_id: string
+          p_idempotency_key: string
+          p_organization_id: string
+          p_source_id: string
+        }
+        Returns: {
+          job: Json
+          outcome: string
+          source: Json
+        }[]
+      }
+      finalize_supplier_sbom_submission_atomic: {
+        Args: {
+          p_actual_byte_size: number
+          p_actual_media_type: string
+          p_actual_sha256: string
+          p_correlation_id: string
+          p_idempotency_key: string
+          p_session_token_hash: string
+          p_source_id: string
+        }
+        Returns: {
+          job: Json
+          outcome: string
+          source: Json
+          submission: Json
+        }[]
+      }
+      generate_sbom_composite_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_correlation_id: string
+          p_idempotency_key: string
+          p_organization_id: string
+          p_review_id: string
+        }
+        Returns: {
+          outcome: string
+          review: Json
+        }[]
+      }
       get_current_user_id: { Args: never; Returns: string }
       get_finding_product_impact_summary: {
         Args: {
@@ -9418,6 +10608,53 @@ export type Database = {
           relationships: Json
         }[]
       }
+      get_sbom_composite_review: {
+        Args: {
+          p_actor_user_id: string
+          p_organization_id: string
+          p_review_id: string
+        }
+        Returns: {
+          outcome: string
+          review: Json
+        }[]
+      }
+      get_sbom_diff_findings:
+        | {
+            Args: {
+              p_actor_user_id: string
+              p_organization_id: string
+              p_report_id: string
+            }
+            Returns: {
+              outcome: string
+              result: Json
+            }[]
+          }
+        | {
+            Args: {
+              p_actor_user_id: string
+              p_cursor: string
+              p_limit: number
+              p_organization_id: string
+              p_report_id: string
+            }
+            Returns: {
+              outcome: string
+              result: Json
+            }[]
+          }
+      get_sbom_diff_report: {
+        Args: {
+          p_actor_user_id: string
+          p_organization_id: string
+          p_report_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
       get_sbom_document: {
         Args: {
           p_actor_user_id: string
@@ -9453,6 +10690,18 @@ export type Database = {
       }
       get_sbom_quality_settings: {
         Args: { p_actor_user_id: string; p_organization_id: string }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      get_sbom_source_diff_report: {
+        Args: {
+          p_actor_user_id: string
+          p_baseline_source_id: string
+          p_organization_id: string
+          p_source_id: string
+        }
         Returns: {
           outcome: string
           result: Json
@@ -9509,6 +10758,24 @@ export type Database = {
           outcome: string
         }[]
       }
+      get_supplier_sbom_submission_upload: {
+        Args: {
+          p_idempotency_key: string
+          p_session_token_hash: string
+          p_source_id: string
+        }
+        Returns: {
+          outcome: string
+          source: Json
+        }[]
+      }
+      get_supplier_sbom_submission_upload_atomic: {
+        Args: { p_session_token_hash: string; p_source_id: string }
+        Returns: {
+          outcome: string
+          reservation: Json
+        }[]
+      }
       is_iso_3166_alpha_2: { Args: { p_country: string }; Returns: boolean }
       is_login_locked: { Args: { p_email: string }; Returns: string }
       link_external_identity_atomic: {
@@ -9556,6 +10823,19 @@ export type Database = {
       list_due_product_support_alert_organizations: {
         Args: never
         Returns: {
+          organization_id: string
+        }[]
+      }
+      list_due_sbom_composite_generation_organizations: {
+        Args: { p_limit: number }
+        Returns: {
+          organization_id: string
+        }[]
+      }
+      list_due_sbom_diff_organizations: {
+        Args: { p_limit: number }
+        Returns: {
+          oldest_due_at: string
           organization_id: string
         }[]
       }
@@ -9693,6 +10973,36 @@ export type Database = {
           result: Json
         }[]
       }
+      list_sbom_diff_component_changes: {
+        Args: {
+          p_actor_user_id: string
+          p_change_type: string
+          p_cursor: string
+          p_ecosystem: string
+          p_limit: number
+          p_organization_id: string
+          p_q: string
+          p_report_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      list_sbom_diff_component_facts: {
+        Args: {
+          p_cursor: string
+          p_limit: number
+          p_organization_id: string
+          p_report_id: string
+          p_side: string
+          p_worker_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
       list_sbom_documents_for_release: {
         Args: {
           p_actor_user_id: string
@@ -9762,6 +11072,37 @@ export type Database = {
         Returns: {
           baselines: Json
           outcome: string
+        }[]
+      }
+      list_supplier_sbom_requests: {
+        Args: {
+          p_actor_user_id: string
+          p_cursor: string
+          p_limit: number
+          p_organization_id: string
+          p_product_id: string
+          p_release_id: string
+          p_state: string
+        }
+        Returns: {
+          next_cursor: string
+          outcome: string
+          requests: Json
+        }[]
+      }
+      list_supplier_sbom_submissions: {
+        Args: {
+          p_actor_user_id: string
+          p_cursor: string
+          p_limit: number
+          p_organization_id: string
+          p_request_id: string
+          p_state: string
+        }
+        Returns: {
+          next_cursor: string
+          outcome: string
+          submissions: Json
         }[]
       }
       m1_accept_invitation_atomic_legacy_unchecked: {
@@ -10312,6 +11653,10 @@ export type Database = {
           outcome: string
         }[]
       }
+      materialize_sbom_composite_projection: {
+        Args: { p_organization_id: string; p_review_id: string }
+        Returns: undefined
+      }
       merge_external_identities_atomic: {
         Args: {
           p_actor_user_id: string
@@ -10382,6 +11727,20 @@ export type Database = {
           processed_count: number
           superseded_count: number
           upserted_count: number
+        }[]
+      }
+      persist_sbom_diff_batch_atomic: {
+        Args: {
+          p_changes: Json
+          p_checkpoint: Json
+          p_complete: boolean
+          p_organization_id: string
+          p_report_id: string
+          p_worker_id: string
+        }
+        Returns: {
+          outcome: string
+          report: Json
         }[]
       }
       persist_sbom_normalization_batch_atomic: {
@@ -10615,6 +11974,17 @@ export type Database = {
           policies: Json
         }[]
       }
+      reconcile_sbom_composite_generation_atomic: {
+        Args: {
+          p_organization_id: string
+          p_review_id: string
+          p_worker_id: string
+        }
+        Returns: {
+          generated_document_id: string
+          outcome: string
+        }[]
+      }
       record_connector_test_atomic: {
         Args: {
           p_actor_user_id: string
@@ -10750,6 +12120,13 @@ export type Database = {
         Returns: {
           lifecycle: Json
           outcome: string
+        }[]
+      }
+      refresh_sbom_composite_review_projection_atomic: {
+        Args: { p_organization_id: string; p_review_id: string }
+        Returns: {
+          outcome: string
+          review: Json
         }[]
       }
       register_finding_propagation_source_atomic: {
@@ -11069,6 +12446,27 @@ export type Database = {
               source: Json
             }[]
           }
+      reserve_supplier_sbom_submission_atomic: {
+        Args: {
+          p_correlation_id: string
+          p_declared_byte_size: number
+          p_declared_format?: string
+          p_declared_media_type: string
+          p_declared_sha256: string
+          p_declared_spec_version?: string
+          p_idempotency_key: string
+          p_original_filename: string
+          p_request_digest: string
+          p_session_token_hash: string
+          p_source_id: string
+          p_submission_id: string
+        }
+        Returns: {
+          outcome: string
+          source: Json
+          submission: Json
+        }[]
+      }
       resolve_active_organization_legal_entity_context: {
         Args: { p_legal_entity_id: string; p_organization_id: string }
         Returns: {
@@ -11097,6 +12495,50 @@ export type Database = {
           token_salt: string
         }[]
       }
+      resolve_sbom_composite_conflict_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_conflict_id: string
+          p_correlation_id: string
+          p_decision: string
+          p_idempotency_key: string
+          p_organization_id: string
+          p_reason: string
+          p_review_id: string
+          p_selected_source_component_id: string
+        }
+        Returns: {
+          outcome: string
+          review: Json
+        }[]
+      }
+      resolve_sbom_composite_relationship_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_correlation_id: string
+          p_disposition: string
+          p_idempotency_key: string
+          p_organization_id: string
+          p_reason: string
+          p_relationship_id: string
+          p_review_id: string
+        }
+        Returns: {
+          outcome: string
+          review: Json
+        }[]
+      }
+      resolve_sbom_diff_baseline: {
+        Args: {
+          p_actor_user_id: string
+          p_organization_id: string
+          p_source_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
       resolve_sync_conflict_atomic: {
         Args: {
           p_actor_user_id: string
@@ -11111,6 +12553,18 @@ export type Database = {
         Returns: {
           conflict: Json
           outcome: string
+        }[]
+      }
+      retry_sbom_diff_report_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_idempotency_key: string
+          p_organization_id: string
+          p_report_id: string
+        }
+        Returns: {
+          outcome: string
+          report: Json
         }[]
       }
       retry_sync_run_atomic: {
@@ -11184,6 +12638,21 @@ export type Database = {
         Returns: {
           assessment: Json
           outcome: string
+        }[]
+      }
+      review_supplier_sbom_submission_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_correlation_id: string
+          p_decision: string
+          p_idempotency_key: string
+          p_organization_id: string
+          p_reason: string
+          p_submission_id: string
+        }
+        Returns: {
+          outcome: string
+          submission: Json
         }[]
       }
       revoke_invitation_atomic: {
@@ -11260,6 +12729,28 @@ export type Database = {
         Args: { p_component_id: string; p_organization_id: string }
         Returns: Json
       }
+      sbom_composite_identity_key: {
+        Args: {
+          p_canonical_purl: string
+          p_component_ref: string
+          p_cpe: string
+          p_document_id: string
+          p_hashes: Json
+        }
+        Returns: string
+      }
+      sbom_composite_review_json: {
+        Args: { p_organization_id: string; p_review_id: string }
+        Returns: Json
+      }
+      sbom_diff_cursor_encode: {
+        Args: { p_created_at: string; p_id: string }
+        Returns: string
+      }
+      sbom_diff_report_json: {
+        Args: { p_organization_id: string; p_report_id: string }
+        Returns: Json
+      }
       sbom_document_json: {
         Args: { p_document_id: string; p_organization_id: string }
         Returns: Json
@@ -11273,6 +12764,10 @@ export type Database = {
         Returns: boolean
       }
       sbom_json_has_sensitive_key: { Args: { p_value: Json }; Returns: boolean }
+      sbom_purl_package_identity: {
+        Args: { p_canonical_purl: string }
+        Returns: string
+      }
       sbom_quality_cursor_encode: {
         Args: { p_id: string; p_sort_value: string }
         Returns: string
@@ -11283,6 +12778,18 @@ export type Database = {
       }
       sbom_source_json: {
         Args: { p_organization_id: string; p_source_id: string }
+        Returns: Json
+      }
+      sbom_supplier_invitation_json: {
+        Args: { p_invitation_id: string; p_organization_id: string }
+        Returns: Json
+      }
+      sbom_supplier_request_json: {
+        Args: { p_organization_id: string; p_request_id: string }
+        Returns: Json
+      }
+      sbom_supplier_submission_json: {
+        Args: { p_organization_id: string; p_submission_id: string }
         Returns: Json
       }
       sbom_validation_report_json: {
@@ -11412,6 +12919,10 @@ export type Database = {
         Returns: {
           outcome: string
         }[]
+      }
+      sync_sbom_composite_selected_provenance: {
+        Args: { p_organization_id: string; p_review_id: string }
+        Returns: undefined
       }
       transition_organization_legal_entity_atomic: {
         Args: {
@@ -11695,6 +13206,18 @@ export type Database = {
       valid_sbom_validation_report: {
         Args: { p_report: Json; p_status: string }
         Returns: boolean
+      }
+      validate_sbom_composite_scope: {
+        Args: {
+          p_actor_user_id: string
+          p_organization_id: string
+          p_product_id: string
+          p_release_id: string
+          p_source_ids: Json
+        }
+        Returns: {
+          outcome: string
+        }[]
       }
       verify_email_code_atomic: {
         Args: {

@@ -49,6 +49,7 @@ export function coerceBaseRole(value: unknown): BaseRole {
 export const PERMISSION_ACTIONS = [
   "view",
   "upload",
+  "review",
   "create",
   "edit",
   "delete",
@@ -97,7 +98,11 @@ export const PERMISSION_MATRIX = {
   connectors: ["view", "create", "edit", "delete", "export", "approve"],
   // Immutable SBOM evidence is visible to the same roles that may inspect a
   // release. Upload remains explicit instead of piggybacking on product edit.
-  sboms: ["view", "upload"],
+  // Review controls the security-sensitive lifecycle transitions for
+  // supplier evidence and generated composite SBOMs. It is deliberately
+  // distinct from upload: collecting evidence must not authorize accepting
+  // it into an authoritative composition.
+  sboms: ["view", "upload", "review"],
 } as const satisfies Record<string, readonly PermissionAction[]>;
 
 export type PermissionModule = keyof typeof PERMISSION_MATRIX;
@@ -208,6 +213,7 @@ export const IMPLICATIONS: Readonly<
 > = {
   view: [],
   upload: ["view"],
+  review: ["view"],
   create: ["view"],
   edit: ["view"],
   delete: ["view"],

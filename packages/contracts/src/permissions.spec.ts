@@ -133,6 +133,12 @@ describe("normalizePermissions", () => {
     expect(hasPermission(out, "can_edit_products")).toBe(false);
   });
 
+  it("grants SBOM visibility for review without treating upload as approval", () => {
+    const out = normalizePermissions({ can_review_sboms: true });
+    expect(hasPermission(out, "can_view_sboms")).toBe(true);
+    expect(hasPermission(out, "can_upload_sboms")).toBe(false);
+  });
+
   it("grants view for any acting permission", () => {
     const out = normalizePermissions({ can_delete_orders: true });
     expect(hasPermission(out, "can_view_orders")).toBe(true);
@@ -153,8 +159,8 @@ describe("normalizePermissions", () => {
 });
 
 describe("presets", () => {
-  it("grants explicit SBOM view/upload defaults without changing permission resolution", () => {
-    expect(PERMISSION_MATRIX.sboms).toEqual(["view", "upload"]);
+  it("grants explicit SBOM view/upload/review defaults without changing permission resolution", () => {
+    expect(PERMISSION_MATRIX.sboms).toEqual(["view", "upload", "review"]);
     for (const baseRole of BASE_ROLES) {
       expect(
         hasPermission(DEFAULT_PERMISSIONS_BY_ROLE[baseRole], "can_view_sboms"),
@@ -171,6 +177,22 @@ describe("presets", () => {
     expect(
       hasPermission(DEFAULT_PERMISSIONS_BY_ROLE.viewer, "can_upload_sboms"),
     ).toBe(false);
+    for (const baseRole of ["owner", "admin"] as const) {
+      expect(
+        hasPermission(
+          DEFAULT_PERMISSIONS_BY_ROLE[baseRole],
+          "can_review_sboms",
+        ),
+      ).toBe(true);
+    }
+    for (const baseRole of ["member", "viewer"] as const) {
+      expect(
+        hasPermission(
+          DEFAULT_PERMISSIONS_BY_ROLE[baseRole],
+          "can_review_sboms",
+        ),
+      ).toBe(false);
+    }
   });
 
   it("adds product approval only for owners and admins", () => {

@@ -51,6 +51,8 @@ import { FindingImpactStatus } from "./finding-impact-status";
 import { ProductRelationshipSection } from "./product-relationship-section";
 import { ProductComplianceSections } from "./product-compliance-sections";
 import { SbomIntakeSection } from "./sbom-intake-section";
+import { SbomCompositeReviewSection } from "./sbom-composite-review-section";
+import { SbomSupplierReviewSection } from "./sbom-supplier-review-section";
 
 const PRODUCT_TYPE_LABELS = Object.freeze({
   hardware_with_software: "Hardware with software",
@@ -765,6 +767,7 @@ export function ProductDetailContent({ productId }: { productId: string }) {
   const canApprove = permissions.can_approve_products === true;
   const canViewSboms = permissions.can_view_sboms === true;
   const canUploadSboms = permissions.can_upload_sboms === true;
+  const canReviewSboms = permissions.can_review_sboms === true;
   const [activePanel, setActivePanel] = useState<WorkbenchPanel | null>(null);
   const [activeTab, setActiveTab] = useState<WorkbenchTab>("identity");
   const canEditCurrentProduct = canEdit && !product.data?.product.archivedAt;
@@ -954,6 +957,34 @@ export function ProductDetailContent({ productId }: { productId: string }) {
               canView={canViewSboms}
               canUpload={canUploadSboms && !product.data.product.archivedAt}
               canReplay={role === "owner"}
+              enabled={enabled}
+            />
+          ) : null}
+          {canViewSboms ? (
+            <SbomCompositeReviewSection
+              productId={productId}
+              releases={
+                releases.data?.releases.rows.map((release) => ({
+                  id: release.id,
+                  label: release.label,
+                  version: release.version,
+                })) ?? []
+              }
+              canReview={canReviewSboms && !product.data.product.archivedAt}
+              enabled={enabled}
+            />
+          ) : null}
+          {canViewSboms ? (
+            <SbomSupplierReviewSection
+              productId={productId}
+              releases={
+                releases.data?.releases.rows.map((release) => ({
+                  id: release.id,
+                  label: release.label,
+                  version: release.version,
+                })) ?? []
+              }
+              canReview={canReviewSboms && !product.data.product.archivedAt}
               enabled={enabled}
             />
           ) : null}

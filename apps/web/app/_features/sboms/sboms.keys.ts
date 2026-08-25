@@ -1,4 +1,20 @@
 const all = Object.freeze(["sboms"] as const);
+const compositeReviews = Object.freeze(["sboms", "composite-reviews"] as const);
+const compositeReview = Object.freeze((reviewId: string) =>
+  Object.freeze([...compositeReviews, reviewId] as const),
+);
+const supplierRequests = Object.freeze(["sboms", "supplier-requests"] as const);
+const supplierRequestList = Object.freeze(
+  (
+    query: Readonly<{ productId?: string; releaseId?: string; state?: string }>,
+  ) =>
+    Object.freeze([
+      ...supplierRequests,
+      query.productId ?? null,
+      query.releaseId ?? null,
+      query.state ?? null,
+    ] as const),
+);
 const jobs = Object.freeze(["sboms", "jobs"] as const);
 const job = Object.freeze((jobId: string) =>
   Object.freeze([...jobs, jobId] as const),
@@ -155,6 +171,10 @@ const diffFindings = Object.freeze(
 
 export const sbomKeys = Object.freeze({
   all,
+  compositeReviews,
+  compositeReview,
+  supplierRequests,
+  supplierRequestList,
   jobs,
   job,
   sourceHistories,

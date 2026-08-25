@@ -101,6 +101,63 @@ describe("SupabaseSbomRepository replay mapping", () => {
   );
 });
 
+describe("SupabaseSbomRepository composite generation claims", () => {
+  const organizationId = "11111111-1111-4111-8111-111111111111";
+  const workerId = "22222222-2222-4222-8222-222222222222";
+
+  it("parses canonical CPE evidence for the generated composite worker", async () => {
+    const rpc = jest.fn().mockResolvedValue({
+      data: [
+        {
+          outcome: "claimed",
+          work: {
+            reviewId: "33333333-3333-4333-8333-333333333333",
+            actorId: "44444444-4444-4444-8444-444444444444",
+            productId: "55555555-5555-4555-8555-555555555555",
+            releaseId: "66666666-6666-4666-8666-666666666666",
+            mergeRulesVersion: "sbom-composite.v1",
+            generatedSourceId: null,
+            components: [
+              {
+                componentRef: "component:alpha",
+                name: "alpha",
+                version: "1.0.0",
+                canonicalPurl: "pkg:npm/alpha@1.0.0",
+                canonicalCpe: "cpe:2.3:a:acme:alpha:1.0.0:*:*:*:*:*:*:*",
+                hashes: [],
+              },
+            ],
+            dependencies: [],
+          },
+        },
+      ],
+      error: null,
+    });
+    const repository = new SupabaseSbomRepository({
+      admin: () => ({ rpc }),
+    } as unknown as SupabaseService);
+
+    await expect(
+      repository.claimCompositeGeneration(organizationId, {
+        workerId,
+        leaseSeconds: 60,
+      }),
+    ).resolves.toMatchObject({
+      outcome: "claimed",
+      components: [
+        {
+          canonicalCpe: "cpe:2.3:a:acme:alpha:1.0.0:*:*:*:*:*:*:*",
+        },
+      ],
+    });
+    expect(rpc).toHaveBeenCalledWith("claim_sbom_composite_generation", {
+      p_organization_id: organizationId,
+      p_worker_id: workerId,
+      p_lease_seconds: 60,
+    });
+  });
+});
+
 describe("SupabaseSbomRepository deduplicated completion", () => {
   const organizationId = "11111111-1111-4111-8111-111111111111";
   const sourceId = "22222222-2222-4222-8222-222222222222";

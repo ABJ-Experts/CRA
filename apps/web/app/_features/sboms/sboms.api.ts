@@ -1,15 +1,29 @@
 import {
   completeSbomUploadInputSchema,
+  createSbomCompositeReviewInputSchema,
   createSbomDiffInputSchema,
+  createSupplierSbomInvitationInputSchema,
+  createSupplierSbomInvitationResponseSchema,
+  createSupplierSbomRequestInputSchema,
   createSbomCiCredentialInputSchema,
   createSbomCiCredentialResponseSchema,
   initializeSbomUploadInputSchema,
+  generateSbomCompositeInputSchema,
   replaySbomJobInputSchema,
+  resolveSbomCompositeConflictInputSchema,
+  resolveSbomCompositeRelationshipInputSchema,
+  reviewSupplierSbomSubmissionInputSchema,
   retrySbomDiffInputSchema,
   revokeSbomCiCredentialInputSchema,
   sbomCiCredentialListResponseSchema,
   sbomCiCredentialParamsSchema,
   sbomCiCredentialResponseSchema,
+  sbomCompositeConflictParamsSchema,
+  sbomCompositeGenerationResponseSchema,
+  sbomCompositeRelationshipParamsSchema,
+  sbomCompositeReleaseParamsSchema,
+  sbomCompositeReviewParamsSchema,
+  sbomCompositeReviewResponseSchema,
   sbomComponentSearchQuerySchema,
   sbomComponentSearchResponseSchema,
   sbomDependencyTreeQuerySchema,
@@ -36,14 +50,29 @@ import {
   sbomSourceHistoryQuerySchema,
   sbomSourceHistoryResponseSchema,
   sbomSourceParamsSchema,
+  sbomSupplierRequestParamsSchema,
+  sbomSupplierRequestReleaseParamsSchema,
+  sbomSupplierSubmissionParamsSchema,
   sbomValidationReportResponseSchema,
+  supplierSbomRequestResponseSchema,
+  supplierSbomRequestsQuerySchema,
+  supplierSbomRequestsResponseSchema,
+  supplierSbomSubmissionResponseSchema,
   sbomUploadInitializationResponseSchema,
   sbomUploadParamsSchema,
   type CompleteSbomUploadInput,
+  type CreateSbomCompositeReviewInput,
   type CreateSbomDiffInput,
+  type CreateSupplierSbomInvitationInput,
+  type CreateSupplierSbomRequestInput,
   type CreateSbomCiCredentialInput,
   type InitializeSbomUploadInput,
+  type GenerateSbomCompositeInput,
   type ReplaySbomJobInput,
+  type ResolveSbomCompositeConflictInput,
+  type ResolveSbomCompositeRelationshipInput,
+  type ReviewSupplierSbomSubmissionInput,
+  type SupplierSbomRequestsQuery,
   type RetrySbomDiffInput,
   type RevokeSbomCiCredentialInput,
   type SbomSourceHistoryQuery,
@@ -139,6 +168,105 @@ function diffPath(diffId: string, suffix = ""): `/${string}` {
   return `/api/v1/sbom-diffs/${parsed.data.diffId}${suffix}`;
 }
 
+function compositeReleasePath(
+  productId: string,
+  releaseId: string,
+): `/${string}` {
+  const parsed = sbomCompositeReleaseParamsSchema.safeParse({
+    productId,
+    releaseId,
+  });
+  if (!parsed.success) {
+    throw invalidIdentifier("The release identifier is invalid.");
+  }
+  return `/api/v1/products/${parsed.data.productId}/releases/${parsed.data.releaseId}/sbom-composite-reviews`;
+}
+
+function compositeReviewPath(reviewId: string, suffix = ""): `/${string}` {
+  const parsed = sbomCompositeReviewParamsSchema.safeParse({ reviewId });
+  if (!parsed.success) {
+    throw invalidIdentifier("The composite review identifier is invalid.");
+  }
+  return `/api/v1/sbom-composite-reviews/${parsed.data.reviewId}${suffix}`;
+}
+
+function compositeConflictPath(
+  reviewId: string,
+  conflictId: string,
+): `/${string}` {
+  const parsed = sbomCompositeConflictParamsSchema.safeParse({
+    reviewId,
+    conflictId,
+  });
+  if (!parsed.success) {
+    throw invalidIdentifier("The composite conflict identifier is invalid.");
+  }
+  return `/api/v1/sbom-composite-reviews/${parsed.data.reviewId}/conflicts/${parsed.data.conflictId}/resolve`;
+}
+
+function compositeRelationshipPath(
+  reviewId: string,
+  relationshipId: string,
+): `/${string}` {
+  const parsed = sbomCompositeRelationshipParamsSchema.safeParse({
+    reviewId,
+    relationshipId,
+  });
+  if (!parsed.success) {
+    throw invalidIdentifier(
+      "The composite relationship identifier is invalid.",
+    );
+  }
+  return `/api/v1/sbom-composite-reviews/${parsed.data.reviewId}/relationships/${parsed.data.relationshipId}/resolve`;
+}
+
+function supplierRequestReleasePath(
+  productId: string,
+  releaseId: string,
+): `/${string}` {
+  const parsed = sbomSupplierRequestReleaseParamsSchema.safeParse({
+    productId,
+    releaseId,
+  });
+  if (!parsed.success) {
+    throw invalidIdentifier(
+      "The supplier request release identifier is invalid.",
+    );
+  }
+  return `/api/v1/products/${parsed.data.productId}/releases/${parsed.data.releaseId}/supplier-sbom-requests`;
+}
+
+function supplierRequestPath(requestId: string, suffix = ""): `/${string}` {
+  const parsed = sbomSupplierRequestParamsSchema.safeParse({ requestId });
+  if (!parsed.success) {
+    throw invalidIdentifier("The supplier request identifier is invalid.");
+  }
+  return `/api/v1/supplier-sbom-requests/${parsed.data.requestId}${suffix}`;
+}
+
+function supplierSubmissionPath(
+  submissionId: string,
+  suffix = "",
+): `/${string}` {
+  const parsed = sbomSupplierSubmissionParamsSchema.safeParse({ submissionId });
+  if (!parsed.success) {
+    throw invalidIdentifier("The supplier submission identifier is invalid.");
+  }
+  return `/api/v1/supplier-sbom-submissions/${parsed.data.submissionId}${suffix}`;
+}
+
+function supplierRequestsPath(
+  query: Readonly<Partial<SupplierSbomRequestsQuery>>,
+): `/${string}` {
+  const parsed = apiClient.parseInput(supplierSbomRequestsQuerySchema, query);
+  const search = new URLSearchParams({ limit: String(parsed.limit) });
+  if (parsed.cursor) search.set("cursor", parsed.cursor);
+  if (parsed.productId) search.set("productId", parsed.productId);
+  if (parsed.releaseId) search.set("releaseId", parsed.releaseId);
+  if (parsed.state) search.set("state", parsed.state);
+  return `/api/v1/supplier-sbom-requests?${search.toString()}`;
+}
+
 function documentListPath(
   productId: string,
   releaseId: string,
@@ -176,6 +304,155 @@ function documentQueryPath(
  * Supabase directly.
  */
 export class SbomsApi {
+  createCompositeReview(
+    productId: string,
+    releaseId: string,
+    input: CreateSbomCompositeReviewInput,
+    signal?: AbortSignal,
+  ) {
+    return authenticatedRequestJson<
+      typeof sbomCompositeReviewResponseSchema,
+      typeof createSbomCompositeReviewInputSchema
+    >({
+      path: compositeReleasePath(productId, releaseId),
+      method: "POST",
+      body: input,
+      inputSchema: createSbomCompositeReviewInputSchema,
+      schema: sbomCompositeReviewResponseSchema,
+      signal,
+    });
+  }
+
+  getCompositeReview(reviewId: string, signal?: AbortSignal) {
+    return authenticatedRequestJson<typeof sbomCompositeReviewResponseSchema>({
+      path: compositeReviewPath(reviewId),
+      schema: sbomCompositeReviewResponseSchema,
+      signal,
+    });
+  }
+
+  resolveCompositeConflict(
+    reviewId: string,
+    conflictId: string,
+    input: ResolveSbomCompositeConflictInput,
+    signal?: AbortSignal,
+  ) {
+    return authenticatedRequestJson<
+      typeof sbomCompositeReviewResponseSchema,
+      typeof resolveSbomCompositeConflictInputSchema
+    >({
+      path: compositeConflictPath(reviewId, conflictId),
+      method: "POST",
+      body: input,
+      inputSchema: resolveSbomCompositeConflictInputSchema,
+      schema: sbomCompositeReviewResponseSchema,
+      signal,
+    });
+  }
+
+  resolveCompositeRelationship(
+    reviewId: string,
+    relationshipId: string,
+    input: ResolveSbomCompositeRelationshipInput,
+    signal?: AbortSignal,
+  ) {
+    return authenticatedRequestJson<
+      typeof sbomCompositeReviewResponseSchema,
+      typeof resolveSbomCompositeRelationshipInputSchema
+    >({
+      path: compositeRelationshipPath(reviewId, relationshipId),
+      method: "POST",
+      body: input,
+      inputSchema: resolveSbomCompositeRelationshipInputSchema,
+      schema: sbomCompositeReviewResponseSchema,
+      signal,
+    });
+  }
+
+  generateComposite(
+    reviewId: string,
+    input: GenerateSbomCompositeInput,
+    signal?: AbortSignal,
+  ) {
+    return authenticatedRequestJson<
+      typeof sbomCompositeGenerationResponseSchema,
+      typeof generateSbomCompositeInputSchema
+    >({
+      path: compositeReviewPath(reviewId, "/generate"),
+      method: "POST",
+      body: input,
+      inputSchema: generateSbomCompositeInputSchema,
+      schema: sbomCompositeGenerationResponseSchema,
+      signal,
+    });
+  }
+
+  createSupplierRequest(
+    productId: string,
+    releaseId: string,
+    input: CreateSupplierSbomRequestInput,
+    signal?: AbortSignal,
+  ) {
+    return authenticatedRequestJson<
+      typeof supplierSbomRequestResponseSchema,
+      typeof createSupplierSbomRequestInputSchema
+    >({
+      path: supplierRequestReleasePath(productId, releaseId),
+      method: "POST",
+      body: input,
+      inputSchema: createSupplierSbomRequestInputSchema,
+      schema: supplierSbomRequestResponseSchema,
+      signal,
+    });
+  }
+
+  listSupplierRequests(
+    query: Readonly<Partial<SupplierSbomRequestsQuery>> = {},
+    signal?: AbortSignal,
+  ) {
+    return authenticatedRequestJson<typeof supplierSbomRequestsResponseSchema>({
+      path: supplierRequestsPath(query),
+      schema: supplierSbomRequestsResponseSchema,
+      signal,
+    });
+  }
+
+  createSupplierInvitation(
+    requestId: string,
+    input: CreateSupplierSbomInvitationInput,
+    signal?: AbortSignal,
+  ) {
+    return authenticatedRequestJson<
+      typeof createSupplierSbomInvitationResponseSchema,
+      typeof createSupplierSbomInvitationInputSchema
+    >({
+      path: supplierRequestPath(requestId, "/invitations"),
+      method: "POST",
+      body: input,
+      inputSchema: createSupplierSbomInvitationInputSchema,
+      schema: createSupplierSbomInvitationResponseSchema,
+      signal,
+    });
+  }
+
+  reviewSupplierSubmission(
+    submissionId: string,
+    input: ReviewSupplierSbomSubmissionInput,
+    signal?: AbortSignal,
+  ) {
+    return authenticatedRequestJson<
+      typeof supplierSbomSubmissionResponseSchema,
+      typeof reviewSupplierSbomSubmissionInputSchema
+    >({
+      path: supplierSubmissionPath(submissionId, "/review"),
+      method: "POST",
+      body: input,
+      inputSchema: reviewSupplierSbomSubmissionInputSchema,
+      schema: supplierSbomSubmissionResponseSchema,
+      signal,
+    });
+  }
+
   initializeUpload(input: InitializeSbomUploadRequest, signal?: AbortSignal) {
     const parsed = apiClient.parseInput(initializeSbomUploadInputSchema, input);
     return authenticatedRequestJson<

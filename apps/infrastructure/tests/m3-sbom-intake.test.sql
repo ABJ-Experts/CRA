@@ -14,7 +14,7 @@ end;
 $$;
 
 select pg_temp.check(
-  'M3 creates immutable intake evidence and the private normalized graph tables',
+  'M3 retains immutable intake evidence and the private normalized graph tables',
   (select not public and file_size_limit = 104857600 from storage.buckets where id = 'sbom-originals')
   and to_regclass('public.sbom_raw_objects') is not null
   and to_regclass('public.sbom_sources') is not null
@@ -25,7 +25,7 @@ select pg_temp.check(
   and to_regclass('public.sbom_components') is not null
   and to_regclass('public.sbom_component_identities') is not null
   and to_regclass('public.sbom_component_dependencies') is not null
-  and (select count(*) = 13 from pg_class tables
+  and (select count(*) >= 13 from pg_class tables
     join pg_namespace namespaces on namespaces.oid = tables.relnamespace
     where namespaces.nspname = 'public' and tables.relkind = 'r'
       and tables.relname like 'sbom_%')

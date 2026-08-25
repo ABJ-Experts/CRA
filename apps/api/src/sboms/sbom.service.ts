@@ -14,6 +14,7 @@ import {
 import { SbomNormalizationUseCases } from "./application/sbom-normalization-use-cases";
 import { SbomQualityUseCases } from "./application/sbom-quality-use-cases";
 import { SbomDiffUseCases } from "./application/sbom-diff-use-cases";
+import { SbomCompositeUseCases } from "./application/sbom-composite-use-cases";
 import {
   SBOM_CI_CREDENTIALS,
   type SbomCiCredentialPort,
@@ -27,6 +28,7 @@ export class SbomService {
     private readonly normalization: SbomNormalizationUseCases,
     private readonly quality: SbomQualityUseCases,
     private readonly diffs: SbomDiffUseCases,
+    private readonly composites: SbomCompositeUseCases,
     @Inject(SBOM_CI_CREDENTIALS)
     private readonly credentials: SbomCiCredentialPort,
   ) {}
@@ -123,6 +125,32 @@ export class SbomService {
 
   retryDiff(command: Parameters<SbomDiffUseCases["retry"]>[0]) {
     return this.unwrap(this.diffs.retry(command));
+  }
+
+  createCompositeReview(
+    command: Parameters<SbomCompositeUseCases["create"]>[0],
+  ) {
+    return this.unwrap(this.composites.create(command));
+  }
+
+  compositeReview(command: Parameters<SbomCompositeUseCases["review"]>[0]) {
+    return this.unwrap(this.composites.review(command));
+  }
+
+  resolveCompositeConflict(
+    command: Parameters<SbomCompositeUseCases["resolveConflict"]>[0],
+  ) {
+    return this.unwrap(this.composites.resolveConflict(command));
+  }
+
+  resolveCompositeRelationship(
+    command: Parameters<SbomCompositeUseCases["resolveRelationship"]>[0],
+  ) {
+    return this.unwrap(this.composites.resolveRelationship(command));
+  }
+
+  generateComposite(command: Parameters<SbomCompositeUseCases["generate"]>[0]) {
+    return this.unwrap(this.composites.generate(command));
   }
 
   replay(command: Parameters<SbomIntakeUseCases["replay"]>[0]) {

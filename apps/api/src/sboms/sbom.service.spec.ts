@@ -35,6 +35,7 @@ function harness(result: unknown = success) {
       useCases as never,
       useCases as never,
       useCases as never,
+      useCases as never,
       credentials as never,
     ),
     useCases,

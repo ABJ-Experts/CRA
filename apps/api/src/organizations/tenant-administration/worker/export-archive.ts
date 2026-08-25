@@ -168,6 +168,21 @@ export const exportSourceRegistry: readonly ExportSourceRegistration[] =
         "sbom_diff_component_changes",
       ],
     },
+    {
+      // Supplier request and composite review facts are durable compliance
+      // evidence. Invitation/session bearer verifiers remain excluded below.
+      sourceId: "sbom_composite_supplier_provenance",
+      tables: [
+        "sbom_supplier_requests",
+        "sbom_supplier_submissions",
+        "sbom_composite_reviews",
+        "sbom_composite_review_inputs",
+        "sbom_composite_conflicts",
+        "sbom_composite_unresolved_relationships",
+        "sbom_composite_component_provenance",
+        "sbom_composite_dependency_provenance",
+      ],
+    },
   ]);
 
 /** Explicit omissions are security objects, never an accidental omission. */
@@ -209,6 +224,8 @@ export const exportSourceExclusions: Readonly<Record<string, string>> =
       "Contains unverified staging-object locations and upload reservation metadata; export must not disclose security-sensitive upload state.",
     sbom_ingest_jobs:
       "Contains active worker leases and retry state; exporting operational security state would make a restored job ambiguous.",
+    sbom_supplier_invitations:
+      "Contains invitation and scoped-upload bearer token hashes; request lifecycle evidence is exported without credential-security material.",
   });
 
 const crcTable = (() => {

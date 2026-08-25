@@ -1,6 +1,10 @@
 "use client";
 
 import type {
+  CreateSbomCompositeReviewInput,
+  GenerateSbomCompositeInput,
+  CreateSupplierSbomInvitationInput,
+  CreateSupplierSbomRequestInput,
   CreateSbomCiCredentialInput,
   CreateSbomDiffInput,
   RevokeSbomCiCredentialInput,
@@ -21,11 +25,16 @@ import type {
   SbomQualityFindingsResponse,
   SbomQualityReportResponse,
   RetrySbomDiffInput,
+  ResolveSbomCompositeConflictInput,
+  ResolveSbomCompositeRelationshipInput,
+  ReviewSupplierSbomSubmissionInput,
+  SbomCompositeReviewResponse,
   SbomSourceDiffQuery,
   SbomSourceDiffResponse,
   SbomSourceHistoryQuery,
   SbomSourceHistoryResponse,
   SbomValidationReportResponse,
+  SupplierSbomRequestsQuery,
 } from "@repo/contracts/sboms";
 import {
   useMutation,
@@ -51,6 +60,171 @@ function shouldPollDiff(
   state: SbomDiffReportResponse["report"]["state"] | undefined,
 ) {
   return state === "queued" || state === "processing";
+}
+
+function shouldPollComposite(
+  state: SbomCompositeReviewResponse["review"]["state"] | undefined,
+) {
+  return state === "generating" || state === "processing";
+}
+
+export function useSbomCompositeReviewQuery(
+  reviewId: string | null,
+  enabled: boolean,
+) {
+  return useQuery<SbomCompositeReviewResponse>({
+    queryKey:
+      reviewId === null
+        ? sbomKeys.compositeReviews
+        : sbomKeys.compositeReview(reviewId),
+    enabled: enabled && reviewId !== null,
+    retry: false,
+    refetchInterval: (query) =>
+      shouldPollComposite(query.state.data?.review.state) ? 2_000 : false,
+    queryFn: ({ signal }) => {
+      if (reviewId === null) {
+        throw new Error("A composite review identifier is required.");
+      }
+      return sbomsApi.getCompositeReview(reviewId, signal);
+    },
+  });
+}
+
+export function useCreateSbomCompositeReviewMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      productId,
+      releaseId,
+      input,
+    }: {
+      productId: string;
+      releaseId: string;
+      input: CreateSbomCompositeReviewInput;
+    }) => sbomsApi.createCompositeReview(productId, releaseId, input),
+    onSuccess: (response) =>
+      queryClient.setQueryData(
+        sbomKeys.compositeReview(response.review.id),
+        response,
+      ),
+  });
+}
+
+export function useResolveSbomCompositeConflictMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      reviewId,
+      conflictId,
+      input,
+    }: {
+      reviewId: string;
+      conflictId: string;
+      input: ResolveSbomCompositeConflictInput;
+    }) => sbomsApi.resolveCompositeConflict(reviewId, conflictId, input),
+    onSuccess: (response) =>
+      queryClient.setQueryData(
+        sbomKeys.compositeReview(response.review.id),
+        response,
+      ),
+  });
+}
+
+export function useResolveSbomCompositeRelationshipMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      reviewId,
+      relationshipId,
+      input,
+    }: {
+      reviewId: string;
+      relationshipId: string;
+      input: ResolveSbomCompositeRelationshipInput;
+    }) =>
+      sbomsApi.resolveCompositeRelationship(reviewId, relationshipId, input),
+    onSuccess: (response) =>
+      queryClient.setQueryData(
+        sbomKeys.compositeReview(response.review.id),
+        response,
+      ),
+  });
+}
+
+export function useGenerateSbomCompositeMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      reviewId,
+      input,
+    }: {
+      reviewId: string;
+      input: GenerateSbomCompositeInput;
+    }) => sbomsApi.generateComposite(reviewId, input),
+    onSuccess: (response) =>
+      queryClient.setQueryData(sbomKeys.compositeReview(response.review.id), {
+        review: response.review,
+      }),
+  });
+}
+
+export function useSupplierSbomRequestsQuery(
+  query: Readonly<Partial<SupplierSbomRequestsQuery>>,
+  enabled: boolean,
+) {
+  return useQuery({
+    queryKey: sbomKeys.supplierRequestList(query),
+    enabled,
+    retry: false,
+    queryFn: ({ signal }) => sbomsApi.listSupplierRequests(query, signal),
+  });
+}
+
+export function useCreateSupplierSbomRequestMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      productId,
+      releaseId,
+      input,
+    }: {
+      productId: string;
+      releaseId: string;
+      input: CreateSupplierSbomRequestInput;
+    }) => sbomsApi.createSupplierRequest(productId, releaseId, input),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: sbomKeys.supplierRequests }),
+  });
+}
+
+export function useCreateSupplierSbomInvitationMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      requestId,
+      input,
+    }: {
+      requestId: string;
+      input: CreateSupplierSbomInvitationInput;
+    }) => sbomsApi.createSupplierInvitation(requestId, input),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: sbomKeys.supplierRequests }),
+  });
+}
+
+export function useReviewSupplierSbomSubmissionMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      submissionId,
+      input,
+    }: {
+      submissionId: string;
+      input: ReviewSupplierSbomSubmissionInput;
+    }) => sbomsApi.reviewSupplierSubmission(submissionId, input),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: sbomKeys.supplierRequests }),
+  });
 }
 
 export function useSbomJobQuery(jobId: string | null, enabled: boolean) {

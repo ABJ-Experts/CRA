@@ -9,6 +9,8 @@ import {
 import { Injectable } from "@nestjs/common";
 import {
   sbomComponentSearchResponseSchema,
+  sbomCompositeGenerationResponseSchema,
+  sbomCompositeReviewResponseSchema,
   sbomDependencyTreeResponseSchema,
   sbomDiffComponentsResponseSchema,
   sbomDiffFindingsResponseSchema,
@@ -39,13 +41,29 @@ import type {
   SbomJob,
   SbomSource,
 } from "../application/sbom-intake-use-cases";
+import type {
+  SupplierSbomInvitation,
+  SupplierSbomRepository,
+  SupplierSbomRequest,
+  SupplierSbomSession,
+  SupplierSbomSubmission,
+} from "../application/supplier-sbom-use-cases";
 import type { SbomNormalizationRepository } from "../application/sbom-normalization-use-cases";
 import type { SbomQualityRepository } from "../application/sbom-quality-use-cases";
 import type { SbomDiffRepository } from "../application/sbom-diff-use-cases";
+import type { SbomCompositeRepository } from "../application/sbom-composite-use-cases";
+import {
+  SBOM_COMPOSITE_MERGE_RULES_VERSION,
+  stableCompositeInputDigest,
+} from "../application/sbom-composite-policy";
 import type {
   SbomIngestClaim,
   SbomIngestQueue,
 } from "../worker/sbom-ingest-worker";
+import type {
+  SbomCompositeClaim,
+  SbomCompositeQueue,
+} from "../worker/sbom-composite-worker";
 import type {
   SbomQualityClaim,
   SbomQualityFactPage,
@@ -201,6 +219,38 @@ const diffFactPageSchema = z
     nextCursor: z.string().min(1).nullable(),
   })
   .strict();
+const compositeClaimSchema = z
+  .object({
+    reviewId: z.uuid(),
+    actorId: z.uuid(),
+    productId: z.uuid(),
+    releaseId: z.uuid(),
+    mergeRulesVersion: z.string().min(1),
+    generatedSourceId: z.uuid().nullable().default(null),
+    components: z.array(
+      z
+        .object({
+          componentRef: z.string().min(1),
+          name: z.string().min(1),
+          version: z.string().nullable(),
+          canonicalPurl: z.string().nullable(),
+          canonicalCpe: z.string().nullable(),
+          hashes: z.array(
+            z.object({
+              algorithm: z.string().min(1),
+              value: z.string().min(1),
+            }),
+          ),
+        })
+        .strict(),
+    ),
+    dependencies: z.array(
+      z
+        .object({ fromRef: z.string().min(1), toRef: z.string().min(1) })
+        .strict(),
+    ),
+  })
+  .strict();
 
 /** Service-role adapter: every access starts with organizationId and parses provider JSON. */
 @Injectable()
@@ -210,10 +260,13 @@ export class SupabaseSbomRepository
     SbomNormalizationRepository,
     SbomQualityRepository,
     SbomDiffRepository,
+    SbomCompositeRepository,
     SbomCiCredentialPort,
+    SupplierSbomRepository,
     SbomIngestQueue,
     SbomQualityQueue,
-    SbomDiffQueue
+    SbomDiffQueue,
+    SbomCompositeQueue
 {
   constructor(private readonly supabase: SupabaseService) {}
 
@@ -262,6 +315,284 @@ export class SupabaseSbomRepository
           "not_found" | "conflict" | "idempotency_mismatch" | "invalid_request",
       };
     return { outcome, reservation: this.source(row.source) } as const;
+  }
+
+  async createRequest(
+    organizationId: string,
+    input: Parameters<SupplierSbomRepository["createRequest"]>[1],
+  ): Promise<Awaited<ReturnType<SupplierSbomRepository["createRequest"]>>> {
+    const row = await this.one("create_supplier_sbom_request_atomic", {
+      p_organization_id: organizationId,
+      p_actor_user_id: input.actorId,
+      p_request_id: randomUUID(),
+      p_product_id: input.productId,
+      p_release_id: input.releaseId,
+      p_supplier_display_name: input.supplierDisplayName,
+      p_allowed_component_ref: input.allowedComponentRef,
+      p_expires_at: input.expiresAt,
+      p_idempotency_key: input.idempotencyKey,
+      p_request_digest: supplierRequestDigest(input),
+      p_correlation_id: correlationFromIdempotency(input.idempotencyKey),
+    });
+    const outcome = this.outcome(
+      row,
+      new Set([
+        "created",
+        "replayed",
+        "not_found",
+        "conflict",
+        "idempotency_mismatch",
+        "invalid_request",
+      ]),
+    );
+    if (outcome !== "created" && outcome !== "replayed")
+      return {
+        outcome: outcome as
+          "not_found" | "conflict" | "idempotency_mismatch" | "invalid_request",
+      };
+    return { outcome, request: supplierRequest(row.request) };
+  }
+
+  async listRequests(
+    organizationId: string,
+    input: Parameters<SupplierSbomRepository["listRequests"]>[1],
+  ): Promise<Awaited<ReturnType<SupplierSbomRepository["listRequests"]>>> {
+    const row = await this.one("list_supplier_sbom_requests", {
+      p_organization_id: organizationId,
+      p_actor_user_id: input.actorId,
+      p_product_id: input.productId ?? null,
+      p_release_id: input.releaseId ?? null,
+      p_state: input.state ?? null,
+      p_limit: input.limit,
+      p_cursor: input.cursor ?? null,
+    });
+    if (this.outcome(row, new Set(["found", "not_found"])) !== "found") {
+      return { outcome: "not_found" };
+    }
+    const requests = supplierArray(row.requests).map((item) => {
+      const summary = supplierRecord(item);
+      return Object.freeze({
+        request: supplierRequest(summary.request),
+        invitations: Object.freeze(
+          supplierArray(summary.invitations).map(supplierInvitation),
+        ),
+        submissions: Object.freeze(
+          supplierArray(summary.submissions).map(supplierSubmission),
+        ),
+      });
+    });
+    return Object.freeze({
+      outcome: "found" as const,
+      requests: Object.freeze(requests),
+      nextCursor: typeof row.next_cursor === "string" ? row.next_cursor : null,
+    });
+  }
+
+  async createInvitation(
+    organizationId: string,
+    input: Parameters<SupplierSbomRepository["createInvitation"]>[1],
+  ): Promise<Awaited<ReturnType<SupplierSbomRepository["createInvitation"]>>> {
+    const token = opaqueToken();
+    const row = await this.one("create_supplier_sbom_invitation_atomic", {
+      p_organization_id: organizationId,
+      p_actor_user_id: input.actorId,
+      p_request_id: input.requestId,
+      p_invitation_id: randomUUID(),
+      p_token_hash: tokenHash(token),
+      p_expires_at: input.expiresAt,
+      p_idempotency_key: input.idempotencyKey,
+      p_request_digest: supplierInvitationDigest(input),
+      p_correlation_id: correlationFromIdempotency(input.idempotencyKey),
+    });
+    const outcome = this.outcome(
+      row,
+      new Set([
+        "created",
+        "replayed",
+        "not_found",
+        "conflict",
+        "idempotency_mismatch",
+        "invalid_request",
+      ]),
+    );
+    if (outcome !== "created" && outcome !== "replayed")
+      return {
+        outcome: outcome as
+          "not_found" | "conflict" | "idempotency_mismatch" | "invalid_request",
+      };
+    // A replay can never return a newly generated bearer token.  Callers must
+    // retain the token from the original response, which prevents token replay
+    // over an idempotency route from becoming a credential disclosure channel.
+    return {
+      outcome,
+      invitation: supplierInvitation(row.invitation),
+      ...(outcome === "created" ? { invitationToken: token } : {}),
+    } as Awaited<ReturnType<SupplierSbomRepository["createInvitation"]>>;
+  }
+
+  async exchangeInvitation(
+    input: Parameters<SupplierSbomRepository["exchangeInvitation"]>[0],
+  ): Promise<
+    Awaited<ReturnType<SupplierSbomRepository["exchangeInvitation"]>>
+  > {
+    // M9 generates this second opaque bearer before exchange. The database
+    // stores only its digest, atomically binds it to the consumed invitation,
+    // and permits a retry only when the same digest is supplied.
+    const sessionToken = input.sessionToken;
+    const row = await this.one("consume_supplier_sbom_invitation_atomic", {
+      p_token_hash: tokenHash(input.invitationToken),
+      p_session_token_hash: tokenHash(sessionToken),
+      p_session_expires_at: new Date(
+        Date.now() + 15 * 60 * 1_000,
+      ).toISOString(),
+    });
+    const outcome = this.outcome(
+      row,
+      new Set(["created", "not_found", "conflict", "idempotency_mismatch"]),
+    );
+    if (outcome !== "created")
+      return {
+        outcome: outcome as "not_found" | "conflict" | "idempotency_mismatch",
+      };
+    return {
+      outcome: "created",
+      session: supplierSession(row.session, sessionToken),
+    };
+  }
+
+  async reserveUpload(
+    input: Parameters<SupplierSbomRepository["reserveUpload"]>[0],
+  ): Promise<Awaited<ReturnType<SupplierSbomRepository["reserveUpload"]>>> {
+    const sourceId = randomUUID();
+    const row = await this.one("reserve_supplier_sbom_submission_atomic", {
+      p_session_token_hash: tokenHash(input.sessionToken),
+      p_submission_id: randomUUID(),
+      p_source_id: sourceId,
+      p_idempotency_key: input.idempotencyKey,
+      p_request_digest: supplierUploadDigest(input),
+      p_original_filename: input.filename,
+      p_declared_media_type: input.mediaType,
+      p_declared_byte_size: input.byteSize,
+      p_declared_sha256: input.sha256,
+      p_correlation_id: input.correlationId,
+      p_declared_format: input.declaredFormat ?? null,
+      p_declared_spec_version: input.declaredSpecVersion ?? null,
+    });
+    const outcome = this.outcome(
+      row,
+      new Set([
+        "created",
+        "replayed",
+        "not_found",
+        "conflict",
+        "idempotency_mismatch",
+        "invalid_request",
+      ]),
+    );
+    if (outcome !== "created" && outcome !== "replayed")
+      return {
+        outcome: outcome as
+          "not_found" | "conflict" | "idempotency_mismatch" | "invalid_request",
+      };
+    return {
+      outcome,
+      reservation: this.source(row.source),
+      submission: supplierSubmission(row.submission),
+    };
+  }
+
+  async getUploadForCompletion(
+    input: Parameters<SupplierSbomRepository["getUploadForCompletion"]>[0],
+  ): Promise<
+    Awaited<ReturnType<SupplierSbomRepository["getUploadForCompletion"]>>
+  > {
+    const row = await this.one("get_supplier_sbom_submission_upload", {
+      p_session_token_hash: tokenHash(input.sessionToken),
+      p_source_id: input.sourceId,
+      p_idempotency_key: input.idempotencyKey,
+    });
+    const outcome = this.outcome(
+      row,
+      new Set(["ready", "replayed", "not_found", "conflict"]),
+    );
+    if (outcome !== "ready" && outcome !== "replayed")
+      return { outcome: outcome as "not_found" | "conflict" };
+    return { outcome, reservation: this.source(row.source) };
+  }
+
+  async completeUpload(
+    input: Parameters<SupplierSbomRepository["completeUpload"]>[0],
+  ): Promise<Awaited<ReturnType<SupplierSbomRepository["completeUpload"]>>> {
+    const row = await this.one("finalize_supplier_sbom_submission_atomic", {
+      p_session_token_hash: tokenHash(input.sessionToken),
+      p_source_id: input.sourceId,
+      p_idempotency_key: input.idempotencyKey,
+      p_actual_sha256: input.actualHash,
+      p_actual_byte_size: input.actualByteSize,
+      p_actual_media_type: input.actualMediaType,
+      p_correlation_id: input.correlationId,
+    });
+    const outcome = this.outcome(
+      row,
+      new Set([
+        "queued",
+        "replayed",
+        "deduplicated",
+        "not_found",
+        "conflict",
+        "idempotency_mismatch",
+      ]),
+    );
+    if (
+      outcome !== "queued" &&
+      outcome !== "replayed" &&
+      outcome !== "deduplicated"
+    )
+      return {
+        outcome: outcome as "not_found" | "conflict" | "idempotency_mismatch",
+      };
+    return {
+      outcome,
+      job: this.job(row.job),
+      submission: supplierSubmission(row.submission),
+    };
+  }
+
+  async reviewSubmission(
+    organizationId: string,
+    input: Parameters<SupplierSbomRepository["reviewSubmission"]>[1],
+  ): Promise<Awaited<ReturnType<SupplierSbomRepository["reviewSubmission"]>>> {
+    const row = await this.one("review_supplier_sbom_submission_atomic", {
+      p_organization_id: organizationId,
+      p_actor_user_id: input.actorId,
+      p_submission_id: input.submissionId,
+      p_decision: input.decision === "accepted" ? "accept" : "reject",
+      p_reason: input.reason,
+      p_idempotency_key: input.idempotencyKey,
+      p_correlation_id: correlationFromIdempotency(input.idempotencyKey),
+    });
+    const outcome = this.outcome(
+      row,
+      new Set([
+        "accepted",
+        "rejected",
+        "replayed",
+        "not_found",
+        "conflict",
+        "idempotency_mismatch",
+        "invalid_request",
+      ]),
+    );
+    if (
+      outcome !== "accepted" &&
+      outcome !== "rejected" &&
+      outcome !== "replayed"
+    )
+      return {
+        outcome: outcome as
+          "not_found" | "conflict" | "idempotency_mismatch" | "invalid_request",
+      };
+    return { outcome, submission: supplierSubmission(row.submission) };
   }
 
   async getSource(
@@ -956,6 +1287,328 @@ export class SupabaseSbomRepository
     };
   }
 
+  async createReview(
+    organizationId: string,
+    input: Parameters<SbomCompositeRepository["createReview"]>[1],
+  ): Promise<Awaited<ReturnType<SbomCompositeRepository["createReview"]>>> {
+    const inputSetDigest = sha256(
+      stableCompositeInputDigest(
+        input.sourceIds.map((sourceId) => ({
+          sourceId,
+          documentId: sourceId,
+          sourceDocumentHash: sourceId,
+        })),
+      ),
+    );
+    const row = await this.one("create_sbom_composite_review_atomic", {
+      p_organization_id: organizationId,
+      p_actor_user_id: input.actorId,
+      p_review_id: randomUUID(),
+      p_product_id: input.productId,
+      p_release_id: input.releaseId,
+      p_merge_rules_version: SBOM_COMPOSITE_MERGE_RULES_VERSION,
+      p_input_set_digest: inputSetDigest,
+      p_inputs: input.sourceIds.map((sourceId) => ({ sourceId })),
+      p_correlation_id: randomUUID(),
+    });
+    const outcome = this.outcome(
+      row,
+      new Set([
+        "created",
+        "replayed",
+        "not_found",
+        "conflict",
+        "invalid_request",
+      ]),
+    );
+    if (outcome === "created" || outcome === "replayed") {
+      const createdReview = compositeReviewResponse(row.review);
+      if (outcome === "replayed") {
+        return { outcome, response: createdReview };
+      }
+      // Creation persists the immutable input set first.  The projection is a
+      // separate, idempotent database operation so field-level conflicts and
+      // provenance are always materialized from the completed source graph,
+      // never from client supplied display values.
+      const projection = await this.one(
+        "refresh_sbom_composite_review_projection_atomic",
+        {
+          p_organization_id: organizationId,
+          p_review_id: createdReview.review.id,
+        },
+      );
+      if (
+        this.outcome(projection, new Set(["refreshed", "not_found"])) !==
+        "refreshed"
+      ) {
+        return { outcome: "not_found" };
+      }
+      return { outcome, response: compositeReviewResponse(projection.review) };
+    }
+    return {
+      outcome:
+        outcome === "not_found"
+          ? "not_found"
+          : outcome === "invalid_request"
+            ? "invalid_request"
+            : "conflict",
+    };
+  }
+
+  async validateScope(
+    organizationId: string,
+    input: Parameters<SbomCompositeRepository["validateScope"]>[1],
+  ): Promise<Awaited<ReturnType<SbomCompositeRepository["validateScope"]>>> {
+    const row = await this.one("validate_sbom_composite_scope", {
+      p_organization_id: organizationId,
+      p_actor_user_id: input.actorId,
+      p_product_id: input.productId,
+      p_release_id: input.releaseId,
+      p_source_ids: input.sourceIds,
+    });
+    return this.outcome(
+      row,
+      new Set<"compatible" | "not_found" | "conflict">([
+        "compatible",
+        "not_found",
+        "conflict",
+      ]),
+    );
+  }
+
+  async getReview(
+    organizationId: string,
+    input: Parameters<SbomCompositeRepository["getReview"]>[1],
+  ): Promise<Awaited<ReturnType<SbomCompositeRepository["getReview"]>>> {
+    const row = await this.one("get_sbom_composite_review", {
+      p_organization_id: organizationId,
+      p_actor_user_id: input.actorId,
+      p_review_id: input.reviewId,
+    });
+    if (this.outcome(row, new Set(["found", "not_found"])) !== "found") {
+      return null;
+    }
+    return compositeReviewResponse(row.review);
+  }
+
+  async resolveConflict(
+    organizationId: string,
+    input: Parameters<SbomCompositeRepository["resolveConflict"]>[1],
+  ): Promise<Awaited<ReturnType<SbomCompositeRepository["resolveConflict"]>>> {
+    const row = await this.one("resolve_sbom_composite_conflict_atomic", {
+      p_organization_id: organizationId,
+      p_actor_user_id: input.actorId,
+      p_review_id: input.reviewId,
+      p_conflict_id: input.conflictId,
+      p_selected_source_component_id:
+        input.decision === "select_source_component"
+          ? input.selectedComponentId
+          : null,
+      p_decision: input.decision,
+      p_reason: input.reason,
+      p_idempotency_key: input.idempotencyKey,
+      p_correlation_id: randomUUID(),
+    });
+    const outcome = this.outcome(
+      row,
+      new Set([
+        "resolved",
+        "replayed",
+        "not_found",
+        "conflict",
+        "invalid_request",
+      ]),
+    );
+    if (outcome === "resolved" || outcome === "replayed") {
+      return { outcome, response: compositeReviewResponse(row.review) };
+    }
+    return {
+      outcome:
+        outcome === "not_found"
+          ? "not_found"
+          : outcome === "invalid_request"
+            ? "invalid_request"
+            : "conflict",
+    };
+  }
+
+  async resolveRelationship(
+    organizationId: string,
+    input: Parameters<SbomCompositeRepository["resolveRelationship"]>[1],
+  ): Promise<
+    Awaited<ReturnType<SbomCompositeRepository["resolveRelationship"]>>
+  > {
+    const row = await this.one("resolve_sbom_composite_relationship_atomic", {
+      p_organization_id: organizationId,
+      p_actor_user_id: input.actorId,
+      p_review_id: input.reviewId,
+      p_relationship_id: input.relationshipId,
+      p_disposition: input.decision,
+      p_reason: input.reason,
+      p_idempotency_key: input.idempotencyKey,
+      p_correlation_id: randomUUID(),
+    });
+    const outcome = this.outcome(
+      row,
+      new Set([
+        "resolved",
+        "replayed",
+        "not_found",
+        "conflict",
+        "invalid_request",
+      ]),
+    );
+    if (outcome === "resolved" || outcome === "replayed") {
+      return { outcome, response: compositeReviewResponse(row.review) };
+    }
+    return {
+      outcome:
+        outcome === "not_found"
+          ? "not_found"
+          : outcome === "invalid_request"
+            ? "invalid_request"
+            : "conflict",
+    };
+  }
+
+  async generate(
+    organizationId: string,
+    input: Parameters<SbomCompositeRepository["generate"]>[1],
+  ): Promise<Awaited<ReturnType<SbomCompositeRepository["generate"]>>> {
+    const row = await this.one("generate_sbom_composite_atomic", {
+      p_organization_id: organizationId,
+      p_actor_user_id: input.actorId,
+      p_review_id: input.reviewId,
+      p_idempotency_key: input.idempotencyKey,
+      p_correlation_id: randomUUID(),
+    });
+    const outcome = this.outcome(
+      row,
+      new Set([
+        "queued",
+        "claimed",
+        "replayed",
+        "not_found",
+        "conflict",
+        "invalid_request",
+        "invalid_state",
+      ]),
+    );
+    if (
+      outcome === "queued" ||
+      outcome === "claimed" ||
+      outcome === "replayed"
+    ) {
+      return {
+        outcome: outcome === "replayed" ? "replayed" : "queued",
+        response: compositeGenerationResponse(
+          row.review,
+          outcome === "replayed",
+        ),
+      };
+    }
+    return {
+      outcome:
+        outcome === "invalid_state"
+          ? "conflict"
+          : outcome === "not_found"
+            ? "not_found"
+            : outcome === "invalid_request"
+              ? "invalid_request"
+              : "conflict",
+    };
+  }
+
+  async dueCompositeOrganizationIds(): Promise<readonly string[]> {
+    const rows = await this.rows(
+      "list_due_sbom_composite_generation_organizations",
+      { p_limit: 500 },
+    );
+    return Object.freeze(
+      rows.flatMap((row) =>
+        typeof row.organization_id === "string" ? [row.organization_id] : [],
+      ),
+    );
+  }
+
+  async claimCompositeGeneration(
+    organizationId: string,
+    input: Parameters<SbomCompositeQueue["claimCompositeGeneration"]>[1],
+  ): Promise<SbomCompositeClaim> {
+    const row = await this.one("claim_sbom_composite_generation", {
+      p_organization_id: organizationId,
+      p_worker_id: input.workerId,
+      p_lease_seconds: input.leaseSeconds,
+    });
+    const outcome = this.outcome(
+      row,
+      new Set(["claimed", "empty", "conflict", "invalid_request"]),
+    );
+    if (outcome !== "claimed") {
+      return {
+        outcome: outcome === "conflict" ? "conflict" : "none_available",
+      };
+    }
+    const work = compositeClaimSchema.parse(row.work);
+    return Object.freeze({ outcome: "claimed", organizationId, ...work });
+  }
+
+  async attachGeneratedSource(
+    organizationId: string,
+    input: Parameters<SbomCompositeQueue["attachGeneratedSource"]>[1],
+  ): Promise<void> {
+    const row = await this.one(
+      "attach_sbom_composite_generated_source_atomic",
+      {
+        p_organization_id: organizationId,
+        p_review_id: input.reviewId,
+        p_worker_id: input.workerId,
+        p_source_id: input.sourceId,
+      },
+    );
+    if (
+      this.outcome(row, new Set(["attached", "replayed", "not_found"])) ===
+      "not_found"
+    )
+      throw new SbomRepositoryError("unavailable");
+  }
+
+  async reconcileCompositeGeneration(
+    organizationId: string,
+    input: Parameters<SbomCompositeQueue["reconcileCompositeGeneration"]>[1],
+  ): Promise<void> {
+    const row = await this.one("reconcile_sbom_composite_generation_atomic", {
+      p_organization_id: organizationId,
+      p_review_id: input.reviewId,
+      p_worker_id: input.workerId,
+    });
+    if (
+      this.outcome(
+        row,
+        new Set(["pending", "completed", "failed", "not_found"]),
+      ) === "not_found"
+    )
+      throw new SbomRepositoryError("unavailable");
+  }
+
+  async failCompositeGeneration(
+    organizationId: string,
+    input: Parameters<SbomCompositeQueue["failCompositeGeneration"]>[1],
+  ): Promise<void> {
+    const row = await this.one("fail_sbom_composite_generation_atomic", {
+      p_organization_id: organizationId,
+      p_review_id: input.reviewId,
+      p_worker_id: input.workerId,
+      p_error_code: input.errorCode,
+      p_message: input.message,
+    });
+    if (
+      this.outcome(row, new Set(["failed", "not_found", "invalid_request"])) !==
+      "failed"
+    )
+      throw new SbomRepositoryError("unavailable");
+  }
+
   async dueDiffOrganizationIds(): Promise<readonly string[]> {
     const rows = await this.rows("list_due_sbom_diff_organizations", {
       p_limit: 500,
@@ -1480,6 +2133,21 @@ function batchComponents(
   }));
 }
 
+function compositeReviewResponse(value: unknown) {
+  return sbomCompositeReviewResponseSchema.parse({ review: value });
+}
+
+function compositeGenerationResponse(value: unknown, replayed: boolean) {
+  return sbomCompositeGenerationResponseSchema.parse({
+    review: value,
+    replayed,
+  });
+}
+
+function sha256(value: string): string {
+  return createHash("sha256").update(value).digest("hex");
+}
+
 function batchEdges(
   batch: SbomNormalizationBatch,
 ): readonly Record<string, unknown>[] {
@@ -1757,6 +2425,231 @@ export function sbomRequestDigest(
       }),
     )
     .digest("hex");
+}
+
+function opaqueToken(): string {
+  return randomBytes(32).toString("base64url");
+}
+
+/** The database stores only this stable digest, never an invitation/session bearer. */
+function tokenHash(token: string): string {
+  return createHash("sha256").update(token).digest("hex");
+}
+
+function correlationFromIdempotency(idempotencyKey: string): string {
+  // UUID idempotency keys are already validated at the HTTP boundary.  A
+  // separate correlation id is intentionally generated for every write.
+  void idempotencyKey;
+  return randomUUID();
+}
+
+function supplierUploadDigest(
+  input: Parameters<SupplierSbomRepository["reserveUpload"]>[0],
+): string {
+  return createHash("sha256")
+    .update(
+      JSON.stringify({
+        filename: input.filename,
+        byteSize: input.byteSize,
+        mediaType: input.mediaType,
+        sha256: input.sha256,
+        idempotencyKey: input.idempotencyKey,
+        declaredFormat: input.declaredFormat ?? null,
+        declaredSpecVersion: input.declaredSpecVersion ?? null,
+      }),
+    )
+    .digest("hex");
+}
+
+function supplierRequestDigest(
+  input: Parameters<SupplierSbomRepository["createRequest"]>[1],
+): string {
+  return createHash("sha256")
+    .update(
+      JSON.stringify({
+        productId: input.productId,
+        releaseId: input.releaseId,
+        supplierDisplayName: input.supplierDisplayName,
+        allowedComponentRef: input.allowedComponentRef,
+        expiresAt: input.expiresAt,
+        idempotencyKey: input.idempotencyKey,
+      }),
+    )
+    .digest("hex");
+}
+
+function supplierInvitationDigest(
+  input: Parameters<SupplierSbomRepository["createInvitation"]>[1],
+): string {
+  return createHash("sha256")
+    .update(
+      JSON.stringify({
+        requestId: input.requestId,
+        expiresAt: input.expiresAt,
+        idempotencyKey: input.idempotencyKey,
+      }),
+    )
+    .digest("hex");
+}
+
+function supplierRequest(value: unknown): SupplierSbomRequest {
+  const row = supplierRecord(value);
+  return Object.freeze({
+    id: supplierString(row, "id"),
+    organizationId: supplierString(row, "organizationId", "organization_id"),
+    productId: supplierString(row, "productId", "product_id"),
+    releaseId: supplierString(row, "releaseId", "release_id"),
+    allowedComponentRef: supplierString(
+      row,
+      "allowedComponentRef",
+      "allowed_component_ref",
+    ),
+    supplierDisplayName: supplierString(
+      row,
+      "supplierDisplayName",
+      "supplier_display_name",
+    ),
+    state: supplierEnum(row, ["open", "closed", "revoked"] as const, "state"),
+    createdAt: supplierString(row, "createdAt", "created_at"),
+    expiresAt: supplierString(row, "expiresAt", "expires_at"),
+    createdBy: supplierString(row, "createdBy", "created_by"),
+    closedAt: supplierNullableString(row, "closedAt", "closed_at"),
+  });
+}
+
+function supplierInvitation(value: unknown): SupplierSbomInvitation {
+  const row = supplierRecord(value);
+  return Object.freeze({
+    id: supplierString(row, "id"),
+    requestId: supplierString(row, "requestId", "request_id"),
+    tokenPrefix: supplierString(row, "tokenPrefix", "token_prefix"),
+    state: supplierEnum(
+      row,
+      ["active", "used", "expired", "revoked"] as const,
+      "state",
+    ),
+    expiresAt: supplierString(row, "expiresAt", "expires_at"),
+    createdAt: supplierString(row, "createdAt", "created_at"),
+    usedAt: supplierNullableString(row, "usedAt", "used_at"),
+    revokedAt: supplierNullableString(row, "revokedAt", "revoked_at"),
+  });
+}
+
+function supplierSession(
+  value: unknown,
+  token: string | null,
+): SupplierSbomSession {
+  const row = supplierRecord(value);
+  return Object.freeze({
+    sessionToken:
+      token ??
+      (() => {
+        throw new SbomRepositoryError("malformed");
+      })(),
+    expiresAt: supplierString(row, "expiresAt", "expires_at"),
+    requestReference: supplierString(
+      row,
+      "requestReference",
+      "request_reference",
+    ),
+    allowedComponentRef: supplierString(
+      row,
+      "allowedComponentRef",
+      "allowed_component_ref",
+    ),
+  });
+}
+
+function supplierSubmission(value: unknown): SupplierSbomSubmission {
+  const row = supplierRecord(value);
+  return Object.freeze({
+    id: supplierString(row, "id"),
+    requestId: supplierString(row, "requestId", "request_id"),
+    sourceId: supplierNullableString(row, "sourceId", "source_id"),
+    state: supplierEnum(
+      row,
+      [
+        "pending",
+        "processing",
+        "validation_failed",
+        "awaiting_review",
+        "accepted",
+        "rejected",
+        "superseded",
+      ] as const,
+      "state",
+    ),
+    fileName: supplierString(row, "fileName", "file_name"),
+    mediaType: supplierString(row, "mediaType", "media_type"),
+    byteSize: supplierNumber(row, "byteSize", "byte_size"),
+    sha256: supplierString(row, "sha256"),
+    validationMessage: supplierNullableString(
+      row,
+      "validationMessage",
+      "validation_message",
+    ),
+    reviewReason: supplierNullableString(row, "reviewReason", "review_reason"),
+    reviewedAt: supplierNullableString(row, "reviewedAt", "reviewed_at"),
+    reviewedBy: supplierNullableString(row, "reviewedBy", "reviewed_by"),
+    supersededBySubmissionId: supplierNullableString(
+      row,
+      "supersededBySubmissionId",
+      "superseded_by_submission_id",
+    ),
+    createdAt: supplierString(row, "createdAt", "created_at"),
+    updatedAt: supplierString(row, "updatedAt", "updated_at"),
+  });
+}
+
+function supplierRecord(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw new SbomRepositoryError("malformed");
+  return value as Record<string, unknown>;
+}
+
+function supplierArray(value: unknown): readonly unknown[] {
+  if (!Array.isArray(value)) throw new SbomRepositoryError("malformed");
+  return value;
+}
+
+function supplierString(
+  row: Record<string, unknown>,
+  ...names: string[]
+): string {
+  for (const name of names) if (typeof row[name] === "string") return row[name];
+  throw new SbomRepositoryError("malformed");
+}
+function supplierNullableString(
+  row: Record<string, unknown>,
+  ...names: string[]
+): string | null {
+  for (const name of names) {
+    if (row[name] === null) return null;
+    if (typeof row[name] === "string") return row[name];
+  }
+  throw new SbomRepositoryError("malformed");
+}
+function supplierNumber(
+  row: Record<string, unknown>,
+  ...names: string[]
+): number {
+  for (const name of names)
+    if (typeof row[name] === "number" && Number.isInteger(row[name]))
+      return row[name];
+  throw new SbomRepositoryError("malformed");
+}
+function supplierEnum<const T extends readonly string[]>(
+  row: Record<string, unknown>,
+  values: T,
+  name: string,
+): T[number] {
+  const value = row[name];
+  if (
+    typeof value === "string" &&
+    (values as readonly string[]).includes(value)
+  )
+    return value;
+  throw new SbomRepositoryError("malformed");
 }
 function string(value: unknown): string {
   if (typeof value !== "string") throw new SbomRepositoryError("malformed");

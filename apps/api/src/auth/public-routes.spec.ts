@@ -51,6 +51,12 @@ const ALLOWED_PUBLIC: Record<string, string> = {
     "CI cannot have a browser session; the dedicated SBOM CI credential guard authenticates this narrow intake route.",
   "POST ci/sbom-uploads/:sourceId/complete":
     "Continuation of the CI direct-upload protocol, guarded by the same organization-scoped credential.",
+  "POST supplier-sbom-portal/sessions":
+    "A supplier has no CRA session; the one-time opaque invitation bearer is the only credential accepted here.",
+  "POST supplier-sbom-portal/submissions":
+    "A short-lived opaque supplier session bearer scopes this upload reservation to one invitation and component.",
+  "POST supplier-sbom-portal/submissions/:sourceId/complete":
+    "Continuation of the supplier direct-upload protocol; the opaque session is rechecked and bytes are inspected server-side.",
 };
 
 interface RouteInfo {
@@ -205,6 +211,9 @@ describe("route guard coverage", () => {
       "POST sbom-diffs/:diffId/retry": false,
       "POST ci/sbom-uploads": true,
       "POST ci/sbom-uploads/:sourceId/complete": true,
+      "POST supplier-sbom-portal/sessions": true,
+      "POST supplier-sbom-portal/submissions": true,
+      "POST supplier-sbom-portal/submissions/:sourceId/complete": true,
     });
   });
 

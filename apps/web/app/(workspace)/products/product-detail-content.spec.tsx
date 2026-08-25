@@ -59,6 +59,48 @@ vi.mock("../../_features/sboms/sboms.queries", () => ({
     error: null,
     refetch: vi.fn(),
   }),
+  useSbomCompositeReviewQuery: () => ({
+    data: undefined,
+    isPending: false,
+    isError: false,
+    error: null,
+    refetch: vi.fn(),
+  }),
+  useCreateSbomCompositeReviewMutation: () => ({
+    isPending: false,
+    mutateAsync: vi.fn(),
+  }),
+  useResolveSbomCompositeConflictMutation: () => ({
+    isPending: false,
+    mutateAsync: vi.fn(),
+  }),
+  useResolveSbomCompositeRelationshipMutation: () => ({
+    isPending: false,
+    mutateAsync: vi.fn(),
+  }),
+  useGenerateSbomCompositeMutation: () => ({
+    isPending: false,
+    mutateAsync: vi.fn(),
+  }),
+  useSupplierSbomRequestsQuery: () => ({
+    data: { requests: [], nextCursor: null },
+    isPending: false,
+    isError: false,
+    error: null,
+    refetch: vi.fn(),
+  }),
+  useCreateSupplierSbomRequestMutation: () => ({
+    isPending: false,
+    mutateAsync: vi.fn(),
+  }),
+  useCreateSupplierSbomInvitationMutation: () => ({
+    isPending: false,
+    mutateAsync: vi.fn(),
+  }),
+  useReviewSupplierSbomSubmissionMutation: () => ({
+    isPending: false,
+    mutateAsync: vi.fn(),
+  }),
 }));
 
 const PRODUCT = {

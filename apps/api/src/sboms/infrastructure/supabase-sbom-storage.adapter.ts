@@ -63,6 +63,41 @@ export class SupabaseSbomStorageAdapter implements SbomStoragePort {
     }
   }
 
+  /**
+   * Server-only writer for deterministic generated evidence.  It never
+   * overwrites an object: a restart may observe an existing identical key and
+   * continue through the normal immutable-source completion path.
+   */
+  async writeImmutable(
+    input: Readonly<{
+      objectKey: string;
+      contentType: string;
+      bytes: Buffer;
+    }>,
+  ): Promise<Readonly<{ outcome: "written" | "already_exists" }>> {
+    this.assertMetadata({
+      contentType: input.contentType,
+      byteSize: input.bytes.byteLength,
+    });
+    if (!objectKey.test(input.objectKey))
+      throw new SbomStorageError("malformed");
+    try {
+      const result = (await this.supabase
+        .admin()
+        .storage.from(bucket)
+        .upload(input.objectKey, input.bytes, {
+          contentType: input.contentType,
+          upsert: false,
+        })) as StorageResponse<unknown>;
+      if (!result.error) return Object.freeze({ outcome: "written" as const });
+      if (isAlreadyExists(result.error))
+        return Object.freeze({ outcome: "already_exists" as const });
+      throw new SbomStorageError("unavailable");
+    } catch (error) {
+      throw this.providerError(error);
+    }
+  }
+
   async createSignedDownload(
     input: Readonly<{
       objectKey: string;
@@ -295,6 +330,15 @@ function guardedStream(
     },
   });
   return Readable.fromWeb(blob.stream() as never).pipe(guard);
+}
+
+function isAlreadyExists(
+  error: Readonly<{ message?: string }> | null,
+): boolean {
+  return (
+    typeof error?.message === "string" &&
+    /already exists|duplicate/i.test(error.message)
+  );
 }
 
 export class SbomStorageError extends Error {
