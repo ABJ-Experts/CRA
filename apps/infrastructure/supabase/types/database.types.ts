@@ -8544,8 +8544,12 @@ export type Database = {
         Row: {
           created_at: string
           ecosystem: string | null
+          event_sequence: Json
           id: string
           package_name: string | null
+          purl_name: string | null
+          purl_namespace: string | null
+          purl_type: string | null
           range_type: string | null
           range_value: Json
           source_record_version_id: string
@@ -8554,8 +8558,12 @@ export type Database = {
         Insert: {
           created_at?: string
           ecosystem?: string | null
+          event_sequence?: Json
           id?: string
           package_name?: string | null
+          purl_name?: string | null
+          purl_namespace?: string | null
+          purl_type?: string | null
           range_type?: string | null
           range_value: Json
           source_record_version_id: string
@@ -8564,8 +8572,12 @@ export type Database = {
         Update: {
           created_at?: string
           ecosystem?: string | null
+          event_sequence?: Json
           id?: string
           package_name?: string | null
+          purl_name?: string | null
+          purl_namespace?: string | null
+          purl_type?: string | null
           range_type?: string | null
           range_value?: Json
           source_record_version_id?: string
@@ -8620,6 +8632,73 @@ export type Database = {
             columns: ["vulnerability_id"]
             isOneToOne: false
             referencedRelation: "vulnerabilities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vulnerability_component_occurrences: {
+        Row: {
+          canonical_purl: string
+          component_id: string
+          component_identity: string
+          component_version: string | null
+          created_at: string
+          document_id: string
+          first_evaluated_at: string
+          id: string
+          last_evaluated_at: string
+          organization_id: string
+          release_id: string
+          updated_at: string
+        }
+        Insert: {
+          canonical_purl: string
+          component_id: string
+          component_identity: string
+          component_version?: string | null
+          created_at?: string
+          document_id: string
+          first_evaluated_at?: string
+          id?: string
+          last_evaluated_at?: string
+          organization_id: string
+          release_id: string
+          updated_at?: string
+        }
+        Update: {
+          canonical_purl?: string
+          component_id?: string
+          component_identity?: string
+          component_version?: string | null
+          created_at?: string
+          document_id?: string
+          first_evaluated_at?: string
+          id?: string
+          last_evaluated_at?: string
+          organization_id?: string
+          release_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vulnerability_component_occur_organization_id_document_id__fkey"
+            columns: ["organization_id", "document_id", "component_id"]
+            isOneToOne: false
+            referencedRelation: "sbom_components"
+            referencedColumns: ["organization_id", "document_id", "id"]
+          },
+          {
+            foreignKeyName: "vulnerability_component_occurre_organization_id_release_id_fkey"
+            columns: ["organization_id", "release_id"]
+            isOneToOne: false
+            referencedRelation: "product_releases"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "vulnerability_component_occurrences_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
@@ -8680,6 +8759,7 @@ export type Database = {
         Row: {
           checkpoint: Json
           created_at: string
+          current_promotion_sequence: number
           disabled_reason: string | null
           enabled: boolean
           feed_key: string
@@ -8704,6 +8784,7 @@ export type Database = {
         Insert: {
           checkpoint?: Json
           created_at?: string
+          current_promotion_sequence?: number
           disabled_reason?: string | null
           enabled?: boolean
           feed_key: string
@@ -8728,6 +8809,7 @@ export type Database = {
         Update: {
           checkpoint?: Json
           created_at?: string
+          current_promotion_sequence?: number
           disabled_reason?: string | null
           enabled?: boolean
           feed_key?: string
@@ -8806,6 +8888,107 @@ export type Database = {
           },
         ]
       }
+      vulnerability_feed_promotion_snapshots: {
+        Row: {
+          completed_at: string
+          created_at: string
+          feed_key: string
+          promotion_sequence: number
+          run_id: string
+          source_record_count: number
+        }
+        Insert: {
+          completed_at: string
+          created_at?: string
+          feed_key: string
+          promotion_sequence: number
+          run_id: string
+          source_record_count: number
+        }
+        Update: {
+          completed_at?: string
+          created_at?: string
+          feed_key?: string
+          promotion_sequence?: number
+          run_id?: string
+          source_record_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vulnerability_feed_promotion_snapshots_feed_key_fkey"
+            columns: ["feed_key"]
+            isOneToOne: false
+            referencedRelation: "vulnerability_feed_configs"
+            referencedColumns: ["feed_key"]
+          },
+          {
+            foreignKeyName: "vulnerability_feed_promotion_snapshots_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: true
+            referencedRelation: "vulnerability_feed_sync_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vulnerability_feed_snapshot_source_records: {
+        Row: {
+          created_at: string
+          feed_key: string
+          promotion_sequence: number
+          record_state: string
+          source_record_id: string
+          source_record_version_id: string
+          vulnerability_id: string
+        }
+        Insert: {
+          created_at?: string
+          feed_key: string
+          promotion_sequence: number
+          record_state: string
+          source_record_id: string
+          source_record_version_id: string
+          vulnerability_id: string
+        }
+        Update: {
+          created_at?: string
+          feed_key?: string
+          promotion_sequence?: number
+          record_state?: string
+          source_record_id?: string
+          source_record_version_id?: string
+          vulnerability_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vulnerability_feed_snapshot_so_feed_key_promotion_sequence_fkey"
+            columns: ["feed_key", "promotion_sequence"]
+            isOneToOne: false
+            referencedRelation: "vulnerability_feed_promotion_snapshots"
+            referencedColumns: ["feed_key", "promotion_sequence"]
+          },
+          {
+            foreignKeyName: "vulnerability_feed_snapshot_sourc_source_record_version_id_fkey"
+            columns: ["source_record_version_id"]
+            isOneToOne: false
+            referencedRelation: "vulnerability_source_record_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vulnerability_feed_snapshot_source_record_source_record_id_fkey"
+            columns: ["source_record_id"]
+            isOneToOne: false
+            referencedRelation: "vulnerability_source_records"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vulnerability_feed_snapshot_source_record_vulnerability_id_fkey"
+            columns: ["vulnerability_id"]
+            isOneToOne: false
+            referencedRelation: "vulnerabilities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vulnerability_feed_staged_records: {
         Row: {
           canonical_id: string
@@ -8871,6 +9054,7 @@ export type Database = {
           lease_owner: string | null
           max_attempts: number
           next_attempt_at: string
+          promotion_sequence: number | null
           records_promoted: number
           records_received: number
           replay_idempotency_key: string | null
@@ -8902,6 +9086,7 @@ export type Database = {
           lease_owner?: string | null
           max_attempts?: number
           next_attempt_at?: string
+          promotion_sequence?: number | null
           records_promoted?: number
           records_received?: number
           replay_idempotency_key?: string | null
@@ -8933,6 +9118,7 @@ export type Database = {
           lease_owner?: string | null
           max_attempts?: number
           next_attempt_at?: string
+          promotion_sequence?: number | null
           records_promoted?: number
           records_received?: number
           replay_idempotency_key?: string | null
@@ -8970,6 +9156,562 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      vulnerability_finding_component_occurrences: {
+        Row: {
+          created_at: string
+          finding_id: string
+          first_detected_at: string
+          last_evaluated_at: string
+          last_seen_job_id: string | null
+          occurrence_id: string
+          organization_id: string
+          state: string
+          superseded_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          finding_id: string
+          first_detected_at?: string
+          last_evaluated_at?: string
+          last_seen_job_id?: string | null
+          occurrence_id: string
+          organization_id: string
+          state?: string
+          superseded_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          finding_id?: string
+          first_detected_at?: string
+          last_evaluated_at?: string
+          last_seen_job_id?: string | null
+          occurrence_id?: string
+          organization_id?: string
+          state?: string
+          superseded_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vulnerability_finding_compone_organization_id_last_seen_jo_fkey"
+            columns: ["organization_id", "last_seen_job_id"]
+            isOneToOne: false
+            referencedRelation: "vulnerability_match_jobs"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "vulnerability_finding_component_occurrence_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vulnerability_finding_component_occurrences_finding_id_fkey"
+            columns: ["finding_id"]
+            isOneToOne: false
+            referencedRelation: "vulnerability_findings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vulnerability_finding_component_occurrences_occurrence_id_fkey"
+            columns: ["occurrence_id"]
+            isOneToOne: false
+            referencedRelation: "vulnerability_component_occurrences"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vulnerability_findings: {
+        Row: {
+          affected_range: Json
+          affected_range_id: string
+          canonical_advisory_id: string
+          comparator_name: string
+          comparator_version: string
+          component_identity: string
+          confidence: number
+          confidence_explanation: string
+          confidence_table_version: string
+          created_at: string
+          evaluated_component_value: string
+          event_sequence: Json
+          first_detected_at: string
+          id: string
+          last_evaluated_at: string
+          last_seen_job_id: string | null
+          match_method: string
+          organization_id: string
+          release_id: string
+          source_feed_key: string
+          source_record_id: string
+          source_record_version_id: string
+          status: string
+          superseded_at: string | null
+          updated_at: string
+          vulnerability_id: string
+        }
+        Insert: {
+          affected_range: Json
+          affected_range_id: string
+          canonical_advisory_id: string
+          comparator_name: string
+          comparator_version: string
+          component_identity: string
+          confidence: number
+          confidence_explanation: string
+          confidence_table_version: string
+          created_at?: string
+          evaluated_component_value: string
+          event_sequence: Json
+          first_detected_at?: string
+          id?: string
+          last_evaluated_at?: string
+          last_seen_job_id?: string | null
+          match_method: string
+          organization_id: string
+          release_id: string
+          source_feed_key: string
+          source_record_id: string
+          source_record_version_id: string
+          status?: string
+          superseded_at?: string | null
+          updated_at?: string
+          vulnerability_id: string
+        }
+        Update: {
+          affected_range?: Json
+          affected_range_id?: string
+          canonical_advisory_id?: string
+          comparator_name?: string
+          comparator_version?: string
+          component_identity?: string
+          confidence?: number
+          confidence_explanation?: string
+          confidence_table_version?: string
+          created_at?: string
+          evaluated_component_value?: string
+          event_sequence?: Json
+          first_detected_at?: string
+          id?: string
+          last_evaluated_at?: string
+          last_seen_job_id?: string | null
+          match_method?: string
+          organization_id?: string
+          release_id?: string
+          source_feed_key?: string
+          source_record_id?: string
+          source_record_version_id?: string
+          status?: string
+          superseded_at?: string | null
+          updated_at?: string
+          vulnerability_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vulnerability_findings_affected_range_id_fkey"
+            columns: ["affected_range_id"]
+            isOneToOne: false
+            referencedRelation: "vulnerability_affected_ranges"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vulnerability_findings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vulnerability_findings_organization_id_last_seen_job_id_fkey"
+            columns: ["organization_id", "last_seen_job_id"]
+            isOneToOne: false
+            referencedRelation: "vulnerability_match_jobs"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "vulnerability_findings_organization_id_release_id_fkey"
+            columns: ["organization_id", "release_id"]
+            isOneToOne: false
+            referencedRelation: "product_releases"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "vulnerability_findings_source_feed_key_fkey"
+            columns: ["source_feed_key"]
+            isOneToOne: false
+            referencedRelation: "vulnerability_feed_configs"
+            referencedColumns: ["feed_key"]
+          },
+          {
+            foreignKeyName: "vulnerability_findings_source_record_id_fkey"
+            columns: ["source_record_id"]
+            isOneToOne: false
+            referencedRelation: "vulnerability_source_records"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vulnerability_findings_source_record_version_id_fkey"
+            columns: ["source_record_version_id"]
+            isOneToOne: false
+            referencedRelation: "vulnerability_source_record_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vulnerability_findings_vulnerability_id_fkey"
+            columns: ["vulnerability_id"]
+            isOneToOne: false
+            referencedRelation: "vulnerabilities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vulnerability_match_evaluations: {
+        Row: {
+          affected_range: Json | null
+          affected_range_id: string | null
+          comparator_name: string | null
+          comparator_version: string | null
+          created_at: string
+          evaluated_at: string
+          evaluated_component_value: string
+          event_sequence: Json | null
+          id: string
+          match_job_id: string
+          match_method: string
+          occurrence_id: string
+          organization_id: string
+          outcome: string
+          review_code: string | null
+          source_feed_key: string
+          source_record_id: string | null
+          source_record_version_id: string | null
+          vulnerability_id: string | null
+        }
+        Insert: {
+          affected_range?: Json | null
+          affected_range_id?: string | null
+          comparator_name?: string | null
+          comparator_version?: string | null
+          created_at?: string
+          evaluated_at: string
+          evaluated_component_value: string
+          event_sequence?: Json | null
+          id?: string
+          match_job_id: string
+          match_method: string
+          occurrence_id: string
+          organization_id: string
+          outcome: string
+          review_code?: string | null
+          source_feed_key: string
+          source_record_id?: string | null
+          source_record_version_id?: string | null
+          vulnerability_id?: string | null
+        }
+        Update: {
+          affected_range?: Json | null
+          affected_range_id?: string | null
+          comparator_name?: string | null
+          comparator_version?: string | null
+          created_at?: string
+          evaluated_at?: string
+          evaluated_component_value?: string
+          event_sequence?: Json | null
+          id?: string
+          match_job_id?: string
+          match_method?: string
+          occurrence_id?: string
+          organization_id?: string
+          outcome?: string
+          review_code?: string | null
+          source_feed_key?: string
+          source_record_id?: string | null
+          source_record_version_id?: string | null
+          vulnerability_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vulnerability_match_evaluatio_organization_id_match_job_id_fkey"
+            columns: ["organization_id", "match_job_id"]
+            isOneToOne: false
+            referencedRelation: "vulnerability_match_jobs"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "vulnerability_match_evaluations_affected_range_id_fkey"
+            columns: ["affected_range_id"]
+            isOneToOne: false
+            referencedRelation: "vulnerability_affected_ranges"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vulnerability_match_evaluations_occurrence_id_fkey"
+            columns: ["occurrence_id"]
+            isOneToOne: false
+            referencedRelation: "vulnerability_component_occurrences"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vulnerability_match_evaluations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vulnerability_match_evaluations_source_feed_key_fkey"
+            columns: ["source_feed_key"]
+            isOneToOne: false
+            referencedRelation: "vulnerability_feed_configs"
+            referencedColumns: ["feed_key"]
+          },
+          {
+            foreignKeyName: "vulnerability_match_evaluations_source_record_id_fkey"
+            columns: ["source_record_id"]
+            isOneToOne: false
+            referencedRelation: "vulnerability_source_records"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vulnerability_match_evaluations_source_record_version_id_fkey"
+            columns: ["source_record_version_id"]
+            isOneToOne: false
+            referencedRelation: "vulnerability_source_record_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vulnerability_match_evaluations_vulnerability_id_fkey"
+            columns: ["vulnerability_id"]
+            isOneToOne: false
+            referencedRelation: "vulnerabilities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vulnerability_match_jobs: {
+        Row: {
+          checkpoint_component_id: string | null
+          checkpoint_source_offset: number
+          checkpoint_version: number
+          completed_at: string | null
+          correlation_id: string
+          created_at: string
+          dead_lettered_at: string | null
+          delivery_attempts: number
+          document_id: string
+          due_at: string
+          id: string
+          last_error_code: string | null
+          last_error_message: string | null
+          lease_expires_at: string | null
+          lease_owner: string | null
+          matched_component_count: number
+          max_attempts: number
+          mirror_captured_at: string | null
+          organization_id: string
+          osv_promotion_sequence: number
+          processed_component_count: number
+          release_id: string
+          requested_by: string | null
+          reviewable_component_count: number
+          started_at: string | null
+          status: string
+          trigger_key: string
+          updated_at: string
+        }
+        Insert: {
+          checkpoint_component_id?: string | null
+          checkpoint_source_offset?: number
+          checkpoint_version?: number
+          completed_at?: string | null
+          correlation_id: string
+          created_at?: string
+          dead_lettered_at?: string | null
+          delivery_attempts?: number
+          document_id: string
+          due_at?: string
+          id?: string
+          last_error_code?: string | null
+          last_error_message?: string | null
+          lease_expires_at?: string | null
+          lease_owner?: string | null
+          matched_component_count?: number
+          max_attempts?: number
+          mirror_captured_at?: string | null
+          organization_id: string
+          osv_promotion_sequence: number
+          processed_component_count?: number
+          release_id: string
+          requested_by?: string | null
+          reviewable_component_count?: number
+          started_at?: string | null
+          status?: string
+          trigger_key: string
+          updated_at?: string
+        }
+        Update: {
+          checkpoint_component_id?: string | null
+          checkpoint_source_offset?: number
+          checkpoint_version?: number
+          completed_at?: string | null
+          correlation_id?: string
+          created_at?: string
+          dead_lettered_at?: string | null
+          delivery_attempts?: number
+          document_id?: string
+          due_at?: string
+          id?: string
+          last_error_code?: string | null
+          last_error_message?: string | null
+          lease_expires_at?: string | null
+          lease_owner?: string | null
+          matched_component_count?: number
+          max_attempts?: number
+          mirror_captured_at?: string | null
+          organization_id?: string
+          osv_promotion_sequence?: number
+          processed_component_count?: number
+          release_id?: string
+          requested_by?: string | null
+          reviewable_component_count?: number
+          started_at?: string | null
+          status?: string
+          trigger_key?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vulnerability_match_jobs_organization_id_document_id_fkey"
+            columns: ["organization_id", "document_id"]
+            isOneToOne: false
+            referencedRelation: "sbom_documents"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "vulnerability_match_jobs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vulnerability_match_jobs_organization_id_release_id_fkey"
+            columns: ["organization_id", "release_id"]
+            isOneToOne: false
+            referencedRelation: "product_releases"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "vulnerability_match_jobs_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vulnerability_matching_accuracy_metrics: {
+        Row: {
+          accuracy_run_id: string
+          ecosystem: string
+          false_negative_count: number
+          false_positive_count: number
+          match_method: string
+          release_key: string
+          source_feed_key: string
+          total_cases: number
+        }
+        Insert: {
+          accuracy_run_id: string
+          ecosystem: string
+          false_negative_count: number
+          false_positive_count: number
+          match_method: string
+          release_key: string
+          source_feed_key: string
+          total_cases: number
+        }
+        Update: {
+          accuracy_run_id?: string
+          ecosystem?: string
+          false_negative_count?: number
+          false_positive_count?: number
+          match_method?: string
+          release_key?: string
+          source_feed_key?: string
+          total_cases?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vulnerability_matching_accuracy_metrics_accuracy_run_id_fkey"
+            columns: ["accuracy_run_id"]
+            isOneToOne: false
+            referencedRelation: "vulnerability_matching_accuracy_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vulnerability_matching_accuracy_metrics_source_feed_key_fkey"
+            columns: ["source_feed_key"]
+            isOneToOne: false
+            referencedRelation: "vulnerability_feed_configs"
+            referencedColumns: ["feed_key"]
+          },
+        ]
+      }
+      vulnerability_matching_accuracy_runs: {
+        Row: {
+          accuracy_score: number
+          code_revision: string
+          comparator_registry_version: string
+          confidence_table_version: string
+          created_at: string
+          dataset_digest: string
+          dataset_version: string
+          executed_at: string
+          false_negative_count: number
+          false_positive_count: number
+          id: string
+          passed: boolean
+          runner_metadata: Json
+          total_cases: number
+        }
+        Insert: {
+          accuracy_score: number
+          code_revision: string
+          comparator_registry_version: string
+          confidence_table_version: string
+          created_at?: string
+          dataset_digest: string
+          dataset_version: string
+          executed_at?: string
+          false_negative_count: number
+          false_positive_count: number
+          id?: string
+          passed: boolean
+          runner_metadata?: Json
+          total_cases: number
+        }
+        Update: {
+          accuracy_score?: number
+          code_revision?: string
+          comparator_registry_version?: string
+          confidence_table_version?: string
+          created_at?: string
+          dataset_digest?: string
+          dataset_version?: string
+          executed_at?: string
+          false_negative_count?: number
+          false_positive_count?: number
+          id?: string
+          passed?: boolean
+          runner_metadata?: Json
+          total_cases?: number
+        }
+        Relationships: []
       }
       vulnerability_references: {
         Row: {
@@ -9707,6 +10449,17 @@ export type Database = {
           run_kind: string
           upstream_cursor: string
           upstream_etag: string
+        }[]
+      }
+      claim_vulnerability_match_job_atomic: {
+        Args: {
+          p_lease_owner: string
+          p_lease_seconds: number
+          p_organization_id: string
+        }
+        Returns: {
+          job: Json
+          outcome: string
         }[]
       }
       clear_login_attempts: { Args: { p_email: string }; Returns: undefined }
@@ -10528,6 +11281,19 @@ export type Database = {
           report: Json
         }[]
       }
+      enqueue_vulnerability_match_job_atomic: {
+        Args: {
+          p_correlation_id: string
+          p_document_id: string
+          p_organization_id: string
+          p_release_id: string
+          p_requested_by?: string
+        }
+        Returns: {
+          job_id: string
+          outcome: string
+        }[]
+      }
       ensure_organization_branding_draft: {
         Args: { p_actor_user_id: string; p_organization_id: string }
         Returns: undefined
@@ -10773,6 +11539,22 @@ export type Database = {
           p_worker_id: string
         }
         Returns: string
+      }
+      fail_vulnerability_match_job_atomic: {
+        Args: {
+          p_error_code: string
+          p_error_message: string
+          p_expected_checkpoint_version: number
+          p_job_id: string
+          p_lease_owner: string
+          p_organization_id: string
+          p_retryable: boolean
+        }
+        Returns: {
+          checkpoint_version: number
+          error_code: string
+          outcome: string
+        }[]
       }
       finalize_organization_branding_asset_upload_atomic: {
         Args: {
@@ -11459,6 +12241,17 @@ export type Database = {
           reservation: Json
         }[]
       }
+      get_vulnerability_match_status: {
+        Args: {
+          p_actor_user_id: string
+          p_document_id: string
+          p_organization_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
       is_iso_3166_alpha_2: { Args: { p_country: string }; Returns: boolean }
       is_login_locked: { Args: { p_email: string }; Returns: string }
       link_external_identity_atomic: {
@@ -11539,6 +12332,12 @@ export type Database = {
         Args: { p_limit: number }
         Returns: {
           oldest_due_at: string
+          organization_id: string
+        }[]
+      }
+      list_due_vulnerability_match_organizations: {
+        Args: { p_limit?: number }
+        Returns: {
           organization_id: string
         }[]
       }
@@ -11809,6 +12608,61 @@ export type Database = {
           status: string
           total_count: number
           updated_at: string
+        }[]
+      }
+      list_vulnerability_findings_for_document: {
+        Args: {
+          p_actor_user_id: string
+          p_cursor?: string
+          p_document_id: string
+          p_include_low_confidence: boolean
+          p_limit?: number
+          p_organization_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      list_vulnerability_match_components: {
+        Args: {
+          p_job_id: string
+          p_lease_owner: string
+          p_limit?: number
+          p_organization_id: string
+        }
+        Returns: {
+          component: Json
+        }[]
+      }
+      list_vulnerability_match_osv_candidates: {
+        Args: {
+          p_ecosystem: string
+          p_job_id: string
+          p_lease_owner: string
+          p_organization_id: string
+          p_purl_name: string
+          p_purl_namespace: string
+          p_purl_type: string
+        }
+        Returns: {
+          candidate: Json
+        }[]
+      }
+      list_vulnerability_match_results_for_document_page: {
+        Args: {
+          p_actor_user_id: string
+          p_document_id: string
+          p_include_low_confidence: boolean
+          p_include_reviewable: boolean
+          p_organization_id: string
+          p_page?: number
+          p_page_size?: number
+          p_q?: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
         }[]
       }
       m1_accept_invitation_atomic_legacy_unchecked: {
@@ -12478,6 +13332,25 @@ export type Database = {
           report: Json
         }[]
       }
+      persist_vulnerability_match_page_atomic: {
+        Args: {
+          p_expected_checkpoint_version: number
+          p_is_final: boolean
+          p_job_id: string
+          p_lease_owner: string
+          p_organization_id: string
+          p_processed_component_ids: Json
+          p_results: Json
+        }
+        Returns: {
+          checkpoint_version: number
+          matched_count: number
+          outcome: string
+          processed_count: number
+          reviewable_count: number
+          superseded_count: number
+        }[]
+      }
       preview_field_authority_policy: {
         Args: {
           p_actor_user_id: string
@@ -12568,6 +13441,13 @@ export type Database = {
         Returns: Json
       }
       promote_vulnerability_feed_sync: {
+        Args: { p_run_id: string; p_worker_id: string }
+        Returns: {
+          health: Json
+          outcome: string
+        }[]
+      }
+      promote_vulnerability_feed_sync_m4_01: {
         Args: { p_run_id: string; p_worker_id: string }
         Returns: {
           health: Json
@@ -12820,6 +13700,26 @@ export type Database = {
         Returns: {
           job: Json
           outcome: string
+        }[]
+      }
+      record_vulnerability_matching_accuracy_run: {
+        Args: {
+          p_code_revision: string
+          p_comparator_registry_version: string
+          p_confidence_table_version: string
+          p_dataset_digest: string
+          p_dataset_version: string
+          p_false_negative_count: number
+          p_false_positive_count: number
+          p_metrics: Json
+          p_runner_metadata: Json
+          p_total_cases: number
+        }
+        Returns: {
+          accuracy_run_id: string
+          accuracy_score: number
+          outcome: string
+          passed: boolean
         }[]
       }
       recover_organization_atomic: {

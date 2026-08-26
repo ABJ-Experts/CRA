@@ -79,8 +79,16 @@ const queries = vi.hoisted(() => ({
   useSbomQualityReportQuery: vi.fn(),
   useSbomQualityFindingsQuery: vi.fn(),
 }));
+const matchingQueries = vi.hoisted(() => ({
+  useVulnerabilityMatchStatusQuery: vi.fn(),
+  useVulnerabilityFindingsQuery: vi.fn(),
+}));
 
 vi.mock("../../_features/sboms/sboms.queries", () => queries);
+vi.mock(
+  "../../_features/vulnerabilities/vulnerability-matching.queries",
+  () => matchingQueries,
+);
 
 function primeQueries() {
   queries.useSbomDocumentDetailQuery.mockReturnValue({
@@ -218,6 +226,36 @@ function primeQueries() {
       nextCursor: null,
     },
   });
+  matchingQueries.useVulnerabilityMatchStatusQuery.mockReturnValue({
+    isPending: false,
+    isError: false,
+    error: null,
+    refetch: vi.fn(),
+    data: {
+      status: {
+        documentId: DOCUMENT_ID,
+        state: "completed",
+        currentJobId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        mirrorSnapshotSequence: 42,
+        componentsTotal: 2,
+        componentsEvaluated: 2,
+        findingsAffected: 1,
+        findingsReviewable: 0,
+        failureCode: null,
+        failureReason: null,
+        startedAt: NOW,
+        completedAt: NOW,
+        updatedAt: NOW,
+      },
+    },
+  });
+  matchingQueries.useVulnerabilityFindingsQuery.mockReturnValue({
+    isPending: false,
+    isError: false,
+    error: null,
+    refetch: vi.fn(),
+    data: { rows: [], total: 0, page: 1, pageSize: 50, pageCount: 1 },
+  });
 }
 
 describe("SbomNormalizedDocumentDetail", () => {
@@ -255,6 +293,9 @@ describe("SbomNormalizedDocumentDetail", () => {
     ).toBeVisible();
     expect(
       screen.getByRole("heading", { name: "SBOM quality report" }),
+    ).toBeVisible();
+    expect(
+      screen.getByRole("heading", { name: "Vulnerability matching" }),
     ).toBeVisible();
     expect(screen.getByText("CRA legal floor")).toBeVisible();
     expect(

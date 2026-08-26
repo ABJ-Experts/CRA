@@ -22,7 +22,15 @@ import {
 } from "./infrastructure/http-vulnerability-feed.providers";
 import { SupabaseVulnerabilityFeedRepository } from "./infrastructure/supabase-vulnerability-feed.repository";
 import { VulnerabilityFeedsController } from "./vulnerabilities.controller";
+import {
+  VULNERABILITY_MATCHING_REPOSITORY,
+  type VulnerabilityMatchingRepository,
+} from "./application/vulnerability-matching.port";
+import { VulnerabilityMatchingUseCases } from "./application/vulnerability-matching-use-cases";
+import { SupabaseVulnerabilityMatchingRepository } from "./infrastructure/supabase-vulnerability-matching.repository";
+import { VulnerabilityMatchingController } from "./vulnerability-matching.controller";
 import { VulnerabilityFeedWorker } from "./worker/vulnerability-feed-worker";
+import { VulnerabilityMatchingWorker } from "./matching/worker/vulnerability-matching-worker";
 
 export const VULNERABILITY_FEED_PROVIDERS = Symbol(
   "VULNERABILITY_FEED_PROVIDERS",
@@ -30,9 +38,10 @@ export const VULNERABILITY_FEED_PROVIDERS = Symbol(
 
 @Module({
   imports: [SupabaseModule],
-  controllers: [VulnerabilityFeedsController],
+  controllers: [VulnerabilityFeedsController, VulnerabilityMatchingController],
   providers: [
     SupabaseVulnerabilityFeedRepository,
+    SupabaseVulnerabilityMatchingRepository,
     {
       provide: VULNERABILITY_MIRROR_REPOSITORY,
       useExisting: SupabaseVulnerabilityFeedRepository,
@@ -62,6 +71,16 @@ export const VULNERABILITY_FEED_PROVIDERS = Symbol(
       inject: [VULNERABILITY_MIRROR_REPOSITORY],
     },
     {
+      provide: VULNERABILITY_MATCHING_REPOSITORY,
+      useExisting: SupabaseVulnerabilityMatchingRepository,
+    },
+    {
+      provide: VulnerabilityMatchingUseCases,
+      inject: [VULNERABILITY_MATCHING_REPOSITORY],
+      useFactory: (repository: VulnerabilityMatchingRepository) =>
+        new VulnerabilityMatchingUseCases(repository),
+    },
+    {
       provide: VulnerabilityFeedWorker,
       useFactory: (
         repository: VulnerabilityMirrorRepository,
@@ -85,8 +104,23 @@ export const VULNERABILITY_FEED_PROVIDERS = Symbol(
         ConfigService,
       ],
     },
+    {
+      provide: VulnerabilityMatchingWorker,
+      inject: [SupabaseVulnerabilityMatchingRepository, ConfigService],
+      useFactory: (
+        repository: SupabaseVulnerabilityMatchingRepository,
+        config: ConfigService,
+      ) =>
+        new VulnerabilityMatchingWorker({
+          workerId: randomUUID(),
+          leaseSeconds:
+            config.get<number>("VULNERABILITY_MATCH_LEASE_SECONDS") ?? 90,
+          pageSize: config.get<number>("VULNERABILITY_MATCH_PAGE_SIZE") ?? 250,
+          queue: repository,
+        }),
+    },
   ],
-  exports: [VulnerabilityFeedWorker],
+  exports: [VulnerabilityFeedWorker, VulnerabilityMatchingWorker],
 })
 export class VulnerabilitiesModule {}
 

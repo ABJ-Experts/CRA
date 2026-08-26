@@ -61,6 +61,7 @@ jobs:
             echo "SMTP_FROM=CRA <no-reply@cra.test>"
           } >> "$GITHUB_ENV"
       - run: pnpm --filter api run build
+      - run: pnpm --filter api run verify:vulnerability-matching-accuracy
       - name: Start API and wait for readiness
         shell: bash
         run: |

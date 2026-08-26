@@ -226,6 +226,16 @@ export const exportSourceExclusions: Readonly<Record<string, string>> =
       "Contains active worker leases and retry state; exporting operational security state would make a restored job ambiguous.",
     sbom_supplier_invitations:
       "Contains invitation and scoped-upload bearer token hashes; request lifecycle evidence is exported without credential-security material.",
+    vulnerability_match_jobs:
+      "Active lease, retry, and checkpoint state is deployment-local operational state; restoring it from a tenant archive would replay work against a different immutable mirror snapshot.",
+    vulnerability_component_occurrences:
+      "Derived bridge rows are reproducible from the exported immutable SBOM graph and deployment-local mirror; their foreign keys are not portable across deployments.",
+    vulnerability_finding_component_occurrences:
+      "Derived bridge rows are reproducible from the exported immutable SBOM graph and deployment-local mirror; their foreign keys are not portable across deployments.",
+    vulnerability_findings:
+      "A finding is a reproducible projection of tenant SBOM evidence and the deployment-local authoritative mirror; exporting mirror-source foreign keys would make a restored archive misleading.",
+    vulnerability_match_evaluations:
+      "Candidate and review evidence is a deployment-local derived projection pinned to a global mirror snapshot, not a portable tenant authority record.",
   });
 
 const crcTable = (() => {

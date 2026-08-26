@@ -338,9 +338,10 @@ begin
   select * into v_findings
   from public.get_sbom_diff_findings(v_org, v_actor, v_diff_id, 10, null);
   if v_findings.outcome <> 'found'
-    or (v_findings.result ->> 'state') <> 'partial_integration_unavailable'
+    or (v_findings.result ->> 'state') <> 'ready'
+    or v_findings.result -> 'items' <> '[]'::jsonb
     or v_findings.result -> 'nextCursor' <> 'null'::jsonb then
-    raise exception 'finding delta did not preserve the M4-ready cursor boundary';
+    raise exception 'finding delta did not preserve the ready cursor boundary';
   end if;
   update public.sbom_diff_reports
   set state = 'completed', progress_stage = 'completed', progress_percent = 100,

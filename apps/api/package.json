@@ -24,6 +24,8 @@
     "worker:sbom-diff": "node dist/sbom-diff-worker.js",
     "worker:sbom-composite": "node dist/sbom-composite-worker.js",
     "worker:vulnerability-feeds": "node dist/vulnerability-feed-worker.js",
+    "worker:vulnerability-matching": "node dist/vulnerability-matching-worker.js",
+    "verify:vulnerability-matching-accuracy": "node dist/vulnerability-matching-accuracy-gate.js",
     "verify:tenant-export-capacity": "node dist/organizations/tenant-administration/worker/tenant-export-capacity.js"
   },
   "dependencies": {

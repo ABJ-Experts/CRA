@@ -20,6 +20,7 @@ import {
   useSbomDependencyTreeChildrenQueries,
   useSbomDocumentDetailQuery,
 } from "../../_features/sboms/sboms.queries";
+import { VulnerabilityMatchingResults } from "../../_features/vulnerabilities/vulnerability-matching-results";
 import { SbomQualityReport } from "./sbom-quality-report";
 
 const SEARCH_DEBOUNCE_MS = 250;
@@ -750,6 +751,10 @@ export function SbomNormalizedDocumentDetail({
       </header>
       <SbomQualityReport
         sourceId={sourceId ?? document.sourceId}
+        enabled={enabled}
+      />
+      <VulnerabilityMatchingResults
+        documentId={document.id}
         enabled={enabled}
       />
       <div className="grid gap-4 xl:grid-cols-2">
