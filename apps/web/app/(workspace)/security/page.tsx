@@ -8,11 +8,14 @@ import Image from "next/image";
 import { useState } from "react";
 
 import { SectionCard } from "../../dashboard/_components/dashboard-chrome";
+import { VulnerabilityFeedHealthSection } from "../../_features/vulnerabilities/vulnerability-feed-health";
 import {
   securityApi,
   securityQueryKeys,
 } from "../../_features/security/security.api";
 import { ApiClientError } from "../../_lib/http/api-client";
+import { useMocksReady } from "../../_providers/providers";
+import { useSession } from "../../_providers/session-provider";
 
 /**
  * Two-factor authentication.
@@ -34,6 +37,8 @@ type Step =
 
 export default function SecurityPage() {
   const queryClient = useQueryClient();
+  const mocksReady = useMocksReady();
+  const { role, isLoading: sessionLoading } = useSession();
   const [step, setStep] = useState<Step>({ kind: "idle" });
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -44,6 +49,9 @@ export default function SecurityPage() {
     retry: false,
     queryFn: ({ signal }) => securityApi.listFactors(signal),
   });
+  const liveApiEnabled =
+    mocksReady && process.env.NEXT_PUBLIC_ENABLE_MOCKS === "false";
+  const canManageVulnerabilityFeeds = role === "owner" || role === "admin";
 
   async function startEnrollment() {
     setBusy(true);
@@ -213,6 +221,12 @@ export default function SecurityPage() {
           ) : null}
         </div>
       </SectionCard>
+
+      <VulnerabilityFeedHealthSection
+        liveApiEnabled={liveApiEnabled}
+        canManage={canManageVulnerabilityFeeds}
+        accessLoading={sessionLoading}
+      />
     </div>
   );
 }

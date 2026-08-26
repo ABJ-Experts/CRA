@@ -143,6 +143,18 @@
       "types": "./dist/connectors/types/index.d.ts",
       "default": "./dist/connectors/types/index.js"
     },
+    "./vulnerabilities": {
+      "types": "./dist/vulnerabilities/index.d.ts",
+      "default": "./dist/vulnerabilities/index.js"
+    },
+    "./vulnerabilities/schemas": {
+      "types": "./dist/vulnerabilities/schemas/index.d.ts",
+      "default": "./dist/vulnerabilities/schemas/index.js"
+    },
+    "./vulnerabilities/types": {
+      "types": "./dist/vulnerabilities/types/index.d.ts",
+      "default": "./dist/vulnerabilities/types/index.js"
+    },
     "./permissions/schemas": {
       "types": "./dist/permissions/schemas/index.d.ts",
       "default": "./dist/permissions/schemas/index.js"

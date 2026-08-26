@@ -29,6 +29,22 @@ const int = (fallback: number) =>
 const boundedInt = (fallback: number, maximum: number, message: string) =>
   int(fallback).refine((value) => value <= maximum, message);
 
+const optionalBoundedInt = (maximum: number, message: string) =>
+  z
+    .string()
+    .optional()
+    .transform((value) =>
+      value === undefined || value === ""
+        ? undefined
+        : Number.parseInt(value, 10),
+    )
+    .refine(
+      (value) =>
+        value === undefined || (Number.isSafeInteger(value) && value > 0),
+      "must be a positive integer",
+    )
+    .refine((value) => value === undefined || value <= maximum, message);
+
 const fixedZero = z.coerce
   .number()
   .default(0)
@@ -183,6 +199,56 @@ export const envSchema = z.object({
     50_000,
     "must not exceed 50000 components",
   ),
+  // Feed schedules belong to the durable global configuration. These optional
+  // deployment overrides are validated at boot and applied by the worker, not
+  // embedded into provider adapters.
+  VULNERABILITY_FEED_LEASE_SECONDS: boundedInt(
+    60,
+    3600,
+    "must not exceed 3600 seconds",
+  ),
+  VULNERABILITY_NVD_SCHEDULE_INTERVAL_SECONDS: optionalBoundedInt(
+    7 * 24 * 60 * 60,
+    "must not exceed 7 days",
+  ),
+  VULNERABILITY_OSV_SCHEDULE_INTERVAL_SECONDS: optionalBoundedInt(
+    7 * 24 * 60 * 60,
+    "must not exceed 7 days",
+  ),
+  VULNERABILITY_CISA_KEV_SCHEDULE_INTERVAL_SECONDS: optionalBoundedInt(
+    7 * 24 * 60 * 60,
+    "must not exceed 7 days",
+  ),
+  VULNERABILITY_EPSS_SCHEDULE_INTERVAL_SECONDS: optionalBoundedInt(
+    7 * 24 * 60 * 60,
+    "must not exceed 7 days",
+  ),
+  VULNERABILITY_GITHUB_ADVISORY_SCHEDULE_INTERVAL_SECONDS: optionalBoundedInt(
+    7 * 24 * 60 * 60,
+    "must not exceed 7 days",
+  ),
+  VULNERABILITY_NVD_STALE_THRESHOLD_SECONDS: optionalBoundedInt(
+    14 * 24 * 60 * 60,
+    "must not exceed 14 days",
+  ),
+  VULNERABILITY_OSV_STALE_THRESHOLD_SECONDS: optionalBoundedInt(
+    14 * 24 * 60 * 60,
+    "must not exceed 14 days",
+  ),
+  VULNERABILITY_CISA_KEV_STALE_THRESHOLD_SECONDS: optionalBoundedInt(
+    14 * 24 * 60 * 60,
+    "must not exceed 14 days",
+  ),
+  VULNERABILITY_EPSS_STALE_THRESHOLD_SECONDS: optionalBoundedInt(
+    14 * 24 * 60 * 60,
+    "must not exceed 14 days",
+  ),
+  VULNERABILITY_GITHUB_ADVISORY_STALE_THRESHOLD_SECONDS: optionalBoundedInt(
+    14 * 24 * 60 * 60,
+    "must not exceed 14 days",
+  ),
+  /** Optional deployment secret. Never persisted or emitted in logs. */
+  GITHUB_ADVISORY_TOKEN: z.string().trim().min(1).optional(),
   /**
    * With no scanner adapter configured, decoded raster-only inspection remains
    * available in non-strict environments and is recorded in the audit trail.

@@ -8500,6 +8500,642 @@ export type Database = {
         }
         Relationships: []
       }
+      vulnerabilities: {
+        Row: {
+          canonical_id: string
+          created_at: string
+          id: string
+          lifecycle_state: string
+          modified_at: string | null
+          published_at: string | null
+          severity: Json
+          summary: string | null
+          title: string | null
+          updated_at: string
+          withdrawn_at: string | null
+        }
+        Insert: {
+          canonical_id: string
+          created_at?: string
+          id?: string
+          lifecycle_state?: string
+          modified_at?: string | null
+          published_at?: string | null
+          severity?: Json
+          summary?: string | null
+          title?: string | null
+          updated_at?: string
+          withdrawn_at?: string | null
+        }
+        Update: {
+          canonical_id?: string
+          created_at?: string
+          id?: string
+          lifecycle_state?: string
+          modified_at?: string | null
+          published_at?: string | null
+          severity?: Json
+          summary?: string | null
+          title?: string | null
+          updated_at?: string
+          withdrawn_at?: string | null
+        }
+        Relationships: []
+      }
+      vulnerability_affected_ranges: {
+        Row: {
+          created_at: string
+          ecosystem: string | null
+          id: string
+          package_name: string | null
+          range_type: string | null
+          range_value: Json
+          source_record_version_id: string
+          vulnerability_id: string
+        }
+        Insert: {
+          created_at?: string
+          ecosystem?: string | null
+          id?: string
+          package_name?: string | null
+          range_type?: string | null
+          range_value: Json
+          source_record_version_id: string
+          vulnerability_id: string
+        }
+        Update: {
+          created_at?: string
+          ecosystem?: string | null
+          id?: string
+          package_name?: string | null
+          range_type?: string | null
+          range_value?: Json
+          source_record_version_id?: string
+          vulnerability_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vulnerability_affected_ranges_source_record_version_id_fkey"
+            columns: ["source_record_version_id"]
+            isOneToOne: false
+            referencedRelation: "vulnerability_source_record_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vulnerability_affected_ranges_vulnerability_id_fkey"
+            columns: ["vulnerability_id"]
+            isOneToOne: false
+            referencedRelation: "vulnerabilities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vulnerability_aliases: {
+        Row: {
+          alias: string
+          created_at: string
+          source_record_version_id: string
+          vulnerability_id: string
+        }
+        Insert: {
+          alias: string
+          created_at?: string
+          source_record_version_id: string
+          vulnerability_id: string
+        }
+        Update: {
+          alias?: string
+          created_at?: string
+          source_record_version_id?: string
+          vulnerability_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vulnerability_aliases_source_record_version_id_fkey"
+            columns: ["source_record_version_id"]
+            isOneToOne: false
+            referencedRelation: "vulnerability_source_record_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vulnerability_aliases_vulnerability_id_fkey"
+            columns: ["vulnerability_id"]
+            isOneToOne: false
+            referencedRelation: "vulnerabilities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vulnerability_enrichments: {
+        Row: {
+          created_at: string
+          enrichment: Json
+          enrichment_type: string
+          feed_key: string
+          id: string
+          source_record_version_id: string
+          vulnerability_id: string
+        }
+        Insert: {
+          created_at?: string
+          enrichment: Json
+          enrichment_type: string
+          feed_key: string
+          id?: string
+          source_record_version_id: string
+          vulnerability_id: string
+        }
+        Update: {
+          created_at?: string
+          enrichment?: Json
+          enrichment_type?: string
+          feed_key?: string
+          id?: string
+          source_record_version_id?: string
+          vulnerability_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vulnerability_enrichments_feed_key_fkey"
+            columns: ["feed_key"]
+            isOneToOne: false
+            referencedRelation: "vulnerability_feed_configs"
+            referencedColumns: ["feed_key"]
+          },
+          {
+            foreignKeyName: "vulnerability_enrichments_source_record_version_id_fkey"
+            columns: ["source_record_version_id"]
+            isOneToOne: false
+            referencedRelation: "vulnerability_source_record_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vulnerability_enrichments_vulnerability_id_fkey"
+            columns: ["vulnerability_id"]
+            isOneToOne: false
+            referencedRelation: "vulnerabilities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vulnerability_feed_configs: {
+        Row: {
+          checkpoint: Json
+          created_at: string
+          disabled_reason: string | null
+          enabled: boolean
+          feed_key: string
+          freshness_state: string
+          last_attempt_at: string | null
+          last_complete_snapshot_at: string | null
+          last_failure_at: string | null
+          last_failure_code: string | null
+          last_failure_reason: string | null
+          last_record_count: number
+          last_success_at: string | null
+          lease_expires_at: string | null
+          lease_owner: string | null
+          next_scheduled_at: string
+          schedule_interval_seconds: number
+          stale_threshold_seconds: number
+          sync_state: string
+          updated_at: string
+          upstream_cursor: string | null
+          upstream_etag: string | null
+        }
+        Insert: {
+          checkpoint?: Json
+          created_at?: string
+          disabled_reason?: string | null
+          enabled?: boolean
+          feed_key: string
+          freshness_state?: string
+          last_attempt_at?: string | null
+          last_complete_snapshot_at?: string | null
+          last_failure_at?: string | null
+          last_failure_code?: string | null
+          last_failure_reason?: string | null
+          last_record_count?: number
+          last_success_at?: string | null
+          lease_expires_at?: string | null
+          lease_owner?: string | null
+          next_scheduled_at?: string
+          schedule_interval_seconds: number
+          stale_threshold_seconds: number
+          sync_state?: string
+          updated_at?: string
+          upstream_cursor?: string | null
+          upstream_etag?: string | null
+        }
+        Update: {
+          checkpoint?: Json
+          created_at?: string
+          disabled_reason?: string | null
+          enabled?: boolean
+          feed_key?: string
+          freshness_state?: string
+          last_attempt_at?: string | null
+          last_complete_snapshot_at?: string | null
+          last_failure_at?: string | null
+          last_failure_code?: string | null
+          last_failure_reason?: string | null
+          last_record_count?: number
+          last_success_at?: string | null
+          lease_expires_at?: string | null
+          lease_owner?: string | null
+          next_scheduled_at?: string
+          schedule_interval_seconds?: number
+          stale_threshold_seconds?: number
+          sync_state?: string
+          updated_at?: string
+          upstream_cursor?: string | null
+          upstream_etag?: string | null
+        }
+        Relationships: []
+      }
+      vulnerability_feed_events: {
+        Row: {
+          actor_user_id: string | null
+          correlation_id: string | null
+          created_at: string
+          detail: Json
+          event_type: string
+          feed_key: string
+          id: string
+          run_id: string | null
+        }
+        Insert: {
+          actor_user_id?: string | null
+          correlation_id?: string | null
+          created_at?: string
+          detail?: Json
+          event_type: string
+          feed_key: string
+          id?: string
+          run_id?: string | null
+        }
+        Update: {
+          actor_user_id?: string | null
+          correlation_id?: string | null
+          created_at?: string
+          detail?: Json
+          event_type?: string
+          feed_key?: string
+          id?: string
+          run_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vulnerability_feed_events_actor_user_id_fkey"
+            columns: ["actor_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vulnerability_feed_events_feed_key_fkey"
+            columns: ["feed_key"]
+            isOneToOne: false
+            referencedRelation: "vulnerability_feed_configs"
+            referencedColumns: ["feed_key"]
+          },
+          {
+            foreignKeyName: "vulnerability_feed_events_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "vulnerability_feed_sync_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vulnerability_feed_staged_records: {
+        Row: {
+          canonical_id: string
+          normalized_payload: Json
+          raw_payload: Json
+          received_at: string
+          record_sha256: string
+          record_state: string
+          run_id: string
+          source_record_key: string
+          source_update_marker: string | null
+          source_updated_at: string | null
+        }
+        Insert: {
+          canonical_id: string
+          normalized_payload: Json
+          raw_payload: Json
+          received_at?: string
+          record_sha256: string
+          record_state?: string
+          run_id: string
+          source_record_key: string
+          source_update_marker?: string | null
+          source_updated_at?: string | null
+        }
+        Update: {
+          canonical_id?: string
+          normalized_payload?: Json
+          raw_payload?: Json
+          received_at?: string
+          record_sha256?: string
+          record_state?: string
+          run_id?: string
+          source_record_key?: string
+          source_update_marker?: string | null
+          source_updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vulnerability_feed_staged_records_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "vulnerability_feed_sync_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vulnerability_feed_sync_runs: {
+        Row: {
+          attempt_count: number
+          checkpoint: Json
+          completed_at: string | null
+          correlation_id: string
+          created_at: string
+          dead_lettered_at: string | null
+          expected_record_count: number | null
+          failure_code: string | null
+          failure_reason: string | null
+          feed_key: string
+          id: string
+          idempotency_key: string | null
+          lease_expires_at: string | null
+          lease_owner: string | null
+          max_attempts: number
+          next_attempt_at: string
+          records_promoted: number
+          records_received: number
+          replay_idempotency_key: string | null
+          replayed_at: string | null
+          replayed_by: string | null
+          requested_by: string | null
+          run_kind: string
+          staging_complete: boolean
+          started_at: string | null
+          status: string
+          updated_at: string
+          upstream_cursor: string | null
+          upstream_etag: string | null
+        }
+        Insert: {
+          attempt_count?: number
+          checkpoint?: Json
+          completed_at?: string | null
+          correlation_id: string
+          created_at?: string
+          dead_lettered_at?: string | null
+          expected_record_count?: number | null
+          failure_code?: string | null
+          failure_reason?: string | null
+          feed_key: string
+          id?: string
+          idempotency_key?: string | null
+          lease_expires_at?: string | null
+          lease_owner?: string | null
+          max_attempts?: number
+          next_attempt_at?: string
+          records_promoted?: number
+          records_received?: number
+          replay_idempotency_key?: string | null
+          replayed_at?: string | null
+          replayed_by?: string | null
+          requested_by?: string | null
+          run_kind: string
+          staging_complete?: boolean
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+          upstream_cursor?: string | null
+          upstream_etag?: string | null
+        }
+        Update: {
+          attempt_count?: number
+          checkpoint?: Json
+          completed_at?: string | null
+          correlation_id?: string
+          created_at?: string
+          dead_lettered_at?: string | null
+          expected_record_count?: number | null
+          failure_code?: string | null
+          failure_reason?: string | null
+          feed_key?: string
+          id?: string
+          idempotency_key?: string | null
+          lease_expires_at?: string | null
+          lease_owner?: string | null
+          max_attempts?: number
+          next_attempt_at?: string
+          records_promoted?: number
+          records_received?: number
+          replay_idempotency_key?: string | null
+          replayed_at?: string | null
+          replayed_by?: string | null
+          requested_by?: string | null
+          run_kind?: string
+          staging_complete?: boolean
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+          upstream_cursor?: string | null
+          upstream_etag?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vulnerability_feed_sync_runs_feed_key_fkey"
+            columns: ["feed_key"]
+            isOneToOne: false
+            referencedRelation: "vulnerability_feed_configs"
+            referencedColumns: ["feed_key"]
+          },
+          {
+            foreignKeyName: "vulnerability_feed_sync_runs_replayed_by_fkey"
+            columns: ["replayed_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vulnerability_feed_sync_runs_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vulnerability_references: {
+        Row: {
+          created_at: string
+          id: string
+          reference_type: string
+          reference_url: string
+          source_record_version_id: string
+          vulnerability_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          reference_type?: string
+          reference_url: string
+          source_record_version_id: string
+          vulnerability_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          reference_type?: string
+          reference_url?: string
+          source_record_version_id?: string
+          vulnerability_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vulnerability_references_source_record_version_id_fkey"
+            columns: ["source_record_version_id"]
+            isOneToOne: false
+            referencedRelation: "vulnerability_source_record_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vulnerability_references_vulnerability_id_fkey"
+            columns: ["vulnerability_id"]
+            isOneToOne: false
+            referencedRelation: "vulnerabilities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vulnerability_source_record_versions: {
+        Row: {
+          id: string
+          normalized_payload: Json
+          promoted_at: string
+          raw_payload: Json
+          record_sha256: string
+          record_state: string
+          run_id: string
+          source_record_id: string
+          source_update_marker: string | null
+          source_updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          normalized_payload: Json
+          promoted_at?: string
+          raw_payload: Json
+          record_sha256: string
+          record_state: string
+          run_id: string
+          source_record_id: string
+          source_update_marker?: string | null
+          source_updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          normalized_payload?: Json
+          promoted_at?: string
+          raw_payload?: Json
+          record_sha256?: string
+          record_state?: string
+          run_id?: string
+          source_record_id?: string
+          source_update_marker?: string | null
+          source_updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vulnerability_source_record_versions_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "vulnerability_feed_sync_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vulnerability_source_record_versions_source_record_id_fkey"
+            columns: ["source_record_id"]
+            isOneToOne: false
+            referencedRelation: "vulnerability_source_records"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vulnerability_source_records: {
+        Row: {
+          created_at: string
+          current_version_id: string | null
+          feed_key: string
+          first_seen_at: string
+          id: string
+          last_seen_at: string
+          record_state: string
+          source_record_key: string
+          source_update_marker: string | null
+          source_updated_at: string | null
+          updated_at: string
+          vulnerability_id: string
+        }
+        Insert: {
+          created_at?: string
+          current_version_id?: string | null
+          feed_key: string
+          first_seen_at?: string
+          id?: string
+          last_seen_at?: string
+          record_state?: string
+          source_record_key: string
+          source_update_marker?: string | null
+          source_updated_at?: string | null
+          updated_at?: string
+          vulnerability_id: string
+        }
+        Update: {
+          created_at?: string
+          current_version_id?: string | null
+          feed_key?: string
+          first_seen_at?: string
+          id?: string
+          last_seen_at?: string
+          record_state?: string
+          source_record_key?: string
+          source_update_marker?: string | null
+          source_updated_at?: string | null
+          updated_at?: string
+          vulnerability_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vulnerability_source_records_current_version_fkey"
+            columns: ["current_version_id"]
+            isOneToOne: false
+            referencedRelation: "vulnerability_source_record_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vulnerability_source_records_feed_key_fkey"
+            columns: ["feed_key"]
+            isOneToOne: false
+            referencedRelation: "vulnerability_feed_configs"
+            referencedColumns: ["feed_key"]
+          },
+          {
+            foreignKeyName: "vulnerability_source_records_vulnerability_id_fkey"
+            columns: ["vulnerability_id"]
+            isOneToOne: false
+            referencedRelation: "vulnerabilities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       m2_product_relationship_operations: {
@@ -8836,6 +9472,19 @@ export type Database = {
           outcome: string
         }[]
       }
+      checkpoint_vulnerability_feed_sync: {
+        Args: {
+          p_checkpoint: Json
+          p_cursor: string
+          p_etag: string
+          p_lease_seconds?: number
+          p_page_complete: boolean
+          p_records_received: number
+          p_run_id: string
+          p_worker_id: string
+        }
+        Returns: string
+      }
       claim_finding_propagation_job_atomic: {
         Args: {
           p_lease_owner: string
@@ -9046,6 +9695,22 @@ export type Database = {
           run: Json
         }[]
       }
+      claim_vulnerability_feed_sync: {
+        Args: { p_lease_seconds?: number; p_worker_id: string }
+        Returns: {
+          attempt_count: number
+          checkpoint: Json
+          correlation_id: string
+          feed_key: string
+          last_complete_snapshot_at: string
+          last_success_at: string
+          lease_expires_at: string
+          run_id: string
+          run_kind: string
+          upstream_cursor: string
+          upstream_etag: string
+        }[]
+      }
       clear_login_attempts: { Args: { p_email: string }; Returns: undefined }
       commit_product_import_atomic: {
         Args: {
@@ -9249,6 +9914,14 @@ export type Database = {
           artifact: Json
           outcome: string
         }[]
+      }
+      complete_vulnerability_feed_staging: {
+        Args: {
+          p_expected_record_count: number
+          p_run_id: string
+          p_worker_id: string
+        }
+        Returns: string
       }
       connector_compliance_metrics_snapshot: {
         Args: { p_organization_id: string }
@@ -10092,6 +10765,16 @@ export type Database = {
           outcome: string
           run: Json
         }[]
+      }
+      fail_vulnerability_feed_sync: {
+        Args: {
+          p_failure_code: string
+          p_failure_reason: string
+          p_retry_after_seconds?: number
+          p_run_id: string
+          p_worker_id: string
+        }
+        Returns: string
       }
       finalize_organization_branding_asset_upload_atomic: {
         Args: {
@@ -11107,6 +11790,29 @@ export type Database = {
           submissions: Json
         }[]
       }
+      list_vulnerability_feed_sync_runs: {
+        Args: { p_feed_key?: string; p_limit?: number; p_offset?: number }
+        Returns: {
+          attempt_count: number
+          completed_at: string
+          correlation_id: string
+          created_at: string
+          dead_lettered_at: string
+          failure_code: string
+          failure_reason: string
+          feed_key: string
+          id: string
+          max_attempts: number
+          next_attempt_at: string
+          records_promoted: number
+          records_received: number
+          run_kind: string
+          started_at: string
+          status: string
+          total_count: number
+          updated_at: string
+        }[]
+      }
       m1_accept_invitation_atomic_legacy_unchecked: {
         Args: { p_email: string; p_token_hash: string; p_user_id: string }
         Returns: {
@@ -11863,6 +12569,13 @@ export type Database = {
         }
         Returns: Json
       }
+      promote_vulnerability_feed_sync: {
+        Args: { p_run_id: string; p_worker_id: string }
+        Returns: {
+          health: Json
+          outcome: string
+        }[]
+      }
       publish_organization_branding_atomic: {
         Args: {
           p_actor_user_id: string
@@ -12131,6 +12844,7 @@ export type Database = {
           review: Json
         }[]
       }
+      refresh_vulnerability_feed_freshness: { Args: never; Returns: number }
       register_finding_propagation_source_atomic: {
         Args: {
           p_actor_user_id: string
@@ -12269,6 +12983,32 @@ export type Database = {
               outcome: string
             }[]
           }
+      replay_vulnerability_feed_sync:
+        | {
+            Args: {
+              p_actor_user_id: string
+              p_correlation_id: string
+              p_feed_key: string
+              p_idempotency_key: string
+            }
+            Returns: {
+              outcome: string
+              run: Json
+            }[]
+          }
+        | {
+            Args: {
+              p_actor_user_id: string
+              p_correlation_id: string
+              p_feed_key: string
+              p_idempotency_key: string
+              p_run_id: string
+            }
+            Returns: {
+              outcome: string
+              run: Json
+            }[]
+          }
       request_organization_export_atomic: {
         Args: {
           p_actor_user_id: string
@@ -12320,6 +13060,18 @@ export type Database = {
           p_expected_row_count: number
           p_organization_id: string
           p_sync_run_id: string
+        }
+        Returns: {
+          outcome: string
+          run: Json
+        }[]
+      }
+      request_vulnerability_feed_sync: {
+        Args: {
+          p_actor_user_id: string
+          p_correlation_id: string
+          p_feed_key: string
+          p_idempotency_key: string
         }
         Returns: {
           outcome: string
@@ -12869,6 +13621,31 @@ export type Database = {
           outcome: string
         }[]
       }
+      set_vulnerability_feed_configuration: {
+        Args: {
+          p_disabled_reason?: string
+          p_enabled: boolean
+          p_feed_key: string
+          p_schedule_interval_seconds?: number
+          p_stale_threshold_seconds?: number
+        }
+        Returns: string
+      }
+      stage_vulnerability_feed_record: {
+        Args: {
+          p_canonical_id: string
+          p_normalized_payload: Json
+          p_raw_payload: Json
+          p_record_sha256: string
+          p_record_state: string
+          p_run_id: string
+          p_source_record_key: string
+          p_source_update_marker: string
+          p_source_updated_at: string
+          p_worker_id: string
+        }
+        Returns: string
+      }
       supersede_product_component_link_atomic: {
         Args: {
           p_actor_user_id: string
@@ -13229,6 +14006,10 @@ export type Database = {
         }
         Returns: string
       }
+      vulnerability_feed_health_json: {
+        Args: { p_feed_key?: string }
+        Returns: Json
+      }
       withdraw_product_security_update_artifact_atomic: {
         Args: {
           p_actor_user_id: string
@@ -13243,6 +14024,14 @@ export type Database = {
           artifact: Json
           outcome: string
         }[]
+      }
+      yield_vulnerability_feed_sync: {
+        Args: {
+          p_delay_seconds?: number
+          p_run_id: string
+          p_worker_id: string
+        }
+        Returns: string
       }
     }
     Enums: {
