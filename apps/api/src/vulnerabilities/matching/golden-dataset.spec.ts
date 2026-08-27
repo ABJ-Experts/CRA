@@ -9,13 +9,18 @@ import {
   goldenMetrics,
 } from "./golden-dataset";
 
-describe("M4-02 versioned matching golden dataset", () => {
+describe("M4 versioned matching golden dataset", () => {
   it("has a reviewed digest and zero deterministic false positives/negatives", () => {
     expect(goldenDatasetDigest()).toBe(GOLDEN_DATASET_SHA256);
     expect(goldenMetrics()).toMatchObject({
       falsePositives: 0,
       falseNegatives: 0,
     });
+    expect(goldenMetrics().metrics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ method: "cpe_nvd", feed: "nvd" }),
+      ]),
+    );
   });
 
   it("measures every case, including negative cases, and enforces the release threshold", () => {

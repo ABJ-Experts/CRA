@@ -1,11 +1,15 @@
 import { createHash } from "node:crypto";
 
+import {
+  evaluateCpeNvdComponent,
+  type NvdCpeCandidate,
+} from "./cpe-nvd-policy";
 import { evaluatePurlOsvComponent, type OsvCandidate } from "./matching-policy";
 
-/** Reviewed dataset expansion: comparator-family and explicit-version coverage. */
-export const GOLDEN_DATASET_VERSION = "1.1.0";
+/** Reviewed PURL and CPE coverage, including deliberately negative examples. */
+export const GOLDEN_DATASET_VERSION = "1.2.0";
 export const GOLDEN_DATASET_SHA256 =
-  "f61af87825cac8271d8fcf98f0fb41f6b22e6842a302e6e96e8c1b6036968838";
+  "572497c00060b5a6f000c2cc98597a33dd4e2a72e834f2012480b4020af908b5";
 
 const candidate = (overrides: Partial<OsvCandidate> = {}): OsvCandidate => ({
   affectedRangeId: "22222222-2222-4222-8222-222222222222",
@@ -21,6 +25,29 @@ const candidate = (overrides: Partial<OsvCandidate> = {}): OsvCandidate => ({
   rangeType: "SEMVER",
   rangeValue: {},
   eventSequence: [{ introduced: "1.0.0" }, { fixed: "2.0.0" }],
+  ...overrides,
+});
+
+const cpeCandidate = (
+  overrides: Partial<NvdCpeCandidate> = {},
+): NvdCpeCandidate => ({
+  affectedRangeId: "22222222-2222-4222-8222-222222222222",
+  sourceRecordId: "33333333-3333-4333-8333-333333333333",
+  sourceRecordVersionId: "44444444-4444-4444-8444-444444444444",
+  vulnerabilityId: "55555555-5555-4555-8555-555555555555",
+  canonicalAdvisoryId: "CVE-2026-CPE-1",
+  sourceFeedKey: "nvd",
+  configuration: {
+    operator: "OR",
+    cpeMatch: [
+      {
+        criteria: "cpe:2.3:a:acme:widget:*:*:*:*:*:*:*:*",
+        vulnerable: true,
+      },
+    ],
+    nodes: [],
+  },
+  configurationPath: "0/match/0",
   ...overrides,
 });
 
@@ -170,9 +197,88 @@ export const GOLDEN_DATASET = Object.freeze([
   },
 ] as const);
 
+export const CPE_GOLDEN_DATASET = Object.freeze([
+  {
+    release: "golden-cpe-version-specific",
+    ecosystem: "npm",
+    component: {
+      componentId: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+      canonicalPurl: null,
+      canonicalCpe: "cpe:2.3:a:acme:widget:1.5.0:*:*:*:*:*:*:*",
+      normalizedVersion: "1.5.0",
+      ecosystem: "npm",
+    },
+    candidates: [
+      cpeCandidate({
+        configuration: {
+          operator: "OR",
+          cpeMatch: [
+            {
+              criteria: "cpe:2.3:a:acme:widget:*:*:*:*:*:*:*:*",
+              vulnerable: true,
+              versionStartIncluding: "1.0.0",
+              versionEndExcluding: "2.0.0",
+            },
+          ],
+          nodes: [],
+        },
+      }),
+    ],
+    expectedAffected: ["CVE-2026-CPE-1"],
+  },
+  {
+    release: "golden-cpe-broad-family",
+    ecosystem: "npm",
+    component: {
+      componentId: "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
+      canonicalPurl: null,
+      canonicalCpe: "cpe:/a:acme:widget",
+      normalizedVersion: "1.5.0",
+      ecosystem: "npm",
+    },
+    candidates: [cpeCandidate()],
+    expectedAffected: ["CVE-2026-CPE-1"],
+  },
+  {
+    release: "golden-cpe-nested-negative",
+    ecosystem: "npm",
+    component: {
+      componentId: "ffffffff-ffff-4fff-8fff-ffffffffffff",
+      canonicalPurl: null,
+      canonicalCpe: "cpe:2.3:a:acme:widget:3.0.0:*:*:*:*:*:*:*",
+      normalizedVersion: "3.0.0",
+      ecosystem: "npm",
+    },
+    candidates: [
+      cpeCandidate({
+        configuration: {
+          operator: "AND",
+          cpeMatch: [],
+          nodes: [
+            {
+              operator: "OR",
+              cpeMatch: [
+                {
+                  criteria: "cpe:2.3:a:acme:widget:*:*:*:*:*:*:*:*",
+                  vulnerable: true,
+                  versionEndExcluding: "2.0.0",
+                },
+              ],
+              nodes: [],
+            },
+          ],
+        },
+      }),
+    ],
+    expectedAffected: [],
+  },
+] as const);
+
 export function goldenDatasetDigest(): string {
   return createHash("sha256")
-    .update(JSON.stringify(GOLDEN_DATASET))
+    .update(
+      JSON.stringify({ purlOsv: GOLDEN_DATASET, cpeNvd: CPE_GOLDEN_DATASET }),
+    )
     .digest("hex");
 }
 
@@ -180,7 +286,7 @@ export function goldenMetrics() {
   let totalCases = 0;
   let falsePositives = 0;
   let falseNegatives = 0;
-  const metrics = GOLDEN_DATASET.map((testCase) => {
+  const purlMetrics = GOLDEN_DATASET.map((testCase) => {
     const actual = new Set(
       evaluatePurlOsvComponent(testCase.component, testCase.candidates)
         .filter((evaluation) => evaluation.outcome === "affected")
@@ -206,5 +312,36 @@ export function goldenMetrics() {
       falseNegatives: fn,
     });
   });
-  return Object.freeze({ totalCases, falsePositives, falseNegatives, metrics });
+  const cpeMetrics = CPE_GOLDEN_DATASET.map((testCase) => {
+    const actual = new Set(
+      evaluateCpeNvdComponent(testCase.component, testCase.candidates)
+        .filter((evaluation) => evaluation.outcome === "affected")
+        .flatMap((evaluation) =>
+          evaluation.canonicalAdvisoryId === undefined
+            ? []
+            : [evaluation.canonicalAdvisoryId],
+        ),
+    );
+    const expected = new Set<string>(testCase.expectedAffected);
+    const fp = [...actual].filter((id) => !expected.has(id)).length;
+    const fn = [...expected].filter((id) => !actual.has(id)).length;
+    falsePositives += fp;
+    falseNegatives += fn;
+    totalCases += 1;
+    return Object.freeze({
+      release: testCase.release,
+      ecosystem: testCase.ecosystem,
+      method: "cpe_nvd" as const,
+      feed: "nvd" as const,
+      totalCases: 1,
+      falsePositives: fp,
+      falseNegatives: fn,
+    });
+  });
+  return Object.freeze({
+    totalCases,
+    falsePositives,
+    falseNegatives,
+    metrics: [...purlMetrics, ...cpeMetrics],
+  });
 }

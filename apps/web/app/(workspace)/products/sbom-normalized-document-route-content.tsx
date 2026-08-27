@@ -20,6 +20,7 @@ export function SbomNormalizedDocumentRouteContent({
         documentId={documentId}
         sourceId={sourceId}
         canView={permissions.can_view_sboms === true}
+        canEditFindings={permissions.can_edit_findings === true}
         enabled={!isLoading && mocksReady}
       />
     </main>

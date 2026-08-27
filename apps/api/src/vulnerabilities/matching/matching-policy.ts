@@ -8,6 +8,22 @@ import {
 export const COMPARATOR_REGISTRY_VERSION = "m4-02.1";
 export const CONFIDENCE_TABLE_VERSION = "m4-02.1";
 
+/** CPE fallback is deliberately less certain than either PURL confidence tier. */
+export const CPE_NVD_CONFIDENCE_TABLE_VERSION = "m4-04.1";
+
+export const CPE_NVD_CONFIDENCE_TABLE = Object.freeze({
+  versionSpecific: Object.freeze({
+    score: 0.7,
+    explanation:
+      "NVD CPE fallback matched a version-specific CPE configuration; review is required because no usable PURL was available.",
+  }),
+  broadFamily: Object.freeze({
+    score: 0.55,
+    explanation:
+      "NVD CPE fallback matched a broad CPE product family; review is required because no usable PURL or version-specific CPE criterion was available.",
+  }),
+});
+
 /**
  * Versioned deterministic confidence table. Event-range matches have complete
  * boundary provenance; explicit-version-only OSV records remain applicable but
@@ -29,6 +45,8 @@ export const PURL_OSV_CONFIDENCE_TABLE = Object.freeze({
 export type MatchableComponent = Readonly<{
   componentId: string;
   canonicalPurl: string | null;
+  /** Present only for fallback matching; a valid PURL always takes precedence. */
+  canonicalCpe?: string | null;
   normalizedVersion: string | null;
   ecosystem: string | null;
 }>;
@@ -65,18 +83,25 @@ export type MatchEvaluationDraft = Readonly<{
     | "purl_ecosystem_mismatch"
     | "invalid_purl"
     | "unparseable_version"
-    | "unsupported_range";
+    | "unsupported_range"
+    | "invalid_cpe"
+    | "unsupported_cpe_binding"
+    | "platform_constraint_unresolved";
   affectedRangeId?: string;
   sourceRecordId?: string;
   sourceRecordVersionId?: string;
   vulnerabilityId?: string;
   canonicalAdvisoryId?: string;
-  matchMethod: "purl_osv";
+  sourceFeedKey?: "osv" | "nvd";
+  matchMethod: "purl_osv" | "cpe_nvd";
   comparatorName?: VersionComparatorId;
   comparatorVersion?: string;
   evaluatedComponentValue: string;
   affectedRange?: Readonly<Record<string, unknown>>;
   eventSequence?: readonly OsvRangeEvent[];
+  /** Immutable NVD-node evidence retained for CPE fallback explanations. */
+  cpeConfigurationEvidence?: Readonly<Record<string, unknown>>;
+  cpeSpecificity?: "version_specific" | "broad_family";
   evaluatedAt: string;
   confidence?: number;
   confidenceTableVersion?: string;
@@ -275,6 +300,7 @@ function candidateEvidence(
     sourceRecordVersionId: candidate.sourceRecordVersionId,
     vulnerabilityId: candidate.vulnerabilityId,
     canonicalAdvisoryId: candidate.canonicalAdvisoryId,
+    sourceFeedKey: "osv",
     matchMethod: "purl_osv",
     comparatorName: comparator,
     comparatorVersion: COMPARATOR_REGISTRY_VERSION,
@@ -295,6 +321,7 @@ function review(
       componentId: component.componentId,
       outcome: "reviewable",
       reviewCode,
+      sourceFeedKey: "osv",
       matchMethod: "purl_osv",
       evaluatedComponentValue: component.normalizedVersion ?? "",
       evaluatedAt: now,

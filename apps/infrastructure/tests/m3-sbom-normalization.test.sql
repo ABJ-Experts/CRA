@@ -71,6 +71,11 @@ begin
   select * into v_job from public.finalize_sbom_source_atomic(
     v_org, v_source, v_actor, null, repeat('c', 64), 10, 'application/json', v_key, gen_random_uuid()
   );
+  update public.sbom_ingest_jobs
+     set next_attempt_at = now() + interval '1 day'
+   where organization_id = v_org
+     and source_id <> v_source
+     and status in ('queued', 'failed');
   select * into v_claim from public.claim_sbom_ingest_job(v_org, 'normalizer-state-worker', 60);
   if v_claim.outcome <> 'claimed' then
     raise exception 'normalization state test could not claim job';
@@ -132,6 +137,11 @@ begin
   select * into v_job_one from public.finalize_sbom_source_atomic(
     v_org, v_source_one, v_actor, null, v_hash, 42, 'application/json', v_key_one, gen_random_uuid()
   );
+  update public.sbom_ingest_jobs
+     set next_attempt_at = now() + interval '1 day'
+   where organization_id = v_org
+     and source_id <> v_source_one
+     and status in ('queued', 'failed');
   select * into v_claim from public.claim_sbom_ingest_job(v_org, 'normalizer-replay-worker-one', 60);
   if v_claim.outcome <> 'claimed' or (v_claim.work ->> 'sourceId')::uuid <> v_source_one then
     raise exception 'first immutable-hash job was not claimable';
@@ -188,6 +198,11 @@ begin
   select * into v_job_two from public.finalize_sbom_source_atomic(
     v_org, v_source_two, v_actor, null, v_hash, 42, 'application/json', v_key_two, gen_random_uuid()
   );
+  update public.sbom_ingest_jobs
+     set next_attempt_at = now() + interval '1 day'
+   where organization_id = v_org
+     and source_id <> v_source_two
+     and status in ('queued', 'failed');
   select * into v_claim from public.claim_sbom_ingest_job(v_org, 'normalizer-replay-worker-two', 60);
   if v_claim.outcome <> 'claimed' or (v_claim.work ->> 'sourceId')::uuid <> v_source_two then
     raise exception 'second immutable-hash job was not claimable';

@@ -24,8 +24,8 @@ export type GoldenAccuracyRun = Readonly<{
   metrics: readonly Readonly<{
     releaseKey: string;
     ecosystem: string;
-    matchMethod: "purl_osv";
-    sourceFeedKey: "osv";
+    matchMethod: "purl_osv" | "cpe_nvd";
+    sourceFeedKey: "osv" | "nvd";
     totalCases: number;
     falsePositiveCount: number;
     falseNegativeCount: number;
@@ -70,7 +70,7 @@ export function assertGoldenAccuracyGate(
 ): GoldenAccuracyRun {
   if (!run.passed) {
     throw new Error(
-      `PURL/OSV golden accuracy ${run.accuracyScore.toFixed(4)} is below ${MATCHING_ACCURACY_THRESHOLD.toFixed(2)}`,
+      `Vulnerability matching golden accuracy ${run.accuracyScore.toFixed(4)} is below ${MATCHING_ACCURACY_THRESHOLD.toFixed(2)}`,
     );
   }
   return run;

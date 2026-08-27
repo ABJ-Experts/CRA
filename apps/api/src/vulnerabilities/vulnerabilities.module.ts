@@ -29,6 +29,7 @@ import {
 } from "./application/vulnerability-matching.port";
 import { VulnerabilityMatchingUseCases } from "./application/vulnerability-matching-use-cases";
 import { SupabaseVulnerabilityMatchingRepository } from "./infrastructure/supabase-vulnerability-matching.repository";
+import { SupabaseVulnerabilityReevaluationRepository } from "./infrastructure/supabase-vulnerability-reevaluation.repository";
 import { SupabaseVulnerabilityEnrichmentRepository } from "./infrastructure/supabase-vulnerability-enrichment.repository";
 import { SupabaseVulnerabilityKevAlertQueue } from "./infrastructure/supabase-vulnerability-kev-alert-queue";
 import { MailVulnerabilityKevAlertNotifierAdapter } from "./infrastructure/mail-vulnerability-kev-alert-notifier.adapter";
@@ -42,6 +43,7 @@ import { VulnerabilityEnrichmentUseCases } from "./application/vulnerability-enr
 import { VulnerabilityFeedWorker } from "./worker/vulnerability-feed-worker";
 import { VulnerabilityKevAlertWorker } from "./worker/vulnerability-kev-alert-worker";
 import { VulnerabilityMatchingWorker } from "./matching/worker/vulnerability-matching-worker";
+import { VulnerabilityReevaluationWorker } from "./worker/vulnerability-reevaluation-worker";
 import {
   REPORTING_OBLIGATION_PORT,
   type ReportingObligationPort,
@@ -62,6 +64,7 @@ export const VULNERABILITY_FEED_PROVIDERS = Symbol(
   providers: [
     SupabaseVulnerabilityFeedRepository,
     SupabaseVulnerabilityMatchingRepository,
+    SupabaseVulnerabilityReevaluationRepository,
     SupabaseVulnerabilityEnrichmentRepository,
     SupabaseVulnerabilityKevAlertQueue,
     MailVulnerabilityKevAlertNotifierAdapter,
@@ -179,11 +182,33 @@ export const VULNERABILITY_FEED_PROVIDERS = Symbol(
           deliver: (input) => notifier.deliver(input),
         }),
     },
+    {
+      provide: VulnerabilityReevaluationWorker,
+      inject: [SupabaseVulnerabilityReevaluationRepository, ConfigService],
+      useFactory: (
+        repository: SupabaseVulnerabilityReevaluationRepository,
+        config: ConfigService,
+      ) =>
+        new VulnerabilityReevaluationWorker({
+          workerId: randomUUID(),
+          leaseSeconds:
+            config.get<number>("VULNERABILITY_REEVALUATION_LEASE_SECONDS") ??
+            90,
+          pageSize:
+            config.get<number>("VULNERABILITY_REEVALUATION_PAGE_SIZE") ?? 250,
+          discoveryPageSize:
+            config.get<number>(
+              "VULNERABILITY_REEVALUATION_DISCOVERY_PAGE_SIZE",
+            ) ?? 100,
+          queue: repository,
+        }),
+    },
   ],
   exports: [
     VulnerabilityFeedWorker,
     VulnerabilityMatchingWorker,
     VulnerabilityKevAlertWorker,
+    VulnerabilityReevaluationWorker,
   ],
 })
 export class VulnerabilitiesModule {}

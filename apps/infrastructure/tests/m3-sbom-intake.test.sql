@@ -219,6 +219,15 @@ begin
     raise exception 'text/plain SPDX tag-value completion did not queue a job: %', v_completion.outcome;
   end if;
 
+  -- The local test database may contain durable E2E jobs in the shared seeded
+  -- organization. Keep this transaction-local fixture deterministic without
+  -- claiming, completing, or deleting those jobs outside this rollback scope.
+  update public.sbom_ingest_jobs
+     set next_attempt_at = now() + interval '1 day'
+   where organization_id = v_org
+     and source_id <> v_source
+     and status in ('queued', 'failed');
+
   select * into v_claim from public.claim_sbom_ingest_job(v_org, 'sql-tag-value-worker', 60);
   if v_claim.outcome <> 'claimed'
     or (v_claim.work ->> 'sourceId')::uuid <> v_source then
@@ -321,6 +330,12 @@ begin
   if v_completion.outcome <> 'queued' then
     raise exception 'validation fixture completion did not queue a job: %', v_completion.outcome;
   end if;
+
+  update public.sbom_ingest_jobs
+     set next_attempt_at = now() + interval '1 day'
+   where organization_id = v_org
+     and source_id <> v_original_source
+     and status in ('queued', 'failed');
 
   select * into v_reservation from public.reserve_sbom_source_atomic(
     v_org, v_product, v_release, v_actor, null, v_corrected_source, 'manual_upload', gen_random_uuid(),
@@ -683,6 +698,11 @@ begin
   select * into v_job from public.finalize_sbom_source_atomic(
     v_org, v_source, v_actor, null, repeat('b', 64), 10, 'application/json', v_key, gen_random_uuid()
   );
+  update public.sbom_ingest_jobs
+     set next_attempt_at = now() + interval '1 day'
+   where organization_id = v_org
+     and source_id <> v_source
+     and status in ('queued', 'failed');
   select * into v_claim from public.claim_sbom_ingest_job(v_org, 'sql-worker', 60);
   if v_claim.outcome <> 'claimed' or (v_claim.job ->> 'status') <> 'processing' then
     raise exception 'queued job was not atomically claimed';

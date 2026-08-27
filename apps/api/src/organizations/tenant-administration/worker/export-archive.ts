@@ -228,6 +228,8 @@ export const exportSourceExclusions: Readonly<Record<string, string>> =
       "Contains invitation and scoped-upload bearer token hashes; request lifecycle evidence is exported without credential-security material.",
     vulnerability_match_jobs:
       "Active lease, retry, and checkpoint state is deployment-local operational state; restoring it from a tenant archive would replay work against a different immutable mirror snapshot.",
+    vulnerability_reevaluation_jobs:
+      "Active advisory re-evaluation leases, retry state, and checkpoints are deployment-local operational state; restoring them from a tenant archive would replay work against a different immutable mirror snapshot.",
     vulnerability_component_occurrences:
       "Derived bridge rows are reproducible from the exported immutable SBOM graph and deployment-local mirror; their foreign keys are not portable across deployments.",
     vulnerability_finding_component_occurrences:

@@ -619,12 +619,15 @@ export function SbomNormalizedDocumentDetail({
   documentId,
   sourceId,
   canView,
+  canEditFindings = false,
   enabled,
 }: Readonly<{
   productId: string;
   documentId: string;
   sourceId?: string;
   canView: boolean;
+  /** Presentation affordance only; matching API enforces the permission. */
+  canEditFindings?: boolean;
   enabled: boolean;
 }>) {
   const detail = useSbomDocumentDetailQuery(documentId, enabled && canView);
@@ -756,6 +759,7 @@ export function SbomNormalizedDocumentDetail({
       <VulnerabilityMatchingResults
         documentId={document.id}
         enabled={enabled}
+        canEditFindings={canEditFindings}
       />
       <div className="grid gap-4 xl:grid-cols-2">
         <div className="rounded-xl border border-border bg-surface-subtle p-4">

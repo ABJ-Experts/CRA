@@ -135,6 +135,14 @@ begin
     raise exception 'canonical upload was not queued: %', v_canonical_completion.outcome;
   end if;
 
+  -- Keep this rollback-scoped fixture deterministic when a local browser E2E
+  -- run has left an unrelated durable job in the shared seeded organization.
+  update public.sbom_ingest_jobs
+     set next_attempt_at = now() + interval '1 day'
+   where organization_id = v_org
+     and source_id <> v_canonical_source
+     and status in ('queued', 'failed');
+
   -- The user-declared predecessor remains immutable even when the bytes are
   -- an alias.  The alias must reuse the queued canonical job, not enqueue one.
   perform * from public.reserve_sbom_source_atomic(
@@ -233,6 +241,11 @@ begin
     v_org, v_next_source, v_actor, null, v_next_hash, 64,
     'application/json', v_next_key, gen_random_uuid()
   );
+  update public.sbom_ingest_jobs
+     set next_attempt_at = now() + interval '1 day'
+   where organization_id = v_org
+     and source_id <> v_next_source
+     and status in ('queued', 'failed');
   select * into v_next_claim
   from public.claim_sbom_ingest_job(v_org, 'm3-lineage-next-worker', 60);
   select * into v_next_begin
