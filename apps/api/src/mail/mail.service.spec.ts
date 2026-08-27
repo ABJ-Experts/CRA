@@ -254,4 +254,29 @@ describe("MailService", () => {
     );
     expect(mail?.headers?.["X-CRA-Idempotency-Key"]).toMatch(/^[a-f0-9]{64}$/);
   });
+
+  it("sends required KEV alerts without raw SBOM content", async () => {
+    const service = new MailService(enabledConfig());
+
+    await service.sendKevAlert(
+      "owner@cra.test",
+      {
+        productName: "Pump <controller>",
+        releaseName: "2026.08",
+        advisoryId: "CVE-2026-0001",
+        lifecycleState: "in_support",
+        kevListingDate: "2026-08-26",
+      },
+      "33333333-3333-4333-8333-333333333333",
+    );
+
+    const message = mockSendMail.mock.calls[0]?.[0] as Readonly<{
+      html?: unknown;
+    }>;
+    expect(message?.html).toContain("Pump &lt;controller&gt;");
+    expect(message?.html).toContain("CVE-2026-0001");
+    expect(message?.html).toContain("No regulatory report has been created");
+    expect(message?.html).not.toContain("bomFormat");
+    expect(message?.html).not.toContain("components");
+  });
 });

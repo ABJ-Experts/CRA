@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { Module } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 
+import { MailModule } from "../mail/mail.module";
 import { SupabaseModule } from "../supabase/supabase.module";
 import type {
   VulnerabilityFeedKey,
@@ -28,20 +29,47 @@ import {
 } from "./application/vulnerability-matching.port";
 import { VulnerabilityMatchingUseCases } from "./application/vulnerability-matching-use-cases";
 import { SupabaseVulnerabilityMatchingRepository } from "./infrastructure/supabase-vulnerability-matching.repository";
+import { SupabaseVulnerabilityEnrichmentRepository } from "./infrastructure/supabase-vulnerability-enrichment.repository";
+import { SupabaseVulnerabilityKevAlertQueue } from "./infrastructure/supabase-vulnerability-kev-alert-queue";
+import { MailVulnerabilityKevAlertNotifierAdapter } from "./infrastructure/mail-vulnerability-kev-alert-notifier.adapter";
 import { VulnerabilityMatchingController } from "./vulnerability-matching.controller";
+import { VulnerabilityEnrichmentController } from "./vulnerability-enrichment.controller";
+import {
+  VULNERABILITY_ENRICHMENT_REPOSITORY,
+  type VulnerabilityEnrichmentRepository,
+} from "./application/vulnerability-enrichment.port";
+import { VulnerabilityEnrichmentUseCases } from "./application/vulnerability-enrichment-use-cases";
 import { VulnerabilityFeedWorker } from "./worker/vulnerability-feed-worker";
+import { VulnerabilityKevAlertWorker } from "./worker/vulnerability-kev-alert-worker";
 import { VulnerabilityMatchingWorker } from "./matching/worker/vulnerability-matching-worker";
+import {
+  REPORTING_OBLIGATION_PORT,
+  type ReportingObligationPort,
+} from "./application/reporting-obligation.port";
+import { UnavailableReportingObligationAdapter } from "./infrastructure/unavailable-reporting-obligation.adapter";
 
 export const VULNERABILITY_FEED_PROVIDERS = Symbol(
   "VULNERABILITY_FEED_PROVIDERS",
 );
 
 @Module({
-  imports: [SupabaseModule],
-  controllers: [VulnerabilityFeedsController, VulnerabilityMatchingController],
+  imports: [SupabaseModule, MailModule],
+  controllers: [
+    VulnerabilityFeedsController,
+    VulnerabilityMatchingController,
+    VulnerabilityEnrichmentController,
+  ],
   providers: [
     SupabaseVulnerabilityFeedRepository,
     SupabaseVulnerabilityMatchingRepository,
+    SupabaseVulnerabilityEnrichmentRepository,
+    SupabaseVulnerabilityKevAlertQueue,
+    MailVulnerabilityKevAlertNotifierAdapter,
+    UnavailableReportingObligationAdapter,
+    {
+      provide: REPORTING_OBLIGATION_PORT,
+      useExisting: UnavailableReportingObligationAdapter,
+    },
     {
       provide: VULNERABILITY_MIRROR_REPOSITORY,
       useExisting: SupabaseVulnerabilityFeedRepository,
@@ -79,6 +107,18 @@ export const VULNERABILITY_FEED_PROVIDERS = Symbol(
       inject: [VULNERABILITY_MATCHING_REPOSITORY],
       useFactory: (repository: VulnerabilityMatchingRepository) =>
         new VulnerabilityMatchingUseCases(repository),
+    },
+    {
+      provide: VULNERABILITY_ENRICHMENT_REPOSITORY,
+      useExisting: SupabaseVulnerabilityEnrichmentRepository,
+    },
+    {
+      provide: VulnerabilityEnrichmentUseCases,
+      inject: [VULNERABILITY_ENRICHMENT_REPOSITORY, REPORTING_OBLIGATION_PORT],
+      useFactory: (
+        repository: VulnerabilityEnrichmentRepository,
+        reporting: ReportingObligationPort,
+      ) => new VulnerabilityEnrichmentUseCases(repository, reporting),
     },
     {
       provide: VulnerabilityFeedWorker,
@@ -119,8 +159,32 @@ export const VULNERABILITY_FEED_PROVIDERS = Symbol(
           queue: repository,
         }),
     },
+    {
+      provide: VulnerabilityKevAlertWorker,
+      inject: [
+        SupabaseVulnerabilityKevAlertQueue,
+        MailVulnerabilityKevAlertNotifierAdapter,
+        ConfigService,
+      ],
+      useFactory: (
+        queue: SupabaseVulnerabilityKevAlertQueue,
+        notifier: MailVulnerabilityKevAlertNotifierAdapter,
+        config: ConfigService,
+      ) =>
+        new VulnerabilityKevAlertWorker({
+          workerId: randomUUID(),
+          leaseSeconds:
+            config.get<number>("VULNERABILITY_KEV_ALERT_LEASE_SECONDS") ?? 120,
+          queue,
+          deliver: (input) => notifier.deliver(input),
+        }),
+    },
   ],
-  exports: [VulnerabilityFeedWorker, VulnerabilityMatchingWorker],
+  exports: [
+    VulnerabilityFeedWorker,
+    VulnerabilityMatchingWorker,
+    VulnerabilityKevAlertWorker,
+  ],
 })
 export class VulnerabilitiesModule {}
 

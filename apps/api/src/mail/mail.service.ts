@@ -212,4 +212,36 @@ export class MailService {
       idempotencyKey,
     );
   }
+
+  async sendKevAlert(
+    to: string,
+    input: Readonly<{
+      productName: string;
+      releaseName: string;
+      advisoryId: string;
+      lifecycleState: string;
+      kevListingDate: string | null;
+    }>,
+    idempotencyKey: string,
+  ): Promise<void> {
+    const productName = escapeHtml(input.productName);
+    const releaseName = escapeHtml(input.releaseName);
+    const advisoryId = escapeHtml(input.advisoryId);
+    const lifecycleState = escapeHtml(input.lifecycleState.replace(/_/g, " "));
+    const listing = input.kevListingDate
+      ? `CISA KEV listing date: <strong>${escapeHtml(input.kevListingDate)}</strong>.`
+      : "CISA KEV listing date is not available.";
+    await this.send(
+      to,
+      `KEV alert: ${input.advisoryId}`,
+      this.layout(
+        "Known Exploited Vulnerability alert",
+        `<p style="color:#4b5058;font-size:14px"><strong>${productName}</strong> release <strong>${releaseName}</strong> is affected by <strong>${advisoryId}</strong>.</p>
+         <p style="color:#4b5058;font-size:14px">Lifecycle state: <strong>${lifecycleState}</strong>. ${listing}</p>
+         <p style="color:#4b5058;font-size:14px">Review the durable alert in CRA before beginning any reporting workflow. No regulatory report has been created or submitted by this notification.</p>`,
+      ),
+      true,
+      idempotencyKey,
+    );
+  }
 }

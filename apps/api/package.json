@@ -25,6 +25,7 @@
     "worker:sbom-composite": "node dist/sbom-composite-worker.js",
     "worker:vulnerability-feeds": "node dist/vulnerability-feed-worker.js",
     "worker:vulnerability-matching": "node dist/vulnerability-matching-worker.js",
+    "worker:vulnerability-kev-alerts": "node dist/vulnerability-kev-alert-worker.js",
     "verify:vulnerability-matching-accuracy": "node dist/vulnerability-matching-accuracy-gate.js",
     "verify:tenant-export-capacity": "node dist/organizations/tenant-administration/worker/tenant-export-capacity.js"
   },

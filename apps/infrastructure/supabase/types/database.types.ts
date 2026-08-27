@@ -9369,6 +9369,172 @@ export type Database = {
           },
         ]
       }
+      vulnerability_kev_alerts: {
+        Row: {
+          acknowledged_at: string | null
+          acknowledged_by: string | null
+          created_at: string
+          delivered_at: string | null
+          delivery_attempts: number
+          delivery_status: string
+          external_obligation_id: string | null
+          id: string
+          kev_listing_date: string | null
+          kev_source_record_id: string
+          kev_source_record_version_id: string
+          last_delivery_error_code: string | null
+          last_delivery_error_message: string | null
+          lease_expires_at: string | null
+          lease_owner: string | null
+          lifecycle_state: string
+          material_fingerprint: string
+          max_delivery_attempts: number
+          organization_id: string
+          release_id: string
+          reporting_idempotency_key: string | null
+          reporting_intent_opened_at: string | null
+          reporting_intent_opened_by: string | null
+          reporting_status: string
+          resolution_reason: string | null
+          resolved_at: string | null
+          severity: string
+          state: string
+          triggering_finding_id: string
+          updated_at: string
+          vulnerability_id: string
+        }
+        Insert: {
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          created_at?: string
+          delivered_at?: string | null
+          delivery_attempts?: number
+          delivery_status?: string
+          external_obligation_id?: string | null
+          id?: string
+          kev_listing_date?: string | null
+          kev_source_record_id: string
+          kev_source_record_version_id: string
+          last_delivery_error_code?: string | null
+          last_delivery_error_message?: string | null
+          lease_expires_at?: string | null
+          lease_owner?: string | null
+          lifecycle_state: string
+          material_fingerprint: string
+          max_delivery_attempts?: number
+          organization_id: string
+          release_id: string
+          reporting_idempotency_key?: string | null
+          reporting_intent_opened_at?: string | null
+          reporting_intent_opened_by?: string | null
+          reporting_status?: string
+          resolution_reason?: string | null
+          resolved_at?: string | null
+          severity?: string
+          state?: string
+          triggering_finding_id: string
+          updated_at?: string
+          vulnerability_id: string
+        }
+        Update: {
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          created_at?: string
+          delivered_at?: string | null
+          delivery_attempts?: number
+          delivery_status?: string
+          external_obligation_id?: string | null
+          id?: string
+          kev_listing_date?: string | null
+          kev_source_record_id?: string
+          kev_source_record_version_id?: string
+          last_delivery_error_code?: string | null
+          last_delivery_error_message?: string | null
+          lease_expires_at?: string | null
+          lease_owner?: string | null
+          lifecycle_state?: string
+          material_fingerprint?: string
+          max_delivery_attempts?: number
+          organization_id?: string
+          release_id?: string
+          reporting_idempotency_key?: string | null
+          reporting_intent_opened_at?: string | null
+          reporting_intent_opened_by?: string | null
+          reporting_status?: string
+          resolution_reason?: string | null
+          resolved_at?: string | null
+          severity?: string
+          state?: string
+          triggering_finding_id?: string
+          updated_at?: string
+          vulnerability_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vulnerability_kev_alerts_acknowledged_by_fkey"
+            columns: ["acknowledged_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vulnerability_kev_alerts_kev_source_record_id_fkey"
+            columns: ["kev_source_record_id"]
+            isOneToOne: false
+            referencedRelation: "vulnerability_source_records"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vulnerability_kev_alerts_kev_source_record_version_id_fkey"
+            columns: ["kev_source_record_version_id"]
+            isOneToOne: false
+            referencedRelation: "vulnerability_source_record_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vulnerability_kev_alerts_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vulnerability_kev_alerts_organization_id_release_id_fkey"
+            columns: ["organization_id", "release_id"]
+            isOneToOne: false
+            referencedRelation: "product_releases"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "vulnerability_kev_alerts_reporting_intent_opened_by_fkey"
+            columns: ["reporting_intent_opened_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vulnerability_kev_alerts_triggering_finding_fkey"
+            columns: ["triggering_finding_id"]
+            isOneToOne: false
+            referencedRelation: "vulnerability_findings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vulnerability_kev_alerts_triggering_finding_id_fkey"
+            columns: ["triggering_finding_id"]
+            isOneToOne: false
+            referencedRelation: "vulnerability_findings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vulnerability_kev_alerts_vulnerability_id_fkey"
+            columns: ["vulnerability_id"]
+            isOneToOne: false
+            referencedRelation: "vulnerabilities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vulnerability_match_evaluations: {
         Row: {
           affected_range: Json | null
@@ -9927,6 +10093,32 @@ export type Database = {
           outcome: string
         }[]
       }
+      acknowledge_vulnerability_kev_alert_atomic:
+        | {
+            Args: {
+              p_actor_user_id: string
+              p_alert_id: string
+              p_document_id: string
+              p_organization_id: string
+            }
+            Returns: {
+              alert: Json
+              outcome: string
+            }[]
+          }
+        | {
+            Args: {
+              p_actor_user_id: string
+              p_alert_id: string
+              p_document_id: string
+              p_idempotency_key: string
+              p_organization_id: string
+            }
+            Returns: {
+              alert: Json
+              outcome: string
+            }[]
+          }
       add_product_release_market_availability_atomic: {
         Args: {
           p_actor_user_id: string
@@ -10451,6 +10643,17 @@ export type Database = {
           upstream_etag: string
         }[]
       }
+      claim_vulnerability_kev_alert_delivery: {
+        Args: {
+          p_lease_seconds?: number
+          p_organization_id: string
+          p_worker_id: string
+        }
+        Returns: {
+          alert: Json
+          outcome: string
+        }[]
+      }
       claim_vulnerability_match_job_atomic: {
         Args: {
           p_lease_owner: string
@@ -10673,6 +10876,19 @@ export type Database = {
           p_worker_id: string
         }
         Returns: string
+      }
+      complete_vulnerability_kev_alert_delivery: {
+        Args: {
+          p_alert_id: string
+          p_delivered: boolean
+          p_error_code?: string
+          p_error_message?: string
+          p_organization_id: string
+          p_worker_id: string
+        }
+        Returns: {
+          outcome: string
+        }[]
       }
       connector_compliance_metrics_snapshot: {
         Args: { p_organization_id: string }
@@ -12241,6 +12457,13 @@ export type Database = {
           reservation: Json
         }[]
       }
+      get_vulnerability_kev_alert_notification_details: {
+        Args: { p_alert_id: string; p_organization_id: string }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
       get_vulnerability_match_status: {
         Args: {
           p_actor_user_id: string
@@ -12332,6 +12555,12 @@ export type Database = {
         Args: { p_limit: number }
         Returns: {
           oldest_due_at: string
+          organization_id: string
+        }[]
+      }
+      list_due_vulnerability_kev_alert_organizations: {
+        Args: { p_limit?: number }
+        Returns: {
           organization_id: string
         }[]
       }
@@ -12585,6 +12814,51 @@ export type Database = {
           next_cursor: string
           outcome: string
           submissions: Json
+        }[]
+      }
+      list_vulnerability_enriched_findings_for_document_page: {
+        Args: {
+          p_actor_user_id: string
+          p_document_id: string
+          p_include_low_confidence: boolean
+          p_organization_id: string
+          p_page?: number
+          p_page_size?: number
+          p_q?: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      list_vulnerability_enriched_findings_for_document_page_baseline: {
+        Args: {
+          p_actor_user_id: string
+          p_document_id: string
+          p_include_low_confidence: boolean
+          p_organization_id: string
+          p_page?: number
+          p_page_size?: number
+          p_q?: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      list_vulnerability_enriched_findings_for_document_page_intellig: {
+        Args: {
+          p_actor_user_id: string
+          p_document_id: string
+          p_include_low_confidence: boolean
+          p_organization_id: string
+          p_page?: number
+          p_page_size?: number
+          p_q?: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
         }[]
       }
       list_vulnerability_feed_sync_runs: {
@@ -13174,6 +13448,31 @@ export type Database = {
         Args: { p_values: number[] }
         Returns: boolean
       }
+      m4_03_actor_can_edit_findings: {
+        Args: { p_actor_user_id: string; p_organization_id: string }
+        Returns: boolean
+      }
+      m4_03_current_kev_evidence: {
+        Args: { p_vulnerability_id: string }
+        Returns: {
+          listing_date: string
+          material_fingerprint: string
+          source_record_id: string
+          source_record_version_id: string
+        }[]
+      }
+      m4_03_intelligence_json: {
+        Args: { p_assessed_at: string; p_vulnerability_id: string }
+        Returns: Json
+      }
+      m4_03_intelligence_with_provenance_json: {
+        Args: { p_assessed_at: string; p_vulnerability_id: string }
+        Returns: Json
+      }
+      m4_03_kev_alert_json: {
+        Args: { p_alert_id: string; p_organization_id: string }
+        Returns: Json
+      }
       mark_mfa_factors_removed: {
         Args: { p_operation_id: string; p_user_id: string }
         Returns: string
@@ -13333,6 +13632,25 @@ export type Database = {
         }[]
       }
       persist_vulnerability_match_page_atomic: {
+        Args: {
+          p_expected_checkpoint_version: number
+          p_is_final: boolean
+          p_job_id: string
+          p_lease_owner: string
+          p_organization_id: string
+          p_processed_component_ids: Json
+          p_results: Json
+        }
+        Returns: {
+          checkpoint_version: number
+          matched_count: number
+          outcome: string
+          processed_count: number
+          reviewable_count: number
+          superseded_count: number
+        }[]
+      }
+      persist_vulnerability_match_page_atomic_unchecked: {
         Args: {
           p_expected_checkpoint_version: number
           p_is_final: boolean
@@ -13578,6 +13896,14 @@ export type Database = {
           outcome: string
         }[]
       }
+      reconcile_vulnerability_kev_alerts_for_release: {
+        Args: { p_organization_id: string; p_release_id: string }
+        Returns: {
+          created_count: number
+          outcome: string
+          resolved_count: number
+        }[]
+      }
       record_connector_test_atomic: {
         Args: {
           p_actor_user_id: string
@@ -13702,6 +14028,36 @@ export type Database = {
           outcome: string
         }[]
       }
+      record_vulnerability_kev_reporting_intent_atomic:
+        | {
+            Args: {
+              p_actor_user_id: string
+              p_alert_id: string
+              p_document_id: string
+              p_external_obligation_id?: string
+              p_organization_id: string
+              p_reporting_status: string
+            }
+            Returns: {
+              alert: Json
+              outcome: string
+            }[]
+          }
+        | {
+            Args: {
+              p_actor_user_id: string
+              p_alert_id: string
+              p_document_id: string
+              p_external_obligation_id: string
+              p_idempotency_key: string
+              p_organization_id: string
+              p_reporting_status: string
+            }
+            Returns: {
+              alert: Json
+              outcome: string
+            }[]
+          }
       record_vulnerability_matching_accuracy_run: {
         Args: {
           p_code_revision: string

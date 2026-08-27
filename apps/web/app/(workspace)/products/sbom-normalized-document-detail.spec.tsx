@@ -82,6 +82,7 @@ const queries = vi.hoisted(() => ({
 const matchingQueries = vi.hoisted(() => ({
   useVulnerabilityMatchStatusQuery: vi.fn(),
   useVulnerabilityFindingsQuery: vi.fn(),
+  useVulnerabilityEnrichedFindingsQuery: vi.fn(),
 }));
 
 vi.mock("../../_features/sboms/sboms.queries", () => queries);
@@ -255,6 +256,13 @@ function primeQueries() {
     error: null,
     refetch: vi.fn(),
     data: { rows: [], total: 0, page: 1, pageSize: 50, pageCount: 1 },
+  });
+  matchingQueries.useVulnerabilityEnrichedFindingsQuery.mockReturnValue({
+    isPending: false,
+    isError: false,
+    error: null,
+    refetch: vi.fn(),
+    data: { rows: [], alerts: [], total: 0, page: 1, pageSize: 50, pageCount: 1 },
   });
 }
 

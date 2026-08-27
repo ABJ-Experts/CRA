@@ -236,6 +236,8 @@ export const exportSourceExclusions: Readonly<Record<string, string>> =
       "A finding is a reproducible projection of tenant SBOM evidence and the deployment-local authoritative mirror; exporting mirror-source foreign keys would make a restored archive misleading.",
     vulnerability_match_evaluations:
       "Candidate and review evidence is a deployment-local derived projection pinned to a global mirror snapshot, not a portable tenant authority record.",
+    vulnerability_kev_alerts:
+      "KEV alerts are a deployment-local derived escalation ledger pinned to global feed versions and include notification lease state; their safe human actions remain in exported audit facts rather than portable mirror-bound rows.",
   });
 
 const crcTable = (() => {
