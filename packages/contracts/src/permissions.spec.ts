@@ -127,6 +127,18 @@ describe("merges", () => {
 });
 
 describe("normalizePermissions", () => {
+  it("grants view for SBOM upload without introducing a product-edit grant", () => {
+    const out = normalizePermissions({ can_upload_sboms: true });
+    expect(hasPermission(out, "can_view_sboms")).toBe(true);
+    expect(hasPermission(out, "can_edit_products")).toBe(false);
+  });
+
+  it("grants SBOM visibility for review without treating upload as approval", () => {
+    const out = normalizePermissions({ can_review_sboms: true });
+    expect(hasPermission(out, "can_view_sboms")).toBe(true);
+    expect(hasPermission(out, "can_upload_sboms")).toBe(false);
+  });
+
   it("grants view for any acting permission", () => {
     const out = normalizePermissions({ can_delete_orders: true });
     expect(hasPermission(out, "can_view_orders")).toBe(true);
@@ -147,10 +159,100 @@ describe("normalizePermissions", () => {
 });
 
 describe("presets", () => {
+  it("grants explicit SBOM view/upload/review defaults without changing permission resolution", () => {
+    expect(PERMISSION_MATRIX.sboms).toEqual(["view", "upload", "review"]);
+    for (const baseRole of BASE_ROLES) {
+      expect(
+        hasPermission(DEFAULT_PERMISSIONS_BY_ROLE[baseRole], "can_view_sboms"),
+      ).toBe(true);
+    }
+    for (const baseRole of ["owner", "admin", "member"] as const) {
+      expect(
+        hasPermission(
+          DEFAULT_PERMISSIONS_BY_ROLE[baseRole],
+          "can_upload_sboms",
+        ),
+      ).toBe(true);
+    }
+    expect(
+      hasPermission(DEFAULT_PERMISSIONS_BY_ROLE.viewer, "can_upload_sboms"),
+    ).toBe(false);
+    for (const baseRole of ["owner", "admin"] as const) {
+      expect(
+        hasPermission(
+          DEFAULT_PERMISSIONS_BY_ROLE[baseRole],
+          "can_review_sboms",
+        ),
+      ).toBe(true);
+    }
+    for (const baseRole of ["member", "viewer"] as const) {
+      expect(
+        hasPermission(
+          DEFAULT_PERMISSIONS_BY_ROLE[baseRole],
+          "can_review_sboms",
+        ),
+      ).toBe(false);
+    }
+  });
+
+  it("adds product approval only for owners and admins", () => {
+    expect(PERMISSION_MATRIX.products).toContain("approve");
+    expect(isPermissionKey("can_approve_products")).toBe(true);
+    expect(
+      hasPermission(DEFAULT_PERMISSIONS_BY_ROLE.owner, "can_approve_products"),
+    ).toBe(true);
+    expect(
+      hasPermission(DEFAULT_PERMISSIONS_BY_ROLE.admin, "can_approve_products"),
+    ).toBe(true);
+    expect(
+      hasPermission(DEFAULT_PERMISSIONS_BY_ROLE.member, "can_approve_products"),
+    ).toBe(false);
+    expect(
+      hasPermission(DEFAULT_PERMISSIONS_BY_ROLE.viewer, "can_approve_products"),
+    ).toBe(false);
+  });
+
   it("owner has every permission", () => {
     for (const key of PERMISSION_KEYS) {
       expect(hasPermission(DEFAULT_PERMISSIONS_BY_ROLE.owner, key)).toBe(true);
     }
+  });
+
+  it("reserves organization export and deletion for owners", () => {
+    expect(
+      hasPermission(
+        DEFAULT_PERMISSIONS_BY_ROLE.owner,
+        "can_export_organization",
+      ),
+    ).toBe(true);
+    expect(
+      hasPermission(
+        DEFAULT_PERMISSIONS_BY_ROLE.owner,
+        "can_delete_organization",
+      ),
+    ).toBe(true);
+    for (const baseRole of ["admin", "member", "viewer"] as const) {
+      expect(
+        hasPermission(
+          DEFAULT_PERMISSIONS_BY_ROLE[baseRole],
+          "can_export_organization",
+        ),
+      ).toBe(false);
+      expect(
+        hasPermission(
+          DEFAULT_PERMISSIONS_BY_ROLE[baseRole],
+          "can_delete_organization",
+        ),
+      ).toBe(false);
+    }
+  });
+
+  it("keeps custom-role permission merging additive, so destructive routes must also require owner", () => {
+    const out = resolveEffectivePermissions({
+      baseRole: "viewer",
+      customRoles: [role({ permissions: { can_delete_organization: true } })],
+    });
+    expect(hasPermission(out, "can_delete_organization")).toBe(true);
   });
 
   it("admin has everything except organization editing", () => {
@@ -183,6 +285,33 @@ describe("presets", () => {
     for (const key of PERMISSION_KEYS) {
       if (key.startsWith("can_view_")) continue;
       expect(hasPermission(viewer, key)).toBe(false);
+    }
+  });
+
+  it("defaults finding read access to every live role, but finding changes to owner and admin", () => {
+    for (const baseRole of BASE_ROLES) {
+      expect(
+        hasPermission(
+          DEFAULT_PERMISSIONS_BY_ROLE[baseRole],
+          "can_view_findings",
+        ),
+      ).toBe(true);
+    }
+    for (const baseRole of ["owner", "admin"] as const) {
+      expect(
+        hasPermission(
+          DEFAULT_PERMISSIONS_BY_ROLE[baseRole],
+          "can_edit_findings",
+        ),
+      ).toBe(true);
+    }
+    for (const baseRole of ["member", "viewer"] as const) {
+      expect(
+        hasPermission(
+          DEFAULT_PERMISSIONS_BY_ROLE[baseRole],
+          "can_edit_findings",
+        ),
+      ).toBe(false);
     }
   });
 

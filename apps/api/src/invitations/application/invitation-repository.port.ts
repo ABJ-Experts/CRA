@@ -30,6 +30,29 @@ export type RevokeInvitationAtomicOutcome =
   | "actor_not_found"
   | "actor_email_mismatch";
 
+/**
+ * The database owns the lock that serializes accept, revoke, and resend.
+ * A successful outcome contains the delivery-safe values required by the mail
+ * adapter; the raw token is deliberately never persisted or returned here.
+ */
+export type ResendInvitationAtomicOutcome =
+  | Readonly<{
+      outcome: "resent";
+      invitationId: string;
+      email: string;
+      organizationName: string;
+    }>
+  | Readonly<{
+      outcome:
+        | "not_found"
+        | "expired"
+        | "accepted"
+        | "not_pending"
+        | "already_member"
+        | "actor_not_found"
+        | "actor_email_mismatch";
+    }>;
+
 export type InsertInvitationInput = Readonly<{
   invitedBy: string;
   email: string;
@@ -57,6 +80,13 @@ export interface InvitationRepository {
     invitationId: string,
     actor: InvitationActor,
   ): Promise<RevokeInvitationAtomicOutcome>;
+  resendAtomic(
+    orgId: string,
+    invitationId: string,
+    actor: InvitationActor,
+    tokenHash: string,
+    expiresAt: string,
+  ): Promise<ResendInvitationAtomicOutcome>;
   list(orgId: string): Promise<readonly Readonly<Invitation>[]>;
   organization(orgId: string): Promise<Readonly<OrganizationSummary> | null>;
 }

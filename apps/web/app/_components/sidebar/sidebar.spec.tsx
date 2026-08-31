@@ -2,6 +2,7 @@
 
 import "@testing-library/jest-dom/vitest";
 
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
   fireEvent,
@@ -15,22 +16,49 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SIDEBAR_ATTR, SIDEBAR_STORAGE_KEY } from "./sidebar-collapse";
 
 const state = vi.hoisted(() => ({
-  pathname: "/dashboard/tables/basic",
+  pathname: "/organization",
   canView: (key: string) => key.length > 0,
+  replace: vi.fn(),
+  refresh: vi.fn(),
+  branding: null as {
+    source: "published";
+    displayName: string;
+    footerText: string | null;
+    logo: { altText: string | null } | null;
+  } | null,
 }));
 
 vi.mock("next/navigation", () => ({
   usePathname: () => state.pathname,
+  useRouter: () => ({ replace: state.replace, refresh: state.refresh }),
 }));
 vi.mock("../../_providers/session-provider", () => ({
   useCanViewMenu: () => state.canView,
 }));
+vi.mock("../../dashboard/organization-theme-provider", () => ({
+  useDashboardOrganizationBranding: () => state.branding,
+}));
 
 import { Sidebar } from "./sidebar";
 
+function renderSidebar() {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
+
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <Sidebar />
+    </QueryClientProvider>,
+  );
+}
+
 beforeEach(() => {
-  state.pathname = "/dashboard/tables/basic";
+  state.pathname = "/organization";
   state.canView = () => true;
+  state.replace.mockReset();
+  state.refresh.mockReset();
+  state.branding = null;
   localStorage.clear();
   document.documentElement.removeAttribute(SIDEBAR_ATTR);
 });
@@ -43,28 +71,107 @@ afterEach(() => {
 });
 
 describe("Sidebar", () => {
-  it("opens the active group and identifies the current nested route", () => {
-    render(<Sidebar />);
+  it("identifies the current CRA workspace route", () => {
+    renderSidebar();
 
     expect(screen.getByRole("navigation", { name: "Main" })).toBeVisible();
-    expect(screen.getByRole("link", { name: "CRA" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "CRA Sentinel" })).toHaveAttribute(
       "href",
       "/dashboard",
     );
-    expect(screen.getByRole("button", { name: "Tables" })).toHaveAttribute(
-      "aria-expanded",
-      "true",
-    );
-    expect(screen.getByRole("link", { name: "Basic" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Organization" })).toHaveAttribute(
       "aria-current",
       "page",
     );
-    expect(screen.getByText("99+")).toBeVisible();
+    expect(screen.getByRole("button", { name: "Sign out" })).toBeVisible();
+    expect(screen.getByText("C")).toHaveClass("text-on-accent");
+  });
+
+  it("links customer navigation to canonical top-level routes", () => {
+    renderSidebar();
+
+    expect(screen.getByRole("link", { name: "Management" })).toHaveAttribute(
+      "href",
+      "/management",
+    );
+    expect(
+      screen.getByRole("link", { name: "Organization" }),
+    ).toHaveAttribute("href", "/organization");
+    expect(screen.getByRole("link", { name: "Products" })).toHaveAttribute(
+      "href",
+      "/products",
+    );
+    expect(screen.getByRole("link", { name: "Connectors" })).toHaveAttribute(
+      "href",
+      "/connectors",
+    );
+    expect(screen.getByRole("link", { name: "Account" })).toHaveAttribute(
+      "href",
+      "/account",
+    );
+    expect(screen.getByRole("link", { name: "Security" })).toHaveAttribute(
+      "href",
+      "/security",
+    );
+    expect(screen.getByRole("link", { name: "Roles" })).toHaveAttribute(
+      "href",
+      "/roles",
+    );
+    expect(screen.getByRole("link", { name: "Permissions" })).toHaveAttribute(
+      "href",
+      "/permissions",
+    );
+  });
+
+  it("renders the published name and published-only logo endpoint", () => {
+    state.branding = {
+      source: "published",
+      displayName: "Analytical Engines",
+      footerText: "Analytical Engines footer",
+      logo: { altText: "Analytical Engines logo" },
+    };
+    renderSidebar();
+
+    expect(
+      screen.getByRole("link", { name: "Analytical Engines" }),
+    ).toBeVisible();
+    expect(
+      screen.getByRole("img", { name: "Analytical Engines logo" }),
+    ).toHaveAttribute("src", "/api/v1/organizations/current/branding/logo");
+    expect(screen.queryByText("CRA Sentinel")).not.toBeInTheDocument();
+  });
+
+  it("uses the published display-name initial and footer when no logo is published", () => {
+    state.branding = {
+      source: "published",
+      displayName: "Analytical Engines",
+      footerText: "Engineering safer products.",
+      logo: null,
+    };
+    renderSidebar();
+
+    expect(
+      screen.getByRole("link", { name: "Analytical Engines" }),
+    ).toBeVisible();
+    expect(screen.getByText("A", { exact: true })).toHaveClass(
+      "text-on-accent",
+    );
+    expect(screen.getByText("Engineering safer products.")).toBeVisible();
+    expect(screen.queryByText("C", { exact: true })).not.toBeInTheDocument();
+  });
+
+  it("keeps the CRA mark when branding is unavailable", () => {
+    state.branding = null;
+    renderSidebar();
+
+    expect(screen.getByRole("link", { name: "CRA Sentinel" })).toBeVisible();
+    expect(screen.getByText("C")).toBeVisible();
+    expect(screen.queryByRole("img")).not.toBeInTheDocument();
   });
 
   it("persists collapse and restores the expanded rail", async () => {
     const user = userEvent.setup();
-    render(<Sidebar />);
+    renderSidebar();
 
     await user.click(screen.getByRole("button", { name: "Collapse sidebar" }));
     expect(
@@ -81,36 +188,37 @@ describe("Sidebar", () => {
     expect(document.documentElement).not.toHaveAttribute(SIDEBAR_ATTR);
   });
 
-  it("opens and closes expandable groups without mutating the nav contract", async () => {
+  it("opens and closes access-control navigation without mutating the nav contract", async () => {
     const user = userEvent.setup();
-    state.pathname = "/dashboard/messages";
-    render(<Sidebar />);
-    const tables = screen.getByRole("button", { name: "Tables" });
+    state.pathname = "/roles";
+    renderSidebar();
+    const authorization = screen.getByRole("button", { name: "Authorization" });
 
-    expect(tables).toHaveAttribute("aria-expanded", "false");
-    await user.click(tables);
-    expect(tables).toHaveAttribute("aria-expanded", "true");
-    await user.click(tables);
-    expect(tables).toHaveAttribute("aria-expanded", "false");
+    expect(authorization).toHaveAttribute("aria-expanded", "true");
+    await user.click(authorization);
+    expect(authorization).toHaveAttribute("aria-expanded", "false");
+    await user.click(authorization);
+    expect(authorization).toHaveAttribute("aria-expanded", "true");
   });
 
   it("filters unauthorized children and removes empty groups", () => {
-    const allowed = new Set(["dashboard", "dashboard.analytics", "messages"]);
+    const allowed = new Set(["dashboard", "organization"]);
     state.canView = (key) => allowed.has(key);
-    render(<Sidebar />);
+    renderSidebar();
 
-    expect(screen.getByRole("button", { name: /Dashboard/ })).toBeVisible();
-    expect(screen.getByRole("link", { name: "Analytics" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Dashboard/ })).toBeVisible();
     expect(
-      screen.queryByRole("button", { name: "Tables" }),
+      screen.getByRole("link", { name: "Organization" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: "Management" }),
     ).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Messages/ })).toBeInTheDocument();
-    expect(screen.queryByText("Admin Authorization")).not.toBeInTheDocument();
+    expect(screen.queryByText("Account & access")).not.toBeInTheDocument();
   });
 
   it("opens and dismisses the mobile drawer", async () => {
     const user = userEvent.setup();
-    render(<Sidebar />);
+    renderSidebar();
     const open = screen.getByRole("button", { name: "Open navigation" });
 
     await user.click(open);

@@ -74,6 +74,12 @@ const acceptedRow = Object.freeze({
   organization_name: "CRA",
   organization_slug: "cra",
 });
+const resentRow = Object.freeze({
+  outcome: "resent",
+  invitation_id: invitationId,
+  email: "member@cra.test",
+  organization_name: "CRA",
+});
 
 describe("SupabaseInvitationRepository create reads", () => {
   it("finds an existing account by canonical email", async () => {
@@ -497,6 +503,101 @@ describe("SupabaseInvitationRepository atomic revocation", () => {
           id: userId,
           email: "owner@cra.test",
         }),
+      ).rejects.toThrow();
+    },
+  );
+});
+
+describe("SupabaseInvitationRepository atomic resend", () => {
+  it("rotates the scoped pending invitation through the atomic RPC", async () => {
+    const { repository, rpc } = fixture(
+      {},
+      {
+        resend_invitation_atomic: [{ data: [resentRow], error: null }],
+      },
+    );
+
+    await expect(
+      repository.resendAtomic(
+        organizationId,
+        invitationId,
+        { id: userId, email: "owner@cra.test" },
+        "fresh-hashed-token",
+        "2026-08-16T00:00:00.000Z",
+      ),
+    ).resolves.toEqual({
+      outcome: "resent",
+      invitationId,
+      email: "member@cra.test",
+      organizationName: "CRA",
+    });
+    expect(rpc).toHaveBeenCalledWith("resend_invitation_atomic", {
+      p_organization_id: organizationId,
+      p_invitation_id: invitationId,
+      p_actor_user_id: userId,
+      p_actor_email: "owner@cra.test",
+      p_token_hash: "fresh-hashed-token",
+      p_expires_at: "2026-08-16T00:00:00.000Z",
+    });
+  });
+
+  it.each([
+    "not_found",
+    "expired",
+    "accepted",
+    "not_pending",
+    "already_member",
+    "actor_not_found",
+    "actor_email_mismatch",
+  ] as const)(
+    "maps the %s resend result without exposing row data",
+    async (outcome) => {
+      const { repository } = fixture(
+        {},
+        {
+          resend_invitation_atomic: [
+            { data: [{ ...resentRow, outcome }], error: null },
+          ],
+        },
+      );
+
+      await expect(
+        repository.resendAtomic(
+          organizationId,
+          invitationId,
+          { id: userId, email: "owner@cra.test" },
+          "fresh-hashed-token",
+          "2026-08-16T00:00:00.000Z",
+        ),
+      ).resolves.toEqual({ outcome });
+    },
+  );
+
+  it.each([
+    { data: null, error: { message: "offline" } },
+    { data: null, error: null },
+    { data: [], error: null },
+    { data: [resentRow, resentRow], error: null },
+    { data: [{ ...resentRow, invitation_id: null }], error: null },
+    { data: [{ ...resentRow, email: null }], error: null },
+    { data: [{ ...resentRow, organization_name: null }], error: null },
+    { data: [{ ...resentRow, outcome: "future_outcome" }], error: null },
+  ] as const)(
+    "rejects an invalid resend provider response %#",
+    async (result) => {
+      const { repository } = fixture(
+        {},
+        { resend_invitation_atomic: [result] },
+      );
+
+      await expect(
+        repository.resendAtomic(
+          organizationId,
+          invitationId,
+          { id: userId, email: "owner@cra.test" },
+          "fresh-hashed-token",
+          "2026-08-16T00:00:00.000Z",
+        ),
       ).rejects.toThrow();
     },
   );

@@ -24,6 +24,22 @@ const navKeys: MenuKey[] = items.flatMap((item) => [
 ]);
 
 describe("menu key parity", () => {
+  it("contains only the implemented CRA workspace and access navigation", () => {
+    expect(navKeys).toEqual([
+      "dashboard",
+      "management",
+      "organization",
+      "products",
+      "connectors",
+      "profile",
+      "profile.account",
+      "profile.security",
+      "authorization",
+      "authorization.roles",
+      "authorization.permissions",
+    ]);
+  });
+
   it("every nav entry declares a key that exists in the contract", () => {
     for (const key of navKeys) expect(MENU_KEYS).toContain(key);
   });

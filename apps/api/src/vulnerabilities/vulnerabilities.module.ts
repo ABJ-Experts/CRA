@@ -1,0 +1,368 @@
+import { randomUUID } from "node:crypto";
+
+import { Module } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
+
+import { MailModule } from "../mail/mail.module";
+import { SupabaseModule } from "../supabase/supabase.module";
+import type {
+  VulnerabilityFeedKey,
+  VulnerabilityFeedProvider,
+} from "./application/vulnerability-feed.port";
+import {
+  VULNERABILITY_MIRROR_REPOSITORY,
+  type VulnerabilityMirrorRepository,
+} from "./application/vulnerability-mirror.port";
+import { VulnerabilityFeedUseCases } from "./application/vulnerability-feed-use-cases";
+import {
+  EpssVulnerabilityFeedProvider,
+  CsafVulnerabilityFeedProvider,
+  GithubAdvisoryFeedProvider,
+  KevVulnerabilityFeedProvider,
+  NvdVulnerabilityFeedProvider,
+  OsvVulnerabilityFeedProvider,
+  normalizeCsafDocument,
+  parseCsafAllowedHosts,
+} from "./infrastructure/http-vulnerability-feed.providers";
+import { SupabaseVulnerabilityFeedRepository } from "./infrastructure/supabase-vulnerability-feed.repository";
+import { VulnerabilityFeedsController } from "./vulnerabilities.controller";
+import {
+  VULNERABILITY_MATCHING_REPOSITORY,
+  type VulnerabilityMatchingRepository,
+} from "./application/vulnerability-matching.port";
+import { VulnerabilityMatchingUseCases } from "./application/vulnerability-matching-use-cases";
+import { SupabaseVulnerabilityMatchingRepository } from "./infrastructure/supabase-vulnerability-matching.repository";
+import { SupabaseVulnerabilityReachabilityIngestionRepository } from "./infrastructure/supabase-vulnerability-reachability-ingestion.repository";
+import { SupabaseVulnerabilityReevaluationRepository } from "./infrastructure/supabase-vulnerability-reevaluation.repository";
+import { SupabaseVulnerabilityEnrichmentRepository } from "./infrastructure/supabase-vulnerability-enrichment.repository";
+import { SupabaseVulnerabilityKevAlertQueue } from "./infrastructure/supabase-vulnerability-kev-alert-queue";
+import { MailVulnerabilityKevAlertNotifierAdapter } from "./infrastructure/mail-vulnerability-kev-alert-notifier.adapter";
+import { SupabaseVulnerabilityFindingReviewNotificationQueue } from "./infrastructure/supabase-vulnerability-finding-review-notification-queue";
+import { MailVulnerabilityFindingReviewNotifierAdapter } from "./infrastructure/mail-vulnerability-finding-review-notifier.adapter";
+import { VulnerabilityMatchingController } from "./vulnerability-matching.controller";
+import { VulnerabilityEnrichmentController } from "./vulnerability-enrichment.controller";
+import {
+  VULNERABILITY_ENRICHMENT_REPOSITORY,
+  type VulnerabilityEnrichmentRepository,
+} from "./application/vulnerability-enrichment.port";
+import { VulnerabilityEnrichmentUseCases } from "./application/vulnerability-enrichment-use-cases";
+import { VulnerabilityFeedWorker } from "./worker/vulnerability-feed-worker";
+import { VulnerabilityKevAlertWorker } from "./worker/vulnerability-kev-alert-worker";
+import { VulnerabilityFindingReviewNotificationWorker } from "./worker/vulnerability-finding-review-notification-worker";
+import { VulnerabilityMatchingWorker } from "./matching/worker/vulnerability-matching-worker";
+import { VulnerabilityReevaluationWorker } from "./worker/vulnerability-reevaluation-worker";
+import {
+  REPORTING_OBLIGATION_PORT,
+  type ReportingObligationPort,
+} from "./application/reporting-obligation.port";
+import { UnavailableReportingObligationAdapter } from "./infrastructure/unavailable-reporting-obligation.adapter";
+import { OfflineBundleImportsController } from "./offline-bundle-imports.controller";
+import {
+  VULNERABILITY_OFFLINE_BUNDLE_REPOSITORY,
+  type VulnerabilityOfflineBundleRepository,
+} from "./application/offline-bundle-import.port";
+import { OfflineBundleImportUseCases } from "./application/offline-bundle-import-use-cases";
+import { OfflineBundlePreflightService } from "./application/offline-bundle-preflight.service";
+import { SupabaseOfflineBundleRepository } from "./infrastructure/supabase-offline-bundle.repository";
+import {
+  VULNERABILITY_REACHABILITY_INGESTION_REPOSITORY,
+  type VulnerabilityReachabilityIngestionRepository,
+} from "./application/vulnerability-reachability-ingestion.port";
+import { VulnerabilityReachabilityIngestionUseCases } from "./application/vulnerability-reachability-ingestion-use-cases";
+import { parseRegisteredReachabilityAnalyzers } from "./infrastructure/registered-reachability-analyzers";
+import {
+  VULNERABILITY_FINDING_REVIEW_NOTIFICATION_QUEUE,
+  VULNERABILITY_FINDING_REVIEW_NOTIFIER,
+  type VulnerabilityFindingReviewNotificationQueue,
+  type VulnerabilityFindingReviewNotifier,
+} from "./application/vulnerability-finding-review-notification.port";
+
+export const VULNERABILITY_FEED_PROVIDERS = Symbol(
+  "VULNERABILITY_FEED_PROVIDERS",
+);
+
+@Module({
+  imports: [SupabaseModule, MailModule],
+  controllers: [
+    VulnerabilityFeedsController,
+    OfflineBundleImportsController,
+    VulnerabilityMatchingController,
+    VulnerabilityEnrichmentController,
+  ],
+  providers: [
+    SupabaseVulnerabilityFeedRepository,
+    SupabaseOfflineBundleRepository,
+    SupabaseVulnerabilityMatchingRepository,
+    SupabaseVulnerabilityReachabilityIngestionRepository,
+    SupabaseVulnerabilityReevaluationRepository,
+    SupabaseVulnerabilityEnrichmentRepository,
+    SupabaseVulnerabilityKevAlertQueue,
+    MailVulnerabilityKevAlertNotifierAdapter,
+    SupabaseVulnerabilityFindingReviewNotificationQueue,
+    MailVulnerabilityFindingReviewNotifierAdapter,
+    UnavailableReportingObligationAdapter,
+    {
+      provide: REPORTING_OBLIGATION_PORT,
+      useExisting: UnavailableReportingObligationAdapter,
+    },
+    {
+      provide: VULNERABILITY_MIRROR_REPOSITORY,
+      useExisting: SupabaseVulnerabilityFeedRepository,
+    },
+    {
+      provide: VULNERABILITY_OFFLINE_BUNDLE_REPOSITORY,
+      useExisting: SupabaseOfflineBundleRepository,
+    },
+    {
+      provide: VULNERABILITY_FEED_PROVIDERS,
+      useFactory: (config: ConfigService) => {
+        const providers: VulnerabilityFeedProvider[] = [
+          new NvdVulnerabilityFeedProvider(),
+          new OsvVulnerabilityFeedProvider(),
+          new KevVulnerabilityFeedProvider(),
+          new EpssVulnerabilityFeedProvider(),
+          new GithubAdvisoryFeedProvider(
+            config.get<string>("GITHUB_ADVISORY_TOKEN"),
+          ),
+          new CsafVulnerabilityFeedProvider({
+            indexUrl: config.get<string>("VULNERABILITY_CSAF_INDEX_URL"),
+            allowedHosts: parseCsafAllowedHosts(
+              config.get<string>("VULNERABILITY_CSAF_ALLOWED_HOSTS"),
+            ),
+          }),
+        ];
+        return new Map(
+          providers.map((provider) => [provider.feedKey, provider]),
+        );
+      },
+      inject: [ConfigService],
+    },
+    {
+      provide: VulnerabilityFeedUseCases,
+      useFactory: (repository: VulnerabilityMirrorRepository) =>
+        new VulnerabilityFeedUseCases(repository),
+      inject: [VULNERABILITY_MIRROR_REPOSITORY],
+    },
+    {
+      provide: OfflineBundleImportUseCases,
+      useFactory: (repository: VulnerabilityOfflineBundleRepository) =>
+        new OfflineBundleImportUseCases(repository),
+      inject: [VULNERABILITY_OFFLINE_BUNDLE_REPOSITORY],
+    },
+    {
+      provide: OfflineBundlePreflightService,
+      useFactory: (
+        imports: OfflineBundleImportUseCases,
+        config: ConfigService,
+      ) =>
+        new OfflineBundlePreflightService(imports, {
+          applicationVersion: config.get<string>(
+            "VULNERABILITY_BUNDLE_APPLICATION_VERSION",
+          ),
+          trustedKeyringJson: config.get<string>(
+            "VULNERABILITY_BUNDLE_TRUSTED_KEYRING_JSON",
+          ),
+          normalizeCsafDocuments: ({ document, sourceUrl }) =>
+            normalizeCsafDocument({ document, sourceUrl }).map((record) => ({
+              ...record,
+              feedKey: "vendor_csaf" as const,
+            })),
+        }),
+      inject: [OfflineBundleImportUseCases, ConfigService],
+    },
+    {
+      provide: VULNERABILITY_MATCHING_REPOSITORY,
+      useExisting: SupabaseVulnerabilityMatchingRepository,
+    },
+    {
+      provide: VULNERABILITY_REACHABILITY_INGESTION_REPOSITORY,
+      useExisting: SupabaseVulnerabilityReachabilityIngestionRepository,
+    },
+    {
+      provide: VULNERABILITY_FINDING_REVIEW_NOTIFICATION_QUEUE,
+      useExisting: SupabaseVulnerabilityFindingReviewNotificationQueue,
+    },
+    {
+      provide: VULNERABILITY_FINDING_REVIEW_NOTIFIER,
+      useExisting: MailVulnerabilityFindingReviewNotifierAdapter,
+    },
+    {
+      provide: VulnerabilityMatchingUseCases,
+      inject: [VULNERABILITY_MATCHING_REPOSITORY],
+      useFactory: (repository: VulnerabilityMatchingRepository) =>
+        new VulnerabilityMatchingUseCases(repository),
+    },
+    {
+      provide: VulnerabilityReachabilityIngestionUseCases,
+      inject: [VULNERABILITY_REACHABILITY_INGESTION_REPOSITORY, ConfigService],
+      useFactory: (
+        repository: VulnerabilityReachabilityIngestionRepository,
+        config: ConfigService,
+      ) =>
+        new VulnerabilityReachabilityIngestionUseCases(
+          repository,
+          parseRegisteredReachabilityAnalyzers(
+            config.get<string>(
+              "VULNERABILITY_REACHABILITY_REGISTERED_ADAPTERS_JSON",
+            ),
+          ),
+        ),
+    },
+    {
+      provide: VULNERABILITY_ENRICHMENT_REPOSITORY,
+      useExisting: SupabaseVulnerabilityEnrichmentRepository,
+    },
+    {
+      provide: VulnerabilityEnrichmentUseCases,
+      inject: [VULNERABILITY_ENRICHMENT_REPOSITORY, REPORTING_OBLIGATION_PORT],
+      useFactory: (
+        repository: VulnerabilityEnrichmentRepository,
+        reporting: ReportingObligationPort,
+      ) => new VulnerabilityEnrichmentUseCases(repository, reporting),
+    },
+    {
+      provide: VulnerabilityFeedWorker,
+      useFactory: (
+        repository: VulnerabilityMirrorRepository,
+        providers: ReadonlyMap<string, VulnerabilityFeedProvider>,
+        config: ConfigService,
+      ) =>
+        new VulnerabilityFeedWorker({
+          workerId: randomUUID(),
+          leaseSeconds:
+            config.get<number>("VULNERABILITY_FEED_LEASE_SECONDS") ?? 60,
+          repository,
+          providers,
+          githubTokenConfigured: Boolean(
+            config.get<string>("GITHUB_ADVISORY_TOKEN"),
+          ),
+          csafIndexConfigured:
+            Boolean(config.get<string>("VULNERABILITY_CSAF_INDEX_URL")) &&
+            parseCsafAllowedHosts(
+              config.get<string>("VULNERABILITY_CSAF_ALLOWED_HOSTS"),
+            ).length > 0,
+          scheduleOverrides: scheduleOverrides(config),
+        }),
+      inject: [
+        VULNERABILITY_MIRROR_REPOSITORY,
+        VULNERABILITY_FEED_PROVIDERS,
+        ConfigService,
+      ],
+    },
+    {
+      provide: VulnerabilityMatchingWorker,
+      inject: [SupabaseVulnerabilityMatchingRepository, ConfigService],
+      useFactory: (
+        repository: SupabaseVulnerabilityMatchingRepository,
+        config: ConfigService,
+      ) =>
+        new VulnerabilityMatchingWorker({
+          workerId: randomUUID(),
+          leaseSeconds:
+            config.get<number>("VULNERABILITY_MATCH_LEASE_SECONDS") ?? 90,
+          pageSize: config.get<number>("VULNERABILITY_MATCH_PAGE_SIZE") ?? 250,
+          queue: repository,
+        }),
+    },
+    {
+      provide: VulnerabilityKevAlertWorker,
+      inject: [
+        SupabaseVulnerabilityKevAlertQueue,
+        MailVulnerabilityKevAlertNotifierAdapter,
+        ConfigService,
+      ],
+      useFactory: (
+        queue: SupabaseVulnerabilityKevAlertQueue,
+        notifier: MailVulnerabilityKevAlertNotifierAdapter,
+        config: ConfigService,
+      ) =>
+        new VulnerabilityKevAlertWorker({
+          workerId: randomUUID(),
+          leaseSeconds:
+            config.get<number>("VULNERABILITY_KEV_ALERT_LEASE_SECONDS") ?? 120,
+          queue,
+          deliver: (input) => notifier.deliver(input),
+        }),
+    },
+    {
+      provide: VulnerabilityFindingReviewNotificationWorker,
+      inject: [
+        VULNERABILITY_FINDING_REVIEW_NOTIFICATION_QUEUE,
+        VULNERABILITY_FINDING_REVIEW_NOTIFIER,
+        ConfigService,
+      ],
+      useFactory: (
+        queue: VulnerabilityFindingReviewNotificationQueue,
+        notifier: VulnerabilityFindingReviewNotifier,
+        config: ConfigService,
+      ) =>
+        new VulnerabilityFindingReviewNotificationWorker({
+          workerId: randomUUID(),
+          leaseSeconds:
+            config.get<number>(
+              "VULNERABILITY_FINDING_REVIEW_NOTIFICATION_LEASE_SECONDS",
+            ) ?? 120,
+          queue,
+          deliver: (input) => notifier.deliver(input),
+        }),
+    },
+    {
+      provide: VulnerabilityReevaluationWorker,
+      inject: [SupabaseVulnerabilityReevaluationRepository, ConfigService],
+      useFactory: (
+        repository: SupabaseVulnerabilityReevaluationRepository,
+        config: ConfigService,
+      ) =>
+        new VulnerabilityReevaluationWorker({
+          workerId: randomUUID(),
+          leaseSeconds:
+            config.get<number>("VULNERABILITY_REEVALUATION_LEASE_SECONDS") ??
+            90,
+          pageSize:
+            config.get<number>("VULNERABILITY_REEVALUATION_PAGE_SIZE") ?? 250,
+          discoveryPageSize:
+            config.get<number>(
+              "VULNERABILITY_REEVALUATION_DISCOVERY_PAGE_SIZE",
+            ) ?? 100,
+          queue: repository,
+        }),
+    },
+  ],
+  exports: [
+    VulnerabilityFeedWorker,
+    VulnerabilityMatchingWorker,
+    VulnerabilityKevAlertWorker,
+    VulnerabilityFindingReviewNotificationWorker,
+    VulnerabilityReevaluationWorker,
+  ],
+})
+export class VulnerabilitiesModule {}
+
+function scheduleOverrides(
+  config: ConfigService,
+): ReadonlyMap<
+  VulnerabilityFeedKey,
+  Readonly<{ scheduleIntervalSeconds?: number; staleThresholdSeconds?: number }>
+> {
+  const names: ReadonlyArray<readonly [VulnerabilityFeedKey, string]> = [
+    ["nvd", "NVD"],
+    ["osv", "OSV"],
+    ["cisa_kev", "CISA_KEV"],
+    ["epss", "EPSS"],
+    ["github_advisory", "GITHUB_ADVISORY"],
+    ["vendor_csaf", "CSAF"],
+  ];
+  return new Map(
+    names.map(([feedKey, name]) => [
+      feedKey,
+      {
+        scheduleIntervalSeconds: config.get<number>(
+          `VULNERABILITY_${name}_SCHEDULE_INTERVAL_SECONDS`,
+        ),
+        staleThresholdSeconds: config.get<number>(
+          `VULNERABILITY_${name}_STALE_THRESHOLD_SECONDS`,
+        ),
+      },
+    ]),
+  );
+}

@@ -27,6 +27,19 @@ begin
 end;
 $$;
 
+-- This shared local database may contain legitimate organizations created by
+-- focused live/E2E tests. Record the starting state instead of assuming only
+-- the seed organization exists; the suite still proves it leaves no rows of
+-- its own behind.
+create temp table pg_temp.rls_suite_baseline (
+  organization_count integer not null,
+  invitation_count integer not null
+) on commit preserve rows;
+insert into pg_temp.rls_suite_baseline (organization_count, invitation_count)
+select
+  (select count(*) from public.organizations),
+  (select count(*) from public.invitations);
+
 -- ---------------------------------------------------------------------------
 -- 1. Lockdown invariants
 -- ---------------------------------------------------------------------------
@@ -141,10 +154,13 @@ begin
   execute 'set local role authenticated';
 
   select count(*) into n from public.organization_members;
-  perform pg_temp.check('organization_members selectable without 42P17', n = 4);
+  perform pg_temp.check('organization_members selectable without 42P17', n >= 4);
 
-  select count(*) into n from public.users;
-  perform pg_temp.check('users visible through shared-org policy', n = 4);
+  select count(*) into n from public.users
+   where email in (
+     'owner@cra.test', 'admin@cra.test', 'member@cra.test', 'viewer@cra.test'
+   );
+  perform pg_temp.check('seed users visible through shared-org policy', n = 4);
 
   select count(*) into n from public.organizations;
   perform pg_temp.check('own organization visible', n = 1);
@@ -907,10 +923,16 @@ begin
   perform pg_temp.check('suite left no privileges behind', n = 0);
 
   select count(*) into n from public.organizations;
-  perform pg_temp.check('suite left no extra organizations behind', n = 1);
+  perform pg_temp.check(
+    'suite left no extra organizations behind',
+    n = (select organization_count from pg_temp.rls_suite_baseline)
+  );
 
   select count(*) into n from public.invitations;
-  perform pg_temp.check('suite left no invitations behind', n = 0);
+  perform pg_temp.check(
+    'suite left no invitations behind',
+    n = (select invitation_count from pg_temp.rls_suite_baseline)
+  );
 end
 $$;
 

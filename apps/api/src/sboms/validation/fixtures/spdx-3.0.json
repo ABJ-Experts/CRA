@@ -1,0 +1,40 @@
+{
+  "@context": "https://spdx.org/rdf/3.0.0/spdx-context.jsonld",
+  "@graph": [
+    {
+      "type": "CreationInfo",
+      "@id": "_:creationinfo",
+      "createdBy": ["https://cra.test/spdx/agent/tool"],
+      "specVersion": "3.0.0",
+      "created": "2026-08-21T00:00:00Z"
+    },
+    {
+      "type": "Tool",
+      "spdxId": "https://cra.test/spdx/agent/tool",
+      "name": "CRA deterministic SBOM validator fixture",
+      "creationInfo": "_:creationinfo"
+    },
+    {
+      "type": "SpdxDocument",
+      "spdxId": "https://cra.test/spdx/document",
+      "creationInfo": "_:creationinfo",
+      "rootElement": ["https://cra.test/spdx/sbom"],
+      "profileConformance": ["core", "software"]
+    },
+    {
+      "type": "software_Sbom",
+      "spdxId": "https://cra.test/spdx/sbom",
+      "creationInfo": "_:creationinfo",
+      "rootElement": ["https://cra.test/spdx/package"],
+      "software_sbomType": ["build"]
+    },
+    {
+      "type": "software_Package",
+      "spdxId": "https://cra.test/spdx/package",
+      "creationInfo": "_:creationinfo",
+      "name": "example",
+      "software_packageVersion": "1.0.0",
+      "software_downloadLocation": "NOASSERTION"
+    }
+  ]
+}

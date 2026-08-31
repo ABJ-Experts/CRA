@@ -48,10 +48,13 @@ export function coerceBaseRole(value: unknown): BaseRole {
 
 export const PERMISSION_ACTIONS = [
   "view",
+  "upload",
+  "review",
   "create",
   "edit",
   "delete",
   "export",
+  "approve",
 ] as const;
 export type PermissionAction = (typeof PERMISSION_ACTIONS)[number];
 
@@ -68,12 +71,15 @@ export const PERMISSION_MATRIX = {
   users: ["view", "create", "edit", "delete", "export"],
   roles: ["view", "create", "edit", "delete"],
   invitations: ["view", "create", "delete"],
-  organization: ["view", "edit"],
+  organization: ["view", "edit", "delete", "export"],
   audit: ["view", "export"],
   // Commerce
-  products: ["view", "create", "edit", "delete", "export"],
+  products: ["view", "create", "edit", "delete", "export", "approve"],
   orders: ["view", "create", "edit", "delete", "export"],
   invoices: ["view", "create", "edit", "delete", "export"],
+  // Finding evidence/triage remains owned by its module. The product detail
+  // receives only a separately-authorized aggregate impact summary.
+  findings: ["view", "edit"],
   // Logistics
   fleet: ["view", "create", "edit", "delete"],
   routes: ["view", "create", "edit", "delete"],
@@ -86,6 +92,17 @@ export const PERMISSION_MATRIX = {
   dashboards: ["view", "export"],
   tables: ["view", "export"],
   analytics: ["view", "export"],
+  // Integrations: PLM/ALM connector sync. "approve" gates commit-to-production
+  // and conflict resolution; secret rotation and authority-policy commits are
+  // additionally owner-role-gated in the controller, not by a separate action.
+  connectors: ["view", "create", "edit", "delete", "export", "approve"],
+  // Immutable SBOM evidence is visible to the same roles that may inspect a
+  // release. Upload remains explicit instead of piggybacking on product edit.
+  // Review controls the security-sensitive lifecycle transitions for
+  // supplier evidence and generated composite SBOMs. It is deliberately
+  // distinct from upload: collecting evidence must not authorize accepting
+  // it into an authoritative composition.
+  sboms: ["view", "upload", "review"],
 } as const satisfies Record<string, readonly PermissionAction[]>;
 
 export type PermissionModule = keyof typeof PERMISSION_MATRIX;
@@ -195,10 +212,13 @@ export const IMPLICATIONS: Readonly<
   Record<PermissionAction, readonly PermissionAction[]>
 > = {
   view: [],
+  upload: ["view"],
+  review: ["view"],
   create: ["view"],
   edit: ["view"],
   delete: ["view"],
   export: ["view"],
+  approve: ["view"],
 };
 
 /** Parse `can_<action>_<module>` back into its parts. */
@@ -305,6 +325,9 @@ const VIEWER_MODULES: readonly PermissionModule[] = [
   "dashboards",
   "tables",
   "analytics",
+  "findings",
+  "connectors",
+  "sboms",
 ];
 
 /** Modules a member may also create/edit in — day-to-day operational work. */
@@ -345,6 +368,7 @@ function memberPreset(): PermissionSet {
   ] as const) {
     out[`can_export_${module}` as PermissionKey] = true;
   }
+  out.can_upload_sboms = true;
   return out;
 }
 
@@ -353,6 +377,8 @@ function adminPreset(): PermissionSet {
   // Organization settings (name, slug, branding, deletion) stay with the owner.
   // Everything else — including user and role administration — is the admin's.
   out.can_edit_organization = false;
+  out.can_delete_organization = false;
+  out.can_export_organization = false;
   return out;
 }
 

@@ -5,6 +5,7 @@ import {
   type Invitation,
   type OrganizationSummary,
 } from "@repo/contracts/invitations";
+import { z } from "zod";
 
 import { SupabaseService } from "../../supabase/supabase.service";
 import type {
@@ -12,6 +13,7 @@ import type {
   InsertInvitationInput,
   InvitationActor,
   InvitationRepository,
+  ResendInvitationAtomicOutcome,
   RevokeInvitationAtomicOutcome,
 } from "../application/invitation-repository.port";
 
@@ -29,6 +31,16 @@ const REVOCATION_OUTCOMES = new Set([
   "not_found",
   "already_accepted",
   "not_pending",
+  "actor_not_found",
+  "actor_email_mismatch",
+] as const);
+
+const RESEND_FAILURES = new Set([
+  "not_found",
+  "expired",
+  "accepted",
+  "not_pending",
+  "already_member",
   "actor_not_found",
   "actor_email_mismatch",
 ] as const);
@@ -57,6 +69,29 @@ function requiredString(
   }
   return candidate;
 }
+
+function requiredEmail(
+  value: Readonly<Record<string, unknown>>,
+  key: string,
+): string {
+  const email = requiredString(value, key);
+  if (!z.email().safeParse(email).success) throw malformedData();
+  return email;
+}
+
+type ResendInvitationRpcClient = Readonly<{
+  rpc: (
+    name: "resend_invitation_atomic",
+    args: Readonly<{
+      p_organization_id: string;
+      p_invitation_id: string;
+      p_actor_user_id: string;
+      p_actor_email: string;
+      p_token_hash: string;
+      p_expires_at: string;
+    }>,
+  ) => Promise<Readonly<{ data: unknown; error: unknown }>>;
+}>;
 
 @Injectable()
 export class SupabaseInvitationRepository implements InvitationRepository {
@@ -203,6 +238,53 @@ export class SupabaseInvitationRepository implements InvitationRepository {
       throw malformedData();
     }
     return data as RevokeInvitationAtomicOutcome;
+  }
+
+  async resendAtomic(
+    orgId: string,
+    invitationId: string,
+    actor: InvitationActor,
+    tokenHash: string,
+    expiresAt: string,
+  ): Promise<ResendInvitationAtomicOutcome> {
+    /*
+     * The new RPC is deliberately typed at this provider boundary until the
+     * database-generated declarations are refreshed by their owning workflow.
+     * Its output is still validated below before domain code can consume it.
+     */
+    const client =
+      this.supabase.admin() as unknown as ResendInvitationRpcClient;
+    const { data, error } = await client.rpc("resend_invitation_atomic", {
+      p_organization_id: orgId,
+      p_invitation_id: invitationId,
+      p_actor_user_id: actor.id,
+      p_actor_email: actor.email,
+      p_token_hash: tokenHash,
+      p_expires_at: expiresAt,
+    });
+
+    if (error) throw providerFailure();
+    if (!Array.isArray(data) || data.length !== 1) throw malformedData();
+    const row = record(data[0]);
+    if (!row) throw malformedData();
+    const outcome = requiredString(row, "outcome");
+
+    if (RESEND_FAILURES.has(outcome as never)) {
+      return Object.freeze({
+        outcome: outcome as Extract<
+          ResendInvitationAtomicOutcome,
+          { outcome: string }
+        >["outcome"],
+      }) as ResendInvitationAtomicOutcome;
+    }
+    if (outcome !== "resent") throw malformedData();
+
+    return Object.freeze({
+      outcome,
+      invitationId: requiredString(row, "invitation_id"),
+      email: requiredEmail(row, "email"),
+      organizationName: requiredString(row, "organization_name"),
+    });
   }
 
   async list(orgId: string): Promise<readonly Readonly<Invitation>[]> {

@@ -26,10 +26,42 @@ const int = (fallback: number) =>
     )
     .refine((n) => Number.isFinite(n) && n > 0, "must be a positive integer");
 
+const boundedInt = (fallback: number, maximum: number, message: string) =>
+  int(fallback).refine((value) => value <= maximum, message);
+
+const optionalBoundedInt = (maximum: number, message: string) =>
+  z
+    .string()
+    .optional()
+    .transform((value) =>
+      value === undefined || value === ""
+        ? undefined
+        : Number.parseInt(value, 10),
+    )
+    .refine(
+      (value) =>
+        value === undefined || (Number.isSafeInteger(value) && value > 0),
+      "must be a positive integer",
+    )
+    .refine((value) => value === undefined || value <= maximum, message);
+
 const fixedZero = z.coerce
   .number()
   .default(0)
   .refine((value) => value === 0, "must be exactly 0");
+
+/**
+ * Environment values arrive as strings. Unlike the legacy convenience parser,
+ * policy switches must reject typos instead of silently weakening a security
+ * control (for example, treating `enabled` as false).
+ */
+const strictBoolean = (fallback: boolean) =>
+  z
+    .preprocess(
+      (value) => (value === "" ? undefined : value),
+      z.enum(["true", "false"]).optional(),
+    )
+    .transform((value) => (value === undefined ? fallback : value === "true"));
 
 export const envSchema = z.object({
   NODE_ENV: z
@@ -70,6 +102,12 @@ export const envSchema = z.object({
   REFRESH_TOKEN_MAX_AGE: int(7 * 24 * 60 * 60), // 7d
   /** HMAC key for the signed active-organization cookie. */
   COOKIE_SIGNING_SECRET: z.string().min(16),
+  /**
+   * pgcrypto pgp_sym_encrypt/decrypt key for connector_secrets.ciphertext.
+   * Postgres functions can't read env vars, so this is threaded in as an RPC
+   * parameter on every call -- never logged, never returned to a browser.
+   */
+  CONNECTOR_SECRET_ENCRYPTION_KEY: z.string().min(32),
 
   // --- Mail -------------------------------------------------------------
   /**
@@ -90,6 +128,183 @@ export const envSchema = z.object({
   OTP_TTL_MINUTES: int(15),
   RECOVERY_TTL_MINUTES: int(60),
   INVITATION_TTL_DAYS: int(7),
+  // PostgreSQL owns worker authority; these only bound a process lease and
+  // the current deterministic in-memory STORE-ZIP implementation.
+  TENANT_LIFECYCLE_LEASE_SECONDS: boundedInt(
+    60,
+    3600,
+    "must not exceed 3600 seconds",
+  ),
+  TENANT_EXPORT_MAX_ARCHIVE_BYTES: boundedInt(
+    47_000_000,
+    50_000_000,
+    "must not exceed the private export bucket object limit",
+  ),
+  // M2 alert workers use database time as their scheduler. These values only
+  // bound a lease and the threshold for an operational clock-skew observation.
+  PRODUCT_RETENTION_ALERT_LEASE_SECONDS: boundedInt(
+    60,
+    3600,
+    "must not exceed 3600 seconds",
+  ),
+  PRODUCT_RETENTION_MAX_CLOCK_SKEW_MILLISECONDS: boundedInt(
+    5_000,
+    300_000,
+    "must not exceed 300000 milliseconds",
+  ),
+  // Finding propagation is lease-based and restart-safe. Keeping this bounded
+  // prevents a mistyped deployment value from delaying recovery indefinitely.
+  FINDING_PROPAGATION_LEASE_SECONDS: boundedInt(
+    60,
+    3600,
+    "must not exceed 3600 seconds",
+  ),
+  PRODUCT_IMPORT_LEASE_SECONDS: boundedInt(
+    60,
+    300,
+    "must not exceed 300 seconds",
+  ),
+  PRODUCT_COMPLIANCE_LEASE_SECONDS: boundedInt(
+    60,
+    300,
+    "must not exceed 300 seconds",
+  ),
+  /**
+   * Comma-delimited deployment allowlist for externally hosted update
+   * references. An empty value is fail-closed: publication may still use the
+   * private artifact bucket but no external candidate can be approved.
+   */
+  PRODUCT_SECURITY_UPDATE_EXTERNAL_REFERENCE_ALLOWED_HOSTS: z
+    .string()
+    .optional()
+    .default(""),
+  /**
+   * Upper bound for in-request artifact inspection during finalize. Larger
+   * objects stay pending and are finalized by the durable inspect worker so
+   * the API never buffers them in memory. Capped at the bucket file limit.
+   */
+  PRODUCT_COMPLIANCE_MAX_SYNC_INSPECT_BYTES: boundedInt(
+    67_108_864,
+    2_147_483_647,
+    "must not exceed the artifact bucket file limit",
+  ),
+  /** Streaming worker ceilings: deployment may tighten, never exceed intake. */
+  SBOM_NORMALIZATION_MAX_BYTES: boundedInt(
+    100 * 1024 * 1024,
+    100 * 1024 * 1024,
+    "must not exceed the immutable SBOM upload limit",
+  ),
+  SBOM_NORMALIZATION_MAX_COMPONENTS: boundedInt(
+    50_000,
+    50_000,
+    "must not exceed 50000 components",
+  ),
+  // Feed schedules belong to the durable global configuration. These optional
+  // deployment overrides are validated at boot and applied by the worker, not
+  // embedded into provider adapters.
+  VULNERABILITY_FEED_LEASE_SECONDS: boundedInt(
+    60,
+    3600,
+    "must not exceed 3600 seconds",
+  ),
+  VULNERABILITY_NVD_SCHEDULE_INTERVAL_SECONDS: optionalBoundedInt(
+    7 * 24 * 60 * 60,
+    "must not exceed 7 days",
+  ),
+  VULNERABILITY_OSV_SCHEDULE_INTERVAL_SECONDS: optionalBoundedInt(
+    7 * 24 * 60 * 60,
+    "must not exceed 7 days",
+  ),
+  VULNERABILITY_CISA_KEV_SCHEDULE_INTERVAL_SECONDS: optionalBoundedInt(
+    7 * 24 * 60 * 60,
+    "must not exceed 7 days",
+  ),
+  VULNERABILITY_EPSS_SCHEDULE_INTERVAL_SECONDS: optionalBoundedInt(
+    7 * 24 * 60 * 60,
+    "must not exceed 7 days",
+  ),
+  VULNERABILITY_GITHUB_ADVISORY_SCHEDULE_INTERVAL_SECONDS: optionalBoundedInt(
+    7 * 24 * 60 * 60,
+    "must not exceed 7 days",
+  ),
+  /** CSAF stays disabled without both this index and an explicit host allowlist. */
+  VULNERABILITY_CSAF_INDEX_URL: z
+    .string()
+    .url()
+    .refine((value) => new URL(value).protocol === "https:", "must use HTTPS")
+    .optional(),
+  /** Comma-delimited exact hostnames permitted for the CSAF index and documents. */
+  VULNERABILITY_CSAF_ALLOWED_HOSTS: z
+    .string()
+    .optional()
+    .default("")
+    .refine(
+      (value) =>
+        value === "" ||
+        value
+          .split(",")
+          .every((host) =>
+            /^[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$/i.test(host.trim()),
+          ),
+      "must contain only comma-delimited DNS hostnames",
+    ),
+  VULNERABILITY_CSAF_SCHEDULE_INTERVAL_SECONDS: optionalBoundedInt(
+    7 * 24 * 60 * 60,
+    "must not exceed 7 days",
+  ),
+  VULNERABILITY_NVD_STALE_THRESHOLD_SECONDS: optionalBoundedInt(
+    14 * 24 * 60 * 60,
+    "must not exceed 14 days",
+  ),
+  VULNERABILITY_OSV_STALE_THRESHOLD_SECONDS: optionalBoundedInt(
+    14 * 24 * 60 * 60,
+    "must not exceed 14 days",
+  ),
+  VULNERABILITY_CISA_KEV_STALE_THRESHOLD_SECONDS: optionalBoundedInt(
+    14 * 24 * 60 * 60,
+    "must not exceed 14 days",
+  ),
+  VULNERABILITY_EPSS_STALE_THRESHOLD_SECONDS: optionalBoundedInt(
+    14 * 24 * 60 * 60,
+    "must not exceed 14 days",
+  ),
+  VULNERABILITY_GITHUB_ADVISORY_STALE_THRESHOLD_SECONDS: optionalBoundedInt(
+    14 * 24 * 60 * 60,
+    "must not exceed 14 days",
+  ),
+  VULNERABILITY_CSAF_STALE_THRESHOLD_SECONDS: optionalBoundedInt(
+    14 * 24 * 60 * 60,
+    "must not exceed 14 days",
+  ),
+  /** Deployment-owned compatibility identity; imports fail closed when absent. */
+  VULNERABILITY_BUNDLE_APPLICATION_VERSION: z
+    .string()
+    .regex(/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/)
+    .optional(),
+  /** JSON public-key keyring. It is parsed only by the import verifier and never logged. */
+  VULNERABILITY_BUNDLE_TRUSTED_KEYRING_JSON: z.string().min(2).optional(),
+  /**
+   * Deployment-owned JSON allowlist of exact reachability adapter/version and
+   * ecosystem/build-format capabilities. Blank is deliberately fail-closed;
+   * the parser is invoked while assembling the integration use case.
+   */
+  VULNERABILITY_REACHABILITY_REGISTERED_ADAPTERS_JSON: z
+    .string()
+    .optional()
+    .default(""),
+  VULNERABILITY_FINDING_REVIEW_NOTIFICATION_LEASE_SECONDS: boundedInt(
+    120,
+    900,
+    "must not exceed 900 seconds",
+  ),
+  /** Optional deployment secret. Never persisted or emitted in logs. */
+  GITHUB_ADVISORY_TOKEN: z.string().trim().min(1).optional(),
+  /**
+   * With no scanner adapter configured, decoded raster-only inspection remains
+   * available in non-strict environments and is recorded in the audit trail.
+   * Strict deployments quarantine instead, so an invalid value must fail boot.
+   */
+  BRANDING_SCANNER_STRICT: strictBoolean(false),
   /**
    * Tolerance when comparing a JWT's `iat` against `users.session_epoch_at`.
    *
@@ -116,6 +331,15 @@ export function validateEnv(raw: Record<string, unknown>): Env {
       .map((i) => `  - ${i.path.join(".") || "(root)"}: ${i.message}`)
       .join("\n");
     throw new Error(`Invalid environment configuration:\n${detail}`);
+  }
+
+  if (
+    parsed.data.VULNERABILITY_CSAF_INDEX_URL !== undefined &&
+    parsed.data.VULNERABILITY_CSAF_ALLOWED_HOSTS.trim() === ""
+  ) {
+    throw new Error(
+      "Invalid environment configuration:\n  - VULNERABILITY_CSAF_ALLOWED_HOSTS: is required when a CSAF index is configured",
+    );
   }
 
   return parsed.data;

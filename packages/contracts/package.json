@@ -83,6 +83,78 @@
       "types": "./dist/roles/types/index.d.ts",
       "default": "./dist/roles/types/index.js"
     },
+    "./organizations": {
+      "types": "./dist/organizations.d.ts",
+      "default": "./dist/organizations.js"
+    },
+    "./organizations/schemas": {
+      "types": "./dist/organizations/schemas/index.d.ts",
+      "default": "./dist/organizations/schemas/index.js"
+    },
+    "./organizations/types": {
+      "types": "./dist/organizations/types/index.d.ts",
+      "default": "./dist/organizations/types/index.js"
+    },
+    "./products": {
+      "types": "./dist/products.d.ts",
+      "default": "./dist/products.js"
+    },
+    "./products/schemas": {
+      "types": "./dist/products/schemas/index.d.ts",
+      "default": "./dist/products/schemas/index.js"
+    },
+    "./products/types": {
+      "types": "./dist/products/types/index.d.ts",
+      "default": "./dist/products/types/index.js"
+    },
+    "./findings": {
+      "types": "./dist/findings.d.ts",
+      "default": "./dist/findings.js"
+    },
+    "./findings/schemas": {
+      "types": "./dist/findings/schemas/index.d.ts",
+      "default": "./dist/findings/schemas/index.js"
+    },
+    "./findings/types": {
+      "types": "./dist/findings/types/index.d.ts",
+      "default": "./dist/findings/types/index.js"
+    },
+    "./sboms": {
+      "types": "./dist/sboms/index.d.ts",
+      "default": "./dist/sboms/index.js"
+    },
+    "./sboms/schemas": {
+      "types": "./dist/sboms/schemas/index.d.ts",
+      "default": "./dist/sboms/schemas/index.js"
+    },
+    "./sboms/types": {
+      "types": "./dist/sboms/types/index.d.ts",
+      "default": "./dist/sboms/types/index.js"
+    },
+    "./connectors": {
+      "types": "./dist/connectors/index.d.ts",
+      "default": "./dist/connectors/index.js"
+    },
+    "./connectors/schemas": {
+      "types": "./dist/connectors/schemas/index.d.ts",
+      "default": "./dist/connectors/schemas/index.js"
+    },
+    "./connectors/types": {
+      "types": "./dist/connectors/types/index.d.ts",
+      "default": "./dist/connectors/types/index.js"
+    },
+    "./vulnerabilities": {
+      "types": "./dist/vulnerabilities/index.d.ts",
+      "default": "./dist/vulnerabilities/index.js"
+    },
+    "./vulnerabilities/schemas": {
+      "types": "./dist/vulnerabilities/schemas/index.d.ts",
+      "default": "./dist/vulnerabilities/schemas/index.js"
+    },
+    "./vulnerabilities/types": {
+      "types": "./dist/vulnerabilities/types/index.d.ts",
+      "default": "./dist/vulnerabilities/types/index.js"
+    },
     "./permissions/schemas": {
       "types": "./dist/permissions/schemas/index.d.ts",
       "default": "./dist/permissions/schemas/index.js"

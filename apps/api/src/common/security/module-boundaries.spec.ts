@@ -12,6 +12,7 @@ import { MailModule } from "../../mail/mail.module";
 import { PermissionsModule } from "../../permissions/permissions.module";
 import { SupabaseModule } from "../../supabase/supabase.module";
 import { UsersModule } from "../../users/users.module";
+import { VulnerabilitiesModule } from "../../vulnerabilities/vulnerabilities.module";
 import { SecurityModule } from "./security.module";
 
 const importsOf = (module: object): readonly unknown[] =>
@@ -38,6 +39,7 @@ describe("explicit module boundaries", () => {
     [InvitationsModule, [AuditModule, SupabaseModule, MailModule]],
     [PermissionsModule, [AuditModule, SupabaseModule]],
     [UsersModule, [AuditModule, SupabaseModule]],
+    [VulnerabilitiesModule, [SupabaseModule, MailModule]],
   ] as const)(
     "%p imports its provider dependencies",
     (module, dependencies) => {

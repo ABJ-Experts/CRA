@@ -6,6 +6,7 @@ const required = Object.freeze({
   SUPABASE_SERVICE_ROLE_KEY: "service-role-key",
   SUPABASE_JWT_SECRET: "j".repeat(32),
   COOKIE_SIGNING_SECRET: "c".repeat(16),
+  CONNECTOR_SECRET_ENCRYPTION_KEY: "k".repeat(32),
 });
 
 describe("environment validation", () => {
@@ -29,6 +30,16 @@ describe("environment validation", () => {
       RECOVERY_TTL_MINUTES: 60,
       INVITATION_TTL_DAYS: 7,
       SESSION_EPOCH_SKEW_SECONDS: 0,
+      TENANT_LIFECYCLE_LEASE_SECONDS: 60,
+      TENANT_EXPORT_MAX_ARCHIVE_BYTES: 47_000_000,
+      PRODUCT_RETENTION_ALERT_LEASE_SECONDS: 60,
+      PRODUCT_RETENTION_MAX_CLOCK_SKEW_MILLISECONDS: 5_000,
+      PRODUCT_IMPORT_LEASE_SECONDS: 60,
+      PRODUCT_COMPLIANCE_LEASE_SECONDS: 60,
+      PRODUCT_COMPLIANCE_MAX_SYNC_INSPECT_BYTES: 67_108_864,
+      VULNERABILITY_REACHABILITY_REGISTERED_ADAPTERS_JSON: "",
+      VULNERABILITY_FINDING_REVIEW_NOTIFICATION_LEASE_SECONDS: 120,
+      BRANDING_SCANNER_STRICT: false,
     });
   });
 
@@ -56,6 +67,11 @@ describe("environment validation", () => {
         RECOVERY_TTL_MINUTES: "45",
         INVITATION_TTL_DAYS: "14",
         SESSION_EPOCH_SKEW_SECONDS: "0",
+        BRANDING_SCANNER_STRICT: "true",
+        PRODUCT_SECURITY_UPDATE_EXTERNAL_REFERENCE_ALLOWED_HOSTS:
+          "updates.example.test,downloads.example.test",
+        VULNERABILITY_REACHABILITY_REGISTERED_ADAPTERS_JSON:
+          '[{"adapterId":"acme","version":"1.0.0","ecosystem":"npm","buildFormat":"node_modules"}]',
       }),
     ).toMatchObject({
       NODE_ENV: "production",
@@ -65,6 +81,11 @@ describe("environment validation", () => {
       SMTP_PORT: 2525,
       LOGIN_MAX_ATTEMPTS: 8,
       SESSION_EPOCH_SKEW_SECONDS: 0,
+      BRANDING_SCANNER_STRICT: true,
+      PRODUCT_SECURITY_UPDATE_EXTERNAL_REFERENCE_ALLOWED_HOSTS:
+        "updates.example.test,downloads.example.test",
+      VULNERABILITY_REACHABILITY_REGISTERED_ADAPTERS_JSON:
+        '[{"adapterId":"acme","version":"1.0.0","ecosystem":"npm","buildFormat":"node_modules"}]',
     });
   });
 
@@ -111,5 +132,66 @@ describe("environment validation", () => {
     expect(() =>
       validateEnv({ ...required, SESSION_EPOCH_SKEW_SECONDS: "1" }),
     ).toThrow("SESSION_EPOCH_SKEW_SECONDS: must be exactly 0");
+  });
+
+  it("accepts only explicit branding scanner policy booleans", () => {
+    expect(
+      validateEnv({ ...required, BRANDING_SCANNER_STRICT: "false" }),
+    ).toMatchObject({ BRANDING_SCANNER_STRICT: false });
+
+    expect(() =>
+      validateEnv({ ...required, BRANDING_SCANNER_STRICT: "enabled" }),
+    ).toThrow("BRANDING_SCANNER_STRICT");
+  });
+
+  it("bounds the configured lifecycle worker lease and in-memory archive ceiling", () => {
+    expect(() =>
+      validateEnv({
+        ...required,
+        TENANT_LIFECYCLE_LEASE_SECONDS: "3601",
+        TENANT_EXPORT_MAX_ARCHIVE_BYTES: "50000001",
+      }),
+    ).toThrow("TENANT_LIFECYCLE_LEASE_SECONDS: must not exceed 3600 seconds");
+  });
+
+  it("bounds the durable finding propagation worker lease", () => {
+    expect(
+      validateEnv({ ...required, FINDING_PROPAGATION_LEASE_SECONDS: "3600" }),
+    ).toMatchObject({ FINDING_PROPAGATION_LEASE_SECONDS: 3600 });
+    expect(() =>
+      validateEnv({ ...required, FINDING_PROPAGATION_LEASE_SECONDS: "3601" }),
+    ).toThrow(
+      "FINDING_PROPAGATION_LEASE_SECONDS: must not exceed 3600 seconds",
+    );
+  });
+
+  it("requires an exact host allowlist before enabling connected CSAF", () => {
+    expect(() =>
+      validateEnv({
+        ...required,
+        VULNERABILITY_CSAF_INDEX_URL: "https://csaf.vendor.test/index.json",
+      }),
+    ).toThrow("VULNERABILITY_CSAF_ALLOWED_HOSTS: is required");
+
+    expect(
+      validateEnv({
+        ...required,
+        VULNERABILITY_CSAF_INDEX_URL: "https://csaf.vendor.test/index.json",
+        VULNERABILITY_CSAF_ALLOWED_HOSTS: "csaf.vendor.test",
+      }),
+    ).toMatchObject({
+      VULNERABILITY_CSAF_INDEX_URL: "https://csaf.vendor.test/index.json",
+      VULNERABILITY_CSAF_ALLOWED_HOSTS: "csaf.vendor.test",
+    });
+  });
+
+  it("rejects insecure CSAF endpoints and malformed allowlist entries", () => {
+    expect(() =>
+      validateEnv({
+        ...required,
+        VULNERABILITY_CSAF_INDEX_URL: "http://csaf.vendor.test/index.json",
+        VULNERABILITY_CSAF_ALLOWED_HOSTS: "csaf.vendor.test,https://other.test",
+      }),
+    ).toThrow("VULNERABILITY_CSAF_INDEX_URL: must use HTTPS");
   });
 });

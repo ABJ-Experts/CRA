@@ -1,6 +1,27 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
+import { createHash } from "node:crypto";
 import { createTransport, type Transporter } from "nodemailer";
+
+export class RequiredMailDeliveryError extends Error {
+  readonly name = "RequiredMailDeliveryError";
+
+  constructor(readonly code: "provider_unavailable" | "delivery_failed") {
+    super(code);
+  }
+}
+
+const escapeHtml = (value: string): string =>
+  value.replace(/[&<>"']/g, (character) => {
+    const entities: Readonly<Record<string, string>> = Object.freeze({
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#39;",
+    });
+    return entities[character] ?? character;
+  });
 
 /**
  * Outbound email.
@@ -56,14 +77,37 @@ export class MailService {
     }
   }
 
-  private async send(to: string, subject: string, html: string): Promise<void> {
+  private async send(
+    to: string,
+    subject: string,
+    html: string,
+    required = false,
+    idempotencyKey?: string,
+  ): Promise<void> {
     if (!this.transporter) {
       this.logger.warn(`Email suppressed (no transport): "${subject}"`);
+      if (required) throw new RequiredMailDeliveryError("provider_unavailable");
       return;
     }
 
     try {
-      await this.transporter.sendMail({ from: this.from, to, subject, html });
+      const idempotencyDigest = idempotencyKey
+        ? createHash("sha256").update(idempotencyKey).digest("hex")
+        : undefined;
+      await this.transporter.sendMail({
+        from: this.from,
+        to,
+        subject,
+        html,
+        ...(idempotencyDigest
+          ? {
+              messageId: `<support-period-${idempotencyDigest}@cra.local>`,
+              headers: {
+                "X-CRA-Idempotency-Key": idempotencyDigest,
+              },
+            }
+          : {}),
+      });
       this.logger.log(`Sent "${subject}"`);
     } catch (error) {
       /*
@@ -75,6 +119,7 @@ export class MailService {
       this.logger.error(
         `Failed to send "${subject}": ${error instanceof Error ? error.message : String(error)}`,
       );
+      if (required) throw new RequiredMailDeliveryError("delivery_failed");
     }
   }
 
@@ -134,6 +179,100 @@ export class MailService {
          <p style="margin:24px 0"><a href="${url}" style="background:#4a50d6;color:#fff;padding:12px 20px;border-radius:8px;text-decoration:none;font-size:14px">Accept invitation</a></p>
          <p style="color:#8a8f98;font-size:12px;word-break:break-all">${url}</p>`,
       ),
+    );
+  }
+
+  /**
+   * Compliance alerts are an outbox-owned effect. Unlike account mail, a
+   * delivery failure must reach the worker so it can persist retry state.
+   */
+  async sendSupportPeriodAlert(
+    to: string,
+    input: Readonly<{
+      productName: string;
+      supportEndsAt: string;
+      thresholdDays: number;
+      missed: boolean;
+    }>,
+    idempotencyKey: string,
+  ): Promise<void> {
+    const productName = escapeHtml(input.productName);
+    const timing = input.missed
+      ? "This support-period threshold was missed and requires prompt review."
+      : "Review the support commitment and any required follow-up action.";
+    await this.send(
+      to,
+      `Support period alert: ${input.productName}`,
+      this.layout(
+        "Support period alert",
+        `<p style="color:#4b5058;font-size:14px"><strong>${productName}</strong> reaches its ${input.thresholdDays}-day support-period threshold on <strong>${escapeHtml(input.supportEndsAt)}</strong>.</p>
+         <p style="color:#4b5058;font-size:14px">${timing}</p>`,
+      ),
+      true,
+      idempotencyKey,
+    );
+  }
+
+  async sendKevAlert(
+    to: string,
+    input: Readonly<{
+      productName: string;
+      releaseName: string;
+      advisoryId: string;
+      lifecycleState: string;
+      kevListingDate: string | null;
+    }>,
+    idempotencyKey: string,
+  ): Promise<void> {
+    const productName = escapeHtml(input.productName);
+    const releaseName = escapeHtml(input.releaseName);
+    const advisoryId = escapeHtml(input.advisoryId);
+    const lifecycleState = escapeHtml(input.lifecycleState.replace(/_/g, " "));
+    const listing = input.kevListingDate
+      ? `CISA KEV listing date: <strong>${escapeHtml(input.kevListingDate)}</strong>.`
+      : "CISA KEV listing date is not available.";
+    await this.send(
+      to,
+      `KEV alert: ${input.advisoryId}`,
+      this.layout(
+        "Known Exploited Vulnerability alert",
+        `<p style="color:#4b5058;font-size:14px"><strong>${productName}</strong> release <strong>${releaseName}</strong> is affected by <strong>${advisoryId}</strong>.</p>
+         <p style="color:#4b5058;font-size:14px">Lifecycle state: <strong>${lifecycleState}</strong>. ${listing}</p>
+         <p style="color:#4b5058;font-size:14px">Review the durable alert in CRA before beginning any reporting workflow. No regulatory report has been created or submitted by this notification.</p>`,
+      ),
+      true,
+      idempotencyKey,
+    );
+  }
+
+  /**
+   * The review worker supplies only the material source transition. Evidence
+   * paths, source payloads, and artefact hashes remain in the tenant-scoped
+   * application surface and are never copied into email.
+   */
+  async sendVulnerabilityFindingReviewAlert(
+    to: string,
+    input: Readonly<{
+      advisoryId: string;
+      transition: string;
+      reviewState: string;
+    }>,
+    idempotencyKey: string,
+  ): Promise<void> {
+    const advisorySubject = input.advisoryId.replace(/[\r\n]+/g, " ").trim();
+    const advisoryId = escapeHtml(advisorySubject);
+    const transition = escapeHtml(input.transition.replace(/_/g, " "));
+    const reviewState = escapeHtml(input.reviewState.replace(/_/g, " "));
+    await this.send(
+      to,
+      `Finding review required: ${advisorySubject}`,
+      this.layout(
+        "Vulnerability finding review required",
+        `<p style="color:#4b5058;font-size:14px">Source status for <strong>${advisoryId}</strong> changed to <strong>${transition}</strong>.</p>
+         <p style="color:#4b5058;font-size:14px">Current review state: <strong>${reviewState}</strong>. Review the finding in CRA; this notification does not change the recorded assessment or close the finding.</p>`,
+      ),
+      true,
+      idempotencyKey,
     );
   }
 }

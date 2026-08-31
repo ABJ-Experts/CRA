@@ -2,7 +2,7 @@ import { Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { createTransport } from "nodemailer";
 
-import { MailService } from "./mail.service";
+import { MailService, RequiredMailDeliveryError } from "./mail.service";
 
 interface SentMessage {
   from: string;
@@ -185,4 +185,143 @@ describe("MailService", () => {
       );
     },
   );
+
+  it("reports a required support alert delivery failure to its outbox owner", async () => {
+    mockSendMail.mockRejectedValueOnce(new Error("connection refused"));
+    const service = new MailService(enabledConfig());
+
+    await expect(
+      service.sendSupportPeriodAlert(
+        "owner@cra.test",
+        {
+          productName: "Product <one>",
+          supportEndsAt: "2036-02-28T00:00:00.000Z",
+          thresholdDays: 30,
+          missed: false,
+        },
+        "support-period:revision-1:30",
+      ),
+    ).rejects.toEqual(new RequiredMailDeliveryError("delivery_failed"));
+    expect(mockSendMail.mock.calls[0]?.[0]?.html).toContain(
+      "Product &lt;one&gt;",
+    );
+  });
+
+  it("reports a disabled required support alert delivery to its outbox owner", async () => {
+    const service = new MailService(
+      config({
+        SMTP_FROM: "CRA <no-reply@cra.test>",
+        APP_URL: "https://cra.test",
+      }),
+    );
+
+    await expect(
+      service.sendSupportPeriodAlert(
+        "owner@cra.test",
+        {
+          productName: "Product one",
+          supportEndsAt: "2036-02-28T00:00:00.000Z",
+          thresholdDays: 30,
+          missed: false,
+        },
+        "support-period:revision-1:30",
+      ),
+    ).rejects.toEqual(new RequiredMailDeliveryError("provider_unavailable"));
+  });
+
+  it("uses a stable provider idempotency message identifier for support alerts", async () => {
+    const service = new MailService(enabledConfig());
+
+    await service.sendSupportPeriodAlert(
+      "owner@cra.test",
+      {
+        productName: "Product one",
+        supportEndsAt: "2036-02-28T00:00:00.000Z",
+        thresholdDays: 30,
+        missed: false,
+      },
+      "support-period:revision-1:30",
+    );
+
+    const mail = mockSendMail.mock.calls[0]?.[0] as
+      | Readonly<{
+          messageId?: unknown;
+          headers?: Readonly<Record<string, unknown>>;
+        }>
+      | undefined;
+    expect(mail?.messageId).toMatch(
+      /^<support-period-[a-f0-9]{64}@cra\.local>$/,
+    );
+    expect(mail?.headers?.["X-CRA-Idempotency-Key"]).toMatch(/^[a-f0-9]{64}$/);
+  });
+
+  it("sends required KEV alerts without raw SBOM content", async () => {
+    const service = new MailService(enabledConfig());
+
+    await service.sendKevAlert(
+      "owner@cra.test",
+      {
+        productName: "Pump <controller>",
+        releaseName: "2026.08",
+        advisoryId: "CVE-2026-0001",
+        lifecycleState: "in_support",
+        kevListingDate: "2026-08-26",
+      },
+      "33333333-3333-4333-8333-333333333333",
+    );
+
+    const message = mockSendMail.mock.calls[0]?.[0] as Readonly<{
+      html?: unknown;
+    }>;
+    expect(message?.html).toContain("Pump &lt;controller&gt;");
+    expect(message?.html).toContain("CVE-2026-0001");
+    expect(message?.html).toContain("No regulatory report has been created");
+    expect(message?.html).not.toContain("bomFormat");
+    expect(message?.html).not.toContain("components");
+  });
+
+  it("sends a required finding-review notification without evidence payloads", async () => {
+    const service = new MailService(enabledConfig());
+
+    await service.sendVulnerabilityFindingReviewAlert(
+      "owner@cra.test",
+      {
+        advisoryId: "CVE-2026-0001",
+        transition: "withdrawn",
+        reviewState: "review_required",
+      },
+      "33333333-3333-4333-8333-333333333333",
+    );
+
+    const message = mockSendMail.mock.calls[0]?.[0] as Readonly<{
+      subject?: unknown;
+      html?: unknown;
+    }>;
+    expect(message?.subject).toBe("Finding review required: CVE-2026-0001");
+    expect(message?.html).toContain("withdrawn");
+    expect(message?.html).toContain("CVE-2026-0001");
+    expect(message?.html).not.toContain("evidencePath");
+    expect(message?.html).not.toContain("sha256");
+  });
+
+  it("normalizes advisory line breaks before composing a review-mail subject", async () => {
+    const service = new MailService(enabledConfig());
+
+    await service.sendVulnerabilityFindingReviewAlert(
+      "owner@cra.test",
+      {
+        advisoryId: "CVE-2026-0001\r\nBcc: no-one@cra.test",
+        transition: "withdrawn",
+        reviewState: "review_required",
+      },
+      "33333333-3333-4333-8333-333333333333",
+    );
+
+    const message = mockSendMail.mock.calls[0]?.[0] as Readonly<{
+      subject?: unknown;
+    }>;
+    expect(message?.subject).toBe(
+      "Finding review required: CVE-2026-0001 Bcc: no-one@cra.test",
+    );
+  });
 });
