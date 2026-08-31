@@ -27,6 +27,7 @@
     "worker:vulnerability-matching": "node dist/vulnerability-matching-worker.js",
     "worker:vulnerability-reevaluation": "node dist/vulnerability-reevaluation-worker.js",
     "worker:vulnerability-kev-alerts": "node dist/vulnerability-kev-alert-worker.js",
+    "worker:vulnerability-finding-review-notifications": "node dist/vulnerability-finding-review-notification-worker.js",
     "verify:vulnerability-matching-accuracy": "node dist/vulnerability-matching-accuracy-gate.js",
     "verify:tenant-export-capacity": "node dist/organizations/tenant-administration/worker/tenant-export-capacity.js"
   },

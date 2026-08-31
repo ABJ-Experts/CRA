@@ -9347,6 +9347,110 @@ export type Database = {
           },
         ]
       }
+      vulnerability_finding_review_events: {
+        Row: {
+          created_at: string
+          finding_id: string
+          id: string
+          material_fingerprint: string
+          max_notification_attempts: number
+          notification_attempts: number
+          notification_due_at: string
+          notification_error_code: string | null
+          notification_error_message: string | null
+          notification_last_attempt_at: string | null
+          notification_lease_expires_at: string | null
+          notification_lease_owner: string | null
+          notification_status: string
+          notified_at: string | null
+          organization_id: string
+          prior_state: Json
+          proposed_state: Json
+          review_state: string
+          source_record_id: string
+          source_record_version_id: string
+          transition_kind: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          finding_id: string
+          id?: string
+          material_fingerprint: string
+          max_notification_attempts?: number
+          notification_attempts?: number
+          notification_due_at?: string
+          notification_error_code?: string | null
+          notification_error_message?: string | null
+          notification_last_attempt_at?: string | null
+          notification_lease_expires_at?: string | null
+          notification_lease_owner?: string | null
+          notification_status?: string
+          notified_at?: string | null
+          organization_id: string
+          prior_state: Json
+          proposed_state: Json
+          review_state?: string
+          source_record_id: string
+          source_record_version_id: string
+          transition_kind: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          finding_id?: string
+          id?: string
+          material_fingerprint?: string
+          max_notification_attempts?: number
+          notification_attempts?: number
+          notification_due_at?: string
+          notification_error_code?: string | null
+          notification_error_message?: string | null
+          notification_last_attempt_at?: string | null
+          notification_lease_expires_at?: string | null
+          notification_lease_owner?: string | null
+          notification_status?: string
+          notified_at?: string | null
+          organization_id?: string
+          prior_state?: Json
+          proposed_state?: Json
+          review_state?: string
+          source_record_id?: string
+          source_record_version_id?: string
+          transition_kind?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vulnerability_finding_review_ev_organization_id_finding_id_fkey"
+            columns: ["organization_id", "finding_id"]
+            isOneToOne: false
+            referencedRelation: "vulnerability_findings"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "vulnerability_finding_review_even_source_record_version_id_fkey"
+            columns: ["source_record_version_id"]
+            isOneToOne: false
+            referencedRelation: "vulnerability_source_record_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vulnerability_finding_review_events_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vulnerability_finding_review_events_source_record_id_fkey"
+            columns: ["source_record_id"]
+            isOneToOne: false
+            referencedRelation: "vulnerability_source_records"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vulnerability_findings: {
         Row: {
           affected_range: Json
@@ -10120,6 +10224,135 @@ export type Database = {
             columns: ["actor_user_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vulnerability_reachability_results: {
+        Row: {
+          analyzer_id: string
+          analyzer_version: string
+          build_format: string
+          component_identity: string
+          confidence_explanation: string
+          confidence_level: string
+          confidence_score: number
+          created_at: string
+          dependency_graph_fingerprint: string | null
+          ecosystem: string
+          evidence_path: Json
+          executed_at: string
+          finding_id: string
+          freshness: string
+          id: string
+          idempotency_key: string
+          input_artifacts: Json
+          input_fingerprint: string
+          limitations: Json
+          material_fingerprint: string
+          occurrence_id: string
+          organization_id: string
+          source_record_version_id: string
+          stale_at: string | null
+          stale_reasons: Json
+          superseded_by_result_id: string | null
+          verdict: string
+          vulnerable_symbol: string | null
+        }
+        Insert: {
+          analyzer_id: string
+          analyzer_version: string
+          build_format: string
+          component_identity: string
+          confidence_explanation: string
+          confidence_level: string
+          confidence_score: number
+          created_at?: string
+          dependency_graph_fingerprint?: string | null
+          ecosystem: string
+          evidence_path: Json
+          executed_at: string
+          finding_id: string
+          freshness?: string
+          id?: string
+          idempotency_key: string
+          input_artifacts: Json
+          input_fingerprint: string
+          limitations?: Json
+          material_fingerprint: string
+          occurrence_id: string
+          organization_id: string
+          source_record_version_id: string
+          stale_at?: string | null
+          stale_reasons?: Json
+          superseded_by_result_id?: string | null
+          verdict: string
+          vulnerable_symbol?: string | null
+        }
+        Update: {
+          analyzer_id?: string
+          analyzer_version?: string
+          build_format?: string
+          component_identity?: string
+          confidence_explanation?: string
+          confidence_level?: string
+          confidence_score?: number
+          created_at?: string
+          dependency_graph_fingerprint?: string | null
+          ecosystem?: string
+          evidence_path?: Json
+          executed_at?: string
+          finding_id?: string
+          freshness?: string
+          id?: string
+          idempotency_key?: string
+          input_artifacts?: Json
+          input_fingerprint?: string
+          limitations?: Json
+          material_fingerprint?: string
+          occurrence_id?: string
+          organization_id?: string
+          source_record_version_id?: string
+          stale_at?: string | null
+          stale_reasons?: Json
+          superseded_by_result_id?: string | null
+          verdict?: string
+          vulnerable_symbol?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vulnerability_reachability_re_organization_id_occurrence_i_fkey"
+            columns: ["organization_id", "occurrence_id"]
+            isOneToOne: false
+            referencedRelation: "vulnerability_component_occurrences"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "vulnerability_reachability_resu_organization_id_finding_id_fkey"
+            columns: ["organization_id", "finding_id"]
+            isOneToOne: false
+            referencedRelation: "vulnerability_findings"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "vulnerability_reachability_result_source_record_version_id_fkey"
+            columns: ["source_record_version_id"]
+            isOneToOne: false
+            referencedRelation: "vulnerability_source_record_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vulnerability_reachability_results_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vulnerability_reachability_results_superseded_by_result_id_fkey"
+            columns: ["superseded_by_result_id"]
+            isOneToOne: false
+            referencedRelation: "vulnerability_reachability_results"
             referencedColumns: ["id"]
           },
         ]
@@ -11007,6 +11240,17 @@ export type Database = {
           upstream_etag: string
         }[]
       }
+      claim_vulnerability_finding_review_notification: {
+        Args: {
+          p_lease_seconds?: number
+          p_organization_id: string
+          p_worker_id: string
+        }
+        Returns: {
+          outcome: string
+          review_event: Json
+        }[]
+      }
       claim_vulnerability_kev_alert_delivery: {
         Args: {
           p_lease_seconds?: number
@@ -11258,6 +11502,19 @@ export type Database = {
           p_worker_id: string
         }
         Returns: string
+      }
+      complete_vulnerability_finding_review_notification: {
+        Args: {
+          p_delivered: boolean
+          p_error_code?: string
+          p_error_message?: string
+          p_organization_id: string
+          p_review_event_id: string
+          p_worker_id: string
+        }
+        Returns: {
+          outcome: string
+        }[]
       }
       complete_vulnerability_kev_alert_delivery: {
         Args: {
@@ -12886,6 +13143,42 @@ export type Database = {
           reservation: Json
         }[]
       }
+      get_vulnerability_csaf_reconciliation_detail: {
+        Args: { p_canonical_id: string }
+        Returns: Json
+      }
+      get_vulnerability_finding_advisory_review: {
+        Args: {
+          p_actor_user_id: string
+          p_document_id: string
+          p_finding_id: string
+          p_organization_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      get_vulnerability_finding_reachability_evidence: {
+        Args: {
+          p_actor_user_id: string
+          p_document_id: string
+          p_finding_id: string
+          p_include_stale?: boolean
+          p_organization_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      get_vulnerability_finding_review_notification_details: {
+        Args: { p_event_id: string; p_organization_id: string }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
       get_vulnerability_kev_alert_notification_details: {
         Args: { p_alert_id: string; p_organization_id: string }
         Returns: {
@@ -12991,6 +13284,12 @@ export type Database = {
         Args: { p_limit: number }
         Returns: {
           oldest_due_at: string
+          organization_id: string
+        }[]
+      }
+      list_due_vulnerability_finding_review_notification_orgs: {
+        Args: { p_limit?: number }
+        Returns: {
           organization_id: string
         }[]
       }
@@ -13446,6 +13745,17 @@ export type Database = {
         }[]
       }
       list_vulnerability_reevaluation_candidates: {
+        Args: {
+          p_job_id: string
+          p_lease_owner: string
+          p_limit?: number
+          p_organization_id: string
+        }
+        Returns: {
+          candidate: Json
+        }[]
+      }
+      list_vulnerability_reevaluation_candidates_m4_06: {
         Args: {
           p_job_id: string
           p_lease_owner: string
@@ -14017,6 +14327,14 @@ export type Database = {
           outcome: string
         }[]
       }
+      mark_vulnerability_reachability_stale_for_finding: {
+        Args: {
+          p_finding_id: string
+          p_organization_id: string
+          p_reason: string
+        }
+        Returns: number
+      }
       materialize_organization_export_snapshot_atomic: {
         Args: {
           p_expected_checkpoint_version: number
@@ -14219,6 +14537,24 @@ export type Database = {
         }[]
       }
       persist_vulnerability_reevaluation_page_atomic: {
+        Args: {
+          p_expected_checkpoint_version: number
+          p_is_final: boolean
+          p_job_id: string
+          p_lease_owner: string
+          p_next_occurrence_id: string
+          p_organization_id: string
+          p_transitions: Json
+        }
+        Returns: {
+          checkpoint_version: number
+          created_count: number
+          outcome: string
+          processed_count: number
+          review_required_count: number
+        }[]
+      }
+      persist_vulnerability_reevaluation_page_atomic_m4_06: {
         Args: {
           p_expected_checkpoint_version: number
           p_is_final: boolean
@@ -14622,6 +14958,21 @@ export type Database = {
           outcome: string
         }[]
       }
+      record_vulnerability_finding_advisory_review_atomic: {
+        Args: {
+          p_document_id: string
+          p_finding_id: string
+          p_organization_id: string
+          p_prior_state: Json
+          p_proposed_state: Json
+          p_source_record_version_id: string
+          p_transition_kind: string
+        }
+        Returns: {
+          event: Json
+          outcome: string
+        }[]
+      }
       record_vulnerability_finding_human_verdict_atomic: {
         Args: {
           p_actor_user_id: string
@@ -14685,6 +15036,18 @@ export type Database = {
           accuracy_score: number
           outcome: string
           passed: boolean
+        }[]
+      }
+      record_vulnerability_reachability_result_atomic: {
+        Args: {
+          p_document_id: string
+          p_finding_id: string
+          p_organization_id: string
+          p_result: Json
+        }
+        Returns: {
+          outcome: string
+          result: Json
         }[]
       }
       recover_organization_atomic: {

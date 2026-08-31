@@ -279,4 +279,49 @@ describe("MailService", () => {
     expect(message?.html).not.toContain("bomFormat");
     expect(message?.html).not.toContain("components");
   });
+
+  it("sends a required finding-review notification without evidence payloads", async () => {
+    const service = new MailService(enabledConfig());
+
+    await service.sendVulnerabilityFindingReviewAlert(
+      "owner@cra.test",
+      {
+        advisoryId: "CVE-2026-0001",
+        transition: "withdrawn",
+        reviewState: "review_required",
+      },
+      "33333333-3333-4333-8333-333333333333",
+    );
+
+    const message = mockSendMail.mock.calls[0]?.[0] as Readonly<{
+      subject?: unknown;
+      html?: unknown;
+    }>;
+    expect(message?.subject).toBe("Finding review required: CVE-2026-0001");
+    expect(message?.html).toContain("withdrawn");
+    expect(message?.html).toContain("CVE-2026-0001");
+    expect(message?.html).not.toContain("evidencePath");
+    expect(message?.html).not.toContain("sha256");
+  });
+
+  it("normalizes advisory line breaks before composing a review-mail subject", async () => {
+    const service = new MailService(enabledConfig());
+
+    await service.sendVulnerabilityFindingReviewAlert(
+      "owner@cra.test",
+      {
+        advisoryId: "CVE-2026-0001\r\nBcc: no-one@cra.test",
+        transition: "withdrawn",
+        reviewState: "review_required",
+      },
+      "33333333-3333-4333-8333-333333333333",
+    );
+
+    const message = mockSendMail.mock.calls[0]?.[0] as Readonly<{
+      subject?: unknown;
+    }>;
+    expect(message?.subject).toBe(
+      "Finding review required: CVE-2026-0001 Bcc: no-one@cra.test",
+    );
+  });
 });

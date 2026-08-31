@@ -37,6 +37,8 @@ describe("environment validation", () => {
       PRODUCT_IMPORT_LEASE_SECONDS: 60,
       PRODUCT_COMPLIANCE_LEASE_SECONDS: 60,
       PRODUCT_COMPLIANCE_MAX_SYNC_INSPECT_BYTES: 67_108_864,
+      VULNERABILITY_REACHABILITY_REGISTERED_ADAPTERS_JSON: "",
+      VULNERABILITY_FINDING_REVIEW_NOTIFICATION_LEASE_SECONDS: 120,
       BRANDING_SCANNER_STRICT: false,
     });
   });
@@ -68,6 +70,8 @@ describe("environment validation", () => {
         BRANDING_SCANNER_STRICT: "true",
         PRODUCT_SECURITY_UPDATE_EXTERNAL_REFERENCE_ALLOWED_HOSTS:
           "updates.example.test,downloads.example.test",
+        VULNERABILITY_REACHABILITY_REGISTERED_ADAPTERS_JSON:
+          '[{"adapterId":"acme","version":"1.0.0","ecosystem":"npm","buildFormat":"node_modules"}]',
       }),
     ).toMatchObject({
       NODE_ENV: "production",
@@ -80,6 +84,8 @@ describe("environment validation", () => {
       BRANDING_SCANNER_STRICT: true,
       PRODUCT_SECURITY_UPDATE_EXTERNAL_REFERENCE_ALLOWED_HOSTS:
         "updates.example.test,downloads.example.test",
+      VULNERABILITY_REACHABILITY_REGISTERED_ADAPTERS_JSON:
+        '[{"adapterId":"acme","version":"1.0.0","ecosystem":"npm","buildFormat":"node_modules"}]',
     });
   });
 

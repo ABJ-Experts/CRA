@@ -183,6 +183,16 @@ export const exportSourceRegistry: readonly ExportSourceRegistration[] =
         "sbom_composite_dependency_provenance",
       ],
     },
+    {
+      // M4-07 evidence and source-state review facts are immutable tenant
+      // audit records. They contain hashes and safe metadata only, never raw
+      // analyzer artifacts, source paths, or provider credentials.
+      sourceId: "vulnerability_reachability_review",
+      tables: [
+        "vulnerability_reachability_results",
+        "vulnerability_finding_review_events",
+      ],
+    },
   ]);
 
 /** Explicit omissions are security objects, never an accidental omission. */

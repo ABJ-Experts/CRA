@@ -32,10 +32,13 @@ import {
 } from "./application/vulnerability-matching.port";
 import { VulnerabilityMatchingUseCases } from "./application/vulnerability-matching-use-cases";
 import { SupabaseVulnerabilityMatchingRepository } from "./infrastructure/supabase-vulnerability-matching.repository";
+import { SupabaseVulnerabilityReachabilityIngestionRepository } from "./infrastructure/supabase-vulnerability-reachability-ingestion.repository";
 import { SupabaseVulnerabilityReevaluationRepository } from "./infrastructure/supabase-vulnerability-reevaluation.repository";
 import { SupabaseVulnerabilityEnrichmentRepository } from "./infrastructure/supabase-vulnerability-enrichment.repository";
 import { SupabaseVulnerabilityKevAlertQueue } from "./infrastructure/supabase-vulnerability-kev-alert-queue";
 import { MailVulnerabilityKevAlertNotifierAdapter } from "./infrastructure/mail-vulnerability-kev-alert-notifier.adapter";
+import { SupabaseVulnerabilityFindingReviewNotificationQueue } from "./infrastructure/supabase-vulnerability-finding-review-notification-queue";
+import { MailVulnerabilityFindingReviewNotifierAdapter } from "./infrastructure/mail-vulnerability-finding-review-notifier.adapter";
 import { VulnerabilityMatchingController } from "./vulnerability-matching.controller";
 import { VulnerabilityEnrichmentController } from "./vulnerability-enrichment.controller";
 import {
@@ -45,6 +48,7 @@ import {
 import { VulnerabilityEnrichmentUseCases } from "./application/vulnerability-enrichment-use-cases";
 import { VulnerabilityFeedWorker } from "./worker/vulnerability-feed-worker";
 import { VulnerabilityKevAlertWorker } from "./worker/vulnerability-kev-alert-worker";
+import { VulnerabilityFindingReviewNotificationWorker } from "./worker/vulnerability-finding-review-notification-worker";
 import { VulnerabilityMatchingWorker } from "./matching/worker/vulnerability-matching-worker";
 import { VulnerabilityReevaluationWorker } from "./worker/vulnerability-reevaluation-worker";
 import {
@@ -60,6 +64,18 @@ import {
 import { OfflineBundleImportUseCases } from "./application/offline-bundle-import-use-cases";
 import { OfflineBundlePreflightService } from "./application/offline-bundle-preflight.service";
 import { SupabaseOfflineBundleRepository } from "./infrastructure/supabase-offline-bundle.repository";
+import {
+  VULNERABILITY_REACHABILITY_INGESTION_REPOSITORY,
+  type VulnerabilityReachabilityIngestionRepository,
+} from "./application/vulnerability-reachability-ingestion.port";
+import { VulnerabilityReachabilityIngestionUseCases } from "./application/vulnerability-reachability-ingestion-use-cases";
+import { parseRegisteredReachabilityAnalyzers } from "./infrastructure/registered-reachability-analyzers";
+import {
+  VULNERABILITY_FINDING_REVIEW_NOTIFICATION_QUEUE,
+  VULNERABILITY_FINDING_REVIEW_NOTIFIER,
+  type VulnerabilityFindingReviewNotificationQueue,
+  type VulnerabilityFindingReviewNotifier,
+} from "./application/vulnerability-finding-review-notification.port";
 
 export const VULNERABILITY_FEED_PROVIDERS = Symbol(
   "VULNERABILITY_FEED_PROVIDERS",
@@ -77,10 +93,13 @@ export const VULNERABILITY_FEED_PROVIDERS = Symbol(
     SupabaseVulnerabilityFeedRepository,
     SupabaseOfflineBundleRepository,
     SupabaseVulnerabilityMatchingRepository,
+    SupabaseVulnerabilityReachabilityIngestionRepository,
     SupabaseVulnerabilityReevaluationRepository,
     SupabaseVulnerabilityEnrichmentRepository,
     SupabaseVulnerabilityKevAlertQueue,
     MailVulnerabilityKevAlertNotifierAdapter,
+    SupabaseVulnerabilityFindingReviewNotificationQueue,
+    MailVulnerabilityFindingReviewNotifierAdapter,
     UnavailableReportingObligationAdapter,
     {
       provide: REPORTING_OBLIGATION_PORT,
@@ -156,10 +175,38 @@ export const VULNERABILITY_FEED_PROVIDERS = Symbol(
       useExisting: SupabaseVulnerabilityMatchingRepository,
     },
     {
+      provide: VULNERABILITY_REACHABILITY_INGESTION_REPOSITORY,
+      useExisting: SupabaseVulnerabilityReachabilityIngestionRepository,
+    },
+    {
+      provide: VULNERABILITY_FINDING_REVIEW_NOTIFICATION_QUEUE,
+      useExisting: SupabaseVulnerabilityFindingReviewNotificationQueue,
+    },
+    {
+      provide: VULNERABILITY_FINDING_REVIEW_NOTIFIER,
+      useExisting: MailVulnerabilityFindingReviewNotifierAdapter,
+    },
+    {
       provide: VulnerabilityMatchingUseCases,
       inject: [VULNERABILITY_MATCHING_REPOSITORY],
       useFactory: (repository: VulnerabilityMatchingRepository) =>
         new VulnerabilityMatchingUseCases(repository),
+    },
+    {
+      provide: VulnerabilityReachabilityIngestionUseCases,
+      inject: [VULNERABILITY_REACHABILITY_INGESTION_REPOSITORY, ConfigService],
+      useFactory: (
+        repository: VulnerabilityReachabilityIngestionRepository,
+        config: ConfigService,
+      ) =>
+        new VulnerabilityReachabilityIngestionUseCases(
+          repository,
+          parseRegisteredReachabilityAnalyzers(
+            config.get<string>(
+              "VULNERABILITY_REACHABILITY_REGISTERED_ADAPTERS_JSON",
+            ),
+          ),
+        ),
     },
     {
       provide: VULNERABILITY_ENRICHMENT_REPOSITORY,
@@ -238,6 +285,28 @@ export const VULNERABILITY_FEED_PROVIDERS = Symbol(
         }),
     },
     {
+      provide: VulnerabilityFindingReviewNotificationWorker,
+      inject: [
+        VULNERABILITY_FINDING_REVIEW_NOTIFICATION_QUEUE,
+        VULNERABILITY_FINDING_REVIEW_NOTIFIER,
+        ConfigService,
+      ],
+      useFactory: (
+        queue: VulnerabilityFindingReviewNotificationQueue,
+        notifier: VulnerabilityFindingReviewNotifier,
+        config: ConfigService,
+      ) =>
+        new VulnerabilityFindingReviewNotificationWorker({
+          workerId: randomUUID(),
+          leaseSeconds:
+            config.get<number>(
+              "VULNERABILITY_FINDING_REVIEW_NOTIFICATION_LEASE_SECONDS",
+            ) ?? 120,
+          queue,
+          deliver: (input) => notifier.deliver(input),
+        }),
+    },
+    {
       provide: VulnerabilityReevaluationWorker,
       inject: [SupabaseVulnerabilityReevaluationRepository, ConfigService],
       useFactory: (
@@ -263,6 +332,7 @@ export const VULNERABILITY_FEED_PROVIDERS = Symbol(
     VulnerabilityFeedWorker,
     VulnerabilityMatchingWorker,
     VulnerabilityKevAlertWorker,
+    VulnerabilityFindingReviewNotificationWorker,
     VulnerabilityReevaluationWorker,
   ],
 })

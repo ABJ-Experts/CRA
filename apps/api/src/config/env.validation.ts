@@ -283,6 +283,20 @@ export const envSchema = z.object({
     .optional(),
   /** JSON public-key keyring. It is parsed only by the import verifier and never logged. */
   VULNERABILITY_BUNDLE_TRUSTED_KEYRING_JSON: z.string().min(2).optional(),
+  /**
+   * Deployment-owned JSON allowlist of exact reachability adapter/version and
+   * ecosystem/build-format capabilities. Blank is deliberately fail-closed;
+   * the parser is invoked while assembling the integration use case.
+   */
+  VULNERABILITY_REACHABILITY_REGISTERED_ADAPTERS_JSON: z
+    .string()
+    .optional()
+    .default(""),
+  VULNERABILITY_FINDING_REVIEW_NOTIFICATION_LEASE_SECONDS: boundedInt(
+    120,
+    900,
+    "must not exceed 900 seconds",
+  ),
   /** Optional deployment secret. Never persisted or emitted in logs. */
   GITHUB_ADVISORY_TOKEN: z.string().trim().min(1).optional(),
   /**

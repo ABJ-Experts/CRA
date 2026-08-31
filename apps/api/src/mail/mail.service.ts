@@ -244,4 +244,35 @@ export class MailService {
       idempotencyKey,
     );
   }
+
+  /**
+   * The review worker supplies only the material source transition. Evidence
+   * paths, source payloads, and artefact hashes remain in the tenant-scoped
+   * application surface and are never copied into email.
+   */
+  async sendVulnerabilityFindingReviewAlert(
+    to: string,
+    input: Readonly<{
+      advisoryId: string;
+      transition: string;
+      reviewState: string;
+    }>,
+    idempotencyKey: string,
+  ): Promise<void> {
+    const advisorySubject = input.advisoryId.replace(/[\r\n]+/g, " ").trim();
+    const advisoryId = escapeHtml(advisorySubject);
+    const transition = escapeHtml(input.transition.replace(/_/g, " "));
+    const reviewState = escapeHtml(input.reviewState.replace(/_/g, " "));
+    await this.send(
+      to,
+      `Finding review required: ${advisorySubject}`,
+      this.layout(
+        "Vulnerability finding review required",
+        `<p style="color:#4b5058;font-size:14px">Source status for <strong>${advisoryId}</strong> changed to <strong>${transition}</strong>.</p>
+         <p style="color:#4b5058;font-size:14px">Current review state: <strong>${reviewState}</strong>. Review the finding in CRA; this notification does not change the recorded assessment or close the finding.</p>`,
+      ),
+      true,
+      idempotencyKey,
+    );
+  }
 }
