@@ -264,9 +264,7 @@ describe("requestJson", () => {
         path: "/api/v1/test/logo",
         method: "POST",
         fields: { altText: "  Product logo  " },
-        fieldsSchema: z
-          .object({ altText: z.string().trim().min(1) })
-          .strict(),
+        fieldsSchema: z.object({ altText: z.string().trim().min(1) }).strict(),
         file: { name: "logo", value: file },
         schema: successSchema,
         fetcher,
@@ -288,5 +286,57 @@ describe("requestJson", () => {
     expect(body).toBeInstanceOf(FormData);
     expect((body as FormData).get("altText")).toBe("Product logo");
     expect((body as FormData).get("logo")).toBe(file);
+  });
+
+  it("preserves a bounded multipart part collection for signed bundle uploads", async () => {
+    const manifest = new File(["{}"], "manifest.json", {
+      type: "application/json",
+    });
+    const signature = new File(["signature"], "manifest.sig", {
+      type: "application/octet-stream",
+    });
+    const payload = new Blob(["records"], { type: "application/json" });
+    const fetcher = vi.fn(
+      async () => new Response(JSON.stringify({ ok: true }), { status: 200 }),
+    );
+
+    await requestMultipart({
+      path: "/api/v1/test/offline-bundles/preflight",
+      method: "POST",
+      fields: { idempotencyKey: "bundle-1" },
+      fieldsSchema: z.object({ idempotencyKey: z.string().min(1) }).strict(),
+      files: [
+        { name: "manifest", value: manifest },
+        { name: "signature", value: signature },
+        { name: "payloads", value: payload, filename: "nvd.json" },
+      ],
+      schema: successSchema,
+      fetcher,
+    });
+
+    const body = (
+      fetcher.mock.calls as unknown as [string, RequestInit][]
+    )[0]?.[1].body as FormData;
+    expect(body.get("manifest")).toBe(manifest);
+    expect(body.get("signature")).toBe(signature);
+    expect((body.get("payloads") as File).name).toBe("nvd.json");
+  });
+
+  it("rejects ambiguous multipart file input before sending it", async () => {
+    const fetcher = vi.fn();
+    const file = new File(["payload"], "payload.json");
+
+    await expect(
+      requestMultipart({
+        path: "/api/v1/test/offline-bundles/preflight",
+        fields: { idempotencyKey: "bundle-1" },
+        fieldsSchema: z.object({ idempotencyKey: z.string().min(1) }).strict(),
+        file: { name: "manifest", value: file },
+        files: [{ name: "signature", value: file }],
+        schema: successSchema,
+        fetcher,
+      }),
+    ).rejects.toMatchObject({ kind: "invalid_request" });
+    expect(fetcher).not.toHaveBeenCalled();
   });
 });

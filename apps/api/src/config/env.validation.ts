@@ -227,6 +227,31 @@ export const envSchema = z.object({
     7 * 24 * 60 * 60,
     "must not exceed 7 days",
   ),
+  /** CSAF stays disabled without both this index and an explicit host allowlist. */
+  VULNERABILITY_CSAF_INDEX_URL: z
+    .string()
+    .url()
+    .refine((value) => new URL(value).protocol === "https:", "must use HTTPS")
+    .optional(),
+  /** Comma-delimited exact hostnames permitted for the CSAF index and documents. */
+  VULNERABILITY_CSAF_ALLOWED_HOSTS: z
+    .string()
+    .optional()
+    .default("")
+    .refine(
+      (value) =>
+        value === "" ||
+        value
+          .split(",")
+          .every((host) =>
+            /^[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$/i.test(host.trim()),
+          ),
+      "must contain only comma-delimited DNS hostnames",
+    ),
+  VULNERABILITY_CSAF_SCHEDULE_INTERVAL_SECONDS: optionalBoundedInt(
+    7 * 24 * 60 * 60,
+    "must not exceed 7 days",
+  ),
   VULNERABILITY_NVD_STALE_THRESHOLD_SECONDS: optionalBoundedInt(
     14 * 24 * 60 * 60,
     "must not exceed 14 days",
@@ -247,6 +272,17 @@ export const envSchema = z.object({
     14 * 24 * 60 * 60,
     "must not exceed 14 days",
   ),
+  VULNERABILITY_CSAF_STALE_THRESHOLD_SECONDS: optionalBoundedInt(
+    14 * 24 * 60 * 60,
+    "must not exceed 14 days",
+  ),
+  /** Deployment-owned compatibility identity; imports fail closed when absent. */
+  VULNERABILITY_BUNDLE_APPLICATION_VERSION: z
+    .string()
+    .regex(/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/)
+    .optional(),
+  /** JSON public-key keyring. It is parsed only by the import verifier and never logged. */
+  VULNERABILITY_BUNDLE_TRUSTED_KEYRING_JSON: z.string().min(2).optional(),
   /** Optional deployment secret. Never persisted or emitted in logs. */
   GITHUB_ADVISORY_TOKEN: z.string().trim().min(1).optional(),
   /**
@@ -281,6 +317,15 @@ export function validateEnv(raw: Record<string, unknown>): Env {
       .map((i) => `  - ${i.path.join(".") || "(root)"}: ${i.message}`)
       .join("\n");
     throw new Error(`Invalid environment configuration:\n${detail}`);
+  }
+
+  if (
+    parsed.data.VULNERABILITY_CSAF_INDEX_URL !== undefined &&
+    parsed.data.VULNERABILITY_CSAF_ALLOWED_HOSTS.trim() === ""
+  ) {
+    throw new Error(
+      "Invalid environment configuration:\n  - VULNERABILITY_CSAF_ALLOWED_HOSTS: is required when a CSAF index is configured",
+    );
   }
 
   return parsed.data;

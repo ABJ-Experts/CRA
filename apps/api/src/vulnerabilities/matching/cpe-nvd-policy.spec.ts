@@ -76,6 +76,20 @@ describe("CPE/NVD matching policy", () => {
     ).toEqual([]);
   });
 
+  it("retains an unambiguous CSAF CPE assertion as vendor evidence", () => {
+    const evaluations = evaluateCpeNvdComponent(component, [
+      { ...candidate, sourceFeedKey: "vendor_csaf" as const },
+    ]);
+
+    expect(evaluations).toEqual([
+      expect.objectContaining({
+        outcome: "affected",
+        sourceFeedKey: "vendor_csaf",
+        matchMethod: "cpe_nvd",
+      }),
+    ]);
+  });
+
   it("evaluates nested AND/OR, negation, vulnerable flags, and broad-family confidence", () => {
     const nested = {
       ...candidate,

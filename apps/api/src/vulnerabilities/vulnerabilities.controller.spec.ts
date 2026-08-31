@@ -3,6 +3,7 @@ import {
   VulnerabilityFeedUnavailableError,
   VulnerabilityFeedUseCases,
 } from "./application/vulnerability-feed-use-cases";
+import { OfflineBundleImportUseCases } from "./application/offline-bundle-import-use-cases";
 import { VulnerabilityFeedsController } from "./vulnerabilities.controller";
 
 const now = "2026-08-26T00:00:00.000Z";
@@ -65,9 +66,12 @@ describe("VulnerabilityFeedsController", () => {
         nextScheduledAt: null,
       },
     ]);
-    const controller = new VulnerabilityFeedsController({
-      health,
-    } as unknown as VulnerabilityFeedUseCases);
+    const controller = new VulnerabilityFeedsController(
+      {
+        health,
+      } as unknown as VulnerabilityFeedUseCases,
+      {} as OfflineBundleImportUseCases,
+    );
 
     const response = await controller.health();
 
@@ -77,9 +81,12 @@ describe("VulnerabilityFeedsController", () => {
 
   it("maps paginated runs and leaves database paging authoritative", async () => {
     const runs = jest.fn().mockResolvedValue({ rows: [], total: 23 });
-    const controller = new VulnerabilityFeedsController({
-      runs,
-    } as unknown as VulnerabilityFeedUseCases);
+    const controller = new VulnerabilityFeedsController(
+      {
+        runs,
+      } as unknown as VulnerabilityFeedUseCases,
+      {} as OfflineBundleImportUseCases,
+    );
 
     await expect(
       controller.listRuns({
@@ -105,10 +112,13 @@ describe("VulnerabilityFeedsController", () => {
   it("forwards actor-bound sync and replay requests with fresh correlations", async () => {
     const requestSync = jest.fn().mockResolvedValue({ id: "run" });
     const replay = jest.fn().mockResolvedValue({ id: "replay" });
-    const controller = new VulnerabilityFeedsController({
-      requestSync,
-      replay,
-    } as unknown as VulnerabilityFeedUseCases);
+    const controller = new VulnerabilityFeedsController(
+      {
+        requestSync,
+        replay,
+      } as unknown as VulnerabilityFeedUseCases,
+      {} as OfflineBundleImportUseCases,
+    );
     await expect(
       controller.requestSync({ feedKey: "nvd" }, { force: false }, user),
     ).resolves.toEqual({ run: { id: "run" } });
@@ -137,12 +147,15 @@ describe("VulnerabilityFeedsController", () => {
 
   it("returns the existing unavailable envelope for every operational failure", async () => {
     const unavailable = new VulnerabilityFeedUnavailableError();
-    const controller = new VulnerabilityFeedsController({
-      health: jest.fn().mockRejectedValue(unavailable),
-      runs: jest.fn().mockRejectedValue(unavailable),
-      requestSync: jest.fn().mockRejectedValue(unavailable),
-      replay: jest.fn().mockRejectedValue(unavailable),
-    } as unknown as VulnerabilityFeedUseCases);
+    const controller = new VulnerabilityFeedsController(
+      {
+        health: jest.fn().mockRejectedValue(unavailable),
+        runs: jest.fn().mockRejectedValue(unavailable),
+        requestSync: jest.fn().mockRejectedValue(unavailable),
+        replay: jest.fn().mockRejectedValue(unavailable),
+      } as unknown as VulnerabilityFeedUseCases,
+      {} as OfflineBundleImportUseCases,
+    );
 
     await expect(controller.health()).rejects.toMatchObject({ status: 503 });
     await expect(
@@ -161,9 +174,12 @@ describe("VulnerabilityFeedsController", () => {
   });
 
   it("keeps the same safe envelope for an unexpected adapter error", async () => {
-    const controller = new VulnerabilityFeedsController({
-      health: jest.fn().mockRejectedValue(new Error("provider token=secret")),
-    } as unknown as VulnerabilityFeedUseCases);
+    const controller = new VulnerabilityFeedsController(
+      {
+        health: jest.fn().mockRejectedValue(new Error("provider token=secret")),
+      } as unknown as VulnerabilityFeedUseCases,
+      {} as OfflineBundleImportUseCases,
+    );
 
     await expect(controller.health()).rejects.toMatchObject({
       status: 503,

@@ -158,4 +158,34 @@ describe("environment validation", () => {
       "FINDING_PROPAGATION_LEASE_SECONDS: must not exceed 3600 seconds",
     );
   });
+
+  it("requires an exact host allowlist before enabling connected CSAF", () => {
+    expect(() =>
+      validateEnv({
+        ...required,
+        VULNERABILITY_CSAF_INDEX_URL: "https://csaf.vendor.test/index.json",
+      }),
+    ).toThrow("VULNERABILITY_CSAF_ALLOWED_HOSTS: is required");
+
+    expect(
+      validateEnv({
+        ...required,
+        VULNERABILITY_CSAF_INDEX_URL: "https://csaf.vendor.test/index.json",
+        VULNERABILITY_CSAF_ALLOWED_HOSTS: "csaf.vendor.test",
+      }),
+    ).toMatchObject({
+      VULNERABILITY_CSAF_INDEX_URL: "https://csaf.vendor.test/index.json",
+      VULNERABILITY_CSAF_ALLOWED_HOSTS: "csaf.vendor.test",
+    });
+  });
+
+  it("rejects insecure CSAF endpoints and malformed allowlist entries", () => {
+    expect(() =>
+      validateEnv({
+        ...required,
+        VULNERABILITY_CSAF_INDEX_URL: "http://csaf.vendor.test/index.json",
+        VULNERABILITY_CSAF_ALLOWED_HOSTS: "csaf.vendor.test,https://other.test",
+      }),
+    ).toThrow("VULNERABILITY_CSAF_INDEX_URL: must use HTTPS");
+  });
 });

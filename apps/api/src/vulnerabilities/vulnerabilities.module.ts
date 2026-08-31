@@ -16,10 +16,13 @@ import {
 import { VulnerabilityFeedUseCases } from "./application/vulnerability-feed-use-cases";
 import {
   EpssVulnerabilityFeedProvider,
+  CsafVulnerabilityFeedProvider,
   GithubAdvisoryFeedProvider,
   KevVulnerabilityFeedProvider,
   NvdVulnerabilityFeedProvider,
   OsvVulnerabilityFeedProvider,
+  normalizeCsafDocument,
+  parseCsafAllowedHosts,
 } from "./infrastructure/http-vulnerability-feed.providers";
 import { SupabaseVulnerabilityFeedRepository } from "./infrastructure/supabase-vulnerability-feed.repository";
 import { VulnerabilityFeedsController } from "./vulnerabilities.controller";
@@ -49,6 +52,14 @@ import {
   type ReportingObligationPort,
 } from "./application/reporting-obligation.port";
 import { UnavailableReportingObligationAdapter } from "./infrastructure/unavailable-reporting-obligation.adapter";
+import { OfflineBundleImportsController } from "./offline-bundle-imports.controller";
+import {
+  VULNERABILITY_OFFLINE_BUNDLE_REPOSITORY,
+  type VulnerabilityOfflineBundleRepository,
+} from "./application/offline-bundle-import.port";
+import { OfflineBundleImportUseCases } from "./application/offline-bundle-import-use-cases";
+import { OfflineBundlePreflightService } from "./application/offline-bundle-preflight.service";
+import { SupabaseOfflineBundleRepository } from "./infrastructure/supabase-offline-bundle.repository";
 
 export const VULNERABILITY_FEED_PROVIDERS = Symbol(
   "VULNERABILITY_FEED_PROVIDERS",
@@ -58,11 +69,13 @@ export const VULNERABILITY_FEED_PROVIDERS = Symbol(
   imports: [SupabaseModule, MailModule],
   controllers: [
     VulnerabilityFeedsController,
+    OfflineBundleImportsController,
     VulnerabilityMatchingController,
     VulnerabilityEnrichmentController,
   ],
   providers: [
     SupabaseVulnerabilityFeedRepository,
+    SupabaseOfflineBundleRepository,
     SupabaseVulnerabilityMatchingRepository,
     SupabaseVulnerabilityReevaluationRepository,
     SupabaseVulnerabilityEnrichmentRepository,
@@ -78,6 +91,10 @@ export const VULNERABILITY_FEED_PROVIDERS = Symbol(
       useExisting: SupabaseVulnerabilityFeedRepository,
     },
     {
+      provide: VULNERABILITY_OFFLINE_BUNDLE_REPOSITORY,
+      useExisting: SupabaseOfflineBundleRepository,
+    },
+    {
       provide: VULNERABILITY_FEED_PROVIDERS,
       useFactory: (config: ConfigService) => {
         const providers: VulnerabilityFeedProvider[] = [
@@ -88,6 +105,12 @@ export const VULNERABILITY_FEED_PROVIDERS = Symbol(
           new GithubAdvisoryFeedProvider(
             config.get<string>("GITHUB_ADVISORY_TOKEN"),
           ),
+          new CsafVulnerabilityFeedProvider({
+            indexUrl: config.get<string>("VULNERABILITY_CSAF_INDEX_URL"),
+            allowedHosts: parseCsafAllowedHosts(
+              config.get<string>("VULNERABILITY_CSAF_ALLOWED_HOSTS"),
+            ),
+          }),
         ];
         return new Map(
           providers.map((provider) => [provider.feedKey, provider]),
@@ -100,6 +123,33 @@ export const VULNERABILITY_FEED_PROVIDERS = Symbol(
       useFactory: (repository: VulnerabilityMirrorRepository) =>
         new VulnerabilityFeedUseCases(repository),
       inject: [VULNERABILITY_MIRROR_REPOSITORY],
+    },
+    {
+      provide: OfflineBundleImportUseCases,
+      useFactory: (repository: VulnerabilityOfflineBundleRepository) =>
+        new OfflineBundleImportUseCases(repository),
+      inject: [VULNERABILITY_OFFLINE_BUNDLE_REPOSITORY],
+    },
+    {
+      provide: OfflineBundlePreflightService,
+      useFactory: (
+        imports: OfflineBundleImportUseCases,
+        config: ConfigService,
+      ) =>
+        new OfflineBundlePreflightService(imports, {
+          applicationVersion: config.get<string>(
+            "VULNERABILITY_BUNDLE_APPLICATION_VERSION",
+          ),
+          trustedKeyringJson: config.get<string>(
+            "VULNERABILITY_BUNDLE_TRUSTED_KEYRING_JSON",
+          ),
+          normalizeCsafDocuments: ({ document, sourceUrl }) =>
+            normalizeCsafDocument({ document, sourceUrl }).map((record) => ({
+              ...record,
+              feedKey: "vendor_csaf" as const,
+            })),
+        }),
+      inject: [OfflineBundleImportUseCases, ConfigService],
     },
     {
       provide: VULNERABILITY_MATCHING_REPOSITORY,
@@ -139,6 +189,11 @@ export const VULNERABILITY_FEED_PROVIDERS = Symbol(
           githubTokenConfigured: Boolean(
             config.get<string>("GITHUB_ADVISORY_TOKEN"),
           ),
+          csafIndexConfigured:
+            Boolean(config.get<string>("VULNERABILITY_CSAF_INDEX_URL")) &&
+            parseCsafAllowedHosts(
+              config.get<string>("VULNERABILITY_CSAF_ALLOWED_HOSTS"),
+            ).length > 0,
           scheduleOverrides: scheduleOverrides(config),
         }),
       inject: [
@@ -225,6 +280,7 @@ function scheduleOverrides(
     ["cisa_kev", "CISA_KEV"],
     ["epss", "EPSS"],
     ["github_advisory", "GITHUB_ADVISORY"],
+    ["vendor_csaf", "CSAF"],
   ];
   return new Map(
     names.map(([feedKey, name]) => [

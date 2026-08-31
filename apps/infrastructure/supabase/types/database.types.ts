@@ -8837,11 +8837,13 @@ export type Database = {
           feed_key: string
           freshness_state: string
           last_attempt_at: string | null
+          last_bundle_payload_sha256: string | null
           last_complete_snapshot_at: string | null
           last_failure_at: string | null
           last_failure_code: string | null
           last_failure_reason: string | null
           last_record_count: number
+          last_source_snapshot_at: string | null
           last_success_at: string | null
           lease_expires_at: string | null
           lease_owner: string | null
@@ -8862,11 +8864,13 @@ export type Database = {
           feed_key: string
           freshness_state?: string
           last_attempt_at?: string | null
+          last_bundle_payload_sha256?: string | null
           last_complete_snapshot_at?: string | null
           last_failure_at?: string | null
           last_failure_code?: string | null
           last_failure_reason?: string | null
           last_record_count?: number
+          last_source_snapshot_at?: string | null
           last_success_at?: string | null
           lease_expires_at?: string | null
           lease_owner?: string | null
@@ -8887,11 +8891,13 @@ export type Database = {
           feed_key?: string
           freshness_state?: string
           last_attempt_at?: string | null
+          last_bundle_payload_sha256?: string | null
           last_complete_snapshot_at?: string | null
           last_failure_at?: string | null
           last_failure_code?: string | null
           last_failure_reason?: string | null
           last_record_count?: number
+          last_source_snapshot_at?: string | null
           last_success_at?: string | null
           lease_expires_at?: string | null
           lease_owner?: string | null
@@ -8908,6 +8914,7 @@ export type Database = {
       vulnerability_feed_events: {
         Row: {
           actor_user_id: string | null
+          bundle_import_id: string | null
           correlation_id: string | null
           created_at: string
           detail: Json
@@ -8918,6 +8925,7 @@ export type Database = {
         }
         Insert: {
           actor_user_id?: string | null
+          bundle_import_id?: string | null
           correlation_id?: string | null
           created_at?: string
           detail?: Json
@@ -8928,6 +8936,7 @@ export type Database = {
         }
         Update: {
           actor_user_id?: string | null
+          bundle_import_id?: string | null
           correlation_id?: string | null
           created_at?: string
           detail?: Json
@@ -8942,6 +8951,13 @@ export type Database = {
             columns: ["actor_user_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vulnerability_feed_events_bundle_import_fkey"
+            columns: ["bundle_import_id"]
+            isOneToOne: false
+            referencedRelation: "vulnerability_offline_bundle_imports"
             referencedColumns: ["id"]
           },
           {
@@ -8962,30 +8978,43 @@ export type Database = {
       }
       vulnerability_feed_promotion_snapshots: {
         Row: {
+          bundle_import_id: string | null
           completed_at: string
           created_at: string
           feed_key: string
           promotion_sequence: number
           run_id: string
           source_record_count: number
+          source_snapshot_at: string | null
         }
         Insert: {
+          bundle_import_id?: string | null
           completed_at: string
           created_at?: string
           feed_key: string
           promotion_sequence: number
           run_id: string
           source_record_count: number
+          source_snapshot_at?: string | null
         }
         Update: {
+          bundle_import_id?: string | null
           completed_at?: string
           created_at?: string
           feed_key?: string
           promotion_sequence?: number
           run_id?: string
           source_record_count?: number
+          source_snapshot_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "vulnerability_feed_promotion_snapshots_bundle_import_fkey"
+            columns: ["bundle_import_id"]
+            isOneToOne: false
+            referencedRelation: "vulnerability_offline_bundle_imports"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "vulnerability_feed_promotion_snapshots_feed_key_fkey"
             columns: ["feed_key"]
@@ -9111,6 +9140,8 @@ export type Database = {
       vulnerability_feed_sync_runs: {
         Row: {
           attempt_count: number
+          bundle_import_id: string | null
+          bundle_payload_sha256: string | null
           checkpoint: Json
           completed_at: string | null
           correlation_id: string
@@ -9134,6 +9165,8 @@ export type Database = {
           replayed_by: string | null
           requested_by: string | null
           run_kind: string
+          source_schema_version: string | null
+          source_snapshot_at: string | null
           staging_complete: boolean
           started_at: string | null
           status: string
@@ -9143,6 +9176,8 @@ export type Database = {
         }
         Insert: {
           attempt_count?: number
+          bundle_import_id?: string | null
+          bundle_payload_sha256?: string | null
           checkpoint?: Json
           completed_at?: string | null
           correlation_id: string
@@ -9166,6 +9201,8 @@ export type Database = {
           replayed_by?: string | null
           requested_by?: string | null
           run_kind: string
+          source_schema_version?: string | null
+          source_snapshot_at?: string | null
           staging_complete?: boolean
           started_at?: string | null
           status?: string
@@ -9175,6 +9212,8 @@ export type Database = {
         }
         Update: {
           attempt_count?: number
+          bundle_import_id?: string | null
+          bundle_payload_sha256?: string | null
           checkpoint?: Json
           completed_at?: string | null
           correlation_id?: string
@@ -9198,6 +9237,8 @@ export type Database = {
           replayed_by?: string | null
           requested_by?: string | null
           run_kind?: string
+          source_schema_version?: string | null
+          source_snapshot_at?: string | null
           staging_complete?: boolean
           started_at?: string | null
           status?: string
@@ -9206,6 +9247,13 @@ export type Database = {
           upstream_etag?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "vulnerability_feed_sync_runs_bundle_import_fkey"
+            columns: ["bundle_import_id"]
+            isOneToOne: false
+            referencedRelation: "vulnerability_offline_bundle_imports"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "vulnerability_feed_sync_runs_feed_key_fkey"
             columns: ["feed_key"]
@@ -9325,6 +9373,7 @@ export type Database = {
           match_method: string
           organization_id: string
           proposed_state: Json
+          reconciliation_conflict: Json
           reevaluation_state: string
           release_id: string
           source_feed_key: string
@@ -9362,6 +9411,7 @@ export type Database = {
           match_method: string
           organization_id: string
           proposed_state?: Json
+          reconciliation_conflict?: Json
           reevaluation_state?: string
           release_id: string
           source_feed_key: string
@@ -9399,6 +9449,7 @@ export type Database = {
           match_method?: string
           organization_id?: string
           proposed_state?: Json
+          reconciliation_conflict?: Json
           reevaluation_state?: string
           release_id?: string
           source_feed_key?: string
@@ -9796,6 +9847,8 @@ export type Database = {
           status: string
           trigger_key: string
           updated_at: string
+          vendor_csaf_mirror_captured_at: string | null
+          vendor_csaf_promotion_sequence: number
         }
         Insert: {
           checkpoint_component_id?: string | null
@@ -9828,6 +9881,8 @@ export type Database = {
           status?: string
           trigger_key: string
           updated_at?: string
+          vendor_csaf_mirror_captured_at?: string | null
+          vendor_csaf_promotion_sequence?: number
         }
         Update: {
           checkpoint_component_id?: string | null
@@ -9860,6 +9915,8 @@ export type Database = {
           status?: string
           trigger_key?: string
           updated_at?: string
+          vendor_csaf_mirror_captured_at?: string | null
+          vendor_csaf_promotion_sequence?: number
         }
         Relationships: [
           {
@@ -9990,6 +10047,80 @@ export type Database = {
           total_cases?: number
         }
         Relationships: []
+      }
+      vulnerability_offline_bundle_imports: {
+        Row: {
+          actor_user_id: string
+          bundle_id: string
+          bundle_version: string
+          completed_at: string | null
+          correlation_id: string
+          created_at: string
+          failure_code: string | null
+          failure_reason: string | null
+          id: string
+          idempotency_key: string
+          manifest_sha256: string
+          payload_inventory: Json
+          promotion_started_at: string | null
+          signed_manifest: Json
+          signing_key_id: string
+          staging_worker_id: string
+          status: string
+          updated_at: string
+          verification_receipt: Json
+        }
+        Insert: {
+          actor_user_id: string
+          bundle_id: string
+          bundle_version: string
+          completed_at?: string | null
+          correlation_id: string
+          created_at?: string
+          failure_code?: string | null
+          failure_reason?: string | null
+          id?: string
+          idempotency_key: string
+          manifest_sha256: string
+          payload_inventory: Json
+          promotion_started_at?: string | null
+          signed_manifest: Json
+          signing_key_id: string
+          staging_worker_id: string
+          status?: string
+          updated_at?: string
+          verification_receipt: Json
+        }
+        Update: {
+          actor_user_id?: string
+          bundle_id?: string
+          bundle_version?: string
+          completed_at?: string | null
+          correlation_id?: string
+          created_at?: string
+          failure_code?: string | null
+          failure_reason?: string | null
+          id?: string
+          idempotency_key?: string
+          manifest_sha256?: string
+          payload_inventory?: Json
+          promotion_started_at?: string | null
+          signed_manifest?: Json
+          signing_key_id?: string
+          staging_worker_id?: string
+          status?: string
+          updated_at?: string
+          verification_receipt?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vulnerability_offline_bundle_imports_actor_user_id_fkey"
+            columns: ["actor_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       vulnerability_reevaluation_jobs: {
         Row: {
@@ -10153,6 +10284,7 @@ export type Database = {
           normalized_payload: Json
           promoted_at: string
           raw_payload: Json
+          reconciliation_detail: Json
           record_sha256: string
           record_state: string
           run_id: string
@@ -10166,6 +10298,7 @@ export type Database = {
           normalized_payload: Json
           promoted_at?: string
           raw_payload: Json
+          reconciliation_detail?: Json
           record_sha256: string
           record_state: string
           run_id: string
@@ -10179,6 +10312,7 @@ export type Database = {
           normalized_payload?: Json
           promoted_at?: string
           raw_payload?: Json
+          reconciliation_detail?: Json
           record_sha256?: string
           record_state?: string
           run_id?: string
@@ -11133,6 +11267,17 @@ export type Database = {
           p_worker_id: string
         }
         Returns: {
+          outcome: string
+        }[]
+      }
+      confirm_vulnerability_offline_bundle_import: {
+        Args: {
+          p_actor_user_id: string
+          p_idempotency_key: string
+          p_import_id: string
+        }
+        Returns: {
+          import: Json
           outcome: string
         }[]
       }
@@ -12757,6 +12902,13 @@ export type Database = {
           result: Json
         }[]
       }
+      get_vulnerability_offline_bundle_import: {
+        Args: { p_import_id: string }
+        Returns: {
+          import: Json
+          outcome: string
+        }[]
+      }
       is_iso_3166_alpha_2: { Args: { p_country: string }; Returns: boolean }
       is_login_locked: { Args: { p_email: string }; Returns: string }
       link_external_identity_atomic: {
@@ -13209,6 +13361,32 @@ export type Database = {
         }
         Returns: {
           component: Json
+        }[]
+      }
+      list_vulnerability_match_csaf_cpe_candidates: {
+        Args: {
+          p_cpe_part: string
+          p_cpe_product: string
+          p_cpe_vendor: string
+          p_job_id: string
+          p_lease_owner: string
+          p_organization_id: string
+        }
+        Returns: {
+          candidate: Json
+        }[]
+      }
+      list_vulnerability_match_csaf_purl_candidates: {
+        Args: {
+          p_job_id: string
+          p_lease_owner: string
+          p_organization_id: string
+          p_purl_name: string
+          p_purl_namespace: string
+          p_purl_type: string
+        }
+        Returns: {
+          candidate: Json
         }[]
       }
       list_vulnerability_match_nvd_candidates: {
@@ -13968,6 +14146,24 @@ export type Database = {
           report: Json
         }[]
       }
+      persist_vulnerability_csaf_reevaluation_page_atomic: {
+        Args: {
+          p_expected_checkpoint_version: number
+          p_is_final: boolean
+          p_job_id: string
+          p_lease_owner: string
+          p_next_occurrence_id: string
+          p_organization_id: string
+          p_transitions: Json
+        }
+        Returns: {
+          checkpoint_version: number
+          created_count: number
+          outcome: string
+          processed_count: number
+          review_required_count: number
+        }[]
+      }
       persist_vulnerability_match_page_atomic: {
         Args: {
           p_expected_checkpoint_version: number
@@ -14036,6 +14232,25 @@ export type Database = {
           outcome: string
           processed_count: number
           review_required_count: number
+        }[]
+      }
+      preflight_vulnerability_offline_bundle_import: {
+        Args: {
+          p_actor_user_id: string
+          p_bundle_id: string
+          p_bundle_version: string
+          p_correlation_id: string
+          p_idempotency_key: string
+          p_manifest: Json
+          p_manifest_sha256: string
+          p_payloads: Json
+          p_signing_key_id: string
+          p_staging_worker_id: string
+          p_verification_receipt: Json
+        }
+        Returns: {
+          import: Json
+          outcome: string
         }[]
       }
       preview_field_authority_policy: {
@@ -14264,6 +14479,14 @@ export type Database = {
           generated_document_id: string
           outcome: string
         }[]
+      }
+      reconcile_vendor_csaf_source_record: {
+        Args: {
+          p_canonical_vulnerability_id: string
+          p_reconciliation_detail: Json
+          p_source_record_id: string
+        }
+        Returns: string
       }
       reconcile_vulnerability_kev_alerts_for_release: {
         Args: { p_organization_id: string; p_release_id: string }
@@ -15669,6 +15892,10 @@ export type Database = {
       }
       vulnerability_feed_health_json: {
         Args: { p_feed_key?: string }
+        Returns: Json
+      }
+      vulnerability_offline_bundle_import_json: {
+        Args: { p_import_id: string }
         Returns: Json
       }
       withdraw_product_security_update_artifact_atomic: {

@@ -5,6 +5,7 @@ import {
   Controller,
   Get,
   HttpCode,
+  NotFoundException,
   Param,
   Post,
   Query,
@@ -14,11 +15,14 @@ import {
   replayVulnerabilitySyncInputSchema,
   replayVulnerabilitySyncParamsSchema,
   triggerVulnerabilitySyncInputSchema,
+  vulnerabilityCsafReconciliationDetailResponseSchema,
+  vulnerabilityCsafReconciliationParamsSchema,
   vulnerabilityFeedHealthResponseSchema,
   vulnerabilityFeedParamsSchema,
   vulnerabilitySyncRunListQuerySchema,
   vulnerabilitySyncRunListResponseSchema,
   vulnerabilitySyncRunResponseSchema,
+  type VulnerabilityCsafReconciliationParams,
   type ReplayVulnerabilitySyncInput,
   type ReplayVulnerabilitySyncParams,
   type TriggerVulnerabilitySyncInput,
@@ -37,12 +41,19 @@ import {
   VulnerabilityFeedUnavailableError,
   VulnerabilityFeedUseCases,
 } from "./application/vulnerability-feed-use-cases";
+import {
+  OfflineBundleImportUnavailableError,
+  OfflineBundleImportUseCases,
+} from "./application/offline-bundle-import-use-cases";
 
 /** Global reference-data operations; owner satisfies the admin minimum role. */
 @Controller("vulnerability-feeds")
 @RequireRole("admin")
 export class VulnerabilityFeedsController {
-  constructor(private readonly feeds: VulnerabilityFeedUseCases) {}
+  constructor(
+    private readonly feeds: VulnerabilityFeedUseCases,
+    private readonly offlineBundles: OfflineBundleImportUseCases,
+  ) {}
 
   @Get("health")
   @ZodResponse(vulnerabilityFeedHealthResponseSchema)
@@ -132,6 +143,29 @@ export class VulnerabilityFeedsController {
     return { run };
   }
 
+  @Get("csaf-reconciliations/:canonicalId")
+  @ZodResponse(vulnerabilityCsafReconciliationDetailResponseSchema)
+  async csafReconciliation(
+    @Param(zodParams(vulnerabilityCsafReconciliationParamsSchema))
+    params: VulnerabilityCsafReconciliationParams,
+  ) {
+    try {
+      const reconciliation = await this.offlineBundles.csafReconciliation(
+        params.canonicalId,
+      );
+      if (reconciliation === null) {
+        throw new NotFoundException({
+          message: "CSAF reconciliation detail was not found.",
+          code: "not_found",
+        });
+      }
+      return { reconciliation };
+    } catch (error) {
+      if (error instanceof NotFoundException) throw error;
+      throw this.offlineBundleFailure(error);
+    }
+  }
+
   private httpFailure(error: unknown): ServiceUnavailableException {
     if (error instanceof VulnerabilityFeedUnavailableError) {
       return new ServiceUnavailableException({
@@ -141,6 +175,19 @@ export class VulnerabilityFeedsController {
     }
     return new ServiceUnavailableException({
       message: "Vulnerability feed operation could not be completed.",
+      code: "unavailable",
+    });
+  }
+
+  private offlineBundleFailure(error: unknown): ServiceUnavailableException {
+    if (error instanceof OfflineBundleImportUnavailableError) {
+      return new ServiceUnavailableException({
+        message: "Offline bundle import could not be completed.",
+        code: "unavailable",
+      });
+    }
+    return new ServiceUnavailableException({
+      message: "Offline bundle import could not be completed.",
       code: "unavailable",
     });
   }

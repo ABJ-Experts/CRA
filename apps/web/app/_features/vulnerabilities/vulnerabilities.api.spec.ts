@@ -5,7 +5,8 @@ import { vulnerabilityFeedsApi } from "./vulnerabilities.api";
 const OBSERVED_AT = "2026-08-26T12:00:00.000Z";
 
 function feed(
-  feedKey: "nvd" | "osv" | "cisa_kev" | "epss" | "github_advisory",
+  feedKey:
+    "nvd" | "osv" | "cisa_kev" | "epss" | "github_advisory" | "vendor_csaf",
 ) {
   return {
     feedKey,
@@ -53,7 +54,7 @@ const run = {
 describe("vulnerabilityFeedsApi", () => {
   afterEach(() => vi.unstubAllGlobals());
 
-  it("uses the authenticated local health boundary and parses all five mirrors", async () => {
+  it("uses the authenticated local health boundary and parses every mirror", async () => {
     const fetcher = vi.fn(
       async () =>
         new Response(
@@ -65,6 +66,7 @@ describe("vulnerabilityFeedsApi", () => {
               feed("cisa_kev"),
               feed("epss"),
               feed("github_advisory"),
+              feed("vendor_csaf"),
             ],
           }),
           { status: 200 },
@@ -141,5 +143,94 @@ describe("vulnerabilityFeedsApi", () => {
         body: JSON.stringify({ reason: "Provider recovered." }),
       },
     );
+  });
+
+  it("submits the complete signed bundle as parsed multipart parts", async () => {
+    const response = {
+      import: {
+        id: "00000000-0000-4000-8000-000000000005",
+        status: "awaiting_confirmation",
+        bundleSha256: "a".repeat(64),
+        manifest: {
+          format: "cra.vulnerability.offline-bundle",
+          schemaVersion: "1.0",
+          bundleVersion: "1.0.0",
+          createdAt: OBSERVED_AT,
+          signingKeyId: "offline-key-2026",
+          compatibility: {
+            minimumApplicationVersion: "1.0.0",
+            maximumApplicationVersionExclusive: "2.0.0",
+          },
+          payloads: [
+            {
+              feedKey: "vendor_csaf",
+              path: "vendor/csaf.json",
+              sha256: "b".repeat(64),
+              byteLength: 12,
+              schemaVersion: "2.0",
+              sourceSnapshotAt: OBSERVED_AT,
+            },
+          ],
+        },
+        signature: {
+          algorithm: "Ed25519",
+          keyId: "offline-key-2026",
+          status: "verified",
+          verifiedAt: OBSERVED_AT,
+        },
+        compatibility: { status: "compatible", reason: null },
+        estimatedChanges: {
+          recordsToCreate: 0,
+          recordsToUpdate: 0,
+          recordsToWithdraw: 0,
+        },
+        sourceSnapshotAt: OBSERVED_AT,
+        sourceSnapshotAgeSeconds: 0,
+        failureCode: null,
+        createdAt: OBSERVED_AT,
+        updatedAt: OBSERVED_AT,
+        completedAt: null,
+      },
+    };
+    const fetcher = vi.fn(
+      async () => new Response(JSON.stringify(response), { status: 202 }),
+    );
+    vi.stubGlobal("fetch", fetcher);
+
+    await expect(
+      vulnerabilityFeedsApi.preflightOfflineBundle(
+        {
+          manifest: new File(["{}"], "manifest.json"),
+          signature: new File(["sig"], "manifest.sig"),
+          payloads: [
+            {
+              file: new File(["payload"], "csaf.json"),
+              manifestPath: "vendor/csaf.json",
+            },
+          ],
+        },
+        { idempotencyKey: "00000000-0000-4000-8000-000000000006" },
+      ),
+    ).resolves.toEqual(response);
+
+    const calls = fetcher.mock.calls as unknown as [string, RequestInit][];
+    const body = calls[0]?.[1].body as FormData;
+    expect(calls[0]?.[0]).toBe(
+      "/api/v1/vulnerability-feeds/offline-bundles/preflight",
+    );
+    expect(body.get("idempotencyKey")).toBe(
+      "00000000-0000-4000-8000-000000000006",
+    );
+    expect((body.get("payloads") as File).name).toBe("vendor/csaf.json");
+  });
+
+  it("rejects malformed offline import identifiers before requesting status", () => {
+    const fetcher = vi.fn();
+    vi.stubGlobal("fetch", fetcher);
+
+    expect(() =>
+      vulnerabilityFeedsApi.offlineBundleImport("not-a-uuid"),
+    ).toThrow("The offline bundle import identifier is invalid.");
+    expect(fetcher).not.toHaveBeenCalled();
   });
 });

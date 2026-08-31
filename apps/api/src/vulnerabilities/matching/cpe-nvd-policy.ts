@@ -45,7 +45,8 @@ export type NvdCpeCandidate = Readonly<{
   sourceRecordVersionId: string;
   vulnerabilityId: string;
   canonicalAdvisoryId: string;
-  sourceFeedKey: "nvd";
+  /** CSAF can provide the same unambiguous CPE predicate without replacing NVD provenance. */
+  sourceFeedKey: "nvd" | "vendor_csaf";
   configuration: NvdConfigurationNode;
   configurationPath?: string;
 }>;
@@ -532,7 +533,7 @@ function candidateEvidence(
     vulnerabilityId: candidate.vulnerabilityId,
     canonicalAdvisoryId: candidate.canonicalAdvisoryId,
     matchMethod: "cpe_nvd",
-    sourceFeedKey: "nvd",
+    sourceFeedKey: candidate.sourceFeedKey,
     comparatorName: comparatorForComponent(component.ecosystem),
     comparatorVersion: CPE_NVD_CONFIDENCE_TABLE_VERSION,
     evaluatedComponentValue: version,

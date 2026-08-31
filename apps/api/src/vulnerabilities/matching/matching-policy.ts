@@ -57,7 +57,11 @@ export type OsvCandidate = Readonly<{
   sourceRecordVersionId: string;
   vulnerabilityId: string;
   canonicalAdvisoryId: string;
-  sourceFeedKey: "osv";
+  /**
+   * CSAF assertions use the same deterministic PURL range policy, but retain
+   * their vendor source identity so they cannot overwrite public provenance.
+   */
+  sourceFeedKey: "osv" | "vendor_csaf";
   ecosystem: string | null;
   purlType: string | null;
   purlNamespace: string | null;
@@ -92,7 +96,7 @@ export type MatchEvaluationDraft = Readonly<{
   sourceRecordVersionId?: string;
   vulnerabilityId?: string;
   canonicalAdvisoryId?: string;
-  sourceFeedKey?: "osv" | "nvd";
+  sourceFeedKey?: "osv" | "nvd" | "vendor_csaf";
   matchMethod: "purl_osv" | "cpe_nvd";
   comparatorName?: VersionComparatorId;
   comparatorVersion?: string;
@@ -178,7 +182,8 @@ function evaluateCandidate(
 ): MatchEvaluationDraft {
   const base = candidateEvidence(component, candidate, comparator, now);
   if (
-    candidate.sourceFeedKey !== "osv" ||
+    (candidate.sourceFeedKey !== "osv" &&
+      candidate.sourceFeedKey !== "vendor_csaf") ||
     normalizeEcosystem(candidate.ecosystem) !== ecosystem ||
     candidate.purlType !== parsed.type ||
     (candidate.purlNamespace ?? null) !== parsed.namespace ||
@@ -300,7 +305,7 @@ function candidateEvidence(
     sourceRecordVersionId: candidate.sourceRecordVersionId,
     vulnerabilityId: candidate.vulnerabilityId,
     canonicalAdvisoryId: candidate.canonicalAdvisoryId,
-    sourceFeedKey: "osv",
+    sourceFeedKey: candidate.sourceFeedKey,
     matchMethod: "purl_osv",
     comparatorName: comparator,
     comparatorVersion: COMPARATOR_REGISTRY_VERSION,

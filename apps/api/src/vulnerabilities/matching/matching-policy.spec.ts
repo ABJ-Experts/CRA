@@ -38,6 +38,20 @@ describe("evaluatePurlOsvComponent", () => {
     ]);
   });
 
+  it("retains CSAF as source-specific PURL evidence without changing the PURL policy", () => {
+    const evaluations = evaluatePurlOsvComponent(component, [
+      { ...candidate, sourceFeedKey: "vendor_csaf" as const },
+    ]);
+
+    expect(evaluations).toEqual([
+      expect.objectContaining({
+        outcome: "affected",
+        sourceFeedKey: "vendor_csaf",
+        matchMethod: "purl_osv",
+      }),
+    ]);
+  });
+
   it("treats invalid PURLs, ecosystem conflicts, and unsupported event limits as reviewable", () => {
     expect(
       evaluatePurlOsvComponent(
