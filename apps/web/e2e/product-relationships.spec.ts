@@ -15,6 +15,27 @@ type LegalEntitiesResponse = Readonly<{
 type CreatedProduct = Readonly<{ product: Readonly<{ id: string }> }>;
 type CreatedRelease = Readonly<{ release: Readonly<{ id: string }> }>;
 
+async function openRelationshipManager(page: Page): Promise<void> {
+  await page
+    .getByRole("button", { name: "Relationships", exact: true })
+    .click();
+  const dialog = page.getByRole("dialog", {
+    name: "Relationships",
+    exact: true,
+  });
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole("tab", { name: "Record change", exact: true }).click();
+}
+
+async function openRelationshipOverview(page: Page): Promise<void> {
+  await page
+    .getByRole("button", { name: "Relationships", exact: true })
+    .click();
+  await expect(
+    page.getByRole("dialog", { name: "Relationships", exact: true }),
+  ).toBeVisible();
+}
+
 async function onboardRunOrganization(
   page: Page,
   email: string,
@@ -177,6 +198,7 @@ test("a run-scoped owner records baseline, variant, component preview, and a rej
     await expect(
       page.getByRole("heading", { name: "E2E Relationship Base", exact: true }),
     ).toBeVisible();
+    await openRelationshipManager(page);
     await expect(
       page.getByRole("combobox", {
         name: "Relationship release",
@@ -245,17 +267,20 @@ test("a run-scoped owner records baseline, variant, component preview, and a rej
       .getByRole("button", { name: "Record component link", exact: true })
       .click();
     await expect(page.getByText("Component link recorded.")).toBeVisible();
+    await page.reload();
+    await openRelationshipOverview(page);
     await expect(
       page
         .getByRole("region", {
           name: "Relationship propagation events",
           exact: true,
         })
-        .getByText("scheduled", { exact: true })
+        .getByText(/^(scheduled|processing|completed)$/)
         .first(),
     ).toBeVisible();
 
     await page.goto(`/products/${componentProductId}`);
+    await openRelationshipManager(page);
     await page
       .getByLabel("Relationship source", { exact: true })
       .fill("E2E architecture record");

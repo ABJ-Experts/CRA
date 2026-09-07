@@ -27,6 +27,7 @@ import {
   useSbomValidationReportQuery,
 } from "../../_features/sboms/sboms.queries";
 import { SbomNormalizedDocumentsPanel } from "./sbom-normalized-documents-panel";
+import { ManualVulnerabilityFindingSection } from "./manual-vulnerability-finding-section";
 
 type ReleaseOption = Readonly<{ id: string; label: string; version: string }>;
 type UploadPhase =
@@ -220,6 +221,7 @@ export function SbomIntakeSection({
   canView,
   canUpload,
   canReplay,
+  canCreateManualFindings = false,
   enabled,
 }: Readonly<{
   productId: string;
@@ -227,6 +229,7 @@ export function SbomIntakeSection({
   canView: boolean;
   canUpload: boolean;
   canReplay: boolean;
+  canCreateManualFindings?: boolean;
   enabled: boolean;
 }>) {
   const [releaseId, setReleaseId] = useState(releases[0]?.id ?? "");
@@ -624,6 +627,10 @@ export function SbomIntakeSection({
             productId={productId}
             releaseId={releaseId}
             enabled={enabled}
+          />
+          <ManualVulnerabilityFindingSection
+            releaseId={releaseId}
+            canCreate={canCreateManualFindings}
           />
         </div>
       )}

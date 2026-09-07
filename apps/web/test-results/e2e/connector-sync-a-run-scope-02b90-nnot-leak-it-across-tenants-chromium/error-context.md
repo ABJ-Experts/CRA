@@ -1,0 +1,176 @@
+# Instructions
+
+- Following Playwright test failed.
+- Explain why, be concise, respect Playwright best practices.
+- Provide a snippet of code with the fix, if possible.
+
+# Test info
+
+- Name: connector-sync.spec.ts >> a run-scoped owner completes connector sync, observes retry safety, and cannot leak it across tenants
+- Location: e2e/connector-sync.spec.ts:137:1
+
+# Error details
+
+```
+Test timeout of 300000ms exceeded.
+```
+
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - complementary [ref=e4]:
+      - generic [ref=e5]:
+        - generic [ref=e6]:
+          - link "CRA Sentinel" [ref=e7] [cursor=pointer]:
+            - /url: /dashboard
+            - generic [ref=e8]: C
+            - text: CRA Sentinel
+          - button "Collapse sidebar" [ref=e9] [cursor=pointer]
+        - navigation "Main" [ref=e12]:
+          - generic [ref=e13]:
+            - list [ref=e15]:
+              - listitem [ref=e16]:
+                - link "Dashboard" [ref=e17] [cursor=pointer]:
+                  - /url: /dashboard
+              - listitem [ref=e25]:
+                - link "Management" [ref=e26] [cursor=pointer]:
+                  - /url: /management
+              - listitem [ref=e32]:
+                - link "Organization" [ref=e33] [cursor=pointer]:
+                  - /url: /organization
+              - listitem [ref=e40]:
+                - link "Products" [ref=e41] [cursor=pointer]:
+                  - /url: /products
+              - listitem [ref=e48]:
+                - link "Connectors" [ref=e49] [cursor=pointer]:
+                  - /url: /connectors
+            - generic [ref=e56]:
+              - paragraph [ref=e57]: Account & access
+              - list [ref=e58]:
+                - listitem [ref=e59]:
+                  - button "Profile" [ref=e60] [cursor=pointer]
+                  - generic:
+                    - list:
+                      - listitem [ref=e68]:
+                        - link "Account" [ref=e69] [cursor=pointer]:
+                          - /url: /account
+                      - listitem [ref=e71]:
+                        - link "Security" [ref=e72] [cursor=pointer]:
+                          - /url: /security
+                - listitem [ref=e74]:
+                  - button "Authorization" [ref=e75] [cursor=pointer]
+                  - generic:
+                    - list:
+                      - listitem [ref=e83]:
+                        - link "Roles" [ref=e84] [cursor=pointer]:
+                          - /url: /roles
+                      - listitem [ref=e86]:
+                        - link "Permissions" [ref=e87] [cursor=pointer]:
+                          - /url: /permissions
+        - button "Sign out" [ref=e91] [cursor=pointer]
+    - generic [ref=e96]:
+      - banner [ref=e97]:
+        - navigation "Breadcrumb" [ref=e99]:
+          - list [ref=e100]:
+            - listitem [ref=e101]:
+              - link "Dashboard" [ref=e102] [cursor=pointer]:
+                - /url: /dashboard
+            - listitem [ref=e103]
+            - listitem [ref=e106]:
+              - generic [ref=e107]: 348c3e7f 86b9 450d A066 7545b8df2dbd
+        - generic [ref=e108]:
+          - button "Search" [ref=e109] [cursor=pointer]
+          - button "Notifications, 7 unread" [ref=e113] [cursor=pointer]
+          - generic [ref=e118]:
+            - generic [ref=e119]: AF
+            - 'img "Ada Foster: online" [ref=e121]'
+      - main [ref=e122]:
+        - generic [ref=e123]:
+          - generic [ref=e124]:
+            - generic [ref=e125]:
+              - heading "E2E Reference Connector 0" [level=1] [ref=e126]
+              - paragraph [ref=e127]: reference_conformance · adapter 1.0.0
+            - button "Export diagnostics" [ref=e130] [cursor=pointer]
+          - generic [ref=e131]:
+            - heading "Connection" [level=2] [ref=e133]
+            - generic [ref=e135]:
+              - generic [ref=e136]:
+                - generic [ref=e137]: Connection successful
+                - button "Test connection" [ref=e139] [cursor=pointer]
+              - generic [ref=e140]:
+                - generic [ref=e141]:
+                  - text: Display name
+                  - textbox "Display name" [ref=e142]: E2E Reference Connector 0
+                - generic [ref=e143]:
+                  - text: Commit policy
+                  - combobox "Commit policy" [ref=e144] [cursor=pointer]:
+                    - option "Manual commit" [selected]
+                    - option "Auto commit"
+                - generic [ref=e145]:
+                  - text: Adapter version
+                  - textbox "Adapter version Fixed at creation." [disabled] [ref=e146]: 1.0.0
+                  - generic [ref=e147]: Fixed at creation.
+                - generic [ref=e148]:
+                  - text: Mapping version
+                  - textbox "Mapping version" [ref=e149]: reference-conformance-v1
+                - generic [ref=e150]:
+                  - text: Connection config (JSON, no secrets)
+                  - textbox "Connection config (JSON, no secrets)" [ref=e151]: "{ \"scopeFilter\": { \"scenario\": \"create\" }, \"defaultOwnerBinding\": { \"legalEntityId\": \"24575ac7-9c57-4f8b-9321-75c643f1351d\", \"responsibleOwnerId\": \"551affb3-d1fb-42b2-ac19-da64ba1d7ba1\" } }"
+                - button "Save connection" [ref=e153] [cursor=pointer]
+              - generic [ref=e154]:
+                - heading "Secret" [level=3] [ref=e155]
+                - generic [ref=e156]: Configured
+                - generic [ref=e159]:
+                  - generic [ref=e160]:
+                    - text: Rotate secret
+                    - textbox "Rotate secret" [ref=e161]
+                  - button "Rotate secret" [ref=e162] [cursor=pointer]
+          - generic [ref=e163]:
+            - heading "Mapping & authority policy" [level=2] [ref=e165]
+            - generic [ref=e167]:
+              - paragraph [ref=e168]: No field authority policies have been configured.
+              - generic [ref=e169]:
+                - generic [ref=e170]:
+                  - text: Entity type
+                  - combobox "Entity type" [ref=e171] [cursor=pointer]:
+                    - option "Product" [selected]
+                    - option "Release"
+                - generic [ref=e172]:
+                  - text: Field name
+                  - combobox "Field name" [ref=e173] [cursor=pointer]:
+                    - option "name" [selected]
+                    - option "internalCode"
+                    - option "productType"
+                    - option "description"
+                    - option "parentExternalId"
+                - generic [ref=e174]:
+                  - text: Authority policy
+                  - combobox "Authority policy" [ref=e175] [cursor=pointer]:
+                    - option "CRA authoritative" [selected]
+                    - option "External authoritative"
+                    - option "Newest, with review"
+                    - option "Manual only"
+                - generic [ref=e176]:
+                  - checkbox "Protected field" [ref=e177]
+                  - text: Protected field
+                - generic [ref=e178]:
+                  - button "Preview impact" [ref=e179] [cursor=pointer]
+                  - button "Save" [disabled] [ref=e180]
+          - generic [ref=e181]:
+            - heading "Sync runs" [level=2] [ref=e183]
+            - generic [ref=e185]:
+              - alert [ref=e186]: Configure every required field authority policy before starting a sync.
+              - generic [ref=e187]:
+                - button "Start dry run (incremental)" [disabled] [ref=e188]
+                - button "Start dry run (full)" [disabled] [ref=e189]
+          - generic [ref=e190]:
+            - heading "Conflicts" [level=2] [ref=e192]
+            - paragraph [ref=e194]: No sync run has run yet.
+          - generic [ref=e195]:
+            - heading "Dead letters" [level=2] [ref=e197]
+            - paragraph [ref=e199]: No failed sync runs.
+  - button "Open Next.js Dev Tools" [ref=e205] [cursor=pointer]
+  - alert [ref=e209]
+```

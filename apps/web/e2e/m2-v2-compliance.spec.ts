@@ -152,18 +152,22 @@ async function gotoProductDetail(
   await expect(
     page.getByRole("heading", { name: productName, exact: true }),
   ).toBeVisible();
-  await expect(
-    page.getByRole("heading", {
-      name: "Substantial modifications",
-      exact: true,
-    }),
-  ).toBeVisible();
-  await expect(
-    page.getByRole("heading", {
-      name: "Security update artifacts",
-      exact: true,
-    }),
-  ).toBeVisible();
+}
+
+async function openWorkbench(
+  page: Page,
+  panel: "Modifications" | "Security artifacts",
+  tab?: "Record assessment" | "Reserve artifact",
+): Promise<void> {
+  await page.getByRole("button", { name: panel, exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: panel, exact: true });
+  await expect(dialog).toBeVisible();
+  if (tab) await dialog.getByRole("tab", { name: tab, exact: true }).click();
+}
+
+async function closeWorkbench(page: Page): Promise<void> {
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog")).toHaveCount(0);
 }
 
 test("a run-scoped owner reviews a flagged assessment and publishes a cleared security update artifact", async ({
@@ -187,6 +191,7 @@ test("a run-scoped owner reviews a flagged assessment and publishes a cleared se
     );
     const page = await context.newPage();
     await gotoProductDetail(page, productId, productName);
+    await openWorkbench(page, "Modifications", "Record assessment");
     await expect(
       page.getByRole("combobox", { name: "Affected release", exact: true }),
     ).toHaveValue(releaseId);
@@ -271,6 +276,10 @@ test("a run-scoped owner reviews a flagged assessment and publishes a cleared se
     });
 
     await page
+      .getByRole("tab", { name: "History", exact: true })
+      .click();
+
+    await page
       .getByRole("combobox", {
         name: "Authoritative determination",
         exact: true,
@@ -312,6 +321,9 @@ test("a run-scoped owner reviews a flagged assessment and publishes a cleared se
     await expect(
       page.getByText(/Authoritative determination: Substantial/),
     ).toBeVisible();
+
+    await closeWorkbench(page);
+    await openWorkbench(page, "Security artifacts", "Reserve artifact");
 
     const bytes = Buffer.from(
       "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=",
@@ -359,6 +371,7 @@ test("a run-scoped owner reviews a flagged assessment and publishes a cleared se
     await expect(
       page.getByText("Upload finalized and queued for integrity review."),
     ).toBeVisible();
+    await page.getByRole("tab", { name: "Artifacts", exact: true }).click();
     await expect(
       page.getByText("Verified", {
         exact: true,
@@ -482,6 +495,7 @@ test("a run-scoped owner sees the flagged badge, reviews assessment history, rej
     );
     const page = await context.newPage();
     await gotoProductDetail(page, productId, productName);
+    await openWorkbench(page, "Modifications", "Record assessment");
 
     // --- Create + review to "substantial": the flagged badge must appear. ---
     await page
@@ -554,6 +568,10 @@ test("a run-scoped owner sees the flagged badge, reviews assessment history, rej
       .click();
     const createdAssessment =
       (await (await assessmentCreated).json()) as AssessmentResponse;
+
+    await page
+      .getByRole("tab", { name: "History", exact: true })
+      .click();
 
     await page
       .getByRole("combobox", {
@@ -639,6 +657,7 @@ test("a run-scoped owner sees the flagged badge, reviews assessment history, rej
     await expect(
       page.getByRole("heading", { name: productName, exact: true }),
     ).toBeVisible();
+    await openWorkbench(page, "Modifications");
     const currentAssessmentRow = page
       .locator("li")
       .filter({ hasText: `${runLabel} trust-boundary update` })
@@ -666,6 +685,8 @@ test("a run-scoped owner sees the flagged badge, reviews assessment history, rej
     ).toBeVisible();
 
     // --- Reserve a second artifact and reject it during quarantine review. ---
+    await closeWorkbench(page);
+    await openWorkbench(page, "Security artifacts", "Reserve artifact");
     const rejectBytes = Buffer.from(
       "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=",
       "base64",
@@ -704,6 +725,9 @@ test("a run-scoped owner sees the flagged badge, reviews assessment history, rej
     const rejectReservation = (await (
       await rejectReservationResponse
     ).json()) as ArtifactReservationResponse;
+
+    await closeWorkbench(page);
+    await openWorkbench(page, "Security artifacts");
 
     const rejectArtifactRow = page
       .locator("li")

@@ -9,6 +9,7 @@ import {
 import { Button } from "@repo/ui/button";
 import { Checkbox } from "@repo/ui/checkbox";
 import { Input } from "@repo/ui/input";
+import { CalendarDays, Plus, X } from "lucide-react";
 import { useState } from "react";
 
 import {
@@ -67,13 +68,6 @@ function toDraft(values: OrganizationSettingsValues | null): SettingsDraft {
   };
 }
 
-function listDraft(value: string): string[] {
-  return value
-    .split(",")
-    .map((entry) => entry.trim())
-    .filter(Boolean);
-}
-
 export function OrganizationSettingsSection({
   catalog,
   values,
@@ -91,6 +85,7 @@ export function OrganizationSettingsSection({
 }) {
   const updateSettings = useUpdateOrganizationSettingsMutation();
   const [draft, setDraft] = useState<SettingsDraft>(() => toDraft(values));
+  const [holidayToAdd, setHolidayToAdd] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [conflicted, setConflicted] = useState(false);
   const canSetMfaDate = readiness.safeToEnforce;
@@ -276,19 +271,110 @@ export function OrganizationSettingsSection({
             ))}
           </div>
         </fieldset>
-        <Input
-          value={draft.holidays.join(", ")}
-          onChange={(event) =>
-            setDraft((current) => ({
-              ...current,
-              holidays: listDraft(event.target.value),
-            }))
-          }
-          disabled={!canEdit || updateSettings.isPending}
-          label="Organization holidays"
-          helperText="Use comma-separated ISO dates, such as 2026-12-25."
-          placeholder="2026-12-25, 2027-01-01"
-        />
+        <section
+          aria-labelledby="organization-holidays-heading"
+          className="rounded-xl border border-border bg-surface p-4"
+        >
+          <div className="flex items-start gap-3">
+            <span
+              aria-hidden="true"
+              className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-accent-subtle text-active-500"
+            >
+              <CalendarDays className="size-4" strokeWidth={1.5} />
+            </span>
+            <div className="min-w-0">
+              <h3
+                id="organization-holidays-heading"
+                className="text-subhead-semibold text-fg"
+              >
+                Organization holidays
+              </h3>
+              <p className="mt-1 text-caption-1-regular text-fg-muted">
+                Add the dates your organization is unavailable.
+              </p>
+            </div>
+          </div>
+          <div className="mt-4 grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+            <Input
+              type="date"
+              value={holidayToAdd}
+              onChange={(event) => setHolidayToAdd(event.target.value)}
+              disabled={!canEdit || updateSettings.isPending}
+              label="Organization holidays"
+              hideLabel
+              wrapperClassName="min-w-0"
+            />
+            <Button
+              type="button"
+              className="w-full sm:w-auto"
+              startIcon={<Plus aria-hidden="true" />}
+              disabled={
+                !canEdit ||
+                updateSettings.isPending ||
+                holidayToAdd.length === 0
+              }
+              onClick={() => {
+                setDraft((current) => ({
+                  ...current,
+                  holidays: current.holidays.includes(holidayToAdd)
+                    ? current.holidays
+                    : [...current.holidays, holidayToAdd].sort(),
+                }));
+                setHolidayToAdd("");
+              }}
+            >
+              Add holiday
+            </Button>
+          </div>
+          <div className="mt-4 border-t border-border pt-3">
+            <p className="text-caption-1-semibold text-fg-muted">
+              Selected dates
+            </p>
+            {draft.holidays.length > 0 ? (
+              <ul
+                aria-label="Selected organization holidays"
+                className="mt-2 flex flex-wrap gap-2"
+              >
+                {draft.holidays.map((holiday) => (
+                  <li
+                    key={holiday}
+                    className="flex items-center gap-1 rounded-lg border border-border bg-canvas py-1 pr-1 pl-2 text-caption-1-regular text-fg"
+                  >
+                    <CalendarDays
+                      aria-hidden="true"
+                      className="size-3.5 text-fg-muted"
+                      strokeWidth={1.5}
+                    />
+                    <time dateTime={holiday}>{holiday}</time>
+                    <Button
+                      type="button"
+                      variant="invisible"
+                      tone="grey"
+                      size="sm"
+                      iconOnly
+                      aria-label={`Remove holiday ${holiday}`}
+                      disabled={!canEdit || updateSettings.isPending}
+                      onClick={() =>
+                        setDraft((current) => ({
+                          ...current,
+                          holidays: current.holidays.filter(
+                            (currentHoliday) => currentHoliday !== holiday,
+                          ),
+                        }))
+                      }
+                    >
+                      <X aria-hidden="true" />
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="mt-2 text-caption-1-regular text-fg-muted">
+                No dates added yet.
+              </p>
+            )}
+          </div>
+        </section>
         <Input
           type="date"
           value={draft.mfaEnforcementDate ?? ""}

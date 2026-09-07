@@ -9796,6 +9796,116 @@ export type Database = {
           },
         ]
       }
+      vulnerability_manual_finding_commands: {
+        Row: {
+          actor_user_id: string
+          created_at: string
+          finding_id: string
+          idempotency_key: string
+          organization_id: string
+          payload_digest: string
+        }
+        Insert: {
+          actor_user_id: string
+          created_at?: string
+          finding_id: string
+          idempotency_key: string
+          organization_id: string
+          payload_digest: string
+        }
+        Update: {
+          actor_user_id?: string
+          created_at?: string
+          finding_id?: string
+          idempotency_key?: string
+          organization_id?: string
+          payload_digest?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vulnerability_manual_finding_co_organization_id_finding_id_fkey"
+            columns: ["organization_id", "finding_id"]
+            isOneToOne: false
+            referencedRelation: "vulnerability_manual_findings"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "vulnerability_manual_finding_commands_actor_user_id_fkey"
+            columns: ["actor_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vulnerability_manual_finding_commands_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vulnerability_manual_findings: {
+        Row: {
+          advisory_id: string
+          created_at: string
+          created_by: string
+          evidence: string
+          id: string
+          organization_id: string
+          rationale: string
+          release_id: string
+          source: string
+          source_reference: string
+        }
+        Insert: {
+          advisory_id: string
+          created_at?: string
+          created_by: string
+          evidence: string
+          id?: string
+          organization_id: string
+          rationale: string
+          release_id: string
+          source: string
+          source_reference: string
+        }
+        Update: {
+          advisory_id?: string
+          created_at?: string
+          created_by?: string
+          evidence?: string
+          id?: string
+          organization_id?: string
+          rationale?: string
+          release_id?: string
+          source?: string
+          source_reference?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vulnerability_manual_findings_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vulnerability_manual_findings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vulnerability_manual_findings_organization_id_release_id_fkey"
+            columns: ["organization_id", "release_id"]
+            isOneToOne: false
+            referencedRelation: "product_releases"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
       vulnerability_match_evaluations: {
         Row: {
           affected_range: Json | null
@@ -11985,6 +12095,23 @@ export type Database = {
         Returns: {
           outcome: string
           request: Json
+        }[]
+      }
+      create_vulnerability_manual_finding_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_advisory_id: string
+          p_evidence: string
+          p_idempotency_key: string
+          p_organization_id: string
+          p_rationale: string
+          p_release_id: string
+          p_source: string
+          p_source_reference: string
+        }
+        Returns: {
+          finding: Json
+          outcome: string
         }[]
       }
       deactivate_organization_atomic: {
@@ -14296,6 +14423,15 @@ export type Database = {
       }
       m4_03_kev_alert_json: {
         Args: { p_alert_id: string; p_organization_id: string }
+        Returns: Json
+      }
+      m4_07_reachability_result_json: {
+        Args: { p_result_id: string }
+        Returns: Json
+      }
+      m4_07_review_event_json: { Args: { p_event_id: string }; Returns: Json }
+      m4_manual_finding_json: {
+        Args: { p_finding_id: string; p_organization_id: string }
         Returns: Json
       }
       mark_mfa_factors_removed: {

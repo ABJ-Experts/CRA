@@ -68,6 +68,13 @@
   [role="button"]:not(:disabled) {
     cursor: pointer;
   }
+
+  /* Native selects and file controls are interactive affordances too. Keep
+   * their cursor aligned with the shared Radix Select trigger and buttons. */
+  select:not(:disabled),
+  input[type="file"]:not(:disabled) {
+    cursor: pointer;
+  }
 }
 
 /* ---------------------------------------------------------------------------

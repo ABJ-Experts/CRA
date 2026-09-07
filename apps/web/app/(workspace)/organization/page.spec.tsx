@@ -648,6 +648,33 @@ describe("OrganizationAdministrationPage", () => {
     );
   });
 
+  it("adds organization holidays from a date picker without comma-separated entry", async () => {
+    updateSettings.mutateAsync.mockResolvedValue(SETTINGS);
+    render(<OrganizationAdministrationPage />);
+    await openOrganizationWorkspace("Organization settings");
+
+    const holiday = await screen.findByLabelText("Organization holidays", {
+      selector: "input",
+    });
+    fireEvent.change(holiday, { target: { value: "2027-01-01" } });
+    fireEvent.click(screen.getByRole("button", { name: "Add holiday" }));
+
+    expect(screen.getByText("2027-01-01")).toBeTruthy();
+    expect(screen.queryByText(/comma-separated ISO dates/i)).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Save settings" }));
+
+    await waitFor(() =>
+      expect(updateSettings.mutateAsync).toHaveBeenCalledWith(
+        expect.objectContaining({
+          values: expect.objectContaining({
+            holidays: ["2026-12-25", "2027-01-01"],
+          }),
+        }),
+      ),
+    );
+  });
+
   it("hides mutation controls from read-only viewers while preserving read state", async () => {
     session.value = {
       ...session.value,

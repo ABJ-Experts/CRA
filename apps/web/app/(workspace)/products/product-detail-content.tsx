@@ -957,6 +957,10 @@ export function ProductDetailContent({ productId }: { productId: string }) {
               canView={canViewSboms}
               canUpload={canUploadSboms && !product.data.product.archivedAt}
               canReplay={role === "owner"}
+              canCreateManualFindings={
+                permissions.can_edit_findings === true &&
+                !product.data.product.archivedAt
+              }
               enabled={enabled}
             />
           ) : null}

@@ -41,6 +41,13 @@ import { SupabaseVulnerabilityFindingReviewNotificationQueue } from "./infrastru
 import { MailVulnerabilityFindingReviewNotifierAdapter } from "./infrastructure/mail-vulnerability-finding-review-notifier.adapter";
 import { VulnerabilityMatchingController } from "./vulnerability-matching.controller";
 import { VulnerabilityEnrichmentController } from "./vulnerability-enrichment.controller";
+import { VulnerabilityManualFindingsController } from "./vulnerability-manual-findings.controller";
+import { SupabaseVulnerabilityManualFindingsRepository } from "./infrastructure/supabase-vulnerability-manual-findings.repository";
+import {
+  VULNERABILITY_MANUAL_FINDINGS_REPOSITORY,
+  type VulnerabilityManualFindingsRepository,
+} from "./application/vulnerability-manual-findings.port";
+import { VulnerabilityManualFindingsUseCases } from "./application/vulnerability-manual-findings-use-cases";
 import {
   VULNERABILITY_ENRICHMENT_REPOSITORY,
   type VulnerabilityEnrichmentRepository,
@@ -88,6 +95,7 @@ export const VULNERABILITY_FEED_PROVIDERS = Symbol(
     OfflineBundleImportsController,
     VulnerabilityMatchingController,
     VulnerabilityEnrichmentController,
+    VulnerabilityManualFindingsController,
   ],
   providers: [
     SupabaseVulnerabilityFeedRepository,
@@ -96,6 +104,7 @@ export const VULNERABILITY_FEED_PROVIDERS = Symbol(
     SupabaseVulnerabilityReachabilityIngestionRepository,
     SupabaseVulnerabilityReevaluationRepository,
     SupabaseVulnerabilityEnrichmentRepository,
+    SupabaseVulnerabilityManualFindingsRepository,
     SupabaseVulnerabilityKevAlertQueue,
     MailVulnerabilityKevAlertNotifierAdapter,
     SupabaseVulnerabilityFindingReviewNotificationQueue,
@@ -211,6 +220,16 @@ export const VULNERABILITY_FEED_PROVIDERS = Symbol(
     {
       provide: VULNERABILITY_ENRICHMENT_REPOSITORY,
       useExisting: SupabaseVulnerabilityEnrichmentRepository,
+    },
+    {
+      provide: VULNERABILITY_MANUAL_FINDINGS_REPOSITORY,
+      useExisting: SupabaseVulnerabilityManualFindingsRepository,
+    },
+    {
+      provide: VulnerabilityManualFindingsUseCases,
+      inject: [VULNERABILITY_MANUAL_FINDINGS_REPOSITORY],
+      useFactory: (repository: VulnerabilityManualFindingsRepository) =>
+        new VulnerabilityManualFindingsUseCases(repository),
     },
     {
       provide: VulnerabilityEnrichmentUseCases,

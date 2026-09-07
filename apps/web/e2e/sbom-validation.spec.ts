@@ -72,6 +72,70 @@ type SbomSourceHistoryResponse = Readonly<{
   }>[];
 }>;
 
+test("owner records a release-scoped manual vulnerability finding", async ({
+  browser,
+}, testInfo) => {
+  const runId = `manual-${Date.now()}-${testInfo.parallelIndex}`;
+  const context = await browser.newContext({
+    baseURL: WEB_ORIGIN,
+    viewport: DESKTOP_VIEWPORT,
+  });
+
+  try {
+    expect((await signIn(context.request, OWNER_EMAIL)).status()).toBe(200);
+    const session = await currentSession(context.request);
+    const legalEntityId = await defaultLegalEntityId(context.request);
+    const product = await createProduct(context.request, {
+      runId,
+      ownerId: session.user.id,
+      legalEntityId,
+    });
+    const release = await createRelease(
+      context.request,
+      product.product.id,
+      runId,
+    );
+    const page = await context.newPage();
+    await page.goto(`/products/${product.product.id}`);
+    await expect(
+      page.getByRole("heading", {
+        name: "Manual vulnerability finding",
+        exact: true,
+      }),
+    ).toBeVisible();
+    await page
+      .getByLabel("Advisory or case ID", { exact: true })
+      .fill("CVE-2026-10001");
+    await page
+      .getByLabel("Source reference", { exact: true })
+      .fill(`Support case ${runId}`);
+    await page
+      .getByLabel("Evidence", { exact: true })
+      .fill("The customer provided a reproducible affected-version log.");
+    await page
+      .getByLabel("Reason for retaining this finding", { exact: true })
+      .fill("The report requires a security review.");
+    const response = page.waitForResponse(
+      (candidate) =>
+        new URL(candidate.url()).pathname ===
+          "/api/v1/vulnerability-manual-findings" &&
+        candidate.request().method() === "POST",
+    );
+    await page
+      .getByRole("button", { name: "Record manual finding", exact: true })
+      .click();
+    expect((await response).status()).toBe(201);
+    await expect(page.getByRole("status")).toContainText(
+      "CVE-2026-10001 was recorded for review.",
+    );
+    await expect(
+      page.getByRole("combobox", { name: "Release", exact: true }),
+    ).toContainText(release.release.label);
+  } finally {
+    await context.close();
+  }
+});
+
 test("owner uploads valid and invalid SBOMs, filters diagnostics, and corrects immutable evidence", async ({
   browser,
 }, testInfo) => {
@@ -108,6 +172,32 @@ test("owner uploads valid and invalid SBOMs, filters diagnostics, and corrects i
     await expect(
       page.getByRole("combobox", { name: "Release", exact: true }),
     ).toContainText(release.release.label);
+
+    await page
+      .getByLabel("Advisory or case ID", { exact: true })
+      .fill("CVE-2026-10001");
+    await page
+      .getByLabel("Source reference", { exact: true })
+      .fill(`Support case ${runId}`);
+    await page
+      .getByLabel("Evidence", { exact: true })
+      .fill("The customer provided a reproducible affected-version log.");
+    await page
+      .getByLabel("Reason for retaining this finding", { exact: true })
+      .fill("The report requires a security review.");
+    const manualFindingResponse = page.waitForResponse(
+      (response) =>
+        new URL(response.url()).pathname ===
+          "/api/v1/vulnerability-manual-findings" &&
+        response.request().method() === "POST",
+    );
+    await page
+      .getByRole("button", { name: "Record manual finding", exact: true })
+      .click();
+    expect((await manualFindingResponse).status()).toBe(201);
+    await expect(page.getByRole("status")).toContainText(
+      "was recorded for review",
+    );
 
     const valid = await uploadFixture(page, {
       runId,
