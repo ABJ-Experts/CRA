@@ -250,6 +250,16 @@ export const exportSourceExclusions: Readonly<Record<string, string>> =
       "Candidate and review evidence is a deployment-local derived projection pinned to a global mirror snapshot, not a portable tenant authority record.",
     vulnerability_kev_alerts:
       "KEV alerts are a deployment-local derived escalation ledger pinned to global feed versions and include notification lease state; their safe human actions remain in exported audit facts rather than portable mirror-bound rows.",
+    vulnerability_manual_finding_commands:
+      "Idempotency keys and request digests are request-security material.",
+    vulnerability_manual_findings:
+      "Manual-finding records are assessed evidence owned by the finding workflow; that workflow has no portable restore contract yet, so exporting partial references would be misleading.",
+    vulnerability_triage_saved_views:
+      "Shared queue filters are operational UI preferences that can contain mutable product, release, and user references; they are intentionally not portable tenant evidence.",
+    vulnerability_triage_saved_view_defaults:
+      "Per-user defaults are operational UI preferences and are not portable tenant evidence.",
+    vulnerability_triage_saved_view_commands:
+      "Idempotency keys and request digests are request-security material.",
   });
 
 const crcTable = (() => {

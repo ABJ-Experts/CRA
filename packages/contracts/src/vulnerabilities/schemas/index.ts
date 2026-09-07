@@ -4,3 +4,4 @@ export * from "./vulnerability-matching.schema.js";
 export * from "./vulnerability-manual-finding.schema.js";
 export * from "./vulnerability-offline-bundle.schema.js";
 export * from "./vulnerability-reachability.schema.js";
+export * from "./vulnerability-triage.schema.js";

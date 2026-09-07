@@ -312,6 +312,20 @@ describe("presets", () => {
           "can_edit_findings",
         ),
       ).toBe(false);
+      expect(
+        hasPermission(
+          DEFAULT_PERMISSIONS_BY_ROLE[baseRole],
+          "can_manage_finding_views",
+        ),
+      ).toBe(false);
+    }
+    for (const baseRole of ["owner", "admin"] as const) {
+      expect(
+        hasPermission(
+          DEFAULT_PERMISSIONS_BY_ROLE[baseRole],
+          "can_manage_finding_views",
+        ),
+      ).toBe(true);
     }
   });
 

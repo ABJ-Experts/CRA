@@ -30,6 +30,7 @@ describe("menu key parity", () => {
       "management",
       "organization",
       "products",
+      "findings",
       "connectors",
       "profile",
       "profile.account",

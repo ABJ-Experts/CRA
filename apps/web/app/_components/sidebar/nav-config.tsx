@@ -4,6 +4,7 @@ import {
   LayoutGrid,
   Package,
   Settings2,
+  ShieldAlert,
   ShieldCheck,
   UserRound,
   type LucideIcon,
@@ -57,6 +58,12 @@ export const NAV: NavSection[] = [
         href: "/products",
         icon: Package,
         menuKey: "products",
+      },
+      {
+        label: "Findings",
+        href: "/findings",
+        icon: ShieldAlert,
+        menuKey: "findings",
       },
       {
         label: "Connectors",

@@ -10749,6 +10749,161 @@ export type Database = {
           },
         ]
       }
+      vulnerability_triage_saved_view_commands: {
+        Row: {
+          actor_user_id: string
+          created_at: string
+          id: string
+          idempotency_key: string
+          operation: string
+          organization_id: string
+          request_digest: string
+          result: Json
+        }
+        Insert: {
+          actor_user_id: string
+          created_at?: string
+          id?: string
+          idempotency_key: string
+          operation: string
+          organization_id: string
+          request_digest: string
+          result: Json
+        }
+        Update: {
+          actor_user_id?: string
+          created_at?: string
+          id?: string
+          idempotency_key?: string
+          operation?: string
+          organization_id?: string
+          request_digest?: string
+          result?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vulnerability_triage_saved_view_commands_actor_user_id_fkey"
+            columns: ["actor_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vulnerability_triage_saved_view_commands_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vulnerability_triage_saved_view_defaults: {
+        Row: {
+          organization_id: string
+          saved_view_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          organization_id: string
+          saved_view_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          organization_id?: string
+          saved_view_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vulnerability_triage_saved_vi_organization_id_saved_view_i_fkey"
+            columns: ["organization_id", "saved_view_id"]
+            isOneToOne: false
+            referencedRelation: "vulnerability_triage_saved_views"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "vulnerability_triage_saved_view_defaults_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vulnerability_triage_saved_view_defaults_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vulnerability_triage_saved_views: {
+        Row: {
+          created_at: string
+          created_by: string
+          filters: Json
+          id: string
+          name: string
+          organization_id: string
+          sort_key: string
+          sort_order: string
+          updated_at: string
+          updated_by: string
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          filters?: Json
+          id?: string
+          name: string
+          organization_id: string
+          sort_key?: string
+          sort_order?: string
+          updated_at?: string
+          updated_by: string
+          version?: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          filters?: Json
+          id?: string
+          name?: string
+          organization_id?: string
+          sort_key?: string
+          sort_order?: string
+          updated_at?: string
+          updated_by?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vulnerability_triage_saved_views_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vulnerability_triage_saved_views_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vulnerability_triage_saved_views_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       m2_product_relationship_operations: {
@@ -11776,6 +11931,22 @@ export type Database = {
           override: Json
         }[]
       }
+      create_finding_saved_view_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_correlation_id?: string
+          p_filters: Json
+          p_idempotency_key: string
+          p_name: string
+          p_order: string
+          p_organization_id: string
+          p_sort: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
       create_or_resume_sbom_document_normalization_atomic: {
         Args: {
           p_document_id: string
@@ -12130,6 +12301,20 @@ export type Database = {
           outcome: string
         }[]
       }
+      delete_finding_saved_view_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_correlation_id?: string
+          p_expected_version: number
+          p_idempotency_key: string
+          p_organization_id: string
+          p_saved_view_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
       describe_product_relationship_graph_event_atomic: {
         Args: {
           p_event_id: string
@@ -12141,6 +12326,10 @@ export type Database = {
           event: Json
           outcome: string
         }[]
+      }
+      digest: {
+        Args: { p_algorithm: string; p_value: string }
+        Returns: string
       }
       download_product_security_update_artifact_atomic: {
         Args: {
@@ -12744,6 +12933,17 @@ export type Database = {
         Returns: {
           outcome: string
           summary: Json
+        }[]
+      }
+      get_finding_triage_detail: {
+        Args: {
+          p_actor_user_id: string
+          p_finding_id: string
+          p_organization_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
         }[]
       }
       get_m2_member_states: {
@@ -13447,6 +13647,28 @@ export type Database = {
         Returns: {
           outcome: string
           policies: Json
+        }[]
+      }
+      list_finding_saved_views: {
+        Args: { p_actor_user_id: string; p_organization_id: string }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      list_finding_triage_queue: {
+        Args: {
+          p_actor_user_id: string
+          p_cursor?: string
+          p_filters?: Json
+          p_limit?: number
+          p_order?: string
+          p_organization_id: string
+          p_sort?: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
         }[]
       }
       list_product_import_jobs: {
@@ -14434,6 +14656,27 @@ export type Database = {
       m4_07_review_event_json: { Args: { p_event_id: string }; Returns: Json }
       m4_manual_finding_json: {
         Args: { p_finding_id: string; p_organization_id: string }
+        Returns: Json
+      }
+      m5_triage_active_member: {
+        Args: { p_actor_user_id: string; p_organization_id: string }
+        Returns: boolean
+      }
+      m5_triage_command_result: {
+        Args: {
+          p_actor_user_id: string
+          p_digest: string
+          p_idempotency_key: string
+          p_operation: string
+          p_organization_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      m5_triage_saved_view_json: {
+        Args: { p_organization_id: string; p_saved_view_id: string }
         Returns: Json
       }
       mark_mfa_factors_removed: {
@@ -15983,6 +16226,19 @@ export type Database = {
           outcome: string
         }[]
       }
+      set_finding_saved_view_default_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_correlation_id?: string
+          p_idempotency_key: string
+          p_organization_id: string
+          p_saved_view_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
       set_vulnerability_feed_configuration: {
         Args: {
           p_disabled_reason?: string
@@ -16144,6 +16400,24 @@ export type Database = {
           job_id: string
           outcome: string
           source: Json
+        }[]
+      }
+      update_finding_saved_view_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_correlation_id?: string
+          p_expected_version: number
+          p_filters: Json
+          p_idempotency_key: string
+          p_name: string
+          p_order: string
+          p_organization_id: string
+          p_saved_view_id: string
+          p_sort: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
         }[]
       }
       update_organization_legal_entity_atomic: {

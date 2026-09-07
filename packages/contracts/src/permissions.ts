@@ -55,6 +55,7 @@ export const PERMISSION_ACTIONS = [
   "delete",
   "export",
   "approve",
+  "manage",
 ] as const;
 export type PermissionAction = (typeof PERMISSION_ACTIONS)[number];
 
@@ -80,6 +81,10 @@ export const PERMISSION_MATRIX = {
   // Finding evidence/triage remains owned by its module. The product detail
   // receives only a separately-authorized aggregate impact summary.
   findings: ["view", "edit"],
+  // Shared triage views are a separate, additive capability. Keeping it out
+  // of `findings.edit` prevents a future assessment-write grant from also
+  // authorizing changes to organization-wide view definitions.
+  finding_views: ["manage"],
   // Logistics
   fleet: ["view", "create", "edit", "delete"],
   routes: ["view", "create", "edit", "delete"],
@@ -219,6 +224,7 @@ export const IMPLICATIONS: Readonly<
   delete: ["view"],
   export: ["view"],
   approve: ["view"],
+  manage: [],
 };
 
 /** Parse `can_<action>_<module>` back into its parts. */
@@ -226,8 +232,8 @@ export function parsePermissionKey(key: PermissionKey): {
   action: PermissionAction;
   module: PermissionModule;
 } {
-  // Module names contain no underscore, so the last segment is the module and
-  // the middle is the action. Asserted by a spec.
+  // Actions contain no underscore, so the first separator marks the module.
+  // Modules may be multiword (`finding_views`).
   const withoutPrefix = key.slice("can_".length);
   const separator = withoutPrefix.indexOf("_");
   const action = withoutPrefix.slice(0, separator) as PermissionAction;

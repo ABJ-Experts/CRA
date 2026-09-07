@@ -21,6 +21,13 @@ import {
 } from "./findings.controller";
 import { FindingsService } from "./findings.service";
 import { SupabaseFindingPropagationRepository } from "./infrastructure/supabase-finding-propagation.repository";
+import { VulnerabilityTriageController } from "./triage/vulnerability-triage.controller";
+import {
+  VULNERABILITY_TRIAGE_REPOSITORY,
+  type VulnerabilityTriageRepository,
+} from "./triage/application/vulnerability-triage.port";
+import { VulnerabilityTriageUseCases } from "./triage/application/vulnerability-triage-use-cases";
+import { SupabaseVulnerabilityTriageRepository } from "./triage/infrastructure/supabase-vulnerability-triage.repository";
 import {
   FindingPropagationWorker,
   type FindingPropagationWorkerRepository,
@@ -31,9 +38,21 @@ import {
   controllers: [
     FindingPropagationSourcesController,
     ProductFindingImpactSummaryController,
+    VulnerabilityTriageController,
   ],
   providers: [
     SupabaseFindingPropagationRepository,
+    SupabaseVulnerabilityTriageRepository,
+    {
+      provide: VULNERABILITY_TRIAGE_REPOSITORY,
+      useExisting: SupabaseVulnerabilityTriageRepository,
+    },
+    {
+      provide: VulnerabilityTriageUseCases,
+      inject: [VULNERABILITY_TRIAGE_REPOSITORY],
+      useFactory: (repository: VulnerabilityTriageRepository) =>
+        new VulnerabilityTriageUseCases(repository),
+    },
     {
       provide: FINDING_PROPAGATION_REPOSITORY,
       useExisting: SupabaseFindingPropagationRepository,
