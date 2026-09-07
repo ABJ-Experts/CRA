@@ -4,7 +4,6 @@ import { Button } from "@repo/ui/button";
 import { Input } from "@repo/ui/input";
 import { Tag } from "@repo/ui/tag";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import Image from "next/image";
 import { useState } from "react";
 
 import { SectionCard } from "../../dashboard/_components/dashboard-chrome";
@@ -147,13 +146,15 @@ export default function SecurityPage() {
               </p>
 
               {step.qrCode ? (
-                /* The API returns a data: URI, so no external request is made. */
-                <Image
+                // This is an API-generated data URI, not a remote image. `next/image`
+                // rejects this SVG form at runtime, whereas a native image renders it
+                // without a network request.
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
                   src={step.qrCode}
                   alt="Two-factor setup QR code"
                   width={180}
                   height={180}
-                  unoptimized
                   className="rounded-r12 border border-border bg-white p-2"
                 />
               ) : null}

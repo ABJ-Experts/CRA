@@ -21,6 +21,13 @@ import {
 } from "./findings.controller";
 import { FindingsService } from "./findings.service";
 import { SupabaseFindingPropagationRepository } from "./infrastructure/supabase-finding-propagation.repository";
+import { VulnerabilityAssessmentController } from "./assessments/vulnerability-assessment.controller";
+import {
+  VULNERABILITY_ASSESSMENT_REPOSITORY,
+  type VulnerabilityAssessmentRepository,
+} from "./assessments/application/vulnerability-assessment.port";
+import { VulnerabilityAssessmentUseCases } from "./assessments/application/vulnerability-assessment-use-cases";
+import { SupabaseVulnerabilityAssessmentRepository } from "./assessments/infrastructure/supabase-vulnerability-assessment.repository";
 import { VulnerabilityTriageController } from "./triage/vulnerability-triage.controller";
 import {
   VULNERABILITY_TRIAGE_REPOSITORY,
@@ -38,11 +45,25 @@ import {
   controllers: [
     FindingPropagationSourcesController,
     ProductFindingImpactSummaryController,
+    // This controller must precede triage's GET :findingId route so the
+    // policy static path cannot be parsed as a finding ID.
+    VulnerabilityAssessmentController,
     VulnerabilityTriageController,
   ],
   providers: [
     SupabaseFindingPropagationRepository,
+    SupabaseVulnerabilityAssessmentRepository,
     SupabaseVulnerabilityTriageRepository,
+    {
+      provide: VULNERABILITY_ASSESSMENT_REPOSITORY,
+      useExisting: SupabaseVulnerabilityAssessmentRepository,
+    },
+    {
+      provide: VulnerabilityAssessmentUseCases,
+      inject: [VULNERABILITY_ASSESSMENT_REPOSITORY],
+      useFactory: (repository: VulnerabilityAssessmentRepository) =>
+        new VulnerabilityAssessmentUseCases(repository),
+    },
     {
       provide: VULNERABILITY_TRIAGE_REPOSITORY,
       useExisting: SupabaseVulnerabilityTriageRepository,

@@ -8683,6 +8683,61 @@ export type Database = {
           },
         ]
       }
+      vulnerability_assessment_approval_policies: {
+        Row: {
+          approval_required: boolean
+          created_at: string
+          created_by: string
+          organization_id: string
+          severity: string
+          updated_at: string
+          updated_by: string
+          version: number
+        }
+        Insert: {
+          approval_required: boolean
+          created_at?: string
+          created_by: string
+          organization_id: string
+          severity: string
+          updated_at?: string
+          updated_by: string
+          version?: number
+        }
+        Update: {
+          approval_required?: boolean
+          created_at?: string
+          created_by?: string
+          organization_id?: string
+          severity?: string
+          updated_at?: string
+          updated_by?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vulnerability_assessment_approval_policies_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vulnerability_assessment_approval_policies_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vulnerability_assessment_approval_policies_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vulnerability_component_occurrences: {
         Row: {
           canonical_cpe: string | null
@@ -9273,6 +9328,311 @@ export type Database = {
           {
             foreignKeyName: "vulnerability_feed_sync_runs_requested_by_fkey"
             columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vulnerability_finding_assessment_commands: {
+        Row: {
+          actor_user_id: string
+          created_at: string
+          id: string
+          idempotency_key: string
+          operation: string
+          organization_id: string
+          request_digest: string
+          result: Json
+        }
+        Insert: {
+          actor_user_id: string
+          created_at?: string
+          id?: string
+          idempotency_key: string
+          operation: string
+          organization_id: string
+          request_digest: string
+          result: Json
+        }
+        Update: {
+          actor_user_id?: string
+          created_at?: string
+          id?: string
+          idempotency_key?: string
+          operation?: string
+          organization_id?: string
+          request_digest?: string
+          result?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vulnerability_finding_assessment_commands_actor_user_id_fkey"
+            columns: ["actor_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vulnerability_finding_assessment_commands_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vulnerability_finding_assessment_evidence_links: {
+        Row: {
+          assessment_id: string
+          created_at: string
+          created_by: string
+          document_id: string | null
+          external_url: string | null
+          id: string
+          kind: string
+          organization_id: string
+          title: string
+        }
+        Insert: {
+          assessment_id: string
+          created_at?: string
+          created_by: string
+          document_id?: string | null
+          external_url?: string | null
+          id?: string
+          kind: string
+          organization_id: string
+          title: string
+        }
+        Update: {
+          assessment_id?: string
+          created_at?: string
+          created_by?: string
+          document_id?: string | null
+          external_url?: string | null
+          id?: string
+          kind?: string
+          organization_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vulnerability_finding_assessm_organization_id_assessment_i_fkey"
+            columns: ["organization_id", "assessment_id"]
+            isOneToOne: false
+            referencedRelation: "vulnerability_finding_assessments"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "vulnerability_finding_assessme_organization_id_document_id_fkey"
+            columns: ["organization_id", "document_id"]
+            isOneToOne: false
+            referencedRelation: "sbom_documents"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "vulnerability_finding_assessment_evidence__organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vulnerability_finding_assessment_evidence_links_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vulnerability_finding_assessment_history_events: {
+        Row: {
+          actor_user_id: string
+          assessment_id: string
+          event_type: string
+          id: string
+          new_values: Json
+          occurred_at: string
+          organization_id: string
+          previous_values: Json | null
+          reason: string | null
+        }
+        Insert: {
+          actor_user_id: string
+          assessment_id: string
+          event_type: string
+          id?: string
+          new_values: Json
+          occurred_at?: string
+          organization_id: string
+          previous_values?: Json | null
+          reason?: string | null
+        }
+        Update: {
+          actor_user_id?: string
+          assessment_id?: string
+          event_type?: string
+          id?: string
+          new_values?: Json
+          occurred_at?: string
+          organization_id?: string
+          previous_values?: Json | null
+          reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vulnerability_finding_assess_organization_id_assessment_i_fkey1"
+            columns: ["organization_id", "assessment_id"]
+            isOneToOne: false
+            referencedRelation: "vulnerability_finding_assessments"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "vulnerability_finding_assessment_history_e_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vulnerability_finding_assessment_history_eve_actor_user_id_fkey"
+            columns: ["actor_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vulnerability_finding_assessments: {
+        Row: {
+          approval_required: boolean
+          approval_state: string
+          change_reason: string | null
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          decision_reason: string | null
+          detail: string
+          finding_id: string
+          id: string
+          is_current: boolean
+          organization_id: string
+          policy_severity: string
+          policy_version: number
+          revision: number
+          submitted_at: string
+          submitted_by: string
+          superseded_at: string | null
+          superseded_by_id: string | null
+          supersedes_id: string | null
+          updated_at: string
+          updated_by: string
+          version: number
+          vex_justification: string | null
+          vex_status: string
+        }
+        Insert: {
+          approval_required: boolean
+          approval_state: string
+          change_reason?: string | null
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_reason?: string | null
+          detail: string
+          finding_id: string
+          id?: string
+          is_current?: boolean
+          organization_id: string
+          policy_severity: string
+          policy_version: number
+          revision: number
+          submitted_at?: string
+          submitted_by: string
+          superseded_at?: string | null
+          superseded_by_id?: string | null
+          supersedes_id?: string | null
+          updated_at?: string
+          updated_by: string
+          version?: number
+          vex_justification?: string | null
+          vex_status: string
+        }
+        Update: {
+          approval_required?: boolean
+          approval_state?: string
+          change_reason?: string | null
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_reason?: string | null
+          detail?: string
+          finding_id?: string
+          id?: string
+          is_current?: boolean
+          organization_id?: string
+          policy_severity?: string
+          policy_version?: number
+          revision?: number
+          submitted_at?: string
+          submitted_by?: string
+          superseded_at?: string | null
+          superseded_by_id?: string | null
+          supersedes_id?: string | null
+          updated_at?: string
+          updated_by?: string
+          version?: number
+          vex_justification?: string | null
+          vex_status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vulnerability_finding_assessm_organization_id_superseded_b_fkey"
+            columns: ["organization_id", "superseded_by_id"]
+            isOneToOne: false
+            referencedRelation: "vulnerability_finding_assessments"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "vulnerability_finding_assessm_organization_id_supersedes_i_fkey"
+            columns: ["organization_id", "supersedes_id"]
+            isOneToOne: false
+            referencedRelation: "vulnerability_finding_assessments"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "vulnerability_finding_assessmen_organization_id_finding_id_fkey"
+            columns: ["organization_id", "finding_id"]
+            isOneToOne: false
+            referencedRelation: "vulnerability_findings"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "vulnerability_finding_assessments_decided_by_fkey"
+            columns: ["decided_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vulnerability_finding_assessments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vulnerability_finding_assessments_submitted_by_fkey"
+            columns: ["submitted_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vulnerability_finding_assessments_updated_by_fkey"
+            columns: ["updated_by"]
             isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
@@ -11016,6 +11376,22 @@ export type Database = {
         Returns: {
           baseline: Json
           outcome: string
+        }[]
+      }
+      approve_vulnerability_finding_vex_assessment_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_assessment_id: string
+          p_decision_reason: string
+          p_expected_version: number
+          p_finding_id: string
+          p_idempotency_key: string
+          p_organization_id: string
+          p_request_digest: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
         }[]
       }
       archive_connector_atomic: {
@@ -12946,6 +13322,17 @@ export type Database = {
           result: Json
         }[]
       }
+      get_finding_vex_assessment: {
+        Args: {
+          p_actor_user_id: string
+          p_finding_id: string
+          p_organization_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
       get_m2_member_states: {
         Args: { p_actor_user_id: string; p_organization_id: string }
         Returns: {
@@ -13906,6 +14293,13 @@ export type Database = {
           submissions: Json
         }[]
       }
+      list_vulnerability_assessment_approval_policy: {
+        Args: { p_actor_user_id: string; p_organization_id: string }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
       list_vulnerability_enriched_findings_for_document_page: {
         Args: {
           p_actor_user_id: string
@@ -14677,6 +15071,48 @@ export type Database = {
       }
       m5_triage_saved_view_json: {
         Args: { p_organization_id: string; p_saved_view_id: string }
+        Returns: Json
+      }
+      m5_vex_active_member: {
+        Args: { p_actor_user_id: string; p_organization_id: string }
+        Returns: boolean
+      }
+      m5_vex_assessment_json: {
+        Args: { p_assessment_id: string; p_organization_id: string }
+        Returns: Json
+      }
+      m5_vex_command_result: {
+        Args: {
+          p_actor_user_id: string
+          p_digest: string
+          p_idempotency_key: string
+          p_operation: string
+          p_organization_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      m5_vex_decide_assessment_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_assessment_id: string
+          p_decision: string
+          p_decision_reason: string
+          p_expected_version: number
+          p_finding_id: string
+          p_idempotency_key: string
+          p_organization_id: string
+          p_request_digest: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      m5_vex_history_event_json: {
+        Args: { p_history_event_id: string; p_organization_id: string }
         Returns: Json
       }
       mark_mfa_factors_removed: {
@@ -15516,6 +15952,22 @@ export type Database = {
               source: Json
             }[]
           }
+      reject_vulnerability_finding_vex_assessment_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_assessment_id: string
+          p_decision_reason: string
+          p_expected_version: number
+          p_finding_id: string
+          p_idempotency_key: string
+          p_organization_id: string
+          p_request_digest: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
       remove_organization_branding_logo_atomic: {
         Args: {
           p_actor_user_id: string
@@ -16239,6 +16691,21 @@ export type Database = {
           result: Json
         }[]
       }
+      set_vulnerability_assessment_approval_policy_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_approval_required: boolean
+          p_expected_version: number
+          p_idempotency_key: string
+          p_organization_id: string
+          p_request_digest: string
+          p_severity: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
       set_vulnerability_feed_configuration: {
         Args: {
           p_disabled_reason?: string
@@ -16263,6 +16730,25 @@ export type Database = {
           p_worker_id: string
         }
         Returns: string
+      }
+      submit_vulnerability_finding_vex_assessment_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_change_reason: string
+          p_detail: string
+          p_evidence_links: Json
+          p_expected_version: number
+          p_finding_id: string
+          p_idempotency_key: string
+          p_justification: string
+          p_organization_id: string
+          p_request_digest: string
+          p_vex_status: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
       }
       supersede_product_component_link_atomic: {
         Args: {

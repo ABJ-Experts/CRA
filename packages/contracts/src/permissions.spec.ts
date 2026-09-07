@@ -326,6 +326,32 @@ describe("presets", () => {
           "can_manage_finding_views",
         ),
       ).toBe(true);
+      expect(
+        hasPermission(
+          DEFAULT_PERMISSIONS_BY_ROLE[baseRole],
+          "can_approve_findings",
+        ),
+      ).toBe(true);
+      expect(
+        hasPermission(
+          DEFAULT_PERMISSIONS_BY_ROLE[baseRole],
+          "can_manage_finding_approval_policy",
+        ),
+      ).toBe(true);
+    }
+    for (const baseRole of ["member", "viewer"] as const) {
+      expect(
+        hasPermission(
+          DEFAULT_PERMISSIONS_BY_ROLE[baseRole],
+          "can_approve_findings",
+        ),
+      ).toBe(false);
+      expect(
+        hasPermission(
+          DEFAULT_PERMISSIONS_BY_ROLE[baseRole],
+          "can_manage_finding_approval_policy",
+        ),
+      ).toBe(false);
     }
   });
 

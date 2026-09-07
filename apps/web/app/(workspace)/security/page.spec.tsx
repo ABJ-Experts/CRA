@@ -61,6 +61,10 @@ describe("SecurityPage", () => {
       await screen.findByRole("button", { name: "Set up two-factor" }),
     );
     expect(await screen.findByText("ABC123")).toBeTruthy();
+    const qrCode = screen.getByRole("img", {
+      name: "Two-factor setup QR code",
+    });
+    expect(qrCode).toHaveAttribute("src", "data:image/svg+xml;base64,abc");
     fireEvent.change(screen.getByTestId("mfa-confirm-code"), {
       target: { value: "123456" },
     });

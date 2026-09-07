@@ -1,10 +1,14 @@
 "use client";
 
 import type {
+  ApproveVulnerabilityFindingAssessmentInput,
   CreateVulnerabilitySavedViewInput,
   DeleteVulnerabilitySavedViewInput,
+  RejectVulnerabilityFindingAssessmentInput,
   SetDefaultVulnerabilitySavedViewInput,
+  SubmitVulnerabilityFindingAssessmentInput,
   UpdateVulnerabilitySavedViewInput,
+  UpdateVulnerabilityAssessmentApprovalPolicyInput,
   VulnerabilityTriageQueueQuery,
 } from "@repo/contracts/vulnerabilities";
 import {
@@ -50,6 +54,37 @@ export function useVulnerabilityTriageDetailQuery(
   });
 }
 
+export function useVulnerabilityFindingAssessmentQuery(
+  findingId: string | null,
+  enabled: boolean,
+) {
+  return useQuery({
+    queryKey:
+      findingId === null
+        ? vulnerabilityTriageKeys.assessments
+        : vulnerabilityTriageKeys.assessment(findingId),
+    enabled: enabled && findingId !== null,
+    retry: false,
+    queryFn: ({ signal }) => {
+      if (findingId === null)
+        throw new Error("A finding identifier is required.");
+      return vulnerabilityTriageApi.assessment(findingId, signal);
+    },
+  });
+}
+
+export function useVulnerabilityAssessmentApprovalPolicyQuery(
+  enabled: boolean,
+) {
+  return useQuery({
+    queryKey: vulnerabilityTriageKeys.assessmentApprovalPolicy,
+    enabled,
+    retry: false,
+    queryFn: ({ signal }) =>
+      vulnerabilityTriageApi.assessmentApprovalPolicy(signal),
+  });
+}
+
 export function useVulnerabilitySavedViewsQuery(
   organizationId: string | null,
   enabled: boolean,
@@ -70,6 +105,20 @@ function useInvalidateTriage() {
       client.invalidateQueries({
         queryKey: vulnerabilityTriageKeys.all,
       }),
+    ]);
+}
+
+function useInvalidateFindingAssessment() {
+  const client = useQueryClient();
+  return (findingId: string) =>
+    Promise.all([
+      client.invalidateQueries({
+        queryKey: vulnerabilityTriageKeys.assessment(findingId),
+      }),
+      client.invalidateQueries({
+        queryKey: vulnerabilityTriageKeys.detail(findingId),
+      }),
+      client.invalidateQueries({ queryKey: vulnerabilityTriageKeys.queue }),
     ]);
 }
 
@@ -113,5 +162,71 @@ export function useSetDefaultVulnerabilitySavedViewMutation() {
     mutationFn: (input: SetDefaultVulnerabilitySavedViewInput) =>
       vulnerabilityTriageApi.setDefaultSavedView(input),
     onSuccess: invalidate,
+  });
+}
+
+export function useSubmitVulnerabilityFindingAssessmentMutation() {
+  const invalidate = useInvalidateFindingAssessment();
+  return useMutation({
+    mutationFn: ({
+      findingId,
+      input,
+    }: {
+      findingId: string;
+      input: SubmitVulnerabilityFindingAssessmentInput;
+    }) => vulnerabilityTriageApi.submitAssessment(findingId, input),
+    onSuccess: (_, variables) => invalidate(variables.findingId),
+  });
+}
+
+export function useApproveVulnerabilityFindingAssessmentMutation() {
+  const invalidate = useInvalidateFindingAssessment();
+  return useMutation({
+    mutationFn: ({
+      findingId,
+      assessmentId,
+      input,
+    }: {
+      findingId: string;
+      assessmentId: string;
+      input: ApproveVulnerabilityFindingAssessmentInput;
+    }) =>
+      vulnerabilityTriageApi.approveAssessment(findingId, assessmentId, input),
+    onSuccess: (_, variables) => invalidate(variables.findingId),
+  });
+}
+
+export function useRejectVulnerabilityFindingAssessmentMutation() {
+  const invalidate = useInvalidateFindingAssessment();
+  return useMutation({
+    mutationFn: ({
+      findingId,
+      assessmentId,
+      input,
+    }: {
+      findingId: string;
+      assessmentId: string;
+      input: RejectVulnerabilityFindingAssessmentInput;
+    }) =>
+      vulnerabilityTriageApi.rejectAssessment(findingId, assessmentId, input),
+    onSuccess: (_, variables) => invalidate(variables.findingId),
+  });
+}
+
+export function useUpdateVulnerabilityAssessmentApprovalPolicyMutation() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      severity,
+      input,
+    }: {
+      severity: string;
+      input: UpdateVulnerabilityAssessmentApprovalPolicyInput;
+    }) =>
+      vulnerabilityTriageApi.updateAssessmentApprovalPolicy(severity, input),
+    onSuccess: () =>
+      client.invalidateQueries({
+        queryKey: vulnerabilityTriageKeys.assessmentApprovalPolicy,
+      }),
   });
 }

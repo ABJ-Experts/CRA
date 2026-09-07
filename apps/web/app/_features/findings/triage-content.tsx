@@ -107,7 +107,10 @@ function useMergedQueue(
     });
     setNextCursor(response.nextCursor);
   }, [cursor, placeholder, response]);
-  return { rows: scopeChanged ? [] : rows, nextCursor: scopeChanged ? null : nextCursor };
+  return {
+    rows: scopeChanged ? [] : rows,
+    nextCursor: scopeChanged ? null : nextCursor,
+  };
 }
 
 function TriageFilters({
@@ -264,6 +267,50 @@ function TriageFilters({
           ["unassessed", "Unassessed"],
           ["affected", "Affected"],
           ["not_affected", "Not affected"],
+        ]}
+      />
+      <FilterSelect
+        label="VEX status"
+        value={filters.vexStatuses?.[0] ?? ""}
+        onChange={(value) =>
+          onChange({
+            ...filters,
+            vexStatuses:
+              value === ""
+                ? undefined
+                : [value as NonNullable<QueueFilters["vexStatuses"]>[number]],
+          })
+        }
+        options={[
+          ["", "Any VEX status"],
+          ["under_investigation", "Under investigation"],
+          ["affected", "Affected"],
+          ["not_affected", "Not affected"],
+          ["fixed", "Fixed"],
+        ]}
+      />
+      <FilterSelect
+        label="Approval"
+        value={filters.approvalStates?.[0] ?? ""}
+        onChange={(value) =>
+          onChange({
+            ...filters,
+            approvalStates:
+              value === ""
+                ? undefined
+                : [
+                    value as NonNullable<
+                      QueueFilters["approvalStates"]
+                    >[number],
+                  ],
+          })
+        }
+        options={[
+          ["", "Any approval state"],
+          ["awaiting_approval", "Awaiting approval"],
+          ["approved", "Approved"],
+          ["rejected", "Rejected"],
+          ["approval_not_required", "Not required"],
         ]}
       />
       <FilterSelect
@@ -462,10 +509,7 @@ function SavedViews({
   const savedViewData = scopeChanged ? undefined : savedViews.data;
   const defaultId = savedViewData?.defaultViewId ?? null;
   useEffect(() => {
-    if (
-      appliedDefaultScope.current === organizationId ||
-      !savedViewData
-    )
+    if (appliedDefaultScope.current === organizationId || !savedViewData)
       return;
     appliedDefaultScope.current = organizationId;
     const view = savedViewData.views.find(
@@ -871,7 +915,7 @@ export function FindingTriageContent() {
           {rows.length > 0 ? (
             <>
               <div
-                className="grid grid-cols-[minmax(9rem,1.4fr)_minmax(7rem,1fr)_minmax(6rem,.7fr)_minmax(6rem,.7fr)_minmax(6rem,.7fr)] gap-3 border-b border-border px-4 py-2 text-caption-2-uppercase text-fg-subtle"
+                className="grid grid-cols-[minmax(9rem,1.4fr)_minmax(7rem,1fr)_minmax(6rem,.7fr)_minmax(6rem,.7fr)_minmax(6rem,.7fr)_minmax(7rem,.9fr)] gap-3 border-b border-border px-4 py-2 text-caption-2-uppercase text-fg-subtle"
                 aria-hidden="true"
               >
                 <span>Advisory</span>
@@ -879,6 +923,7 @@ export function FindingTriageContent() {
                 <span>Severity</span>
                 <span>EPSS / KEV</span>
                 <span>Reachability</span>
+                <span>VEX / approval</span>
               </div>
               <div
                 ref={gridRef}
@@ -910,7 +955,7 @@ export function FindingTriageContent() {
                         aria-label={rowLabel(row)}
                         tabIndex={rowIndex === activeIndex.current ? 0 : -1}
                         className={cn(
-                          "absolute grid w-full grid-cols-[minmax(9rem,1.4fr)_minmax(7rem,1fr)_minmax(6rem,.7fr)_minmax(6rem,.7fr)_minmax(6rem,.7fr)] items-center gap-3 border-b border-border px-4 text-left outline-none focus-visible:bg-surface-muted focus-visible:ring-2 focus-visible:ring-focus",
+                          "absolute grid w-full grid-cols-[minmax(9rem,1.4fr)_minmax(7rem,1fr)_minmax(6rem,.7fr)_minmax(6rem,.7fr)_minmax(6rem,.7fr)_minmax(7rem,.9fr)] items-center gap-3 border-b border-border px-4 text-left outline-none focus-visible:bg-surface-muted focus-visible:ring-2 focus-visible:ring-focus",
                           rowIndex % 2 === 1 && "bg-surface-subtle",
                         )}
                         style={{
@@ -986,6 +1031,19 @@ export function FindingTriageContent() {
                           {row.reachability === null
                             ? "Unknown"
                             : titleCase(row.reachability)}
+                        </span>
+                        <span
+                          role="gridcell"
+                          className="text-caption-1-regular text-fg"
+                        >
+                          {row.vexStatus === null
+                            ? "Not assessed"
+                            : titleCase(row.vexStatus)}
+                          <span className="block text-fg-muted">
+                            {row.approvalState === null
+                              ? "Approval unavailable"
+                              : titleCase(row.approvalState)}
+                          </span>
                         </span>
                       </button>
                     );

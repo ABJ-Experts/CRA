@@ -193,6 +193,18 @@ export const exportSourceRegistry: readonly ExportSourceRegistration[] =
         "vulnerability_finding_review_events",
       ],
     },
+    {
+      // M5-02 VEX assessments, evidence links, approval policy snapshots, and
+      // history events are immutable tenant audit facts. Request idempotency
+      // material remains excluded below.
+      sourceId: "vulnerability_vex_assessments",
+      tables: [
+        "vulnerability_finding_assessments",
+        "vulnerability_finding_assessment_evidence_links",
+        "vulnerability_finding_assessment_history_events",
+        "vulnerability_assessment_approval_policies",
+      ],
+    },
   ]);
 
 /** Explicit omissions are security objects, never an accidental omission. */
@@ -259,6 +271,8 @@ export const exportSourceExclusions: Readonly<Record<string, string>> =
     vulnerability_triage_saved_view_defaults:
       "Per-user defaults are operational UI preferences and are not portable tenant evidence.",
     vulnerability_triage_saved_view_commands:
+      "Idempotency keys and request digests are request-security material.",
+    vulnerability_finding_assessment_commands:
       "Idempotency keys and request digests are request-security material.",
   });
 

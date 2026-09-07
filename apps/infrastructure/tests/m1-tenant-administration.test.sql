@@ -1020,7 +1020,8 @@ select pg_temp.check(
       'organization_branding', 'product_registry', 'finding_propagation',
       'connector_sync', 'sbom_normalized_graph',
       'sbom_composite_supplier_provenance',
-      'vulnerability_reachability_review'
+      'vulnerability_reachability_review',
+      'vulnerability_vex_assessments'
     ]::text[]
 );
 

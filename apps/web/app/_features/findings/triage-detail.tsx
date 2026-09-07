@@ -4,6 +4,8 @@ import type { VulnerabilityTriageDetailResponse } from "@repo/contracts/vulnerab
 import { Button } from "@repo/ui/button";
 import { Tag, type TagProps } from "@repo/ui/tag";
 
+import { FindingAssessment } from "./finding-assessment";
+
 function titleCase(value: string): string {
   return value
     .replaceAll("_", " ")
@@ -188,6 +190,26 @@ export function FindingTriageDetail({
           />
         </dl>
       </section>
+
+      {finding.humanAssessment !== null ? (
+        <section className="mt-6" aria-labelledby="legacy-assessment-heading">
+          <h3
+            id="legacy-assessment-heading"
+            className="text-subhead-semibold text-fg"
+          >
+            Matcher applicability evidence
+          </h3>
+          <p className="mt-2 text-caption-1-regular text-fg-muted">
+            {titleCase(finding.humanAssessment.verdict)} · recorded{" "}
+            {formatInstant(finding.humanAssessment.assessedAt)}
+          </p>
+          <p className="mt-1 whitespace-pre-wrap text-caption-1-regular text-fg">
+            {finding.humanAssessment.rationale}
+          </p>
+        </section>
+      ) : null}
+
+      <FindingAssessment findingId={finding.id} />
 
       <section className="mt-6" aria-labelledby="history-heading">
         <h3 id="history-heading" className="text-subhead-semibold text-fg">
