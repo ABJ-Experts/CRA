@@ -207,6 +207,18 @@ export const exportSourceRegistry: readonly ExportSourceRegistration[] =
         "vulnerability_finding_assessment_bulk_operation_targets",
       ],
     },
+    {
+      // M5-04 suppression revisions, internal-SLA policy snapshots, current
+      // operational responsibility, and bounded delivery evidence are all
+      // tenant-owned records. Command idempotency material remains excluded.
+      sourceId: "vulnerability_triage_operational",
+      tables: [
+        "vulnerability_finding_suppressions",
+        "vulnerability_triage_sla_policies",
+        "vulnerability_finding_triage_states",
+        "vulnerability_triage_alert_events",
+      ],
+    },
   ]);
 
 /** Explicit omissions are security objects, never an accidental omission. */
@@ -275,6 +287,8 @@ export const exportSourceExclusions: Readonly<Record<string, string>> =
     vulnerability_triage_saved_view_commands:
       "Idempotency keys and request digests are request-security material.",
     vulnerability_finding_assessment_commands:
+      "Idempotency keys and request digests are request-security material.",
+    vulnerability_triage_commands:
       "Idempotency keys and request digests are request-security material.",
   });
 

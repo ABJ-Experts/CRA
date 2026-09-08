@@ -67,7 +67,7 @@ function severityTone(value: QueueRow["severity"]): TagProps["tone"] {
       : "purple";
 }
 function rowLabel(row: QueueRow) {
-  return `${row.finding.advisoryId}, ${row.product?.name ?? "product unavailable"}, ${row.severity} severity`;
+  return `${row.finding.advisoryId}, ${row.product?.name ?? "product unavailable"}, ${row.severity} severity, ${row.operational.suppression.state}, internal SLA ${row.operational.internalSla.state}, delivery ${row.operational.notification.state}`;
 }
 function uuid() {
   return crypto.randomUUID();
@@ -333,6 +333,77 @@ function TriageFilters({
           ["not_reachable", "Not reachable"],
           ["unknown", "Unknown"],
           ["not_analysed", "Not analysed"],
+        ]}
+      />
+      <FilterSelect
+        label="Queue state"
+        value={filters.suppressionStates?.[0] ?? ""}
+        onChange={(value) =>
+          onChange({
+            ...filters,
+            suppressionStates:
+              value === ""
+                ? undefined
+                : [
+                    value as NonNullable<
+                      QueueFilters["suppressionStates"]
+                    >[number],
+                  ],
+          })
+        }
+        options={[
+          ["", "Any queue state"],
+          ["actionable", "Actionable"],
+          ["suppressed", "Suppressed"],
+        ]}
+      />
+      <FilterSelect
+        label="Internal SLA"
+        value={filters.internalSlaStates?.[0] ?? ""}
+        onChange={(value) =>
+          onChange({
+            ...filters,
+            internalSlaStates:
+              value === ""
+                ? undefined
+                : [
+                    value as NonNullable<
+                      QueueFilters["internalSlaStates"]
+                    >[number],
+                  ],
+          })
+        }
+        options={[
+          ["", "Any internal SLA"],
+          ["not_configured", "Not configured"],
+          ["tracking", "Tracking"],
+          ["paused", "Paused"],
+          ["breached", "Breached"],
+        ]}
+      />
+      <FilterSelect
+        label="Alert delivery"
+        value={filters.notificationDeliveryStates?.[0] ?? ""}
+        onChange={(value) =>
+          onChange({
+            ...filters,
+            notificationDeliveryStates:
+              value === ""
+                ? undefined
+                : [
+                    value as NonNullable<
+                      QueueFilters["notificationDeliveryStates"]
+                    >[number],
+                  ],
+          })
+        }
+        options={[
+          ["", "Any alert delivery"],
+          ["pending", "Pending"],
+          ["retrying", "Retrying"],
+          ["dead_letter", "Delivery failed"],
+          ["recipient_unavailable", "Recipient unavailable"],
+          ["delivered", "Delivered"],
         ]}
       />
       <FilterSelect
@@ -940,7 +1011,7 @@ export function FindingTriageContent() {
           {rows.length > 0 ? (
             <>
               <div
-                className="grid grid-cols-[2.5rem_minmax(9rem,1.4fr)_minmax(7rem,1fr)_minmax(6rem,.7fr)_minmax(6rem,.7fr)_minmax(6rem,.7fr)_minmax(7rem,.9fr)] gap-3 border-b border-border px-4 py-2 text-caption-2-uppercase text-fg-subtle"
+                className="grid grid-cols-[2.5rem_minmax(9rem,1.4fr)_minmax(7rem,1fr)_minmax(6rem,.7fr)_minmax(6rem,.7fr)_minmax(6rem,.7fr)_minmax(7rem,.9fr)_minmax(9rem,1fr)] gap-3 border-b border-border px-4 py-2 text-caption-2-uppercase text-fg-subtle"
                 aria-hidden="true"
               >
                 <span>Select</span>
@@ -950,6 +1021,7 @@ export function FindingTriageContent() {
                 <span>EPSS / KEV</span>
                 <span>Reachability</span>
                 <span>VEX / approval</span>
+                <span>Operations</span>
               </div>
               <div
                 ref={gridRef}
@@ -984,7 +1056,7 @@ export function FindingTriageContent() {
                           row.finding.id,
                         )}
                         className={cn(
-                          "absolute grid w-full grid-cols-[2.5rem_minmax(9rem,1.4fr)_minmax(7rem,1fr)_minmax(6rem,.7fr)_minmax(6rem,.7fr)_minmax(6rem,.7fr)_minmax(7rem,.9fr)] items-center gap-3 border-b border-border px-4 text-left outline-none focus-visible:bg-surface-muted focus-visible:ring-2 focus-visible:ring-focus",
+                          "absolute grid w-full grid-cols-[2.5rem_minmax(9rem,1.4fr)_minmax(7rem,1fr)_minmax(6rem,.7fr)_minmax(6rem,.7fr)_minmax(6rem,.7fr)_minmax(7rem,.9fr)_minmax(9rem,1fr)] items-center gap-3 border-b border-border px-4 text-left outline-none focus-visible:bg-surface-muted focus-visible:ring-2 focus-visible:ring-focus",
                           selectedFindingIds.includes(row.finding.id) &&
                             "bg-accent-subtle",
                           rowIndex % 2 === 1 && "bg-surface-subtle",
@@ -1091,6 +1163,16 @@ export function FindingTriageContent() {
                             {row.approvalState === null
                               ? "Approval unavailable"
                               : titleCase(row.approvalState)}
+                          </span>
+                        </span>
+                        <span
+                          role="gridcell"
+                          className="min-w-0 text-caption-1-regular text-fg"
+                        >
+                          {titleCase(row.operational.suppression.state)}
+                          <span className="block truncate text-fg-muted">
+                            SLA {titleCase(row.operational.internalSla.state)} ·{" "}
+                            {titleCase(row.operational.notification.state)}
                           </span>
                         </span>
                       </div>

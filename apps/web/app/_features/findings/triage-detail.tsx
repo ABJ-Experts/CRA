@@ -5,6 +5,7 @@ import { Button } from "@repo/ui/button";
 import { Tag, type TagProps } from "@repo/ui/tag";
 
 import { FindingAssessment } from "./finding-assessment";
+import { FindingTriageOperational } from "./finding-triage-operational";
 
 function titleCase(value: string): string {
   return value
@@ -210,6 +211,10 @@ export function FindingTriageDetail({
       ) : null}
 
       <FindingAssessment findingId={finding.id} />
+      <FindingTriageOperational
+        findingId={finding.id}
+        operational={detail.operational}
+      />
 
       <section className="mt-6" aria-labelledby="history-heading">
         <h3 id="history-heading" className="text-subhead-semibold text-fg">

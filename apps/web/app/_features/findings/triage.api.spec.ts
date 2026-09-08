@@ -139,4 +139,69 @@ describe("vulnerabilityTriageApi", () => {
       }),
     );
   });
+
+  it("serializes operational filters and versioned suppression without replaying writes", async () => {
+    const findingId = "11111111-1111-4111-8111-111111111111";
+    const idempotencyKey = "33333333-3333-4333-8333-333333333333";
+    const operational = {
+      version: 1,
+      assignee: null,
+      suppression: {
+        state: "suppressed",
+        reason: "Awaiting the vendor maintenance window.",
+        expiresAt: "2030-01-01T00:00:00.000Z",
+        revision: 1,
+      },
+      internalSla: {
+        state: "paused",
+        severity: "high",
+        targetMinutes: 60,
+        startedAt: "2026-09-08T10:00:00.000Z",
+        pausedAt: "2026-09-08T10:05:00.000Z",
+        dueAt: "2026-09-08T11:00:00.000Z",
+      },
+      notification: {
+        state: "retrying",
+        lastAttemptAt: "2026-09-08T10:05:00.000Z",
+        deliveredAt: null,
+        failureMessage: "Provider unavailable.",
+      },
+    } as const;
+    const fetcher = vi.fn<
+      (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
+    >(async (input) =>
+      String(input).includes("/suppression")
+        ? json({ operational })
+        : json({ rows: [], nextCursor: null, filterIssues: [] }),
+    );
+    vi.stubGlobal("fetch", fetcher);
+
+    await expect(
+      vulnerabilityTriageApi.list({
+        suppressionStates: ["suppressed"],
+        internalSlaStates: ["breached"],
+        notificationDeliveryStates: ["dead_letter"],
+      }),
+    ).resolves.toMatchObject({ rows: [] });
+
+    await expect(
+      vulnerabilityTriageApi.suppress(findingId, {
+        reason: "Awaiting the vendor maintenance window.",
+        expiresAt: "2030-01-01T00:00:00.000Z",
+        expectedVersion: 0,
+        idempotencyKey,
+      }),
+    ).resolves.toEqual({ operational });
+
+    expect(String(fetcher.mock.calls[0]?.[0])).toContain(
+      "suppressionStates=suppressed",
+    );
+    expect(String(fetcher.mock.calls[0]?.[0])).toContain(
+      "internalSlaStates=breached",
+    );
+    expect(fetcher).toHaveBeenLastCalledWith(
+      `/api/v1/findings/${findingId}/suppression`,
+      expect.objectContaining({ method: "POST" }),
+    );
+  });
 });

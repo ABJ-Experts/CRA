@@ -39,6 +39,8 @@ import { SupabaseVulnerabilityKevAlertQueue } from "./infrastructure/supabase-vu
 import { MailVulnerabilityKevAlertNotifierAdapter } from "./infrastructure/mail-vulnerability-kev-alert-notifier.adapter";
 import { SupabaseVulnerabilityFindingReviewNotificationQueue } from "./infrastructure/supabase-vulnerability-finding-review-notification-queue";
 import { MailVulnerabilityFindingReviewNotifierAdapter } from "./infrastructure/mail-vulnerability-finding-review-notifier.adapter";
+import { MailVulnerabilityTriageAlertNotifierAdapter } from "./infrastructure/mail-vulnerability-triage-alert-notifier.adapter";
+import { SupabaseVulnerabilityTriageAlertQueue } from "./infrastructure/supabase-vulnerability-triage-alert-queue";
 import { VulnerabilityMatchingController } from "./vulnerability-matching.controller";
 import { VulnerabilityEnrichmentController } from "./vulnerability-enrichment.controller";
 import { VulnerabilityManualFindingsController } from "./vulnerability-manual-findings.controller";
@@ -56,6 +58,7 @@ import { VulnerabilityEnrichmentUseCases } from "./application/vulnerability-enr
 import { VulnerabilityFeedWorker } from "./worker/vulnerability-feed-worker";
 import { VulnerabilityKevAlertWorker } from "./worker/vulnerability-kev-alert-worker";
 import { VulnerabilityFindingReviewNotificationWorker } from "./worker/vulnerability-finding-review-notification-worker";
+import { VulnerabilityTriageAlertWorker } from "./worker/vulnerability-triage-alert-worker";
 import { VulnerabilityMatchingWorker } from "./matching/worker/vulnerability-matching-worker";
 import { VulnerabilityReevaluationWorker } from "./worker/vulnerability-reevaluation-worker";
 import {
@@ -83,6 +86,12 @@ import {
   type VulnerabilityFindingReviewNotificationQueue,
   type VulnerabilityFindingReviewNotifier,
 } from "./application/vulnerability-finding-review-notification.port";
+import {
+  VULNERABILITY_TRIAGE_ALERT_NOTIFIER,
+  VULNERABILITY_TRIAGE_ALERT_QUEUE,
+  type VulnerabilityTriageAlertNotifier,
+  type VulnerabilityTriageAlertQueue,
+} from "./application/vulnerability-triage-alert.port";
 
 export const VULNERABILITY_FEED_PROVIDERS = Symbol(
   "VULNERABILITY_FEED_PROVIDERS",
@@ -109,6 +118,8 @@ export const VULNERABILITY_FEED_PROVIDERS = Symbol(
     MailVulnerabilityKevAlertNotifierAdapter,
     SupabaseVulnerabilityFindingReviewNotificationQueue,
     MailVulnerabilityFindingReviewNotifierAdapter,
+    SupabaseVulnerabilityTriageAlertQueue,
+    MailVulnerabilityTriageAlertNotifierAdapter,
     UnavailableReportingObligationAdapter,
     {
       provide: REPORTING_OBLIGATION_PORT,
@@ -194,6 +205,14 @@ export const VULNERABILITY_FEED_PROVIDERS = Symbol(
     {
       provide: VULNERABILITY_FINDING_REVIEW_NOTIFIER,
       useExisting: MailVulnerabilityFindingReviewNotifierAdapter,
+    },
+    {
+      provide: VULNERABILITY_TRIAGE_ALERT_QUEUE,
+      useExisting: SupabaseVulnerabilityTriageAlertQueue,
+    },
+    {
+      provide: VULNERABILITY_TRIAGE_ALERT_NOTIFIER,
+      useExisting: MailVulnerabilityTriageAlertNotifierAdapter,
     },
     {
       provide: VulnerabilityMatchingUseCases,
@@ -326,6 +345,27 @@ export const VULNERABILITY_FEED_PROVIDERS = Symbol(
         }),
     },
     {
+      provide: VulnerabilityTriageAlertWorker,
+      inject: [
+        VULNERABILITY_TRIAGE_ALERT_QUEUE,
+        VULNERABILITY_TRIAGE_ALERT_NOTIFIER,
+        ConfigService,
+      ],
+      useFactory: (
+        queue: VulnerabilityTriageAlertQueue,
+        notifier: VulnerabilityTriageAlertNotifier,
+        config: ConfigService,
+      ) =>
+        new VulnerabilityTriageAlertWorker({
+          workerId: randomUUID(),
+          leaseSeconds:
+            config.get<number>("VULNERABILITY_TRIAGE_ALERT_LEASE_SECONDS") ??
+            120,
+          queue,
+          deliver: (input) => notifier.deliver(input),
+        }),
+    },
+    {
       provide: VulnerabilityReevaluationWorker,
       inject: [SupabaseVulnerabilityReevaluationRepository, ConfigService],
       useFactory: (
@@ -352,6 +392,7 @@ export const VULNERABILITY_FEED_PROVIDERS = Symbol(
     VulnerabilityMatchingWorker,
     VulnerabilityKevAlertWorker,
     VulnerabilityFindingReviewNotificationWorker,
+    VulnerabilityTriageAlertWorker,
     VulnerabilityReevaluationWorker,
   ],
 })

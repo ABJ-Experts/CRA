@@ -10013,6 +10013,160 @@ export type Database = {
           },
         ]
       }
+      vulnerability_finding_suppressions: {
+        Row: {
+          created_at: string
+          created_by: string
+          ended_at: string | null
+          ended_reason: string | null
+          expires_at: string
+          finding_id: string
+          id: string
+          is_current: boolean
+          organization_id: string
+          reason: string
+          revision: number
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          ended_at?: string | null
+          ended_reason?: string | null
+          expires_at: string
+          finding_id: string
+          id?: string
+          is_current?: boolean
+          organization_id: string
+          reason: string
+          revision: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          ended_at?: string | null
+          ended_reason?: string | null
+          expires_at?: string
+          finding_id?: string
+          id?: string
+          is_current?: boolean
+          organization_id?: string
+          reason?: string
+          revision?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vulnerability_finding_suppressi_organization_id_finding_id_fkey"
+            columns: ["organization_id", "finding_id"]
+            isOneToOne: false
+            referencedRelation: "vulnerability_findings"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "vulnerability_finding_suppressions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vulnerability_finding_suppressions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vulnerability_finding_triage_states: {
+        Row: {
+          assignee_user_id: string | null
+          created_at: string
+          finding_id: string
+          last_observed_severity: string
+          organization_id: string
+          sla_breached_at: string | null
+          sla_elapsed_seconds: number
+          sla_paused_at: string | null
+          sla_policy_version: number | null
+          sla_severity: string | null
+          sla_started_at: string | null
+          sla_target_minutes: number | null
+          updated_at: string
+          updated_by: string | null
+          version: number
+        }
+        Insert: {
+          assignee_user_id?: string | null
+          created_at?: string
+          finding_id: string
+          last_observed_severity: string
+          organization_id: string
+          sla_breached_at?: string | null
+          sla_elapsed_seconds?: number
+          sla_paused_at?: string | null
+          sla_policy_version?: number | null
+          sla_severity?: string | null
+          sla_started_at?: string | null
+          sla_target_minutes?: number | null
+          updated_at?: string
+          updated_by?: string | null
+          version?: number
+        }
+        Update: {
+          assignee_user_id?: string | null
+          created_at?: string
+          finding_id?: string
+          last_observed_severity?: string
+          organization_id?: string
+          sla_breached_at?: string | null
+          sla_elapsed_seconds?: number
+          sla_paused_at?: string | null
+          sla_policy_version?: number | null
+          sla_severity?: string | null
+          sla_started_at?: string | null
+          sla_target_minutes?: number | null
+          updated_at?: string
+          updated_by?: string | null
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vulnerability_finding_triage__organization_id_assignee_use_fkey"
+            columns: ["organization_id", "assignee_user_id"]
+            isOneToOne: false
+            referencedRelation: "organization_members"
+            referencedColumns: ["organization_id", "user_id"]
+          },
+          {
+            foreignKeyName: "vulnerability_finding_triage_st_organization_id_finding_id_fkey"
+            columns: ["organization_id", "finding_id"]
+            isOneToOne: true
+            referencedRelation: "vulnerability_findings"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "vulnerability_finding_triage_states_assignee_user_id_fkey"
+            columns: ["assignee_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vulnerability_finding_triage_states_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vulnerability_finding_triage_states_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vulnerability_findings: {
         Row: {
           affected_range: Json
@@ -11311,6 +11465,139 @@ export type Database = {
           },
         ]
       }
+      vulnerability_triage_alert_events: {
+        Row: {
+          attempts: number
+          created_at: string
+          delivered_at: string | null
+          due_at: string
+          error_code: string | null
+          error_message: string | null
+          event_key: string
+          event_kind: string
+          finding_id: string
+          id: string
+          last_attempt_at: string | null
+          lease_expires_at: string | null
+          lease_owner: string | null
+          max_attempts: number
+          organization_id: string
+          state: string
+          suppression_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          attempts?: number
+          created_at?: string
+          delivered_at?: string | null
+          due_at?: string
+          error_code?: string | null
+          error_message?: string | null
+          event_key: string
+          event_kind: string
+          finding_id: string
+          id?: string
+          last_attempt_at?: string | null
+          lease_expires_at?: string | null
+          lease_owner?: string | null
+          max_attempts?: number
+          organization_id: string
+          state?: string
+          suppression_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          attempts?: number
+          created_at?: string
+          delivered_at?: string | null
+          due_at?: string
+          error_code?: string | null
+          error_message?: string | null
+          event_key?: string
+          event_kind?: string
+          finding_id?: string
+          id?: string
+          last_attempt_at?: string | null
+          lease_expires_at?: string | null
+          lease_owner?: string | null
+          max_attempts?: number
+          organization_id?: string
+          state?: string
+          suppression_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vulnerability_triage_alert_even_organization_id_finding_id_fkey"
+            columns: ["organization_id", "finding_id"]
+            isOneToOne: false
+            referencedRelation: "vulnerability_findings"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "vulnerability_triage_alert_events_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vulnerability_triage_alert_events_suppression_id_fkey"
+            columns: ["suppression_id"]
+            isOneToOne: false
+            referencedRelation: "vulnerability_finding_suppressions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vulnerability_triage_commands: {
+        Row: {
+          actor_user_id: string
+          created_at: string
+          id: string
+          idempotency_key: string
+          operation: string
+          organization_id: string
+          request_digest: string
+          result: Json
+        }
+        Insert: {
+          actor_user_id: string
+          created_at?: string
+          id?: string
+          idempotency_key: string
+          operation: string
+          organization_id: string
+          request_digest: string
+          result: Json
+        }
+        Update: {
+          actor_user_id?: string
+          created_at?: string
+          id?: string
+          idempotency_key?: string
+          operation?: string
+          organization_id?: string
+          request_digest?: string
+          result?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vulnerability_triage_commands_actor_user_id_fkey"
+            columns: ["actor_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vulnerability_triage_commands_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vulnerability_triage_saved_view_commands: {
         Row: {
           actor_user_id: string
@@ -11459,6 +11746,64 @@ export type Database = {
           },
           {
             foreignKeyName: "vulnerability_triage_saved_views_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vulnerability_triage_sla_policies: {
+        Row: {
+          created_at: string
+          created_by: string
+          enabled: boolean
+          organization_id: string
+          severity: string
+          target_minutes: number | null
+          updated_at: string
+          updated_by: string
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          enabled: boolean
+          organization_id: string
+          severity: string
+          target_minutes?: number | null
+          updated_at?: string
+          updated_by: string
+          version?: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          enabled?: boolean
+          organization_id?: string
+          severity?: string
+          target_minutes?: number | null
+          updated_at?: string
+          updated_by?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vulnerability_triage_sla_policies_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vulnerability_triage_sla_policies_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vulnerability_triage_sla_policies_updated_by_fkey"
             columns: ["updated_by"]
             isOneToOne: false
             referencedRelation: "users"
@@ -11648,6 +11993,21 @@ export type Database = {
         Returns: {
           baseline: Json
           outcome: string
+        }[]
+      }
+      assign_finding_triage_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_assignee_user_id: string
+          p_correlation_id?: string
+          p_expected_version: number
+          p_finding_id: string
+          p_idempotency_key: string
+          p_organization_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
         }[]
       }
       assign_product_legal_entity_atomic: {
@@ -12134,6 +12494,17 @@ export type Database = {
           outcome: string
         }[]
       }
+      claim_vulnerability_triage_alert: {
+        Args: {
+          p_lease_seconds?: number
+          p_organization_id: string
+          p_worker_id: string
+        }
+        Returns: {
+          alert_event: Json
+          outcome: string
+        }[]
+      }
       clear_login_attempts: { Args: { p_email: string }; Returns: undefined }
       commit_product_import_atomic: {
         Args: {
@@ -12365,6 +12736,19 @@ export type Database = {
           p_delivered: boolean
           p_error_code?: string
           p_error_message?: string
+          p_organization_id: string
+          p_worker_id: string
+        }
+        Returns: {
+          outcome: string
+        }[]
+      }
+      complete_vulnerability_triage_alert: {
+        Args: {
+          p_delivered: boolean
+          p_error_code?: string
+          p_error_message?: string
+          p_event_id: string
           p_organization_id: string
           p_worker_id: string
         }
@@ -13560,6 +13944,17 @@ export type Database = {
           result: Json
         }[]
       }
+      get_finding_triage_detail_m5_04_raw: {
+        Args: {
+          p_actor_user_id: string
+          p_finding_id: string
+          p_organization_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
       get_finding_vex_assessment: {
         Args: {
           p_actor_user_id: string
@@ -14167,6 +14562,13 @@ export type Database = {
           outcome: string
         }[]
       }
+      get_vulnerability_triage_alert_details: {
+        Args: { p_event_id: string; p_organization_id: string }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
       is_iso_3166_alpha_2: { Args: { p_country: string }; Returns: boolean }
       is_login_locked: { Args: { p_email: string }; Returns: string }
       link_external_identity_atomic: {
@@ -14274,6 +14676,12 @@ export type Database = {
           organization_id: string
         }[]
       }
+      list_due_vulnerability_triage_alert_organizations: {
+        Args: { p_limit?: number }
+        Returns: {
+          organization_id: string
+        }[]
+      }
       list_field_authority_policies: {
         Args: {
           p_actor_user_id: string
@@ -14293,6 +14701,21 @@ export type Database = {
         }[]
       }
       list_finding_triage_queue: {
+        Args: {
+          p_actor_user_id: string
+          p_cursor?: string
+          p_filters?: Json
+          p_limit?: number
+          p_order?: string
+          p_organization_id: string
+          p_sort?: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      list_finding_triage_queue_m5_04_raw: {
         Args: {
           p_actor_user_id: string
           p_cursor?: string
@@ -14771,6 +15194,13 @@ export type Database = {
         }
         Returns: {
           candidate: Json
+        }[]
+      }
+      list_vulnerability_triage_sla_policies: {
+        Args: { p_actor_user_id: string; p_organization_id: string }
+        Returns: {
+          outcome: string
+          result: Json
         }[]
       }
       m1_accept_invitation_atomic_legacy_unchecked: {
@@ -15328,6 +15758,10 @@ export type Database = {
         Args: { p_actor_user_id: string; p_organization_id: string }
         Returns: boolean
       }
+      m5_triage_actor_can_configure_sla: {
+        Args: { p_actor_user_id: string; p_organization_id: string }
+        Returns: boolean
+      }
       m5_triage_command_result: {
         Args: {
           p_actor_user_id: string
@@ -15341,8 +15775,54 @@ export type Database = {
           result: Json
         }[]
       }
+      m5_triage_ensure_state: {
+        Args: {
+          p_actor_user_id: string
+          p_finding_id: string
+          p_organization_id: string
+        }
+        Returns: {
+          assignee_user_id: string | null
+          created_at: string
+          finding_id: string
+          last_observed_severity: string
+          organization_id: string
+          sla_breached_at: string | null
+          sla_elapsed_seconds: number
+          sla_paused_at: string | null
+          sla_policy_version: number | null
+          sla_severity: string | null
+          sla_started_at: string | null
+          sla_target_minutes: number | null
+          updated_at: string
+          updated_by: string | null
+          version: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "vulnerability_finding_triage_states"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      m5_triage_finding_severity: {
+        Args: { p_finding_id: string; p_organization_id: string }
+        Returns: string
+      }
+      m5_triage_materialize_due_work: {
+        Args: { p_organization_id: string }
+        Returns: number
+      }
+      m5_triage_operational_json: {
+        Args: { p_finding_id: string; p_organization_id: string }
+        Returns: Json
+      }
       m5_triage_saved_view_json: {
         Args: { p_organization_id: string; p_saved_view_id: string }
+        Returns: Json
+      }
+      m5_triage_state_json: {
+        Args: { p_finding_id: string; p_organization_id: string }
         Returns: Json
       }
       m5_vex_active_member: {
@@ -17004,6 +17484,22 @@ export type Database = {
         }
         Returns: string
       }
+      set_vulnerability_triage_sla_policy_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_correlation_id?: string
+          p_enabled: boolean
+          p_expected_version: number
+          p_idempotency_key: string
+          p_organization_id: string
+          p_severity: string
+          p_target_minutes: number
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
       stage_vulnerability_feed_record: {
         Args: {
           p_canonical_id: string
@@ -17083,6 +17579,22 @@ export type Database = {
         Returns: {
           outcome: string
           support_period: Json
+        }[]
+      }
+      suppress_finding_triage_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_correlation_id?: string
+          p_expected_version: number
+          p_expires_at: string
+          p_finding_id: string
+          p_idempotency_key: string
+          p_organization_id: string
+          p_reason: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
         }[]
       }
       switch_organization_atomic: {

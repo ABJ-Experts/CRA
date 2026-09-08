@@ -29,7 +29,17 @@ begin
   ) values (
     v_vulnerability, v_source_version, 'npm', 'm5-vex-browser-fixture',
     'SEMVER', '{"events":[{"introduced":"0"}]}'::jsonb, '[]'::jsonb
-  ) returning id into v_range;
+  ) on conflict (source_record_version_id, ecosystem, package_name, range_type, range_value)
+    do nothing returning id into v_range;
+
+  if v_range is null then
+    select id into v_range from public.vulnerability_affected_ranges
+      where source_record_version_id = v_source_version
+        and ecosystem = 'npm'
+        and package_name = 'm5-vex-browser-fixture'
+        and range_type = 'SEMVER'
+        and range_value = '{"events":[{"introduced":"0"}]}'::jsonb;
+  end if;
 
   insert into public.vulnerability_findings (
     id, organization_id, release_id, component_identity, canonical_advisory_id,

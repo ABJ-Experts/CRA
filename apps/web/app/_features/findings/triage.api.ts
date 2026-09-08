@@ -12,6 +12,9 @@ import {
   updateVulnerabilitySavedViewInputSchema,
   updateVulnerabilityAssessmentApprovalPolicyInputSchema,
   undoVulnerabilityAssessmentBulkOperationInputSchema,
+  assignVulnerabilityTriageFindingInputSchema,
+  suppressVulnerabilityTriageFindingInputSchema,
+  updateVulnerabilityTriageSlaPolicyInputSchema,
   vulnerabilityAssessmentBulkOperationMutationResponseSchema,
   vulnerabilityAssessmentBulkOperationParamsSchema,
   vulnerabilityAssessmentBulkOperationResponseSchema,
@@ -28,6 +31,9 @@ import {
   vulnerabilityTriageFindingParamsSchema,
   vulnerabilityTriageQueueQuerySchema,
   vulnerabilityTriageQueueResponseSchema,
+  vulnerabilityTriageOperationalMutationResponseSchema,
+  vulnerabilityTriageSlaPoliciesResponseSchema,
+  vulnerabilityTriageSlaPolicyMutationResponseSchema,
   type CreateVulnerabilitySavedViewInput,
   type CreateVulnerabilityAssessmentBulkPreviewInput,
   type CreateVulnerabilityAssessmentPropagationPreviewInput,
@@ -41,6 +47,9 @@ import {
   type UpdateVulnerabilitySavedViewInput,
   type UpdateVulnerabilityAssessmentApprovalPolicyInput,
   type UndoVulnerabilityAssessmentBulkOperationInput,
+  type AssignVulnerabilityTriageFindingInput,
+  type SuppressVulnerabilityTriageFindingInput,
+  type UpdateVulnerabilityTriageSlaPolicyInput,
   type VulnerabilityTriageQueueQuery,
 } from "@repo/contracts/vulnerabilities";
 
@@ -151,6 +160,13 @@ function queuePath(query: VulnerabilityTriageQueueQuery): `/${string}` {
   appendMany(search, "reEvaluationStates", query.reEvaluationStates);
   appendMany(search, "assessedByUserIds", query.assessedByUserIds);
   appendMany(search, "reachability", query.reachability);
+  appendMany(search, "suppressionStates", query.suppressionStates);
+  appendMany(search, "internalSlaStates", query.internalSlaStates);
+  appendMany(
+    search,
+    "notificationDeliveryStates",
+    query.notificationDeliveryStates,
+  );
   if (query.epssState) search.set("epssState", query.epssState);
   if (query.epssMin !== undefined) search.set("epssMin", String(query.epssMin));
   if (query.epssMax !== undefined) search.set("epssMax", String(query.epssMax));
@@ -183,6 +199,44 @@ export class VulnerabilityTriageApi {
       path: findingPath(findingId),
       schema: vulnerabilityTriageDetailResponseSchema,
       signal,
+    });
+  }
+
+  assign(findingId: string, input: AssignVulnerabilityTriageFindingInput) {
+    return authenticatedRequestJson({
+      path: `${findingPath(findingId)}/assignee`,
+      method: "PATCH",
+      inputSchema: assignVulnerabilityTriageFindingInputSchema,
+      body: input,
+      schema: vulnerabilityTriageOperationalMutationResponseSchema,
+    });
+  }
+
+  suppress(findingId: string, input: SuppressVulnerabilityTriageFindingInput) {
+    return authenticatedRequestJson({
+      path: `${findingPath(findingId)}/suppression`,
+      method: "POST",
+      inputSchema: suppressVulnerabilityTriageFindingInputSchema,
+      body: input,
+      schema: vulnerabilityTriageOperationalMutationResponseSchema,
+    });
+  }
+
+  triageSlaPolicies(signal?: AbortSignal) {
+    return authenticatedRequestJson({
+      path: "/api/v1/findings/triage-sla-policies",
+      schema: vulnerabilityTriageSlaPoliciesResponseSchema,
+      signal,
+    });
+  }
+
+  updateTriageSlaPolicy(input: UpdateVulnerabilityTriageSlaPolicyInput) {
+    return authenticatedRequestJson({
+      path: "/api/v1/findings/triage-sla-policies",
+      method: "PUT",
+      inputSchema: updateVulnerabilityTriageSlaPolicyInputSchema,
+      body: input,
+      schema: vulnerabilityTriageSlaPolicyMutationResponseSchema,
     });
   }
 

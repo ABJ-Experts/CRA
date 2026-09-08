@@ -14,6 +14,9 @@ import type {
   UpdateVulnerabilitySavedViewInput,
   UpdateVulnerabilityAssessmentApprovalPolicyInput,
   UndoVulnerabilityAssessmentBulkOperationInput,
+  AssignVulnerabilityTriageFindingInput,
+  SuppressVulnerabilityTriageFindingInput,
+  UpdateVulnerabilityTriageSlaPolicyInput,
   VulnerabilityTriageQueueQuery,
 } from "@repo/contracts/vulnerabilities";
 import {
@@ -90,6 +93,15 @@ export function useVulnerabilityAssessmentApprovalPolicyQuery(
   });
 }
 
+export function useVulnerabilityTriageSlaPoliciesQuery(enabled: boolean) {
+  return useQuery({
+    queryKey: vulnerabilityTriageKeys.triageSlaPolicies,
+    enabled,
+    retry: false,
+    queryFn: ({ signal }) => vulnerabilityTriageApi.triageSlaPolicies(signal),
+  });
+}
+
 export function useVulnerabilityAssessmentBulkOperationQuery(
   operationId: string | null,
   enabled: boolean,
@@ -142,6 +154,17 @@ function useInvalidateFindingAssessment() {
       client.invalidateQueries({
         queryKey: vulnerabilityTriageKeys.assessment(findingId),
       }),
+      client.invalidateQueries({
+        queryKey: vulnerabilityTriageKeys.detail(findingId),
+      }),
+      client.invalidateQueries({ queryKey: vulnerabilityTriageKeys.queue }),
+    ]);
+}
+
+function useInvalidateFindingOperationalState() {
+  const client = useQueryClient();
+  return (findingId: string) =>
+    Promise.all([
       client.invalidateQueries({
         queryKey: vulnerabilityTriageKeys.detail(findingId),
       }),
@@ -270,6 +293,50 @@ export function useUpdateVulnerabilityAssessmentApprovalPolicyMutation() {
       client.invalidateQueries({
         queryKey: vulnerabilityTriageKeys.assessmentApprovalPolicy,
       }),
+  });
+}
+
+export function useAssignVulnerabilityTriageFindingMutation() {
+  const invalidate = useInvalidateFindingOperationalState();
+  return useMutation({
+    mutationFn: ({
+      findingId,
+      input,
+    }: {
+      findingId: string;
+      input: AssignVulnerabilityTriageFindingInput;
+    }) => vulnerabilityTriageApi.assign(findingId, input),
+    onSuccess: (_, variables) => invalidate(variables.findingId),
+  });
+}
+
+export function useSuppressVulnerabilityTriageFindingMutation() {
+  const invalidate = useInvalidateFindingOperationalState();
+  return useMutation({
+    mutationFn: ({
+      findingId,
+      input,
+    }: {
+      findingId: string;
+      input: SuppressVulnerabilityTriageFindingInput;
+    }) => vulnerabilityTriageApi.suppress(findingId, input),
+    onSuccess: (_, variables) => invalidate(variables.findingId),
+  });
+}
+
+export function useUpdateVulnerabilityTriageSlaPolicyMutation() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (input: UpdateVulnerabilityTriageSlaPolicyInput) =>
+      vulnerabilityTriageApi.updateTriageSlaPolicy(input),
+    onSuccess: () =>
+      Promise.all([
+        client.invalidateQueries({
+          queryKey: vulnerabilityTriageKeys.triageSlaPolicies,
+        }),
+        client.invalidateQueries({ queryKey: vulnerabilityTriageKeys.queue }),
+        client.invalidateQueries({ queryKey: vulnerabilityTriageKeys.all }),
+      ]),
   });
 }
 

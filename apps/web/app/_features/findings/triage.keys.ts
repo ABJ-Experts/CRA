@@ -12,6 +12,10 @@ const assessmentBulkOperations = Object.freeze([
   ...all,
   "assessment-bulk-operations",
 ] as const);
+const triageSlaPolicies = Object.freeze([
+  ...all,
+  "triage-sla-policies",
+] as const);
 
 function stableQuery(query: Readonly<Partial<VulnerabilityTriageQueueQuery>>) {
   return JSON.stringify(
@@ -24,6 +28,7 @@ export const vulnerabilityTriageKeys = Object.freeze({
   queue,
   assessments,
   assessmentBulkOperations,
+  triageSlaPolicies,
   queueList: (
     organizationId: string | null,
     query: Readonly<Partial<VulnerabilityTriageQueueQuery>>,

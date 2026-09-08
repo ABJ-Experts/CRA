@@ -275,4 +275,41 @@ export class MailService {
       idempotencyKey,
     );
   }
+
+  /**
+   * Internal triage notifications deliberately state that they are neither a
+   * regulatory clock nor a report update. The database-owned notifier passes
+   * only the advisory, severity, and event kind; evidence remains in CRA.
+   */
+  async sendVulnerabilityTriageAlert(
+    to: string,
+    input: Readonly<{
+      advisoryId: string;
+      severity: string;
+      kind: "suppression_expired" | "internal_sla_breached";
+    }>,
+    idempotencyKey: string,
+  ): Promise<void> {
+    const advisorySubject = input.advisoryId.replace(/[\r\n]+/g, " ").trim();
+    const advisoryId = escapeHtml(advisorySubject);
+    const severity = escapeHtml(input.severity.replace(/_/g, " "));
+    const isSuppressionExpiry = input.kind === "suppression_expired";
+    const title = isSuppressionExpiry
+      ? "Suppression expired"
+      : "Internal triage SLA breached";
+    const detail = isSuppressionExpiry
+      ? `The finite suppression for <strong>${advisoryId}</strong> expired. The finding is actionable again.`
+      : `The internal triage SLA for <strong>${advisoryId}</strong> (${severity}) was breached.`;
+    await this.send(
+      to,
+      `${title}: ${advisorySubject}`,
+      this.layout(
+        title,
+        `<p style="color:#4b5058;font-size:14px">${detail}</p>
+         <p style="color:#4b5058;font-size:14px">This is an internal triage alert. No regulatory deadline, obligation, or report was changed by this notification.</p>`,
+      ),
+      true,
+      idempotencyKey,
+    );
+  }
 }

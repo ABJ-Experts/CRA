@@ -324,4 +324,30 @@ describe("MailService", () => {
       "Finding review required: CVE-2026-0001 Bcc: no-one@cra.test",
     );
   });
+
+  it("sends an internal SLA alert without implying a regulatory change", async () => {
+    const service = new MailService(enabledConfig());
+
+    await service.sendVulnerabilityTriageAlert(
+      "owner@cra.test",
+      {
+        advisoryId: "CVE-2026-0001",
+        severity: "high",
+        kind: "internal_sla_breached",
+      },
+      "33333333-3333-4333-8333-333333333333",
+    );
+
+    const message = mockSendMail.mock.calls[0]?.[0] as Readonly<{
+      subject?: unknown;
+      html?: unknown;
+    }>;
+    expect(message?.subject).toBe(
+      "Internal triage SLA breached: CVE-2026-0001",
+    );
+    expect(message?.html).toContain("Internal triage SLA");
+    expect(message?.html).toContain(
+      "No regulatory deadline, obligation, or report was changed",
+    );
+  });
 });

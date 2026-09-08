@@ -1021,7 +1021,8 @@ select pg_temp.check(
       'connector_sync', 'sbom_normalized_graph',
       'sbom_composite_supplier_provenance',
       'vulnerability_reachability_review',
-      'vulnerability_vex_assessments'
+      'vulnerability_vex_assessments',
+      'vulnerability_triage_operational'
     ]::text[]
 );
 
