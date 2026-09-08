@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   vulnerabilityTriageQueueQuerySchema,
   type SubmitVulnerabilityFindingAssessmentInput,
+  type RecordVulnerabilityRemediationAnchorInput,
 } from "@repo/contracts/vulnerabilities";
 
 import { vulnerabilityTriageApi } from "./triage.api";
@@ -166,6 +167,15 @@ describe("vulnerabilityTriageApi", () => {
         deliveredAt: null,
         failureMessage: "Provider unavailable.",
       },
+      remediation: {
+        state: "not_recorded",
+        anchor: null,
+        reintroduction: {
+          state: "not_reintroduced",
+          fromFindingId: null,
+          detectedAt: null,
+        },
+      },
     } as const;
     const fetcher = vi.fn<
       (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
@@ -201,6 +211,72 @@ describe("vulnerabilityTriageApi", () => {
     );
     expect(fetcher).toHaveBeenLastCalledWith(
       `/api/v1/findings/${findingId}/suppression`,
+      expect.objectContaining({ method: "POST" }),
+    );
+  });
+
+  it("serializes remediation queue filters and validates versioned writes", async () => {
+    const findingId = "11111111-1111-4111-8111-111111111111";
+    const idempotencyKey = "33333333-3333-4333-8333-333333333333";
+    const remediation = {
+      state: "available",
+      anchor: {
+        id: "22222222-2222-4222-8222-222222222222",
+        findingId,
+        revision: 1,
+        remediationKind: "corrective",
+        fixVersion: "2.4.1",
+        mitigationDescription: "The vendor-provided package is available.",
+        availabilityAt: "2020-09-08T10:00:00.000Z",
+        availabilityProvenance: "human_asserted",
+        availabilityBasis: "Vendor confirmation reviewed by the owner.",
+        correctionReason: null,
+        recordedByUserId: findingId,
+        recordedAt: "2020-09-08T10:05:00.000Z",
+      },
+      reintroduction: {
+        state: "not_reintroduced",
+        fromFindingId: null,
+        detectedAt: null,
+      },
+    } as const;
+    const fetcher = vi.fn<
+      (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
+    >(async (input) =>
+      String(input).includes("/remediation")
+        ? json({ remediation })
+        : json({ rows: [], nextCursor: null, filterIssues: [] }),
+    );
+    vi.stubGlobal("fetch", fetcher);
+    const input: RecordVulnerabilityRemediationAnchorInput = {
+      remediationKind: "corrective",
+      fixVersion: "2.4.1",
+      mitigationDescription: "The vendor-provided package is available.",
+      availabilityAt: "2020-09-08T10:00:00.000Z",
+      availabilityProvenance: "human_asserted",
+      availabilityBasis: "Vendor confirmation reviewed by the owner.",
+      expectedVersion: 0,
+      idempotencyKey,
+    };
+
+    await expect(
+      vulnerabilityTriageApi.list({
+        remediationStates: ["available"],
+        reintroductionStates: ["reintroduced"],
+      }),
+    ).resolves.toMatchObject({ rows: [] });
+    await expect(
+      vulnerabilityTriageApi.recordRemediation(findingId, input),
+    ).resolves.toEqual({ remediation });
+
+    expect(String(fetcher.mock.calls[0]?.[0])).toContain(
+      "remediationStates=available",
+    );
+    expect(String(fetcher.mock.calls[0]?.[0])).toContain(
+      "reintroductionStates=reintroduced",
+    );
+    expect(fetcher).toHaveBeenLastCalledWith(
+      `/api/v1/findings/${findingId}/remediation`,
       expect.objectContaining({ method: "POST" }),
     );
   });

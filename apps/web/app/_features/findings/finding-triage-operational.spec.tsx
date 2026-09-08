@@ -73,6 +73,15 @@ const operational = {
     deliveredAt: null,
     failureMessage: "Provider unavailable.",
   },
+  remediation: {
+    state: "not_recorded" as const,
+    anchor: null,
+    reintroduction: {
+      state: "not_reintroduced" as const,
+      fromFindingId: null,
+      detectedAt: null,
+    },
+  },
 };
 
 describe("FindingTriageOperational", () => {

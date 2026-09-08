@@ -3981,6 +3981,7 @@ export type Database = {
           due_at: string | null
           event_key: string
           event_type: string
+          finding_id: string | null
           graph_version: number | null
           id: string
           last_delivery_error: string | null
@@ -3993,7 +3994,9 @@ export type Database = {
           organization_id: string
           payload: Json
           product_id: string
+          reintroduced_from_finding_id: string | null
           release_id: string | null
+          remediation_anchor_id: string | null
           support_period_id: string | null
           support_period_revision: number | null
         }
@@ -4009,6 +4012,7 @@ export type Database = {
           due_at?: string | null
           event_key: string
           event_type: string
+          finding_id?: string | null
           graph_version?: number | null
           id?: string
           last_delivery_error?: string | null
@@ -4021,7 +4025,9 @@ export type Database = {
           organization_id: string
           payload: Json
           product_id: string
+          reintroduced_from_finding_id?: string | null
           release_id?: string | null
+          remediation_anchor_id?: string | null
           support_period_id?: string | null
           support_period_revision?: number | null
         }
@@ -4037,6 +4043,7 @@ export type Database = {
           due_at?: string | null
           event_key?: string
           event_type?: string
+          finding_id?: string | null
           graph_version?: number | null
           id?: string
           last_delivery_error?: string | null
@@ -4049,7 +4056,9 @@ export type Database = {
           organization_id?: string
           payload?: Json
           product_id?: string
+          reintroduced_from_finding_id?: string | null
           release_id?: string | null
+          remediation_anchor_id?: string | null
           support_period_id?: string | null
           support_period_revision?: number | null
         }
@@ -4074,6 +4083,27 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_regulatory_outbox_finding_fk"
+            columns: ["organization_id", "finding_id"]
+            isOneToOne: false
+            referencedRelation: "vulnerability_findings"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "product_regulatory_outbox_reintroduced_from_finding_fk"
+            columns: ["organization_id", "reintroduced_from_finding_id"]
+            isOneToOne: false
+            referencedRelation: "vulnerability_findings"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "product_regulatory_outbox_remediation_anchor_fk"
+            columns: ["organization_id", "remediation_anchor_id"]
+            isOneToOne: false
+            referencedRelation: "vulnerability_finding_remediation_anchors"
+            referencedColumns: ["organization_id", "id"]
           },
           {
             foreignKeyName: "product_regulatory_outbox_support_period_fk"
@@ -9909,6 +9939,92 @@ export type Database = {
           },
         ]
       }
+      vulnerability_finding_remediation_anchors: {
+        Row: {
+          availability_at: string | null
+          availability_basis: string | null
+          availability_provenance: string | null
+          correction_reason: string | null
+          finding_id: string
+          fix_version: string | null
+          id: string
+          is_current: boolean
+          mitigation_description: string
+          organization_id: string
+          recorded_at: string
+          recorded_by: string
+          remediation_kind: string
+          revision: number
+          superseded_at: string | null
+          superseded_by: string | null
+        }
+        Insert: {
+          availability_at?: string | null
+          availability_basis?: string | null
+          availability_provenance?: string | null
+          correction_reason?: string | null
+          finding_id: string
+          fix_version?: string | null
+          id?: string
+          is_current?: boolean
+          mitigation_description: string
+          organization_id: string
+          recorded_at?: string
+          recorded_by: string
+          remediation_kind: string
+          revision: number
+          superseded_at?: string | null
+          superseded_by?: string | null
+        }
+        Update: {
+          availability_at?: string | null
+          availability_basis?: string | null
+          availability_provenance?: string | null
+          correction_reason?: string | null
+          finding_id?: string
+          fix_version?: string | null
+          id?: string
+          is_current?: boolean
+          mitigation_description?: string
+          organization_id?: string
+          recorded_at?: string
+          recorded_by?: string
+          remediation_kind?: string
+          revision?: number
+          superseded_at?: string | null
+          superseded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vulnerability_finding_remediati_organization_id_finding_id_fkey"
+            columns: ["organization_id", "finding_id"]
+            isOneToOne: false
+            referencedRelation: "vulnerability_findings"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "vulnerability_finding_remediation_anchors_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vulnerability_finding_remediation_anchors_recorded_by_fkey"
+            columns: ["recorded_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vulnerability_finding_remediation_anchors_superseded_by_fkey"
+            columns: ["superseded_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vulnerability_finding_review_events: {
         Row: {
           created_at: string
@@ -10197,6 +10313,8 @@ export type Database = {
           proposed_state: Json
           reconciliation_conflict: Json
           reevaluation_state: string
+          reintroduced_at: string | null
+          reintroduced_from_finding_id: string | null
           release_id: string
           source_feed_key: string
           source_record_id: string
@@ -10235,6 +10353,8 @@ export type Database = {
           proposed_state?: Json
           reconciliation_conflict?: Json
           reevaluation_state?: string
+          reintroduced_at?: string | null
+          reintroduced_from_finding_id?: string | null
           release_id: string
           source_feed_key: string
           source_record_id: string
@@ -10273,6 +10393,8 @@ export type Database = {
           proposed_state?: Json
           reconciliation_conflict?: Json
           reevaluation_state?: string
+          reintroduced_at?: string | null
+          reintroduced_from_finding_id?: string | null
           release_id?: string
           source_feed_key?: string
           source_record_id?: string
@@ -10316,6 +10438,13 @@ export type Database = {
             columns: ["organization_id", "release_id"]
             isOneToOne: false
             referencedRelation: "product_releases"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "vulnerability_findings_reintroduced_from_finding_fk"
+            columns: ["organization_id", "reintroduced_from_finding_id"]
+            isOneToOne: false
+            referencedRelation: "vulnerability_findings"
             referencedColumns: ["organization_id", "id"]
           },
           {
@@ -13933,6 +14062,17 @@ export type Database = {
           summary: Json
         }[]
       }
+      get_finding_remediation_anchors: {
+        Args: {
+          p_actor_user_id: string
+          p_finding_id: string
+          p_organization_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
       get_finding_triage_detail: {
         Args: {
           p_actor_user_id: string
@@ -14740,6 +14880,13 @@ export type Database = {
           p_organization_id: string
           p_sort?: string
         }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      list_m6_remediation_outbox_events: {
+        Args: { p_cursor?: string; p_limit?: number; p_organization_id: string }
         Returns: {
           outcome: string
           result: Json
@@ -15754,12 +15901,36 @@ export type Database = {
         Args: { p_operation_id: string; p_organization_id: string }
         Returns: Json
       }
+      m5_remediation_anchor_json: {
+        Args: { p_anchor_id: string; p_organization_id: string }
+        Returns: Json
+      }
+      m5_remediation_mark_reintroduced_finding: {
+        Args: { p_finding_id: string; p_organization_id: string }
+        Returns: string
+      }
+      m5_remediation_projection_json: {
+        Args: { p_finding_id: string; p_organization_id: string }
+        Returns: Json
+      }
       m5_triage_active_member: {
         Args: { p_actor_user_id: string; p_organization_id: string }
         Returns: boolean
       }
       m5_triage_actor_can_configure_sla: {
         Args: { p_actor_user_id: string; p_organization_id: string }
+        Returns: boolean
+      }
+      m5_triage_actor_can_edit_findings: {
+        Args: { p_actor_user_id: string; p_organization_id: string }
+        Returns: boolean
+      }
+      m5_triage_actor_has_permission: {
+        Args: {
+          p_actor_user_id: string
+          p_organization_id: string
+          p_permission_key: string
+        }
         Returns: boolean
       }
       m5_triage_command_result: {
@@ -15814,6 +15985,10 @@ export type Database = {
         Returns: number
       }
       m5_triage_operational_json: {
+        Args: { p_finding_id: string; p_organization_id: string }
+        Returns: Json
+      }
+      m5_triage_operational_json_m5_04: {
         Args: { p_finding_id: string; p_organization_id: string }
         Returns: Json
       }
@@ -16413,6 +16588,27 @@ export type Database = {
         Returns: {
           connector: Json
           outcome: string
+        }[]
+      }
+      record_finding_remediation_anchor_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_availability_at: string
+          p_availability_basis: string
+          p_availability_provenance: string
+          p_correction_reason: string
+          p_correlation_id?: string
+          p_expected_revision: number
+          p_finding_id: string
+          p_fix_version: string
+          p_idempotency_key: string
+          p_mitigation_description: string
+          p_organization_id: string
+          p_remediation_kind: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
         }[]
       }
       record_invitation_delivery_onboarding_atomic: {

@@ -15,6 +15,8 @@ import type {
   UpdateVulnerabilityAssessmentApprovalPolicyInput,
   UndoVulnerabilityAssessmentBulkOperationInput,
   AssignVulnerabilityTriageFindingInput,
+  CorrectVulnerabilityRemediationAnchorInput,
+  RecordVulnerabilityRemediationAnchorInput,
   SuppressVulnerabilityTriageFindingInput,
   UpdateVulnerabilityTriageSlaPolicyInput,
   VulnerabilityTriageQueueQuery,
@@ -58,6 +60,25 @@ export function useVulnerabilityTriageDetailQuery(
       if (findingId === null)
         throw new Error("A finding identifier is required.");
       return vulnerabilityTriageApi.detail(findingId, signal);
+    },
+  });
+}
+
+export function useVulnerabilityRemediationHistoryQuery(
+  findingId: string | null,
+  enabled: boolean,
+) {
+  return useQuery({
+    queryKey:
+      findingId === null
+        ? vulnerabilityTriageKeys.remediationHistory
+        : vulnerabilityTriageKeys.remediationHistoryForFinding(findingId),
+    enabled: enabled && findingId !== null,
+    retry: false,
+    queryFn: ({ signal }) => {
+      if (findingId === null)
+        throw new Error("A finding identifier is required.");
+      return vulnerabilityTriageApi.remediationHistory(findingId, signal);
     },
   });
 }
@@ -165,6 +186,21 @@ function useInvalidateFindingOperationalState() {
   const client = useQueryClient();
   return (findingId: string) =>
     Promise.all([
+      client.invalidateQueries({
+        queryKey: vulnerabilityTriageKeys.detail(findingId),
+      }),
+      client.invalidateQueries({ queryKey: vulnerabilityTriageKeys.queue }),
+    ]);
+}
+
+function useInvalidateFindingRemediation() {
+  const client = useQueryClient();
+  return (findingId: string) =>
+    Promise.all([
+      client.invalidateQueries({
+        queryKey:
+          vulnerabilityTriageKeys.remediationHistoryForFinding(findingId),
+      }),
       client.invalidateQueries({
         queryKey: vulnerabilityTriageKeys.detail(findingId),
       }),
@@ -320,6 +356,34 @@ export function useSuppressVulnerabilityTriageFindingMutation() {
       findingId: string;
       input: SuppressVulnerabilityTriageFindingInput;
     }) => vulnerabilityTriageApi.suppress(findingId, input),
+    onSuccess: (_, variables) => invalidate(variables.findingId),
+  });
+}
+
+export function useRecordVulnerabilityRemediationMutation() {
+  const invalidate = useInvalidateFindingRemediation();
+  return useMutation({
+    mutationFn: ({
+      findingId,
+      input,
+    }: {
+      findingId: string;
+      input: RecordVulnerabilityRemediationAnchorInput;
+    }) => vulnerabilityTriageApi.recordRemediation(findingId, input),
+    onSuccess: (_, variables) => invalidate(variables.findingId),
+  });
+}
+
+export function useCorrectVulnerabilityRemediationMutation() {
+  const invalidate = useInvalidateFindingRemediation();
+  return useMutation({
+    mutationFn: ({
+      findingId,
+      input,
+    }: {
+      findingId: string;
+      input: CorrectVulnerabilityRemediationAnchorInput;
+    }) => vulnerabilityTriageApi.correctRemediation(findingId, input),
     onSuccess: (_, variables) => invalidate(variables.findingId),
   });
 }

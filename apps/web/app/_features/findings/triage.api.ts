@@ -13,6 +13,8 @@ import {
   updateVulnerabilityAssessmentApprovalPolicyInputSchema,
   undoVulnerabilityAssessmentBulkOperationInputSchema,
   assignVulnerabilityTriageFindingInputSchema,
+  correctVulnerabilityRemediationAnchorInputSchema,
+  recordVulnerabilityRemediationAnchorInputSchema,
   suppressVulnerabilityTriageFindingInputSchema,
   updateVulnerabilityTriageSlaPolicyInputSchema,
   vulnerabilityAssessmentBulkOperationMutationResponseSchema,
@@ -34,6 +36,8 @@ import {
   vulnerabilityTriageOperationalMutationResponseSchema,
   vulnerabilityTriageSlaPoliciesResponseSchema,
   vulnerabilityTriageSlaPolicyMutationResponseSchema,
+  vulnerabilityRemediationHistoryResponseSchema,
+  vulnerabilityRemediationMutationResponseSchema,
   type CreateVulnerabilitySavedViewInput,
   type CreateVulnerabilityAssessmentBulkPreviewInput,
   type CreateVulnerabilityAssessmentPropagationPreviewInput,
@@ -48,6 +52,8 @@ import {
   type UpdateVulnerabilityAssessmentApprovalPolicyInput,
   type UndoVulnerabilityAssessmentBulkOperationInput,
   type AssignVulnerabilityTriageFindingInput,
+  type CorrectVulnerabilityRemediationAnchorInput,
+  type RecordVulnerabilityRemediationAnchorInput,
   type SuppressVulnerabilityTriageFindingInput,
   type UpdateVulnerabilityTriageSlaPolicyInput,
   type VulnerabilityTriageQueueQuery,
@@ -167,6 +173,8 @@ function queuePath(query: VulnerabilityTriageQueueQuery): `/${string}` {
     "notificationDeliveryStates",
     query.notificationDeliveryStates,
   );
+  appendMany(search, "remediationStates", query.remediationStates);
+  appendMany(search, "reintroductionStates", query.reintroductionStates);
   if (query.epssState) search.set("epssState", query.epssState);
   if (query.epssMin !== undefined) search.set("epssMin", String(query.epssMin));
   if (query.epssMax !== undefined) search.set("epssMax", String(query.epssMax));
@@ -219,6 +227,40 @@ export class VulnerabilityTriageApi {
       inputSchema: suppressVulnerabilityTriageFindingInputSchema,
       body: input,
       schema: vulnerabilityTriageOperationalMutationResponseSchema,
+    });
+  }
+
+  remediationHistory(findingId: string, signal?: AbortSignal) {
+    return authenticatedRequestJson({
+      path: `${findingPath(findingId)}/remediation`,
+      schema: vulnerabilityRemediationHistoryResponseSchema,
+      signal,
+    });
+  }
+
+  recordRemediation(
+    findingId: string,
+    input: RecordVulnerabilityRemediationAnchorInput,
+  ) {
+    return authenticatedRequestJson({
+      path: `${findingPath(findingId)}/remediation`,
+      method: "POST",
+      inputSchema: recordVulnerabilityRemediationAnchorInputSchema,
+      body: input,
+      schema: vulnerabilityRemediationMutationResponseSchema,
+    });
+  }
+
+  correctRemediation(
+    findingId: string,
+    input: CorrectVulnerabilityRemediationAnchorInput,
+  ) {
+    return authenticatedRequestJson({
+      path: `${findingPath(findingId)}/remediation`,
+      method: "PATCH",
+      inputSchema: correctVulnerabilityRemediationAnchorInputSchema,
+      body: input,
+      schema: vulnerabilityRemediationMutationResponseSchema,
     });
   }
 

@@ -5,6 +5,7 @@ import { Button } from "@repo/ui/button";
 import { Tag, type TagProps } from "@repo/ui/tag";
 
 import { FindingAssessment } from "./finding-assessment";
+import { FindingRemediation } from "./finding-remediation";
 import { FindingTriageOperational } from "./finding-triage-operational";
 
 function titleCase(value: string): string {
@@ -211,6 +212,10 @@ export function FindingTriageDetail({
       ) : null}
 
       <FindingAssessment findingId={finding.id} />
+      <FindingRemediation
+        findingId={finding.id}
+        remediation={detail.operational.remediation}
+      />
       <FindingTriageOperational
         findingId={finding.id}
         operational={detail.operational}

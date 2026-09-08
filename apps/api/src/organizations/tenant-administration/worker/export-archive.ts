@@ -217,6 +217,7 @@ export const exportSourceRegistry: readonly ExportSourceRegistration[] =
         "vulnerability_triage_sla_policies",
         "vulnerability_finding_triage_states",
         "vulnerability_triage_alert_events",
+        "vulnerability_finding_remediation_anchors",
       ],
     },
   ]);

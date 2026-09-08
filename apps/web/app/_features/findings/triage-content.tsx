@@ -67,7 +67,7 @@ function severityTone(value: QueueRow["severity"]): TagProps["tone"] {
       : "purple";
 }
 function rowLabel(row: QueueRow) {
-  return `${row.finding.advisoryId}, ${row.product?.name ?? "product unavailable"}, ${row.severity} severity, ${row.operational.suppression.state}, internal SLA ${row.operational.internalSla.state}, delivery ${row.operational.notification.state}`;
+  return `${row.finding.advisoryId}, ${row.product?.name ?? "product unavailable"}, ${row.severity} severity, ${row.operational.suppression.state}, internal SLA ${row.operational.internalSla.state}, delivery ${row.operational.notification.state}, remediation ${row.operational.remediation.state}, reintroduction ${row.operational.remediation.reintroduction.state}`;
 }
 function uuid() {
   return crypto.randomUUID();
@@ -404,6 +404,53 @@ function TriageFilters({
           ["dead_letter", "Delivery failed"],
           ["recipient_unavailable", "Recipient unavailable"],
           ["delivered", "Delivered"],
+        ]}
+      />
+      <FilterSelect
+        label="Remediation"
+        value={filters.remediationStates?.[0] ?? ""}
+        onChange={(value) =>
+          onChange({
+            ...filters,
+            remediationStates:
+              value === ""
+                ? undefined
+                : [
+                    value as NonNullable<
+                      QueueFilters["remediationStates"]
+                    >[number],
+                  ],
+          })
+        }
+        options={[
+          ["", "Any remediation"],
+          ["not_recorded", "No anchor"],
+          ["planned", "Fix planned"],
+          ["available", "Fix available"],
+          ["applied", "Fix applied"],
+        ]}
+      />
+      <FilterSelect
+        label="Reintroduction"
+        value={filters.reintroductionStates?.[0] ?? ""}
+        onChange={(value) =>
+          onChange({
+            ...filters,
+            reintroductionStates:
+              value === ""
+                ? undefined
+                : [
+                    value as NonNullable<
+                      QueueFilters["reintroductionStates"]
+                    >[number],
+                  ],
+          })
+        }
+        options={[
+          ["", "Any reintroduction"],
+          ["not_reintroduced", "Not reintroduced"],
+          ["reintroduced", "Reintroduced"],
+          ["not_evaluated", "Not evaluated"],
         ]}
       />
       <FilterSelect
@@ -1009,9 +1056,9 @@ export function FindingTriageContent() {
             />
           ) : null}
           {rows.length > 0 ? (
-            <>
+            <div className="overflow-x-auto">
               <div
-                className="grid grid-cols-[2.5rem_minmax(9rem,1.4fr)_minmax(7rem,1fr)_minmax(6rem,.7fr)_minmax(6rem,.7fr)_minmax(6rem,.7fr)_minmax(7rem,.9fr)_minmax(9rem,1fr)] gap-3 border-b border-border px-4 py-2 text-caption-2-uppercase text-fg-subtle"
+                className="grid min-w-[940px] grid-cols-[2.5rem_minmax(9rem,1.4fr)_minmax(7rem,1fr)_minmax(6rem,.7fr)_minmax(6rem,.7fr)_minmax(6rem,.7fr)_minmax(7rem,.9fr)_minmax(9rem,1fr)] gap-3 border-b border-border px-4 py-2 text-caption-2-uppercase text-fg-subtle"
                 aria-hidden="true"
               >
                 <span>Select</span>
@@ -1030,7 +1077,7 @@ export function FindingTriageContent() {
                 aria-rowcount={rows.length}
                 aria-busy={queue.isFetching}
                 tabIndex={-1}
-                className="overflow-y-auto outline-none"
+                className="min-w-[940px] overflow-y-auto outline-none"
                 style={{ height: VIEWPORT_HEIGHT }}
                 onScroll={(event) =>
                   setScrollTop(event.currentTarget.scrollTop)
@@ -1169,10 +1216,25 @@ export function FindingTriageContent() {
                           role="gridcell"
                           className="min-w-0 text-caption-1-regular text-fg"
                         >
-                          {titleCase(row.operational.suppression.state)}
+                          {titleCase(row.operational.suppression.state)} ·{" "}
+                          {row.operational.remediation.state === "not_recorded"
+                            ? "No remediation anchor"
+                            : row.operational.remediation.state === "planned"
+                              ? "Fix planned"
+                              : row.operational.remediation.state ===
+                                  "available"
+                                ? "Fix available"
+                                : "Fix applied"}
                           <span className="block truncate text-fg-muted">
                             SLA {titleCase(row.operational.internalSla.state)} ·{" "}
-                            {titleCase(row.operational.notification.state)}
+                            {titleCase(row.operational.notification.state)} ·{" "}
+                            {row.operational.remediation.reintroduction
+                              .state === "not_evaluated"
+                              ? "Reintroduction not evaluated"
+                              : titleCase(
+                                  row.operational.remediation.reintroduction
+                                    .state,
+                                )}
                           </span>
                         </span>
                       </div>
@@ -1201,7 +1263,7 @@ export function FindingTriageContent() {
                   </span>
                 )}
               </div>
-            </>
+            </div>
           ) : null}
         </section>
       ) : null}
