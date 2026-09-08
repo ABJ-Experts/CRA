@@ -9332,6 +9332,200 @@ export type Database = {
           },
         ]
       }
+      vulnerability_finding_assessment_bulk_operation_targets: {
+        Row: {
+          applied_at: string | null
+          component_identity: string
+          component_version: string
+          created_assessment_id: string | null
+          created_at: string
+          expected_assessment_id: string | null
+          expected_assessment_version: number
+          failure_code: string | null
+          finding_id: string
+          id: string
+          operation_id: string
+          ordinal: number
+          organization_id: string
+          previous_assessment_id: string | null
+          product_name: string
+          release_name: string
+          state: string
+          undone_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          applied_at?: string | null
+          component_identity: string
+          component_version: string
+          created_assessment_id?: string | null
+          created_at?: string
+          expected_assessment_id?: string | null
+          expected_assessment_version?: number
+          failure_code?: string | null
+          finding_id: string
+          id?: string
+          operation_id: string
+          ordinal: number
+          organization_id: string
+          previous_assessment_id?: string | null
+          product_name: string
+          release_name: string
+          state?: string
+          undone_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          applied_at?: string | null
+          component_identity?: string
+          component_version?: string
+          created_assessment_id?: string | null
+          created_at?: string
+          expected_assessment_id?: string | null
+          expected_assessment_version?: number
+          failure_code?: string | null
+          finding_id?: string
+          id?: string
+          operation_id?: string
+          ordinal?: number
+          organization_id?: string
+          previous_assessment_id?: string | null
+          product_name?: string
+          release_name?: string
+          state?: string
+          undone_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vulnerability_finding_assessm_organization_id_created_asse_fkey"
+            columns: ["organization_id", "created_assessment_id"]
+            isOneToOne: false
+            referencedRelation: "vulnerability_finding_assessments"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "vulnerability_finding_assessm_organization_id_expected_ass_fkey"
+            columns: ["organization_id", "expected_assessment_id"]
+            isOneToOne: false
+            referencedRelation: "vulnerability_finding_assessments"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "vulnerability_finding_assessm_organization_id_operation_id_fkey"
+            columns: ["organization_id", "operation_id"]
+            isOneToOne: false
+            referencedRelation: "vulnerability_finding_assessment_bulk_operations"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "vulnerability_finding_assessm_organization_id_previous_ass_fkey"
+            columns: ["organization_id", "previous_assessment_id"]
+            isOneToOne: false
+            referencedRelation: "vulnerability_finding_assessments"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "vulnerability_finding_assessment_bulk_ope_organization_id_fkey1"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vulnerability_finding_assessment_bulk_operations: {
+        Row: {
+          created_at: string
+          created_by: string
+          excluded_count: number
+          expires_at: string
+          id: string
+          operation_kind: string
+          organization_id: string
+          parent_audit_log_id: string | null
+          selection_filters: Json | null
+          selection_mode: string
+          snapshot_digest: string
+          source_assessment_id: string | null
+          source_assessment_version: number | null
+          source_finding_id: string | null
+          state: string
+          submission: Json
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          excluded_count?: number
+          expires_at: string
+          id?: string
+          operation_kind: string
+          organization_id: string
+          parent_audit_log_id?: string | null
+          selection_filters?: Json | null
+          selection_mode: string
+          snapshot_digest: string
+          source_assessment_id?: string | null
+          source_assessment_version?: number | null
+          source_finding_id?: string | null
+          state?: string
+          submission: Json
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          excluded_count?: number
+          expires_at?: string
+          id?: string
+          operation_kind?: string
+          organization_id?: string
+          parent_audit_log_id?: string | null
+          selection_filters?: Json | null
+          selection_mode?: string
+          snapshot_digest?: string
+          source_assessment_id?: string | null
+          source_assessment_version?: number | null
+          source_finding_id?: string | null
+          state?: string
+          submission?: Json
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vulnerability_finding_assessm_organization_id_source_asses_fkey"
+            columns: ["organization_id", "source_assessment_id"]
+            isOneToOne: false
+            referencedRelation: "vulnerability_finding_assessments"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "vulnerability_finding_assessm_organization_id_source_findi_fkey"
+            columns: ["organization_id", "source_finding_id"]
+            isOneToOne: false
+            referencedRelation: "vulnerability_findings"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "vulnerability_finding_assessment_bulk_oper_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vulnerability_finding_assessment_bulk_operation_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vulnerability_finding_assessment_commands: {
         Row: {
           actor_user_id: string
@@ -9507,6 +9701,7 @@ export type Database = {
         Row: {
           approval_required: boolean
           approval_state: string
+          bulk_operation_target_id: string | null
           change_reason: string | null
           created_at: string
           decided_at: string | null
@@ -9534,6 +9729,7 @@ export type Database = {
         Insert: {
           approval_required: boolean
           approval_state: string
+          bulk_operation_target_id?: string | null
           change_reason?: string | null
           created_at?: string
           decided_at?: string | null
@@ -9561,6 +9757,7 @@ export type Database = {
         Update: {
           approval_required?: boolean
           approval_state?: string
+          bulk_operation_target_id?: string | null
           change_reason?: string | null
           created_at?: string
           decided_at?: string | null
@@ -9605,6 +9802,13 @@ export type Database = {
             columns: ["organization_id", "finding_id"]
             isOneToOne: false
             referencedRelation: "vulnerability_findings"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "vulnerability_finding_assessments_bulk_target_fkey"
+            columns: ["organization_id", "bulk_operation_target_id"]
+            isOneToOne: false
+            referencedRelation: "vulnerability_finding_assessment_bulk_operation_targets"
             referencedColumns: ["organization_id", "id"]
           },
           {
@@ -12644,6 +12848,26 @@ export type Database = {
           request: Json
         }[]
       }
+      create_vulnerability_assessment_bulk_preview_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_filters: Json
+          p_finding_ids: Json
+          p_idempotency_key: string
+          p_operation_kind: string
+          p_organization_id: string
+          p_request_digest: string
+          p_selection_mode: string
+          p_source_assessment_id: string
+          p_source_assessment_version: number
+          p_source_finding_id: string
+          p_submission: Json
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
       create_vulnerability_manual_finding_atomic: {
         Args: {
           p_actor_user_id: string
@@ -12870,6 +13094,22 @@ export type Database = {
         Returns: {
           inserted_count: number
           outcome: string
+        }[]
+      }
+      execute_vulnerability_assessment_bulk_operation_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_confirm_scope_changes: boolean
+          p_expected_version: number
+          p_idempotency_key: string
+          p_operation_id: string
+          p_organization_id: string
+          p_request_digest: string
+          p_snapshot_digest: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
         }[]
       }
       expire_product_import_jobs: {
@@ -13855,6 +14095,17 @@ export type Database = {
           reservation: Json
         }[]
       }
+      get_vulnerability_assessment_bulk_operation: {
+        Args: {
+          p_actor_user_id: string
+          p_operation_id: string
+          p_organization_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
       get_vulnerability_csaf_reconciliation_detail: {
         Args: { p_canonical_id: string }
         Returns: Json
@@ -14042,6 +14293,21 @@ export type Database = {
         }[]
       }
       list_finding_triage_queue: {
+        Args: {
+          p_actor_user_id: string
+          p_cursor?: string
+          p_filters?: Json
+          p_limit?: number
+          p_order?: string
+          p_organization_id: string
+          p_sort?: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      list_finding_triage_queue_raw: {
         Args: {
           p_actor_user_id: string
           p_cursor?: string
@@ -15048,6 +15314,14 @@ export type Database = {
       m4_07_review_event_json: { Args: { p_event_id: string }; Returns: Json }
       m4_manual_finding_json: {
         Args: { p_finding_id: string; p_organization_id: string }
+        Returns: Json
+      }
+      m5_bulk_effective_assessment_id: {
+        Args: { p_finding_id: string; p_organization_id: string }
+        Returns: string
+      }
+      m5_bulk_operation_json: {
+        Args: { p_operation_id: string; p_organization_id: string }
         Returns: Json
       }
       m5_triage_active_member: {
@@ -16387,6 +16661,22 @@ export type Database = {
           run: Json
         }[]
       }
+      retry_vulnerability_assessment_bulk_operation_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_confirm_scope_changes: boolean
+          p_expected_version: number
+          p_idempotency_key: string
+          p_operation_id: string
+          p_organization_id: string
+          p_request_digest: string
+          p_snapshot_digest: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
       reverify_product_security_update_artifact_atomic: {
         Args: {
           p_actor_user_id: string
@@ -16834,6 +17124,20 @@ export type Database = {
         Returns: {
           outcome: string
           release: Json
+        }[]
+      }
+      undo_vulnerability_assessment_bulk_operation_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_expected_version: number
+          p_idempotency_key: string
+          p_operation_id: string
+          p_organization_id: string
+          p_request_digest: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
         }[]
       }
       unlink_external_identity_atomic: {

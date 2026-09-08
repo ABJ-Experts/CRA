@@ -22,6 +22,13 @@ import {
 import { FindingsService } from "./findings.service";
 import { SupabaseFindingPropagationRepository } from "./infrastructure/supabase-finding-propagation.repository";
 import { VulnerabilityAssessmentController } from "./assessments/vulnerability-assessment.controller";
+import { VulnerabilityAssessmentBulkController } from "./assessments/bulk/vulnerability-assessment-bulk.controller";
+import {
+  VULNERABILITY_ASSESSMENT_BULK_REPOSITORY,
+  type VulnerabilityAssessmentBulkRepository,
+} from "./assessments/bulk/application/vulnerability-assessment-bulk.port";
+import { VulnerabilityAssessmentBulkUseCases } from "./assessments/bulk/application/vulnerability-assessment-bulk-use-cases";
+import { SupabaseVulnerabilityAssessmentBulkRepository } from "./assessments/bulk/infrastructure/supabase-vulnerability-assessment-bulk.repository";
 import {
   VULNERABILITY_ASSESSMENT_REPOSITORY,
   type VulnerabilityAssessmentRepository,
@@ -48,21 +55,33 @@ import {
     // This controller must precede triage's GET :findingId route so the
     // policy static path cannot be parsed as a finding ID.
     VulnerabilityAssessmentController,
+    VulnerabilityAssessmentBulkController,
     VulnerabilityTriageController,
   ],
   providers: [
     SupabaseFindingPropagationRepository,
     SupabaseVulnerabilityAssessmentRepository,
+    SupabaseVulnerabilityAssessmentBulkRepository,
     SupabaseVulnerabilityTriageRepository,
     {
       provide: VULNERABILITY_ASSESSMENT_REPOSITORY,
       useExisting: SupabaseVulnerabilityAssessmentRepository,
     },
     {
+      provide: VULNERABILITY_ASSESSMENT_BULK_REPOSITORY,
+      useExisting: SupabaseVulnerabilityAssessmentBulkRepository,
+    },
+    {
       provide: VulnerabilityAssessmentUseCases,
       inject: [VULNERABILITY_ASSESSMENT_REPOSITORY],
       useFactory: (repository: VulnerabilityAssessmentRepository) =>
         new VulnerabilityAssessmentUseCases(repository),
+    },
+    {
+      provide: VulnerabilityAssessmentBulkUseCases,
+      inject: [VULNERABILITY_ASSESSMENT_BULK_REPOSITORY],
+      useFactory: (repository: VulnerabilityAssessmentBulkRepository) =>
+        new VulnerabilityAssessmentBulkUseCases(repository),
     },
     {
       provide: VULNERABILITY_TRIAGE_REPOSITORY,

@@ -194,15 +194,17 @@ export const exportSourceRegistry: readonly ExportSourceRegistration[] =
       ],
     },
     {
-      // M5-02 VEX assessments, evidence links, approval policy snapshots, and
-      // history events are immutable tenant audit facts. Request idempotency
-      // material remains excluded below.
+      // M5 VEX assessments, their approval-policy snapshots, and the frozen
+      // M5-03 bulk-operation/target audit ledger are immutable tenant facts.
+      // Request idempotency material remains excluded below.
       sourceId: "vulnerability_vex_assessments",
       tables: [
         "vulnerability_finding_assessments",
         "vulnerability_finding_assessment_evidence_links",
         "vulnerability_finding_assessment_history_events",
         "vulnerability_assessment_approval_policies",
+        "vulnerability_finding_assessment_bulk_operations",
+        "vulnerability_finding_assessment_bulk_operation_targets",
       ],
     },
   ]);

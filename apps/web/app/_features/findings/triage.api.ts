@@ -1,12 +1,20 @@
 import {
   createVulnerabilitySavedViewInputSchema,
+  createVulnerabilityAssessmentBulkPreviewInputSchema,
+  createVulnerabilityAssessmentPropagationPreviewInputSchema,
   deleteVulnerabilitySavedViewInputSchema,
+  executeVulnerabilityAssessmentBulkOperationInputSchema,
   approveVulnerabilityFindingAssessmentInputSchema,
   rejectVulnerabilityFindingAssessmentInputSchema,
   setDefaultVulnerabilitySavedViewInputSchema,
+  retryVulnerabilityAssessmentBulkOperationInputSchema,
   submitVulnerabilityFindingAssessmentInputSchema,
   updateVulnerabilitySavedViewInputSchema,
   updateVulnerabilityAssessmentApprovalPolicyInputSchema,
+  undoVulnerabilityAssessmentBulkOperationInputSchema,
+  vulnerabilityAssessmentBulkOperationMutationResponseSchema,
+  vulnerabilityAssessmentBulkOperationParamsSchema,
+  vulnerabilityAssessmentBulkOperationResponseSchema,
   vulnerabilityAssessmentApprovalPolicyListResponseSchema,
   vulnerabilityAssessmentApprovalPolicyParamsSchema,
   vulnerabilityAssessmentApprovalPolicyResponseSchema,
@@ -21,13 +29,18 @@ import {
   vulnerabilityTriageQueueQuerySchema,
   vulnerabilityTriageQueueResponseSchema,
   type CreateVulnerabilitySavedViewInput,
+  type CreateVulnerabilityAssessmentBulkPreviewInput,
+  type CreateVulnerabilityAssessmentPropagationPreviewInput,
   type DeleteVulnerabilitySavedViewInput,
+  type ExecuteVulnerabilityAssessmentBulkOperationInput,
   type ApproveVulnerabilityFindingAssessmentInput,
   type RejectVulnerabilityFindingAssessmentInput,
   type SetDefaultVulnerabilitySavedViewInput,
+  type RetryVulnerabilityAssessmentBulkOperationInput,
   type SubmitVulnerabilityFindingAssessmentInput,
   type UpdateVulnerabilitySavedViewInput,
   type UpdateVulnerabilityAssessmentApprovalPolicyInput,
+  type UndoVulnerabilityAssessmentBulkOperationInput,
   type VulnerabilityTriageQueueQuery,
 } from "@repo/contracts/vulnerabilities";
 
@@ -96,6 +109,20 @@ function savedViewPath(viewId: string): `/${string}` {
     );
   }
   return `/api/v1/findings/saved-views/${parsed.data.viewId}`;
+}
+
+function bulkOperationPath(operationId: string): `/${string}` {
+  const parsed = vulnerabilityAssessmentBulkOperationParamsSchema.safeParse({
+    operationId,
+  });
+  if (!parsed.success) {
+    throw new ApiClientError(
+      "invalid_request",
+      "The bulk operation identifier is invalid.",
+      400,
+    );
+  }
+  return `/api/v1/findings/assessment-bulk/${parsed.data.operationId}`;
 }
 
 function appendMany(
@@ -274,6 +301,77 @@ export class VulnerabilityTriageApi {
       inputSchema: setDefaultVulnerabilitySavedViewInputSchema,
       body: input,
       schema: vulnerabilitySavedViewMutationResponseSchema,
+    });
+  }
+
+  createAssessmentBulkPreview(
+    input: CreateVulnerabilityAssessmentBulkPreviewInput,
+  ) {
+    return authenticatedRequestJson({
+      path: "/api/v1/findings/assessment-bulk/previews",
+      method: "POST",
+      inputSchema: createVulnerabilityAssessmentBulkPreviewInputSchema,
+      body: input,
+      schema: vulnerabilityAssessmentBulkOperationMutationResponseSchema,
+    });
+  }
+
+  createAssessmentPropagationPreview(
+    input: CreateVulnerabilityAssessmentPropagationPreviewInput,
+  ) {
+    return authenticatedRequestJson({
+      path: "/api/v1/findings/assessment-propagation/previews",
+      method: "POST",
+      inputSchema: createVulnerabilityAssessmentPropagationPreviewInputSchema,
+      body: input,
+      schema: vulnerabilityAssessmentBulkOperationMutationResponseSchema,
+    });
+  }
+
+  assessmentBulkOperation(operationId: string, signal?: AbortSignal) {
+    return authenticatedRequestJson({
+      path: bulkOperationPath(operationId),
+      schema: vulnerabilityAssessmentBulkOperationResponseSchema,
+      signal,
+    });
+  }
+
+  executeAssessmentBulkOperation(
+    operationId: string,
+    input: ExecuteVulnerabilityAssessmentBulkOperationInput,
+  ) {
+    return authenticatedRequestJson({
+      path: `${bulkOperationPath(operationId)}/execute`,
+      method: "POST",
+      inputSchema: executeVulnerabilityAssessmentBulkOperationInputSchema,
+      body: input,
+      schema: vulnerabilityAssessmentBulkOperationMutationResponseSchema,
+    });
+  }
+
+  retryAssessmentBulkOperation(
+    operationId: string,
+    input: RetryVulnerabilityAssessmentBulkOperationInput,
+  ) {
+    return authenticatedRequestJson({
+      path: `${bulkOperationPath(operationId)}/retry`,
+      method: "POST",
+      inputSchema: retryVulnerabilityAssessmentBulkOperationInputSchema,
+      body: input,
+      schema: vulnerabilityAssessmentBulkOperationMutationResponseSchema,
+    });
+  }
+
+  undoAssessmentBulkOperation(
+    operationId: string,
+    input: UndoVulnerabilityAssessmentBulkOperationInput,
+  ) {
+    return authenticatedRequestJson({
+      path: `${bulkOperationPath(operationId)}/undo`,
+      method: "POST",
+      inputSchema: undoVulnerabilityAssessmentBulkOperationInputSchema,
+      body: input,
+      schema: vulnerabilityAssessmentBulkOperationMutationResponseSchema,
     });
   }
 }

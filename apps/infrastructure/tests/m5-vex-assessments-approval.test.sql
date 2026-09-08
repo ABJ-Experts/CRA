@@ -73,7 +73,7 @@ select pg_temp.check(
 
 select pg_temp.check(
   'M5 queue uses the parsed reEvaluation key and VEX approval filters',
-  pg_get_functiondef('public.list_finding_triage_queue(uuid,uuid,jsonb,integer,text,text,text)'::regprocedure)
+  pg_get_functiondef('public.list_finding_triage_queue_raw(uuid,uuid,jsonb,integer,text,text,text)'::regprocedure)
     ~ '''reEvaluationStates'''
   and pg_get_functiondef('public.list_finding_triage_queue(uuid,uuid,jsonb,integer,text,text,text)'::regprocedure)
     ~ '''vexStatuses'''

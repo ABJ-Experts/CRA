@@ -68,12 +68,12 @@ select pg_temp.check(
   exists (select 1 from pg_index indexes
     where indexes.indexrelid = 'public.vulnerability_findings_triage_active_cursor_idx'::regclass)
   and strpos(
-    pg_get_functiondef('public.list_finding_triage_queue(uuid,uuid,jsonb,integer,text,text,text)'::regprocedure),
+    pg_get_functiondef('public.list_finding_triage_queue_raw(uuid,uuid,jsonb,integer,text,text,text)'::regprocedure),
     'translate(replace(encode(convert_to'
   ) > 0
-  and pg_get_functiondef('public.list_finding_triage_queue(uuid,uuid,jsonb,integer,text,text,text)'::regprocedure)
+  and pg_get_functiondef('public.list_finding_triage_queue_raw(uuid,uuid,jsonb,integer,text,text,text)'::regprocedure)
     ~ 'p_organization_id'
-  and pg_get_functiondef('public.list_finding_triage_queue(uuid,uuid,jsonb,integer,text,text,text)'::regprocedure)
+  and pg_get_functiondef('public.list_finding_triage_queue_raw(uuid,uuid,jsonb,integer,text,text,text)'::regprocedure)
     ~ 'findingStates'
 );
 

@@ -64,6 +64,25 @@ describe("vulnerabilityTriageApi", () => {
     expect(fetcher).not.toHaveBeenCalled();
   });
 
+  it("rejects malformed bulk targets before transport", async () => {
+    const fetcher = vi.fn();
+    vi.stubGlobal("fetch", fetcher);
+
+    await expect(
+      vulnerabilityTriageApi.createAssessmentBulkPreview({
+        selection: { mode: "selected_rows", findingIds: ["not-a-uuid"] },
+        assessment: {
+          status: "affected",
+          detail: "The affected code path is present in this release.",
+          changeReason: "Apply the same reviewed conclusion.",
+          evidenceLinks: [],
+        },
+        idempotencyKey: "33333333-3333-4333-8333-333333333333",
+      }),
+    ).rejects.toThrow("The request contains invalid data.");
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+
   it("validates assessment writes at the browser boundary without retrying them", async () => {
     const findingId = "11111111-1111-4111-8111-111111111111";
     const assessmentId = "22222222-2222-4222-8222-222222222222";

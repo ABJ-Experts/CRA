@@ -5,6 +5,7 @@ import type {
   VulnerabilityTriageQueueResponse,
 } from "@repo/contracts/vulnerabilities";
 import { Button } from "@repo/ui/button";
+import { Checkbox } from "@repo/ui/checkbox";
 import { cn } from "@repo/ui/cn";
 import { Tag, type TagProps } from "@repo/ui/tag";
 import dynamic from "next/dynamic";
@@ -24,6 +25,7 @@ import {
   useVulnerabilityTriageDetailQuery,
   useVulnerabilityTriageQueueQuery,
 } from "./triage.queries";
+import { FindingBulkAssessmentAction } from "./finding-bulk-assessment";
 
 const FindingTriageDetail = dynamic(
   () => import("./triage-detail").then((module) => module.FindingTriageDetail),
@@ -737,6 +739,7 @@ export function FindingTriageContent() {
   const { isLoading: sessionLoading, session } = useSession();
   const organizationId = session?.organization?.id ?? null;
   const canView = useHasPermission("can_view_findings");
+  const canEdit = useHasPermission("can_edit_findings");
   const [filters, setFilters] = useState<QueueFilters>({
     sort: "lastEvaluatedAt",
     order: "desc",
@@ -745,6 +748,9 @@ export function FindingTriageContent() {
     Exclude<VulnerabilityTriageQueueResponse["nextCursor"], null> | undefined
   >();
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedFindingIds, setSelectedFindingIds] = useState<
+    readonly string[]
+  >([]);
   const [scrollTop, setScrollTop] = useState(0);
   const activeIndex = useRef(0);
   const gridRef = useRef<HTMLDivElement>(null);
@@ -752,6 +758,10 @@ export function FindingTriageContent() {
     () => ({ ...filters, cursor, limit: 50 }),
     [cursor, filters],
   );
+  useEffect(() => {
+    setSelectedFindingIds([]);
+    setSelectedId(null);
+  }, [organizationId]);
   const queue = useVulnerabilityTriageQueueQuery(
     query,
     organizationId,
@@ -778,6 +788,14 @@ export function FindingTriageContent() {
     setFilters(next);
     activeIndex.current = 0;
     setScrollTop(0);
+    setSelectedFindingIds([]);
+  }, []);
+  const toggleFindingSelection = useCallback((findingId: string) => {
+    setSelectedFindingIds((current) =>
+      current.includes(findingId)
+        ? current.filter((id) => id !== findingId)
+        : [...current, findingId],
+    );
   }, []);
   const moveFocus = useCallback(
     (index: number) => {
@@ -901,6 +919,13 @@ export function FindingTriageContent() {
                 Updating results…
               </span>
             ) : null}
+            {canEdit ? (
+              <FindingBulkAssessmentAction
+                filters={filters}
+                selectedFindingIds={selectedFindingIds}
+                onApplied={() => setSelectedFindingIds([])}
+              />
+            ) : null}
           </div>
           {queue.isLoading && rows.length === 0 ? (
             <p role="status" className="p-6 text-subhead-regular text-fg-muted">
@@ -915,9 +940,10 @@ export function FindingTriageContent() {
           {rows.length > 0 ? (
             <>
               <div
-                className="grid grid-cols-[minmax(9rem,1.4fr)_minmax(7rem,1fr)_minmax(6rem,.7fr)_minmax(6rem,.7fr)_minmax(6rem,.7fr)_minmax(7rem,.9fr)] gap-3 border-b border-border px-4 py-2 text-caption-2-uppercase text-fg-subtle"
+                className="grid grid-cols-[2.5rem_minmax(9rem,1.4fr)_minmax(7rem,1fr)_minmax(6rem,.7fr)_minmax(6rem,.7fr)_minmax(6rem,.7fr)_minmax(7rem,.9fr)] gap-3 border-b border-border px-4 py-2 text-caption-2-uppercase text-fg-subtle"
                 aria-hidden="true"
               >
+                <span>Select</span>
                 <span>Advisory</span>
                 <span>Product / release</span>
                 <span>Severity</span>
@@ -947,15 +973,20 @@ export function FindingTriageContent() {
                   {visibleRows.map((row, index) => {
                     const rowIndex = start + index;
                     return (
-                      <button
+                      <div
                         key={row.finding.id}
                         id={`finding-row-${row.finding.id}`}
                         role="row"
                         aria-rowindex={rowIndex + 1}
                         aria-label={rowLabel(row)}
                         tabIndex={rowIndex === activeIndex.current ? 0 : -1}
+                        aria-selected={selectedFindingIds.includes(
+                          row.finding.id,
+                        )}
                         className={cn(
-                          "absolute grid w-full grid-cols-[minmax(9rem,1.4fr)_minmax(7rem,1fr)_minmax(6rem,.7fr)_minmax(6rem,.7fr)_minmax(6rem,.7fr)_minmax(7rem,.9fr)] items-center gap-3 border-b border-border px-4 text-left outline-none focus-visible:bg-surface-muted focus-visible:ring-2 focus-visible:ring-focus",
+                          "absolute grid w-full grid-cols-[2.5rem_minmax(9rem,1.4fr)_minmax(7rem,1fr)_minmax(6rem,.7fr)_minmax(6rem,.7fr)_minmax(6rem,.7fr)_minmax(7rem,.9fr)] items-center gap-3 border-b border-border px-4 text-left outline-none focus-visible:bg-surface-muted focus-visible:ring-2 focus-visible:ring-focus",
+                          selectedFindingIds.includes(row.finding.id) &&
+                            "bg-accent-subtle",
                           rowIndex % 2 === 1 && "bg-surface-subtle",
                         )}
                         style={{
@@ -983,12 +1014,29 @@ export function FindingTriageContent() {
                             event.preventDefault();
                             moveFocus(rows.length - 1);
                           }
-                          if (event.key === "Enter" || event.key === " ") {
+                          if (event.key === "Enter") {
                             event.preventDefault();
                             setSelectedId(row.finding.id);
                           }
+                          if (event.key === " ") {
+                            event.preventDefault();
+                            toggleFindingSelection(row.finding.id);
+                          }
                         }}
                       >
+                        <span role="gridcell">
+                          <Checkbox
+                            checked={selectedFindingIds.includes(
+                              row.finding.id,
+                            )}
+                            aria-label={`Select ${rowLabel(row)}`}
+                            onClick={(event) => event.stopPropagation()}
+                            onCheckedChange={() =>
+                              toggleFindingSelection(row.finding.id)
+                            }
+                            className="size-4"
+                          />
+                        </span>
                         <span
                           role="gridcell"
                           className="min-w-0 truncate font-mono text-caption-1-semibold text-fg"
@@ -1045,14 +1093,14 @@ export function FindingTriageContent() {
                               : titleCase(row.approvalState)}
                           </span>
                         </span>
-                      </button>
+                      </div>
                     );
                   })}
                 </div>
               </div>
               <div className="flex items-center justify-between gap-3 border-t border-border p-3">
                 <p className="text-caption-1-regular text-fg-muted">
-                  Use arrow keys to move, Enter to inspect.
+                  Use arrow keys to move, Space to select, and Enter to inspect.
                 </p>
                 {nextCursor ? (
                   <Button

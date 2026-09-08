@@ -32,6 +32,7 @@ import {
   useVulnerabilityAssessmentApprovalPolicyQuery,
   useVulnerabilityFindingAssessmentQuery,
 } from "./triage.queries";
+import { FindingAssessmentPropagationAction } from "./finding-bulk-assessment";
 
 type Assessment = NonNullable<
   VulnerabilityFindingAssessmentResponse["assessment"]
@@ -101,6 +102,7 @@ export function FindingAssessment({
   );
   const assessment = useVulnerabilityFindingAssessmentQuery(findingId, true);
   const policy = useVulnerabilityAssessmentApprovalPolicyQuery(canManagePolicy);
+  const currentAssessment = assessment.data?.assessment ?? null;
 
   if (assessment.isLoading) {
     return (
@@ -165,6 +167,23 @@ export function FindingAssessment({
           canApprove={canApprove}
           onReload={() => void assessment.refetch()}
         />
+        {canEdit && currentAssessment !== null ? (
+          <div className="mt-4 border-t border-border pt-4">
+            <h4 className="text-subhead-semibold text-fg">
+              Controlled propagation
+            </h4>
+            <p className="mt-1 text-caption-1-regular text-fg-muted">
+              Preview matching component-and-version targets before copying this
+              submitted VEX content.
+            </p>
+            <div className="mt-3">
+              <FindingAssessmentPropagationAction
+                findingId={findingId}
+                assessment={currentAssessment}
+              />
+            </div>
+          </div>
+        ) : null}
         <AssessmentHistory history={assessment.data?.history ?? []} />
       </div>
       {canManagePolicy ? (

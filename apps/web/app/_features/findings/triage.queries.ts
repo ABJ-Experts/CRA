@@ -2,13 +2,18 @@
 
 import type {
   ApproveVulnerabilityFindingAssessmentInput,
+  CreateVulnerabilityAssessmentBulkPreviewInput,
+  CreateVulnerabilityAssessmentPropagationPreviewInput,
   CreateVulnerabilitySavedViewInput,
   DeleteVulnerabilitySavedViewInput,
+  ExecuteVulnerabilityAssessmentBulkOperationInput,
   RejectVulnerabilityFindingAssessmentInput,
   SetDefaultVulnerabilitySavedViewInput,
+  RetryVulnerabilityAssessmentBulkOperationInput,
   SubmitVulnerabilityFindingAssessmentInput,
   UpdateVulnerabilitySavedViewInput,
   UpdateVulnerabilityAssessmentApprovalPolicyInput,
+  UndoVulnerabilityAssessmentBulkOperationInput,
   VulnerabilityTriageQueueQuery,
 } from "@repo/contracts/vulnerabilities";
 import {
@@ -85,6 +90,28 @@ export function useVulnerabilityAssessmentApprovalPolicyQuery(
   });
 }
 
+export function useVulnerabilityAssessmentBulkOperationQuery(
+  operationId: string | null,
+  enabled: boolean,
+) {
+  return useQuery({
+    queryKey:
+      operationId === null
+        ? vulnerabilityTriageKeys.assessmentBulkOperations
+        : vulnerabilityTriageKeys.assessmentBulkOperation(operationId),
+    enabled: enabled && operationId !== null,
+    retry: false,
+    queryFn: ({ signal }) => {
+      if (operationId === null)
+        throw new Error("A bulk operation identifier is required.");
+      return vulnerabilityTriageApi.assessmentBulkOperation(
+        operationId,
+        signal,
+      );
+    },
+  });
+}
+
 export function useVulnerabilitySavedViewsQuery(
   organizationId: string | null,
   enabled: boolean,
@@ -119,6 +146,21 @@ function useInvalidateFindingAssessment() {
         queryKey: vulnerabilityTriageKeys.detail(findingId),
       }),
       client.invalidateQueries({ queryKey: vulnerabilityTriageKeys.queue }),
+    ]);
+}
+
+function useInvalidateBulkOperation() {
+  const client = useQueryClient();
+  return (operationId: string) =>
+    Promise.all([
+      client.invalidateQueries({
+        queryKey: vulnerabilityTriageKeys.assessmentBulkOperation(operationId),
+      }),
+      client.invalidateQueries({ queryKey: vulnerabilityTriageKeys.queue }),
+      client.invalidateQueries({
+        queryKey: vulnerabilityTriageKeys.assessments,
+      }),
+      client.invalidateQueries({ queryKey: vulnerabilityTriageKeys.all }),
     ]);
 }
 
@@ -228,5 +270,68 @@ export function useUpdateVulnerabilityAssessmentApprovalPolicyMutation() {
       client.invalidateQueries({
         queryKey: vulnerabilityTriageKeys.assessmentApprovalPolicy,
       }),
+  });
+}
+
+export function useCreateVulnerabilityAssessmentBulkPreviewMutation() {
+  const invalidate = useInvalidateBulkOperation();
+  return useMutation({
+    mutationFn: (input: CreateVulnerabilityAssessmentBulkPreviewInput) =>
+      vulnerabilityTriageApi.createAssessmentBulkPreview(input),
+    onSuccess: (result) => invalidate(result.operation.id),
+  });
+}
+
+export function useCreateVulnerabilityAssessmentPropagationPreviewMutation() {
+  const invalidate = useInvalidateBulkOperation();
+  return useMutation({
+    mutationFn: (input: CreateVulnerabilityAssessmentPropagationPreviewInput) =>
+      vulnerabilityTriageApi.createAssessmentPropagationPreview(input),
+    onSuccess: (result) => invalidate(result.operation.id),
+  });
+}
+
+export function useExecuteVulnerabilityAssessmentBulkOperationMutation() {
+  const invalidate = useInvalidateBulkOperation();
+  return useMutation({
+    mutationFn: ({
+      operationId,
+      input,
+    }: {
+      operationId: string;
+      input: ExecuteVulnerabilityAssessmentBulkOperationInput;
+    }) =>
+      vulnerabilityTriageApi.executeAssessmentBulkOperation(operationId, input),
+    onSuccess: (result) => invalidate(result.operation.id),
+  });
+}
+
+export function useRetryVulnerabilityAssessmentBulkOperationMutation() {
+  const invalidate = useInvalidateBulkOperation();
+  return useMutation({
+    mutationFn: ({
+      operationId,
+      input,
+    }: {
+      operationId: string;
+      input: RetryVulnerabilityAssessmentBulkOperationInput;
+    }) =>
+      vulnerabilityTriageApi.retryAssessmentBulkOperation(operationId, input),
+    onSuccess: (result) => invalidate(result.operation.id),
+  });
+}
+
+export function useUndoVulnerabilityAssessmentBulkOperationMutation() {
+  const invalidate = useInvalidateBulkOperation();
+  return useMutation({
+    mutationFn: ({
+      operationId,
+      input,
+    }: {
+      operationId: string;
+      input: UndoVulnerabilityAssessmentBulkOperationInput;
+    }) =>
+      vulnerabilityTriageApi.undoAssessmentBulkOperation(operationId, input),
+    onSuccess: (result) => invalidate(result.operation.id),
   });
 }
