@@ -18,6 +18,7 @@ import {
   useSession,
 } from "../../_providers/session-provider";
 import { ApiClientError } from "../../_lib/http/api-client";
+import { PageHeading } from "../../dashboard/_components/dashboard-chrome";
 import {
   useCreateVulnerabilitySavedViewMutation,
   useDeleteVulnerabilitySavedViewMutation,
@@ -716,7 +717,7 @@ function SavedViews({
   }
   return (
     <section
-      className="rounded-xl border border-border bg-canvas p-4"
+      className="rounded-2xl border border-border bg-canvas p-6"
       aria-labelledby="saved-views-heading"
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -960,25 +961,22 @@ export function FindingTriageContent() {
       </div>
     );
   return (
-    <div className="flex min-w-0 flex-col gap-5 overflow-x-hidden px-6 pb-8 lg:px-[30px]">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-h5 text-fg">Findings</h1>
-          <p className="text-subhead-regular text-fg-muted">
-            Tenant-scoped vulnerability triage. Filters and pagination run on
-            the server.
-          </p>
-        </div>
-        <Button
-          variant="outline"
-          tone="grey"
-          onClick={() =>
-            updateFilters({ sort: "lastEvaluatedAt", order: "desc" })
-          }
-        >
-          Clear filters
-        </Button>
-      </div>
+    <div className="flex min-w-0 flex-col gap-6 overflow-x-hidden px-6 py-6 lg:px-[30px]">
+      <PageHeading
+        title="Findings"
+        subtitle="Tenant-scoped vulnerability triage. Filters and pagination run on the server."
+        actions={
+          <Button
+            variant="outline"
+            tone="grey"
+            onClick={() =>
+              updateFilters({ sort: "lastEvaluatedAt", order: "desc" })
+            }
+          >
+            Clear filters
+          </Button>
+        }
+      />
       <SavedViews
         filters={filters}
         organizationId={organizationId}
@@ -1019,7 +1017,7 @@ export function FindingTriageContent() {
       {!queue.isError ? (
         <section
           aria-labelledby="triage-queue-heading"
-          className="rounded-xl border border-border bg-canvas"
+          className="rounded-2xl border border-border bg-canvas"
         >
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3">
             <div>

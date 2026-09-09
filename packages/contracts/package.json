@@ -43,6 +43,18 @@
       "types": "./dist/pagination/types/index.d.ts",
       "default": "./dist/pagination/types/index.js"
     },
+    "./reporting": {
+      "types": "./dist/reporting.d.ts",
+      "default": "./dist/reporting.js"
+    },
+    "./reporting/schemas": {
+      "types": "./dist/reporting/schemas/index.d.ts",
+      "default": "./dist/reporting/schemas/index.js"
+    },
+    "./reporting/types": {
+      "types": "./dist/reporting/types/index.d.ts",
+      "default": "./dist/reporting/types/index.js"
+    },
     "./http": {
       "types": "./dist/http.d.ts",
       "default": "./dist/http.js"

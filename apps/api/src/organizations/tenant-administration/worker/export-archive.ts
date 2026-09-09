@@ -221,6 +221,18 @@ export const exportSourceRegistry: readonly ExportSourceRegistration[] =
       ],
     },
     {
+      // M6-01 reporting obligations freeze applicable deadline rules,
+      // anchor transitions, cancellation/submission facts, and breach history
+      // as tenant-owned operational records. Request idempotency stays in the
+      // existing triage command ledger and remains excluded below.
+      sourceId: "reporting_obligations",
+      tables: [
+        "reporting_obligations",
+        "reporting_obligation_stages",
+        "reporting_obligation_events",
+      ],
+    },
+    {
       // M5-07 operational notes retain author/recipient snapshots, immutable
       // revisions, and durable delivery outcomes. They are intentionally not
       // assessment reasons or evidence records.

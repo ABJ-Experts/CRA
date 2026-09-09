@@ -1,6 +1,7 @@
 import {
   Building2,
   Cable,
+  Clock3,
   LayoutGrid,
   Package,
   Settings2,
@@ -64,6 +65,12 @@ export const NAV: NavSection[] = [
         href: "/findings",
         icon: ShieldAlert,
         menuKey: "findings",
+      },
+      {
+        label: "Reporting",
+        href: "/reporting",
+        icon: Clock3,
+        menuKey: "reporting",
       },
       {
         label: "Connectors",

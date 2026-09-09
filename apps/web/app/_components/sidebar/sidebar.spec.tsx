@@ -101,6 +101,10 @@ describe("Sidebar", () => {
       "href",
       "/products",
     );
+    expect(screen.getByRole("link", { name: "Reporting" })).toHaveAttribute(
+      "href",
+      "/reporting",
+    );
     expect(screen.getByRole("link", { name: "Connectors" })).toHaveAttribute(
       "href",
       "/connectors",

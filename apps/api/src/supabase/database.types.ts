@@ -5294,6 +5294,257 @@ export type Database = {
           },
         ]
       }
+      reporting_obligation_events: {
+        Row: {
+          actor_display_name: string | null
+          actor_user_id: string | null
+          anchor_kind: string | null
+          correlation_id: string | null
+          event_kind: string
+          id: string
+          new_value: Json | null
+          obligation_id: string
+          occurred_at: string
+          old_value: Json | null
+          organization_id: string
+          reason: string | null
+          stage_kind: string | null
+        }
+        Insert: {
+          actor_display_name?: string | null
+          actor_user_id?: string | null
+          anchor_kind?: string | null
+          correlation_id?: string | null
+          event_kind: string
+          id?: string
+          new_value?: Json | null
+          obligation_id: string
+          occurred_at?: string
+          old_value?: Json | null
+          organization_id: string
+          reason?: string | null
+          stage_kind?: string | null
+        }
+        Update: {
+          actor_display_name?: string | null
+          actor_user_id?: string | null
+          anchor_kind?: string | null
+          correlation_id?: string | null
+          event_kind?: string
+          id?: string
+          new_value?: Json | null
+          obligation_id?: string
+          occurred_at?: string
+          old_value?: Json | null
+          organization_id?: string
+          reason?: string | null
+          stage_kind?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reporting_obligation_events_actor_user_id_fkey"
+            columns: ["actor_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reporting_obligation_events_organization_id_obligation_id_fkey"
+            columns: ["organization_id", "obligation_id"]
+            isOneToOne: false
+            referencedRelation: "reporting_obligations"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      reporting_obligation_stages: {
+        Row: {
+          anchor_kind: string
+          created_at: string
+          due_at: string | null
+          duration: string
+          id: string
+          obligation_id: string
+          organization_id: string
+          overdue_at: string | null
+          stage_kind: string
+          state: string
+          submission_reference: string | null
+          submitted_at: string | null
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          anchor_kind: string
+          created_at?: string
+          due_at?: string | null
+          duration: string
+          id?: string
+          obligation_id: string
+          organization_id: string
+          overdue_at?: string | null
+          stage_kind: string
+          state: string
+          submission_reference?: string | null
+          submitted_at?: string | null
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          anchor_kind?: string
+          created_at?: string
+          due_at?: string | null
+          duration?: string
+          id?: string
+          obligation_id?: string
+          organization_id?: string
+          overdue_at?: string | null
+          stage_kind?: string
+          state?: string
+          submission_reference?: string | null
+          submitted_at?: string | null
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reporting_obligation_stages_organization_id_obligation_id_fkey"
+            columns: ["organization_id", "obligation_id"]
+            isOneToOne: false
+            referencedRelation: "reporting_obligations"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      reporting_obligations: {
+        Row: {
+          awareness_at: string
+          awareness_basis: string
+          cancellation_reason: string | null
+          cancelled_at: string | null
+          cancelled_by_user_id: string | null
+          created_at: string
+          created_by_display_name: string
+          created_by_user_id: string
+          id: string
+          obligation_type: string
+          organization_id: string
+          rule_set_id: string
+          rule_set_version: number
+          rule_snapshot: Json
+          source_finding_id: string | null
+          status: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          awareness_at: string
+          awareness_basis: string
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by_user_id?: string | null
+          created_at?: string
+          created_by_display_name: string
+          created_by_user_id: string
+          id?: string
+          obligation_type: string
+          organization_id: string
+          rule_set_id: string
+          rule_set_version: number
+          rule_snapshot: Json
+          source_finding_id?: string | null
+          status?: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          awareness_at?: string
+          awareness_basis?: string
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by_user_id?: string | null
+          created_at?: string
+          created_by_display_name?: string
+          created_by_user_id?: string
+          id?: string
+          obligation_type?: string
+          organization_id?: string
+          rule_set_id?: string
+          rule_set_version?: number
+          rule_snapshot?: Json
+          source_finding_id?: string | null
+          status?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reporting_obligations_cancelled_by_user_id_fkey"
+            columns: ["cancelled_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reporting_obligations_created_by_user_id_fkey"
+            columns: ["created_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reporting_obligations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reporting_obligations_organization_id_source_finding_id_fkey"
+            columns: ["organization_id", "source_finding_id"]
+            isOneToOne: false
+            referencedRelation: "vulnerability_findings"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "reporting_obligations_rule_set_id_fkey"
+            columns: ["rule_set_id"]
+            isOneToOne: false
+            referencedRelation: "reporting_rule_sets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reporting_rule_sets: {
+        Row: {
+          created_at: string
+          effective_from: string
+          effective_to: string | null
+          id: string
+          jurisdiction: string
+          rules: Json
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          effective_from: string
+          effective_to?: string | null
+          id?: string
+          jurisdiction: string
+          rules: Json
+          version: number
+        }
+        Update: {
+          created_at?: string
+          effective_from?: string
+          effective_to?: string | null
+          id?: string
+          jurisdiction?: string
+          rules?: Json
+          version?: number
+        }
+        Relationships: []
+      }
       retention_authoritative_facts: {
         Row: {
           active: boolean
@@ -12839,6 +13090,21 @@ export type Database = {
           outcome: string
         }[]
       }
+      cancel_reporting_obligation_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_correlation_id?: string
+          p_expected_version: number
+          p_idempotency_key: string
+          p_obligation_id: string
+          p_organization_id: string
+          p_reason: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
       cancel_sync_run_atomic: {
         Args: {
           p_actor_user_id: string
@@ -13603,6 +13869,24 @@ export type Database = {
           release: Json
         }[]
       }
+      correct_reporting_obligation_anchor_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_anchor_at: string
+          p_anchor_kind: string
+          p_basis: string
+          p_correlation_id?: string
+          p_expected_version: number
+          p_idempotency_key: string
+          p_obligation_id: string
+          p_organization_id: string
+          p_reason: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
       create_connector_atomic: {
         Args: {
           p_actor_user_id: string
@@ -13919,6 +14203,22 @@ export type Database = {
           graph_version: number
           outcome: string
           relationship: Json
+        }[]
+      }
+      create_reporting_obligation_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_awareness_at: string
+          p_awareness_basis: string
+          p_correlation_id?: string
+          p_idempotency_key: string
+          p_obligation_type: string
+          p_organization_id: string
+          p_source_finding_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
         }[]
       }
       create_sbom_ci_credential_atomic: {
@@ -15185,6 +15485,17 @@ export type Database = {
           relationships: Json
         }[]
       }
+      get_reporting_obligation: {
+        Args: {
+          p_actor_user_id: string
+          p_obligation_id: string
+          p_organization_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
       get_sbom_composite_review: {
         Args: {
           p_actor_user_id: string
@@ -15755,6 +16066,21 @@ export type Database = {
         Returns: {
           outcome: string
           products: Json
+        }[]
+      }
+      list_reporting_obligations: {
+        Args: {
+          p_actor_user_id: string
+          p_cursor: string
+          p_finding_id?: string
+          p_limit?: number
+          p_organization_id: string
+          p_status?: string
+          p_type?: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
         }[]
       }
       list_sbom_dependency_tree: {
@@ -16896,6 +17222,36 @@ export type Database = {
         Args: { p_organization_id: string; p_target_id: string }
         Returns: Json
       }
+      m6_actor_display_name: { Args: { p_user_id: string }; Returns: string }
+      m6_anchor_at: {
+        Args: {
+          p_anchor_kind: string
+          p_obligation: Database["public"]["Tables"]["reporting_obligations"]["Row"]
+        }
+        Returns: string
+      }
+      m6_command_digest: { Args: { p_payload: Json }; Returns: string }
+      m6_due_at: {
+        Args: { p_anchor: string; p_duration: string }
+        Returns: string
+      }
+      m6_refresh_reporting_obligation_stages: {
+        Args: {
+          p_now?: string
+          p_obligation_id: string
+          p_organization_id: string
+        }
+        Returns: undefined
+      }
+      m6_reporting_obligation_json: {
+        Args: { p_obligation_id: string; p_organization_id: string }
+        Returns: Json
+      }
+      m6_reporting_stage_json: {
+        Args: { p_organization_id: string; p_stage_id: string }
+        Returns: Json
+      }
+      m6_utc_second_z: { Args: { p_value: string }; Returns: string }
       mark_mfa_factors_removed: {
         Args: { p_operation_id: string; p_user_id: string }
         Returns: string
@@ -17568,6 +17924,23 @@ export type Database = {
         Returns: {
           object_path: string
           outcome: string
+        }[]
+      }
+      record_reporting_obligation_stage_submission_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_correlation_id?: string
+          p_expected_version: number
+          p_idempotency_key: string
+          p_obligation_id: string
+          p_organization_id: string
+          p_stage_kind: string
+          p_submission_reference: string
+          p_submitted_at: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
         }[]
       }
       record_sbom_ci_credential_use: {
@@ -18698,6 +19071,18 @@ export type Database = {
       sync_sbom_composite_selected_provenance: {
         Args: { p_organization_id: string; p_review_id: string }
         Returns: undefined
+      }
+      tick_reporting_obligation_stages_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_idempotency_key?: string
+          p_now?: string
+          p_organization_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
       }
       transition_organization_legal_entity_atomic: {
         Args: {

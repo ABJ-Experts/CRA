@@ -11,3 +11,4 @@ export * from "./products.js";
 export * from "./findings.js";
 export * from "./sboms.js";
 export * from "./vulnerabilities.js";
+export * from "./reporting.js";
