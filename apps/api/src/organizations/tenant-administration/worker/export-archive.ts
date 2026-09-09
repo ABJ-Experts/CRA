@@ -221,6 +221,17 @@ export const exportSourceRegistry: readonly ExportSourceRegistration[] =
       ],
     },
     {
+      // M5-07 operational notes retain author/recipient snapshots, immutable
+      // revisions, and durable delivery outcomes. They are intentionally not
+      // assessment reasons or evidence records.
+      sourceId: "vulnerability_triage_notes",
+      tables: [
+        "vulnerability_finding_notes",
+        "vulnerability_finding_note_revisions",
+        "vulnerability_finding_note_mentions",
+      ],
+    },
+    {
       // M5-06 immutable export evidence and safe delivery outcomes are
       // tenant-owned facts. Active job leases remain deployment-local below.
       sourceId: "vulnerability_vex_exports",

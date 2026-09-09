@@ -3,6 +3,7 @@ import { Module } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 
 import { ProductsModule } from "../products/products.module";
+import { MailModule } from "../mail/mail.module";
 import {
   PRODUCT_RELATIONSHIP_GRAPH_EVENT_WORKER,
   PRODUCT_RELATIONSHIP_PROPAGATION_WORKER,
@@ -65,13 +66,22 @@ import {
 } from "./triage/application/vulnerability-triage.port";
 import { VulnerabilityTriageUseCases } from "./triage/application/vulnerability-triage-use-cases";
 import { SupabaseVulnerabilityTriageRepository } from "./triage/infrastructure/supabase-vulnerability-triage.repository";
+import { SupabaseVulnerabilityTriageNoteMentionQueue } from "./triage/infrastructure/supabase-vulnerability-triage-note-mention-queue";
+import { MailVulnerabilityTriageNoteMentionNotifierAdapter } from "./triage/infrastructure/mail-vulnerability-triage-note-mention-notifier.adapter";
+import { VulnerabilityTriageNoteMentionWorker } from "./triage/worker/vulnerability-triage-note-mention-worker";
+import {
+  VULNERABILITY_TRIAGE_NOTE_MENTION_NOTIFIER,
+  VULNERABILITY_TRIAGE_NOTE_MENTION_QUEUE,
+  type VulnerabilityTriageNoteMentionNotifier,
+  type VulnerabilityTriageNoteMentionQueue,
+} from "./triage/application/vulnerability-triage-note-mention.port";
 import {
   FindingPropagationWorker,
   type FindingPropagationWorkerRepository,
 } from "./worker/finding-propagation-worker";
 
 @Module({
-  imports: [SupabaseModule, ProductsModule],
+  imports: [SupabaseModule, ProductsModule, MailModule],
   controllers: [
     FindingPropagationSourcesController,
     ProductFindingImpactSummaryController,
@@ -88,6 +98,8 @@ import {
     SupabaseVulnerabilityAssessmentRepository,
     SupabaseVulnerabilityAssessmentBulkRepository,
     SupabaseVulnerabilityTriageRepository,
+    SupabaseVulnerabilityTriageNoteMentionQueue,
+    MailVulnerabilityTriageNoteMentionNotifierAdapter,
     SupabaseVexExportStorageAdapter,
     SupabaseVulnerabilityVexExportRepository,
     SupabaseVulnerabilityVexPublicationQueue,
@@ -122,6 +134,36 @@ import {
     {
       provide: VULNERABILITY_TRIAGE_REPOSITORY,
       useExisting: SupabaseVulnerabilityTriageRepository,
+    },
+    {
+      provide: VULNERABILITY_TRIAGE_NOTE_MENTION_QUEUE,
+      useExisting: SupabaseVulnerabilityTriageNoteMentionQueue,
+    },
+    {
+      provide: VULNERABILITY_TRIAGE_NOTE_MENTION_NOTIFIER,
+      useExisting: MailVulnerabilityTriageNoteMentionNotifierAdapter,
+    },
+    {
+      provide: VulnerabilityTriageNoteMentionWorker,
+      inject: [
+        VULNERABILITY_TRIAGE_NOTE_MENTION_QUEUE,
+        VULNERABILITY_TRIAGE_NOTE_MENTION_NOTIFIER,
+        ConfigService,
+      ],
+      useFactory: (
+        queue: VulnerabilityTriageNoteMentionQueue,
+        notifier: VulnerabilityTriageNoteMentionNotifier,
+        config: ConfigService,
+      ) =>
+        new VulnerabilityTriageNoteMentionWorker({
+          workerId: randomUUID(),
+          leaseSeconds: config.get<number>(
+            "VULNERABILITY_TRIAGE_NOTE_MENTION_LEASE_SECONDS",
+            120,
+          ),
+          queue,
+          notifier,
+        }),
     },
     {
       provide: VULNERABILITY_VEX_EXPORT_REPOSITORY,
@@ -226,6 +268,7 @@ import {
     FindingPropagationUseCases,
     FindingPropagationWorker,
     VulnerabilityVexPublicationWorker,
+    VulnerabilityTriageNoteMentionWorker,
   ],
 })
 export class FindingsModule {}

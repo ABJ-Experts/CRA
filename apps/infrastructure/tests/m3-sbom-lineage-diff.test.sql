@@ -69,8 +69,12 @@ declare
   v_alias_key uuid := gen_random_uuid();
   v_alias_pending_key uuid := gen_random_uuid();
   v_next_key uuid := gen_random_uuid();
-  v_canonical_hash text := repeat('e', 64);
-  v_next_hash text := repeat('f', 64);
+  -- A fixed digest collides with durable local E2E fixtures.  The assertions
+  -- compare values captured in this transaction, so randomized valid SHA-256
+  -- shaped inputs preserve the invariant while keeping this rollback test
+  -- independent of pre-existing local development data.
+  v_canonical_hash text := encode(extensions.digest(gen_random_uuid()::text, 'sha256'), 'hex');
+  v_next_hash text := encode(extensions.digest(gen_random_uuid()::text, 'sha256'), 'hex');
   v_canonical_completion record;
   v_alias_completion record;
   v_next_completion record;

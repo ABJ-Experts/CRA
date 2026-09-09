@@ -246,7 +246,7 @@ describe("FindingVexExport", () => {
 
   it("shows a delivery failure in text and permits an explicit retry", async () => {
     renderExport();
-    expect(screen.getByText("Dead Letter")).toBeInTheDocument();
+    expect(screen.getByText("Delivery failed")).toBeInTheDocument();
     expect(
       screen.getByText("The configured publication target is unavailable."),
     ).toBeInTheDocument();

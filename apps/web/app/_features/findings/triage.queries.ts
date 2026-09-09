@@ -26,6 +26,9 @@ import type {
   RetryVulnerabilityVexPublicationInput,
   UpdateVulnerabilityVexPublicationTargetInput,
   WithdrawVulnerabilityVexPublicationInput,
+  CreateVulnerabilityTriageNoteInput,
+  UpdateVulnerabilityTriageNoteInput,
+  DeleteVulnerabilityTriageNoteInput,
 } from "@repo/contracts/vulnerabilities";
 import {
   keepPreviousData,
@@ -86,6 +89,75 @@ export function useVulnerabilityRemediationHistoryQuery(
         throw new Error("A finding identifier is required.");
       return vulnerabilityTriageApi.remediationHistory(findingId, signal);
     },
+  });
+}
+
+export function useVulnerabilityTriageNotesQuery(
+  findingId: string | null,
+  enabled: boolean,
+) {
+  return useQuery({
+    queryKey:
+      findingId === null
+        ? vulnerabilityTriageKeys.notes
+        : vulnerabilityTriageKeys.notesForFinding(findingId),
+    enabled: enabled && findingId !== null,
+    retry: false,
+    queryFn: ({ signal }) => {
+      if (!findingId) throw new Error("A finding identifier is required.");
+      return vulnerabilityTriageApi.notes(findingId, {}, signal);
+    },
+  });
+}
+
+function useInvalidateNotes() {
+  const client = useQueryClient();
+  return (findingId: string) =>
+    client.invalidateQueries({
+      queryKey: vulnerabilityTriageKeys.notesForFinding(findingId),
+    });
+}
+export function useCreateVulnerabilityTriageNoteMutation() {
+  const invalidate = useInvalidateNotes();
+  return useMutation({
+    mutationFn: (variables: {
+      findingId: string;
+      input: CreateVulnerabilityTriageNoteInput;
+    }) =>
+      vulnerabilityTriageApi.createNote(variables.findingId, variables.input),
+    onSuccess: (_, variables) => invalidate(variables.findingId),
+  });
+}
+export function useUpdateVulnerabilityTriageNoteMutation() {
+  const invalidate = useInvalidateNotes();
+  return useMutation({
+    mutationFn: (variables: {
+      findingId: string;
+      noteId: string;
+      input: UpdateVulnerabilityTriageNoteInput;
+    }) =>
+      vulnerabilityTriageApi.updateNote(
+        variables.findingId,
+        variables.noteId,
+        variables.input,
+      ),
+    onSuccess: (_, variables) => invalidate(variables.findingId),
+  });
+}
+export function useDeleteVulnerabilityTriageNoteMutation() {
+  const invalidate = useInvalidateNotes();
+  return useMutation({
+    mutationFn: (variables: {
+      findingId: string;
+      noteId: string;
+      input: DeleteVulnerabilityTriageNoteInput;
+    }) =>
+      vulnerabilityTriageApi.deleteNote(
+        variables.findingId,
+        variables.noteId,
+        variables.input,
+      ),
+    onSuccess: (_, variables) => invalidate(variables.findingId),
   });
 }
 

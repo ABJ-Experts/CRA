@@ -9939,6 +9939,220 @@ export type Database = {
           },
         ]
       }
+      vulnerability_finding_note_mentions: {
+        Row: {
+          cancelled_at: string | null
+          created_at: string
+          delivered_at: string | null
+          id: string
+          note_id: string
+          notification_attempts: number
+          notification_due_at: string
+          notification_error_code: string | null
+          notification_error_message: string | null
+          notification_last_attempt_at: string | null
+          notification_lease_expires_at: string | null
+          notification_lease_owner: string | null
+          notification_status: string
+          organization_id: string
+          recipient_display_name: string
+          recipient_user_id: string | null
+        }
+        Insert: {
+          cancelled_at?: string | null
+          created_at?: string
+          delivered_at?: string | null
+          id?: string
+          note_id: string
+          notification_attempts?: number
+          notification_due_at?: string
+          notification_error_code?: string | null
+          notification_error_message?: string | null
+          notification_last_attempt_at?: string | null
+          notification_lease_expires_at?: string | null
+          notification_lease_owner?: string | null
+          notification_status?: string
+          organization_id: string
+          recipient_display_name: string
+          recipient_user_id?: string | null
+        }
+        Update: {
+          cancelled_at?: string | null
+          created_at?: string
+          delivered_at?: string | null
+          id?: string
+          note_id?: string
+          notification_attempts?: number
+          notification_due_at?: string
+          notification_error_code?: string | null
+          notification_error_message?: string | null
+          notification_last_attempt_at?: string | null
+          notification_lease_expires_at?: string | null
+          notification_lease_owner?: string | null
+          notification_status?: string
+          organization_id?: string
+          recipient_display_name?: string
+          recipient_user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vulnerability_finding_note_mention_organization_id_note_id_fkey"
+            columns: ["organization_id", "note_id"]
+            isOneToOne: false
+            referencedRelation: "vulnerability_finding_notes"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "vulnerability_finding_note_mentions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vulnerability_finding_note_mentions_recipient_user_id_fkey"
+            columns: ["recipient_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vulnerability_finding_note_revisions: {
+        Row: {
+          actor_display_name: string
+          actor_user_id: string | null
+          body: string | null
+          created_at: string
+          event_kind: string
+          id: string
+          mention_recipient_ids: Json
+          note_id: string
+          organization_id: string
+          revision: number
+        }
+        Insert: {
+          actor_display_name: string
+          actor_user_id?: string | null
+          body?: string | null
+          created_at?: string
+          event_kind: string
+          id?: string
+          mention_recipient_ids?: Json
+          note_id: string
+          organization_id: string
+          revision: number
+        }
+        Update: {
+          actor_display_name?: string
+          actor_user_id?: string | null
+          body?: string | null
+          created_at?: string
+          event_kind?: string
+          id?: string
+          mention_recipient_ids?: Json
+          note_id?: string
+          organization_id?: string
+          revision?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vulnerability_finding_note_revisio_organization_id_note_id_fkey"
+            columns: ["organization_id", "note_id"]
+            isOneToOne: false
+            referencedRelation: "vulnerability_finding_notes"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "vulnerability_finding_note_revisions_actor_user_id_fkey"
+            columns: ["actor_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vulnerability_finding_note_revisions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vulnerability_finding_notes: {
+        Row: {
+          author_display_name: string
+          author_user_id: string | null
+          body: string | null
+          created_at: string
+          deleted_at: string | null
+          deleted_by_display_name: string | null
+          deleted_by_user_id: string | null
+          finding_id: string
+          id: string
+          organization_id: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          author_display_name: string
+          author_user_id?: string | null
+          body?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          deleted_by_display_name?: string | null
+          deleted_by_user_id?: string | null
+          finding_id: string
+          id?: string
+          organization_id: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          author_display_name?: string
+          author_user_id?: string | null
+          body?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          deleted_by_display_name?: string | null
+          deleted_by_user_id?: string | null
+          finding_id?: string
+          id?: string
+          organization_id?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vulnerability_finding_notes_author_user_id_fkey"
+            columns: ["author_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vulnerability_finding_notes_deleted_by_user_id_fkey"
+            columns: ["deleted_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vulnerability_finding_notes_organization_id_finding_id_fkey"
+            columns: ["organization_id", "finding_id"]
+            isOneToOne: false
+            referencedRelation: "vulnerability_findings"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "vulnerability_finding_notes_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vulnerability_finding_remediation_anchors: {
         Row: {
           availability_at: string | null
@@ -12735,6 +12949,17 @@ export type Database = {
           source_release_id: string
         }[]
       }
+      claim_finding_triage_note_mention: {
+        Args: {
+          p_lease_seconds?: number
+          p_organization_id: string
+          p_worker_id: string
+        }
+        Returns: {
+          mention: Json
+          outcome: string
+        }[]
+      }
       claim_mfa_recovery: {
         Args: { p_code_hash: string; p_user_id: string }
         Returns: {
@@ -13053,6 +13278,19 @@ export type Database = {
         Returns: {
           outcome: string
           run: Json
+        }[]
+      }
+      complete_finding_triage_note_mention: {
+        Args: {
+          p_delivered: boolean
+          p_error_code?: string
+          p_error_message?: string
+          p_mention_id: string
+          p_organization_id: string
+          p_worker_id: string
+        }
+        Returns: {
+          outcome: string
         }[]
       }
       complete_mfa_recovery: {
@@ -13425,6 +13663,21 @@ export type Database = {
           p_order: string
           p_organization_id: string
           p_sort: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      create_finding_triage_note_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_body: string
+          p_correlation_id?: string
+          p_finding_id: string
+          p_idempotency_key: string
+          p_mention_recipient_ids: string[]
+          p_organization_id: string
         }
         Returns: {
           outcome: string
@@ -13833,6 +14086,21 @@ export type Database = {
           p_idempotency_key: string
           p_organization_id: string
           p_saved_view_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      delete_finding_triage_note_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_correlation_id?: string
+          p_expected_version: number
+          p_finding_id: string
+          p_idempotency_key: string
+          p_note_id: string
+          p_organization_id: string
         }
         Returns: {
           outcome: string
@@ -14541,6 +14809,13 @@ export type Database = {
           result: Json
         }[]
       }
+      get_finding_triage_note_mention_notification_details: {
+        Args: { p_mention_id: string; p_organization_id: string }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
       get_finding_vex_assessment: {
         Args: {
           p_actor_user_id: string
@@ -15202,6 +15477,12 @@ export type Database = {
           organization_id: string
         }[]
       }
+      list_due_finding_triage_note_mention_orgs: {
+        Args: { p_limit?: number }
+        Returns: {
+          organization_id: string
+        }[]
+      }
       list_due_product_import_organizations: {
         Args: { p_limit: number }
         Returns: {
@@ -15303,6 +15584,32 @@ export type Database = {
       }
       list_finding_saved_views: {
         Args: { p_actor_user_id: string; p_organization_id: string }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      list_finding_triage_note_mention_candidates: {
+        Args: {
+          p_actor_user_id: string
+          p_finding_id: string
+          p_limit?: number
+          p_organization_id: string
+          p_query?: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      list_finding_triage_notes: {
+        Args: {
+          p_actor_user_id: string
+          p_cursor: string
+          p_finding_id: string
+          p_limit?: number
+          p_organization_id: string
+        }
         Returns: {
           outcome: string
           result: Json
@@ -16403,6 +16710,19 @@ export type Database = {
       }
       m5_bulk_operation_json: {
         Args: { p_operation_id: string; p_organization_id: string }
+        Returns: Json
+      }
+      m5_note_actor_json: {
+        Args: {
+          p_display_name: string
+          p_organization_id: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      m5_note_display_name: { Args: { p_user_id: string }; Returns: string }
+      m5_note_json: {
+        Args: { p_note_id: string; p_organization_id: string }
         Returns: Json
       }
       m5_remediation_anchor_json: {
@@ -18484,6 +18804,23 @@ export type Database = {
           p_organization_id: string
           p_saved_view_id: string
           p_sort: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      update_finding_triage_note_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_body: string
+          p_correlation_id?: string
+          p_expected_version: number
+          p_finding_id: string
+          p_idempotency_key: string
+          p_mention_recipient_ids: string[]
+          p_note_id: string
+          p_organization_id: string
         }
         Returns: {
           outcome: string

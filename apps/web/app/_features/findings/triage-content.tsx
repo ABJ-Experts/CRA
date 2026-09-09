@@ -4,11 +4,13 @@ import type {
   VulnerabilityTriageQueueQuery,
   VulnerabilityTriageQueueResponse,
 } from "@repo/contracts/vulnerabilities";
+import { vulnerabilityTriageFindingParamsSchema } from "@repo/contracts/vulnerabilities";
 import { Button } from "@repo/ui/button";
 import { Checkbox } from "@repo/ui/checkbox";
 import { cn } from "@repo/ui/cn";
 import { Tag, type TagProps } from "@repo/ui/tag";
 import dynamic from "next/dynamic";
+import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
@@ -855,6 +857,7 @@ function withoutQueueControls(filters: QueueFilters) {
 
 export function FindingTriageContent() {
   const { isLoading: sessionLoading, session } = useSession();
+  const searchParams = useSearchParams();
   const organizationId = session?.organization?.id ?? null;
   const canView = useHasPermission("can_view_findings");
   const canEdit = useHasPermission("can_edit_findings");
@@ -872,14 +875,20 @@ export function FindingTriageContent() {
   const [scrollTop, setScrollTop] = useState(0);
   const activeIndex = useRef(0);
   const gridRef = useRef<HTMLDivElement>(null);
+  const deepLinkedFindingId = useMemo(() => {
+    const parsed = vulnerabilityTriageFindingParamsSchema.safeParse({
+      findingId: searchParams.get("findingId"),
+    });
+    return parsed.success ? parsed.data.findingId : null;
+  }, [searchParams]);
   const query = useMemo(
     () => ({ ...filters, cursor, limit: 50 }),
     [cursor, filters],
   );
   useEffect(() => {
     setSelectedFindingIds([]);
-    setSelectedId(null);
-  }, [organizationId]);
+    setSelectedId(deepLinkedFindingId);
+  }, [deepLinkedFindingId, organizationId]);
   const queue = useVulnerabilityTriageQueueQuery(
     query,
     organizationId,

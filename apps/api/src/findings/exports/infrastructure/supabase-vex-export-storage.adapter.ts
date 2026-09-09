@@ -90,7 +90,9 @@ export class SupabaseVexExportStorageAdapter implements VexExportStoragePort {
       return bytes;
     } catch (error) {
       if (error instanceof VexExportStorageError) throw error;
-      this.logger.warn(`VEX export download failed: ${safeErrorMessage(error)}`);
+      this.logger.warn(
+        `VEX export download failed: ${safeErrorMessage(error)}`,
+      );
       throw unavailable();
     }
   }

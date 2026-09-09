@@ -68,6 +68,17 @@ const lockedSnapshotTables = (functionSql: string): readonly string[] => {
   );
 };
 
+const dynamicSnapshotLockAdditions = (sql: string): readonly string[] =>
+  Object.freeze(
+    [
+      ...[...sql.matchAll(/v_new_lock text := '([^']+)'/g)].flatMap((match) => [
+        ...(match[1] ?? "").matchAll(/public\.([a-z_]+)/g),
+      ]),
+    ]
+      .map((match) => match[1])
+      .filter((table): table is string => Boolean(table)),
+  );
+
 describe("tenant export source registry architecture", () => {
   it("covers every current migration-defined tenant table or explains its exclusion", () => {
     const tenantTables = tenantTablesFromMigrations();
@@ -94,13 +105,15 @@ describe("tenant export source registry architecture", () => {
   });
 
   it("locks every registered physical table in the latest snapshot materializer", () => {
-    const lockedTables = lockedSnapshotTables(
-      latestMaterializeSnapshotFunctionSql(),
-    );
+    const functionSql = latestMaterializeSnapshotFunctionSql();
+    const lockedTables = lockedSnapshotTables(functionSql);
+    const dynamicAdditions = dynamicSnapshotLockAdditions(migrationSql());
     const registeredTables = exportSourceRegistry.flatMap(
       (source) => source.tables,
     );
 
-    expect(lockedTables).toEqual(expect.arrayContaining(registeredTables));
+    expect([...lockedTables, ...dynamicAdditions]).toEqual(
+      expect.arrayContaining(registeredTables),
+    );
   });
 });

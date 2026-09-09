@@ -8,6 +8,7 @@ import { FindingAssessment } from "./finding-assessment";
 import { FindingRemediation } from "./finding-remediation";
 import { FindingTriageOperational } from "./finding-triage-operational";
 import { FindingVexExport } from "./finding-vex-export";
+import { FindingTriageNotes } from "./finding-triage-notes";
 
 function titleCase(value: string): string {
   return value
@@ -217,6 +218,7 @@ export function FindingTriageDetail({
         findingId={finding.id}
         remediation={detail.operational.remediation}
       />
+      <FindingTriageNotes findingId={finding.id} />
       <FindingVexExport
         productId={finding.productId}
         productName={finding.productName}

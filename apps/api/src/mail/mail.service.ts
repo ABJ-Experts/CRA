@@ -312,4 +312,25 @@ export class MailService {
       idempotencyKey,
     );
   }
+
+  /** Deliberately content-minimal: no note, author, evidence, or assessment data. */
+  async sendVulnerabilityTriageNoteMention(
+    to: string,
+    findingId: string,
+    idempotencyKey: string,
+  ): Promise<void> {
+    const safeFindingId = findingId.replace(/[^a-f0-9-]/gi, "");
+    const href = `${this.appUrl}/findings?findingId=${encodeURIComponent(safeFindingId)}`;
+    await this.send(
+      to,
+      "You were mentioned in a triage note",
+      this.layout(
+        "Triage note mention",
+        `<p style="color:#4b5058;font-size:14px">You were mentioned in an internal finding triage note.</p>
+         <p style="color:#4b5058;font-size:14px"><a href="${escapeHtml(href)}">Open the finding in CRA</a></p>`,
+      ),
+      true,
+      idempotencyKey,
+    );
+  }
 }

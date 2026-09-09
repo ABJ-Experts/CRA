@@ -55,6 +55,13 @@ import {
   vulnerabilityTriageSlaPolicyMutationResponseSchema,
   vulnerabilityRemediationHistoryResponseSchema,
   vulnerabilityRemediationMutationResponseSchema,
+  createVulnerabilityTriageNoteInputSchema,
+  updateVulnerabilityTriageNoteInputSchema,
+  deleteVulnerabilityTriageNoteInputSchema,
+  vulnerabilityTriageNotesQuerySchema,
+  vulnerabilityTriageNotesResponseSchema,
+  vulnerabilityTriageNoteMentionCandidatesResponseSchema,
+  vulnerabilityTriageNoteMutationResponseSchema,
   type CreateVulnerabilitySavedViewInput,
   type CreateVulnerabilityAssessmentBulkPreviewInput,
   type CreateVulnerabilityAssessmentPropagationPreviewInput,
@@ -80,6 +87,10 @@ import {
   type RetryVulnerabilityVexPublicationInput,
   type UpdateVulnerabilityVexPublicationTargetInput,
   type WithdrawVulnerabilityVexPublicationInput,
+  type CreateVulnerabilityTriageNoteInput,
+  type UpdateVulnerabilityTriageNoteInput,
+  type DeleteVulnerabilityTriageNoteInput,
+  type VulnerabilityTriageNotesQuery,
 } from "@repo/contracts/vulnerabilities";
 
 import { ApiClientError, apiClient } from "../../_lib/http/api-client";
@@ -101,6 +112,13 @@ function findingPath(findingId: string): `/${string}` {
 
 function assessmentPath(findingId: string): `/${string}` {
   return `${findingPath(findingId)}/assessment`;
+}
+
+function notePath(findingId: string, noteId?: string): `/${string}` {
+  const base = `${findingPath(findingId)}/notes`;
+  return (
+    noteId ? `${base}/${encodeURIComponent(noteId)}` : base
+  ) as `/${string}`;
 }
 
 function assessmentRevisionPath(
@@ -660,6 +678,72 @@ export class VulnerabilityTriageApi {
       inputSchema: undoVulnerabilityAssessmentBulkOperationInputSchema,
       body: input,
       schema: vulnerabilityAssessmentBulkOperationMutationResponseSchema,
+    });
+  }
+
+  notes(
+    findingId: string,
+    query: Readonly<Partial<VulnerabilityTriageNotesQuery>>,
+    signal?: AbortSignal,
+  ) {
+    const parsed = vulnerabilityTriageNotesQuerySchema.parse(query);
+    const search = new URLSearchParams({ limit: String(parsed.limit) });
+    if (parsed.cursor) search.set("cursor", parsed.cursor);
+    return authenticatedRequestJson({
+      path: `${notePath(findingId)}?${search.toString()}`,
+      schema: vulnerabilityTriageNotesResponseSchema,
+      signal,
+    });
+  }
+
+  noteMentionCandidates(
+    findingId: string,
+    query: Readonly<{ q?: string; limit?: number }>,
+    signal?: AbortSignal,
+  ) {
+    const search = new URLSearchParams();
+    if (query.q) search.set("q", query.q);
+    if (query.limit) search.set("limit", String(query.limit));
+    return authenticatedRequestJson({
+      path: `${findingPath(findingId)}/note-mention-candidates?${search.toString()}`,
+      schema: vulnerabilityTriageNoteMentionCandidatesResponseSchema,
+      signal,
+    });
+  }
+
+  createNote(findingId: string, input: CreateVulnerabilityTriageNoteInput) {
+    return authenticatedRequestJson({
+      path: notePath(findingId),
+      method: "POST",
+      inputSchema: createVulnerabilityTriageNoteInputSchema,
+      body: input,
+      schema: vulnerabilityTriageNoteMutationResponseSchema,
+    });
+  }
+  updateNote(
+    findingId: string,
+    noteId: string,
+    input: UpdateVulnerabilityTriageNoteInput,
+  ) {
+    return authenticatedRequestJson({
+      path: notePath(findingId, noteId),
+      method: "PATCH",
+      inputSchema: updateVulnerabilityTriageNoteInputSchema,
+      body: input,
+      schema: vulnerabilityTriageNoteMutationResponseSchema,
+    });
+  }
+  deleteNote(
+    findingId: string,
+    noteId: string,
+    input: DeleteVulnerabilityTriageNoteInput,
+  ) {
+    return authenticatedRequestJson({
+      path: notePath(findingId, noteId),
+      method: "DELETE",
+      inputSchema: deleteVulnerabilityTriageNoteInputSchema,
+      body: input,
+      schema: vulnerabilityTriageNoteMutationResponseSchema,
     });
   }
 }

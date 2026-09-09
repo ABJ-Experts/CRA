@@ -1023,6 +1023,7 @@ select pg_temp.check(
       'vulnerability_reachability_review',
       'vulnerability_vex_assessments',
       'vulnerability_triage_operational',
+      'vulnerability_triage_notes',
       'vulnerability_vex_exports'
     ]::text[]
 );
