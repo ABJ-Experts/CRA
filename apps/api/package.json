@@ -15,6 +15,7 @@
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "worker:tenant-lifecycle": "node dist/tenant-lifecycle-worker.js",
     "worker:product-retention": "node dist/product-retention-worker.js",
+    "worker:reporting-deadlines": "node dist/reporting-deadline-monitor-worker.js",
     "worker:finding-propagation": "node dist/finding-propagation-worker.js",
     "worker:product-import": "node dist/product-import-worker.js",
     "worker:product-compliance": "node dist/product-compliance-worker.js",

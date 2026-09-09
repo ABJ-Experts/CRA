@@ -255,6 +255,31 @@ describe("MailService", () => {
     expect(mail?.headers?.["X-CRA-Idempotency-Key"]).toMatch(/^[a-f0-9]{64}$/);
   });
 
+  it("sends content-minimal required reporting deadline alerts", async () => {
+    const service = new MailService(enabledConfig());
+
+    await service.sendReportingDeadlineAlert(
+      "owner@cra.test",
+      {
+        obligationId: "11111111-1111-4111-8111-111111111111",
+        stage: "early_warning",
+        thresholdPercent: 50,
+        dueAt: "2026-09-10T10:00:00Z",
+      },
+      "reporting:stage:revision-1:50:recipient",
+    );
+
+    const message = mockSendMail.mock.calls[0]?.[0];
+    expect(message?.subject).toBe("Reporting deadline 50%");
+    expect(message?.html).toContain("early warning");
+    expect(message?.html).toContain("2026-09-10T10:00:00Z");
+    expect(message?.html).toContain(
+      "https://cra.test/reporting?obligationId=11111111-1111-4111-8111-111111111111",
+    );
+    expect(message?.html).not.toContain("assessment");
+    expect(message?.html).not.toContain("evidence");
+  });
+
   it("sends required KEV alerts without raw SBOM content", async () => {
     const service = new MailService(enabledConfig());
 

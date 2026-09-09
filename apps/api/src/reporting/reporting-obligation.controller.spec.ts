@@ -76,6 +76,41 @@ describe("ReportingObligationController", () => {
       ),
     ).rejects.toBeInstanceOf(ConflictException);
   });
+
+  it("scopes the compact deadline summary to the verified organization", async () => {
+    const useCases = useCasesFor();
+    useCases.deadlineSummary.mockResolvedValue({
+      summary: {
+        serverNow: "2026-09-09T10:00:00Z",
+        overdueCount: 1,
+        nextDeadline: {
+          obligationId,
+          stage: "early_warning",
+          dueAt: "2026-09-10T10:00:00Z",
+          elapsedPercent: 50,
+          reportingHref: `/reporting?obligationId=${obligationId}`,
+        },
+      },
+    });
+    const controller = subject(useCases);
+
+    await expect(controller.deadlineSummary({}, user)).resolves.toEqual({
+      summary: {
+        serverNow: "2026-09-09T10:00:00Z",
+        overdueCount: 1,
+        nextDeadline: {
+          obligationId,
+          stage: "early_warning",
+          dueAt: "2026-09-10T10:00:00Z",
+          elapsedPercent: 50,
+          reportingHref: `/reporting?obligationId=${obligationId}`,
+        },
+      },
+    });
+    expect(useCases.deadlineSummary).toHaveBeenCalledWith(organizationId, {
+      actorId,
+    });
+  });
 });
 
 function subject(useCases: ReturnType<typeof useCasesFor>) {
@@ -86,6 +121,7 @@ function subject(useCases: ReturnType<typeof useCasesFor>) {
 
 function useCasesFor() {
   return {
+    deadlineSummary: jest.fn(),
     list: jest.fn(),
     detail: jest.fn(),
     create: jest.fn(),

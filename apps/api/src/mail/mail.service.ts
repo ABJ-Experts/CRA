@@ -333,4 +333,38 @@ export class MailService {
       idempotencyKey,
     );
   }
+
+  /**
+   * Reporting monitors own the outbox and pass no assessment, evidence, or
+   * finding text into this mail boundary. The recipient still receives an
+   * authenticated link; the reporting API rechecks access when it is opened.
+   */
+  async sendReportingDeadlineAlert(
+    to: string,
+    input: Readonly<{
+      obligationId: string;
+      stage: "early_warning" | "notification" | "final_report";
+      thresholdPercent: 50 | 75 | 90 | 100;
+      dueAt: string;
+    }>,
+    idempotencyKey: string,
+  ): Promise<void> {
+    const safeObligationId = input.obligationId.replace(/[^a-f0-9-]/gi, "");
+    const href = `${this.appUrl}/reporting?obligationId=${encodeURIComponent(safeObligationId)}`;
+    const stage = escapeHtml(input.stage.replace(/_/g, " "));
+    const threshold =
+      input.thresholdPercent === 100 ? "breach" : `${input.thresholdPercent}%`;
+    await this.send(
+      to,
+      `Reporting deadline ${threshold}`,
+      this.layout(
+        "Reporting deadline alert",
+        `<p style="color:#4b5058;font-size:14px">A reporting <strong>${stage}</strong> deadline has reached its <strong>${escapeHtml(threshold)}</strong> threshold.</p>
+         <p style="color:#4b5058;font-size:14px">Due at: <strong>${escapeHtml(input.dueAt)}</strong>.</p>
+         <p style="color:#4b5058;font-size:14px"><a href="${escapeHtml(href)}">Open reporting obligations in CRA</a></p>`,
+      ),
+      true,
+      idempotencyKey,
+    );
+  }
 }

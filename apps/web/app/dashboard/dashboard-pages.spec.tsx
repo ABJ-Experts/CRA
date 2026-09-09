@@ -117,6 +117,9 @@ vi.mock("./organization-theme-provider", () => ({
     <div data-testid="organization-theme-provider">{children}</div>
   ),
 }));
+vi.mock("../_features/reporting/reporting-deadline-header-indicator", () => ({
+  ReportingDeadlineHeaderIndicator: () => null,
+}));
 
 import ComingSoonPage from "./[...slug]/page";
 import { PageHeading, SectionCard } from "./_components/dashboard-chrome";

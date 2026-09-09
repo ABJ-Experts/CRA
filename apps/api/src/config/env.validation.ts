@@ -152,6 +152,18 @@ export const envSchema = z.object({
     300_000,
     "must not exceed 300000 milliseconds",
   ),
+  // Reporting monitoring leases only guard durable outbox claims. PostgreSQL
+  // remains the clock and the worker rechecks it every 30 seconds.
+  REPORTING_DEADLINE_MONITOR_LEASE_SECONDS: boundedInt(
+    60,
+    900,
+    "must not exceed 900 seconds",
+  ),
+  REPORTING_DEADLINE_MONITOR_MAX_CLOCK_SKEW_MILLISECONDS: boundedInt(
+    1_000,
+    300_000,
+    "must not exceed 300000 milliseconds",
+  ).refine((value) => value >= 1_000, "must be at least 1000 milliseconds"),
   // Finding propagation is lease-based and restart-safe. Keeping this bounded
   // prevents a mistyped deployment value from delaying recovery indefinitely.
   FINDING_PROPAGATION_LEASE_SECONDS: boundedInt(

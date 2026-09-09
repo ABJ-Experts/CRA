@@ -7,6 +7,7 @@ import type {
   ReportingObligationListQuery,
   ReportingObligationListResponse,
   ReportingObligationMutationResponse,
+  ReportingDeadlineSummaryResponse,
 } from "@repo/contracts/reporting";
 
 export const REPORTING_OBLIGATION_REPOSITORY = Symbol(
@@ -18,6 +19,10 @@ export class ReportingObligationInvalidRequestError extends Error {}
 export class ReportingObligationInvalidStateError extends Error {}
 
 export interface ReportingObligationRepository {
+  deadlineSummary(
+    organizationId: string,
+    input: Readonly<{ actorId: string }>,
+  ): Promise<ReportingDeadlineSummaryResponse | null>;
   list(
     organizationId: string,
     input: Readonly<{ actorId: string } & ReportingObligationListQuery>,

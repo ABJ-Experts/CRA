@@ -8,6 +8,7 @@ import {
   reportingObligationListResponseSchema,
   reportingObligationMutationResponseSchema,
   reportingObligationParamsSchema,
+  reportingDeadlineSummaryResponseSchema,
   type CancelReportingObligationInput,
   type CorrectReportingObligationAnchorInput,
   type CreateReportingObligationInput,
@@ -51,6 +52,13 @@ function queryString(query: Readonly<Partial<ReportingObligationListQuery>>) {
 }
 
 export const reportingApi = Object.freeze({
+  deadlineSummary(signal?: AbortSignal) {
+    return apiClient.request({
+      path: "/api/v1/reporting/obligations/deadline-summary",
+      schema: reportingDeadlineSummaryResponseSchema,
+      signal,
+    });
+  },
   list(
     query: Readonly<Partial<ReportingObligationListQuery>>,
     signal?: AbortSignal,

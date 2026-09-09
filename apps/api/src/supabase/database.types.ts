@@ -5294,6 +5294,176 @@ export type Database = {
           },
         ]
       }
+      reporting_deadline_alert_deliveries: {
+        Row: {
+          alert_id: string
+          cancelled_at: string | null
+          channel: string
+          checkpoint_version: number
+          created_at: string
+          delivered_at: string | null
+          delivery_attempts: number
+          delivery_state: string
+          due_at: string
+          id: string
+          last_attempt_at: string | null
+          last_error_code: string | null
+          lease_expires_at: string | null
+          lease_owner: string | null
+          organization_id: string
+          recipient_user_id: string
+          updated_at: string
+        }
+        Insert: {
+          alert_id: string
+          cancelled_at?: string | null
+          channel: string
+          checkpoint_version?: number
+          created_at?: string
+          delivered_at?: string | null
+          delivery_attempts?: number
+          delivery_state?: string
+          due_at?: string
+          id?: string
+          last_attempt_at?: string | null
+          last_error_code?: string | null
+          lease_expires_at?: string | null
+          lease_owner?: string | null
+          organization_id: string
+          recipient_user_id: string
+          updated_at?: string
+        }
+        Update: {
+          alert_id?: string
+          cancelled_at?: string | null
+          channel?: string
+          checkpoint_version?: number
+          created_at?: string
+          delivered_at?: string | null
+          delivery_attempts?: number
+          delivery_state?: string
+          due_at?: string
+          id?: string
+          last_attempt_at?: string | null
+          last_error_code?: string | null
+          lease_expires_at?: string | null
+          lease_owner?: string | null
+          organization_id?: string
+          recipient_user_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reporting_deadline_alert_deliveri_organization_id_alert_id_fkey"
+            columns: ["organization_id", "alert_id"]
+            isOneToOne: false
+            referencedRelation: "reporting_deadline_alerts"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "reporting_deadline_alert_deliveries_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reporting_deadline_alert_deliveries_recipient_user_id_fkey"
+            columns: ["recipient_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reporting_deadline_alerts: {
+        Row: {
+          created_at: string
+          deadline_revision: number
+          due_at: string
+          id: string
+          idempotency_key: string
+          obligation_id: string
+          organization_id: string
+          stage_id: string
+          threshold_crossed_at: string
+          threshold_percent: number
+        }
+        Insert: {
+          created_at?: string
+          deadline_revision: number
+          due_at: string
+          id?: string
+          idempotency_key: string
+          obligation_id: string
+          organization_id: string
+          stage_id: string
+          threshold_crossed_at: string
+          threshold_percent: number
+        }
+        Update: {
+          created_at?: string
+          deadline_revision?: number
+          due_at?: string
+          id?: string
+          idempotency_key?: string
+          obligation_id?: string
+          organization_id?: string
+          stage_id?: string
+          threshold_crossed_at?: string
+          threshold_percent?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reporting_deadline_alerts_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reporting_deadline_alerts_organization_id_obligation_id_fkey"
+            columns: ["organization_id", "obligation_id"]
+            isOneToOne: false
+            referencedRelation: "reporting_obligations"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "reporting_deadline_alerts_organization_id_stage_id_fkey"
+            columns: ["organization_id", "stage_id"]
+            isOneToOne: false
+            referencedRelation: "reporting_obligation_stages"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      reporting_deadline_monitor_health: {
+        Row: {
+          critical_at: string | null
+          last_clock_skew_milliseconds: number | null
+          last_database_now: string | null
+          last_evaluated_at: string | null
+          singleton: boolean
+          updated_at: string
+        }
+        Insert: {
+          critical_at?: string | null
+          last_clock_skew_milliseconds?: number | null
+          last_database_now?: string | null
+          last_evaluated_at?: string | null
+          singleton?: boolean
+          updated_at?: string
+        }
+        Update: {
+          critical_at?: string | null
+          last_clock_skew_milliseconds?: number | null
+          last_database_now?: string | null
+          last_evaluated_at?: string | null
+          singleton?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
       reporting_obligation_events: {
         Row: {
           actor_display_name: string | null
@@ -5361,6 +5531,7 @@ export type Database = {
         Row: {
           anchor_kind: string
           created_at: string
+          deadline_revision: number
           due_at: string | null
           duration: string
           id: string
@@ -5377,6 +5548,7 @@ export type Database = {
         Insert: {
           anchor_kind: string
           created_at?: string
+          deadline_revision?: number
           due_at?: string | null
           duration: string
           id?: string
@@ -5393,6 +5565,7 @@ export type Database = {
         Update: {
           anchor_kind?: string
           created_at?: string
+          deadline_revision?: number
           due_at?: string | null
           duration?: string
           id?: string
@@ -13348,6 +13521,17 @@ export type Database = {
           outcome: string
         }[]
       }
+      claim_reporting_deadline_alert_delivery_atomic: {
+        Args: {
+          p_lease_seconds?: number
+          p_organization_id: string
+          p_worker_id: string
+        }
+        Returns: {
+          delivery: Json
+          outcome: string
+        }[]
+      }
       claim_retention_cleanup_atomic: {
         Args: {
           p_lease_owner: string
@@ -13682,6 +13866,17 @@ export type Database = {
           p_lease_owner: string
           p_organization_id: string
           p_recipient_user_id: string
+        }
+        Returns: {
+          outcome: string
+        }[]
+      }
+      complete_reporting_deadline_alert_delivery_atomic: {
+        Args: {
+          p_delivery_id: string
+          p_expected_checkpoint_version: number
+          p_organization_id: string
+          p_worker_id: string
         }
         Returns: {
           outcome: string
@@ -14773,6 +14968,19 @@ export type Database = {
           outcome: string
         }[]
       }
+      fail_reporting_deadline_alert_delivery_atomic: {
+        Args: {
+          p_code: string
+          p_delivery_id: string
+          p_expected_checkpoint_version: number
+          p_organization_id: string
+          p_retryable: boolean
+          p_worker_id: string
+        }
+        Returns: {
+          outcome: string
+        }[]
+      }
       fail_retention_cleanup_atomic: {
         Args: {
           p_cleanup_run_id: string
@@ -15485,6 +15693,38 @@ export type Database = {
           relationships: Json
         }[]
       }
+      get_reporting_deadline_alert_delivery_details: {
+        Args: {
+          p_delivery_id: string
+          p_expected_checkpoint_version: number
+          p_organization_id: string
+          p_worker_id: string
+        }
+        Returns: {
+          details: Json
+          outcome: string
+        }[]
+      }
+      get_reporting_deadline_monitor_health: {
+        Args: never
+        Returns: {
+          health: Json
+          outcome: string
+        }[]
+      }
+      get_reporting_deadline_monitor_now: {
+        Args: never
+        Returns: {
+          database_now: string
+        }[]
+      }
+      get_reporting_deadline_summary: {
+        Args: { p_actor_user_id: string; p_organization_id: string }
+        Returns: {
+          outcome: string
+          summary: Json
+        }[]
+      }
       get_reporting_obligation: {
         Args: {
           p_actor_user_id: string
@@ -15817,6 +16057,12 @@ export type Database = {
       }
       list_due_product_support_alert_organizations: {
         Args: never
+        Returns: {
+          organization_id: string
+        }[]
+      }
+      list_due_reporting_deadline_alert_organizations: {
+        Args: { p_limit?: number }
         Returns: {
           organization_id: string
         }[]
@@ -17235,6 +17481,14 @@ export type Database = {
         Args: { p_anchor: string; p_duration: string }
         Returns: string
       }
+      m6_materialize_reporting_deadline_alerts: {
+        Args: {
+          p_database_now: string
+          p_organization_id: string
+          p_stage_id: string
+        }
+        Returns: number
+      }
       m6_refresh_reporting_obligation_stages: {
         Args: {
           p_now?: string
@@ -17246,6 +17500,14 @@ export type Database = {
       m6_reporting_obligation_json: {
         Args: { p_obligation_id: string; p_organization_id: string }
         Returns: Json
+      }
+      m6_reporting_stage_elapsed_percent: {
+        Args: {
+          p_database_now: string
+          p_organization_id: string
+          p_stage_id: string
+        }
+        Returns: number
       }
       m6_reporting_stage_json: {
         Args: { p_organization_id: string; p_stage_id: string }
@@ -17341,6 +17603,13 @@ export type Database = {
         }
         Returns: {
           artifact: Json
+          outcome: string
+        }[]
+      }
+      observe_reporting_deadline_monitor_clock_skew_atomic: {
+        Args: { p_clock_skew_milliseconds: number; p_observed_at: string }
+        Returns: {
+          critical: boolean
           outcome: string
         }[]
       }
@@ -17770,6 +18039,15 @@ export type Database = {
         Returns: {
           outcome: string
           policies: Json
+        }[]
+      }
+      reconcile_reporting_deadline_monitoring_atomic: {
+        Args: { p_database_now?: string; p_limit?: number }
+        Returns: {
+          database_now: string
+          emitted: number
+          evaluated: number
+          outcome: string
         }[]
       }
       reconcile_sbom_composite_generation_atomic: {

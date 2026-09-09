@@ -12,6 +12,8 @@ import type {
   reportingObligationListResponseSchema,
   reportingObligationMutationResponseSchema,
   reportingObligationParamsSchema,
+  reportingDeadlineSummaryResponseSchema,
+  reportingDeadlineSummaryQuerySchema,
 } from "../schemas/reporting-obligations.schema.js";
 
 export type CreateReportingObligationInput = z.output<
@@ -44,4 +46,10 @@ export type ReportingObligationDetailResponse = z.output<
 >;
 export type ReportingObligationMutationResponse = z.output<
   typeof reportingObligationMutationResponseSchema
+>;
+export type ReportingDeadlineSummaryQuery = z.output<
+  typeof reportingDeadlineSummaryQuerySchema
+>;
+export type ReportingDeadlineSummaryResponse = z.output<
+  typeof reportingDeadlineSummaryResponseSchema
 >;

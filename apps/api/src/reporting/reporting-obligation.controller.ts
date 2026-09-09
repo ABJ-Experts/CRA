@@ -21,11 +21,14 @@ import {
   reportingObligationListResponseSchema,
   reportingObligationMutationResponseSchema,
   reportingObligationParamsSchema,
+  reportingDeadlineSummaryQuerySchema,
+  reportingDeadlineSummaryResponseSchema,
   type CancelReportingObligationInput,
   type CorrectReportingObligationAnchorInput,
   type CreateReportingObligationInput,
   type RecordReportingObligationStageSubmissionInput,
   type ReportingObligationListQuery,
+  type ReportingDeadlineSummaryQuery,
 } from "@repo/contracts/reporting";
 
 import {
@@ -63,6 +66,28 @@ export class ReportingObligationController {
         actorId: user.id,
         ...query,
       });
+      if (result) return result;
+    } catch (error) {
+      throw readFailure(error);
+    }
+    throw notFound();
+  }
+
+  @Get("deadline-summary")
+  @RequirePermissions("can_view_findings")
+  @ZodResponse(reportingDeadlineSummaryResponseSchema)
+  async deadlineSummary(
+    @Query(zodQuery(reportingDeadlineSummaryQuerySchema))
+    _query: ReportingDeadlineSummaryQuery,
+    @CurrentUser() user: RequestUser,
+  ) {
+    try {
+      const result = await this.reporting.deadlineSummary(
+        organizationId(user),
+        {
+          actorId: user.id,
+        },
+      );
       if (result) return result;
     } catch (error) {
       throw readFailure(error);

@@ -42,6 +42,13 @@ export const reportingObligationStageStateSchema = z.enum([
   "not_required",
 ]);
 
+export const reportingDeadlineThresholdSchema = z.union([
+  z.literal(50),
+  z.literal(75),
+  z.literal(90),
+  z.literal(100),
+]);
+
 export const reportingDurationSchema = z.enum([
   "PT24H",
   "PT72H",
@@ -150,6 +157,12 @@ export const reportingObligationStageSchema = z
     dueAt: utcSecondDateTimeSchema.nullable(),
     submittedAt: utcSecondDateTimeSchema.nullable(),
     overdueAt: utcSecondDateTimeSchema.nullable(),
+    /** Incremented only when the stage deadline is recomputed from an anchor correction. */
+    deadlineRevision: storedVersionSchema,
+    /** Server-derived elapsed progress. It is display data, never timer authority. */
+    elapsedPercent: z.number().min(0).max(100).nullable(),
+    /** Retained even when a late stage is subsequently submitted. */
+    breachedAt: utcSecondDateTimeSchema.nullable(),
     version: storedVersionSchema,
   })
   .strict()
@@ -159,6 +172,13 @@ export const reportingObligationStageSchema = z
         code: "custom",
         path: ["dueAt"],
         message: "Pending-anchor stages cannot expose a due date",
+      });
+    }
+    if (stage.state === "pending_anchor" && stage.elapsedPercent !== null) {
+      context.addIssue({
+        code: "custom",
+        path: ["elapsedPercent"],
+        message: "Pending-anchor stages cannot expose elapsed progress",
       });
     }
     if (stage.state === "submitted" && stage.submittedAt === null) {
@@ -269,3 +289,26 @@ export const reportingObligationDetailResponseSchema = z
 
 export const reportingObligationMutationResponseSchema =
   reportingObligationDetailResponseSchema;
+
+export const reportingDeadlineSummaryQuerySchema = z.object({}).strict();
+
+export const reportingDeadlineSummarySchema = z
+  .object({
+    serverNow: utcSecondDateTimeSchema,
+    overdueCount: z.number().int().nonnegative(),
+    nextDeadline: z
+      .object({
+        obligationId: z.uuid(),
+        stage: reportingObligationStageKindSchema,
+        dueAt: utcSecondDateTimeSchema,
+        elapsedPercent: z.number().min(0).max(100),
+        reportingHref: z.string().regex(/^\/reporting\?obligationId=[0-9a-f-]{36}$/i),
+      })
+      .strict()
+      .nullable(),
+  })
+  .strict();
+
+export const reportingDeadlineSummaryResponseSchema = z
+  .object({ summary: reportingDeadlineSummarySchema })
+  .strict();

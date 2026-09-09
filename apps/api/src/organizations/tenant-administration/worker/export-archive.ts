@@ -230,6 +230,8 @@ export const exportSourceRegistry: readonly ExportSourceRegistration[] =
         "reporting_obligations",
         "reporting_obligation_stages",
         "reporting_obligation_events",
+        "reporting_deadline_alerts",
+        "reporting_deadline_alert_deliveries",
       ],
     },
     {

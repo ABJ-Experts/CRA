@@ -3,6 +3,7 @@ import {
   reportingObligationDetailResponseSchema,
   reportingObligationListResponseSchema,
   reportingObligationMutationResponseSchema,
+  reportingDeadlineSummaryResponseSchema,
   type CancelReportingObligationInput,
   type CorrectReportingObligationAnchorInput,
   type CreateReportingObligationInput,
@@ -11,7 +12,9 @@ import {
   type ReportingObligationListQuery,
   type ReportingObligationListResponse,
   type ReportingObligationMutationResponse,
+  type ReportingDeadlineSummaryResponse,
 } from "@repo/contracts/reporting";
+import { z } from "zod";
 
 import { SupabaseService } from "../../supabase/supabase.service";
 import {
@@ -36,6 +39,23 @@ type RpcClient = Readonly<{
 @Injectable()
 export class SupabaseReportingObligationRepository implements ReportingObligationRepository {
   constructor(private readonly supabase: SupabaseService) {}
+
+  async deadlineSummary(
+    organizationId: string,
+    input: Readonly<{ actorId: string }>,
+  ): Promise<ReportingDeadlineSummaryResponse | null> {
+    const rpc = await this.summaryResult("get_reporting_deadline_summary", {
+      p_organization_id: organizationId,
+      p_actor_user_id: input.actorId,
+    });
+    if (rpc.outcome === "not_found") return null;
+    if (rpc.outcome !== "found") {
+      throw new Error("reporting deadline summary unavailable");
+    }
+    return reportingDeadlineSummaryResponseSchema.parse(
+      reportingDeadlineSummaryFromWire(normalizeWireTimestamps(rpc.summary)),
+    );
+  }
 
   async list(
     organizationId: string,
@@ -206,6 +226,24 @@ export class SupabaseReportingObligationRepository implements ReportingObligatio
     return { outcome, result: (row as Record<string, unknown>).result };
   }
 
+  private async summaryResult(
+    name: string,
+    args: Readonly<Record<string, unknown>>,
+  ): Promise<Readonly<{ outcome: string; summary: unknown }>> {
+    const response = await this.client().rpc(name, args);
+    if (response.error)
+      throw new Error("reporting deadline summary unavailable");
+    const row = one(response.data);
+    if (row === null || typeof row !== "object" || Array.isArray(row)) {
+      throw new Error("invalid reporting deadline summary result");
+    }
+    const outcome = (row as Record<string, unknown>).outcome;
+    if (typeof outcome !== "string") {
+      throw new Error("invalid reporting deadline summary outcome");
+    }
+    return { outcome, summary: (row as Record<string, unknown>).summary };
+  }
+
   private client(): RpcClient {
     return this.supabase.admin() as unknown as RpcClient;
   }
@@ -238,4 +276,32 @@ function normalizeWireTimestamps(value: unknown): unknown {
       normalizeWireTimestamps(nested),
     ]),
   );
+}
+
+const reportingDeadlineSummaryWireSchema = z
+  .object({
+    serverNow: z.string(),
+    overdueCount: z.number().int().nonnegative(),
+    nextDeadline: z
+      .object({
+        obligationId: z.uuid(),
+        stage: z.enum(["early_warning", "notification", "final_report"]),
+        dueAt: z.string(),
+        elapsedPercent: z.number().min(0).max(100),
+        reportingHref: z.string(),
+      })
+      .strict()
+      .nullable(),
+  })
+  .strict();
+
+function reportingDeadlineSummaryFromWire(value: unknown): unknown {
+  const summary = reportingDeadlineSummaryWireSchema.parse(value);
+  return {
+    summary: {
+      serverNow: summary.serverNow,
+      overdueCount: summary.overdueCount,
+      nextDeadline: summary.nextDeadline,
+    },
+  };
 }

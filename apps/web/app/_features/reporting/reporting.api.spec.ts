@@ -68,6 +68,31 @@ describe("reportingApi", () => {
       }),
     ).rejects.toMatchObject({ kind: "invalid_response" });
   });
+
+  it("parses only a strict server-timed deadline summary", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        json({
+          summary: {
+            serverNow: "2026-04-15T09:20:00Z",
+            overdueCount: 0,
+            nextDeadline: {
+              obligationId,
+              stage: "early_warning",
+              dueAt: "2026-04-15T09:20:00Z",
+              elapsedPercent: 50,
+              reportingHref: `/reporting?obligationId=${obligationId}`,
+            },
+          },
+        }),
+      ),
+    );
+
+    await expect(reportingApi.deadlineSummary()).resolves.toMatchObject({
+      summary: { overdueCount: 0 },
+    });
+  });
 });
 
 function obligation() {
@@ -115,6 +140,9 @@ function stage(
     dueAt,
     submittedAt: null,
     overdueAt: null,
+    deadlineRevision: 1,
+    elapsedPercent: dueAt === null ? null : 50,
+    breachedAt: null,
     version: 1,
   };
 }

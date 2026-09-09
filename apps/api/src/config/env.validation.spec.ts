@@ -34,6 +34,8 @@ describe("environment validation", () => {
       TENANT_EXPORT_MAX_ARCHIVE_BYTES: 47_000_000,
       PRODUCT_RETENTION_ALERT_LEASE_SECONDS: 60,
       PRODUCT_RETENTION_MAX_CLOCK_SKEW_MILLISECONDS: 5_000,
+      REPORTING_DEADLINE_MONITOR_LEASE_SECONDS: 60,
+      REPORTING_DEADLINE_MONITOR_MAX_CLOCK_SKEW_MILLISECONDS: 1_000,
       PRODUCT_IMPORT_LEASE_SECONDS: 60,
       PRODUCT_COMPLIANCE_LEASE_SECONDS: 60,
       PRODUCT_COMPLIANCE_MAX_SYNC_INSPECT_BYTES: 67_108_864,
@@ -164,6 +166,25 @@ describe("environment validation", () => {
       validateEnv({ ...required, FINDING_PROPAGATION_LEASE_SECONDS: "3601" }),
     ).toThrow(
       "FINDING_PROPAGATION_LEASE_SECONDS: must not exceed 3600 seconds",
+    );
+  });
+
+  it("requires a one-second-or-greater reporting monitor skew threshold", () => {
+    expect(
+      validateEnv({
+        ...required,
+        REPORTING_DEADLINE_MONITOR_MAX_CLOCK_SKEW_MILLISECONDS: "1000",
+      }),
+    ).toMatchObject({
+      REPORTING_DEADLINE_MONITOR_MAX_CLOCK_SKEW_MILLISECONDS: 1_000,
+    });
+    expect(() =>
+      validateEnv({
+        ...required,
+        REPORTING_DEADLINE_MONITOR_MAX_CLOCK_SKEW_MILLISECONDS: "999",
+      }),
+    ).toThrow(
+      "REPORTING_DEADLINE_MONITOR_MAX_CLOCK_SKEW_MILLISECONDS: must be at least 1000 milliseconds",
     );
   });
 

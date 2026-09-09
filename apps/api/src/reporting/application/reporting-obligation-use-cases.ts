@@ -11,6 +11,13 @@ import type { ReportingObligationRepository } from "./reporting-obligation.port"
 export class ReportingObligationUseCases {
   constructor(private readonly repository: ReportingObligationRepository) {}
 
+  deadlineSummary(
+    organizationId: string,
+    input: Readonly<{ actorId: string }>,
+  ) {
+    return this.repository.deadlineSummary(organizationId, input);
+  }
+
   list(
     organizationId: string,
     input: Readonly<{ actorId: string } & ReportingObligationListQuery>,

@@ -14,4 +14,5 @@ export const reportingKeys = Object.freeze({
     Object.freeze([...all, "list", stableQuery(query)] as const),
   detail: (obligationId: string) =>
     Object.freeze([...all, "detail", obligationId] as const),
+  deadlineSummary: () => Object.freeze([...all, "deadline-summary"] as const),
 });

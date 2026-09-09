@@ -30,6 +30,17 @@ export function useReportingObligationsQuery(
   });
 }
 
+export function useReportingDeadlineSummaryQuery(enabled: boolean) {
+  return useQuery({
+    queryKey: reportingKeys.deadlineSummary(),
+    enabled,
+    retry: false,
+    refetchInterval: 30_000,
+    refetchIntervalInBackground: false,
+    queryFn: ({ signal }) => reportingApi.deadlineSummary(signal),
+  });
+}
+
 export function useReportingObligationDetailQuery(
   obligationId: string | null,
   enabled: boolean,

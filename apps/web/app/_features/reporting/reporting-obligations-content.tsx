@@ -4,10 +4,12 @@ import type {
   ReportingObligationAnchorKind,
   ReportingObligationListResponse,
 } from "@repo/contracts/reporting";
+import { reportingObligationParamsSchema } from "@repo/contracts/reporting";
 import { Button } from "@repo/ui/button";
 import { Input } from "@repo/ui/input";
 import { Tag } from "@repo/ui/tag";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 
 import { ApiClientError } from "../../_lib/http/api-client";
 import {
@@ -23,6 +25,7 @@ import {
   useCorrectReportingAnchorMutation,
   useCreateReportingObligationMutation,
   useRecordReportingSubmissionMutation,
+  useReportingDeadlineSummaryQuery,
   useReportingObligationsQuery,
 } from "./reporting.queries";
 
@@ -74,6 +77,7 @@ function requestMessage(error: unknown) {
 }
 
 export function ReportingObligationsContent() {
+  const searchParams = useSearchParams();
   const { isLoading: sessionLoading } = useSession();
   const canView = useHasPermission("can_view_findings");
   const canEdit = useHasPermission("can_edit_findings");
@@ -82,6 +86,18 @@ export function ReportingObligationsContent() {
     canView && !sessionLoading,
   );
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const selectedFromUrl = useMemo(() => {
+    const parsed = reportingObligationParamsSchema.safeParse({
+      obligationId: searchParams.get("obligationId"),
+    });
+    return parsed.success ? parsed.data.obligationId : null;
+  }, [searchParams]);
+  useEffect(() => {
+    if (selectedFromUrl !== null) setSelectedId(selectedFromUrl);
+  }, [selectedFromUrl]);
+  const summary = useReportingDeadlineSummaryQuery(
+    canView && !sessionLoading,
+  );
   const selected =
     query.data?.obligations.find((item) => item.id === selectedId) ??
     query.data?.obligations[0] ??
@@ -126,6 +142,8 @@ export function ReportingObligationsContent() {
         title="Reporting obligations"
         subtitle="Track CRA reporting timers from human-asserted awareness, frozen rule versions, and durable anchor corrections."
       />
+
+      <DeadlineMonitorStatus summary={summary.data?.summary} />
 
       {canEdit ? <CreateObligationForm /> : null}
 
@@ -212,7 +230,11 @@ export function ReportingObligationsContent() {
             </table>
           </div>
           {selected ? (
-            <ObligationDetail obligation={selected} canEdit={canEdit} />
+            <ObligationDetail
+              obligation={selected}
+              canEdit={canEdit}
+              serverNow={summary.data?.summary.serverNow}
+            />
           ) : null}
         </div>
       ) : null}
@@ -332,7 +354,12 @@ function CreateObligationForm() {
 function ObligationDetail({
   obligation,
   canEdit,
-}: Readonly<{ obligation: ReportingObligation; canEdit: boolean }>) {
+  serverNow,
+}: Readonly<{
+  obligation: ReportingObligation;
+  canEdit: boolean;
+  serverNow: string | undefined;
+}>) {
   return (
     <aside
       className="rounded-xl border border-border bg-canvas p-4"
@@ -385,6 +412,15 @@ function ObligationDetail({
             <p className="mt-1 text-fg-muted">
               Due {formatInstant(stage.dueAt)}
             </p>
+            <p className="mt-1 text-fg-muted">
+              <Countdown dueAt={stage.dueAt} serverNow={serverNow} />
+              {stage.elapsedPercent !== null
+                ? ` · ${Math.floor(stage.elapsedPercent)}% elapsed`
+                : ""}
+            </p>
+            {stage.breachedAt !== null && stage.state === "submitted" ? (
+              <p className="mt-1 text-danger">Submitted late</p>
+            ) : null}
           </li>
         ))}
       </ol>
@@ -398,6 +434,91 @@ function ObligationDetail({
       ) : null}
     </aside>
   );
+}
+
+function DeadlineMonitorStatus({
+  summary,
+}: Readonly<{
+  summary:
+    | {
+        serverNow: string;
+        overdueCount: number;
+        nextDeadline: {
+          stage: string;
+          dueAt: string;
+          elapsedPercent: number;
+        } | null;
+      }
+    | undefined;
+}>) {
+  if (summary === undefined) return null;
+  if (summary.nextDeadline === null && summary.overdueCount === 0) {
+    return (
+      <SectionCard>
+        <p role="status" className="text-subhead-regular text-fg-muted">
+          No active reporting deadline.
+        </p>
+      </SectionCard>
+    );
+  }
+  return (
+    <SectionCard>
+      <p role="status" className="text-subhead-regular text-fg">
+        {summary.nextDeadline === null
+          ? "No running reporting deadline."
+          : `${stageLabel(summary.nextDeadline.stage)} · ${formatInstant(summary.nextDeadline.dueAt)}`}
+      </p>
+      {summary.nextDeadline !== null ? (
+        <p className="mt-1 text-caption-1-regular text-fg-muted">
+          <Countdown
+            dueAt={summary.nextDeadline.dueAt}
+            serverNow={summary.serverNow}
+          />
+          {` · ${Math.floor(summary.nextDeadline.elapsedPercent)}% elapsed`}
+        </p>
+      ) : null}
+      {summary.overdueCount > 0 ? (
+        <p className="mt-1 text-caption-1-regular text-danger">
+          {summary.overdueCount} overdue reporting deadline{summary.overdueCount === 1 ? "" : "s"}.
+        </p>
+      ) : null}
+    </SectionCard>
+  );
+}
+
+export function Countdown({
+  dueAt,
+  serverNow,
+}: Readonly<{ dueAt: string | null; serverNow: string | undefined }>) {
+  const [tick, setTick] = useState(0);
+  const baseline = useRef<Readonly<{ server: number; browser: number }> | null>(
+    null,
+  );
+  useEffect(() => {
+    baseline.current =
+      serverNow === undefined
+        ? null
+        : { server: new Date(serverNow).getTime(), browser: Date.now() };
+    // The baseline is intentionally retained outside rendering so the browser
+    // can only present elapsed time from the server snapshot. Trigger one
+    // render after replacing it; otherwise the initial render stays on the
+    // accessible "Updating countdown…" placeholder until the next minute.
+    setTick((value) => value + 1);
+  }, [serverNow]);
+  useEffect(() => {
+    const timer = window.setInterval(() => setTick((value) => value + 1), 60_000);
+    return () => window.clearInterval(timer);
+  }, []);
+  void tick;
+  if (dueAt === null) return <>Pending anchor</>;
+  if (baseline.current === null) return <>Updating countdown…</>;
+  const estimate =
+    baseline.current.server + (Date.now() - baseline.current.browser);
+  const seconds = Math.ceil((new Date(dueAt).getTime() - estimate) / 1_000);
+  if (seconds <= 0) return <>Deadline reached; refreshing status…</>;
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  return <>{`${hours > 0 ? `${hours}h ` : ""}${minutes}m remaining`}</>;
 }
 
 function TransitionForms({

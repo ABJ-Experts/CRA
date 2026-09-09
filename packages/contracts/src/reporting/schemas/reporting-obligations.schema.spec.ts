@@ -8,6 +8,7 @@ import {
   reportingObligationDetailResponseSchema,
   reportingObligationListQuerySchema,
   reportingObligationListResponseSchema,
+  reportingDeadlineSummaryResponseSchema,
 } from "./reporting-obligations.schema";
 
 const uuid = "11111111-1111-4111-8111-111111111111";
@@ -188,6 +189,34 @@ describe("reporting obligation contracts", () => {
       }),
     ).toHaveProperty("obligations.0.id", uuid);
   });
+
+  it("accepts only a server-timed reporting deadline summary", () => {
+    expect(
+      reportingDeadlineSummaryResponseSchema.parse({
+        summary: {
+          serverNow: "2026-04-15T09:20:00Z",
+          overdueCount: 1,
+          nextDeadline: {
+            obligationId: uuid,
+            stage: "notification",
+            dueAt: "2026-04-17T09:20:00Z",
+            elapsedPercent: 75,
+            reportingHref: `/reporting?obligationId=${uuid}`,
+          },
+        },
+      }),
+    ).toHaveProperty("summary.nextDeadline.elapsedPercent", 75);
+    expect(() =>
+      reportingDeadlineSummaryResponseSchema.parse({
+        summary: {
+          serverNow: "2026-04-15T09:20:00Z",
+          overdueCount: 0,
+          nextDeadline: null,
+          browserNow: "untrusted",
+        },
+      }),
+    ).toThrow();
+  });
 });
 
 function summaryFixture(
@@ -288,6 +317,9 @@ function stage(
     dueAt,
     submittedAt: state === "submitted" ? "2026-04-17T08:00:00Z" : null,
     overdueAt: state === "overdue" ? "2026-04-17T09:20:01Z" : null,
+    deadlineRevision: 1,
+    elapsedPercent: state === "pending_anchor" ? null : 50,
+    breachedAt: state === "overdue" ? "2026-04-17T09:20:00Z" : null,
     version: 1,
   };
 }

@@ -49,6 +49,9 @@ test("owner creates, anchors, submits, and cancels a local reporting obligation"
   await expect(
     page.getByRole("heading", { name: "Reporting obligations" }),
   ).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: /reporting deadline.*left/i }),
+  ).toBeVisible();
 
   const create = page.locator("form").filter({
     has: page.getByRole("heading", { name: "Open obligation" }),
@@ -63,6 +66,12 @@ test("owner creates, anchors, submits, and cancels a local reporting obligation"
   const stages = detail.locator("ol");
   await expect(stages.getByText("Early Warning", { exact: true })).toBeVisible();
   await expect(stages.getByText("Final Report", { exact: true })).toBeVisible();
+  await expect(
+    stages.locator("li").filter({ hasText: /Early Warning.*remaining.*elapsed/ }),
+  ).toBeVisible();
+  await expect(
+    stages.locator("li").filter({ hasText: /Final Report.*Pending anchor/ }),
+  ).toBeVisible();
 
   const correction = detail.locator("form").filter({ hasText: "Correct anchor" });
   await correction.locator("select").selectOption("remediation_available");
