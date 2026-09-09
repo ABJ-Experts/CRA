@@ -208,7 +208,7 @@ export class NodeProductComplianceExternalReferenceValidator implements ProductC
     }
     if (
       addresses.length === 0 ||
-      addresses.some(({ address }) => !isPublicAddress(address))
+      addresses.some(({ address }) => !isPublicNetworkAddress(address))
     ) {
       return null;
     }
@@ -349,7 +349,8 @@ const isHostName = (host: string): boolean =>
         /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/.test(label),
     );
 
-const isPublicAddress = (address: string): boolean => {
+/** Shared DNS safety predicate for server-owned outbound HTTPS integrations. */
+export const isPublicNetworkAddress = (address: string): boolean => {
   const kind = isIP(address);
   if (kind === 4) return isPublicIpv4(address);
   if (kind === 6) return isPublicIpv6(address);

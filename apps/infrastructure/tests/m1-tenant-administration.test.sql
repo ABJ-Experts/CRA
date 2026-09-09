@@ -1022,7 +1022,8 @@ select pg_temp.check(
       'sbom_composite_supplier_provenance',
       'vulnerability_reachability_review',
       'vulnerability_vex_assessments',
-      'vulnerability_triage_operational'
+      'vulnerability_triage_operational',
+      'vulnerability_vex_exports'
     ]::text[]
 );
 

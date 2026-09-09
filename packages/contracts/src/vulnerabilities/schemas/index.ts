@@ -8,3 +8,4 @@ export * from "./vulnerability-assessment.schema.js";
 export * from "./vulnerability-assessment-bulk.schema.js";
 export * from "./vulnerability-triage.schema.js";
 export * from "./vulnerability-remediation.schema.js";
+export * from "./vulnerability-vex-export.schema.js";

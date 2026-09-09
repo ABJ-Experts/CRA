@@ -29,6 +29,7 @@
     "worker:vulnerability-kev-alerts": "node dist/vulnerability-kev-alert-worker.js",
     "worker:vulnerability-finding-review-notifications": "node dist/vulnerability-finding-review-notification-worker.js",
     "worker:vulnerability-triage-alerts": "node dist/vulnerability-triage-alert-worker.js",
+    "worker:vulnerability-vex-publication": "node dist/vulnerability-vex-publication-worker.js",
     "verify:vulnerability-matching-accuracy": "node dist/vulnerability-matching-accuracy-gate.js",
     "verify:tenant-export-capacity": "node dist/organizations/tenant-administration/worker/tenant-export-capacity.js"
   },

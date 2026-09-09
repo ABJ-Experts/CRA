@@ -355,6 +355,55 @@ describe("presets", () => {
     }
   });
 
+  it("adds export and controlled-publication grants only for owners and admins", () => {
+    expect(PERMISSION_MATRIX.findings).toContain("export");
+    expect(PERMISSION_MATRIX.finding_publication).toEqual(["manage"]);
+    for (const baseRole of ["owner", "admin"] as const) {
+      expect(
+        hasPermission(
+          DEFAULT_PERMISSIONS_BY_ROLE[baseRole],
+          "can_export_findings",
+        ),
+      ).toBe(true);
+      expect(
+        hasPermission(
+          DEFAULT_PERMISSIONS_BY_ROLE[baseRole],
+          "can_manage_finding_publication",
+        ),
+      ).toBe(true);
+    }
+    for (const baseRole of ["member", "viewer"] as const) {
+      expect(
+        hasPermission(
+          DEFAULT_PERMISSIONS_BY_ROLE[baseRole],
+          "can_export_findings",
+        ),
+      ).toBe(false);
+      expect(
+        hasPermission(
+          DEFAULT_PERMISSIONS_BY_ROLE[baseRole],
+          "can_manage_finding_publication",
+        ),
+      ).toBe(false);
+    }
+    const customRoleGrant = resolveEffectivePermissions({
+      baseRole: "viewer",
+      customRoles: [
+        role({ permissions: { can_manage_finding_publication: true } }),
+      ],
+    });
+    expect(
+      hasPermission(customRoleGrant, "can_manage_finding_publication"),
+    ).toBe(true);
+    const overridden = resolveEffectivePermissions({
+      baseRole: "admin",
+      baseRoleOverrides: { can_manage_finding_publication: false },
+    });
+    expect(
+      hasPermission(overridden, "can_manage_finding_publication"),
+    ).toBe(false);
+  });
+
   it("privilege is monotonic across the base roles", () => {
     const granted = (r: (typeof BASE_ROLES)[number]) =>
       PERMISSION_KEYS.filter((k) =>

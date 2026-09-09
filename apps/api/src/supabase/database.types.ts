@@ -11942,6 +11942,375 @@ export type Database = {
           },
         ]
       }
+      vulnerability_vex_export_snapshot_assessments: {
+        Row: {
+          assessment_id: string
+          assessment_revision: number
+          finding_id: string
+          organization_id: string
+          snapshot_id: string
+        }
+        Insert: {
+          assessment_id: string
+          assessment_revision: number
+          finding_id: string
+          organization_id: string
+          snapshot_id: string
+        }
+        Update: {
+          assessment_id?: string
+          assessment_revision?: number
+          finding_id?: string
+          organization_id?: string
+          snapshot_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vulnerability_vex_export_snap_organization_id_assessment_i_fkey"
+            columns: ["organization_id", "assessment_id"]
+            isOneToOne: false
+            referencedRelation: "vulnerability_finding_assessments"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "vulnerability_vex_export_snaps_organization_id_snapshot_id_fkey"
+            columns: ["organization_id", "snapshot_id"]
+            isOneToOne: false
+            referencedRelation: "vulnerability_vex_export_snapshots"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "vulnerability_vex_export_snapsh_organization_id_finding_id_fkey"
+            columns: ["organization_id", "finding_id"]
+            isOneToOne: false
+            referencedRelation: "vulnerability_findings"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "vulnerability_vex_export_snapshot_assessme_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vulnerability_vex_export_snapshots: {
+        Row: {
+          content_bytes: number
+          content_sha256: string
+          created_at: string
+          created_by: string
+          export_format: string
+          id: string
+          organization_id: string
+          release_id: string
+          scope_digest: string
+          scope_version: number
+          specification_version: string
+          storage_bucket: string
+          storage_object_path: string
+        }
+        Insert: {
+          content_bytes: number
+          content_sha256: string
+          created_at?: string
+          created_by: string
+          export_format: string
+          id?: string
+          organization_id: string
+          release_id: string
+          scope_digest: string
+          scope_version: number
+          specification_version: string
+          storage_bucket?: string
+          storage_object_path: string
+        }
+        Update: {
+          content_bytes?: number
+          content_sha256?: string
+          created_at?: string
+          created_by?: string
+          export_format?: string
+          id?: string
+          organization_id?: string
+          release_id?: string
+          scope_digest?: string
+          scope_version?: number
+          specification_version?: string
+          storage_bucket?: string
+          storage_object_path?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vulnerability_vex_export_snapsh_organization_id_release_id_fkey"
+            columns: ["organization_id", "release_id"]
+            isOneToOne: false
+            referencedRelation: "product_releases"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "vulnerability_vex_export_snapshots_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vulnerability_vex_export_snapshots_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vulnerability_vex_publication_attempts: {
+        Row: {
+          attempt_number: number
+          error_code: string | null
+          error_detail: string | null
+          http_status: number | null
+          id: string
+          job_id: string
+          occurred_at: string
+          organization_id: string
+          outcome: string
+          remote_version: string | null
+        }
+        Insert: {
+          attempt_number: number
+          error_code?: string | null
+          error_detail?: string | null
+          http_status?: number | null
+          id?: string
+          job_id: string
+          occurred_at?: string
+          organization_id: string
+          outcome: string
+          remote_version?: string | null
+        }
+        Update: {
+          attempt_number?: number
+          error_code?: string | null
+          error_detail?: string | null
+          http_status?: number | null
+          id?: string
+          job_id?: string
+          occurred_at?: string
+          organization_id?: string
+          outcome?: string
+          remote_version?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vulnerability_vex_publication_attem_organization_id_job_id_fkey"
+            columns: ["organization_id", "job_id"]
+            isOneToOne: false
+            referencedRelation: "vulnerability_vex_publication_jobs"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "vulnerability_vex_publication_attempts_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vulnerability_vex_publication_jobs: {
+        Row: {
+          attempt_count: number
+          completed_at: string | null
+          created_at: string
+          created_by: string
+          delivery_state: string
+          event_key: string
+          id: string
+          job_kind: string
+          last_error_code: string | null
+          last_error_detail: string | null
+          lease_expires_at: string | null
+          lease_owner: string | null
+          max_attempts: number
+          next_attempt_at: string
+          organization_id: string
+          replaced_by_snapshot_id: string | null
+          snapshot_id: string
+          target_id: string
+          updated_at: string
+          version: number
+          withdrawal_reason: string | null
+        }
+        Insert: {
+          attempt_count?: number
+          completed_at?: string | null
+          created_at?: string
+          created_by: string
+          delivery_state?: string
+          event_key: string
+          id?: string
+          job_kind: string
+          last_error_code?: string | null
+          last_error_detail?: string | null
+          lease_expires_at?: string | null
+          lease_owner?: string | null
+          max_attempts?: number
+          next_attempt_at?: string
+          organization_id: string
+          replaced_by_snapshot_id?: string | null
+          snapshot_id: string
+          target_id: string
+          updated_at?: string
+          version?: number
+          withdrawal_reason?: string | null
+        }
+        Update: {
+          attempt_count?: number
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string
+          delivery_state?: string
+          event_key?: string
+          id?: string
+          job_kind?: string
+          last_error_code?: string | null
+          last_error_detail?: string | null
+          lease_expires_at?: string | null
+          lease_owner?: string | null
+          max_attempts?: number
+          next_attempt_at?: string
+          organization_id?: string
+          replaced_by_snapshot_id?: string | null
+          snapshot_id?: string
+          target_id?: string
+          updated_at?: string
+          version?: number
+          withdrawal_reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vulnerability_vex_publication__organization_id_snapshot_id_fkey"
+            columns: ["organization_id", "snapshot_id"]
+            isOneToOne: false
+            referencedRelation: "vulnerability_vex_export_snapshots"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "vulnerability_vex_publication_jo_organization_id_target_id_fkey"
+            columns: ["organization_id", "target_id"]
+            isOneToOne: false
+            referencedRelation: "vulnerability_vex_publication_targets"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "vulnerability_vex_publication_jobs_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vulnerability_vex_publication_jobs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vulnerability_vex_publication_organization_id_replaced_by__fkey"
+            columns: ["organization_id", "replaced_by_snapshot_id"]
+            isOneToOne: false
+            referencedRelation: "vulnerability_vex_export_snapshots"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      vulnerability_vex_publication_targets: {
+        Row: {
+          created_at: string
+          created_by: string
+          current_publication_job_id: string | null
+          current_snapshot_id: string | null
+          enabled: boolean
+          id: string
+          organization_id: string
+          published_at: string | null
+          target_key: string
+          updated_at: string
+          updated_by: string
+          version: number
+          withdrawn_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          current_publication_job_id?: string | null
+          current_snapshot_id?: string | null
+          enabled?: boolean
+          id?: string
+          organization_id: string
+          published_at?: string | null
+          target_key: string
+          updated_at?: string
+          updated_by: string
+          version?: number
+          withdrawn_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          current_publication_job_id?: string | null
+          current_snapshot_id?: string | null
+          enabled?: boolean
+          id?: string
+          organization_id?: string
+          published_at?: string | null
+          target_key?: string
+          updated_at?: string
+          updated_by?: string
+          version?: number
+          withdrawn_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vulnerability_vex_publication_organization_id_current_snap_fkey"
+            columns: ["organization_id", "current_snapshot_id"]
+            isOneToOne: false
+            referencedRelation: "vulnerability_vex_export_snapshots"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "vulnerability_vex_publication_targets_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vulnerability_vex_publication_targets_current_job_fk"
+            columns: ["organization_id", "current_publication_job_id"]
+            isOneToOne: false
+            referencedRelation: "vulnerability_vex_publication_jobs"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "vulnerability_vex_publication_targets_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vulnerability_vex_publication_targets_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       m2_product_relationship_operations: {
@@ -12636,6 +13005,17 @@ export type Database = {
           outcome: string
         }[]
       }
+      claim_vulnerability_vex_publication_job: {
+        Args: {
+          p_lease_seconds: number
+          p_organization_id: string
+          p_worker_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
       clear_login_attempts: { Args: { p_email: string }; Returns: undefined }
       commit_product_import_atomic: {
         Args: {
@@ -12885,6 +13265,19 @@ export type Database = {
         }
         Returns: {
           outcome: string
+        }[]
+      }
+      complete_vulnerability_vex_publication_job: {
+        Args: {
+          p_http_status?: number
+          p_job_id: string
+          p_organization_id: string
+          p_remote_version?: string
+          p_worker_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
         }[]
       }
       confirm_vulnerability_offline_bundle_import: {
@@ -13400,6 +13793,26 @@ export type Database = {
           outcome: string
         }[]
       }
+      create_vulnerability_vex_export_snapshot_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_content_bytes: number
+          p_content_sha256: string
+          p_correlation_id?: string
+          p_expected_scope_digest: string
+          p_export_format: string
+          p_idempotency_key: string
+          p_organization_id: string
+          p_product_id: string
+          p_release_id: string
+          p_specification_version: string
+          p_storage_object_path: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
       deactivate_organization_atomic: {
         Args: {
           p_actor_user_id: string
@@ -13594,6 +14007,25 @@ export type Database = {
         Returns: {
           job_id: string
           outcome: string
+        }[]
+      }
+      enqueue_vulnerability_vex_publication_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_confirm_target: boolean
+          p_correlation_id?: string
+          p_expected_content_sha256: string
+          p_expected_target_version: number
+          p_idempotency_key: string
+          p_job_kind: string
+          p_organization_id: string
+          p_snapshot_id: string
+          p_target_id: string
+          p_withdrawal_reason: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
         }[]
       }
       ensure_organization_branding_draft: {
@@ -13901,6 +14333,20 @@ export type Database = {
         Returns: {
           checkpoint_version: number
           outcome: string
+        }[]
+      }
+      fail_vulnerability_vex_publication_job: {
+        Args: {
+          p_error_code: string
+          p_error_detail: string
+          p_job_id: string
+          p_organization_id: string
+          p_retry_at?: string
+          p_worker_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
         }[]
       }
       finalize_organization_branding_asset_upload_atomic: {
@@ -14711,6 +15157,28 @@ export type Database = {
           result: Json
         }[]
       }
+      get_vulnerability_vex_export_snapshot: {
+        Args: {
+          p_actor_user_id: string
+          p_organization_id: string
+          p_snapshot_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      get_vulnerability_vex_export_storage_locator: {
+        Args: {
+          p_actor_user_id: string
+          p_organization_id: string
+          p_snapshot_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
       is_iso_3166_alpha_2: { Args: { p_country: string }; Returns: boolean }
       is_login_locked: { Args: { p_email: string }; Returns: string }
       link_external_identity_atomic: {
@@ -15346,6 +15814,42 @@ export type Database = {
         }[]
       }
       list_vulnerability_triage_sla_policies: {
+        Args: { p_actor_user_id: string; p_organization_id: string }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      list_vulnerability_vex_export_snapshots: {
+        Args: {
+          p_actor_user_id: string
+          p_organization_id: string
+          p_product_id: string
+          p_release_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      list_vulnerability_vex_publication_due_organizations: {
+        Args: { p_limit?: number }
+        Returns: {
+          organization_id: string
+        }[]
+      }
+      list_vulnerability_vex_publication_jobs: {
+        Args: {
+          p_actor_user_id: string
+          p_organization_id: string
+          p_snapshot_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      list_vulnerability_vex_publication_targets: {
         Args: { p_actor_user_id: string; p_organization_id: string }
         Returns: {
           outcome: string
@@ -16040,8 +16544,36 @@ export type Database = {
           result: Json
         }[]
       }
+      m5_vex_export_scope_json: {
+        Args: {
+          p_organization_id: string
+          p_product_id: string
+          p_release_id: string
+        }
+        Returns: Json
+      }
+      m5_vex_export_scope_payload: {
+        Args: {
+          p_organization_id: string
+          p_product_id: string
+          p_release_id: string
+        }
+        Returns: Json
+      }
+      m5_vex_export_snapshot_json: {
+        Args: { p_organization_id: string; p_snapshot_id: string }
+        Returns: Json
+      }
       m5_vex_history_event_json: {
         Args: { p_history_event_id: string; p_organization_id: string }
+        Returns: Json
+      }
+      m5_vex_publication_job_json: {
+        Args: { p_job_id: string; p_organization_id: string }
+        Returns: Json
+      }
+      m5_vex_publication_target_json: {
+        Args: { p_organization_id: string; p_target_id: string }
         Returns: Json
       }
       mark_mfa_factors_removed: {
@@ -16386,6 +16918,19 @@ export type Database = {
         Returns: {
           outcome: string
           preview: Json
+        }[]
+      }
+      preview_vulnerability_vex_export_scope: {
+        Args: {
+          p_actor_user_id: string
+          p_export_format: string
+          p_organization_id: string
+          p_product_id: string
+          p_release_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
         }[]
       }
       product_compliance_metrics_snapshot: {
@@ -17355,6 +17900,20 @@ export type Database = {
           result: Json
         }[]
       }
+      retry_vulnerability_vex_publication_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_correlation_id?: string
+          p_expected_version: number
+          p_idempotency_key: string
+          p_job_id: string
+          p_organization_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
       reverify_product_security_update_artifact_atomic: {
         Args: {
           p_actor_user_id: string
@@ -17692,6 +18251,21 @@ export type Database = {
           p_organization_id: string
           p_severity: string
           p_target_minutes: number
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      set_vulnerability_vex_publication_target_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_correlation_id?: string
+          p_enabled: boolean
+          p_expected_version: number
+          p_idempotency_key: string
+          p_organization_id: string
+          p_target_key: string
         }
         Returns: {
           outcome: string
@@ -18184,6 +18758,21 @@ export type Database = {
         Returns: {
           artifact: Json
           outcome: string
+        }[]
+      }
+      withdraw_vulnerability_vex_publication_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_correlation_id?: string
+          p_expected_version: number
+          p_idempotency_key: string
+          p_job_id: string
+          p_organization_id: string
+          p_withdrawal_reason: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
         }[]
       }
       yield_vulnerability_feed_sync: {

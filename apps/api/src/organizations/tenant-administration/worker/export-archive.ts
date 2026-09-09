@@ -220,6 +220,18 @@ export const exportSourceRegistry: readonly ExportSourceRegistration[] =
         "vulnerability_finding_remediation_anchors",
       ],
     },
+    {
+      // M5-06 immutable export evidence and safe delivery outcomes are
+      // tenant-owned facts. Active job leases remain deployment-local below.
+      sourceId: "vulnerability_vex_exports",
+      tables: [
+        "vulnerability_vex_export_snapshots",
+        "vulnerability_vex_export_snapshot_assessments",
+        "vulnerability_vex_publication_targets",
+        "vulnerability_vex_publication_jobs",
+        "vulnerability_vex_publication_attempts",
+      ],
+    },
   ]);
 
 /** Explicit omissions are security objects, never an accidental omission. */
@@ -291,6 +303,8 @@ export const exportSourceExclusions: Readonly<Record<string, string>> =
       "Idempotency keys and request digests are request-security material.",
     vulnerability_triage_commands:
       "Idempotency keys and request digests are request-security material.",
+    vulnerability_vex_publication_jobs:
+      "Contains active worker leases, retry scheduling, and target delivery state; immutable export snapshots and completed delivery attempts are exported separately.",
   });
 
 const crcTable = (() => {

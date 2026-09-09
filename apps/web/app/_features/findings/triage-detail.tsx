@@ -7,6 +7,7 @@ import { Tag, type TagProps } from "@repo/ui/tag";
 import { FindingAssessment } from "./finding-assessment";
 import { FindingRemediation } from "./finding-remediation";
 import { FindingTriageOperational } from "./finding-triage-operational";
+import { FindingVexExport } from "./finding-vex-export";
 
 function titleCase(value: string): string {
   return value
@@ -215,6 +216,12 @@ export function FindingTriageDetail({
       <FindingRemediation
         findingId={finding.id}
         remediation={detail.operational.remediation}
+      />
+      <FindingVexExport
+        productId={finding.productId}
+        productName={finding.productName}
+        releaseId={finding.releaseId}
+        releaseName={finding.releaseName}
       />
       <FindingTriageOperational
         findingId={finding.id}

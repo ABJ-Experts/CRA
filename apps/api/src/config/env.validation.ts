@@ -297,6 +297,13 @@ export const envSchema = z.object({
     900,
     "must not exceed 900 seconds",
   ),
+  /** Empty is fail-closed: no publication endpoint exists until deployment provisions one. */
+  VULNERABILITY_VEX_PUBLICATION_TARGETS_JSON: z.string().optional().default(""),
+  VULNERABILITY_VEX_PUBLICATION_LEASE_SECONDS: boundedInt(
+    120,
+    900,
+    "must not exceed 900 seconds",
+  ),
   /** Optional deployment secret. Never persisted or emitted in logs. */
   GITHUB_ADVISORY_TOKEN: z.string().trim().min(1).optional(),
   /**

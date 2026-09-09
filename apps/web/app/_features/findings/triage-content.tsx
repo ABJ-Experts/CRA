@@ -951,7 +951,7 @@ export function FindingTriageContent() {
       </div>
     );
   return (
-    <div className="flex flex-col gap-5 px-6 pb-8 lg:px-[30px]">
+    <div className="flex min-w-0 flex-col gap-5 overflow-x-hidden px-6 pb-8 lg:px-[30px]">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-h5 text-fg">Findings</h1>
@@ -1056,7 +1056,7 @@ export function FindingTriageContent() {
             />
           ) : null}
           {rows.length > 0 ? (
-            <div className="overflow-x-auto">
+            <div className="max-w-full overflow-x-auto">
               <div
                 className="grid min-w-[940px] grid-cols-[2.5rem_minmax(9rem,1.4fr)_minmax(7rem,1fr)_minmax(6rem,.7fr)_minmax(6rem,.7fr)_minmax(6rem,.7fr)_minmax(7rem,.9fr)_minmax(9rem,1fr)] gap-3 border-b border-border px-4 py-2 text-caption-2-uppercase text-fg-subtle"
                 aria-hidden="true"

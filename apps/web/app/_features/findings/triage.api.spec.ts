@@ -280,4 +280,144 @@ describe("vulnerabilityTriageApi", () => {
       expect.objectContaining({ method: "POST" }),
     );
   });
+
+  it("validates VEX export scope, registry target paths, and safe download handoffs", async () => {
+    const productId = "11111111-1111-4111-8111-111111111111";
+    const releaseId = "22222222-2222-4222-8222-222222222222";
+    const exportId = "33333333-3333-4333-8333-333333333333";
+    const fetcher = vi.fn<
+      (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
+    >(async (input) => {
+      const path = String(input);
+      if (path.endsWith("/download")) {
+        return json({
+          downloadUrl: "http://127.0.0.1:54321/storage/v1/object/sign/vex/a",
+          expiresAt: "2026-09-08T12:05:00.000Z",
+          contentSha256: "a".repeat(64),
+          byteSize: 123,
+        });
+      }
+      if (path.includes(`/publications/${releaseId}/`)) {
+        return json({
+          publication: {
+            id: releaseId,
+            organizationId: productId,
+            exportId,
+            targetId: productId,
+            state: "pending",
+            attempts: 0,
+            version: 1,
+            lastErrorCode: null,
+            lastErrorMessage: null,
+            publishedAt: null,
+            replacedByExportId: null,
+            withdrawnAt: null,
+            withdrawnReason: null,
+            createdAt: "2026-09-08T12:00:00.000Z",
+            updatedAt: "2026-09-08T12:00:00.000Z",
+          },
+          idempotent: false,
+        });
+      }
+      if (path.includes("/preview?")) {
+        return json({
+          organizationId: productId,
+          productId,
+          releaseId,
+          scopeVersion: 2,
+          scopeDigest: "b".repeat(64),
+          eligibleAssessmentRevisions: [],
+          formatAvailability: [
+            {
+              format: "openvex",
+              specificationVersion: "0.2.0",
+              supported: true,
+              mappingIssues: [],
+            },
+            {
+              format: "cyclonedx-vex",
+              specificationVersion: "1.6",
+              supported: true,
+              mappingIssues: [],
+            },
+          ],
+        });
+      }
+      return json({
+        export: {
+          id: exportId,
+          organizationId: productId,
+          productId,
+          releaseId,
+          format: "openvex",
+          specificationVersion: "0.2.0",
+          scopeVersion: 2,
+          scopeDigest: "b".repeat(64),
+          contentSha256: "a".repeat(64),
+          byteSize: 123,
+          assessmentRevisionReferences: [
+            {
+              findingId: productId,
+              assessmentId: releaseId,
+              assessmentRevision: 1,
+              status: "not_affected",
+              justification: "component_not_present",
+              approvalState: "approved",
+            },
+          ],
+          createdAt: "2026-09-08T12:00:00.000Z",
+          createdByUserId: productId,
+        },
+        idempotent: false,
+      });
+    });
+    vi.stubGlobal("fetch", fetcher);
+
+    await vulnerabilityTriageApi.vexExportPreview({ productId, releaseId });
+    await vulnerabilityTriageApi.createVexExport({
+      productId,
+      releaseId,
+      format: "openvex",
+      expectedScopeVersion: 2,
+      expectedScopeDigest: "b".repeat(64),
+      idempotencyKey: "44444444-4444-4444-8444-444444444444",
+    });
+    await expect(
+      vulnerabilityTriageApi.vexExportDownload(exportId),
+    ).resolves.toMatchObject({
+      contentSha256: "a".repeat(64),
+    });
+    await vulnerabilityTriageApi.retryVexPublication(releaseId, {
+      expectedVersion: 1,
+      idempotencyKey: "44444444-4444-4444-8444-444444444444",
+    });
+    await vulnerabilityTriageApi.withdrawVexPublication(releaseId, {
+      expectedVersion: 1,
+      withdrawalReason: "Retire the configured endpoint.",
+      idempotencyKey: "44444444-4444-4444-8444-444444444444",
+    });
+
+    expect(String(fetcher.mock.calls[0]?.[0])).toContain(
+      `/api/v1/findings/vex-exports/preview?productId=${productId}&releaseId=${releaseId}`,
+    );
+    expect(fetcher.mock.calls[1]?.[0]).toBe("/api/v1/findings/vex-exports");
+    expect(fetcher.mock.calls[2]?.[0]).toBe(
+      `/api/v1/findings/vex-exports/${exportId}/download`,
+    );
+    expect(fetcher.mock.calls[2]?.[1]).toMatchObject({ method: "GET" });
+    expect(fetcher.mock.calls[3]?.[0]).toBe(
+      `/api/v1/findings/vex-exports/publications/${releaseId}/retry`,
+    );
+    expect(fetcher.mock.calls[4]?.[0]).toBe(
+      `/api/v1/findings/vex-exports/publications/${releaseId}/withdraw`,
+    );
+    expect(() =>
+      vulnerabilityTriageApi.updateVexPublicationTarget({
+        targetKey: "HTTPS://untrusted.example",
+        enabled: true,
+        expectedVersion: 0,
+        idempotencyKey: "44444444-4444-4444-8444-444444444444",
+      }),
+    ).toThrow("The request contains invalid data.");
+  });
 });

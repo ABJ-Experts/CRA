@@ -20,6 +20,12 @@ import type {
   SuppressVulnerabilityTriageFindingInput,
   UpdateVulnerabilityTriageSlaPolicyInput,
   VulnerabilityTriageQueueQuery,
+  CreateVulnerabilityVexExportInput,
+  EnqueueVulnerabilityVexPublicationInput,
+  PreviewVulnerabilityVexExportQuery,
+  RetryVulnerabilityVexPublicationInput,
+  UpdateVulnerabilityVexPublicationTargetInput,
+  WithdrawVulnerabilityVexPublicationInput,
 } from "@repo/contracts/vulnerabilities";
 import {
   keepPreviousData,
@@ -123,6 +129,78 @@ export function useVulnerabilityTriageSlaPoliciesQuery(enabled: boolean) {
   });
 }
 
+export function useVulnerabilityVexExportPreviewQuery(
+  scope: PreviewVulnerabilityVexExportQuery | null,
+  enabled: boolean,
+) {
+  return useQuery({
+    queryKey:
+      scope === null
+        ? vulnerabilityTriageKeys.vexExports
+        : vulnerabilityTriageKeys.vexExportPreview(
+            scope.productId,
+            scope.releaseId,
+          ),
+    enabled: enabled && scope !== null,
+    retry: false,
+    queryFn: ({ signal }) => {
+      if (scope === null)
+        throw new Error("A product and release are required for VEX export.");
+      return vulnerabilityTriageApi.vexExportPreview(scope, signal);
+    },
+  });
+}
+
+export function useVulnerabilityVexExportsQuery(
+  scope: PreviewVulnerabilityVexExportQuery | null,
+  enabled: boolean,
+) {
+  return useQuery({
+    queryKey:
+      scope === null
+        ? vulnerabilityTriageKeys.vexExports
+        : vulnerabilityTriageKeys.vexExportList(
+            scope.productId,
+            scope.releaseId,
+          ),
+    enabled: enabled && scope !== null,
+    retry: false,
+    queryFn: ({ signal }) => {
+      if (scope === null)
+        throw new Error("A product and release are required for VEX exports.");
+      return vulnerabilityTriageApi.vexExports(scope, signal);
+    },
+  });
+}
+
+export function useVulnerabilityVexPublicationTargetsQuery(enabled: boolean) {
+  return useQuery({
+    queryKey: vulnerabilityTriageKeys.vexPublicationTargets,
+    enabled,
+    retry: false,
+    queryFn: ({ signal }) =>
+      vulnerabilityTriageApi.vexPublicationTargets(signal),
+  });
+}
+
+export function useVulnerabilityVexPublicationsQuery(
+  exportId: string | null,
+  enabled: boolean,
+) {
+  return useQuery({
+    queryKey:
+      exportId === null
+        ? vulnerabilityTriageKeys.vexExports
+        : vulnerabilityTriageKeys.vexPublications(exportId),
+    enabled: enabled && exportId !== null,
+    retry: false,
+    queryFn: ({ signal }) => {
+      if (exportId === null) throw new Error("A VEX export is required.");
+      return vulnerabilityTriageApi.vexPublications(exportId, signal);
+    },
+  });
+}
+
 export function useVulnerabilityAssessmentBulkOperationQuery(
   operationId: string | null,
   enabled: boolean,
@@ -205,6 +283,39 @@ function useInvalidateFindingRemediation() {
         queryKey: vulnerabilityTriageKeys.detail(findingId),
       }),
       client.invalidateQueries({ queryKey: vulnerabilityTriageKeys.queue }),
+    ]);
+}
+
+function useInvalidateVexExports() {
+  const client = useQueryClient();
+  return (productId?: string, releaseId?: string, exportId?: string) =>
+    Promise.all([
+      client.invalidateQueries({
+        queryKey: vulnerabilityTriageKeys.vexExports,
+      }),
+      ...(productId !== undefined && releaseId !== undefined
+        ? [
+            client.invalidateQueries({
+              queryKey: vulnerabilityTriageKeys.vexExportPreview(
+                productId,
+                releaseId,
+              ),
+            }),
+            client.invalidateQueries({
+              queryKey: vulnerabilityTriageKeys.vexExportList(
+                productId,
+                releaseId,
+              ),
+            }),
+          ]
+        : []),
+      ...(exportId !== undefined
+        ? [
+            client.invalidateQueries({
+              queryKey: vulnerabilityTriageKeys.vexPublications(exportId),
+            }),
+          ]
+        : []),
     ]);
 }
 
@@ -401,6 +512,83 @@ export function useUpdateVulnerabilityTriageSlaPolicyMutation() {
         client.invalidateQueries({ queryKey: vulnerabilityTriageKeys.queue }),
         client.invalidateQueries({ queryKey: vulnerabilityTriageKeys.all }),
       ]),
+  });
+}
+
+export function useCreateVulnerabilityVexExportMutation() {
+  const invalidate = useInvalidateVexExports();
+  return useMutation({
+    mutationFn: (input: CreateVulnerabilityVexExportInput) =>
+      vulnerabilityTriageApi.createVexExport(input),
+    onSuccess: (_, input) => invalidate(input.productId, input.releaseId),
+  });
+}
+
+export function useVulnerabilityVexExportDownloadMutation() {
+  return useMutation({
+    mutationFn: (exportId: string) =>
+      vulnerabilityTriageApi.vexExportDownload(exportId),
+  });
+}
+
+export function useUpdateVulnerabilityVexPublicationTargetMutation() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (input: UpdateVulnerabilityVexPublicationTargetInput) =>
+      vulnerabilityTriageApi.updateVexPublicationTarget(input),
+    onSuccess: () =>
+      client.invalidateQueries({
+        queryKey: vulnerabilityTriageKeys.vexPublicationTargets,
+      }),
+  });
+}
+
+export function useEnqueueVulnerabilityVexPublicationMutation() {
+  const invalidate = useInvalidateVexExports();
+  return useMutation({
+    mutationFn: ({
+      exportId,
+      input,
+    }: {
+      exportId: string;
+      input: EnqueueVulnerabilityVexPublicationInput;
+    }) => vulnerabilityTriageApi.enqueueVexPublication(exportId, input),
+    onSuccess: (_, variables) =>
+      invalidate(undefined, undefined, variables.exportId),
+  });
+}
+
+export function useRetryVulnerabilityVexPublicationMutation() {
+  const invalidate = useInvalidateVexExports();
+  return useMutation({
+    mutationFn: (variables: {
+      exportId: string;
+      publicationId: string;
+      input: RetryVulnerabilityVexPublicationInput;
+    }) =>
+      vulnerabilityTriageApi.retryVexPublication(
+        variables.publicationId,
+        variables.input,
+      ),
+    onSuccess: (_, variables) =>
+      invalidate(undefined, undefined, variables.exportId),
+  });
+}
+
+export function useWithdrawVulnerabilityVexPublicationMutation() {
+  const invalidate = useInvalidateVexExports();
+  return useMutation({
+    mutationFn: (variables: {
+      exportId: string;
+      publicationId: string;
+      input: WithdrawVulnerabilityVexPublicationInput;
+    }) =>
+      vulnerabilityTriageApi.withdrawVexPublication(
+        variables.publicationId,
+        variables.input,
+      ),
+    onSuccess: (_, variables) =>
+      invalidate(undefined, undefined, variables.exportId),
   });
 }
 

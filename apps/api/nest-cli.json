@@ -8,6 +8,10 @@
       {
         "include": "sboms/validation/assets/**/*",
         "outDir": "dist"
+      },
+      {
+        "include": "findings/exports/assets/**/*",
+        "outDir": "dist"
       }
     ]
   }

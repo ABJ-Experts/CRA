@@ -80,7 +80,9 @@ export const PERMISSION_MATRIX = {
   invoices: ["view", "create", "edit", "delete", "export"],
   // Finding evidence/triage remains owned by its module. The product detail
   // receives only a separately-authorized aggregate impact summary.
-  findings: ["view", "edit", "approve"],
+  // Export is deliberately distinct from assessment editing: an operator may
+  // assess a finding without being allowed to materialize a portable VEX file.
+  findings: ["view", "edit", "approve", "export"],
   // Shared triage views are a separate, additive capability. Keeping it out
   // of `findings.edit` prevents a future assessment-write grant from also
   // authorizing changes to organization-wide view definitions.
@@ -88,6 +90,10 @@ export const PERMISSION_MATRIX = {
   // Organization-wide VEX approval rules are independent of a user's ability
   // to submit or approve an individual finding assessment.
   finding_approval_policy: ["manage"],
+  // Publication controls external delivery of an otherwise private VEX
+  // snapshot. It is intentionally separate from finding export and is only
+  // granted by default to owner/admin presets.
+  finding_publication: ["manage"],
   // Logistics
   fleet: ["view", "create", "edit", "delete"],
   routes: ["view", "create", "edit", "delete"],

@@ -17,6 +17,23 @@ import {
   recordVulnerabilityRemediationAnchorInputSchema,
   suppressVulnerabilityTriageFindingInputSchema,
   updateVulnerabilityTriageSlaPolicyInputSchema,
+  createVulnerabilityVexExportInputSchema,
+  enqueueVulnerabilityVexPublicationInputSchema,
+  previewVulnerabilityVexExportQuerySchema,
+  retryVulnerabilityVexPublicationInputSchema,
+  updateVulnerabilityVexPublicationTargetInputSchema,
+  vulnerabilityVexExportListResponseSchema,
+  vulnerabilityVexExportDownloadResponseSchema,
+  vulnerabilityVexExportParamsSchema,
+  vulnerabilityVexExportPreviewSchema,
+  vulnerabilityVexExportResponseSchema,
+  vulnerabilityVexPublicationJobParamsSchema,
+  vulnerabilityVexPublicationListResponseSchema,
+  vulnerabilityVexPublicationResponseSchema,
+  vulnerabilityVexPublicationTargetListResponseSchema,
+  vulnerabilityVexPublicationTargetKeyParamsSchema,
+  vulnerabilityVexPublicationTargetResponseSchema,
+  withdrawVulnerabilityVexPublicationInputSchema,
   vulnerabilityAssessmentBulkOperationMutationResponseSchema,
   vulnerabilityAssessmentBulkOperationParamsSchema,
   vulnerabilityAssessmentBulkOperationResponseSchema,
@@ -57,6 +74,12 @@ import {
   type SuppressVulnerabilityTriageFindingInput,
   type UpdateVulnerabilityTriageSlaPolicyInput,
   type VulnerabilityTriageQueueQuery,
+  type CreateVulnerabilityVexExportInput,
+  type EnqueueVulnerabilityVexPublicationInput,
+  type PreviewVulnerabilityVexExportQuery,
+  type RetryVulnerabilityVexPublicationInput,
+  type UpdateVulnerabilityVexPublicationTargetInput,
+  type WithdrawVulnerabilityVexPublicationInput,
 } from "@repo/contracts/vulnerabilities";
 
 import { ApiClientError, apiClient } from "../../_lib/http/api-client";
@@ -140,6 +163,56 @@ function bulkOperationPath(operationId: string): `/${string}` {
   return `/api/v1/findings/assessment-bulk/${parsed.data.operationId}`;
 }
 
+function vexExportPath(exportId: string): `/${string}` {
+  const parsed = vulnerabilityVexExportParamsSchema.safeParse({ exportId });
+  if (!parsed.success) {
+    throw new ApiClientError(
+      "invalid_request",
+      "The VEX export identifier is invalid.",
+      400,
+    );
+  }
+  return `/api/v1/findings/vex-exports/${parsed.data.exportId}`;
+}
+
+function vexPublicationPath(publicationId: string): `/${string}` {
+  const parsed = vulnerabilityVexPublicationJobParamsSchema.safeParse({
+    publicationId,
+  });
+  if (!parsed.success) {
+    throw new ApiClientError(
+      "invalid_request",
+      "The VEX publication identifier is invalid.",
+      400,
+    );
+  }
+  return `/api/v1/findings/vex-exports/publications/${parsed.data.publicationId}`;
+}
+
+function vexPublicationTargetPath(targetKey: string): `/${string}` {
+  const parsed = vulnerabilityVexPublicationTargetKeyParamsSchema.safeParse({
+    targetKey,
+  });
+  if (!parsed.success) {
+    throw new ApiClientError(
+      "invalid_request",
+      "The VEX publication target is invalid.",
+      400,
+    );
+  }
+  return `/api/v1/findings/vex-exports/publication-targets/${parsed.data.targetKey}`;
+}
+
+function vexPreviewPath(
+  query: PreviewVulnerabilityVexExportQuery,
+): `/${string}` {
+  const search = new URLSearchParams({
+    productId: query.productId,
+    releaseId: query.releaseId,
+  });
+  return `/api/v1/findings/vex-exports/preview?${search.toString()}`;
+}
+
 function appendMany(
   search: URLSearchParams,
   key: string,
@@ -187,6 +260,125 @@ function queuePath(query: VulnerabilityTriageQueueQuery): `/${string}` {
 
 /** Typed browser boundary for the tenant-scoped, server-paginated queue. */
 export class VulnerabilityTriageApi {
+  vexExportPreview(
+    input: PreviewVulnerabilityVexExportQuery,
+    signal?: AbortSignal,
+  ) {
+    const query = apiClient.parseInput(
+      previewVulnerabilityVexExportQuerySchema,
+      input,
+    );
+    return authenticatedRequestJson({
+      path: vexPreviewPath(query),
+      schema: vulnerabilityVexExportPreviewSchema,
+      signal,
+    });
+  }
+
+  vexExports(input: PreviewVulnerabilityVexExportQuery, signal?: AbortSignal) {
+    const query = apiClient.parseInput(
+      previewVulnerabilityVexExportQuerySchema,
+      input,
+    );
+    const search = new URLSearchParams({
+      productId: query.productId,
+      releaseId: query.releaseId,
+    });
+    return authenticatedRequestJson({
+      path: `/api/v1/findings/vex-exports?${search.toString()}`,
+      schema: vulnerabilityVexExportListResponseSchema,
+      signal,
+    });
+  }
+
+  createVexExport(input: CreateVulnerabilityVexExportInput) {
+    return authenticatedRequestJson({
+      path: "/api/v1/findings/vex-exports",
+      method: "POST",
+      inputSchema: createVulnerabilityVexExportInputSchema,
+      body: input,
+      schema: vulnerabilityVexExportResponseSchema,
+    });
+  }
+
+  vexExportDownload(exportId: string) {
+    return authenticatedRequestJson({
+      path: `${vexExportPath(exportId)}/download`,
+      schema: vulnerabilityVexExportDownloadResponseSchema,
+    });
+  }
+
+  vexPublicationTargets(signal?: AbortSignal) {
+    return authenticatedRequestJson({
+      path: "/api/v1/findings/vex-exports/publication-targets",
+      schema: vulnerabilityVexPublicationTargetListResponseSchema,
+      signal,
+    });
+  }
+
+  updateVexPublicationTarget(
+    input: UpdateVulnerabilityVexPublicationTargetInput,
+  ) {
+    const parsed = apiClient.parseInput(
+      updateVulnerabilityVexPublicationTargetInputSchema,
+      input,
+    );
+    return authenticatedRequestJson({
+      path: vexPublicationTargetPath(parsed.targetKey),
+      method: "PUT",
+      inputSchema: updateVulnerabilityVexPublicationTargetInputSchema,
+      body: parsed,
+      schema: vulnerabilityVexPublicationTargetResponseSchema,
+    });
+  }
+
+  vexPublications(exportId: string, signal?: AbortSignal) {
+    return authenticatedRequestJson({
+      path: `${vexExportPath(exportId)}/publications`,
+      schema: vulnerabilityVexPublicationListResponseSchema,
+      signal,
+    });
+  }
+
+  enqueueVexPublication(
+    exportId: string,
+    input: EnqueueVulnerabilityVexPublicationInput,
+  ) {
+    return authenticatedRequestJson({
+      path: `${vexExportPath(exportId)}/publications`,
+      method: "POST",
+      inputSchema: enqueueVulnerabilityVexPublicationInputSchema,
+      body: input,
+      schema: vulnerabilityVexPublicationResponseSchema,
+    });
+  }
+
+  retryVexPublication(
+    publicationId: string,
+    input: RetryVulnerabilityVexPublicationInput,
+  ) {
+    return authenticatedRequestJson({
+      path: `${vexPublicationPath(publicationId)}/retry`,
+      method: "POST",
+      inputSchema: retryVulnerabilityVexPublicationInputSchema,
+      body: input,
+      schema: vulnerabilityVexPublicationResponseSchema,
+    });
+  }
+
+  withdrawVexPublication(
+    publicationId: string,
+    input: WithdrawVulnerabilityVexPublicationInput,
+  ) {
+    return authenticatedRequestJson({
+      path: `${vexPublicationPath(publicationId)}/withdraw`,
+      method: "POST",
+      inputSchema: withdrawVulnerabilityVexPublicationInputSchema,
+      body: input,
+      schema: vulnerabilityVexPublicationResponseSchema,
+    });
+  }
+
   list(
     input: Partial<VulnerabilityTriageQueueQuery> = {},
     signal?: AbortSignal,
