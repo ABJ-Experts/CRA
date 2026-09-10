@@ -3,6 +3,7 @@ import type { z } from "zod";
 import type {
   acquireReportingStageDraftLockInputSchema,
   acquireReportingStageDraftLockResponseSchema,
+  approveReportingStageDraftInputSchema,
   applyReportingFamilyTemplateInputSchema,
   createReportingFamilyTemplateInputSchema,
   createReportingFamilyTemplateVersionInputSchema,
@@ -12,11 +13,15 @@ import type {
   reportingFamilyTemplateResponseSchema,
   reportingFamilyTemplateSchema,
   reportingFamilyTemplatesResponseSchema,
+  reportingStageDraftApprovalResponseSchema,
+  reportingStageDraftApprovalSchema,
   reportingStageDraftConflictResponseSchema,
   reportingStageDraftSchema,
   reportingStageDraftParamsSchema,
   reportingStageDraftResponseSchema,
   reportingStageSubmissionSnapshotResponseSchema,
+  reauthenticateReportingStageApprovalInputSchema,
+  reauthenticateReportingStageApprovalResponseSchema,
   saveReportingStageDraftInputSchema,
   submitReportingStageDraftInputSchema,
 } from "../schemas/reporting-stage-drafts.schema.js";
@@ -39,6 +44,21 @@ export type SaveReportingStageDraftInput = z.output<
 >;
 export type SubmitReportingStageDraftInput = z.output<
   typeof submitReportingStageDraftInputSchema
+>;
+export type ReportingStageDraftApproval = z.output<
+  typeof reportingStageDraftApprovalSchema
+>;
+export type ReauthenticateReportingStageApprovalInput = z.output<
+  typeof reauthenticateReportingStageApprovalInputSchema
+>;
+export type ReauthenticateReportingStageApprovalResponse = z.output<
+  typeof reauthenticateReportingStageApprovalResponseSchema
+>;
+export type ApproveReportingStageDraftInput = z.output<
+  typeof approveReportingStageDraftInputSchema
+>;
+export type ReportingStageDraftApprovalResponse = z.output<
+  typeof reportingStageDraftApprovalResponseSchema
 >;
 export type ReportingStageDraftResponse = z.output<
   typeof reportingStageDraftResponseSchema

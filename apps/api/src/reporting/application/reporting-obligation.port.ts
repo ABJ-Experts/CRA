@@ -2,6 +2,7 @@ import type {
   AcquireReportingStageDraftLockInput,
   AcquireReportingStageDraftLockResponse,
   ApplyReportingFamilyTemplateInput,
+  ApproveReportingStageDraftInput,
   CancelReportingObligationInput,
   CreateReportingFamilyTemplateInput,
   CreateReportingFamilyTemplateVersionInput,
@@ -14,9 +15,11 @@ import type {
   ReportingFamilyTemplatesResponse,
   ReportingFamilyTemplateListQuery,
   ReportingStageDraft,
+  ReportingStageDraftApprovalResponse,
   ReportingStageDraftParams,
   ReportingStageDraftResponse,
   ReportingStageSubmissionSnapshotResponse,
+  ReauthenticateReportingStageApprovalResponse,
   ReportingObligationDetailResponse,
   ReportingObligationListQuery,
   ReportingObligationListResponse,
@@ -29,6 +32,24 @@ import type {
 export const REPORTING_OBLIGATION_REPOSITORY = Symbol(
   "REPORTING_OBLIGATION_REPOSITORY",
 );
+export const REPORTING_STAGE_APPROVAL_REAUTHENTICATION = Symbol(
+  "REPORTING_STAGE_APPROVAL_REAUTHENTICATION",
+);
+export interface ReportingStageApprovalReauthenticationPort {
+  verify(
+    input: Readonly<{
+      email: string;
+      password: string;
+      accessToken: string;
+      actorId: string;
+      mfaCode?: string;
+    }>,
+  ): Promise<
+    Readonly<{
+      outcome: "verified" | "invalid" | "mfa_required" | "unavailable";
+    }>
+  >;
+}
 
 export class ReportingObligationConflictError extends Error {}
 export class ReportingObligationInvalidRequestError extends Error {}
@@ -43,6 +64,8 @@ export class ReportingStageDraftLockedError extends Error {
     super("Reporting stage draft is locked.");
   }
 }
+export class ReportingStageApprovalProofError extends Error {}
+export class ReportingStageApprovalSodError extends Error {}
 
 export interface ReportingObligationRepository {
   getStageDraft(
@@ -89,6 +112,30 @@ export interface ReportingObligationRepository {
       } & SubmitReportingStageDraftInput
     >,
   ): Promise<ReportingStageSubmissionSnapshotResponse | null>;
+  createStageApprovalProof(
+    organizationId: string,
+    input: Readonly<{
+      actorId: string;
+      sessionId: string;
+      obligationId: string;
+      stageId: string;
+      draftRevision: number;
+      draftHash: string;
+      expiresAt: string;
+    }>,
+  ): Promise<ReauthenticateReportingStageApprovalResponse | null>;
+  approveStageDraft(
+    organizationId: string,
+    input: Readonly<
+      {
+        actorId: string;
+        sessionId: string;
+        obligationId: string;
+        stageId: string;
+        submissionReference: string;
+      } & ApproveReportingStageDraftInput
+    >,
+  ): Promise<ReportingStageDraftApprovalResponse | null>;
   listFamilyTemplates(
     organizationId: string,
     input: Readonly<{ actorId: string } & ReportingFamilyTemplateListQuery>,

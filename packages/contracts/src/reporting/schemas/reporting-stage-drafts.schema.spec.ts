@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  approveReportingStageDraftInputSchema,
   createReportingFamilyTemplateInputSchema,
+  reauthenticateReportingStageApprovalInputSchema,
+  reauthenticateReportingStageApprovalResponseSchema,
   reportingFamilyTemplateVersionSchema,
   reportingStageDraftSchema,
   reportingStageFieldProvenanceSchema,
@@ -60,6 +63,7 @@ describe("reporting stage draft contracts", () => {
         releaseId: id,
         stage: "notification",
         revision: 1,
+        contentHash: "a".repeat(64),
         status: "editable",
         completeness: "incomplete",
         fieldDefinitions: definitions,
@@ -84,6 +88,7 @@ describe("reporting stage draft contracts", () => {
       releaseId: id,
       stage: "notification",
       revision: 1,
+      contentHash: "a".repeat(64),
       status: "editable",
       completeness: "incomplete",
       fieldDefinitions: definitions,
@@ -201,5 +206,44 @@ describe("reporting stage draft contracts", () => {
         idempotencyKey: id,
       }),
     ).toHaveProperty("expectedRevision", 1);
+  });
+
+  it("binds fresh approval reauthentication and one-use proof consumption to an exact draft revision hash", () => {
+    const hash = "a".repeat(64);
+    expect(
+      reauthenticateReportingStageApprovalInputSchema.parse({
+        draftRevision: 2,
+        draftHash: hash,
+        password: "fresh-password",
+        mfaCode: "123456",
+        idempotencyKey: id,
+      }),
+    ).toHaveProperty("draftHash", hash);
+    expect(
+      reauthenticateReportingStageApprovalInputSchema.safeParse({
+        draftRevision: 2,
+        draftHash: "A".repeat(64),
+        password: "fresh-password",
+        idempotencyKey: id,
+      }).success,
+    ).toBe(false);
+    expect(
+      reauthenticateReportingStageApprovalResponseSchema.safeParse({
+        reauthenticationProofId: id,
+        expiresAt: timestamp,
+        password: "must-never-be-returned",
+      }).success,
+    ).toBe(false);
+    expect(
+      approveReportingStageDraftInputSchema.parse({
+        draftRevision: 2,
+        draftHash: hash,
+        reauthenticationProofId: id,
+        submissionReference: "CRA-PORTAL-2026-0001",
+        segregationOfDutiesOverrideReason:
+          "Only approved responder available during incident response.",
+        idempotencyKey: id,
+      }),
+    ).toHaveProperty("reauthenticationProofId", id);
   });
 });

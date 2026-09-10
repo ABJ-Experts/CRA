@@ -4,6 +4,7 @@ import { ConfigService } from "@nestjs/config";
 
 import { MailModule } from "../mail/mail.module";
 import { SupabaseModule } from "../supabase/supabase.module";
+import { AuthModule } from "../auth/auth.module";
 import {
   REPORTING_DEADLINE_MONITOR_HEALTH_READER,
   ReportingDeadlineMonitorHealthUseCases,
@@ -11,20 +12,28 @@ import {
 } from "./application/reporting-deadline-monitor-health.port";
 import {
   REPORTING_OBLIGATION_REPOSITORY,
+  REPORTING_STAGE_APPROVAL_REAUTHENTICATION,
   type ReportingObligationRepository,
+  type ReportingStageApprovalReauthenticationPort,
 } from "./application/reporting-obligation.port";
 import { ReportingObligationUseCases } from "./application/reporting-obligation-use-cases";
 import { SupabaseReportingObligationRepository } from "./infrastructure/supabase-reporting-obligation.repository";
+import { ExistingAuthReportingStageApprovalReauthenticationAdapter } from "./infrastructure/reporting-stage-approval-reauthentication.adapter";
 import { MailReportingDeadlineDeliveryAdapter } from "./infrastructure/mail-reporting-deadline-delivery.adapter";
 import { SupabaseReportingDeadlineMonitorRepository } from "./infrastructure/supabase-reporting-deadline-monitor.repository";
 import { ReportingObligationController } from "./reporting-obligation.controller";
 import { ReportingDeadlineMonitorWorker } from "./worker/reporting-deadline-monitor-worker";
 
 @Module({
-  imports: [SupabaseModule, MailModule],
+  imports: [SupabaseModule, MailModule, AuthModule],
   controllers: [ReportingObligationController],
   providers: [
     SupabaseReportingObligationRepository,
+    ExistingAuthReportingStageApprovalReauthenticationAdapter,
+    {
+      provide: REPORTING_STAGE_APPROVAL_REAUTHENTICATION,
+      useExisting: ExistingAuthReportingStageApprovalReauthenticationAdapter,
+    },
     SupabaseReportingDeadlineMonitorRepository,
     MailReportingDeadlineDeliveryAdapter,
     {
@@ -33,9 +42,14 @@ import { ReportingDeadlineMonitorWorker } from "./worker/reporting-deadline-moni
     },
     {
       provide: ReportingObligationUseCases,
-      inject: [REPORTING_OBLIGATION_REPOSITORY],
-      useFactory: (repository: ReportingObligationRepository) =>
-        new ReportingObligationUseCases(repository),
+      inject: [
+        REPORTING_OBLIGATION_REPOSITORY,
+        REPORTING_STAGE_APPROVAL_REAUTHENTICATION,
+      ],
+      useFactory: (
+        repository: ReportingObligationRepository,
+        reauthentication: ReportingStageApprovalReauthenticationPort,
+      ) => new ReportingObligationUseCases(repository, reauthentication),
     },
     {
       provide: ReportingDeadlineMonitorWorker,

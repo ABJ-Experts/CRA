@@ -126,13 +126,16 @@ export function useReportingStageDraftQuery(
     queryFn: ({ signal }) => {
       if (obligationId === null || stageId === null)
         throw new Error("A reporting stage is required.");
-      return reportingApi.stageDraft(obligationId, stageId, signal).catch((error) => {
-        // The server deliberately returns 404 for a missing private draft. At
-        // this UI boundary that is the normal empty state, not a recoverable
-        // request failure; other 404s remain opaque and expose no tenant data.
-        if (error instanceof ApiClientError && error.status === 404) return null;
-        throw error;
-      });
+      return reportingApi
+        .stageDraft(obligationId, stageId, signal)
+        .catch((error) => {
+          // The server deliberately returns 404 for a missing private draft. At
+          // this UI boundary that is the normal empty state, not a recoverable
+          // request failure; other 404s remain opaque and expose no tenant data.
+          if (error instanceof ApiClientError && error.status === 404)
+            return null;
+          throw error;
+        });
     },
   });
 }
@@ -207,6 +210,39 @@ export function useSubmitReportingStageDraftMutation() {
       input: SubmitReportingStageDraftInput;
     }) =>
       reportingApi.submitStageDraft(
+        variables.obligationId,
+        variables.stageId,
+        variables.input,
+      ),
+    onSuccess: (_, variables) => {
+      invalidateStageDraft(client, variables.obligationId, variables.stageId);
+      client.invalidateQueries({ queryKey: reportingKeys.all });
+    },
+  });
+}
+export function useReauthenticateReportingStageApprovalMutation() {
+  return useMutation({
+    mutationFn: (variables: {
+      obligationId: string;
+      stageId: string;
+      input: import("@repo/contracts/reporting").ReauthenticateReportingStageApprovalInput;
+    }) =>
+      reportingApi.reauthenticateStageApproval(
+        variables.obligationId,
+        variables.stageId,
+        variables.input,
+      ),
+  });
+}
+export function useApproveReportingStageDraftMutation() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (variables: {
+      obligationId: string;
+      stageId: string;
+      input: import("@repo/contracts/reporting").ApproveReportingStageDraftInput;
+    }) =>
+      reportingApi.approveStageDraft(
         variables.obligationId,
         variables.stageId,
         variables.input,

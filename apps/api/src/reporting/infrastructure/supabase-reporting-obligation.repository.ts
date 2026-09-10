@@ -4,13 +4,16 @@ import {
   reportingFamilyTemplateResponseSchema,
   reportingFamilyTemplatesResponseSchema,
   reportingStageDraftResponseSchema,
+  reportingStageDraftApprovalResponseSchema,
   reportingStageSubmissionSnapshotResponseSchema,
+  reauthenticateReportingStageApprovalResponseSchema,
   reportingObligationDetailResponseSchema,
   reportingObligationListResponseSchema,
   reportingObligationMutationResponseSchema,
   reportingDeadlineSummaryResponseSchema,
   type AcquireReportingStageDraftLockInput,
   type AcquireReportingStageDraftLockResponse,
+  type ApproveReportingStageDraftInput,
   type ApplyReportingFamilyTemplateInput,
   type CancelReportingObligationInput,
   type CorrectReportingObligationAnchorInput,
@@ -30,8 +33,10 @@ import {
   type ReportingFamilyTemplatesResponse,
   type ReportingStageDraftParams,
   type ReportingStageDraftResponse,
+  type ReportingStageDraftApprovalResponse,
   type ReportingStageSubmissionSnapshotResponse,
   type SaveReportingStageDraftInput,
+  type ReauthenticateReportingStageApprovalResponse,
   type SubmitReportingStageDraftInput,
 } from "@repo/contracts/reporting";
 import { z } from "zod";
@@ -43,6 +48,8 @@ import {
   ReportingObligationInvalidStateError,
   ReportingStageDraftConflictError,
   ReportingStageDraftLockedError,
+  ReportingStageApprovalProofError,
+  ReportingStageApprovalSodError,
   type ReportingObligationRepository,
 } from "../application/reporting-obligation.port";
 
@@ -182,6 +189,85 @@ export class SupabaseReportingObligationRepository implements ReportingObligatio
     }
     return reportingStageSubmissionSnapshotResponseSchema.parse(
       normalizeWireTimestamps(submissionResult(rpc.result)),
+    );
+  }
+
+  async createStageApprovalProof(
+    organizationId: string,
+    input: Readonly<{
+      actorId: string;
+      sessionId: string;
+      obligationId: string;
+      stageId: string;
+      draftRevision: number;
+      draftHash: string;
+      expiresAt: string;
+    }>,
+  ): Promise<ReauthenticateReportingStageApprovalResponse | null> {
+    const draft = await this.draftForStage(organizationId, input);
+    if (draft === null) return null;
+    const rpc = await this.result(
+      "create_reporting_stage_approval_proof_atomic",
+      {
+        p_organization_id: organizationId,
+        p_actor_user_id: input.actorId,
+        p_session_id: input.sessionId,
+        p_draft_id: draft.id,
+        p_draft_revision: input.draftRevision,
+        p_draft_hash: input.draftHash,
+        p_expires_at: input.expiresAt,
+        p_correlation_id: null,
+      },
+    );
+    if (rpc.outcome === "not_found") return null;
+    if (rpc.outcome === "conflict")
+      throw new ReportingStageDraftConflictError(draft);
+    if (rpc.outcome !== "created")
+      throw new ReportingObligationInvalidRequestError();
+    return reauthenticateReportingStageApprovalResponseSchema.parse(
+      normalizeWireTimestamps(rpc.result),
+    );
+  }
+
+  async approveStageDraft(
+    organizationId: string,
+    input: Readonly<
+      {
+        actorId: string;
+        sessionId: string;
+        obligationId: string;
+        stageId: string;
+        submissionReference: string;
+      } & ApproveReportingStageDraftInput
+    >,
+  ): Promise<ReportingStageDraftApprovalResponse | null> {
+    const draft = await this.draftForStage(organizationId, input);
+    if (draft === null) return null;
+    const rpc = await this.result("approve_reporting_stage_draft_atomic", {
+      p_organization_id: organizationId,
+      p_actor_user_id: input.actorId,
+      p_session_id: input.sessionId,
+      p_draft_id: draft.id,
+      p_draft_revision: input.draftRevision,
+      p_draft_hash: input.draftHash,
+      p_reauthentication_proof_id: input.reauthenticationProofId,
+      p_submission_reference: input.submissionReference,
+      p_sod_override_reason: input.segregationOfDutiesOverrideReason ?? null,
+      p_idempotency_key: input.idempotencyKey,
+      p_correlation_id: null,
+    });
+    if (rpc.outcome === "not_found") return null;
+    if (rpc.outcome === "conflict")
+      throw new ReportingStageDraftConflictError(draft);
+    if (rpc.outcome === "proof_invalid")
+      throw new ReportingStageApprovalProofError();
+    if (rpc.outcome === "sod_conflict")
+      throw new ReportingStageApprovalSodError();
+    this.throwStageDraftFailure(rpc);
+    if (rpc.outcome !== "updated")
+      throw new Error("reporting stage approval unavailable");
+    return reportingStageDraftApprovalResponseSchema.parse(
+      normalizeWireTimestamps(rpc.result),
     );
   }
 

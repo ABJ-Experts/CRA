@@ -86,8 +86,16 @@ test("owner creates and submits a local collaborative stage draft", async ({
   await draft
     .getByPlaceholder("Regulator portal or filing reference")
     .fill(`${marker}-DRAFT-SUBMISSION`);
-  await expect(draft.getByRole("button", { name: "Submit stage" })).toBeEnabled();
-  await draft.getByRole("button", { name: "Submit stage" }).click();
+  await draft.getByLabel("Current password").fill(ownerPassword!);
+  await draft
+    .getByLabel("Owner override reason (only when approving your own edits)")
+    .fill("The seeded owner is the only authorized responder for this local verification.");
+  await draft.getByRole("button", { name: "Reauthenticate" }).click();
+  await expect(draft.getByText("Fresh approval proof ready.")).toBeVisible();
+  await expect(
+    draft.getByRole("button", { name: "Approve and record submission" }),
+  ).toBeEnabled();
+  await draft.getByRole("button", { name: "Approve and record submission" }).click();
   await expect(
     stages.locator("li").filter({ hasText: /Early Warning.*submitted/ }),
   ).toBeVisible();

@@ -14,12 +14,74 @@ import type {
   ReportingStageDraftParams,
   SaveReportingStageDraftInput,
   SubmitReportingStageDraftInput,
+  ReauthenticateReportingStageApprovalInput,
+  ApproveReportingStageDraftInput,
 } from "@repo/contracts/reporting";
 
-import type { ReportingObligationRepository } from "./reporting-obligation.port";
+import type {
+  ReportingObligationRepository,
+  ReportingStageApprovalReauthenticationPort,
+} from "./reporting-obligation.port";
 
 export class ReportingObligationUseCases {
-  constructor(private readonly repository: ReportingObligationRepository) {}
+  constructor(
+    private readonly repository: ReportingObligationRepository,
+    private readonly reauthentication: ReportingStageApprovalReauthenticationPort,
+  ) {}
+
+  async reauthenticateStageApproval(
+    organizationId: string,
+    input: Readonly<
+      {
+        actorId: string;
+        sessionId: string;
+        email: string;
+        accessToken: string;
+        obligationId: string;
+        stageId: string;
+      } & ReauthenticateReportingStageApprovalInput
+    >,
+  ) {
+    const verified = await this.reauthentication.verify({
+      email: input.email,
+      password: input.password,
+      accessToken: input.accessToken,
+      actorId: input.actorId,
+      ...(input.mfaCode ? { mfaCode: input.mfaCode } : {}),
+    });
+    if (verified.outcome !== "verified")
+      return { outcome: verified.outcome } as const;
+    const proof = await this.repository.createStageApprovalProof(
+      organizationId,
+      {
+        actorId: input.actorId,
+        sessionId: input.sessionId,
+        obligationId: input.obligationId,
+        stageId: input.stageId,
+        draftRevision: input.draftRevision,
+        draftHash: input.draftHash,
+        expiresAt: new Date(Date.now() + 5 * 60_000).toISOString(),
+      },
+    );
+    return proof === null
+      ? { outcome: "not_found" as const }
+      : { outcome: "created" as const, proof };
+  }
+
+  approveStageDraft(
+    organizationId: string,
+    input: Readonly<
+      {
+        actorId: string;
+        sessionId: string;
+        obligationId: string;
+        stageId: string;
+        submissionReference: string;
+      } & ApproveReportingStageDraftInput
+    >,
+  ) {
+    return this.repository.approveStageDraft(organizationId, input);
+  }
 
   getStageDraft(
     organizationId: string,

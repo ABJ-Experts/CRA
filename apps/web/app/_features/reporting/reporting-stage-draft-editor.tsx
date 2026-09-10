@@ -20,7 +20,8 @@ import {
   useReportingFamilyTemplatesQuery,
   useReportingStageDraftQuery,
   useSaveReportingStageDraftMutation,
-  useSubmitReportingStageDraftMutation,
+  useApproveReportingStageDraftMutation,
+  useReauthenticateReportingStageApprovalMutation,
 } from "./reporting.queries";
 
 type Obligation = ReportingObligationListResponse["obligations"][number];
@@ -74,7 +75,10 @@ export function ReportingStageDraftEditor({
   const create = useCreateReportingStageDraftMutation();
   const acquire = useAcquireReportingStageDraftLockMutation();
   const save = useSaveReportingStageDraftMutation();
-  const submit = useSubmitReportingStageDraftMutation();
+  const reauthenticateApproval =
+    useReauthenticateReportingStageApprovalMutation();
+  const approve = useApproveReportingStageDraftMutation();
+  const canSubmitReports = useHasPermission("can_submit_reporting");
   const applyTemplate = useApplyReportingFamilyTemplateMutation();
   const createTemplate = useCreateReportingFamilyTemplateMutation();
   const templates = useReportingFamilyTemplatesQuery(
@@ -89,6 +93,10 @@ export function ReportingStageDraftEditor({
   const [conflict, setConflict] = useState<ReportingStageDraft | null>(null);
   const [idempotencyKey, setIdempotencyKey] = useState(uuid);
   const [templateName, setTemplateName] = useState("");
+  const [approvalPassword, setApprovalPassword] = useState("");
+  const [approvalMfaCode, setApprovalMfaCode] = useState("");
+  const [approvalProofId, setApprovalProofId] = useState<string | null>(null);
+  const [sodOverrideReason, setSodOverrideReason] = useState("");
 
   useEffect(() => {
     if (draftQuery.data?.draft) {
@@ -107,14 +115,14 @@ export function ReportingStageDraftEditor({
     create.isPending ||
     acquire.isPending ||
     save.isPending ||
-    submit.isPending ||
+    reauthenticateApproval.isPending ||
+    approve.isPending ||
     applyTemplate.isPending ||
     createTemplate.isPending;
   const error =
     create.error ??
     acquire.error ??
     save.error ??
-    submit.error ??
     applyTemplate.error ??
     draftQuery.error;
 
@@ -236,27 +244,57 @@ export function ReportingStageDraftEditor({
           setIdempotencyKey(uuid());
         },
         onError: (error) => {
-          setConflict(currentDraftFromConflict(error) ?? draftQuery.data?.draft ?? null);
+          setConflict(
+            currentDraftFromConflict(error) ?? draftQuery.data?.draft ?? null,
+          );
         },
       },
     );
   }
-  function submitDraft() {
-    if (working === null || lockToken === null) return;
-    submit.mutate(
+  function reauthenticateForApproval() {
+    if (working === null) return;
+    reauthenticateApproval.mutate(
       {
         obligationId: obligation.id,
         stageId: stage.id,
         input: {
-          expectedRevision: working.revision,
-          lockToken,
+          draftRevision: working.revision,
+          draftHash: working.contentHash,
+          password: approvalPassword,
+          ...(approvalMfaCode ? { mfaCode: approvalMfaCode } : {}),
+          idempotencyKey,
+        },
+      },
+      {
+        onSuccess: (proof) => {
+          setApprovalProofId(proof.reauthenticationProofId);
+          setApprovalPassword("");
+          setApprovalMfaCode("");
+          setIdempotencyKey(uuid());
+        },
+      },
+    );
+  }
+  function approveDraft() {
+    if (working === null || approvalProofId === null) return;
+    approve.mutate(
+      {
+        obligationId: obligation.id,
+        stageId: stage.id,
+        input: {
+          draftRevision: working.revision,
+          draftHash: working.contentHash,
+          reauthenticationProofId: approvalProofId,
           submissionReference,
+          ...(sodOverrideReason.trim()
+            ? { segregationOfDutiesOverrideReason: sodOverrideReason }
+            : {}),
           idempotencyKey,
         },
       },
       {
         onSuccess: () => {
-          setLockToken(null);
+          setApprovalProofId(null);
           setIdempotencyKey(uuid());
         },
       },
@@ -591,7 +629,23 @@ export function ReportingStageDraftEditor({
               >
                 {save.isPending ? "Saving…" : "Save draft"}
               </Button>
-              <label className="min-w-56 flex-1 text-caption-1-regular text-fg-muted">
+            </div>
+          ) : null}
+          {canSubmitReports && working.status !== "submitted" ? (
+            <div
+              className="mt-4 border-t border-border pt-3"
+              aria-label="Report approval"
+            >
+              <h4 className="text-caption-1-semibold text-fg">Approval</h4>
+              <p className="mt-1 text-caption-1-regular text-fg-muted">
+                Approve revision {working.revision}. The displayed content,
+                provenance, validation state and hash are bound to a single-use
+                fresh reauthentication proof.
+              </p>
+              <p className="mt-1 break-all text-caption-1-regular text-fg-muted">
+                Content hash: {working.contentHash}
+              </p>
+              <label className="mt-3 block text-caption-1-regular text-fg-muted">
                 Submission reference
                 <Input
                   className="mt-1"
@@ -602,18 +656,75 @@ export function ReportingStageDraftEditor({
                   placeholder="Regulator portal or filing reference"
                 />
               </label>
-              <Button
-                size="sm"
-                disabled={
-                  working.completeness !== "valid" ||
-                  working.requiresTemplateReview ||
-                  submissionReference.trim().length === 0 ||
-                  isPending
-                }
-                onClick={submitDraft}
-              >
-                {submit.isPending ? "Submitting…" : "Submit stage"}
-              </Button>
+              <label className="mt-3 block text-caption-1-regular text-fg-muted">
+                Current password
+                <Input
+                  className="mt-1"
+                  type="password"
+                  autoComplete="current-password"
+                  value={approvalPassword}
+                  onChange={(event) => setApprovalPassword(event.target.value)}
+                />
+              </label>
+              <label className="mt-3 block text-caption-1-regular text-fg-muted">
+                MFA code (if required)
+                <Input
+                  className="mt-1"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  value={approvalMfaCode}
+                  onChange={(event) => setApprovalMfaCode(event.target.value)}
+                />
+              </label>
+              <label className="mt-3 block text-caption-1-regular text-fg-muted">
+                Owner override reason (only when approving your own edits)
+                <Input
+                  className="mt-1"
+                  value={sodOverrideReason}
+                  onChange={(event) => setSodOverrideReason(event.target.value)}
+                />
+              </label>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  tone="grey"
+                  disabled={
+                    working.completeness !== "valid" ||
+                    working.requiresTemplateReview ||
+                    approvalPassword.length === 0 ||
+                    isPending
+                  }
+                  onClick={reauthenticateForApproval}
+                >
+                  {reauthenticateApproval.isPending
+                    ? "Verifying…"
+                    : "Reauthenticate"}
+                </Button>
+                <Button
+                  size="sm"
+                  disabled={
+                    working.completeness !== "valid" ||
+                    working.requiresTemplateReview ||
+                    submissionReference.trim().length === 0 ||
+                    approvalProofId === null ||
+                    isPending
+                  }
+                  onClick={approveDraft}
+                >
+                  {approve.isPending
+                    ? "Approving…"
+                    : "Approve and record submission"}
+                </Button>
+              </div>
+              {approvalProofId ? (
+                <p
+                  role="status"
+                  className="mt-2 text-caption-1-regular text-success"
+                >
+                  Fresh approval proof ready. It will be consumed once.
+                </p>
+              ) : null}
             </div>
           ) : null}
           {error && !draftQuery.isError ? (

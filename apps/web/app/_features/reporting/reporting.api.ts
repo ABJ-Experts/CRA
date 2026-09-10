@@ -12,6 +12,7 @@ import {
   acquireReportingStageDraftLockInputSchema,
   acquireReportingStageDraftLockResponseSchema,
   applyReportingFamilyTemplateInputSchema,
+  approveReportingStageDraftInputSchema,
   createReportingFamilyTemplateInputSchema,
   createReportingStageDraftInputSchema,
   reportingFamilyTemplateListQuerySchema,
@@ -21,6 +22,9 @@ import {
   reportingStageDraftParamsSchema,
   reportingStageDraftResponseSchema,
   reportingStageSubmissionSnapshotResponseSchema,
+  reportingStageDraftApprovalResponseSchema,
+  reauthenticateReportingStageApprovalInputSchema,
+  reauthenticateReportingStageApprovalResponseSchema,
   saveReportingStageDraftInputSchema,
   submitReportingStageDraftInputSchema,
   type CancelReportingObligationInput,
@@ -35,6 +39,8 @@ import {
   type ReportingFamilyTemplateListQuery,
   type SaveReportingStageDraftInput,
   type SubmitReportingStageDraftInput,
+  type ApproveReportingStageDraftInput,
+  type ReauthenticateReportingStageApprovalInput,
 } from "@repo/contracts/reporting";
 
 import { ApiClientError, apiClient } from "../../_lib/http/api-client";
@@ -224,6 +230,32 @@ export const reportingApi = Object.freeze({
       inputSchema: submitReportingStageDraftInputSchema,
       body: input,
       schema: reportingStageSubmissionSnapshotResponseSchema,
+    });
+  },
+  reauthenticateStageApproval(
+    obligationId: string,
+    stageId: string,
+    input: ReauthenticateReportingStageApprovalInput,
+  ) {
+    return apiClient.request({
+      path: `${stageDraftPath(obligationId, stageId)}/reauthentication`,
+      method: "POST",
+      inputSchema: reauthenticateReportingStageApprovalInputSchema,
+      body: input,
+      schema: reauthenticateReportingStageApprovalResponseSchema,
+    });
+  },
+  approveStageDraft(
+    obligationId: string,
+    stageId: string,
+    input: ApproveReportingStageDraftInput,
+  ) {
+    return apiClient.request({
+      path: `${stageDraftPath(obligationId, stageId)}/approve`,
+      method: "POST",
+      inputSchema: approveReportingStageDraftInputSchema,
+      body: input,
+      schema: reportingStageDraftApprovalResponseSchema,
     });
   },
   familyTemplates(

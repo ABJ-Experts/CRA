@@ -1,4 +1,6 @@
 import { memberStateCountryCodeSchema } from "../../products/schemas/release-market-lifecycle.schema.js";
+import { destructiveMfaCodeSchema } from "../../organizations/schemas/organization-lifecycle.schema.js";
+import { idempotencyKeySchema } from "../../organizations/schemas/organization-input.schema.js";
 import { z } from "zod";
 
 import {
@@ -6,12 +8,16 @@ import {
   reportingObligationStageKindSchema,
   utcSecondDateTimeSchema,
 } from "./reporting-obligations.schema.js";
-import { idempotencyKeySchema } from "../../organizations/schemas/organization-input.schema.js";
 
 const requiredText = (maximum: number) => z.string().trim().min(1).max(maximum);
 const expectedRevisionSchema = z.number().int().nonnegative();
 const revisionSchema = z.number().int().positive();
 const fieldKeySchema = z.string().regex(/^[a-z][a-z0-9_]{0,63}$/);
+
+/** A canonical digest binds the approval proof to the exact immutable draft revision. */
+export const reportingStageDraftHashSchema = z
+  .string()
+  .regex(/^[a-f0-9]{64}$/, "Use a lowercase SHA-256 draft hash");
 
 export const reportingStageFieldTypeSchema = z.enum([
   "short_text",
@@ -151,6 +157,8 @@ const reportingStageDraftBaseSchema = z
     releaseId: z.uuid(),
     stage: reportingObligationStageKindSchema,
     revision: revisionSchema,
+    /** Server-canonical SHA-256 for this exact editable revision. */
+    contentHash: reportingStageDraftHashSchema,
     status: reportingStageDraftStatusSchema,
     completeness: reportingStageDraftCompletenessSchema,
     fieldDefinitions: z
@@ -289,6 +297,78 @@ export const submitReportingStageDraftInputSchema = z
     submissionReference: requiredText(1_000),
     idempotencyKey: idempotencyKeySchema,
   })
+  .strict();
+
+export const reportingStageDraftApprovalStateSchema = z.enum([
+  "awaiting_approval",
+  "approved",
+  "rejected",
+]);
+
+export const reportingStageDraftApprovalSchema = z
+  .object({
+    id: z.uuid(),
+    draftId: z.uuid(),
+    draftRevision: revisionSchema,
+    draftHash: reportingStageDraftHashSchema,
+    state: reportingStageDraftApprovalStateSchema,
+    requestedBy: reportingActorSnapshotSchema,
+    requestedAt: utcSecondDateTimeSchema,
+    decidedBy: reportingActorSnapshotSchema.nullable(),
+    decidedAt: utcSecondDateTimeSchema.nullable(),
+    segregationOfDutiesOverrideReason: requiredText(2_000).nullable(),
+  })
+  .strict()
+  .superRefine((approval, context) => {
+    const decided = approval.state !== "awaiting_approval";
+    if (decided !== (approval.decidedBy !== null)) {
+      context.addIssue({
+        code: "custom",
+        path: ["decidedBy"],
+        message: "Only decided approvals have a decision actor",
+      });
+    }
+    if (decided !== (approval.decidedAt !== null)) {
+      context.addIssue({
+        code: "custom",
+        path: ["decidedAt"],
+        message: "Only decided approvals have a decision timestamp",
+      });
+    }
+  });
+
+/** Fresh credentials are consumed by the auth provider and must never be persisted or returned. */
+export const reauthenticateReportingStageApprovalInputSchema = z
+  .object({
+    draftRevision: revisionSchema,
+    draftHash: reportingStageDraftHashSchema,
+    password: z.string().min(1).max(1_024),
+    mfaCode: destructiveMfaCodeSchema.optional(),
+    idempotencyKey: idempotencyKeySchema,
+  })
+  .strict();
+
+/** This proof is single-use, draft-revision/hash-bound, and intentionally credential-free. */
+export const reauthenticateReportingStageApprovalResponseSchema = z
+  .object({
+    reauthenticationProofId: z.uuid(),
+    expiresAt: utcSecondDateTimeSchema,
+  })
+  .strict();
+
+export const approveReportingStageDraftInputSchema = z
+  .object({
+    draftRevision: revisionSchema,
+    draftHash: reportingStageDraftHashSchema,
+    reauthenticationProofId: z.uuid(),
+    submissionReference: requiredText(1_000),
+    segregationOfDutiesOverrideReason: requiredText(2_000).optional(),
+    idempotencyKey: idempotencyKeySchema,
+  })
+  .strict();
+
+export const reportingStageDraftApprovalResponseSchema = z
+  .object({ approval: reportingStageDraftApprovalSchema })
   .strict();
 
 export const reportingFamilyTemplateVersionSchema = z

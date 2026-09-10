@@ -14,6 +14,7 @@ import {
 } from "@nestjs/common";
 import {
   acquireReportingStageDraftLockInputSchema,
+  approveReportingStageDraftInputSchema,
   acquireReportingStageDraftLockResponseSchema,
   applyReportingFamilyTemplateInputSchema,
   cancelReportingObligationInputSchema,
@@ -38,9 +39,13 @@ import {
   reportingStageDraftParamsSchema,
   reportingStageDraftResponseSchema,
   reportingStageSubmissionSnapshotResponseSchema,
+  reportingStageDraftApprovalResponseSchema,
+  reauthenticateReportingStageApprovalInputSchema,
+  reauthenticateReportingStageApprovalResponseSchema,
   saveReportingStageDraftInputSchema,
   submitReportingStageDraftInputSchema,
   type AcquireReportingStageDraftLockInput,
+  type ApproveReportingStageDraftInput,
   type ApplyReportingFamilyTemplateInput,
   type CancelReportingObligationInput,
   type CorrectReportingObligationAnchorInput,
@@ -56,6 +61,7 @@ import {
   type ReportingStageDraftParams,
   type SaveReportingStageDraftInput,
   type SubmitReportingStageDraftInput,
+  type ReauthenticateReportingStageApprovalInput,
 } from "@repo/contracts/reporting";
 
 import {
@@ -75,6 +81,8 @@ import {
   ReportingObligationInvalidStateError,
   ReportingStageDraftConflictError,
   ReportingStageDraftLockedError,
+  ReportingStageApprovalProofError,
+  ReportingStageApprovalSodError,
 } from "./application/reporting-obligation.port";
 import { ReportingObligationUseCases } from "./application/reporting-obligation-use-cases";
 
@@ -333,6 +341,79 @@ export class ReportingObligationController {
     throw notFound();
   }
 
+  @Post(":obligationId/stages/:stageId/draft/reauthentication")
+  @RequirePermissions("can_view_findings", "can_submit_reporting")
+  @ZodResponse(reauthenticateReportingStageApprovalResponseSchema)
+  async reauthenticateStageApproval(
+    @Param(zodParams(reportingStageDraftParamsSchema))
+    params: ReportingStageDraftParams,
+    @Body(zodBody(reauthenticateReportingStageApprovalInputSchema))
+    input: ReauthenticateReportingStageApprovalInput,
+    @CurrentUser() user: RequestUser,
+  ) {
+    if (!user.sessionId)
+      throw approvalForbidden("A valid organization session is required.");
+    const result = await this.reporting.reauthenticateStageApproval(
+      organizationId(user),
+      {
+        actorId: user.id,
+        sessionId: user.sessionId,
+        email: user.email,
+        accessToken: user.accessToken,
+        ...params,
+        ...input,
+      },
+    );
+    if (result.outcome === "created") return result.proof;
+    if (result.outcome === "mfa_required")
+      throw approvalForbidden(
+        "Two-factor verification is required for report approval.",
+      );
+    if (result.outcome === "invalid")
+      throw approvalForbidden("Reauthentication failed.");
+    if (result.outcome === "not_found") throw notFound();
+    throw unavailable();
+  }
+
+  @Post(":obligationId/stages/:stageId/draft/approve")
+  @RequirePermissions("can_view_findings", "can_submit_reporting")
+  @ZodResponse(reportingStageDraftApprovalResponseSchema)
+  async approveStageDraft(
+    @Param(zodParams(reportingStageDraftParamsSchema))
+    params: ReportingStageDraftParams,
+    @Body(zodBody(approveReportingStageDraftInputSchema))
+    input: ApproveReportingStageDraftInput,
+    @CurrentUser() user: RequestUser,
+  ) {
+    if (!user.sessionId)
+      throw approvalForbidden("A valid organization session is required.");
+    try {
+      const result = await this.reporting.approveStageDraft(
+        organizationId(user),
+        {
+          actorId: user.id,
+          sessionId: user.sessionId,
+          ...params,
+          ...input,
+        },
+      );
+      if (result) return result;
+    } catch (error) {
+      if (error instanceof ReportingStageApprovalProofError)
+        throw approvalForbidden(
+          "The fresh approval proof is expired or already used. Reauthenticate and retry.",
+        );
+      if (error instanceof ReportingStageApprovalSodError)
+        throw new ConflictException({
+          code: "segregation_of_duties",
+          message:
+            "A different authorized approver is required, or an owner must provide an exception reason.",
+        });
+      throw draftMutationFailure(error);
+    }
+    throw notFound();
+  }
+
   @Post(":obligationId/stages/:stageId/draft/templates/apply")
   @RequirePermissions("can_view_findings", "can_edit_findings")
   @ZodResponse(reportingStageDraftMutationResponseSchema)
@@ -469,6 +550,10 @@ function unavailable(): ServiceUnavailableException {
     message: "Reporting obligations are temporarily unavailable.",
     code: "unavailable",
   });
+}
+
+function approvalForbidden(message: string): HttpException {
+  return new HttpException({ code: "approval_forbidden", message }, 403);
 }
 
 function readFailure(error: unknown): Error {

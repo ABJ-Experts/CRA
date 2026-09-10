@@ -56,6 +56,7 @@ export const PERMISSION_ACTIONS = [
   "export",
   "approve",
   "manage",
+  "submit",
 ] as const;
 export type PermissionAction = (typeof PERMISSION_ACTIONS)[number];
 
@@ -94,6 +95,9 @@ export const PERMISSION_MATRIX = {
   // snapshot. It is intentionally separate from finding export and is only
   // granted by default to owner/admin presets.
   finding_publication: ["manage"],
+  // Regulatory reporting submission is intentionally separate from editing a
+  // draft. It is granted only to owner/admin presets unless explicitly added.
+  reporting: ["view", "submit"],
   // Logistics
   fleet: ["view", "create", "edit", "delete"],
   routes: ["view", "create", "edit", "delete"],
@@ -234,6 +238,7 @@ export const IMPLICATIONS: Readonly<
   export: ["view"],
   approve: ["view"],
   manage: [],
+  submit: ["view"],
 };
 
 /** Parse `can_<action>_<module>` back into its parts. */

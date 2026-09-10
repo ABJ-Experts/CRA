@@ -144,7 +144,7 @@ export function ReportingObligationsContent() {
 
       <DeadlineMonitorStatus summary={summary.data?.summary} />
 
-      {canEdit ? <CreateObligationForm /> : null}
+      {canEdit ? <CreateObligationForm onCreated={setSelectedId} /> : null}
 
       {query.isLoading ? (
         <SectionCard>
@@ -241,7 +241,9 @@ export function ReportingObligationsContent() {
   );
 }
 
-function CreateObligationForm() {
+function CreateObligationForm({
+  onCreated,
+}: Readonly<{ onCreated: (obligationId: string) => void }>) {
   const create = useCreateReportingObligationMutation();
   const [type, setType] = useState<(typeof TYPE_OPTIONS)[number]["value"]>(
     "actively_exploited_vulnerability",
@@ -268,7 +270,12 @@ function CreateObligationForm() {
             awarenessBasis: basis,
             idempotencyKey,
           },
-          { onSuccess: () => setIdempotencyKey(uuid()) },
+          {
+            onSuccess: (result) => {
+              onCreated(result.obligation.id);
+              setIdempotencyKey(uuid());
+            },
+          },
         );
       }}
     >

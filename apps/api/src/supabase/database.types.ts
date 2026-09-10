@@ -5820,6 +5820,142 @@ export type Database = {
         }
         Relationships: []
       }
+      reporting_stage_approval_proofs: {
+        Row: {
+          actor_user_id: string
+          consumed_at: string | null
+          created_at: string
+          draft_hash: string
+          draft_id: string
+          draft_revision: number
+          expires_at: string
+          id: string
+          organization_id: string
+          session_id: string
+        }
+        Insert: {
+          actor_user_id: string
+          consumed_at?: string | null
+          created_at?: string
+          draft_hash: string
+          draft_id: string
+          draft_revision: number
+          expires_at: string
+          id?: string
+          organization_id: string
+          session_id: string
+        }
+        Update: {
+          actor_user_id?: string
+          consumed_at?: string | null
+          created_at?: string
+          draft_hash?: string
+          draft_id?: string
+          draft_revision?: number
+          expires_at?: string
+          id?: string
+          organization_id?: string
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reporting_stage_approval_proofs_actor_user_id_fkey"
+            columns: ["actor_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reporting_stage_approval_proofs_draft_id_fkey"
+            columns: ["draft_id"]
+            isOneToOne: false
+            referencedRelation: "reporting_stage_drafts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reporting_stage_approval_proofs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reporting_stage_approvals: {
+        Row: {
+          approved_at: string
+          approved_by_user_id: string
+          draft_hash: string
+          draft_id: string
+          draft_revision: number
+          id: string
+          obligation_id: string
+          organization_id: string
+          segregation_of_duties_override_reason: string | null
+          stage_id: string
+        }
+        Insert: {
+          approved_at?: string
+          approved_by_user_id: string
+          draft_hash: string
+          draft_id: string
+          draft_revision: number
+          id?: string
+          obligation_id: string
+          organization_id: string
+          segregation_of_duties_override_reason?: string | null
+          stage_id: string
+        }
+        Update: {
+          approved_at?: string
+          approved_by_user_id?: string
+          draft_hash?: string
+          draft_id?: string
+          draft_revision?: number
+          id?: string
+          obligation_id?: string
+          organization_id?: string
+          segregation_of_duties_override_reason?: string | null
+          stage_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reporting_stage_approvals_approved_by_user_id_fkey"
+            columns: ["approved_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reporting_stage_approvals_draft_id_fkey"
+            columns: ["draft_id"]
+            isOneToOne: false
+            referencedRelation: "reporting_stage_drafts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reporting_stage_approvals_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reporting_stage_approvals_organization_id_obligation_id_fkey"
+            columns: ["organization_id", "obligation_id"]
+            isOneToOne: false
+            referencedRelation: "reporting_obligations"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "reporting_stage_approvals_organization_id_stage_id_fkey"
+            columns: ["organization_id", "stage_id"]
+            isOneToOne: true
+            referencedRelation: "reporting_obligation_stages"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
       reporting_stage_draft_commands: {
         Row: {
           actor_user_id: string
@@ -13478,6 +13614,25 @@ export type Database = {
           result: Json
         }[]
       }
+      approve_reporting_stage_draft_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_correlation_id?: string
+          p_draft_hash: string
+          p_draft_id: string
+          p_draft_revision: number
+          p_idempotency_key: string
+          p_organization_id: string
+          p_reauthentication_proof_id: string
+          p_session_id: string
+          p_sod_override_reason: string
+          p_submission_reference: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
       approve_vulnerability_finding_vex_assessment_atomic: {
         Args: {
           p_actor_user_id: string
@@ -14842,6 +14997,22 @@ export type Database = {
           p_obligation_type: string
           p_organization_id: string
           p_source_finding_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      create_reporting_stage_approval_proof_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_correlation_id?: string
+          p_draft_hash: string
+          p_draft_id: string
+          p_draft_revision: number
+          p_expires_at: string
+          p_organization_id: string
+          p_session_id: string
         }
         Returns: {
           outcome: string
@@ -18003,6 +18174,12 @@ export type Database = {
           p_updated_at: string
         }
         Returns: Json
+      }
+      m6_reporting_draft_hash: {
+        Args: {
+          p_draft: Database["public"]["Tables"]["reporting_stage_drafts"]["Row"]
+        }
+        Returns: string
       }
       m6_reporting_draft_json: {
         Args: { p_draft_id: string; p_organization_id: string }

@@ -222,6 +222,7 @@ function draftFixture() {
     releaseId: "99999999-9999-4999-8999-999999999999",
     stage: "notification" as const,
     revision: 2,
+    contentHash: "a".repeat(64),
     status: "editable" as const,
     completeness: "incomplete" as const,
     fieldDefinitions: [
