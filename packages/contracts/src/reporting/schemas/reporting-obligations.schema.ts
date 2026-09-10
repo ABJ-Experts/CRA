@@ -3,7 +3,7 @@ import { utcZDateTimeSchema } from "../../products/schemas/release-market-lifecy
 import { z } from "zod";
 
 const requiredText = (maximum: number) => z.string().trim().min(1).max(maximum);
-const utcSecondDateTimeSchema = utcZDateTimeSchema.regex(
+export const utcSecondDateTimeSchema = utcZDateTimeSchema.regex(
   /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/,
   "Use a UTC timestamp ending in Z with second precision",
 );
@@ -302,7 +302,9 @@ export const reportingDeadlineSummarySchema = z
         stage: reportingObligationStageKindSchema,
         dueAt: utcSecondDateTimeSchema,
         elapsedPercent: z.number().min(0).max(100),
-        reportingHref: z.string().regex(/^\/reporting\?obligationId=[0-9a-f-]{36}$/i),
+        reportingHref: z
+          .string()
+          .regex(/^\/reporting\?obligationId=[0-9a-f-]{36}$/i),
       })
       .strict()
       .nullable(),

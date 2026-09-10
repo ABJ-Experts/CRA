@@ -15,6 +15,8 @@ export class ApiClientError extends Error {
     readonly status?: number,
     readonly code?: string,
     readonly fieldErrors?: Readonly<Record<string, string>>,
+    /** Structured API error details for feature-specific, schema-validated recovery. */
+    readonly payload?: unknown,
   ) {
     super(message);
     this.name = "ApiClientError";
@@ -117,6 +119,7 @@ async function parseResponse<TResponseSchema extends z.ZodTypeAny>(
       response.status,
       parsed.success ? parsed.data.code : undefined,
       parsed.success ? parsed.data.fieldErrors : undefined,
+      payload,
     );
   }
 

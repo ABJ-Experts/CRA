@@ -10,9 +10,16 @@ import {
   Post,
   Query,
   ServiceUnavailableException,
+  HttpException,
 } from "@nestjs/common";
 import {
+  acquireReportingStageDraftLockInputSchema,
+  acquireReportingStageDraftLockResponseSchema,
+  applyReportingFamilyTemplateInputSchema,
   cancelReportingObligationInputSchema,
+  createReportingFamilyTemplateInputSchema,
+  createReportingFamilyTemplateVersionInputSchema,
+  createReportingStageDraftInputSchema,
   correctReportingObligationAnchorInputSchema,
   createReportingObligationInputSchema,
   recordReportingObligationStageSubmissionInputSchema,
@@ -23,12 +30,32 @@ import {
   reportingObligationParamsSchema,
   reportingDeadlineSummaryQuerySchema,
   reportingDeadlineSummaryResponseSchema,
+  reportingFamilyTemplateParamsSchema,
+  reportingFamilyTemplateListQuerySchema,
+  reportingFamilyTemplateResponseSchema,
+  reportingFamilyTemplatesResponseSchema,
+  reportingStageDraftMutationResponseSchema,
+  reportingStageDraftParamsSchema,
+  reportingStageDraftResponseSchema,
+  reportingStageSubmissionSnapshotResponseSchema,
+  saveReportingStageDraftInputSchema,
+  submitReportingStageDraftInputSchema,
+  type AcquireReportingStageDraftLockInput,
+  type ApplyReportingFamilyTemplateInput,
   type CancelReportingObligationInput,
   type CorrectReportingObligationAnchorInput,
   type CreateReportingObligationInput,
+  type CreateReportingFamilyTemplateInput,
+  type CreateReportingFamilyTemplateVersionInput,
+  type CreateReportingStageDraftInput,
   type RecordReportingObligationStageSubmissionInput,
   type ReportingObligationListQuery,
   type ReportingDeadlineSummaryQuery,
+  type ReportingFamilyTemplateParams,
+  type ReportingFamilyTemplateListQuery,
+  type ReportingStageDraftParams,
+  type SaveReportingStageDraftInput,
+  type SubmitReportingStageDraftInput,
 } from "@repo/contracts/reporting";
 
 import {
@@ -46,6 +73,8 @@ import {
   ReportingObligationConflictError,
   ReportingObligationInvalidRequestError,
   ReportingObligationInvalidStateError,
+  ReportingStageDraftConflictError,
+  ReportingStageDraftLockedError,
 } from "./application/reporting-obligation.port";
 import { ReportingObligationUseCases } from "./application/reporting-obligation-use-cases";
 
@@ -111,6 +140,221 @@ export class ReportingObligationController {
       if (result) return result;
     } catch (error) {
       throw mutationFailure(error);
+    }
+    throw notFound();
+  }
+
+  @Get("templates")
+  @RequirePermissions("can_edit_organization")
+  @ZodResponse(reportingFamilyTemplatesResponseSchema)
+  async listTemplates(
+    @Query(zodQuery(reportingFamilyTemplateListQuerySchema))
+    query: ReportingFamilyTemplateListQuery,
+    @CurrentUser() user: RequestUser,
+  ) {
+    try {
+      const result = await this.reporting.listFamilyTemplates(
+        organizationId(user),
+        {
+          actorId: user.id,
+          ...query,
+        },
+      );
+      if (result) return result;
+    } catch (error) {
+      throw readFailure(error);
+    }
+    throw notFound();
+  }
+
+  @Post("templates")
+  @RequirePermissions("can_edit_organization")
+  @ZodResponse(reportingFamilyTemplateResponseSchema)
+  async createTemplate(
+    @Body(zodBody(createReportingFamilyTemplateInputSchema))
+    input: CreateReportingFamilyTemplateInput,
+    @CurrentUser() user: RequestUser,
+  ) {
+    try {
+      const result = await this.reporting.createFamilyTemplate(
+        organizationId(user),
+        {
+          actorId: user.id,
+          ...input,
+        },
+      );
+      if (result) return result;
+    } catch (error) {
+      throw draftMutationFailure(error);
+    }
+    throw notFound();
+  }
+
+  @Post("templates/:templateId/versions")
+  @RequirePermissions("can_edit_organization")
+  @ZodResponse(reportingFamilyTemplateResponseSchema)
+  async createTemplateVersion(
+    @Param(zodParams(reportingFamilyTemplateParamsSchema))
+    params: ReportingFamilyTemplateParams,
+    @Body(zodBody(createReportingFamilyTemplateVersionInputSchema))
+    input: CreateReportingFamilyTemplateVersionInput,
+    @CurrentUser() user: RequestUser,
+  ) {
+    try {
+      const result = await this.reporting.createFamilyTemplateVersion(
+        organizationId(user),
+        { actorId: user.id, ...params, ...input },
+      );
+      if (result) return result;
+    } catch (error) {
+      throw draftMutationFailure(error);
+    }
+    throw notFound();
+  }
+
+  @Get(":obligationId/stages/:stageId/draft")
+  @RequirePermissions("can_view_findings")
+  @ZodResponse(reportingStageDraftResponseSchema)
+  async getStageDraft(
+    @Param(zodParams(reportingStageDraftParamsSchema))
+    params: ReportingStageDraftParams,
+    @CurrentUser() user: RequestUser,
+  ) {
+    try {
+      const result = await this.reporting.getStageDraft(organizationId(user), {
+        actorId: user.id,
+        ...params,
+      });
+      if (result) return result;
+    } catch (error) {
+      throw readFailure(error);
+    }
+    throw notFound();
+  }
+
+  @Post(":obligationId/stages/:stageId/draft")
+  @RequirePermissions("can_view_findings", "can_edit_findings")
+  @ZodResponse(reportingStageDraftResponseSchema)
+  async createStageDraft(
+    @Param(zodParams(reportingStageDraftParamsSchema))
+    params: ReportingStageDraftParams,
+    @Body(zodBody(createReportingStageDraftInputSchema))
+    input: CreateReportingStageDraftInput,
+    @CurrentUser() user: RequestUser,
+  ) {
+    try {
+      const result = await this.reporting.createStageDraft(
+        organizationId(user),
+        {
+          actorId: user.id,
+          ...params,
+          ...input,
+        },
+      );
+      if (result) return result;
+    } catch (error) {
+      throw draftMutationFailure(error);
+    }
+    throw notFound();
+  }
+
+  @Post(":obligationId/stages/:stageId/draft/lock")
+  @RequirePermissions("can_view_findings", "can_edit_findings")
+  @ZodResponse(acquireReportingStageDraftLockResponseSchema)
+  async acquireStageDraftLock(
+    @Param(zodParams(reportingStageDraftParamsSchema))
+    params: ReportingStageDraftParams,
+    @Body(zodBody(acquireReportingStageDraftLockInputSchema))
+    input: AcquireReportingStageDraftLockInput,
+    @CurrentUser() user: RequestUser,
+  ) {
+    try {
+      const result = await this.reporting.acquireStageDraftLock(
+        organizationId(user),
+        {
+          actorId: user.id,
+          ...params,
+          ...input,
+        },
+      );
+      if (result) return result;
+    } catch (error) {
+      throw draftMutationFailure(error);
+    }
+    throw notFound();
+  }
+
+  @Patch(":obligationId/stages/:stageId/draft/save")
+  @RequirePermissions("can_view_findings", "can_edit_findings")
+  @ZodResponse(reportingStageDraftMutationResponseSchema)
+  async saveStageDraft(
+    @Param(zodParams(reportingStageDraftParamsSchema))
+    params: ReportingStageDraftParams,
+    @Body(zodBody(saveReportingStageDraftInputSchema))
+    input: SaveReportingStageDraftInput,
+    @CurrentUser() user: RequestUser,
+  ) {
+    try {
+      const result = await this.reporting.saveStageDraft(organizationId(user), {
+        actorId: user.id,
+        ...params,
+        ...input,
+      });
+      if (result) return result;
+    } catch (error) {
+      throw draftMutationFailure(error);
+    }
+    throw notFound();
+  }
+
+  @Post(":obligationId/stages/:stageId/draft/submit")
+  @RequirePermissions("can_view_findings", "can_edit_findings")
+  @ZodResponse(reportingStageSubmissionSnapshotResponseSchema)
+  async submitStageDraft(
+    @Param(zodParams(reportingStageDraftParamsSchema))
+    params: ReportingStageDraftParams,
+    @Body(zodBody(submitReportingStageDraftInputSchema))
+    input: SubmitReportingStageDraftInput,
+    @CurrentUser() user: RequestUser,
+  ) {
+    try {
+      const result = await this.reporting.submitStageDraft(
+        organizationId(user),
+        {
+          actorId: user.id,
+          ...params,
+          ...input,
+        },
+      );
+      if (result) return result;
+    } catch (error) {
+      throw draftMutationFailure(error);
+    }
+    throw notFound();
+  }
+
+  @Post(":obligationId/stages/:stageId/draft/templates/apply")
+  @RequirePermissions("can_view_findings", "can_edit_findings")
+  @ZodResponse(reportingStageDraftMutationResponseSchema)
+  async applyTemplate(
+    @Param(zodParams(reportingStageDraftParamsSchema))
+    params: ReportingStageDraftParams,
+    @Body(zodBody(applyReportingFamilyTemplateInputSchema))
+    input: ApplyReportingFamilyTemplateInput,
+    @CurrentUser() user: RequestUser,
+  ) {
+    try {
+      const result = await this.reporting.applyFamilyTemplate(
+        organizationId(user),
+        {
+          actorId: user.id,
+          ...params,
+          ...input,
+        },
+      );
+      if (result) return result;
+    } catch (error) {
+      throw draftMutationFailure(error);
     }
     throw notFound();
   }
@@ -253,4 +497,26 @@ function mutationFailure(error: unknown): Error {
       code: "invalid_request",
     });
   return unavailable();
+}
+
+function draftMutationFailure(error: unknown): Error {
+  if (error instanceof ReportingStageDraftConflictError) {
+    return new ConflictException({
+      code: "stale_revision",
+      message:
+        "The draft changed. Reload or compare the current revision before saving.",
+      currentDraft: error.draft,
+    });
+  }
+  if (error instanceof ReportingStageDraftLockedError) {
+    return new HttpException(
+      {
+        code: "locked",
+        message: "This draft is currently being edited by another member.",
+        currentDraft: error.draft,
+      },
+      423,
+    );
+  }
+  return mutationFailure(error);
 }

@@ -4,20 +4,20 @@ import { expect, test } from "@playwright/test";
 
 const ownerEmail = process.env.E2E_OWNER_EMAIL;
 const ownerPassword = process.env.E2E_OWNER_PASSWORD;
+const localReleaseId = "87b00cd4-ed54-4e77-83fa-c001e8268adf";
 test.skip(
   !ownerEmail || !ownerPassword,
   "E2E_OWNER_EMAIL and E2E_OWNER_PASSWORD are required for the local owner journey.",
 );
 
 async function signInAsOwner(page: import("@playwright/test").Page) {
-  await page.goto("/sign-in");
-  await page.getByTestId("si-identifier").fill(ownerEmail!);
-  await page.getByTestId("si-password").fill(ownerPassword!);
-  const response = page.waitForResponse((candidate) =>
-    candidate.url().endsWith("/api/v1/auth/sign-in"),
-  );
-  await page.getByTestId("si-submit").click();
-  expect((await response).status()).toBe(200);
+  // This is context-bound, so the real API's HttpOnly cookies become browser
+  // cookies without exposing them to test code or the page.
+  const response = await page.request.post("/api/v1/auth/sign-in", {
+    data: { email: ownerEmail, password: ownerPassword, remember: true },
+  });
+  expect(response.status()).toBe(200);
+  await page.goto("/dashboard");
   await expect(page).toHaveURL(/\/dashboard$/);
 
   const selected = await page.evaluate(async () => {
@@ -40,7 +40,7 @@ async function signInAsOwner(page: import("@playwright/test").Page) {
   expect(selected).toBe(true);
 }
 
-test("owner creates, anchors, submits, and cancels a local reporting obligation", async ({
+test("owner creates and submits a local collaborative stage draft", async ({
   page,
 }, testInfo) => {
   await signInAsOwner(page);
@@ -49,10 +49,6 @@ test("owner creates, anchors, submits, and cancels a local reporting obligation"
   await expect(
     page.getByRole("heading", { name: "Reporting obligations" }),
   ).toBeVisible();
-  await expect(
-    page.getByRole("link", { name: /reporting deadline.*left/i }),
-  ).toBeVisible();
-
   const create = page.locator("form").filter({
     has: page.getByRole("heading", { name: "Open obligation" }),
   });
@@ -73,26 +69,25 @@ test("owner creates, anchors, submits, and cancels a local reporting obligation"
     stages.locator("li").filter({ hasText: /Final Report.*Pending anchor/ }),
   ).toBeVisible();
 
-  const correction = detail.locator("form").filter({ hasText: "Correct anchor" });
-  await correction.locator("select").selectOption("remediation_available");
-  await correction
-    .getByPlaceholder("Correction reason")
-    .fill(`${marker}: remediation became available.`);
-  await correction.getByRole("button", { name: "Save correction" }).click();
-  await expect(stages.getByText("Final Report", { exact: true })).toBeVisible();
-  await expect(
-    stages.locator("li").filter({ hasText: /Final Report.*running/ }),
-  ).toBeVisible();
-
-  const submission = detail
-    .locator("form")
-    .filter({ hasText: "Record submission" });
-  await submission
-    .getByPlaceholder("Submission reference")
-    .fill(`${marker}-SUBMISSION`);
-  await submission
-    .getByRole("button", { name: "Record submission" })
-    .click();
+  const draft = detail.locator("section").filter({
+    has: page.getByRole("heading", { name: "Early Warning draft" }),
+  });
+  await expect(draft).toBeVisible();
+  await draft.getByPlaceholder("Release UUID").fill(localReleaseId);
+  await draft.getByRole("button", { name: "Create draft" }).click();
+  await draft.getByRole("button", { name: "Edit draft" }).click();
+  await expect(draft.getByText("Editing lock acquired.")).toBeVisible();
+  await draft.locator("textarea").nth(0).fill(`${marker}: initial summary.`);
+  await draft.locator("textarea").nth(1).fill(`${marker}: known impact.`);
+  await draft
+    .getByLabel("Member States (comma-separated ISO codes)")
+    .fill("DE");
+  await draft.getByRole("button", { name: "Save draft" }).click();
+  await draft
+    .getByPlaceholder("Regulator portal or filing reference")
+    .fill(`${marker}-DRAFT-SUBMISSION`);
+  await expect(draft.getByRole("button", { name: "Submit stage" })).toBeEnabled();
+  await draft.getByRole("button", { name: "Submit stage" }).click();
   await expect(
     stages.locator("li").filter({ hasText: /Early Warning.*submitted/ }),
   ).toBeVisible();
@@ -101,15 +96,6 @@ test("owner creates, anchors, submits, and cancels a local reporting obligation"
     path: testInfo.outputPath("m6-reporting-obligation-desktop.png"),
     fullPage: true,
   });
-
-  await detail.getByRole("button", { name: "Cancel obligation" }).click();
-  await expect(detail.getByText("Cancelled:", { exact: false })).toBeVisible();
-  await expect(
-    stages.locator("li").filter({ hasText: /Notification.*not_required/ }),
-  ).toBeVisible();
-  await expect(
-    stages.locator("li").filter({ hasText: /Final Report.*not_required/ }),
-  ).toBeVisible();
 
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(

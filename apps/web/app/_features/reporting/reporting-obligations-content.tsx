@@ -28,6 +28,7 @@ import {
   useReportingDeadlineSummaryQuery,
   useReportingObligationsQuery,
 } from "./reporting.queries";
+import { ReportingStageDraftEditor } from "./reporting-stage-draft-editor";
 
 const TYPE_OPTIONS = [
   {
@@ -95,9 +96,7 @@ export function ReportingObligationsContent() {
   useEffect(() => {
     if (selectedFromUrl !== null) setSelectedId(selectedFromUrl);
   }, [selectedFromUrl]);
-  const summary = useReportingDeadlineSummaryQuery(
-    canView && !sessionLoading,
-  );
+  const summary = useReportingDeadlineSummaryQuery(canView && !sessionLoading);
   const selected =
     query.data?.obligations.find((item) => item.id === selectedId) ??
     query.data?.obligations[0] ??
@@ -421,6 +420,15 @@ function ObligationDetail({
             {stage.breachedAt !== null && stage.state === "submitted" ? (
               <p className="mt-1 text-danger">Submitted late</p>
             ) : null}
+            {canEdit &&
+            obligation.status === "active" &&
+            stage.state !== "submitted" ? (
+              <ReportingStageDraftEditor
+                obligation={obligation}
+                stage={stage}
+                canEdit={canEdit}
+              />
+            ) : null}
           </li>
         ))}
       </ol>
@@ -479,7 +487,8 @@ function DeadlineMonitorStatus({
       ) : null}
       {summary.overdueCount > 0 ? (
         <p className="mt-1 text-caption-1-regular text-danger">
-          {summary.overdueCount} overdue reporting deadline{summary.overdueCount === 1 ? "" : "s"}.
+          {summary.overdueCount} overdue reporting deadline
+          {summary.overdueCount === 1 ? "" : "s"}.
         </p>
       ) : null}
     </SectionCard>
@@ -506,7 +515,10 @@ export function Countdown({
     setTick((value) => value + 1);
   }, [serverNow]);
   useEffect(() => {
-    const timer = window.setInterval(() => setTick((value) => value + 1), 60_000);
+    const timer = window.setInterval(
+      () => setTick((value) => value + 1),
+      60_000,
+    );
     return () => window.clearInterval(timer);
   }, []);
   void tick;

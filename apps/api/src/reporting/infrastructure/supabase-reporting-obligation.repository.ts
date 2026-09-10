@@ -1,18 +1,38 @@
 import { Injectable } from "@nestjs/common";
 import {
+  acquireReportingStageDraftLockResponseSchema,
+  reportingFamilyTemplateResponseSchema,
+  reportingFamilyTemplatesResponseSchema,
+  reportingStageDraftResponseSchema,
+  reportingStageSubmissionSnapshotResponseSchema,
   reportingObligationDetailResponseSchema,
   reportingObligationListResponseSchema,
   reportingObligationMutationResponseSchema,
   reportingDeadlineSummaryResponseSchema,
+  type AcquireReportingStageDraftLockInput,
+  type AcquireReportingStageDraftLockResponse,
+  type ApplyReportingFamilyTemplateInput,
   type CancelReportingObligationInput,
   type CorrectReportingObligationAnchorInput,
+  type CreateReportingFamilyTemplateInput,
+  type CreateReportingFamilyTemplateVersionInput,
   type CreateReportingObligationInput,
+  type CreateReportingStageDraftInput,
   type RecordReportingObligationStageSubmissionInput,
   type ReportingObligationDetailResponse,
   type ReportingObligationListQuery,
   type ReportingObligationListResponse,
   type ReportingObligationMutationResponse,
   type ReportingDeadlineSummaryResponse,
+  type ReportingFamilyTemplateListQuery,
+  type ReportingFamilyTemplateParams,
+  type ReportingFamilyTemplateResponse,
+  type ReportingFamilyTemplatesResponse,
+  type ReportingStageDraftParams,
+  type ReportingStageDraftResponse,
+  type ReportingStageSubmissionSnapshotResponse,
+  type SaveReportingStageDraftInput,
+  type SubmitReportingStageDraftInput,
 } from "@repo/contracts/reporting";
 import { z } from "zod";
 
@@ -21,6 +41,8 @@ import {
   ReportingObligationConflictError,
   ReportingObligationInvalidRequestError,
   ReportingObligationInvalidStateError,
+  ReportingStageDraftConflictError,
+  ReportingStageDraftLockedError,
   type ReportingObligationRepository,
 } from "../application/reporting-obligation.port";
 
@@ -39,6 +61,212 @@ type RpcClient = Readonly<{
 @Injectable()
 export class SupabaseReportingObligationRepository implements ReportingObligationRepository {
   constructor(private readonly supabase: SupabaseService) {}
+
+  async getStageDraft(
+    organizationId: string,
+    input: Readonly<{ actorId: string } & ReportingStageDraftParams>,
+  ): Promise<ReportingStageDraftResponse | null> {
+    const rpc = await this.result("get_reporting_stage_draft", {
+      p_organization_id: organizationId,
+      p_actor_user_id: input.actorId,
+      p_stage_id: input.stageId,
+    });
+    const response = this.stageDraftResult(rpc);
+    return response?.draft.obligationId === input.obligationId
+      ? response
+      : null;
+  }
+
+  async createStageDraft(
+    organizationId: string,
+    input: Readonly<
+      {
+        actorId: string;
+        obligationId: string;
+        stageId: string;
+      } & CreateReportingStageDraftInput
+    >,
+  ): Promise<ReportingStageDraftResponse | null> {
+    const rpc = await this.result("create_reporting_stage_draft_atomic", {
+      p_organization_id: organizationId,
+      p_actor_user_id: input.actorId,
+      p_obligation_id: input.obligationId,
+      p_stage_id: input.stageId,
+      p_release_id: input.releaseId,
+      p_idempotency_key: input.idempotencyKey,
+      p_correlation_id: null,
+    });
+    return this.stageDraftResult(rpc);
+  }
+
+  async acquireStageDraftLock(
+    organizationId: string,
+    input: Readonly<
+      {
+        actorId: string;
+        obligationId: string;
+        stageId: string;
+      } & AcquireReportingStageDraftLockInput
+    >,
+  ): Promise<AcquireReportingStageDraftLockResponse | null> {
+    const draft = await this.draftForStage(organizationId, input);
+    if (draft === null) return null;
+    const rpc = await this.result("acquire_reporting_stage_draft_lock_atomic", {
+      p_organization_id: organizationId,
+      p_actor_user_id: input.actorId,
+      p_draft_id: draft.id,
+      p_expected_version: input.expectedRevision,
+      p_idempotency_key: input.idempotencyKey,
+      p_correlation_id: null,
+    });
+    this.throwStageDraftFailure(rpc);
+    if (!["updated", "found"].includes(rpc.outcome)) {
+      throw new Error("reporting stage draft unavailable");
+    }
+    return acquireReportingStageDraftLockResponseSchema.parse(
+      normalizeWireTimestamps(rpc.result),
+    );
+  }
+
+  async saveStageDraft(
+    organizationId: string,
+    input: Readonly<
+      {
+        actorId: string;
+        obligationId: string;
+        stageId: string;
+      } & SaveReportingStageDraftInput
+    >,
+  ): Promise<ReportingStageDraftResponse | null> {
+    const draft = await this.draftForStage(organizationId, input);
+    if (draft === null) return null;
+    const rpc = await this.result("save_reporting_stage_draft_atomic", {
+      p_organization_id: organizationId,
+      p_actor_user_id: input.actorId,
+      p_draft_id: draft.id,
+      p_expected_version: input.expectedRevision,
+      p_lock_token: input.lockToken,
+      ...draftPersistence(input),
+      p_idempotency_key: input.idempotencyKey,
+      p_correlation_id: null,
+    });
+    return this.stageDraftResult(rpc);
+  }
+
+  async submitStageDraft(
+    organizationId: string,
+    input: Readonly<
+      {
+        actorId: string;
+        obligationId: string;
+        stageId: string;
+      } & SubmitReportingStageDraftInput
+    >,
+  ): Promise<ReportingStageSubmissionSnapshotResponse | null> {
+    const draft = await this.draftForStage(organizationId, input);
+    if (draft === null) return null;
+    const rpc = await this.result("submit_reporting_stage_draft_atomic", {
+      p_organization_id: organizationId,
+      p_actor_user_id: input.actorId,
+      p_draft_id: draft.id,
+      p_expected_version: input.expectedRevision,
+      p_lock_token: input.lockToken,
+      p_submission_reference: input.submissionReference,
+      p_idempotency_key: input.idempotencyKey,
+      p_correlation_id: null,
+    });
+    this.throwStageDraftFailure(rpc);
+    if (rpc.outcome === "not_found") return null;
+    if (rpc.outcome !== "updated") {
+      throw new Error("reporting stage draft unavailable");
+    }
+    return reportingStageSubmissionSnapshotResponseSchema.parse(
+      normalizeWireTimestamps(submissionResult(rpc.result)),
+    );
+  }
+
+  async listFamilyTemplates(
+    organizationId: string,
+    input: Readonly<{ actorId: string } & ReportingFamilyTemplateListQuery>,
+  ): Promise<ReportingFamilyTemplatesResponse | null> {
+    const rpc = await this.result("list_reporting_family_templates", {
+      p_organization_id: organizationId,
+      p_actor_user_id: input.actorId,
+      p_obligation_type: input.obligationType ?? null,
+      p_stage_kind: input.stage ?? null,
+    });
+    // A tenant with no reusable content has an empty collection, not a missing
+    // resource. The RPC reserves not_found for that normal empty state.
+    if (rpc.outcome === "not_found") return { templates: [] };
+    if (rpc.outcome !== "found") {
+      throw new Error("reporting family templates unavailable");
+    }
+    return reportingFamilyTemplatesResponseSchema.parse(
+      normalizeWireTimestamps(rpc.result),
+    );
+  }
+
+  async createFamilyTemplate(
+    organizationId: string,
+    input: Readonly<{ actorId: string } & CreateReportingFamilyTemplateInput>,
+  ): Promise<ReportingFamilyTemplateResponse | null> {
+    const rpc = await this.result("create_reporting_family_template_atomic", {
+      p_organization_id: organizationId,
+      p_actor_user_id: input.actorId,
+      p_name: input.name,
+      p_obligation_type: input.obligationType,
+      p_stage_kind: input.stage,
+      p_description: input.description ?? null,
+      p_content: templatePersistence(input.fields),
+      p_idempotency_key: input.idempotencyKey,
+      p_correlation_id: null,
+    });
+    return this.familyTemplateResult(rpc);
+  }
+
+  async createFamilyTemplateVersion(
+    organizationId: string,
+    input: Readonly<
+      { actorId: string } & ReportingFamilyTemplateParams &
+        CreateReportingFamilyTemplateVersionInput
+    >,
+  ): Promise<ReportingFamilyTemplateResponse | null> {
+    const rpc = await this.result("update_reporting_family_template_atomic", {
+      p_organization_id: organizationId,
+      p_actor_user_id: input.actorId,
+      p_template_id: input.templateId,
+      p_expected_version: input.expectedVersion,
+      p_content: templatePersistence(input.fields),
+      p_idempotency_key: input.idempotencyKey,
+      p_correlation_id: null,
+    });
+    return this.familyTemplateResult(rpc);
+  }
+
+  async applyFamilyTemplate(
+    organizationId: string,
+    input: Readonly<
+      {
+        actorId: string;
+        obligationId: string;
+        stageId: string;
+      } & ApplyReportingFamilyTemplateInput
+    >,
+  ): Promise<ReportingStageDraftResponse | null> {
+    const draft = await this.draftForStage(organizationId, input);
+    if (draft === null) return null;
+    const rpc = await this.result("apply_reporting_family_template_atomic", {
+      p_organization_id: organizationId,
+      p_actor_user_id: input.actorId,
+      p_draft_id: draft.id,
+      p_template_version_id: input.templateVersionId,
+      p_expected_draft_version: input.expectedRevision,
+      p_lock_token: input.lockToken,
+      p_idempotency_key: input.idempotencyKey,
+      p_correlation_id: null,
+    });
+    return this.stageDraftResult(rpc);
+  }
 
   async deadlineSummary(
     organizationId: string,
@@ -178,6 +406,66 @@ export class SupabaseReportingObligationRepository implements ReportingObligatio
     });
   }
 
+  private async draftForStage(
+    organizationId: string,
+    input: Readonly<{ actorId: string; obligationId: string; stageId: string }>,
+  ) {
+    const response = await this.getStageDraft(organizationId, input);
+    return response?.draft ?? null;
+  }
+
+  private stageDraftResult(
+    rpc: Readonly<{ outcome: string; result: unknown }>,
+  ): ReportingStageDraftResponse | null {
+    this.throwStageDraftFailure(rpc);
+    if (rpc.outcome === "not_found") return null;
+    if (!["created", "updated", "found", "idempotent"].includes(rpc.outcome)) {
+      throw new Error("reporting stage draft unavailable");
+    }
+    return reportingStageDraftResponseSchema.parse(
+      normalizeWireTimestamps(rpc.result),
+    );
+  }
+
+  private familyTemplateResult(
+    rpc: Readonly<{ outcome: string; result: unknown }>,
+  ): ReportingFamilyTemplateResponse | null {
+    if (isConflict(rpc.outcome)) throw new ReportingObligationConflictError();
+    if (rpc.outcome === "not_found") return null;
+    if (rpc.outcome === "invalid_request") {
+      throw new ReportingObligationInvalidRequestError();
+    }
+    if (!["created", "updated", "found", "idempotent"].includes(rpc.outcome)) {
+      throw new Error("reporting family template unavailable");
+    }
+    return reportingFamilyTemplateResponseSchema.parse(
+      normalizeWireTimestamps(rpc.result),
+    );
+  }
+
+  private throwStageDraftFailure(
+    rpc: Readonly<{ outcome: string; result: unknown }>,
+  ): void {
+    if (isConflict(rpc.outcome)) {
+      const response = reportingStageDraftResponseSchema.parse(
+        normalizeWireTimestamps(rpc.result),
+      );
+      throw new ReportingStageDraftConflictError(response.draft);
+    }
+    if (rpc.outcome === "locked") {
+      const response = reportingStageDraftResponseSchema.parse(
+        normalizeWireTimestamps(rpc.result),
+      );
+      throw new ReportingStageDraftLockedError(response.draft);
+    }
+    if (rpc.outcome === "invalid_request") {
+      throw new ReportingObligationInvalidRequestError();
+    }
+    if (rpc.outcome === "invalid_state") {
+      throw new ReportingObligationInvalidStateError();
+    }
+  }
+
   private async mutation(
     name: string,
     args: Readonly<Record<string, unknown>>,
@@ -253,6 +541,45 @@ function isConflict(outcome: string): boolean {
   return ["conflict", "idempotency_conflict", "version_conflict"].includes(
     outcome,
   );
+}
+
+function draftPersistence(input: SaveReportingStageDraftInput) {
+  return {
+    p_content: Object.fromEntries(
+      input.fields.map((field) => [field.value.key, field.value.value]),
+    ),
+    p_field_provenance: Object.fromEntries(
+      input.fields.map((field) => [
+        field.value.key,
+        { ...field.provenance, updatedAt: field.updatedAt },
+      ]),
+    ),
+    p_member_states: input.memberStates,
+  };
+}
+
+function templatePersistence(
+  fields: ReadonlyArray<{
+    value: Readonly<{ key: string; value: unknown }>;
+    provenance: unknown;
+    updatedAt: string;
+  }>,
+) {
+  return {
+    fields: fields.map((field) => ({
+      value: field.value,
+      provenance: field.provenance,
+      updatedAt: field.updatedAt,
+    })),
+  };
+}
+
+function submissionResult(value: unknown): unknown {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    return value;
+  }
+  const submission = (value as Record<string, unknown>).submission;
+  return submission === undefined ? value : { submission };
 }
 
 function one(data: unknown): unknown {

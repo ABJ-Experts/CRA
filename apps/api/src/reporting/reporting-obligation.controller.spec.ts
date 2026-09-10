@@ -3,6 +3,7 @@ import { ConflictException, NotFoundException } from "@nestjs/common";
 
 import type { RequestUser } from "../auth/auth.types";
 import { ReportingObligationConflictError } from "./application/reporting-obligation.port";
+import { ReportingStageDraftConflictError } from "./application/reporting-obligation.port";
 import type { ReportingObligationUseCases } from "./application/reporting-obligation-use-cases";
 import { ReportingObligationController } from "./reporting-obligation.controller";
 
@@ -111,6 +112,78 @@ describe("ReportingObligationController", () => {
       actorId,
     });
   });
+
+  it("passes separately gated family-template filters through the application boundary", async () => {
+    const useCases = useCasesFor();
+    useCases.listFamilyTemplates.mockResolvedValue({ templates: [] });
+    const controller = subject(useCases);
+
+    await expect(
+      controller.listTemplates(
+        {
+          obligationType: "severe_incident",
+          stage: "notification",
+        },
+        user,
+      ),
+    ).resolves.toEqual({ templates: [] });
+
+    expect(useCases.listFamilyTemplates).toHaveBeenCalledWith(organizationId, {
+      actorId,
+      obligationType: "severe_incident",
+      stage: "notification",
+    });
+  });
+
+  it("scopes stage-draft writes and returns an explicit stale draft conflict", async () => {
+    const useCases = useCasesFor();
+    useCases.saveStageDraft.mockRejectedValue(
+      new ReportingStageDraftConflictError(draftFixture()),
+    );
+    const controller = subject(useCases);
+
+    await expect(
+      controller.saveStageDraft(
+        { obligationId, stageId: "77777777-7777-4777-8777-777777777777" },
+        {
+          expectedRevision: 1,
+          lockToken: key,
+          fields: [],
+          memberStates: [
+            {
+              countryCode: "DE",
+              provenance: {
+                origin: "human",
+                actor: { userId: actorId, displayName: "Owner Account" },
+                recordedAt: "2026-09-09T09:20:00Z",
+              },
+            },
+          ],
+          idempotencyKey: key,
+        },
+        user,
+      ),
+    ).rejects.toBeInstanceOf(ConflictException);
+    expect(useCases.saveStageDraft).toHaveBeenCalledWith(organizationId, {
+      actorId,
+      obligationId,
+      stageId: "77777777-7777-4777-8777-777777777777",
+      expectedRevision: 1,
+      lockToken: key,
+      fields: [],
+      memberStates: [
+        {
+          countryCode: "DE",
+          provenance: {
+            origin: "human",
+            actor: { userId: actorId, displayName: "Owner Account" },
+            recordedAt: "2026-09-09T09:20:00Z",
+          },
+        },
+      ],
+      idempotencyKey: key,
+    });
+  });
 });
 
 function subject(useCases: ReturnType<typeof useCasesFor>) {
@@ -128,6 +201,57 @@ function useCasesFor() {
     correctAnchor: jest.fn(),
     recordSubmission: jest.fn(),
     cancel: jest.fn(),
+    getStageDraft: jest.fn(),
+    createStageDraft: jest.fn(),
+    acquireStageDraftLock: jest.fn(),
+    saveStageDraft: jest.fn(),
+    submitStageDraft: jest.fn(),
+    listFamilyTemplates: jest.fn(),
+    createFamilyTemplate: jest.fn(),
+    createFamilyTemplateVersion: jest.fn(),
+    applyFamilyTemplate: jest.fn(),
+  };
+}
+
+function draftFixture() {
+  return {
+    id: "88888888-8888-4888-8888-888888888888",
+    organizationId,
+    obligationId,
+    stageId: "77777777-7777-4777-8777-777777777777",
+    releaseId: "99999999-9999-4999-8999-999999999999",
+    stage: "notification" as const,
+    revision: 2,
+    status: "editable" as const,
+    completeness: "incomplete" as const,
+    fieldDefinitions: [
+      {
+        key: "summary",
+        label: "Summary",
+        description: null,
+        type: "long_text" as const,
+        required: true,
+        requiredWhen: null,
+        templateEligible: true,
+      },
+    ],
+    fields: [],
+    memberStates: [
+      {
+        countryCode: "DE" as const,
+        provenance: {
+          origin: "human" as const,
+          actor: { userId: actorId, displayName: "Owner Account" },
+          recordedAt: "2026-09-09T09:20:00Z",
+        },
+      },
+    ],
+    prepopulatedFromSubmissionId: null,
+    requiresTemplateReview: false,
+    lock: null,
+    createdBy: { userId: actorId, displayName: "Owner Account" },
+    createdAt: "2026-09-09T09:20:00Z",
+    updatedAt: "2026-09-09T09:20:00Z",
   };
 }
 

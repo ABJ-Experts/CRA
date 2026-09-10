@@ -15,4 +15,8 @@ export const reportingKeys = Object.freeze({
   detail: (obligationId: string) =>
     Object.freeze([...all, "detail", obligationId] as const),
   deadlineSummary: () => Object.freeze([...all, "deadline-summary"] as const),
+  stageDraft: (obligationId: string, stageId: string) =>
+    Object.freeze([...all, "stage-draft", obligationId, stageId] as const),
+  templates: (obligationType: string, stage: string) =>
+    Object.freeze([...all, "templates", obligationType, stage] as const),
 });

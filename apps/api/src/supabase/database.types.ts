@@ -5464,6 +5464,108 @@ export type Database = {
         }
         Relationships: []
       }
+      reporting_family_template_versions: {
+        Row: {
+          content: Json
+          created_at: string
+          created_by_user_id: string
+          id: string
+          organization_id: string
+          template_id: string
+          version: number
+        }
+        Insert: {
+          content: Json
+          created_at?: string
+          created_by_user_id: string
+          id?: string
+          organization_id: string
+          template_id: string
+          version: number
+        }
+        Update: {
+          content?: Json
+          created_at?: string
+          created_by_user_id?: string
+          id?: string
+          organization_id?: string
+          template_id?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reporting_family_template_vers_organization_id_template_id_fkey"
+            columns: ["organization_id", "template_id"]
+            isOneToOne: false
+            referencedRelation: "reporting_family_templates"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "reporting_family_template_versions_created_by_user_id_fkey"
+            columns: ["created_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reporting_family_templates: {
+        Row: {
+          archived_at: string | null
+          created_at: string
+          created_by_user_id: string
+          current_version: number
+          description: string | null
+          id: string
+          name: string
+          obligation_type: string
+          organization_id: string
+          stage_kind: string
+          updated_at: string
+        }
+        Insert: {
+          archived_at?: string | null
+          created_at?: string
+          created_by_user_id: string
+          current_version?: number
+          description?: string | null
+          id?: string
+          name: string
+          obligation_type: string
+          organization_id: string
+          stage_kind: string
+          updated_at?: string
+        }
+        Update: {
+          archived_at?: string | null
+          created_at?: string
+          created_by_user_id?: string
+          current_version?: number
+          description?: string | null
+          id?: string
+          name?: string
+          obligation_type?: string
+          organization_id?: string
+          stage_kind?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reporting_family_templates_created_by_user_id_fkey"
+            columns: ["created_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reporting_family_templates_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       reporting_obligation_events: {
         Row: {
           actor_display_name: string | null
@@ -5717,6 +5819,289 @@ export type Database = {
           version?: number
         }
         Relationships: []
+      }
+      reporting_stage_draft_commands: {
+        Row: {
+          actor_user_id: string
+          created_at: string
+          id: string
+          idempotency_key: string
+          operation: string
+          organization_id: string
+          request_digest: string
+          result: Json
+        }
+        Insert: {
+          actor_user_id: string
+          created_at?: string
+          id?: string
+          idempotency_key: string
+          operation: string
+          organization_id: string
+          request_digest: string
+          result: Json
+        }
+        Update: {
+          actor_user_id?: string
+          created_at?: string
+          id?: string
+          idempotency_key?: string
+          operation?: string
+          organization_id?: string
+          request_digest?: string
+          result?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reporting_stage_draft_commands_actor_user_id_fkey"
+            columns: ["actor_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reporting_stage_draft_commands_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reporting_stage_draft_revisions: {
+        Row: {
+          changed_by_user_id: string
+          content: Json
+          created_at: string
+          draft_id: string
+          field_provenance: Json
+          id: string
+          member_states: Json
+          organization_id: string
+          revision: number
+        }
+        Insert: {
+          changed_by_user_id: string
+          content: Json
+          created_at?: string
+          draft_id: string
+          field_provenance: Json
+          id?: string
+          member_states: Json
+          organization_id: string
+          revision: number
+        }
+        Update: {
+          changed_by_user_id?: string
+          content?: Json
+          created_at?: string
+          draft_id?: string
+          field_provenance?: Json
+          id?: string
+          member_states?: Json
+          organization_id?: string
+          revision?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reporting_stage_draft_revisions_changed_by_user_id_fkey"
+            columns: ["changed_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reporting_stage_draft_revisions_organization_id_draft_id_fkey"
+            columns: ["organization_id", "draft_id"]
+            isOneToOne: false
+            referencedRelation: "reporting_stage_drafts"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      reporting_stage_drafts: {
+        Row: {
+          content: Json
+          created_at: string
+          created_by_user_id: string
+          field_provenance: Json
+          id: string
+          lock_expires_at: string | null
+          lock_token: string | null
+          locked_by_user_id: string | null
+          member_states: Json
+          obligation_id: string
+          organization_id: string
+          prepopulated_from_submission_id: string | null
+          release_id: string
+          stage_id: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          content?: Json
+          created_at?: string
+          created_by_user_id: string
+          field_provenance?: Json
+          id?: string
+          lock_expires_at?: string | null
+          lock_token?: string | null
+          locked_by_user_id?: string | null
+          member_states?: Json
+          obligation_id: string
+          organization_id: string
+          prepopulated_from_submission_id?: string | null
+          release_id: string
+          stage_id: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          content?: Json
+          created_at?: string
+          created_by_user_id?: string
+          field_provenance?: Json
+          id?: string
+          lock_expires_at?: string | null
+          lock_token?: string | null
+          locked_by_user_id?: string | null
+          member_states?: Json
+          obligation_id?: string
+          organization_id?: string
+          prepopulated_from_submission_id?: string | null
+          release_id?: string
+          stage_id?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reporting_stage_drafts_created_by_user_id_fkey"
+            columns: ["created_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reporting_stage_drafts_locked_by_user_id_fkey"
+            columns: ["locked_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reporting_stage_drafts_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reporting_stage_drafts_organization_id_obligation_id_fkey"
+            columns: ["organization_id", "obligation_id"]
+            isOneToOne: false
+            referencedRelation: "reporting_obligations"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "reporting_stage_drafts_organization_id_release_id_fkey"
+            columns: ["organization_id", "release_id"]
+            isOneToOne: false
+            referencedRelation: "product_releases"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "reporting_stage_drafts_organization_id_stage_id_fkey"
+            columns: ["organization_id", "stage_id"]
+            isOneToOne: true
+            referencedRelation: "reporting_obligation_stages"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      reporting_stage_submissions: {
+        Row: {
+          content: Json
+          draft_id: string
+          draft_revision: number
+          field_provenance: Json
+          id: string
+          member_states: Json
+          obligation_id: string
+          organization_id: string
+          release_id: string
+          stage_id: string
+          submission_reference: string
+          submitted_at: string
+          submitted_by_user_id: string
+        }
+        Insert: {
+          content: Json
+          draft_id: string
+          draft_revision: number
+          field_provenance: Json
+          id?: string
+          member_states: Json
+          obligation_id: string
+          organization_id: string
+          release_id: string
+          stage_id: string
+          submission_reference: string
+          submitted_at?: string
+          submitted_by_user_id: string
+        }
+        Update: {
+          content?: Json
+          draft_id?: string
+          draft_revision?: number
+          field_provenance?: Json
+          id?: string
+          member_states?: Json
+          obligation_id?: string
+          organization_id?: string
+          release_id?: string
+          stage_id?: string
+          submission_reference?: string
+          submitted_at?: string
+          submitted_by_user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reporting_stage_submissions_organization_id_draft_id_fkey"
+            columns: ["organization_id", "draft_id"]
+            isOneToOne: false
+            referencedRelation: "reporting_stage_drafts"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "reporting_stage_submissions_organization_id_obligation_id_fkey"
+            columns: ["organization_id", "obligation_id"]
+            isOneToOne: false
+            referencedRelation: "reporting_obligations"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "reporting_stage_submissions_organization_id_release_id_fkey"
+            columns: ["organization_id", "release_id"]
+            isOneToOne: false
+            referencedRelation: "product_releases"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "reporting_stage_submissions_organization_id_stage_id_fkey"
+            columns: ["organization_id", "stage_id"]
+            isOneToOne: true
+            referencedRelation: "reporting_obligation_stages"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "reporting_stage_submissions_submitted_by_user_id_fkey"
+            columns: ["submitted_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       retention_authoritative_facts: {
         Row: {
@@ -13026,6 +13411,20 @@ export type Database = {
               outcome: string
             }[]
           }
+      acquire_reporting_stage_draft_lock_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_correlation_id?: string
+          p_draft_id: string
+          p_expected_version: number
+          p_idempotency_key: string
+          p_organization_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
       add_product_release_market_availability_atomic: {
         Args: {
           p_actor_user_id: string
@@ -13061,6 +13460,22 @@ export type Database = {
         Returns: {
           baseline: Json
           outcome: string
+        }[]
+      }
+      apply_reporting_family_template_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_correlation_id?: string
+          p_draft_id: string
+          p_expected_draft_version: number
+          p_idempotency_key: string
+          p_lock_token: string
+          p_organization_id: string
+          p_template_version_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
         }[]
       }
       approve_vulnerability_finding_vex_assessment_atomic: {
@@ -14400,6 +14815,23 @@ export type Database = {
           relationship: Json
         }[]
       }
+      create_reporting_family_template_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_content: Json
+          p_correlation_id?: string
+          p_description: string
+          p_idempotency_key: string
+          p_name: string
+          p_obligation_type: string
+          p_organization_id: string
+          p_stage_kind: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
       create_reporting_obligation_atomic: {
         Args: {
           p_actor_user_id: string
@@ -14410,6 +14842,21 @@ export type Database = {
           p_obligation_type: string
           p_organization_id: string
           p_source_finding_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      create_reporting_stage_draft_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_correlation_id?: string
+          p_idempotency_key: string
+          p_obligation_id: string
+          p_organization_id: string
+          p_release_id: string
+          p_stage_id: string
         }
         Returns: {
           outcome: string
@@ -15736,6 +16183,17 @@ export type Database = {
           result: Json
         }[]
       }
+      get_reporting_stage_draft: {
+        Args: {
+          p_actor_user_id: string
+          p_organization_id: string
+          p_stage_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
       get_sbom_composite_review: {
         Args: {
           p_actor_user_id: string
@@ -16312,6 +16770,18 @@ export type Database = {
         Returns: {
           outcome: string
           products: Json
+        }[]
+      }
+      list_reporting_family_templates: {
+        Args: {
+          p_actor_user_id: string
+          p_obligation_type?: string
+          p_organization_id: string
+          p_stage_kind?: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
         }[]
       }
       list_reporting_obligations: {
@@ -17497,6 +17967,65 @@ export type Database = {
         }
         Returns: undefined
       }
+      m6_reporting_draft_command_result: {
+        Args: {
+          p_actor_user_id: string
+          p_digest: string
+          p_idempotency_key: string
+          p_operation: string
+          p_organization_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      m6_reporting_draft_command_store: {
+        Args: {
+          p_actor_user_id: string
+          p_digest: string
+          p_idempotency_key: string
+          p_operation: string
+          p_organization_id: string
+          p_result: Json
+        }
+        Returns: undefined
+      }
+      m6_reporting_draft_complete: {
+        Args: { p_content: Json; p_definitions: Json; p_member_states: Json }
+        Returns: boolean
+      }
+      m6_reporting_draft_fields: {
+        Args: {
+          p_content: Json
+          p_definitions: Json
+          p_provenance: Json
+          p_updated_at: string
+        }
+        Returns: Json
+      }
+      m6_reporting_draft_json: {
+        Args: { p_draft_id: string; p_organization_id: string }
+        Returns: Json
+      }
+      m6_reporting_draft_payload_valid: {
+        Args: {
+          p_content: Json
+          p_member_states: Json
+          p_obligation_type: string
+          p_provenance: Json
+          p_stage_kind: string
+        }
+        Returns: boolean
+      }
+      m6_reporting_draft_valid: {
+        Args: { p_content: Json; p_member_states: Json; p_provenance: Json }
+        Returns: boolean
+      }
+      m6_reporting_family_template_json: {
+        Args: { p_organization_id: string; p_template_id: string }
+        Returns: Json
+      }
       m6_reporting_obligation_json: {
         Args: { p_obligation_id: string; p_organization_id: string }
         Returns: Json
@@ -17509,9 +18038,25 @@ export type Database = {
         }
         Returns: number
       }
+      m6_reporting_stage_field_definitions: {
+        Args: { p_obligation_type: string; p_stage_kind: string }
+        Returns: Json
+      }
       m6_reporting_stage_json: {
         Args: { p_organization_id: string; p_stage_id: string }
         Returns: Json
+      }
+      m6_reporting_submission_json: {
+        Args: { p_organization_id: string; p_submission_id: string }
+        Returns: Json
+      }
+      m6_reporting_template_content_valid: {
+        Args: {
+          p_content: Json
+          p_obligation_type: string
+          p_stage_kind: string
+        }
+        Returns: boolean
       }
       m6_utc_second_z: { Args: { p_value: string }; Returns: string }
       mark_mfa_factors_removed: {
@@ -19012,6 +19557,24 @@ export type Database = {
           saved_count: number
         }[]
       }
+      save_reporting_stage_draft_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_content: Json
+          p_correlation_id?: string
+          p_draft_id: string
+          p_expected_version: number
+          p_field_provenance: Json
+          p_idempotency_key: string
+          p_lock_token: string
+          p_member_states: Json
+          p_organization_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
       save_sync_run_plan_atomic: {
         Args: {
           p_conflicts: Json
@@ -19257,6 +19820,22 @@ export type Database = {
           p_worker_id: string
         }
         Returns: string
+      }
+      submit_reporting_stage_draft_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_correlation_id?: string
+          p_draft_id: string
+          p_expected_version: number
+          p_idempotency_key: string
+          p_lock_token: string
+          p_organization_id: string
+          p_submission_reference: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
       }
       submit_vulnerability_finding_vex_assessment_atomic: {
         Args: {
@@ -19654,6 +20233,21 @@ export type Database = {
         Returns: {
           artifact: Json
           outcome: string
+        }[]
+      }
+      update_reporting_family_template_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_content: Json
+          p_correlation_id?: string
+          p_expected_version: number
+          p_idempotency_key: string
+          p_organization_id: string
+          p_template_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
         }[]
       }
       update_sbom_quality_settings_atomic: {
