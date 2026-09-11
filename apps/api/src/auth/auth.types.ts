@@ -28,6 +28,8 @@ export interface RequestUser {
   accessToken: string;
   /** Assurance level from the JWT: 'aal1' | 'aal2'. */
   aal: string | null;
+  /** Verified Supabase JWT session_id, present only when it is a valid UUID. */
+  sessionId?: string;
 }
 
 export interface AuthedRequest extends Request {
@@ -87,3 +89,12 @@ export const RequireRole = (role: BaseRole) =>
 export const SELF_SCOPED_KEY = "auth:selfScoped";
 export const SelfScoped = (reason: string) =>
   SetMetadata(SELF_SCOPED_KEY, reason);
+
+/**
+ * Allows only the lifecycle recovery entry points to inspect an inactive
+ * signed tenant scope. The tenant access repository still re-verifies owner
+ * membership; ordinary tenant routes never receive this exemption.
+ */
+export const ALLOW_TENANT_RECOVERY_KEY = "auth:allowTenantRecovery";
+export const AllowTenantRecovery = (reason: string) =>
+  SetMetadata(ALLOW_TENANT_RECOVERY_KEY, reason);

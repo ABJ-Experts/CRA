@@ -1,0 +1,114 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-14T06:37:08Z",
+  "title": "Design System: CRA Sentinel",
+  "extensions": {
+    "colorMeta": {
+      "canvas": {
+        "role": "neutral",
+        "displayName": "Paper Canvas",
+        "canonical": "light-dark(#ffffff, #1b1d1f)",
+        "tonalRamp": ["#1b1d1f", "#2e3133", "#3e4043", "#55585a", "#727880", "#9da2a7", "#c6c8cb", "#ffffff"]
+      },
+      "primary": {
+        "role": "primary",
+        "displayName": "Verification Indigo",
+        "canonical": "#595fe5",
+        "tonalRamp": ["#232445", "#31336e", "#4a50d6", "#595fe5", "#858be9", "#adb0ed", "#c3b9fe", "#ebecff"]
+      },
+      "danger": {
+        "role": "tertiary",
+        "displayName": "Exception Red",
+        "canonical": "#e5646c",
+        "tonalRamp": ["#4a2527", "#70383b", "#9d4a50", "#c95961", "#e5646c", "#ee9096", "#f8bec1", "#faebec"]
+      },
+      "success": {
+        "role": "secondary",
+        "displayName": "Assurance Green",
+        "canonical": "#7dc066",
+        "tonalRamp": ["#24381e", "#35532b", "#4f763e", "#679d51", "#7dc066", "#99d690", "#b0e4c8", "#e6f9ef"]
+      },
+      "info": {
+        "role": "secondary",
+        "displayName": "Signal Cyan",
+        "canonical": "#59b4d1",
+        "tonalRamp": ["#1e414b", "#2a5d6b", "#397d91", "#49a0bb", "#59b4d1", "#7cc8e1", "#a9ddf5", "#eaf6fc"]
+      }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Operational Display", "purpose": "High-impact product or page headings only." },
+      "headline": { "displayName": "Section Headline", "purpose": "Page and major section hierarchy." },
+      "title": { "displayName": "Panel Title", "purpose": "Cards, panels, and local group headings." },
+      "body": { "displayName": "Body", "purpose": "Explanatory and form-adjacent content." },
+      "label": { "displayName": "Compact Label", "purpose": "Metadata, compact counters, and control labels." }
+    },
+    "shadows": [
+      { "name": "interactive-lift", "value": "var(--tw-shadow-lg) rgb(0 0 0 / 0.3)", "purpose": "Hover-only elevation for interactive cards." },
+      { "name": "field-inset-ring", "value": "inset 0 0 0 1px var(--color-active-500)", "purpose": "Focus treatment that does not change field geometry." }
+    ],
+    "motion": [
+      { "name": "control-state", "value": "150ms ease-out", "purpose": "Buttons, fields, and simple color or border state changes." },
+      { "name": "nav-disclosure", "value": "200ms ease-out", "purpose": "Sidebar collapse and expandable navigation groups." },
+      { "name": "overlay-in", "value": "140ms cubic-bezier(0.16, 1, 0.3, 1)", "purpose": "Overlay appearance." },
+      { "name": "dialog-in", "value": "260ms cubic-bezier(0.34, 1.6, 0.64, 1)", "purpose": "Dialog entrance from a reduced scale." }
+    ],
+    "breakpoints": [
+      { "name": "lg", "value": "1024px", "purpose": "Dashboard sidebar shifts to a mobile overlay below this point." }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Default committed action; use for the most important available operation.",
+      "html": "<button class=\"ds-btn-primary\">Save changes</button>",
+      "css": ".ds-btn-primary { min-height: 40px; padding: 0 16px; border: 0; border-radius: 12px; background: var(--color-active-500); color: var(--color-on-accent); font: 600 14px/1.5 var(--font-poppins), Poppins, system-ui, sans-serif; cursor: pointer; transition: background-color 150ms ease-out, color 150ms ease-out, opacity 150ms ease-out; } .ds-btn-primary:hover { background: var(--color-active-600); } .ds-btn-primary:focus-visible { outline: 2px solid var(--color-active-500); outline-offset: 2px; } .ds-btn-primary:active { background: var(--color-active-600); }"
+    },
+    {
+      "name": "Outlined Field",
+      "kind": "input",
+      "refersTo": "input-field",
+      "description": "Stable form input with inset state rings instead of shifting borders.",
+      "html": "<label class=\"ds-field\"><span>Email address</span><input placeholder=\"name@company.com\" /></label>",
+      "css": ".ds-field { display: grid; gap: 8px; color: var(--color-fg-muted); font: 500 14px/1.5 var(--font-poppins), Poppins, system-ui, sans-serif; } .ds-field input { height: 40px; box-sizing: border-box; padding: 0 12px; border: 0; border-radius: 12px; background: var(--color-canvas); color: var(--color-fg); font: 400 14px/1.5 var(--font-poppins), Poppins, system-ui, sans-serif; box-shadow: inset 0 0 0 1px var(--color-border); outline: none; transition: box-shadow 150ms ease-out, background-color 150ms ease-out; } .ds-field input::placeholder { color: var(--color-border-strong); } .ds-field input:hover { box-shadow: inset 0 0 0 2px var(--color-accent-subtle); } .ds-field input:focus { box-shadow: inset 0 0 0 1px var(--color-active-500); }"
+    },
+    {
+      "name": "Outlined Card",
+      "kind": "card",
+      "refersTo": "card-outlined",
+      "description": "Default container for summaries, tables, and operational panel groups.",
+      "html": "<article class=\"ds-card\"><h3>Release status</h3><p>Review the current lifecycle and supporting evidence.</p></article>",
+      "css": ".ds-card { padding: 24px; border: 1px solid var(--color-border); border-radius: 12px; background: var(--color-canvas); color: var(--color-fg); font-family: var(--font-poppins), Poppins, system-ui, sans-serif; } .ds-card h3 { margin: 0; font-size: 16px; line-height: 1.5; font-weight: 600; } .ds-card p { margin: 4px 0 0; color: var(--color-fg-muted); font-size: 12px; line-height: 1.5; } .ds-card:hover { border-color: var(--color-border-strong); }"
+    },
+    {
+      "name": "Sidebar Navigation Item",
+      "kind": "nav",
+      "refersTo": "navigation-active",
+      "description": "Permission-aware dashboard navigation with quiet active and hover states.",
+      "html": "<a class=\"ds-nav-item ds-nav-item--active\" href=\"#dashboard\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z\" /></svg><span>Dashboard</span></a>",
+      "css": ".ds-nav-item { display: flex; align-items: center; gap: 24px; min-height: 56px; padding: 0 16px; border-radius: 12px; color: var(--color-fg-muted); font: 500 14px/1.5 var(--font-poppins), Poppins, system-ui, sans-serif; text-decoration: none; transition: color 150ms ease-out, background-color 150ms ease-out; } .ds-nav-item svg { width: 20px; height: 20px; fill: currentColor; } .ds-nav-item:hover { background: var(--color-surface); color: var(--color-fg); } .ds-nav-item--active { background: var(--color-surface-muted); color: var(--color-fg); } .ds-nav-item:focus-visible { outline: 2px solid var(--color-active-500); outline-offset: 2px; }"
+    },
+    {
+      "name": "Status Tag",
+      "kind": "chip",
+      "refersTo": "status-success",
+      "description": "Semantic status marker that pairs a tinted surface with readable text and a matching border.",
+      "html": "<span class=\"ds-status-tag\">Verified</span>",
+      "css": ".ds-status-tag { display: inline-flex; align-items: center; min-height: 24px; padding: 0 8px; border: 1px solid var(--color-success-border); border-radius: 9999px; background: var(--color-success-surface); color: var(--color-success-fg); font: 600 12px/1.5 var(--font-poppins), Poppins, system-ui, sans-serif; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Evidence Control Room",
+    "overview": "CRA Sentinel is a sober, high-trust operating environment for regulatory work that may be reviewed years later. The interface uses neutral surfaces, precise borders, and a single verification-blue action language to keep sensitive tasks calm and legible. It supports light, dark, and organization-branded dashboard contexts without altering the structural or status vocabulary. The system is deliberately restrained rather than austere. Dense tools such as registries, tables, form workflows, and evidence views rely on a compact component scale; new surfaces should nevertheless create generous page-level breathing room and clear visual chapters for scanability.",
+    "keyCharacteristics": ["Graphite and white surfaces establish concentration before color is introduced.", "Verification Indigo marks the primary path, selected state, focus treatment, and organization accent scope.", "Rounded 12px controls soften a rigorous operational interface without becoming playful.", "Tonal layers and precise borders create hierarchy; conspicuous shadow is reserved for interactive elevation.", "Motion is short, state-led, and disabled for reduced-motion users."],
+    "rules": [
+      { "name": "The Evidence-First Color Rule", "body": "Use color to locate action, state, and risk. Never use it as ornamental fill, and do not use status colors as a substitute for labels or text.", "section": "colors" },
+      { "name": "The Muted-Text Safety Rule", "body": "fg-muted is for text at least 18.66px or bold text at least 14px; fg-subtle is reserved for disabled and placeholder content. Ordinary body copy uses fg.", "section": "colors" },
+      { "name": "The Spacious-Frame Rule", "body": "Preserve the compact type scale inside operational widgets, but use clear page-title separation, 24–30px desktop gutters, and generous section breaks whenever the workflow does not require constant comparison.", "section": "typography" },
+      { "name": "The Flat-Until-Actionable Rule", "body": "Static information stays flat or border-defined. Elevation appears only to clarify an overlay, focus, or a genuinely interactive container.", "section": "elevation" }
+    ],
+    "dos": ["Do use semantic surface, foreground, border, and status tokens instead of raw utility colors.", "Do keep primary actions in Verification Indigo and reserve status ramps for their actual meaning.", "Do preserve 12px rounding and compact 32–56px control heights across shared patterns.", "Do provide focus-visible states and retain motion-reduce behavior for every introduced interaction.", "Do make new pages spacious at the composition level while preserving dense, scannable operational widgets."],
+    "donts": ["Don't use fg-muted for regular-size body copy or fg-subtle for active copy.", "Don't use large resting shadows or decorative gradients to manufacture hierarchy.", "Don't widen organization branding beyond the dashboard accent scope or replace structural/status tokens with tenant colors.", "Don't hide layout overflow on html or size primary layouts with 100vw; overlay scroll locking depends on the current document behavior."]
+  }
+}

@@ -53,6 +53,20 @@ describe("cookie contract", () => {
     expect(API_PREFIX).toBe("api/v1");
   });
 
+  it("keeps refresh cookies off SBOM upload and validation API paths", () => {
+    expect(REFRESH_COOKIE_PATH).toBe("/api/v1/auth/refresh");
+    const sbomApiPaths = [
+      "/api/v1/products/product-1/releases/release-1/sbom-uploads",
+      "/api/v1/sbom-sources/source-1/validation-report",
+    ] as const;
+
+    for (const path of sbomApiPaths) {
+      expect(path.startsWith(REFRESH_COOKIE_PATH)).toBe(false);
+    }
+    expect(REFRESH_COOKIE_PATH).not.toBe("/");
+    expect(REFRESH_COOKIE_PATH).not.toBe(`/${API_PREFIX}`);
+  });
+
   it("sets both session cookies HttpOnly, with the refresh one path-scoped", () => {
     const res = fakeResponse();
     setSessionCookies(

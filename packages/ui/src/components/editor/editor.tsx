@@ -452,7 +452,7 @@ export function Editor({
                   className={cn(
                     "inline-flex h-10 shrink-0 items-center justify-center gap-2",
                     "rounded-xl bg-active-500 px-4 pt-[10px] pb-[9px]",
-                    "text-subhead-semibold text-white",
+                    "text-subhead-semibold text-on-accent",
                     "transition-colors duration-150 motion-reduce:transition-none",
                     "hover:bg-active-600",
                     "outline-none focus-visible:ring-2 focus-visible:ring-active-500",

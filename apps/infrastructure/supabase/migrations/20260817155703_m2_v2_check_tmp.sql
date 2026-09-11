@@ -1,0 +1,4 @@
+-- No-op placeholder.
+--
+-- This version was applied locally during M2 V2 migration verification. The
+-- clean-install migration now contains the reviewed constraints and functions.

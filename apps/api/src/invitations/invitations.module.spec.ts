@@ -1,9 +1,12 @@
 import { MODULE_METADATA } from "@nestjs/common/constants";
 
 import { AuditService } from "../audit/audit.service";
+import { OnboardingEvidenceRecorder } from "../organizations/application/onboarding-evidence-recorder.port";
+import { OrganizationsModule } from "../organizations/organizations.module";
 import { AcceptInvitationUseCase } from "./application/accept-invitation.use-case";
 import { CreateInvitationUseCase } from "./application/create-invitation.use-case";
 import { ListInvitationsQuery } from "./application/list-invitations.query";
+import { ResendInvitationUseCase } from "./application/resend-invitation.use-case";
 import { RevokeInvitationUseCase } from "./application/revoke-invitation.use-case";
 import { MailInvitationNotifierAdapter } from "./infrastructure/mail-invitation-notifier.adapter";
 import { NodeInvitationTokenAdapter } from "./infrastructure/node-invitation-token.adapter";
@@ -36,10 +39,20 @@ function factoryFor(token: unknown): FactoryProvider {
 }
 
 describe("InvitationsModule composition", () => {
+  it("imports the Organizations-owned evidence provider one way", () => {
+    const imports = Reflect.getMetadata(
+      MODULE_METADATA.IMPORTS,
+      InvitationsModule,
+    ) as readonly unknown[];
+
+    expect(imports).toContain(OrganizationsModule);
+  });
+
   it("constructs each use case from the inward-owned adapters", () => {
     const repository = {} as SupabaseInvitationRepository;
     const tokens = {} as NodeInvitationTokenAdapter;
     const notifier = {} as MailInvitationNotifierAdapter;
+    const evidence = {} as OnboardingEvidenceRecorder;
     const getOrThrow = jest.fn().mockReturnValue(7);
 
     expect(
@@ -47,6 +60,7 @@ describe("InvitationsModule composition", () => {
         repository,
         tokens,
         notifier,
+        evidence,
         { getOrThrow },
       ),
     ).toBeInstanceOf(CreateInvitationUseCase);
@@ -54,6 +68,15 @@ describe("InvitationsModule composition", () => {
     expect(
       factoryFor(AcceptInvitationUseCase).useFactory(repository, tokens),
     ).toBeInstanceOf(AcceptInvitationUseCase);
+    expect(
+      factoryFor(ResendInvitationUseCase).useFactory(
+        repository,
+        tokens,
+        notifier,
+        evidence,
+        { getOrThrow },
+      ),
+    ).toBeInstanceOf(ResendInvitationUseCase);
     expect(
       factoryFor(RevokeInvitationUseCase).useFactory(repository),
     ).toBeInstanceOf(RevokeInvitationUseCase);
@@ -65,16 +88,18 @@ describe("InvitationsModule composition", () => {
   it("wires the compatibility facade with audit as an observer", () => {
     const create = {} as CreateInvitationUseCase;
     const accept = {} as AcceptInvitationUseCase;
+    const resend = {} as ResendInvitationUseCase;
     const revoke = {} as RevokeInvitationUseCase;
     const list = {} as ListInvitationsQuery;
     const audit = {} as AuditService;
     const provider = factoryFor(InvitationsService);
 
     expect(
-      provider.useFactory(create, accept, revoke, list, audit),
+      provider.useFactory(create, resend, accept, revoke, list, audit),
     ).toBeInstanceOf(InvitationsService);
     expect(provider.inject).toEqual([
       CreateInvitationUseCase,
+      ResendInvitationUseCase,
       AcceptInvitationUseCase,
       RevokeInvitationUseCase,
       ListInvitationsQuery,

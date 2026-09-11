@@ -20,6 +20,7 @@ function fixture() {
     }),
   };
   const accept = { execute: jest.fn() };
+  const resend = { execute: jest.fn() };
   const revoke = { execute: jest.fn() };
   const list = {
     execute: jest.fn().mockResolvedValue({ ok: true, value: [] }),
@@ -27,6 +28,7 @@ function fixture() {
   const auditLog = jest.fn();
   const service = new InvitationsService(
     create as never,
+    resend as never,
     accept as never,
     revoke as never,
     list as never,
@@ -139,6 +141,21 @@ describe("InvitationsService create facade", () => {
       response: { statusCode: 500, message: "Internal server error" },
     });
     await expect(promise).rejects.not.toThrow("SMTP credentials rejected");
+    expect(auditLog).not.toHaveBeenCalled();
+  });
+
+  it("does not expose onboarding evidence failures after email delivery", async () => {
+    const { auditLog, create, service } = fixture();
+    create.execute.mockResolvedValueOnce({
+      ok: false,
+      error: { code: "evidence_failed", invitationId: "invitation-1" },
+    });
+
+    const promise = service.create("organization-1", actor, input);
+    await expect(promise).rejects.toBeInstanceOf(InternalServerErrorException);
+    await expect(promise).rejects.toMatchObject({
+      response: { statusCode: 500, message: "Internal server error" },
+    });
     expect(auditLog).not.toHaveBeenCalled();
   });
 });

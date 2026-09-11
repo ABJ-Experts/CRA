@@ -17,4 +17,11 @@ export const acceptInvitationInputSchema = z.object({
   token: z.string().min(32).max(128),
 });
 
+/**
+ * Resending relies exclusively on the invitation id in the scoped route.
+ * Defaulting an absent JSON body keeps ordinary empty POSTs valid, while the
+ * strict object rejects any caller-supplied identity or delivery fields.
+ */
+export const resendInvitationInputSchema = z.object({}).strict().default({});
+
 export const invitationIdParamSchema = z.object({ id: z.uuid() }).strict();

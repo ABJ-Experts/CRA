@@ -42,6 +42,12 @@ function isStringRecord(value: unknown): value is Record<string, string> {
   );
 }
 
+function isSafeServerErrorCode(
+  value: string | undefined,
+): value is "unavailable" | "malformed_provider" {
+  return value === "unavailable" || value === "malformed_provider";
+}
+
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
   private readonly logger = new Logger(AllExceptionsFilter.name);
@@ -86,12 +92,13 @@ export class AllExceptionsFilter implements ExceptionFilter {
      * goes to the log with the request id so it is still diagnosable.
      */
     if (status >= HttpStatus.INTERNAL_SERVER_ERROR) {
+      const safeServerCode = isSafeServerErrorCode(code) ? code : undefined;
       this.logger.error(
         `${req.method} ${req.originalUrl} -> ${status}`,
         exception instanceof Error ? exception.stack : String(exception),
       );
       message = "Something went wrong. Please try again.";
-      code = undefined;
+      code = safeServerCode;
       fieldErrors = undefined;
     } else {
       /*

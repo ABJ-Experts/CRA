@@ -76,7 +76,7 @@ export const buttonVariants = cva(
         variant: "fill",
         tone: "primary",
         class: [
-          "bg-active-500 text-white",
+          "bg-active-500 text-on-accent",
           "hover:bg-active-600 active:bg-active-600",
           "disabled:bg-border-strong disabled:text-canvas",
         ],
@@ -179,7 +179,7 @@ export const buttonVariants = cva(
       {
         variant: "balloon",
         class: [
-          "bg-active-500 text-white",
+          "bg-active-500 text-on-accent",
           "hover:bg-active-600 active:bg-active-600",
           "disabled:bg-border-strong disabled:text-canvas",
         ],

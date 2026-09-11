@@ -3,6 +3,7 @@ import type { BaseRole } from "@repo/contracts/permissions";
 
 import type { Result } from "../../common/domain/result";
 import { failure, success } from "../../common/domain/result";
+import type { OnboardingEvidenceRecorder } from "../../organizations/application/onboarding-evidence-recorder.port";
 import type { InvitationNotifierPort } from "./invitation-notifier.port";
 import type {
   InvitationActor,
@@ -36,6 +37,10 @@ export type CreateInvitationError =
   | Readonly<{
       code: "notification_failed";
       invitationId: string;
+    }>
+  | Readonly<{
+      code: "evidence_failed";
+      invitationId: string;
     }>;
 
 export class CreateInvitationUseCase {
@@ -43,6 +48,7 @@ export class CreateInvitationUseCase {
     private readonly repository: InvitationRepository,
     private readonly tokens: InvitationTokenPort,
     private readonly notifier: InvitationNotifierPort,
+    private readonly evidence: OnboardingEvidenceRecorder,
     private readonly clock: ClockPort,
     private readonly ttlDays: number,
   ) {}
@@ -119,6 +125,21 @@ export class CreateInvitationUseCase {
       return failure(
         Object.freeze({
           code: "notification_failed" as const,
+          invitationId: invitation.id,
+        }),
+      );
+    }
+
+    try {
+      await this.evidence.recordInvitationDelivery(
+        command.orgId,
+        invitation.id,
+        command.actor.id,
+      );
+    } catch {
+      return failure(
+        Object.freeze({
+          code: "evidence_failed" as const,
           invitationId: invitation.id,
         }),
       );

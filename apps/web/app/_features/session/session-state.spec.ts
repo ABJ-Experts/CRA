@@ -53,7 +53,7 @@ describe("deriveSessionState", () => {
     ).toMatchObject({ isLoading: false, isError: false, menu: null });
   });
 
-  it("does not expose partial menu data while another session query is pending or failed", () => {
+  it("preserves a parsed server menu when identity enrichment is pending or failed", () => {
     expect(
       deriveSessionState({
         enabled: true,
@@ -63,7 +63,7 @@ describe("deriveSessionState", () => {
         loading: true,
         error: false,
       }).menu,
-    ).toBeNull();
+    ).toEqual(["dashboard"]);
     expect(
       deriveSessionState({
         enabled: true,
@@ -73,7 +73,7 @@ describe("deriveSessionState", () => {
         loading: false,
         error: true,
       }).menu,
-    ).toBeNull();
+    ).toEqual(["dashboard"]);
   });
 
   it("returns fresh values so callers cannot mutate query cache data", () => {
@@ -82,7 +82,7 @@ describe("deriveSessionState", () => {
       role: "viewer" as const,
       permissions: { can_view_orders: true },
     };
-    const menu = ["dashboard", "ecommerce.orders"] as const;
+    const menu = ["dashboard", "organization"] as const;
 
     const state = deriveSessionState({
       enabled: true,

@@ -4,14 +4,21 @@ import { ThrottlerModule } from "@nestjs/throttler";
 
 import { AuthModule } from "./auth/auth.module";
 import { HttpBoundaryModule } from "./common/http/http-boundary.module";
+import { ConnectorsModule } from "./connectors/connectors.module";
 import { SecurityModule } from "./common/security/security.module";
 import { validateEnv } from "./config/env.validation";
+import { FindingsModule } from "./findings/findings.module";
 import { HealthController } from "./health/health.controller";
 import { MailModule } from "./mail/mail.module";
 import { InvitationsModule } from "./invitations/invitations.module";
+import { OrganizationsModule } from "./organizations/organizations.module";
 import { PermissionsModule } from "./permissions/permissions.module";
+import { ProductsModule } from "./products/products.module";
+import { ReportingModule } from "./reporting/reporting.module";
 import { SupabaseModule } from "./supabase/supabase.module";
+import { SbomModule } from "./sboms/sbom.module";
 import { UsersModule } from "./users/users.module";
+import { VulnerabilitiesModule } from "./vulnerabilities/vulnerabilities.module";
 
 @Module({
   imports: [
@@ -41,9 +48,16 @@ import { UsersModule } from "./users/users.module";
     MailModule,
     AuthModule,
     PermissionsModule,
+    ProductsModule,
+    ReportingModule,
+    ConnectorsModule,
+    FindingsModule,
     SecurityModule,
     UsersModule,
+    OrganizationsModule,
     InvitationsModule,
+    SbomModule,
+    VulnerabilitiesModule,
   ],
   controllers: [HealthController],
 })

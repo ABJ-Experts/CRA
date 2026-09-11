@@ -1,0 +1,6 @@
+-- No-op placeholder.
+--
+-- This version was applied locally while aligning the M2 V2 artifact contract
+-- limits and download/list RPC behavior. The reviewed clean-install migration
+-- already includes those changes, so this file preserves migration-history
+-- continuity without altering clean databases a second time.

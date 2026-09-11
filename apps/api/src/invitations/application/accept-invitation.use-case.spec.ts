@@ -55,6 +55,10 @@ class AcceptanceRepositoryFake implements InvitationRepository {
     return Promise.reject(new Error("not used"));
   }
 
+  resendAtomic(): Promise<never> {
+    return Promise.reject(new Error("not used"));
+  }
+
   list(): Promise<readonly Invitation[]> {
     return Promise.reject(new Error("not used"));
   }

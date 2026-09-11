@@ -90,6 +90,55 @@ begin
     on conflict (organization_id, user_id) do nothing;
   end loop;
 
+  -- The default legal entity normally appears when the owner submits the
+  -- organization's legal profile through onboarding (the
+  -- ensure_default_legal_entity_for_profile trigger). The seed inserts the
+  -- organization directly, so it must create the same row itself: the
+  -- product registry and the integration suites expect every established
+  -- organization to carry one active default entity.
+  insert into public.organization_legal_entities (
+    organization_id, identifier, display_name, legal_name,
+    registered_address_line_1, registered_address_locality,
+    registered_address_postal_code, registered_address_country,
+    main_establishment_country, manufacturer_contact_name,
+    manufacturer_contact_email, completion_status, status,
+    is_default, created_by, updated_by
+  )
+  select
+    v_org_id, 'default', 'CRA', 'CRA Seed Legal Entity',
+    'Seed Plaza 1', 'Berlin', '10115', 'DE',
+    'DE', 'CRA Owner', 'owner@cra.test',
+    'complete', 'active',
+    true, members.user_id, members.user_id
+  from public.organization_members members
+  where members.organization_id = v_org_id and members.role = 'owner'
+  on conflict (organization_id) where is_default do nothing;
+
+  -- Onboarding stages are normally initialized by the organization-creation
+  -- RPC. The seed org never runs that flow, and the onboarding contract is a
+  -- five-stage tuple, so a missing row set turns the read into a 500. Use
+  -- the same pending-details backfill shape the migration applied to
+  -- organizations that predate onboarding.
+  insert into public.organization_onboarding (organization_id)
+  values (v_org_id)
+  on conflict (organization_id) do nothing;
+
+  insert into public.organization_onboarding_stages (
+    organization_id, stage, stage_order, status, block_reason
+  )
+  select
+    v_org_id, stage_data.stage, stage_data.stage_order,
+    stage_data.status, stage_data.block_reason
+  from (
+    values
+      ('organization_details'::text, 1::smallint, 'pending'::text, null::text),
+      ('first_product', 2, 'blocked', 'awaiting_prior_stage'),
+      ('first_sbom', 3, 'blocked', 'awaiting_prior_stage'),
+      ('invite_team', 4, 'blocked', 'awaiting_prior_stage'),
+      ('completed', 5, 'blocked', 'awaiting_prior_stage')
+  ) as stage_data(stage, stage_order, status, block_reason)
+  on conflict (organization_id, stage) do nothing;
+
   -- Seed accounts represent established team members, not sign-up candidates.
   -- The API's server-side verification gate must therefore treat them as
   -- already verified on both a fresh reset and an idempotent seed rerun.
