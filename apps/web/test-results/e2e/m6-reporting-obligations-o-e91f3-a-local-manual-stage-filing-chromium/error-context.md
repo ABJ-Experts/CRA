@@ -122,7 +122,7 @@ waiting for event "download"
                   - option "Severe incident"
               - generic [ref=f2e154]:
                 - text: Awareness time
-                - textbox "Awareness time" [ref=f2e157]: 2026-09-11T11:49
+                - textbox "Awareness time" [ref=f2e157]: 2026-09-11T12:01
               - generic [ref=f2e158]:
                 - text: Source
                 - combobox "Source" [ref=f2e159] [cursor=pointer]:
@@ -147,16 +147,16 @@ waiting for event "download"
                 - row [ref=f2e175]:
                   - cell [ref=f2e176]:
                     - button "Actively exploited vulnerability" [ref=f2e177] [cursor=pointer]
-                    - paragraph [ref=f2e178]: Awareness Sep 11, 2026, 11:49 AM GMT+5:30
+                    - paragraph [ref=f2e178]: Awareness Sep 11, 2026, 12:01 PM GMT+5:30
                   - cell "active" [ref=f2e179]
-                  - cell "Early Warning · Sep 12, 2026, 11:49 AM GMT+5:30" [ref=f2e183]
+                  - cell "Early Warning · Sep 12, 2026, 12:01 PM GMT+5:30" [ref=f2e183]
                   - cell "1" [ref=f2e184]
                 - row [ref=f2e185]:
                   - cell [ref=f2e186]:
                     - button "Actively exploited vulnerability" [ref=f2e187] [cursor=pointer]
-                    - paragraph [ref=f2e188]: Awareness Sep 11, 2026, 11:47 AM GMT+5:30
+                    - paragraph [ref=f2e188]: Awareness Sep 11, 2026, 11:49 AM GMT+5:30
                   - cell "active" [ref=f2e189]
-                  - cell "Early Warning · Sep 12, 2026, 11:47 AM GMT+5:30" [ref=f2e193]
+                  - cell "Early Warning · Sep 12, 2026, 11:49 AM GMT+5:30" [ref=f2e193]
                   - cell "1" [ref=f2e194]
                 - row [ref=f2e195]:
                   - cell [ref=f2e196]:
@@ -175,23 +175,23 @@ waiting for event "download"
                 - row [ref=f2e215]:
                   - cell [ref=f2e216]:
                     - button "Actively exploited vulnerability" [ref=f2e217] [cursor=pointer]
-                    - paragraph [ref=f2e218]: Awareness Sep 11, 2026, 11:44 AM GMT+5:30
+                    - paragraph [ref=f2e218]: Awareness Sep 11, 2026, 11:47 AM GMT+5:30
                   - cell "active" [ref=f2e219]
-                  - cell "Early Warning · Sep 12, 2026, 11:44 AM GMT+5:30" [ref=f2e223]
+                  - cell "Early Warning · Sep 12, 2026, 11:47 AM GMT+5:30" [ref=f2e223]
                   - cell "1" [ref=f2e224]
                 - row [ref=f2e225]:
                   - cell [ref=f2e226]:
                     - button "Actively exploited vulnerability" [ref=f2e227] [cursor=pointer]
-                    - paragraph [ref=f2e228]: Awareness Sep 11, 2026, 11:41 AM GMT+5:30
+                    - paragraph [ref=f2e228]: Awareness Sep 11, 2026, 11:44 AM GMT+5:30
                   - cell "active" [ref=f2e229]
-                  - cell "Early Warning · Sep 12, 2026, 11:41 AM GMT+5:30" [ref=f2e233]
+                  - cell "Early Warning · Sep 12, 2026, 11:44 AM GMT+5:30" [ref=f2e233]
                   - cell "1" [ref=f2e234]
                 - row [ref=f2e235]:
                   - cell [ref=f2e236]:
                     - button "Actively exploited vulnerability" [ref=f2e237] [cursor=pointer]
-                    - paragraph [ref=f2e238]: Awareness Sep 11, 2026, 11:33 AM GMT+5:30
+                    - paragraph [ref=f2e238]: Awareness Sep 11, 2026, 11:41 AM GMT+5:30
                   - cell "active" [ref=f2e239]
-                  - cell "Early Warning · Sep 12, 2026, 11:33 AM GMT+5:30" [ref=f2e243]
+                  - cell "Early Warning · Sep 12, 2026, 11:41 AM GMT+5:30" [ref=f2e243]
                   - cell "1" [ref=f2e244]
                 - row [ref=f2e245]:
                   - cell [ref=f2e246]:
@@ -203,58 +203,58 @@ waiting for event "download"
                 - row [ref=f2e255]:
                   - cell [ref=f2e256]:
                     - button "Actively exploited vulnerability" [ref=f2e257] [cursor=pointer]
-                    - paragraph [ref=f2e258]: Awareness Sep 11, 2026, 11:31 AM GMT+5:30
+                    - paragraph [ref=f2e258]: Awareness Sep 11, 2026, 11:33 AM GMT+5:30
                   - cell "active" [ref=f2e259]
-                  - cell "Early Warning · Sep 12, 2026, 11:31 AM GMT+5:30" [ref=f2e263]
+                  - cell "Early Warning · Sep 12, 2026, 11:33 AM GMT+5:30" [ref=f2e263]
                   - cell "1" [ref=f2e264]
                 - row [ref=f2e265]:
                   - cell [ref=f2e266]:
                     - button "Actively exploited vulnerability" [ref=f2e267] [cursor=pointer]
-                    - paragraph [ref=f2e268]: Awareness Sep 11, 2026, 11:28 AM GMT+5:30
+                    - paragraph [ref=f2e268]: Awareness Sep 11, 2026, 11:31 AM GMT+5:30
                   - cell "active" [ref=f2e269]
-                  - cell "Early Warning · Sep 12, 2026, 11:28 AM GMT+5:30" [ref=f2e273]
+                  - cell "Early Warning · Sep 12, 2026, 11:31 AM GMT+5:30" [ref=f2e273]
                   - cell "1" [ref=f2e274]
                 - row [ref=f2e275]:
                   - cell [ref=f2e276]:
                     - button "Actively exploited vulnerability" [ref=f2e277] [cursor=pointer]
-                    - paragraph [ref=f2e278]: Awareness Sep 11, 2026, 11:13 AM GMT+5:30
+                    - paragraph [ref=f2e278]: Awareness Sep 11, 2026, 11:28 AM GMT+5:30
                   - cell "active" [ref=f2e279]
-                  - cell "Early Warning · Sep 12, 2026, 11:13 AM GMT+5:30" [ref=f2e283]
+                  - cell "Early Warning · Sep 12, 2026, 11:28 AM GMT+5:30" [ref=f2e283]
                   - cell "1" [ref=f2e284]
                 - row [ref=f2e285]:
                   - cell [ref=f2e286]:
                     - button "Actively exploited vulnerability" [ref=f2e287] [cursor=pointer]
-                    - paragraph [ref=f2e288]: Awareness Sep 10, 2026, 06:14 PM GMT+5:30
+                    - paragraph [ref=f2e288]: Awareness Sep 11, 2026, 11:13 AM GMT+5:30
                   - cell "active" [ref=f2e289]
-                  - cell "Early Warning · Sep 11, 2026, 06:14 PM GMT+5:30" [ref=f2e293]
+                  - cell "Early Warning · Sep 12, 2026, 11:13 AM GMT+5:30" [ref=f2e293]
                   - cell "1" [ref=f2e294]
                 - row [ref=f2e295]:
                   - cell [ref=f2e296]:
                     - button "Actively exploited vulnerability" [ref=f2e297] [cursor=pointer]
-                    - paragraph [ref=f2e298]: Awareness Sep 10, 2026, 06:13 PM GMT+5:30
+                    - paragraph [ref=f2e298]: Awareness Sep 10, 2026, 06:14 PM GMT+5:30
                   - cell "active" [ref=f2e299]
-                  - cell "Early Warning · Sep 11, 2026, 06:13 PM GMT+5:30" [ref=f2e303]
+                  - cell "Early Warning · Sep 11, 2026, 06:14 PM GMT+5:30" [ref=f2e303]
                   - cell "1" [ref=f2e304]
                 - row [ref=f2e305]:
                   - cell [ref=f2e306]:
                     - button "Actively exploited vulnerability" [ref=f2e307] [cursor=pointer]
-                    - paragraph [ref=f2e308]: Awareness Sep 10, 2026, 06:03 PM GMT+5:30
+                    - paragraph [ref=f2e308]: Awareness Sep 10, 2026, 06:13 PM GMT+5:30
                   - cell "active" [ref=f2e309]
-                  - cell "Early Warning · Sep 11, 2026, 06:03 PM GMT+5:30" [ref=f2e313]
+                  - cell "Early Warning · Sep 11, 2026, 06:13 PM GMT+5:30" [ref=f2e313]
                   - cell "1" [ref=f2e314]
                 - row [ref=f2e315]:
                   - cell [ref=f2e316]:
                     - button "Actively exploited vulnerability" [ref=f2e317] [cursor=pointer]
-                    - paragraph [ref=f2e318]: Awareness Sep 10, 2026, 06:02 PM GMT+5:30
+                    - paragraph [ref=f2e318]: Awareness Sep 10, 2026, 06:03 PM GMT+5:30
                   - cell "active" [ref=f2e319]
-                  - cell "Early Warning · Sep 11, 2026, 06:02 PM GMT+5:30" [ref=f2e323]
+                  - cell "Early Warning · Sep 11, 2026, 06:03 PM GMT+5:30" [ref=f2e323]
                   - cell "1" [ref=f2e324]
                 - row [ref=f2e325]:
                   - cell [ref=f2e326]:
                     - button "Actively exploited vulnerability" [ref=f2e327] [cursor=pointer]
-                    - paragraph [ref=f2e328]: Awareness Sep 10, 2026, 04:06 PM GMT+5:30
+                    - paragraph [ref=f2e328]: Awareness Sep 10, 2026, 06:02 PM GMT+5:30
                   - cell "active" [ref=f2e329]
-                  - cell "Early Warning · Sep 11, 2026, 04:06 PM GMT+5:30" [ref=f2e333]
+                  - cell "Early Warning · Sep 11, 2026, 06:02 PM GMT+5:30" [ref=f2e333]
                   - cell "1" [ref=f2e334]
                 - row [ref=f2e335]:
                   - cell [ref=f2e336]:
@@ -266,16 +266,16 @@ waiting for event "download"
                 - row [ref=f2e345]:
                   - cell [ref=f2e346]:
                     - button "Actively exploited vulnerability" [ref=f2e347] [cursor=pointer]
-                    - paragraph [ref=f2e348]: Awareness Sep 10, 2026, 04:04 PM GMT+5:30
+                    - paragraph [ref=f2e348]: Awareness Sep 10, 2026, 04:06 PM GMT+5:30
                   - cell "active" [ref=f2e349]
-                  - cell "Early Warning · Sep 11, 2026, 04:04 PM GMT+5:30" [ref=f2e353]
+                  - cell "Early Warning · Sep 11, 2026, 04:06 PM GMT+5:30" [ref=f2e353]
                   - cell "1" [ref=f2e354]
                 - row [ref=f2e355]:
                   - cell [ref=f2e356]:
                     - button "Actively exploited vulnerability" [ref=f2e357] [cursor=pointer]
-                    - paragraph [ref=f2e358]: Awareness Sep 10, 2026, 03:30 PM GMT+5:30
+                    - paragraph [ref=f2e358]: Awareness Sep 10, 2026, 04:04 PM GMT+5:30
                   - cell "active" [ref=f2e359]
-                  - cell "Early Warning · Sep 11, 2026, 03:30 PM GMT+5:30" [ref=f2e363]
+                  - cell "Early Warning · Sep 11, 2026, 04:04 PM GMT+5:30" [ref=f2e363]
                   - cell "1" [ref=f2e364]
                 - row [ref=f2e365]:
                   - cell [ref=f2e366]:
@@ -294,17 +294,17 @@ waiting for event "download"
                 - row [ref=f2e385]:
                   - cell [ref=f2e386]:
                     - button "Actively exploited vulnerability" [ref=f2e387] [cursor=pointer]
-                    - paragraph [ref=f2e388]: Awareness Sep 10, 2026, 03:29 PM GMT+5:30
+                    - paragraph [ref=f2e388]: Awareness Sep 10, 2026, 03:30 PM GMT+5:30
                   - cell "active" [ref=f2e389]
-                  - cell "Early Warning · Sep 11, 2026, 03:29 PM GMT+5:30" [ref=f2e393]
+                  - cell "Early Warning · Sep 11, 2026, 03:30 PM GMT+5:30" [ref=f2e393]
                   - cell "1" [ref=f2e394]
                 - row [ref=f2e395]:
                   - cell [ref=f2e396]:
                     - button "Actively exploited vulnerability" [ref=f2e397] [cursor=pointer]
-                    - paragraph [ref=f2e398]: Awareness Sep 10, 2026, 02:43 PM GMT+5:30
+                    - paragraph [ref=f2e398]: Awareness Sep 10, 2026, 03:29 PM GMT+5:30
                   - cell "active" [ref=f2e399]
-                  - cell "Notification · Sep 13, 2026, 02:43 PM GMT+5:30" [ref=f2e403]
-                  - cell "2" [ref=f2e404]
+                  - cell "Early Warning · Sep 11, 2026, 03:29 PM GMT+5:30" [ref=f2e403]
+                  - cell "1" [ref=f2e404]
                 - row [ref=f2e405]:
                   - cell [ref=f2e406]:
                     - button "Actively exploited vulnerability" [ref=f2e407] [cursor=pointer]
@@ -315,17 +315,17 @@ waiting for event "download"
                 - row [ref=f2e415]:
                   - cell [ref=f2e416]:
                     - button "Actively exploited vulnerability" [ref=f2e417] [cursor=pointer]
-                    - paragraph [ref=f2e418]: Awareness Sep 10, 2026, 02:42 PM GMT+5:30
+                    - paragraph [ref=f2e418]: Awareness Sep 10, 2026, 02:43 PM GMT+5:30
                   - cell "active" [ref=f2e419]
-                  - cell "Notification · Sep 13, 2026, 02:42 PM GMT+5:30" [ref=f2e423]
+                  - cell "Notification · Sep 13, 2026, 02:43 PM GMT+5:30" [ref=f2e423]
                   - cell "2" [ref=f2e424]
                 - row [ref=f2e425]:
                   - cell [ref=f2e426]:
                     - button "Actively exploited vulnerability" [ref=f2e427] [cursor=pointer]
-                    - paragraph [ref=f2e428]: Awareness Sep 10, 2026, 02:41 PM GMT+5:30
+                    - paragraph [ref=f2e428]: Awareness Sep 10, 2026, 02:42 PM GMT+5:30
                   - cell "active" [ref=f2e429]
-                  - cell "Early Warning · Sep 11, 2026, 02:41 PM GMT+5:30" [ref=f2e433]
-                  - cell "1" [ref=f2e434]
+                  - cell "Notification · Sep 13, 2026, 02:42 PM GMT+5:30" [ref=f2e433]
+                  - cell "2" [ref=f2e434]
                 - row [ref=f2e435]:
                   - cell [ref=f2e436]:
                     - button "Actively exploited vulnerability" [ref=f2e437] [cursor=pointer]
@@ -336,115 +336,115 @@ waiting for event "download"
                 - row [ref=f2e445]:
                   - cell [ref=f2e446]:
                     - button "Actively exploited vulnerability" [ref=f2e447] [cursor=pointer]
-                    - paragraph [ref=f2e448]: Awareness Sep 10, 2026, 02:40 PM GMT+5:30
+                    - paragraph [ref=f2e448]: Awareness Sep 10, 2026, 02:41 PM GMT+5:30
                   - cell "active" [ref=f2e449]
-                  - cell "Early Warning · Sep 11, 2026, 02:40 PM GMT+5:30" [ref=f2e453]
+                  - cell "Early Warning · Sep 11, 2026, 02:41 PM GMT+5:30" [ref=f2e453]
                   - cell "1" [ref=f2e454]
                 - row [ref=f2e455]:
                   - cell [ref=f2e456]:
                     - button "Actively exploited vulnerability" [ref=f2e457] [cursor=pointer]
-                    - paragraph [ref=f2e458]: Awareness Sep 10, 2026, 02:37 PM GMT+5:30
+                    - paragraph [ref=f2e458]: Awareness Sep 10, 2026, 02:40 PM GMT+5:30
                   - cell "active" [ref=f2e459]
-                  - cell "Early Warning · Sep 11, 2026, 02:37 PM GMT+5:30" [ref=f2e463]
+                  - cell "Early Warning · Sep 11, 2026, 02:40 PM GMT+5:30" [ref=f2e463]
                   - cell "1" [ref=f2e464]
                 - row [ref=f2e465]:
                   - cell [ref=f2e466]:
                     - button "Actively exploited vulnerability" [ref=f2e467] [cursor=pointer]
-                    - paragraph [ref=f2e468]: Awareness Sep 10, 2026, 02:36 PM GMT+5:30
+                    - paragraph [ref=f2e468]: Awareness Sep 10, 2026, 02:37 PM GMT+5:30
                   - cell "active" [ref=f2e469]
-                  - cell "Early Warning · Sep 11, 2026, 02:36 PM GMT+5:30" [ref=f2e473]
+                  - cell "Early Warning · Sep 11, 2026, 02:37 PM GMT+5:30" [ref=f2e473]
                   - cell "1" [ref=f2e474]
                 - row [ref=f2e475]:
                   - cell [ref=f2e476]:
                     - button "Actively exploited vulnerability" [ref=f2e477] [cursor=pointer]
-                    - paragraph [ref=f2e478]: Awareness Sep 10, 2026, 02:34 PM GMT+5:30
+                    - paragraph [ref=f2e478]: Awareness Sep 10, 2026, 02:36 PM GMT+5:30
                   - cell "active" [ref=f2e479]
-                  - cell "Early Warning · Sep 11, 2026, 02:34 PM GMT+5:30" [ref=f2e483]
+                  - cell "Early Warning · Sep 11, 2026, 02:36 PM GMT+5:30" [ref=f2e483]
                   - cell "1" [ref=f2e484]
                 - row [ref=f2e485]:
                   - cell [ref=f2e486]:
                     - button "Actively exploited vulnerability" [ref=f2e487] [cursor=pointer]
-                    - paragraph [ref=f2e488]: Awareness Sep 10, 2026, 02:33 PM GMT+5:30
-                  - cell "cancelled" [ref=f2e489]
-                  - cell "No active timer" [ref=f2e493]
-                  - cell "4" [ref=f2e494]
+                    - paragraph [ref=f2e488]: Awareness Sep 10, 2026, 02:34 PM GMT+5:30
+                  - cell "active" [ref=f2e489]
+                  - cell "Early Warning · Sep 11, 2026, 02:34 PM GMT+5:30" [ref=f2e493]
+                  - cell "1" [ref=f2e494]
                 - row [ref=f2e495]:
                   - cell [ref=f2e496]:
                     - button "Actively exploited vulnerability" [ref=f2e497] [cursor=pointer]
-                    - paragraph [ref=f2e498]: Awareness Sep 9, 2026, 06:06 PM GMT+5:30
+                    - paragraph [ref=f2e498]: Awareness Sep 10, 2026, 02:33 PM GMT+5:30
                   - cell "cancelled" [ref=f2e499]
                   - cell "No active timer" [ref=f2e503]
-                  - cell "2" [ref=f2e504]
+                  - cell "4" [ref=f2e504]
                 - row [ref=f2e505]:
                   - cell [ref=f2e506]:
                     - button "Actively exploited vulnerability" [ref=f2e507] [cursor=pointer]
-                    - paragraph [ref=f2e508]: Awareness Sep 9, 2026, 05:55 PM GMT+5:30
+                    - paragraph [ref=f2e508]: Awareness Sep 9, 2026, 06:06 PM GMT+5:30
                   - cell "cancelled" [ref=f2e509]
                   - cell "No active timer" [ref=f2e513]
-                  - cell "4" [ref=f2e514]
+                  - cell "2" [ref=f2e514]
                 - row [ref=f2e515]:
                   - cell [ref=f2e516]:
                     - button "Actively exploited vulnerability" [ref=f2e517] [cursor=pointer]
-                    - paragraph [ref=f2e518]: Awareness Sep 9, 2026, 04:15 PM GMT+5:30
+                    - paragraph [ref=f2e518]: Awareness Sep 9, 2026, 05:55 PM GMT+5:30
                   - cell "cancelled" [ref=f2e519]
                   - cell "No active timer" [ref=f2e523]
                   - cell "4" [ref=f2e524]
                 - row [ref=f2e525]:
                   - cell [ref=f2e526]:
                     - button "Actively exploited vulnerability" [ref=f2e527] [cursor=pointer]
-                    - paragraph [ref=f2e528]: Awareness Sep 9, 2026, 04:07 PM GMT+5:30
+                    - paragraph [ref=f2e528]: Awareness Sep 9, 2026, 04:15 PM GMT+5:30
                   - cell "cancelled" [ref=f2e529]
                   - cell "No active timer" [ref=f2e533]
-                  - cell "6" [ref=f2e534]
+                  - cell "4" [ref=f2e534]
                 - row [ref=f2e535]:
                   - cell [ref=f2e536]:
                     - button "Actively exploited vulnerability" [ref=f2e537] [cursor=pointer]
-                    - paragraph [ref=f2e538]: Awareness Sep 9, 2026, 04:12 PM GMT+5:30
-                  - cell "active" [ref=f2e539]
-                  - cell "Early Warning · Sep 10, 2026, 04:12 PM GMT+5:30" [ref=f2e543]
-                  - cell "1" [ref=f2e544]
+                    - paragraph [ref=f2e538]: Awareness Sep 9, 2026, 04:07 PM GMT+5:30
+                  - cell "cancelled" [ref=f2e539]
+                  - cell "No active timer" [ref=f2e543]
+                  - cell "6" [ref=f2e544]
                 - row [ref=f2e545]:
                   - cell [ref=f2e546]:
                     - button "Actively exploited vulnerability" [ref=f2e547] [cursor=pointer]
-                    - paragraph [ref=f2e548]: Awareness Sep 9, 2026, 04:10 PM GMT+5:30
+                    - paragraph [ref=f2e548]: Awareness Sep 9, 2026, 04:12 PM GMT+5:30
                   - cell "active" [ref=f2e549]
-                  - cell "Early Warning · Sep 10, 2026, 04:10 PM GMT+5:30" [ref=f2e553]
+                  - cell "Early Warning · Sep 10, 2026, 04:12 PM GMT+5:30" [ref=f2e553]
                   - cell "1" [ref=f2e554]
                 - row [ref=f2e555]:
                   - cell [ref=f2e556]:
                     - button "Actively exploited vulnerability" [ref=f2e557] [cursor=pointer]
-                    - paragraph [ref=f2e558]: Awareness Sep 9, 2026, 04:09 PM GMT+5:30
+                    - paragraph [ref=f2e558]: Awareness Sep 9, 2026, 04:10 PM GMT+5:30
                   - cell "active" [ref=f2e559]
-                  - cell "Early Warning · Sep 10, 2026, 04:09 PM GMT+5:30" [ref=f2e563]
+                  - cell "Early Warning · Sep 10, 2026, 04:10 PM GMT+5:30" [ref=f2e563]
                   - cell "1" [ref=f2e564]
                 - row [ref=f2e565]:
                   - cell [ref=f2e566]:
                     - button "Actively exploited vulnerability" [ref=f2e567] [cursor=pointer]
-                    - paragraph [ref=f2e568]: Awareness Sep 9, 2026, 04:05 PM GMT+5:30
+                    - paragraph [ref=f2e568]: Awareness Sep 9, 2026, 04:09 PM GMT+5:30
                   - cell "active" [ref=f2e569]
-                  - cell "Early Warning · Sep 10, 2026, 04:05 PM GMT+5:30" [ref=f2e573]
+                  - cell "Early Warning · Sep 10, 2026, 04:09 PM GMT+5:30" [ref=f2e573]
                   - cell "1" [ref=f2e574]
                 - row [ref=f2e575]:
                   - cell [ref=f2e576]:
                     - button "Actively exploited vulnerability" [ref=f2e577] [cursor=pointer]
-                    - paragraph [ref=f2e578]: Awareness Sep 9, 2026, 04:03 PM GMT+5:30
+                    - paragraph [ref=f2e578]: Awareness Sep 9, 2026, 04:05 PM GMT+5:30
                   - cell "active" [ref=f2e579]
-                  - cell "Early Warning · Sep 10, 2026, 04:03 PM GMT+5:30" [ref=f2e583]
+                  - cell "Early Warning · Sep 10, 2026, 04:05 PM GMT+5:30" [ref=f2e583]
                   - cell "1" [ref=f2e584]
                 - row [ref=f2e585]:
                   - cell [ref=f2e586]:
                     - button "Actively exploited vulnerability" [ref=f2e587] [cursor=pointer]
-                    - paragraph [ref=f2e588]: Awareness Sep 9, 2026, 03:52 PM GMT+5:30
-                  - cell "cancelled" [ref=f2e589]
-                  - cell "No active timer" [ref=f2e593]
-                  - cell "4" [ref=f2e594]
+                    - paragraph [ref=f2e588]: Awareness Sep 9, 2026, 04:03 PM GMT+5:30
+                  - cell "active" [ref=f2e589]
+                  - cell "Early Warning · Sep 10, 2026, 04:03 PM GMT+5:30" [ref=f2e593]
+                  - cell "1" [ref=f2e594]
                 - row [ref=f2e595]:
                   - cell [ref=f2e596]:
                     - button "Actively exploited vulnerability" [ref=f2e597] [cursor=pointer]
-                    - paragraph [ref=f2e598]: Awareness Apr 14, 2026, 09:20 AM GMT+5:30
+                    - paragraph [ref=f2e598]: Awareness Sep 9, 2026, 03:52 PM GMT+5:30
                   - cell "cancelled" [ref=f2e599]
                   - cell "No active timer" [ref=f2e603]
-                  - cell "2" [ref=f2e604]
+                  - cell "4" [ref=f2e604]
                 - row [ref=f2e605]:
                   - cell [ref=f2e606]:
                     - button "Actively exploited vulnerability" [ref=f2e607] [cursor=pointer]
@@ -462,181 +462,188 @@ waiting for event "download"
                 - row [ref=f2e625]:
                   - cell [ref=f2e626]:
                     - button "Actively exploited vulnerability" [ref=f2e627] [cursor=pointer]
-                    - paragraph [ref=f2e628]: Awareness Apr 14, 2026, 08:20 AM GMT+5:30
+                    - paragraph [ref=f2e628]: Awareness Apr 14, 2026, 09:20 AM GMT+5:30
                   - cell "cancelled" [ref=f2e629]
                   - cell "No active timer" [ref=f2e633]
-                  - cell "4" [ref=f2e634]
-            - complementary [ref=f2e635]:
-              - heading "Selected obligation" [level=2] [ref=f2e636]
-              - paragraph [ref=f2e637]: 7d6ef3c1-0971-4b7e-a1ba-433f2c29043a
-              - generic [ref=f2e638]:
-                - generic [ref=f2e639]:
-                  - term [ref=f2e640]: Rule version
-                  - definition [ref=f2e641]: EU-CRA v1
-                - generic [ref=f2e642]:
-                  - term [ref=f2e643]: Author
-                  - definition [ref=f2e644]: Owner Account
-              - list [ref=f2e645]:
-                - listitem [ref=f2e646]:
-                  - generic [ref=f2e647]:
-                    - generic [ref=f2e648]: Early Warning
-                    - generic [ref=f2e649]: running
-                  - paragraph [ref=f2e652]: Due Sep 12, 2026, 11:49 AM GMT+5:30
-                  - paragraph [ref=f2e653]: 23h 58m remaining · 0% elapsed
-                  - region [ref=f2e654]:
-                    - generic [ref=f2e655]:
-                      - generic [ref=f2e656]:
-                        - heading "Early Warning draft" [level=3] [ref=f2e657]
-                        - paragraph [ref=f2e658]: Release-scoped draft content is saved independently from the submitted stage record.
-                      - generic [ref=f2e659]: editable
-                    - status [ref=f2e662]: Editing lock acquired. Save before it expires.
-                    - group "Draft fields" [ref=f2e663]:
-                      - generic [ref=f2e665]:
-                        - generic [ref=f2e666]: Initial summary (required)
-                        - generic [ref=f2e667]: What happened and why this report is required.
-                        - 'textbox "Initial summary (required) What happened and why this report is required. Source: Entered by Owner Account" [ref=f2e668]': "LOCAL-M6-E2E-1789107583451: initial summary."
-                        - generic [ref=f2e669]: "Source: Entered by Owner Account"
-                      - generic [ref=f2e670]:
-                        - generic [ref=f2e671]: Known impact (required)
-                        - generic [ref=f2e672]: Known or reasonably suspected impact.
-                        - 'textbox "Known impact (required) Known or reasonably suspected impact. Source: Entered by Owner Account" [ref=f2e673]': "LOCAL-M6-E2E-1789107583451: known impact."
-                        - generic [ref=f2e674]: "Source: Entered by Owner Account"
+                  - cell "2" [ref=f2e634]
+                - row [ref=f2e635]:
+                  - cell [ref=f2e636]:
+                    - button "Actively exploited vulnerability" [ref=f2e637] [cursor=pointer]
+                    - paragraph [ref=f2e638]: Awareness Apr 14, 2026, 08:20 AM GMT+5:30
+                  - cell "cancelled" [ref=f2e639]
+                  - cell "No active timer" [ref=f2e643]
+                  - cell "4" [ref=f2e644]
+            - complementary [ref=f2e645]:
+              - heading "Selected obligation" [level=2] [ref=f2e646]
+              - paragraph [ref=f2e647]: a0dfd384-2a7d-4653-9e19-fff057b11ba6
+              - generic [ref=f2e648]:
+                - generic [ref=f2e649]:
+                  - term [ref=f2e650]: Rule version
+                  - definition [ref=f2e651]: EU-CRA v1
+                - generic [ref=f2e652]:
+                  - term [ref=f2e653]: Author
+                  - definition [ref=f2e654]: Owner Account
+              - list [ref=f2e655]:
+                - listitem [ref=f2e656]:
+                  - generic [ref=f2e657]:
+                    - generic [ref=f2e658]: Early Warning
+                    - generic [ref=f2e659]: running
+                  - paragraph [ref=f2e662]: Due Sep 12, 2026, 12:01 PM GMT+5:30
+                  - paragraph [ref=f2e663]: 23h 58m remaining · 0% elapsed
+                  - region [ref=f2e664]:
+                    - generic [ref=f2e665]:
+                      - generic [ref=f2e666]:
+                        - heading "Early Warning draft" [level=3] [ref=f2e667]
+                        - paragraph [ref=f2e668]: Release-scoped draft content is saved independently from the submitted stage record.
+                      - generic [ref=f2e669]: editable
+                    - status [ref=f2e672]: Editing lock acquired. Save before it expires.
+                    - group "Draft fields" [ref=f2e673]:
                       - generic [ref=f2e675]:
+                        - generic [ref=f2e676]: Initial summary (required)
+                        - generic [ref=f2e677]: What happened and why this report is required.
+                        - 'textbox "Initial summary (required) What happened and why this report is required. Source: Entered by Owner Account" [ref=f2e678]': "LOCAL-M6-E2E-1789108303560: initial summary."
+                        - generic [ref=f2e679]: "Source: Entered by Owner Account"
+                      - generic [ref=f2e680]:
+                        - generic [ref=f2e681]: Known impact (required)
+                        - generic [ref=f2e682]: Known or reasonably suspected impact.
+                        - 'textbox "Known impact (required) Known or reasonably suspected impact. Source: Entered by Owner Account" [ref=f2e683]': "LOCAL-M6-E2E-1789108303560: known impact."
+                        - generic [ref=f2e684]: "Source: Entered by Owner Account"
+                      - generic [ref=f2e685]:
                         - text: Member States (comma-separated ISO codes)
-                        - textbox "Member States (comma-separated ISO codes) Corrected states retain their origin in the submitted evidence." [ref=f2e678]: DE
-                        - generic [ref=f2e679]: Corrected states retain their origin in the submitted evidence.
-                    - generic [ref=f2e680]:
-                      - heading "Reusable family template" [level=4] [ref=f2e681]
-                      - paragraph [ref=f2e682]: Templates exclude Member States and require review before submission.
-                      - generic [ref=f2e683]:
-                        - generic [ref=f2e684]:
+                        - textbox "Member States (comma-separated ISO codes) Corrected states retain their origin in the submitted evidence." [ref=f2e688]: DE
+                        - generic [ref=f2e689]: Corrected states retain their origin in the submitted evidence.
+                    - generic [ref=f2e690]:
+                      - heading "Reusable family template" [level=4] [ref=f2e691]
+                      - paragraph [ref=f2e692]: Templates exclude Member States and require review before submission.
+                      - generic [ref=f2e693]:
+                        - generic [ref=f2e694]:
                           - text: Save current reusable content as
-                          - textbox "Save current reusable content as" [ref=f2e687]:
+                          - textbox "Save current reusable content as" [ref=f2e697]:
                             - /placeholder: Template name
-                        - button "Save template" [disabled] [ref=f2e688]
-                    - button "Save draft" [disabled] [ref=f2e690]
-                    - generic "Report approval" [ref=f2e691]:
-                      - heading "Approval" [level=4] [ref=f2e692]
-                      - paragraph [ref=f2e693]: Approve revision 2. The displayed content, provenance, validation state and hash are bound to a single-use fresh reauthentication proof.
-                      - paragraph [ref=f2e694]: "Content hash: f8f5623d0ce2c191ddf8d35019be805be79598e6bc8438a78262a882df41e7b1"
-                      - generic [ref=f2e695]:
+                        - button "Save template" [disabled] [ref=f2e698]
+                    - button "Save draft" [disabled] [ref=f2e700]
+                    - generic "Report approval" [ref=f2e701]:
+                      - heading "Approval" [level=4] [ref=f2e702]
+                      - paragraph [ref=f2e703]: Approve revision 2. The displayed content, provenance, validation state and hash are bound to a single-use fresh reauthentication proof.
+                      - paragraph [ref=f2e704]: "Content hash: 1f465f9332047cf20d809cfea44646d97f5c44b92fab450cfb5a93b3716af65b"
+                      - generic [ref=f2e705]:
                         - text: Current password
-                        - textbox "Current password" [ref=f2e698]
-                      - generic [ref=f2e699]:
+                        - textbox "Current password" [ref=f2e708]
+                      - generic [ref=f2e709]:
                         - text: MFA code (if required)
-                        - textbox "MFA code (if required)" [ref=f2e702]
-                      - generic [ref=f2e703]:
-                        - text: Owner override reason (only when approving your own edits)
-                        - textbox "Owner override reason (only when approving your own edits)" [ref=f2e706]: The seeded owner is the only authorized responder for this local verification.
-                      - generic [ref=f2e707]:
-                        - button "Reauthenticate" [disabled] [ref=f2e708]
-                        - button "Approve stage" [disabled] [ref=f2e709]
-                    - generic "Manual submission package" [ref=f2e710]:
-                      - heading "Signed manual package" [level=4] [ref=f2e711]
-                      - paragraph [ref=f2e712]: Package generation preserves the approved snapshot. Downloading it does not record an external filing or stop a deadline.
+                        - textbox "MFA code (if required)" [ref=f2e712]
                       - generic [ref=f2e713]:
-                        - button "Generate package" [ref=f2e714] [cursor=pointer]
-                        - button "Download package" [ref=f2e715] [cursor=pointer]
-                      - status [ref=f2e716]: "Package ready: manual-submission-6926cc26-e1de-4f62-8d92-53cceb079dea.zip. SHA-256 d104da27f66059a72b3a1d55b2e31ace7903f5520aa53667f8883c36a770c674."
-                    - generic "Record external filing" [ref=f2e717]:
-                      - heading "Record external filing" [level=4] [ref=f2e718]
-                      - paragraph [ref=f2e719]: Record the actual external filing only after it has occurred. A fresh filing proof and one receipt are required.
-                      - generic [ref=f2e720]:
+                        - text: Owner override reason (only when approving your own edits)
+                        - textbox "Owner override reason (only when approving your own edits)" [ref=f2e716]: The seeded owner is the only authorized responder for this local verification.
+                      - generic [ref=f2e717]:
+                        - button "Reauthenticate" [disabled] [ref=f2e718]
+                        - button "Approve stage" [disabled] [ref=f2e719]
+                    - generic "Manual submission package" [ref=f2e720]:
+                      - heading "Signed manual package" [level=4] [ref=f2e721]
+                      - paragraph [ref=f2e722]: Package generation preserves the approved snapshot. Downloading it does not record an external filing or stop a deadline.
+                      - generic [ref=f2e723]:
+                        - button "Generate package" [ref=f2e724] [cursor=pointer]
+                        - button "Download package" [ref=f2e725] [cursor=pointer]
+                      - status [ref=f2e726]: "Package ready: manual-submission-a7d3e5a2-dbaf-4294-a3b7-0c2a78a84207.zip. SHA-256 5ed4a73ec81f635d276c6b8dfbef7d008a7faeb475811ec63526c5861f8b6658."
+                    - generic "Record external filing" [ref=f2e727]:
+                      - heading "Record external filing" [level=4] [ref=f2e728]
+                      - paragraph [ref=f2e729]: Record the actual external filing only after it has occurred. A fresh filing proof and one receipt are required.
+                      - generic [ref=f2e730]:
                         - text: External filing reference
-                        - textbox "External filing reference" [ref=f2e723]:
+                        - textbox "External filing reference" [ref=f2e733]:
                           - /placeholder: Regulator portal or filing reference
-                      - generic [ref=f2e724]:
+                      - generic [ref=f2e734]:
                         - text: Actual filing timestamp (UTC)
-                        - textbox "Actual filing timestamp (UTC)" [ref=f2e727]:
+                        - textbox "Actual filing timestamp (UTC)" [ref=f2e737]:
                           - /placeholder: 2026-01-31T15:30:00Z
-                          - text: 2026-09-11T06:19:44Z
-                      - generic [ref=f2e728]:
+                          - text: 2026-09-11T06:31:44Z
+                      - generic [ref=f2e738]:
                         - text: Timestamp basis
-                        - textbox "Timestamp basis" [ref=f2e731]:
+                        - textbox "Timestamp basis" [ref=f2e741]:
                           - /placeholder: Portal receipt timestamp in UTC
-                      - generic [ref=f2e732]:
+                      - generic [ref=f2e742]:
                         - text: Receipt (PDF, PNG, JPEG, or text; 10 MiB maximum)
-                        - button "Receipt (PDF, PNG, JPEG, or text; 10 MiB maximum)" [ref=f2e735] [cursor=pointer]
-                      - generic [ref=f2e736]:
+                        - button "Receipt (PDF, PNG, JPEG, or text; 10 MiB maximum)" [ref=f2e745] [cursor=pointer]
+                      - generic [ref=f2e746]:
                         - text: Current password
-                        - textbox "Current password" [ref=f2e739]
-                      - generic [ref=f2e740]:
-                        - text: MFA code (if required)
-                        - textbox "MFA code (if required)" [ref=f2e743]
-                      - generic [ref=f2e744]:
-                        - button "Reauthenticate for filing" [disabled] [ref=f2e745]
-                        - button "Record external filing" [disabled] [ref=f2e746]
-                    - generic "Export reporting evidence" [ref=f2e747]:
-                      - heading "Export reporting evidence" [level=4] [ref=f2e748]
-                      - paragraph [ref=f2e749]: Export an immutable, manifest-verified evidence pack for this obligation. The export does not alter the reporting record.
+                        - textbox "Current password" [ref=f2e749]
                       - generic [ref=f2e750]:
-                        - button "Generate evidence pack" [ref=f2e751] [cursor=pointer]
-                        - button "Download evidence pack" [disabled] [ref=f2e752]
-                    - alert [ref=f2e753]: The draft could not be updated. Review the values and try again.
-                - listitem [ref=f2e754]:
-                  - generic [ref=f2e755]:
-                    - generic [ref=f2e756]: Notification
-                    - generic [ref=f2e757]: running
-                  - paragraph [ref=f2e760]: Due Sep 14, 2026, 11:49 AM GMT+5:30
-                  - paragraph [ref=f2e761]: 71h 58m remaining · 0% elapsed
-                  - region [ref=f2e762]:
-                    - generic [ref=f2e763]:
-                      - generic [ref=f2e764]:
-                        - heading "Notification draft" [level=3] [ref=f2e765]
-                        - paragraph [ref=f2e766]: Release-scoped draft content is saved independently from the submitted stage record.
-                      - generic [ref=f2e767]: missing
-                    - generic [ref=f2e770]:
-                      - generic [ref=f2e771]:
+                        - text: MFA code (if required)
+                        - textbox "MFA code (if required)" [ref=f2e753]
+                      - generic [ref=f2e754]:
+                        - button "Reauthenticate for filing" [disabled] [ref=f2e755]
+                        - button "Record external filing" [disabled] [ref=f2e756]
+                    - generic "Export reporting evidence" [ref=f2e757]:
+                      - heading "Export reporting evidence" [level=4] [ref=f2e758]
+                      - paragraph [ref=f2e759]: Export an immutable, manifest-verified evidence pack for this obligation. The export does not alter the reporting record.
+                      - generic [ref=f2e760]:
+                        - button "Generate evidence pack" [ref=f2e761] [cursor=pointer]
+                        - button "Download evidence pack" [disabled] [ref=f2e762]
+                    - alert [ref=f2e763]: The draft could not be updated. Review the values and try again.
+                - listitem [ref=f2e764]:
+                  - generic [ref=f2e765]:
+                    - generic [ref=f2e766]: Notification
+                    - generic [ref=f2e767]: running
+                  - paragraph [ref=f2e770]: Due Sep 14, 2026, 12:01 PM GMT+5:30
+                  - paragraph [ref=f2e771]: 71h 58m remaining · 0% elapsed
+                  - region [ref=f2e772]:
+                    - generic [ref=f2e773]:
+                      - generic [ref=f2e774]:
+                        - heading "Notification draft" [level=3] [ref=f2e775]
+                        - paragraph [ref=f2e776]: Release-scoped draft content is saved independently from the submitted stage record.
+                      - generic [ref=f2e777]: missing
+                    - generic [ref=f2e780]:
+                      - generic [ref=f2e781]:
                         - text: Release ID
-                        - textbox "Release ID" [ref=f2e774]:
+                        - textbox "Release ID" [ref=f2e784]:
                           - /placeholder: Release UUID
-                      - paragraph [ref=f2e775]: The release determines the default Member States. Confirm it before creating the draft.
-                      - button "Create draft" [disabled] [ref=f2e776]
-                - listitem [ref=f2e777]:
-                  - generic [ref=f2e778]:
-                    - generic [ref=f2e779]: Final Report
-                    - generic [ref=f2e780]: pending_anchor
-                  - paragraph [ref=f2e783]: Due Pending anchor
-                  - paragraph [ref=f2e784]: Pending anchor
-                  - region [ref=f2e785]:
-                    - generic [ref=f2e786]:
-                      - generic [ref=f2e787]:
-                        - heading "Final Report draft" [level=3] [ref=f2e788]
-                        - paragraph [ref=f2e789]: Release-scoped draft content is saved independently from the submitted stage record.
-                      - generic [ref=f2e790]: missing
-                    - generic [ref=f2e793]:
-                      - generic [ref=f2e794]:
+                      - paragraph [ref=f2e785]: The release determines the default Member States. Confirm it before creating the draft.
+                      - button "Create draft" [disabled] [ref=f2e786]
+                - listitem [ref=f2e787]:
+                  - generic [ref=f2e788]:
+                    - generic [ref=f2e789]: Final Report
+                    - generic [ref=f2e790]: pending_anchor
+                  - paragraph [ref=f2e793]: Due Pending anchor
+                  - paragraph [ref=f2e794]: Pending anchor
+                  - region [ref=f2e795]:
+                    - generic [ref=f2e796]:
+                      - generic [ref=f2e797]:
+                        - heading "Final Report draft" [level=3] [ref=f2e798]
+                        - paragraph [ref=f2e799]: Release-scoped draft content is saved independently from the submitted stage record.
+                      - generic [ref=f2e800]: missing
+                    - generic [ref=f2e803]:
+                      - generic [ref=f2e804]:
                         - text: Release ID
-                        - textbox "Release ID" [ref=f2e797]:
+                        - textbox "Release ID" [ref=f2e807]:
                           - /placeholder: Release UUID
-                      - paragraph [ref=f2e798]: The release determines the default Member States. Confirm it before creating the draft.
-                      - button "Create draft" [disabled] [ref=f2e799]
-              - generic [ref=f2e800]:
-                - generic [ref=f2e801]:
-                  - heading "Correct anchor" [level=3] [ref=f2e802]
-                  - generic [ref=f2e803]:
-                    - combobox [ref=f2e804] [cursor=pointer]:
+                      - paragraph [ref=f2e808]: The release determines the default Member States. Confirm it before creating the draft.
+                      - button "Create draft" [disabled] [ref=f2e809]
+              - generic [ref=f2e810]:
+                - generic [ref=f2e811]:
+                  - heading "Correct anchor" [level=3] [ref=f2e812]
+                  - generic [ref=f2e813]:
+                    - combobox [ref=f2e814] [cursor=pointer]:
                       - option "awareness" [selected]
                       - option "remediation_available"
-                    - textbox [ref=f2e807]: 2026-09-11T11:49
-                    - textbox "Awareness basis" [ref=f2e810]
-                    - textbox "Correction reason" [ref=f2e813]
-                    - button "Save correction" [ref=f2e814] [cursor=pointer]
-                - generic [ref=f2e815]:
-                  - heading "Record submission" [level=3] [ref=f2e816]
-                  - generic [ref=f2e817]:
-                    - combobox [ref=f2e818] [cursor=pointer]:
+                    - textbox [ref=f2e817]: 2026-09-11T12:01
+                    - textbox "Awareness basis" [ref=f2e820]
+                    - textbox "Correction reason" [ref=f2e823]
+                    - button "Save correction" [ref=f2e824] [cursor=pointer]
+                - generic [ref=f2e825]:
+                  - heading "Record submission" [level=3] [ref=f2e826]
+                  - generic [ref=f2e827]:
+                    - combobox [ref=f2e828] [cursor=pointer]:
                       - option "Early Warning" [selected]
                       - option "Notification"
                       - option "Final Report"
-                    - textbox "Submission reference" [ref=f2e821]
-                    - generic [ref=f2e822]:
+                    - textbox "Submission reference" [ref=f2e831]
+                    - generic [ref=f2e832]:
                       - text: Submission time
-                      - textbox "Submission time" [ref=f2e825]: 2026-09-11T11:49
-                    - button "Record submission" [ref=f2e826] [cursor=pointer]
-                - button "Cancel obligation" [disabled] [ref=f2e828]
-  - button "Open Next.js Dev Tools" [ref=f2e834] [cursor=pointer]
-  - alert [ref=f2e838]
+                      - textbox "Submission time" [ref=f2e835]: 2026-09-11T12:01
+                    - button "Record submission" [ref=f2e836] [cursor=pointer]
+                - button "Cancel obligation" [disabled] [ref=f2e838]
+  - button "Open Next.js Dev Tools" [ref=f2e844] [cursor=pointer]
+  - alert [ref=f2e848]
 ```
 
 # Test source

@@ -389,9 +389,12 @@ export function ReportingStageDraftEditor({
           const link = document.createElement("a");
           link.href = result.download.downloadUrl;
           link.download = result.download.fileName;
-          link.target = "_blank";
-          link.rel = "noreferrer";
+          // Keep this a same-tab attachment navigation. A detached `_blank`
+          // anchor can be blocked by browsers and prevents download events.
+          link.style.display = "none";
+          document.body.append(link);
           link.click();
+          link.remove();
         },
       },
     );
