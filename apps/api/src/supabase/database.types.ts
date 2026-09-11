@@ -6483,6 +6483,7 @@ export type Database = {
           proof_object_path: string | null
           proof_sha256: string | null
           proof_storage_bucket: string | null
+          recorded_at: string
           release_id: string
           stage_id: string
           submission_reference: string
@@ -6508,6 +6509,7 @@ export type Database = {
           proof_object_path?: string | null
           proof_sha256?: string | null
           proof_storage_bucket?: string | null
+          recorded_at?: string
           release_id: string
           stage_id: string
           submission_reference: string
@@ -6533,6 +6535,7 @@ export type Database = {
           proof_object_path?: string | null
           proof_sha256?: string | null
           proof_storage_bucket?: string | null
+          recorded_at?: string
           release_id?: string
           stage_id?: string
           submission_reference?: string

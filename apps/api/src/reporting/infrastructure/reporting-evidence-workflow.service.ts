@@ -629,15 +629,26 @@ const evidenceReadSchema = z
   .transform((value) => ({
     ...value,
     submission: value.submission
-      ? reportingStageExternalFilingSchema.parse({
-          ...(value.submission as Record<string, unknown>),
-          approval: value.approval,
-        })
+      ? parseEvidenceSubmission(value.submission, value.approval)
       : null,
     timeline: z
       .array(reportingEvidenceTimelineEventSchema)
       .parse(value.timeline),
   }));
+
+function parseEvidenceSubmission(submission: unknown, approval: unknown) {
+  const parsedSubmission = z
+    .object({ approvalId: z.unknown().optional() })
+    .passthrough()
+    .parse(submission);
+  const publicSubmission = Object.fromEntries(
+    Object.entries(parsedSubmission).filter(([key]) => key !== "approvalId"),
+  );
+  return reportingStageExternalFilingSchema.parse({
+    ...publicSubmission,
+    approval,
+  });
+}
 
 function digest(bytes: Buffer): string {
   return createHash("sha256").update(bytes).digest("hex");

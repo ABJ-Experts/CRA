@@ -22,7 +22,10 @@ declare
   v_org uuid := '00000000-0000-4000-8000-0000000000ca';
   v_actor uuid; v_release uuid; v_obligation uuid; v_stage uuid; v_draft uuid;
   v_create record; v_lock record; v_save record; v_proof record; v_approval record; v_reserve record;
-  v_hash text; v_package uuid; v_mutation_blocked boolean := false;
+  v_finalize record; v_filing_proof record; v_filing record; v_evidence record;
+  v_hash text; v_package uuid; v_approval_id uuid; v_filing_proof_id uuid; v_submission_id uuid;
+  v_package_path text; v_receipt_path text; v_session_id uuid := gen_random_uuid(); v_filing_key uuid := gen_random_uuid();
+  v_mutation_blocked boolean := false;
 begin
   select id into v_actor from public.users where email='owner@cra.test';
   select id into v_release from public.product_releases where organization_id=v_org and archived_at is null order by created_at limit 1;
@@ -44,6 +47,8 @@ begin
   select * into v_reserve from public.reserve_reporting_stage_package_atomic(v_org,v_actor,v_obligation,v_stage,
     (v_approval.result->'approval'->>'id')::uuid,2,v_hash,gen_random_uuid(),gen_random_uuid());
   v_package := (v_reserve.result->'package'->>'id')::uuid;
+  v_approval_id := (v_approval.result->'approval'->>'id')::uuid;
+  v_package_path := v_reserve.result->'package'->>'objectPath';
   begin
     update public.reporting_stage_packages set draft_hash=repeat('a',64) where organization_id=v_org and id=v_package;
   exception when sqlstate '55000' then v_mutation_blocked := true;
@@ -57,6 +62,29 @@ begin
     v_reserve.outcome='created'
     and (select state='reserved' and draft_revision=2 and draft_hash=v_hash and storage_object_path like v_org::text||'/'||v_stage::text||'/packages/%' from public.reporting_stage_packages where organization_id=v_org and id=v_package)
     and v_mutation_blocked);
+
+  insert into storage.objects(bucket_id,name) values ('reporting-evidence',v_package_path);
+  select * into v_finalize from public.finalize_reporting_stage_package_atomic(
+    v_org,v_actor,v_package,repeat('a',64),1024,'test-key',repeat('s',40),repeat('b',64),v_package_path,gen_random_uuid(),gen_random_uuid());
+  v_receipt_path := v_org::text||'/'||v_stage::text||'/filings/'||gen_random_uuid()::text||'/receipt.pdf';
+  insert into storage.objects(bucket_id,name) values ('reporting-evidence',v_receipt_path);
+  select * into v_filing_proof from public.create_reporting_stage_filing_proof_atomic(
+    v_org,v_actor,v_session_id,v_package,v_approval_id,
+    encode(extensions.digest('{"idempotencyKey":"'||v_filing_key::text||'","packageId":"'||v_package::text||'"}','sha256'),'hex'),
+    clock_timestamp()+interval '2 minutes',gen_random_uuid());
+  v_filing_proof_id := (v_filing_proof.result->>'reauthenticationProofId')::uuid;
+  select * into v_filing from public.record_reporting_stage_filing_atomic(
+    v_org,v_actor,v_session_id,v_obligation,v_stage,v_package,v_approval_id,v_filing_proof_id,
+    '2026-09-11T12:00:00+00','external_portal','SRP-TEST-001',v_receipt_path,repeat('c',64),512,
+    'application/pdf','receipt.pdf',v_filing_key,gen_random_uuid());
+  v_submission_id := (v_filing.result->>'submissionId')::uuid;
+  select * into v_evidence from public.get_reporting_stage_evidence_api(v_org,v_actor,v_stage);
+  perform pg_temp.check('M6-06 filing evidence reads durable receipt and submission timestamps',
+    v_finalize.outcome='updated' and v_filing_proof.outcome='created' and v_filing.outcome='updated'
+    and v_submission_id is not null and v_evidence.outcome='found'
+    and v_evidence.result->'submission'->>'id'=v_submission_id::text
+    and v_evidence.result->'submission'->>'recordedAt' is not null
+    and v_evidence.result->'submission'->'receipt'->>'uploadedAt' is not null);
 end $$;
 
 rollback;

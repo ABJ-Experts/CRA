@@ -32,6 +32,7 @@ import {
   useReauthenticateReportingStageFilingMutation,
   useReauthenticateReportingStageApprovalMutation,
 } from "./reporting.queries";
+import { ReportingSrpAvailabilityNotice } from "./reporting-srp-availability-notice";
 
 type Obligation = ReportingObligationListResponse["obligations"][number];
 type Stage = Obligation["stages"][number];
@@ -952,6 +953,9 @@ export function ReportingStageDraftEditor({
                 </p>
               ) : null}
             </div>
+          ) : null}
+          {canSubmitReports && working.status !== "submitted" ? (
+            <ReportingSrpAvailabilityNotice />
           ) : null}
           {canSubmitReports &&
           working.status !== "submitted" &&
