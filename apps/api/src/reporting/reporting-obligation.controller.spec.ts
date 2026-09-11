@@ -184,6 +184,47 @@ describe("ReportingObligationController", () => {
       idempotencyKey: key,
     });
   });
+
+  it("keeps receipt bytes behind the controller boundary and scopes the filing", async () => {
+    const useCases = useCasesFor();
+    useCases.recordStageExternalFiling.mockResolvedValue({ filing: {} });
+    const controller = subject(useCases);
+    const stageId = "77777777-7777-4777-8777-777777777777";
+    const receipt = {
+      buffer: Buffer.from("receipt"),
+      mimetype: "text/plain",
+      originalname: "portal-receipt.txt",
+    } as Express.Multer.File;
+
+    await controller.recordStageExternalFiling(
+      { obligationId, stageId },
+      {
+        packageId: "99999999-9999-4999-8999-999999999999",
+        filingReauthenticationProofId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        submissionReference: "CRA-PORTAL-1",
+        submittedAt: "2026-09-10T10:00:00Z",
+        submittedAtBasis: "External portal receipt timestamp.",
+        expectedStageVersion: 1,
+        idempotencyKey: key,
+      },
+      receipt,
+      { ...user, sessionId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb" },
+    );
+
+    expect(useCases.recordStageExternalFiling).toHaveBeenCalledWith(
+      organizationId,
+      expect.objectContaining({
+        actorId,
+        obligationId,
+        stageId,
+        receipt: expect.objectContaining({
+          fileName: "portal-receipt.txt",
+          mimeType: "text/plain",
+          bytes: Buffer.from("receipt"),
+        }),
+      }),
+    );
+  });
 });
 
 function subject(useCases: ReturnType<typeof useCasesFor>) {
@@ -210,6 +251,14 @@ function useCasesFor() {
     createFamilyTemplate: jest.fn(),
     createFamilyTemplateVersion: jest.fn(),
     applyFamilyTemplate: jest.fn(),
+    generateStageSubmissionPackage: jest.fn(),
+    getStageSubmissionPackageDownload: jest.fn(),
+    reauthenticateStageFiling: jest.fn(),
+    recordStageExternalFiling: jest.fn(),
+    appendStageAcknowledgement: jest.fn(),
+    stageEvidenceTimeline: jest.fn(),
+    generateObligationEvidencePack: jest.fn(),
+    getObligationEvidencePackDownload: jest.fn(),
   };
 }
 

@@ -4,12 +4,22 @@ import type {
   ApplyReportingFamilyTemplateInput,
   ApproveReportingStageDraftInput,
   CancelReportingObligationInput,
+  CreateReportingStageAcknowledgementInput,
   CreateReportingFamilyTemplateInput,
   CreateReportingFamilyTemplateVersionInput,
   CorrectReportingObligationAnchorInput,
   CreateReportingStageDraftInput,
   CreateReportingObligationInput,
   RecordReportingObligationStageSubmissionInput,
+  RecordReportingStageExternalFilingFields,
+  ReauthenticateReportingStageFilingResponse,
+  ReportingObligationEvidencePackDownloadResponse,
+  ReportingObligationEvidencePackResponse,
+  ReportingStageAcknowledgementResponse,
+  ReportingStageEvidencePackageDownloadResponse,
+  ReportingStageEvidencePackageResponse,
+  ReportingStageEvidenceTimelineResponse,
+  ReportingStageExternalFilingResponse,
   ReportingFamilyTemplateParams,
   ReportingFamilyTemplateResponse,
   ReportingFamilyTemplatesResponse,
@@ -34,6 +44,9 @@ export const REPORTING_OBLIGATION_REPOSITORY = Symbol(
 );
 export const REPORTING_STAGE_APPROVAL_REAUTHENTICATION = Symbol(
   "REPORTING_STAGE_APPROVAL_REAUTHENTICATION",
+);
+export const REPORTING_EVIDENCE_WORKFLOW = Symbol(
+  "REPORTING_EVIDENCE_WORKFLOW",
 );
 export interface ReportingStageApprovalReauthenticationPort {
   verify(
@@ -66,6 +79,88 @@ export class ReportingStageDraftLockedError extends Error {
 }
 export class ReportingStageApprovalProofError extends Error {}
 export class ReportingStageApprovalSodError extends Error {}
+export class ReportingStageFilingProofError extends Error {}
+
+/**
+ * The controller validates the untrusted multipart boundary; infrastructure
+ * receives only immutable bytes plus the server-derived digest and safe name.
+ */
+export type ReportingStageReceiptUpload = Readonly<{
+  bytes: Buffer;
+  fileName: string;
+  mimeType: "application/pdf" | "image/png" | "image/jpeg" | "text/plain";
+}>;
+
+export interface ReportingEvidenceWorkflowPort {
+  generateStageSubmissionPackage(
+    organizationId: string,
+    input: Readonly<{
+      actorId: string;
+      obligationId: string;
+      stageId: string;
+      approvalId: string;
+      draftRevision: number;
+      draftHash: string;
+      idempotencyKey: string;
+    }>,
+  ): Promise<ReportingStageEvidencePackageResponse | null>;
+  getStageSubmissionPackageDownload(
+    organizationId: string,
+    input: Readonly<{ actorId: string; stageId: string; packageId: string }>,
+  ): Promise<ReportingStageEvidencePackageDownloadResponse | null>;
+  createStageFilingProof(
+    organizationId: string,
+    input: Readonly<{
+      actorId: string;
+      sessionId: string;
+      obligationId: string;
+      stageId: string;
+      packageId: string;
+      idempotencyKey: string;
+      expiresAt: string;
+    }>,
+  ): Promise<ReauthenticateReportingStageFilingResponse | null>;
+  recordStageExternalFiling(
+    organizationId: string,
+    input: Readonly<{
+      actorId: string;
+      sessionId: string;
+      obligationId: string;
+      stageId: string;
+      fields: RecordReportingStageExternalFilingFields;
+      receipt: ReportingStageReceiptUpload;
+    }>,
+  ): Promise<ReportingStageExternalFilingResponse | null>;
+  appendStageAcknowledgement(
+    organizationId: string,
+    input: Readonly<
+      {
+        actorId: string;
+        obligationId: string;
+      } & CreateReportingStageAcknowledgementInput
+    >,
+  ): Promise<ReportingStageAcknowledgementResponse | null>;
+  stageEvidenceTimeline(
+    organizationId: string,
+    input: Readonly<{ actorId: string; obligationId: string; stageId: string }>,
+  ): Promise<ReportingStageEvidenceTimelineResponse | null>;
+  generateObligationEvidencePack(
+    organizationId: string,
+    input: Readonly<{
+      actorId: string;
+      obligationId: string;
+      idempotencyKey: string;
+    }>,
+  ): Promise<ReportingObligationEvidencePackResponse | null>;
+  getObligationEvidencePackDownload(
+    organizationId: string,
+    input: Readonly<{
+      actorId: string;
+      obligationId: string;
+      evidencePackId: string;
+    }>,
+  ): Promise<ReportingObligationEvidencePackDownloadResponse | null>;
+}
 
 export interface ReportingObligationRepository {
   getStageDraft(
@@ -132,7 +227,6 @@ export interface ReportingObligationRepository {
         sessionId: string;
         obligationId: string;
         stageId: string;
-        submissionReference: string;
       } & ApproveReportingStageDraftInput
     >,
   ): Promise<ReportingStageDraftApprovalResponse | null>;

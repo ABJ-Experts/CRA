@@ -11,6 +11,11 @@ import type {
   CreateReportingStageDraftInput,
   SaveReportingStageDraftInput,
   SubmitReportingStageDraftInput,
+  CreateReportingStageAcknowledgementInput,
+  GenerateReportingObligationEvidencePackInput,
+  GenerateReportingStageSubmissionPackageInput,
+  ReauthenticateReportingStageFilingInput,
+  RecordReportingStageExternalFilingFieldsInput,
   ReportingFamilyTemplateListQuery,
   ReportingObligationListQuery,
 } from "@repo/contracts/reporting";
@@ -251,6 +256,143 @@ export function useApproveReportingStageDraftMutation() {
       invalidateStageDraft(client, variables.obligationId, variables.stageId);
       client.invalidateQueries({ queryKey: reportingKeys.all });
     },
+  });
+}
+export function useGenerateReportingStageSubmissionPackageMutation() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (variables: {
+      obligationId: string;
+      stageId: string;
+      input: GenerateReportingStageSubmissionPackageInput;
+    }) =>
+      reportingApi.generateStageSubmissionPackage(
+        variables.obligationId,
+        variables.stageId,
+        variables.input,
+      ),
+    onSuccess: (_, variables) => {
+      invalidateStageDraft(client, variables.obligationId, variables.stageId);
+      client.invalidateQueries({ queryKey: reportingKeys.all });
+    },
+  });
+}
+export function useDownloadReportingStageSubmissionPackageMutation() {
+  return useMutation({
+    mutationFn: (variables: {
+      obligationId: string;
+      stageId: string;
+      packageId: string;
+    }) =>
+      reportingApi.stageSubmissionPackageDownload(
+        variables.obligationId,
+        variables.stageId,
+        variables.packageId,
+      ),
+  });
+}
+export function useReauthenticateReportingStageFilingMutation() {
+  return useMutation({
+    mutationFn: (variables: {
+      obligationId: string;
+      stageId: string;
+      input: ReauthenticateReportingStageFilingInput;
+    }) =>
+      reportingApi.reauthenticateStageFiling(
+        variables.obligationId,
+        variables.stageId,
+        variables.input,
+      ),
+  });
+}
+export function useRecordReportingStageExternalFilingMutation() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (variables: {
+      obligationId: string;
+      stageId: string;
+      fields: RecordReportingStageExternalFilingFieldsInput;
+      receipt: File;
+    }) =>
+      reportingApi.recordStageExternalFiling(
+        variables.obligationId,
+        variables.stageId,
+        variables.fields,
+        variables.receipt,
+      ),
+    onSuccess: (_, variables) => {
+      invalidateStageDraft(client, variables.obligationId, variables.stageId);
+      client.invalidateQueries({ queryKey: reportingKeys.all });
+      client.invalidateQueries({
+        queryKey: reportingKeys.stageTimeline(
+          variables.obligationId,
+          variables.stageId,
+        ),
+      });
+    },
+  });
+}
+export function useReportingStageEvidenceTimelineQuery(
+  obligationId: string | null,
+  stageId: string | null,
+  enabled: boolean,
+) {
+  return useQuery({
+    queryKey:
+      obligationId !== null && stageId !== null
+        ? reportingKeys.stageTimeline(obligationId, stageId)
+        : reportingKeys.all,
+    enabled: enabled && obligationId !== null && stageId !== null,
+    retry: false,
+    queryFn: ({ signal }) => {
+      if (obligationId === null || stageId === null)
+        throw new Error("A reporting stage is required.");
+      return reportingApi.stageEvidenceTimeline(obligationId, stageId, signal);
+    },
+  });
+}
+export function useGenerateReportingEvidencePackMutation() {
+  return useMutation({
+    mutationFn: (variables: {
+      obligationId: string;
+      input: GenerateReportingObligationEvidencePackInput;
+    }) =>
+      reportingApi.generateEvidencePack(
+        variables.obligationId,
+        variables.input,
+      ),
+  });
+}
+export function useDownloadReportingEvidencePackMutation() {
+  return useMutation({
+    mutationFn: (variables: { obligationId: string; evidencePackId: string }) =>
+      reportingApi.evidencePackDownload(
+        variables.obligationId,
+        variables.evidencePackId,
+      ),
+  });
+}
+export function useCreateReportingStageAcknowledgementMutation() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (variables: {
+      obligationId: string;
+      stageId: string;
+      submissionId: string;
+      input: CreateReportingStageAcknowledgementInput;
+    }) =>
+      reportingApi.createStageAcknowledgement(
+        variables.obligationId,
+        variables.submissionId,
+        variables.input,
+      ),
+    onSuccess: (_, variables) =>
+      client.invalidateQueries({
+        queryKey: reportingKeys.stageTimeline(
+          variables.obligationId,
+          variables.stageId,
+        ),
+      }),
   });
 }
 export function useReportingFamilyTemplatesQuery(

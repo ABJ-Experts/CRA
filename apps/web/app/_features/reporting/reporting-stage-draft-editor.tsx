@@ -2,6 +2,8 @@
 
 import type {
   ReportingObligationListResponse,
+  ReportingObligationEvidencePackResponse,
+  ReportingStageEvidencePackage,
   ReportingStageDraft,
 } from "@repo/contracts/reporting";
 import { reportingStageDraftSchema } from "@repo/contracts/reporting";
@@ -21,6 +23,13 @@ import {
   useReportingStageDraftQuery,
   useSaveReportingStageDraftMutation,
   useApproveReportingStageDraftMutation,
+  useDownloadReportingStageSubmissionPackageMutation,
+  useDownloadReportingEvidencePackMutation,
+  useGenerateReportingEvidencePackMutation,
+  useGenerateReportingStageSubmissionPackageMutation,
+  useRecordReportingStageExternalFilingMutation,
+  useReportingStageEvidenceTimelineQuery,
+  useReauthenticateReportingStageFilingMutation,
   useReauthenticateReportingStageApprovalMutation,
 } from "./reporting.queries";
 
@@ -78,6 +87,12 @@ export function ReportingStageDraftEditor({
   const reauthenticateApproval =
     useReauthenticateReportingStageApprovalMutation();
   const approve = useApproveReportingStageDraftMutation();
+  const generatePackage = useGenerateReportingStageSubmissionPackageMutation();
+  const downloadPackage = useDownloadReportingStageSubmissionPackageMutation();
+  const reauthenticateFiling = useReauthenticateReportingStageFilingMutation();
+  const recordFiling = useRecordReportingStageExternalFilingMutation();
+  const generateEvidencePack = useGenerateReportingEvidencePackMutation();
+  const downloadEvidencePack = useDownloadReportingEvidencePackMutation();
   const canSubmitReports = useHasPermission("can_submit_reporting");
   const applyTemplate = useApplyReportingFamilyTemplateMutation();
   const createTemplate = useCreateReportingFamilyTemplateMutation();
@@ -86,10 +101,14 @@ export function ReportingStageDraftEditor({
     stage.kind,
     canManageTemplates && draftQuery.data?.draft !== undefined,
   );
+  const timeline = useReportingStageEvidenceTimelineQuery(
+    obligation.id,
+    stage.id,
+    canSubmitReports,
+  );
   const [working, setWorking] = useState<ReportingStageDraft | null>(null);
   const [lockToken, setLockToken] = useState<string | null>(null);
   const [releaseId, setReleaseId] = useState("");
-  const [submissionReference, setSubmissionReference] = useState("");
   const [conflict, setConflict] = useState<ReportingStageDraft | null>(null);
   const [idempotencyKey, setIdempotencyKey] = useState(uuid);
   const [templateName, setTemplateName] = useState("");
@@ -97,6 +116,21 @@ export function ReportingStageDraftEditor({
   const [approvalMfaCode, setApprovalMfaCode] = useState("");
   const [approvalProofId, setApprovalProofId] = useState<string | null>(null);
   const [sodOverrideReason, setSodOverrideReason] = useState("");
+  const [approvalId, setApprovalId] = useState<string | null>(null);
+  const [evidencePackage, setEvidencePackage] =
+    useState<ReportingStageEvidencePackage | null>(null);
+  const [filingPassword, setFilingPassword] = useState("");
+  const [filingMfaCode, setFilingMfaCode] = useState("");
+  const [filingProofId, setFilingProofId] = useState<string | null>(null);
+  const [filingReference, setFilingReference] = useState("");
+  const [filingTimestamp, setFilingTimestamp] = useState(() =>
+    new Date().toISOString().replace(/\.\d{3}Z$/, "Z"),
+  );
+  const [filingTimestampBasis, setFilingTimestampBasis] = useState("");
+  const [receipt, setReceipt] = useState<File | null>(null);
+  const [evidencePack, setEvidencePack] = useState<
+    ReportingObligationEvidencePackResponse["evidencePack"] | null
+  >(null);
 
   useEffect(() => {
     if (draftQuery.data?.draft) {
@@ -117,12 +151,26 @@ export function ReportingStageDraftEditor({
     save.isPending ||
     reauthenticateApproval.isPending ||
     approve.isPending ||
+    generatePackage.isPending ||
+    downloadPackage.isPending ||
+    reauthenticateFiling.isPending ||
+    recordFiling.isPending ||
+    generateEvidencePack.isPending ||
+    downloadEvidencePack.isPending ||
     applyTemplate.isPending ||
     createTemplate.isPending;
   const error =
     create.error ??
     acquire.error ??
     save.error ??
+    reauthenticateApproval.error ??
+    approve.error ??
+    generatePackage.error ??
+    downloadPackage.error ??
+    reauthenticateFiling.error ??
+    recordFiling.error ??
+    generateEvidencePack.error ??
+    downloadEvidencePack.error ??
     applyTemplate.error ??
     draftQuery.error;
 
@@ -241,6 +289,9 @@ export function ReportingStageDraftEditor({
       {
         onSuccess: (result) => {
           setWorking(cloneDraft(result.draft));
+          setApprovalId(null);
+          setEvidencePackage(null);
+          setFilingProofId(null);
           setIdempotencyKey(uuid());
         },
         onError: (error) => {
@@ -285,7 +336,6 @@ export function ReportingStageDraftEditor({
           draftRevision: working.revision,
           draftHash: working.contentHash,
           reauthenticationProofId: approvalProofId,
-          submissionReference,
           ...(sodOverrideReason.trim()
             ? { segregationOfDutiesOverrideReason: sodOverrideReason }
             : {}),
@@ -293,9 +343,138 @@ export function ReportingStageDraftEditor({
         },
       },
       {
-        onSuccess: () => {
+        onSuccess: (result) => {
           setApprovalProofId(null);
+          setApprovalId(result.approval.id);
+          setEvidencePackage(null);
           setIdempotencyKey(uuid());
+        },
+      },
+    );
+  }
+  function generateSubmissionPackage() {
+    if (working === null || approvalId === null) return;
+    generatePackage.mutate(
+      {
+        obligationId: obligation.id,
+        stageId: stage.id,
+        input: {
+          approvalId,
+          draftRevision: working.revision,
+          draftHash: working.contentHash,
+          idempotencyKey,
+        },
+      },
+      {
+        onSuccess: (result) => {
+          setEvidencePackage(result.package);
+          setIdempotencyKey(uuid());
+        },
+      },
+    );
+  }
+  function downloadSubmissionPackage() {
+    if (evidencePackage === null || evidencePackage.status !== "ready") return;
+    downloadPackage.mutate(
+      {
+        obligationId: obligation.id,
+        stageId: stage.id,
+        packageId: evidencePackage.id,
+      },
+      {
+        onSuccess: (result) => {
+          // Keep the operational view open: a package download is not an
+          // external filing and should not navigate away from entered filing
+          // evidence. The short-lived URL is still issued only by the API.
+          const link = document.createElement("a");
+          link.href = result.download.downloadUrl;
+          link.download = result.download.fileName;
+          link.target = "_blank";
+          link.rel = "noreferrer";
+          link.click();
+        },
+      },
+    );
+  }
+  function reauthenticateForFiling() {
+    if (evidencePackage === null || filingPassword.length === 0) return;
+    reauthenticateFiling.mutate(
+      {
+        obligationId: obligation.id,
+        stageId: stage.id,
+        input: {
+          packageId: evidencePackage.id,
+          password: filingPassword,
+          ...(filingMfaCode ? { mfaCode: filingMfaCode } : {}),
+          idempotencyKey,
+        },
+      },
+      {
+        onSuccess: (proof) => {
+          setFilingProofId(proof.reauthenticationProofId);
+          setFilingPassword("");
+          setFilingMfaCode("");
+          setIdempotencyKey(uuid());
+        },
+      },
+    );
+  }
+  function recordExternalFiling() {
+    if (
+      evidencePackage === null ||
+      filingProofId === null ||
+      receipt === null ||
+      filingReference.trim().length === 0 ||
+      filingTimestampBasis.trim().length === 0
+    )
+      return;
+    recordFiling.mutate(
+      {
+        obligationId: obligation.id,
+        stageId: stage.id,
+        fields: {
+          packageId: evidencePackage.id,
+          filingReauthenticationProofId: filingProofId,
+          submissionReference: filingReference,
+          submittedAt: filingTimestamp,
+          submittedAtBasis: filingTimestampBasis,
+          expectedStageVersion: stage.version,
+          idempotencyKey,
+        },
+        receipt,
+      },
+      {
+        onSuccess: () => {
+          setFilingProofId(null);
+          setReceipt(null);
+          setIdempotencyKey(uuid());
+        },
+      },
+    );
+  }
+  function generateObligationEvidencePack() {
+    generateEvidencePack.mutate(
+      { obligationId: obligation.id, input: { idempotencyKey } },
+      {
+        onSuccess: (result) => {
+          setEvidencePack(result.evidencePack);
+          setIdempotencyKey(uuid());
+        },
+      },
+    );
+  }
+  function downloadObligationEvidencePack() {
+    if (evidencePack === null) return;
+    downloadEvidencePack.mutate(
+      { obligationId: obligation.id, evidencePackId: evidencePack.id },
+      {
+        onSuccess: (result) => {
+          const link = document.createElement("a");
+          link.href = result.download.downloadUrl;
+          link.download = result.download.fileName;
+          link.target = "_blank";
+          link.rel = "noreferrer";
+          link.click();
         },
       },
     );
@@ -646,17 +825,6 @@ export function ReportingStageDraftEditor({
                 Content hash: {working.contentHash}
               </p>
               <label className="mt-3 block text-caption-1-regular text-fg-muted">
-                Submission reference
-                <Input
-                  className="mt-1"
-                  value={submissionReference}
-                  onChange={(event) =>
-                    setSubmissionReference(event.target.value)
-                  }
-                  placeholder="Regulator portal or filing reference"
-                />
-              </label>
-              <label className="mt-3 block text-caption-1-regular text-fg-muted">
                 Current password
                 <Input
                   className="mt-1"
@@ -706,15 +874,12 @@ export function ReportingStageDraftEditor({
                   disabled={
                     working.completeness !== "valid" ||
                     working.requiresTemplateReview ||
-                    submissionReference.trim().length === 0 ||
                     approvalProofId === null ||
                     isPending
                   }
                   onClick={approveDraft}
                 >
-                  {approve.isPending
-                    ? "Approving…"
-                    : "Approve and record submission"}
+                  {approve.isPending ? "Approving…" : "Approve stage"}
                 </Button>
               </div>
               {approvalProofId ? (
@@ -723,6 +888,242 @@ export function ReportingStageDraftEditor({
                   className="mt-2 text-caption-1-regular text-success"
                 >
                   Fresh approval proof ready. It will be consumed once.
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+          {canSubmitReports && working.status !== "submitted" ? (
+            <div
+              className="mt-4 border-t border-border pt-3"
+              aria-label="Manual submission package"
+            >
+              <h4 className="text-caption-1-semibold text-fg">
+                Signed manual package
+              </h4>
+              <p className="mt-1 text-caption-1-regular text-fg-muted">
+                Package generation preserves the approved snapshot. Downloading
+                it does not record an external filing or stop a deadline.
+              </p>
+              {approvalId === null ? (
+                <p
+                  role="status"
+                  className="mt-2 text-caption-1-regular text-fg-muted"
+                >
+                  Approve this exact revision before generating its signed
+                  package. If this was approved in another session, reload and
+                  request a new approval if no current approval is shown.
+                </p>
+              ) : null}
+              <div className="mt-3 flex flex-wrap gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  tone="grey"
+                  disabled={approvalId === null || isPending}
+                  onClick={generateSubmissionPackage}
+                >
+                  {generatePackage.isPending
+                    ? "Generating…"
+                    : "Generate package"}
+                </Button>
+                <Button
+                  size="sm"
+                  disabled={evidencePackage?.status !== "ready" || isPending}
+                  onClick={downloadSubmissionPackage}
+                >
+                  {downloadPackage.isPending
+                    ? "Preparing…"
+                    : "Download package"}
+                </Button>
+              </div>
+              {evidencePackage ? (
+                <p
+                  role="status"
+                  className="mt-2 break-all text-caption-1-regular text-fg-muted"
+                >
+                  {evidencePackage.status === "ready"
+                    ? `Package ready: ${evidencePackage.fileName}. SHA-256 ${evidencePackage.sha256}.`
+                    : evidencePackage.status === "failed"
+                      ? "Package generation failed. Review the approval and retry."
+                      : "Package generation is in progress."}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+          {canSubmitReports &&
+          working.status !== "submitted" &&
+          evidencePackage?.status === "ready" ? (
+            <div
+              className="mt-4 border-t border-border pt-3"
+              aria-label="Record external filing"
+            >
+              <h4 className="text-caption-1-semibold text-fg">
+                Record external filing
+              </h4>
+              <p className="mt-1 text-caption-1-regular text-fg-muted">
+                Record the actual external filing only after it has occurred. A
+                fresh filing proof and one receipt are required.
+              </p>
+              <label className="mt-3 block text-caption-1-regular text-fg-muted">
+                External filing reference
+                <Input
+                  className="mt-1"
+                  value={filingReference}
+                  onChange={(event) => setFilingReference(event.target.value)}
+                  placeholder="Regulator portal or filing reference"
+                />
+              </label>
+              <label className="mt-3 block text-caption-1-regular text-fg-muted">
+                Actual filing timestamp (UTC)
+                <Input
+                  className="mt-1"
+                  value={filingTimestamp}
+                  onChange={(event) => setFilingTimestamp(event.target.value)}
+                  placeholder="2026-01-31T15:30:00Z"
+                />
+              </label>
+              <label className="mt-3 block text-caption-1-regular text-fg-muted">
+                Timestamp basis
+                <Input
+                  className="mt-1"
+                  value={filingTimestampBasis}
+                  onChange={(event) =>
+                    setFilingTimestampBasis(event.target.value)
+                  }
+                  placeholder="Portal receipt timestamp in UTC"
+                />
+              </label>
+              <label className="mt-3 block text-caption-1-regular text-fg-muted">
+                Receipt (PDF, PNG, JPEG, or text; 10 MiB maximum)
+                <Input
+                  className="mt-1"
+                  type="file"
+                  accept="application/pdf,image/png,image/jpeg,text/plain"
+                  onChange={(event) =>
+                    setReceipt(event.target.files?.item(0) ?? null)
+                  }
+                />
+              </label>
+              <label className="mt-3 block text-caption-1-regular text-fg-muted">
+                Current password
+                <Input
+                  className="mt-1"
+                  type="password"
+                  autoComplete="current-password"
+                  value={filingPassword}
+                  onChange={(event) => setFilingPassword(event.target.value)}
+                />
+              </label>
+              <label className="mt-3 block text-caption-1-regular text-fg-muted">
+                MFA code (if required)
+                <Input
+                  className="mt-1"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  value={filingMfaCode}
+                  onChange={(event) => setFilingMfaCode(event.target.value)}
+                />
+              </label>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  tone="grey"
+                  disabled={filingPassword.length === 0 || isPending}
+                  onClick={reauthenticateForFiling}
+                >
+                  {reauthenticateFiling.isPending
+                    ? "Verifying…"
+                    : "Reauthenticate for filing"}
+                </Button>
+                <Button
+                  size="sm"
+                  disabled={
+                    filingProofId === null ||
+                    receipt === null ||
+                    filingReference.trim().length === 0 ||
+                    filingTimestampBasis.trim().length === 0 ||
+                    isPending
+                  }
+                  onClick={recordExternalFiling}
+                >
+                  {recordFiling.isPending
+                    ? "Recording…"
+                    : "Record external filing"}
+                </Button>
+              </div>
+              {filingProofId ? (
+                <p
+                  role="status"
+                  className="mt-2 text-caption-1-regular text-success"
+                >
+                  Fresh filing proof ready. It will be consumed once.
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+          {canSubmitReports && timeline.data?.events.length ? (
+            <div
+              className="mt-4 border-t border-border pt-3"
+              aria-label="Evidence timeline"
+            >
+              <h4 className="text-caption-1-semibold text-fg">
+                Evidence timeline
+              </h4>
+              <ol className="mt-2 space-y-2 text-caption-1-regular text-fg-muted">
+                {timeline.data.events.map((event) => (
+                  <li key={event.id}>
+                    <span className="font-medium text-fg">
+                      {label(event.kind)}
+                    </span>
+                    {": "}
+                    {event.summary}
+                  </li>
+                ))}
+              </ol>
+            </div>
+          ) : null}
+          {canSubmitReports ? (
+            <div
+              className="mt-4 border-t border-border pt-3"
+              aria-label="Export reporting evidence"
+            >
+              <h4 className="text-caption-1-semibold text-fg">
+                Export reporting evidence
+              </h4>
+              <p className="mt-1 text-caption-1-regular text-fg-muted">
+                Export an immutable, manifest-verified evidence pack for this
+                obligation. The export does not alter the reporting record.
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  tone="grey"
+                  disabled={isPending}
+                  onClick={generateObligationEvidencePack}
+                >
+                  {generateEvidencePack.isPending
+                    ? "Generating…"
+                    : "Generate evidence pack"}
+                </Button>
+                <Button
+                  size="sm"
+                  disabled={evidencePack === null || isPending}
+                  onClick={downloadObligationEvidencePack}
+                >
+                  {downloadEvidencePack.isPending
+                    ? "Preparing…"
+                    : "Download evidence pack"}
+                </Button>
+              </div>
+              {evidencePack ? (
+                <p
+                  role="status"
+                  className="mt-2 break-all text-caption-1-regular text-fg-muted"
+                >
+                  Evidence pack ready: {evidencePack.fileName}. SHA-256{" "}
+                  {evidencePack.sha256}.
                 </p>
               ) : null}
             </div>

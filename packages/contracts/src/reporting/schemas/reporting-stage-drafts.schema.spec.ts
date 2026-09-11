@@ -239,11 +239,19 @@ describe("reporting stage draft contracts", () => {
         draftRevision: 2,
         draftHash: hash,
         reauthenticationProofId: id,
-        submissionReference: "CRA-PORTAL-2026-0001",
         segregationOfDutiesOverrideReason:
           "Only approved responder available during incident response.",
         idempotencyKey: id,
       }),
     ).toHaveProperty("reauthenticationProofId", id);
+    expect(
+      approveReportingStageDraftInputSchema.safeParse({
+        draftRevision: 2,
+        draftHash: hash,
+        reauthenticationProofId: id,
+        submissionReference: "CRA-PORTAL-2026-0001",
+        idempotencyKey: id,
+      }).success,
+    ).toBe(false);
   });
 });

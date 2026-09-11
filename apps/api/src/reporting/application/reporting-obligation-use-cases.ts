@@ -2,6 +2,7 @@ import type {
   AcquireReportingStageDraftLockInput,
   ApplyReportingFamilyTemplateInput,
   CancelReportingObligationInput,
+  CreateReportingStageAcknowledgementInput,
   CreateReportingFamilyTemplateInput,
   CreateReportingFamilyTemplateVersionInput,
   CorrectReportingObligationAnchorInput,
@@ -16,17 +17,26 @@ import type {
   SubmitReportingStageDraftInput,
   ReauthenticateReportingStageApprovalInput,
   ApproveReportingStageDraftInput,
+  GenerateReportingObligationEvidencePackInput,
+  GenerateReportingStageSubmissionPackageInput,
+  RecordReportingStageExternalFilingFields,
+  ReauthenticateReportingStageFilingInput,
+  ReportingObligationEvidencePackParams,
+  ReportingStageEvidencePackageParams,
 } from "@repo/contracts/reporting";
 
 import type {
   ReportingObligationRepository,
+  ReportingEvidenceWorkflowPort,
   ReportingStageApprovalReauthenticationPort,
+  ReportingStageReceiptUpload,
 } from "./reporting-obligation.port";
 
 export class ReportingObligationUseCases {
   constructor(
     private readonly repository: ReportingObligationRepository,
     private readonly reauthentication: ReportingStageApprovalReauthenticationPort,
+    private readonly evidence: ReportingEvidenceWorkflowPort,
   ) {}
 
   async reauthenticateStageApproval(
@@ -76,11 +86,131 @@ export class ReportingObligationUseCases {
         sessionId: string;
         obligationId: string;
         stageId: string;
-        submissionReference: string;
       } & ApproveReportingStageDraftInput
     >,
   ) {
     return this.repository.approveStageDraft(organizationId, input);
+  }
+
+  generateStageSubmissionPackage(
+    organizationId: string,
+    input: Readonly<
+      {
+        actorId: string;
+        obligationId: string;
+        stageId: string;
+      } & GenerateReportingStageSubmissionPackageInput
+    >,
+  ) {
+    return this.evidence.generateStageSubmissionPackage(organizationId, input);
+  }
+
+  getStageSubmissionPackageDownload(
+    organizationId: string,
+    input: Readonly<
+      { actorId: string; stageId: string } & ReportingStageEvidencePackageParams
+    >,
+  ) {
+    return this.evidence.getStageSubmissionPackageDownload(
+      organizationId,
+      input,
+    );
+  }
+
+  async reauthenticateStageFiling(
+    organizationId: string,
+    input: Readonly<
+      {
+        actorId: string;
+        sessionId: string;
+        email: string;
+        accessToken: string;
+        obligationId: string;
+        stageId: string;
+      } & ReauthenticateReportingStageFilingInput
+    >,
+  ) {
+    const verified = await this.reauthentication.verify({
+      email: input.email,
+      password: input.password,
+      accessToken: input.accessToken,
+      actorId: input.actorId,
+      ...(input.mfaCode ? { mfaCode: input.mfaCode } : {}),
+    });
+    if (verified.outcome !== "verified")
+      return { outcome: verified.outcome } as const;
+    const proof = await this.evidence.createStageFilingProof(organizationId, {
+      actorId: input.actorId,
+      sessionId: input.sessionId,
+      obligationId: input.obligationId,
+      stageId: input.stageId,
+      packageId: input.packageId,
+      idempotencyKey: input.idempotencyKey,
+      expiresAt: new Date(Date.now() + 5 * 60_000).toISOString(),
+    });
+    return proof === null
+      ? { outcome: "not_found" as const }
+      : { outcome: "created" as const, proof };
+  }
+
+  recordStageExternalFiling(
+    organizationId: string,
+    input: Readonly<{
+      actorId: string;
+      sessionId: string;
+      obligationId: string;
+      stageId: string;
+      fields: RecordReportingStageExternalFilingFields;
+      receipt: ReportingStageReceiptUpload;
+    }>,
+  ) {
+    return this.evidence.recordStageExternalFiling(organizationId, input);
+  }
+
+  appendStageAcknowledgement(
+    organizationId: string,
+    input: Readonly<
+      {
+        actorId: string;
+        obligationId: string;
+      } & CreateReportingStageAcknowledgementInput
+    >,
+  ) {
+    return this.evidence.appendStageAcknowledgement(organizationId, input);
+  }
+
+  stageEvidenceTimeline(
+    organizationId: string,
+    input: Readonly<{ actorId: string; obligationId: string; stageId: string }>,
+  ) {
+    return this.evidence.stageEvidenceTimeline(organizationId, input);
+  }
+
+  generateObligationEvidencePack(
+    organizationId: string,
+    input: Readonly<
+      {
+        actorId: string;
+        obligationId: string;
+      } & GenerateReportingObligationEvidencePackInput
+    >,
+  ) {
+    return this.evidence.generateObligationEvidencePack(organizationId, input);
+  }
+
+  getObligationEvidencePackDownload(
+    organizationId: string,
+    input: Readonly<
+      {
+        actorId: string;
+        obligationId: string;
+      } & ReportingObligationEvidencePackParams
+    >,
+  ) {
+    return this.evidence.getObligationEvidencePackDownload(
+      organizationId,
+      input,
+    );
   }
 
   getStageDraft(

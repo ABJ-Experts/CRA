@@ -11,7 +11,12 @@ import {
   Query,
   ServiceUnavailableException,
   HttpException,
+  UploadedFile,
+  UseInterceptors,
 } from "@nestjs/common";
+import { FileInterceptor } from "@nestjs/platform-express";
+import { memoryStorage } from "multer";
+import { z } from "zod";
 import {
   acquireReportingStageDraftLockInputSchema,
   approveReportingStageDraftInputSchema,
@@ -42,6 +47,22 @@ import {
   reportingStageDraftApprovalResponseSchema,
   reauthenticateReportingStageApprovalInputSchema,
   reauthenticateReportingStageApprovalResponseSchema,
+  createReportingStageAcknowledgementInputSchema,
+  generateReportingObligationEvidencePackInputSchema,
+  generateReportingStageSubmissionPackageInputSchema,
+  recordReportingStageExternalFilingFieldsSchema,
+  reauthenticateReportingStageFilingInputSchema,
+  reauthenticateReportingStageFilingResponseSchema,
+  reportingObligationEvidencePackDownloadResponseSchema,
+  reportingObligationEvidencePackRouteParamsSchema,
+  reportingObligationEvidencePackResponseSchema,
+  reportingStageAcknowledgementResponseSchema,
+  reportingStageEvidencePackageDownloadResponseSchema,
+  reportingStageEvidencePackageRouteParamsSchema,
+  reportingStageEvidencePackageResponseSchema,
+  reportingStageEvidenceTimelineResponseSchema,
+  reportingStageExternalFilingResponseSchema,
+  reportingSubmissionAcknowledgementRouteParamsSchema,
   saveReportingStageDraftInputSchema,
   submitReportingStageDraftInputSchema,
   type AcquireReportingStageDraftLockInput,
@@ -62,6 +83,13 @@ import {
   type SaveReportingStageDraftInput,
   type SubmitReportingStageDraftInput,
   type ReauthenticateReportingStageApprovalInput,
+  type CreateReportingStageAcknowledgementInput,
+  type GenerateReportingObligationEvidencePackInput,
+  type GenerateReportingStageSubmissionPackageInput,
+  type RecordReportingStageExternalFilingFields,
+  type ReauthenticateReportingStageFilingInput,
+  type ReportingObligationEvidencePackParams,
+  type ReportingStageEvidencePackageParams,
 } from "@repo/contracts/reporting";
 
 import {
@@ -83,9 +111,18 @@ import {
   ReportingStageDraftLockedError,
   ReportingStageApprovalProofError,
   ReportingStageApprovalSodError,
+  ReportingStageFilingProofError,
 } from "./application/reporting-obligation.port";
 import { ReportingObligationUseCases } from "./application/reporting-obligation-use-cases";
+import { ReportingEvidenceWorkflowError } from "./infrastructure/reporting-evidence-workflow.service";
 
+const receiptMimeTypes = new Set([
+  "application/pdf",
+  "image/png",
+  "image/jpeg",
+  "text/plain",
+]);
+const receiptMaximumBytes = 10 * 1024 * 1024;
 @Controller("reporting/obligations")
 export class ReportingObligationController {
   constructor(private readonly reporting: ReportingObligationUseCases) {}
@@ -414,6 +451,219 @@ export class ReportingObligationController {
     throw notFound();
   }
 
+  @Post(":obligationId/stages/:stageId/draft/packages")
+  @RequirePermissions("can_view_findings", "can_submit_reporting")
+  @ZodResponse(reportingStageEvidencePackageResponseSchema)
+  async generateStagePackage(
+    @Param(zodParams(reportingStageDraftParamsSchema))
+    params: ReportingStageDraftParams,
+    @Body(zodBody(generateReportingStageSubmissionPackageInputSchema))
+    input: GenerateReportingStageSubmissionPackageInput,
+    @CurrentUser() user: RequestUser,
+  ) {
+    try {
+      const result = await this.reporting.generateStageSubmissionPackage(
+        organizationId(user),
+        {
+          actorId: user.id,
+          ...params,
+          ...input,
+        },
+      );
+      if (result) return result;
+    } catch (error) {
+      throw evidenceFailure(error);
+    }
+    throw notFound();
+  }
+
+  @Get(":obligationId/stages/:stageId/draft/packages/:packageId/download")
+  @RequirePermissions("can_view_findings", "can_submit_reporting")
+  @ZodResponse(reportingStageEvidencePackageDownloadResponseSchema)
+  async downloadStagePackage(
+    @Param(zodParams(reportingStageEvidencePackageRouteParamsSchema))
+    params: ReportingStageDraftParams & ReportingStageEvidencePackageParams,
+    @CurrentUser() user: RequestUser,
+  ) {
+    try {
+      const result = await this.reporting.getStageSubmissionPackageDownload(
+        organizationId(user),
+        { actorId: user.id, ...params },
+      );
+      if (result) return result;
+    } catch (error) {
+      throw evidenceFailure(error);
+    }
+    throw notFound();
+  }
+
+  @Post(":obligationId/stages/:stageId/draft/filing-reauthentication")
+  @RequirePermissions("can_view_findings", "can_submit_reporting")
+  @ZodResponse(reauthenticateReportingStageFilingResponseSchema)
+  async reauthenticateStageFiling(
+    @Param(zodParams(reportingStageDraftParamsSchema))
+    params: ReportingStageDraftParams,
+    @Body(zodBody(reauthenticateReportingStageFilingInputSchema))
+    input: ReauthenticateReportingStageFilingInput,
+    @CurrentUser() user: RequestUser,
+  ) {
+    if (!user.sessionId)
+      throw approvalForbidden("A valid organization session is required.");
+    const result = await this.reporting.reauthenticateStageFiling(
+      organizationId(user),
+      {
+        actorId: user.id,
+        sessionId: user.sessionId,
+        email: user.email,
+        accessToken: user.accessToken,
+        ...params,
+        ...input,
+      },
+    );
+    if (result.outcome === "created") return result.proof;
+    if (result.outcome === "mfa_required")
+      throw approvalForbidden(
+        "Two-factor verification is required for external filing.",
+      );
+    if (result.outcome === "invalid")
+      throw approvalForbidden("Reauthentication failed.");
+    if (result.outcome === "not_found") throw notFound();
+    throw unavailable();
+  }
+
+  @Post(":obligationId/stages/:stageId/draft/filings")
+  @RequirePermissions("can_view_findings", "can_submit_reporting")
+  @UseInterceptors(
+    FileInterceptor("receipt", {
+      storage: memoryStorage(),
+      limits: {
+        fileSize: receiptMaximumBytes,
+        files: 1,
+        fields: 7,
+        fieldSize: 4_096,
+      },
+    }),
+  )
+  @ZodResponse(reportingStageExternalFilingResponseSchema)
+  async recordStageExternalFiling(
+    @Param(zodParams(reportingStageDraftParamsSchema))
+    params: ReportingStageDraftParams,
+    @Body(zodBody(recordReportingStageExternalFilingFieldsSchema))
+    fields: RecordReportingStageExternalFilingFields,
+    @UploadedFile() receipt: Express.Multer.File | undefined,
+    @CurrentUser() user: RequestUser,
+  ) {
+    if (!user.sessionId)
+      throw approvalForbidden("A valid organization session is required.");
+    const upload = validatedReceipt(receipt);
+    try {
+      const result = await this.reporting.recordStageExternalFiling(
+        organizationId(user),
+        {
+          actorId: user.id,
+          sessionId: user.sessionId,
+          ...params,
+          fields,
+          receipt: upload,
+        },
+      );
+      if (result) return result;
+    } catch (error) {
+      throw evidenceFailure(error);
+    }
+    throw notFound();
+  }
+
+  @Get(":obligationId/stages/:stageId/draft/evidence-timeline")
+  @RequirePermissions("can_view_findings")
+  @ZodResponse(reportingStageEvidenceTimelineResponseSchema)
+  async stageEvidenceTimeline(
+    @Param(zodParams(reportingStageDraftParamsSchema))
+    params: ReportingStageDraftParams,
+    @CurrentUser() user: RequestUser,
+  ) {
+    try {
+      const result = await this.reporting.stageEvidenceTimeline(
+        organizationId(user),
+        { actorId: user.id, ...params },
+      );
+      if (result) return result;
+    } catch (error) {
+      throw evidenceFailure(error);
+    }
+    throw notFound();
+  }
+
+  @Post(":obligationId/submissions/:submissionId/acknowledgements")
+  @RequirePermissions("can_view_findings", "can_submit_reporting")
+  @ZodResponse(reportingStageAcknowledgementResponseSchema)
+  async appendStageAcknowledgement(
+    @Param(zodParams(reportingSubmissionAcknowledgementRouteParamsSchema))
+    params: { obligationId: string; submissionId: string },
+    @Body(zodBody(createReportingStageAcknowledgementInputSchema))
+    input: CreateReportingStageAcknowledgementInput,
+    @CurrentUser() user: RequestUser,
+  ) {
+    if (params.submissionId !== input.submissionId) {
+      throw new BadRequestException({
+        code: "invalid_request",
+        message: "The acknowledgement submission does not match the route.",
+      });
+    }
+    try {
+      const result = await this.reporting.appendStageAcknowledgement(
+        organizationId(user),
+        { actorId: user.id, ...params, ...input },
+      );
+      if (result) return result;
+    } catch (error) {
+      throw evidenceFailure(error);
+    }
+    throw notFound();
+  }
+
+  @Post(":obligationId/evidence-packs")
+  @RequirePermissions("can_view_findings", "can_submit_reporting")
+  @ZodResponse(reportingObligationEvidencePackResponseSchema)
+  async generateEvidencePack(
+    @Param(zodParams(reportingObligationParamsSchema))
+    params: { obligationId: string },
+    @Body(zodBody(generateReportingObligationEvidencePackInputSchema))
+    input: GenerateReportingObligationEvidencePackInput,
+    @CurrentUser() user: RequestUser,
+  ) {
+    try {
+      const result = await this.reporting.generateObligationEvidencePack(
+        organizationId(user),
+        { actorId: user.id, ...params, ...input },
+      );
+      if (result) return result;
+    } catch (error) {
+      throw evidenceFailure(error);
+    }
+    throw notFound();
+  }
+
+  @Get(":obligationId/evidence-packs/:evidencePackId/download")
+  @RequirePermissions("can_view_findings", "can_submit_reporting")
+  @ZodResponse(reportingObligationEvidencePackDownloadResponseSchema)
+  async downloadEvidencePack(
+    @Param(zodParams(reportingObligationEvidencePackRouteParamsSchema))
+    params: { obligationId: string } & ReportingObligationEvidencePackParams,
+    @CurrentUser() user: RequestUser,
+  ) {
+    try {
+      const result = await this.reporting.getObligationEvidencePackDownload(
+        organizationId(user),
+        { actorId: user.id, ...params },
+      );
+      if (result) return result;
+    } catch (error) {
+      throw evidenceFailure(error);
+    }
+    throw notFound();
+  }
+
   @Post(":obligationId/stages/:stageId/draft/templates/apply")
   @RequirePermissions("can_view_findings", "can_edit_findings")
   @ZodResponse(reportingStageDraftMutationResponseSchema)
@@ -604,4 +854,51 @@ function draftMutationFailure(error: unknown): Error {
     );
   }
   return mutationFailure(error);
+}
+
+function validatedReceipt(file: Express.Multer.File | undefined) {
+  if (
+    !file ||
+    file.buffer.byteLength < 1 ||
+    file.buffer.byteLength > receiptMaximumBytes
+  ) {
+    throw new BadRequestException({
+      code: "invalid_receipt",
+      message: "One receipt file of up to 10 MiB is required.",
+    });
+  }
+  const mimeType = file.mimetype.toLowerCase();
+  if (!receiptMimeTypes.has(mimeType)) {
+    throw new BadRequestException({
+      code: "invalid_receipt",
+      message: "Receipt files must be PDF, PNG, JPEG, or plain text.",
+    });
+  }
+  return {
+    bytes: Buffer.from(file.buffer),
+    fileName: file.originalname,
+    mimeType: mimeType as
+      "application/pdf" | "image/png" | "image/jpeg" | "text/plain",
+  };
+}
+
+function evidenceFailure(error: unknown): Error {
+  if (error instanceof ReportingEvidenceWorkflowError) {
+    if (error.code === "conflict")
+      return new ConflictException({
+        code: "evidence_conflict",
+        message: "The approved package or filing changed. Reload and retry.",
+      });
+    if (error.code === "invalid_request")
+      return new BadRequestException({
+        code: "invalid_request",
+        message: "The reporting evidence request is invalid.",
+      });
+  }
+  if (error instanceof ReportingStageFilingProofError) {
+    return approvalForbidden(
+      "The fresh filing proof is expired or already used. Reauthenticate and retry.",
+    );
+  }
+  return unavailable();
 }

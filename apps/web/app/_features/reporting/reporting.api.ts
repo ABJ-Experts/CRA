@@ -25,6 +25,21 @@ import {
   reportingStageDraftApprovalResponseSchema,
   reauthenticateReportingStageApprovalInputSchema,
   reauthenticateReportingStageApprovalResponseSchema,
+  createReportingStageAcknowledgementInputSchema,
+  generateReportingObligationEvidencePackInputSchema,
+  generateReportingStageSubmissionPackageInputSchema,
+  reauthenticateReportingStageFilingInputSchema,
+  reauthenticateReportingStageFilingResponseSchema,
+  recordReportingStageExternalFilingFieldsSchema,
+  reportingObligationEvidencePackDownloadResponseSchema,
+  reportingObligationEvidencePackParamsSchema,
+  reportingObligationEvidencePackResponseSchema,
+  reportingStageAcknowledgementResponseSchema,
+  reportingStageEvidencePackageDownloadResponseSchema,
+  reportingStageEvidencePackageParamsSchema,
+  reportingStageEvidencePackageResponseSchema,
+  reportingStageEvidenceTimelineResponseSchema,
+  reportingStageExternalFilingResponseSchema,
   saveReportingStageDraftInputSchema,
   submitReportingStageDraftInputSchema,
   type CancelReportingObligationInput,
@@ -41,6 +56,11 @@ import {
   type SubmitReportingStageDraftInput,
   type ApproveReportingStageDraftInput,
   type ReauthenticateReportingStageApprovalInput,
+  type CreateReportingStageAcknowledgementInput,
+  type GenerateReportingObligationEvidencePackInput,
+  type GenerateReportingStageSubmissionPackageInput,
+  type ReauthenticateReportingStageFilingInput,
+  type RecordReportingStageExternalFilingFieldsInput,
 } from "@repo/contracts/reporting";
 
 import { ApiClientError, apiClient } from "../../_lib/http/api-client";
@@ -91,6 +111,42 @@ function stageDraftPath(obligationId: string, stageId: string) {
     );
   }
   return `/api/v1/reporting/obligations/${parsed.data.obligationId}/stages/${parsed.data.stageId}/draft` as const;
+}
+
+function stagePackagePath(
+  obligationId: string,
+  stageId: string,
+  packageId?: string,
+) {
+  const draftPath = stageDraftPath(obligationId, stageId);
+  if (packageId === undefined) return `${draftPath}/packages` as const;
+  const parsed = reportingStageEvidencePackageParamsSchema.safeParse({
+    packageId,
+  });
+  if (!parsed.success) {
+    throw new ApiClientError(
+      "invalid_request",
+      "The reporting package identifier is invalid.",
+      400,
+    );
+  }
+  return `${draftPath}/packages/${parsed.data.packageId}` as const;
+}
+
+function evidencePackPath(obligationId: string, evidencePackId?: string) {
+  const root = obligationPath(obligationId);
+  if (evidencePackId === undefined) return `${root}/evidence-packs` as const;
+  const parsed = reportingObligationEvidencePackParamsSchema.safeParse({
+    evidencePackId,
+  });
+  if (!parsed.success) {
+    throw new ApiClientError(
+      "invalid_request",
+      "The reporting evidence pack identifier is invalid.",
+      400,
+    );
+  }
+  return `${root}/evidence-packs/${parsed.data.evidencePackId}` as const;
 }
 
 function familyTemplatePath(templateId?: string) {
@@ -256,6 +312,99 @@ export const reportingApi = Object.freeze({
       inputSchema: approveReportingStageDraftInputSchema,
       body: input,
       schema: reportingStageDraftApprovalResponseSchema,
+    });
+  },
+  generateStageSubmissionPackage(
+    obligationId: string,
+    stageId: string,
+    input: GenerateReportingStageSubmissionPackageInput,
+  ) {
+    return apiClient.request({
+      path: stagePackagePath(obligationId, stageId),
+      method: "POST",
+      inputSchema: generateReportingStageSubmissionPackageInputSchema,
+      body: input,
+      schema: reportingStageEvidencePackageResponseSchema,
+    });
+  },
+  stageSubmissionPackageDownload(
+    obligationId: string,
+    stageId: string,
+    packageId: string,
+  ) {
+    return apiClient.request({
+      path: `${stagePackagePath(obligationId, stageId, packageId)}/download`,
+      schema: reportingStageEvidencePackageDownloadResponseSchema,
+    });
+  },
+  reauthenticateStageFiling(
+    obligationId: string,
+    stageId: string,
+    input: ReauthenticateReportingStageFilingInput,
+  ) {
+    return apiClient.request({
+      path: `${stageDraftPath(obligationId, stageId)}/filing-reauthentication`,
+      method: "POST",
+      inputSchema: reauthenticateReportingStageFilingInputSchema,
+      body: input,
+      schema: reauthenticateReportingStageFilingResponseSchema,
+    });
+  },
+  recordStageExternalFiling(
+    obligationId: string,
+    stageId: string,
+    fields: RecordReportingStageExternalFilingFieldsInput,
+    receipt: File,
+  ) {
+    return apiClient.requestMultipart({
+      path: `${stageDraftPath(obligationId, stageId)}/filings`,
+      method: "POST",
+      fieldsSchema: recordReportingStageExternalFilingFieldsSchema,
+      fields,
+      files: [{ name: "receipt", value: receipt, filename: receipt.name }],
+      schema: reportingStageExternalFilingResponseSchema,
+    });
+  },
+  stageEvidenceTimeline(
+    obligationId: string,
+    stageId: string,
+    signal?: AbortSignal,
+  ) {
+    return apiClient.request({
+      path: `${stageDraftPath(obligationId, stageId)}/evidence-timeline`,
+      schema: reportingStageEvidenceTimelineResponseSchema,
+      signal,
+    });
+  },
+  createStageAcknowledgement(
+    obligationId: string,
+    submissionId: string,
+    input: CreateReportingStageAcknowledgementInput,
+  ) {
+    return apiClient.request({
+      path: `${obligationPath(obligationId)}/submissions/${submissionId}/acknowledgements`,
+      method: "POST",
+      inputSchema: createReportingStageAcknowledgementInputSchema,
+      body: input,
+      schema: reportingStageAcknowledgementResponseSchema,
+    });
+  },
+  generateEvidencePack(
+    obligationId: string,
+    input: GenerateReportingObligationEvidencePackInput,
+  ) {
+    return apiClient.request({
+      path: evidencePackPath(obligationId),
+      method: "POST",
+      inputSchema: generateReportingObligationEvidencePackInputSchema,
+      body: input,
+      schema: reportingObligationEvidencePackResponseSchema,
+    });
+  },
+  evidencePackDownload(obligationId: string, evidencePackId: string) {
+    return apiClient.request({
+      path: `${evidencePackPath(obligationId, evidencePackId)}/download`,
+      schema: reportingObligationEvidencePackDownloadResponseSchema,
     });
   },
   familyTemplates(

@@ -97,10 +97,13 @@ export function ReportingObligationsContent() {
     if (selectedFromUrl !== null) setSelectedId(selectedFromUrl);
   }, [selectedFromUrl]);
   const summary = useReportingDeadlineSummaryQuery(canView && !sessionLoading);
+  // A just-created or URL-selected obligation can be absent during an
+  // invalidation refetch. Never fall back to a different row: that would let
+  // an operator edit or approve the wrong reporting record.
   const selected =
-    query.data?.obligations.find((item) => item.id === selectedId) ??
-    query.data?.obligations[0] ??
-    null;
+    selectedId === null
+      ? (query.data?.obligations[0] ?? null)
+      : (query.data?.obligations.find((item) => item.id === selectedId) ?? null);
 
   if (sessionLoading) {
     return (

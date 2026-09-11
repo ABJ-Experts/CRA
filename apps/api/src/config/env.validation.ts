@@ -103,6 +103,15 @@ export const envSchema = z.object({
   /** HMAC key for the signed active-organization cookie. */
   COOKIE_SIGNING_SECRET: z.string().min(16),
   /**
+   * Server-only Ed25519 material for manual reporting packages. Deployments
+   * keep the private key in their secret manager; retained public keys make
+   * old packages independently verifiable after rotation.
+   */
+  REPORTING_EVIDENCE_SIGNING_KEY_ID: z.string().trim().min(1).max(200).optional(),
+  REPORTING_EVIDENCE_SIGNING_PRIVATE_KEY: z.string().min(1).optional(),
+  REPORTING_EVIDENCE_SIGNING_PUBLIC_KEY: z.string().min(1).optional(),
+  REPORTING_EVIDENCE_RETAINED_PUBLIC_KEYS_JSON: z.string().optional().default("[]"),
+  /**
    * pgcrypto pgp_sym_encrypt/decrypt key for connector_secrets.ciphertext.
    * Postgres functions can't read env vars, so this is threaded in as an RPC
    * parameter on every call -- never logged, never returned to a browser.

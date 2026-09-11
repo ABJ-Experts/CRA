@@ -249,7 +249,12 @@ export const reportingStageDraftConflictSchema = z
     message: z.literal(
       "The draft changed. Reload or compare the current revision before saving.",
     ),
-    currentDraft: reportingStageDraftSchema,
+    // Approval is an immutable companion fact supplied by M6-05. The full
+    // approval shape is validated on the normal draft read boundary below;
+    // conflict payloads retain their established draft-first compatibility.
+    currentDraft: reportingStageDraftSchema.extend({
+      approval: z.unknown().nullable().optional(),
+    }),
   })
   .strict();
 
@@ -270,7 +275,12 @@ export const acquireReportingStageDraftLockInputSchema = z
 
 /** Returned only to the lock holder; never embed this secret in a draft detail response. */
 export const acquireReportingStageDraftLockResponseSchema = z
-  .object({ draft: reportingStageDraftSchema, lockToken: z.uuid() })
+  .object({
+    draft: reportingStageDraftSchema.extend({
+      approval: z.unknown().nullable().optional(),
+    }),
+    lockToken: z.uuid(),
+  })
   .strict();
 
 const updateDraftFieldsSchema = z
@@ -361,7 +371,6 @@ export const approveReportingStageDraftInputSchema = z
     draftRevision: revisionSchema,
     draftHash: reportingStageDraftHashSchema,
     reauthenticationProofId: z.uuid(),
-    submissionReference: requiredText(1_000),
     segregationOfDutiesOverrideReason: requiredText(2_000).optional(),
     idempotencyKey: idempotencyKeySchema,
   })
@@ -479,7 +488,14 @@ export const applyReportingFamilyTemplateInputSchema = z
   .strict();
 
 export const reportingStageDraftResponseSchema = z
-  .object({ draft: reportingStageDraftSchema })
+  .object({
+    // M6-05 keeps the current approval fact alongside the mutable draft.  The
+    // approval itself remains a separate immutable record and is never used
+    // as a submission signal.
+    draft: reportingStageDraftSchema.extend({
+      approval: reportingStageDraftApprovalSchema.nullable().optional(),
+    }),
+  })
   .strict();
 export const reportingStageDraftMutationResponseSchema =
   reportingStageDraftResponseSchema;

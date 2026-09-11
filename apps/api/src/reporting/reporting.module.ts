@@ -18,6 +18,7 @@ import {
 } from "./application/reporting-obligation.port";
 import { ReportingObligationUseCases } from "./application/reporting-obligation-use-cases";
 import { SupabaseReportingObligationRepository } from "./infrastructure/supabase-reporting-obligation.repository";
+import { ReportingEvidenceWorkflowService } from "./infrastructure/reporting-evidence-workflow.service";
 import { ExistingAuthReportingStageApprovalReauthenticationAdapter } from "./infrastructure/reporting-stage-approval-reauthentication.adapter";
 import { MailReportingDeadlineDeliveryAdapter } from "./infrastructure/mail-reporting-deadline-delivery.adapter";
 import { SupabaseReportingDeadlineMonitorRepository } from "./infrastructure/supabase-reporting-deadline-monitor.repository";
@@ -29,6 +30,7 @@ import { ReportingDeadlineMonitorWorker } from "./worker/reporting-deadline-moni
   controllers: [ReportingObligationController],
   providers: [
     SupabaseReportingObligationRepository,
+    ReportingEvidenceWorkflowService,
     ExistingAuthReportingStageApprovalReauthenticationAdapter,
     {
       provide: REPORTING_STAGE_APPROVAL_REAUTHENTICATION,
@@ -45,11 +47,14 @@ import { ReportingDeadlineMonitorWorker } from "./worker/reporting-deadline-moni
       inject: [
         REPORTING_OBLIGATION_REPOSITORY,
         REPORTING_STAGE_APPROVAL_REAUTHENTICATION,
+        ReportingEvidenceWorkflowService,
       ],
       useFactory: (
         repository: ReportingObligationRepository,
         reauthentication: ReportingStageApprovalReauthenticationPort,
-      ) => new ReportingObligationUseCases(repository, reauthentication),
+        evidence: ReportingEvidenceWorkflowService,
+      ) =>
+        new ReportingObligationUseCases(repository, reauthentication, evidence),
     },
     {
       provide: ReportingDeadlineMonitorWorker,

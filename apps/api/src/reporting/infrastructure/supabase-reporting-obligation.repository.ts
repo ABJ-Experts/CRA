@@ -237,7 +237,6 @@ export class SupabaseReportingObligationRepository implements ReportingObligatio
         sessionId: string;
         obligationId: string;
         stageId: string;
-        submissionReference: string;
       } & ApproveReportingStageDraftInput
     >,
   ): Promise<ReportingStageDraftApprovalResponse | null> {
@@ -251,7 +250,9 @@ export class SupabaseReportingObligationRepository implements ReportingObligatio
       p_draft_revision: input.draftRevision,
       p_draft_hash: input.draftHash,
       p_reauthentication_proof_id: input.reauthenticationProofId,
-      p_submission_reference: input.submissionReference,
+      // Retained only for the expand/rollback-compatible RPC signature.
+      // M6-05 approval is no longer evidence of an external filing.
+      p_submission_reference: "",
       p_sod_override_reason: input.segregationOfDutiesOverrideReason ?? null,
       p_idempotency_key: input.idempotencyKey,
       p_correlation_id: null,

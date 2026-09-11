@@ -40,7 +40,7 @@ async function signInAsOwner(page: import("@playwright/test").Page) {
   expect(selected).toBe(true);
 }
 
-test("owner creates and submits a local collaborative stage draft", async ({
+test("owner approves, packages, and records a local manual stage filing", async ({
   page,
 }, testInfo) => {
   await signInAsOwner(page);
@@ -56,14 +56,30 @@ test("owner creates and submits a local collaborative stage draft", async ({
   await create
     .getByLabel("Awareness basis")
     .fill(`${marker}: a human asserted awareness for browser verification.`);
+  const opened = page.waitForResponse(
+    (response) =>
+      response.url().endsWith("/api/v1/reporting/obligations") &&
+      response.request().method() === "POST",
+  );
   await create.getByRole("button", { name: "Open obligation" }).click();
+  const openedResponse = await opened;
+  expect(openedResponse.status()).toBe(201);
+  const openedBody = (await openedResponse.json()) as {
+    obligation: { id: string };
+  };
+  await page.goto(`/reporting?obligationId=${openedBody.obligation.id}`);
 
   const detail = page.getByRole("complementary");
+  await expect(detail.getByText(openedBody.obligation.id, { exact: true })).toBeVisible();
   const stages = detail.locator("ol");
-  await expect(stages.getByText("Early Warning", { exact: true })).toBeVisible();
+  await expect(
+    stages.getByText("Early Warning", { exact: true }),
+  ).toBeVisible();
   await expect(stages.getByText("Final Report", { exact: true })).toBeVisible();
   await expect(
-    stages.locator("li").filter({ hasText: /Early Warning.*remaining.*elapsed/ }),
+    stages
+      .locator("li")
+      .filter({ hasText: /Early Warning.*remaining.*elapsed/ }),
   ).toBeVisible();
   await expect(
     stages.locator("li").filter({ hasText: /Final Report.*Pending anchor/ }),
@@ -75,6 +91,7 @@ test("owner creates and submits a local collaborative stage draft", async ({
   await expect(draft).toBeVisible();
   await draft.getByPlaceholder("Release UUID").fill(localReleaseId);
   await draft.getByRole("button", { name: "Create draft" }).click();
+  await expect(draft.getByRole("button", { name: "Edit draft" })).toBeEnabled();
   await draft.getByRole("button", { name: "Edit draft" }).click();
   await expect(draft.getByText("Editing lock acquired.")).toBeVisible();
   await draft.locator("textarea").nth(0).fill(`${marker}: initial summary.`);
@@ -83,22 +100,47 @@ test("owner creates and submits a local collaborative stage draft", async ({
     .getByLabel("Member States (comma-separated ISO codes)")
     .fill("DE");
   await draft.getByRole("button", { name: "Save draft" }).click();
-  await draft
-    .getByPlaceholder("Regulator portal or filing reference")
-    .fill(`${marker}-DRAFT-SUBMISSION`);
   await draft.getByLabel("Current password").fill(ownerPassword!);
   await draft
     .getByLabel("Owner override reason (only when approving your own edits)")
-    .fill("The seeded owner is the only authorized responder for this local verification.");
+    .fill(
+      "The seeded owner is the only authorized responder for this local verification.",
+    );
   await draft.getByRole("button", { name: "Reauthenticate" }).click();
   await expect(draft.getByText("Fresh approval proof ready.")).toBeVisible();
   await expect(
-    draft.getByRole("button", { name: "Approve and record submission" }),
+    draft.getByRole("button", { name: "Approve stage" }),
   ).toBeEnabled();
-  await draft.getByRole("button", { name: "Approve and record submission" }).click();
-  await expect(
-    stages.locator("li").filter({ hasText: /Early Warning.*submitted/ }),
-  ).toBeVisible();
+  await draft.getByRole("button", { name: "Approve stage" }).click();
+  const earlyWarningStage = stages.locator("li").first();
+  await expect(earlyWarningStage.getByText("running", { exact: true })).toBeVisible();
+
+  await draft.getByRole("button", { name: "Generate package" }).click();
+  await expect(draft.getByText(/Package ready:/)).toBeVisible();
+  const download = page.waitForEvent("download");
+  await draft.getByRole("button", { name: "Download package" }).click();
+  await (await download).path();
+
+  await draft
+    .getByLabel("External filing reference")
+    .fill(`${marker}-EXTERNAL-FILING`);
+  await draft
+    .getByLabel("Timestamp basis")
+    .fill("Local regulator portal receipt timestamp in UTC.");
+  await draft
+    .getByLabel("Receipt (PDF, PNG, JPEG, or text; 10 MiB maximum)")
+    .setInputFiles({
+      name: "receipt.txt",
+      mimeType: "text/plain",
+      buffer: Buffer.from(`${marker}: external filing receipt`),
+    });
+  await draft.getByLabel("Current password").last().fill(ownerPassword!);
+  await draft
+    .getByRole("button", { name: "Reauthenticate for filing" })
+    .click();
+  await expect(draft.getByText("Fresh filing proof ready.")).toBeVisible();
+  await draft.getByRole("button", { name: "Record external filing" }).click();
+  await expect(earlyWarningStage.getByText("submitted", { exact: true })).toBeVisible();
 
   await page.screenshot({
     path: testInfo.outputPath("m6-reporting-obligation-desktop.png"),

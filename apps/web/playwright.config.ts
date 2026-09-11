@@ -2,7 +2,10 @@ import { defineConfig, devices } from "@playwright/test";
 
 /* eslint-disable turbo/no-undeclared-env-vars -- Playwright configuration is evaluated outside Turbo. */
 
-const webOrigin = process.env.E2E_WEB_ORIGIN ?? "http://127.0.0.1:3000";
+// Next development resources are served from localhost by default. Keeping
+// Playwright on that origin prevents its dev-origin protection from blocking
+// client hydration during local browser journeys.
+const webOrigin = process.env.E2E_WEB_ORIGIN ?? "http://localhost:3000";
 
 export default defineConfig({
   testDir: "./e2e",
