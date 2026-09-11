@@ -4,6 +4,7 @@ import {
   createReportingStageAcknowledgementInputSchema,
   generateReportingStageSubmissionPackageInputSchema,
   recordReportingStageExternalFilingFieldsSchema,
+  recordReportingStageRehearsalFilingFieldsSchema,
   reauthenticateReportingStageFilingInputSchema,
   reportingEvidencePublicVerificationKeySchema,
   reportingStageEvidencePackageSchema,
@@ -82,6 +83,27 @@ describe("reporting stage evidence contracts", () => {
         receipt: "a browser path is never trusted",
       }).success,
     ).toBe(false);
+  });
+
+  it("requires an explicit acknowledgement on the separate synthetic filing boundary", () => {
+    const fields = {
+      packageId: id,
+      filingReauthenticationProofId: laterId,
+      submissionReference: "SYNTHETIC-REHEARSAL-0001",
+      submittedAt: timestamp,
+      submittedAtBasis: "Synthetic rehearsal receipt.",
+      expectedStageVersion: 4,
+      idempotencyKey: "33333333-3333-4333-8333-333333333333",
+    };
+    expect(
+      recordReportingStageRehearsalFilingFieldsSchema.safeParse(fields).success,
+    ).toBe(false);
+    expect(
+      recordReportingStageRehearsalFilingFieldsSchema.safeParse({
+        ...fields,
+        rehearsalAcknowledgement: true,
+      }).success,
+    ).toBe(true);
   });
 
   it("keeps acknowledgements append-only and makes public key metadata verification-only", () => {

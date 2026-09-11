@@ -5572,6 +5572,7 @@ export type Database = {
           correlation_id: string | null
           event_kind: string
           id: string
+          is_rehearsal: boolean
           new_value: Json | null
           obligation_id: string
           occurred_at: string
@@ -5587,6 +5588,7 @@ export type Database = {
           correlation_id?: string | null
           event_kind: string
           id?: string
+          is_rehearsal?: boolean
           new_value?: Json | null
           obligation_id: string
           occurred_at?: string
@@ -5602,6 +5604,7 @@ export type Database = {
           correlation_id?: string | null
           event_kind?: string
           id?: string
+          is_rehearsal?: boolean
           new_value?: Json | null
           obligation_id?: string
           occurred_at?: string
@@ -5634,6 +5637,7 @@ export type Database = {
           finalized_at: string | null
           generated_by_user_id: string
           id: string
+          is_rehearsal: boolean
           manifest_sha256: string | null
           obligation_id: string
           organization_id: string
@@ -5648,6 +5652,7 @@ export type Database = {
           finalized_at?: string | null
           generated_by_user_id: string
           id?: string
+          is_rehearsal?: boolean
           manifest_sha256?: string | null
           obligation_id: string
           organization_id: string
@@ -5662,6 +5667,7 @@ export type Database = {
           finalized_at?: string | null
           generated_by_user_id?: string
           id?: string
+          is_rehearsal?: boolean
           manifest_sha256?: string | null
           obligation_id?: string
           organization_id?: string
@@ -5767,8 +5773,10 @@ export type Database = {
           created_by_display_name: string
           created_by_user_id: string
           id: string
+          is_rehearsal: boolean
           obligation_type: string
           organization_id: string
+          rehearsal_replay_of_id: string | null
           rule_set_id: string
           rule_set_version: number
           rule_snapshot: Json
@@ -5787,8 +5795,10 @@ export type Database = {
           created_by_display_name: string
           created_by_user_id: string
           id?: string
+          is_rehearsal?: boolean
           obligation_type: string
           organization_id: string
+          rehearsal_replay_of_id?: string | null
           rule_set_id: string
           rule_set_version: number
           rule_snapshot: Json
@@ -5807,8 +5817,10 @@ export type Database = {
           created_by_display_name?: string
           created_by_user_id?: string
           id?: string
+          is_rehearsal?: boolean
           obligation_type?: string
           organization_id?: string
+          rehearsal_replay_of_id?: string | null
           rule_set_id?: string
           rule_set_version?: number
           rule_snapshot?: Json
@@ -5844,6 +5856,13 @@ export type Database = {
             columns: ["organization_id", "source_finding_id"]
             isOneToOne: false
             referencedRelation: "vulnerability_findings"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "reporting_obligations_rehearsal_replay_fkey"
+            columns: ["organization_id", "rehearsal_replay_of_id"]
+            isOneToOne: false
+            referencedRelation: "reporting_obligations"
             referencedColumns: ["organization_id", "id"]
           },
           {
@@ -6300,6 +6319,7 @@ export type Database = {
           finalized_at: string | null
           generated_by_user_id: string
           id: string
+          is_rehearsal: boolean
           manifest_sha256: string | null
           obligation_id: string
           organization_id: string
@@ -6324,6 +6344,7 @@ export type Database = {
           finalized_at?: string | null
           generated_by_user_id: string
           id?: string
+          is_rehearsal?: boolean
           manifest_sha256?: string | null
           obligation_id: string
           organization_id: string
@@ -6348,6 +6369,7 @@ export type Database = {
           finalized_at?: string | null
           generated_by_user_id?: string
           id?: string
+          is_rehearsal?: boolean
           manifest_sha256?: string | null
           obligation_id?: string
           organization_id?: string
@@ -6412,6 +6434,7 @@ export type Database = {
           acknowledgement_reference: string | null
           created_at: string
           id: string
+          is_rehearsal: boolean
           notes: string | null
           organization_id: string
           recorded_by_user_id: string
@@ -6422,6 +6445,7 @@ export type Database = {
           acknowledgement_reference?: string | null
           created_at?: string
           id?: string
+          is_rehearsal?: boolean
           notes?: string | null
           organization_id: string
           recorded_by_user_id: string
@@ -6432,6 +6456,7 @@ export type Database = {
           acknowledgement_reference?: string | null
           created_at?: string
           id?: string
+          is_rehearsal?: boolean
           notes?: string | null
           organization_id?: string
           recorded_by_user_id?: string
@@ -6471,6 +6496,7 @@ export type Database = {
           field_provenance: Json
           filing_proof_id: string | null
           id: string
+          is_rehearsal: boolean
           member_states: Json
           obligation_id: string
           organization_id: string
@@ -6497,6 +6523,7 @@ export type Database = {
           field_provenance: Json
           filing_proof_id?: string | null
           id?: string
+          is_rehearsal?: boolean
           member_states: Json
           obligation_id: string
           organization_id: string
@@ -6523,6 +6550,7 @@ export type Database = {
           field_provenance?: Json
           filing_proof_id?: string | null
           id?: string
+          is_rehearsal?: boolean
           member_states?: Json
           obligation_id?: string
           organization_id?: string
@@ -15379,6 +15407,21 @@ export type Database = {
           result: Json
         }[]
       }
+      create_reporting_rehearsal_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_awareness_at: string
+          p_awareness_basis: string
+          p_correlation_id?: string
+          p_idempotency_key: string
+          p_obligation_type: string
+          p_organization_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
       create_reporting_stage_approval_proof_atomic: {
         Args: {
           p_actor_user_id: string
@@ -17428,21 +17471,38 @@ export type Database = {
           result: Json
         }[]
       }
-      list_reporting_obligations: {
-        Args: {
-          p_actor_user_id: string
-          p_cursor: string
-          p_finding_id?: string
-          p_limit?: number
-          p_organization_id: string
-          p_status?: string
-          p_type?: string
-        }
-        Returns: {
-          outcome: string
-          result: Json
-        }[]
-      }
+      list_reporting_obligations:
+        | {
+            Args: {
+              p_actor_user_id: string
+              p_cursor: string
+              p_finding_id?: string
+              p_limit?: number
+              p_organization_id: string
+              p_status?: string
+              p_type?: string
+            }
+            Returns: {
+              outcome: string
+              result: Json
+            }[]
+          }
+        | {
+            Args: {
+              p_actor_user_id: string
+              p_cursor: string
+              p_finding_id?: string
+              p_limit?: number
+              p_organization_id: string
+              p_scope?: string
+              p_status?: string
+              p_type?: string
+            }
+            Returns: {
+              outcome: string
+              result: Json
+            }[]
+          }
       list_sbom_dependency_tree: {
         Args: {
           p_actor_user_id: string
@@ -19446,6 +19506,32 @@ export type Database = {
           result: Json
         }[]
       }
+      record_reporting_stage_rehearsal_filing_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_approval_id: string
+          p_basis: string
+          p_correlation_id?: string
+          p_idempotency_key: string
+          p_obligation_id: string
+          p_organization_id: string
+          p_package_id: string
+          p_proof_filename: string
+          p_proof_id: string
+          p_proof_mime: string
+          p_proof_object_path: string
+          p_proof_sha256: string
+          p_proof_size: number
+          p_reference: string
+          p_session_id: string
+          p_stage_id: string
+          p_submitted_at: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
       record_sbom_ci_credential_use: {
         Args: { p_credential_id: string; p_organization_id: string }
         Returns: {
@@ -19703,6 +19789,21 @@ export type Database = {
         Returns: {
           artifact: Json
           outcome: string
+        }[]
+      }
+      replay_reporting_rehearsal_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_correlation_id?: string
+          p_expected_version: number
+          p_idempotency_key: string
+          p_organization_id: string
+          p_rehearsal_id: string
+          p_replay_reason: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
         }[]
       }
       replay_sbom_ingest_job_atomic:

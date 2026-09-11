@@ -28,11 +28,13 @@ import {
   useGenerateReportingEvidencePackMutation,
   useGenerateReportingStageSubmissionPackageMutation,
   useRecordReportingStageExternalFilingMutation,
+  useRecordReportingStageRehearsalFilingMutation,
   useReportingStageEvidenceTimelineQuery,
   useReauthenticateReportingStageFilingMutation,
   useReauthenticateReportingStageApprovalMutation,
 } from "./reporting.queries";
 import { ReportingSrpAvailabilityNotice } from "./reporting-srp-availability-notice";
+import { ReportingRehearsalNotice } from "./reporting-rehearsal-notice";
 
 type Obligation = ReportingObligationListResponse["obligations"][number];
 type Stage = Obligation["stages"][number];
@@ -92,6 +94,8 @@ export function ReportingStageDraftEditor({
   const downloadPackage = useDownloadReportingStageSubmissionPackageMutation();
   const reauthenticateFiling = useReauthenticateReportingStageFilingMutation();
   const recordFiling = useRecordReportingStageExternalFilingMutation();
+  const recordRehearsalFiling =
+    useRecordReportingStageRehearsalFilingMutation();
   const generateEvidencePack = useGenerateReportingEvidencePackMutation();
   const downloadEvidencePack = useDownloadReportingEvidencePackMutation();
   const canSubmitReports = useHasPermission("can_submit_reporting");
@@ -156,6 +160,7 @@ export function ReportingStageDraftEditor({
     downloadPackage.isPending ||
     reauthenticateFiling.isPending ||
     recordFiling.isPending ||
+    recordRehearsalFiling.isPending ||
     generateEvidencePack.isPending ||
     downloadEvidencePack.isPending ||
     applyTemplate.isPending ||
@@ -170,6 +175,7 @@ export function ReportingStageDraftEditor({
     downloadPackage.error ??
     reauthenticateFiling.error ??
     recordFiling.error ??
+    recordRehearsalFiling.error ??
     generateEvidencePack.error ??
     downloadEvidencePack.error ??
     applyTemplate.error ??
@@ -432,28 +438,40 @@ export function ReportingStageDraftEditor({
       filingTimestampBasis.trim().length === 0
     )
       return;
+    const fields = {
+      packageId: evidencePackage.id,
+      filingReauthenticationProofId: filingProofId,
+      submissionReference: filingReference,
+      submittedAt: filingTimestamp,
+      submittedAtBasis: filingTimestampBasis,
+      expectedStageVersion: stage.version,
+      idempotencyKey,
+    };
+    const onSuccess = () => {
+      setFilingProofId(null);
+      setReceipt(null);
+      setIdempotencyKey(uuid());
+    };
+    if (obligation.isRehearsal) {
+      recordRehearsalFiling.mutate(
+        {
+          obligationId: obligation.id,
+          stageId: stage.id,
+          fields: { ...fields, rehearsalAcknowledgement: true },
+          receipt,
+        },
+        { onSuccess },
+      );
+      return;
+    }
     recordFiling.mutate(
       {
         obligationId: obligation.id,
         stageId: stage.id,
-        fields: {
-          packageId: evidencePackage.id,
-          filingReauthenticationProofId: filingProofId,
-          submissionReference: filingReference,
-          submittedAt: filingTimestamp,
-          submittedAtBasis: filingTimestampBasis,
-          expectedStageVersion: stage.version,
-          idempotencyKey,
-        },
+        fields,
         receipt,
       },
-      {
-        onSuccess: () => {
-          setFilingProofId(null);
-          setReceipt(null);
-          setIdempotencyKey(uuid());
-        },
-      },
+      { onSuccess },
     );
   }
   function generateObligationEvidencePack() {
@@ -955,7 +973,10 @@ export function ReportingStageDraftEditor({
             </div>
           ) : null}
           {canSubmitReports && working.status !== "submitted" ? (
-            <ReportingSrpAvailabilityNotice />
+            <>
+              {obligation.isRehearsal ? <ReportingRehearsalNotice /> : null}
+              <ReportingSrpAvailabilityNotice />
+            </>
           ) : null}
           {canSubmitReports &&
           working.status !== "submitted" &&
@@ -965,23 +986,34 @@ export function ReportingStageDraftEditor({
               aria-label="Record external filing"
             >
               <h4 className="text-caption-1-semibold text-fg">
-                Record external filing
+                {obligation.isRehearsal
+                  ? "Record synthetic rehearsal"
+                  : "Record external filing"}
               </h4>
               <p className="mt-1 text-caption-1-regular text-fg-muted">
-                Record the actual external filing only after it has occurred. A
-                fresh filing proof and one receipt are required.
+                {obligation.isRehearsal
+                  ? "Record a synthetic exercise only. This creates immutable rehearsal evidence and never contacts a regulator or claims a legal filing."
+                  : "Record the actual external filing only after it has occurred. A fresh filing proof and one receipt are required."}
               </p>
               <label className="mt-3 block text-caption-1-regular text-fg-muted">
-                External filing reference
+                {obligation.isRehearsal
+                  ? "Synthetic exercise reference"
+                  : "External filing reference"}
                 <Input
                   className="mt-1"
                   value={filingReference}
                   onChange={(event) => setFilingReference(event.target.value)}
-                  placeholder="Regulator portal or filing reference"
+                  placeholder={
+                    obligation.isRehearsal
+                      ? "Exercise acknowledgement reference"
+                      : "Regulator portal or filing reference"
+                  }
                 />
               </label>
               <label className="mt-3 block text-caption-1-regular text-fg-muted">
-                Actual filing timestamp (UTC)
+                {obligation.isRehearsal
+                  ? "Synthetic exercise timestamp (UTC)"
+                  : "Actual filing timestamp (UTC)"}
                 <Input
                   className="mt-1"
                   value={filingTimestamp}
@@ -997,11 +1029,17 @@ export function ReportingStageDraftEditor({
                   onChange={(event) =>
                     setFilingTimestampBasis(event.target.value)
                   }
-                  placeholder="Portal receipt timestamp in UTC"
+                  placeholder={
+                    obligation.isRehearsal
+                      ? "Synthetic exercise timestamp in UTC"
+                      : "Portal receipt timestamp in UTC"
+                  }
                 />
               </label>
               <label className="mt-3 block text-caption-1-regular text-fg-muted">
-                Receipt (PDF, PNG, JPEG, or text; 10 MiB maximum)
+                {obligation.isRehearsal
+                  ? "Synthetic receipt (PDF, PNG, JPEG, or text; 10 MiB maximum)"
+                  : "Receipt (PDF, PNG, JPEG, or text; 10 MiB maximum)"}
                 <Input
                   className="mt-1"
                   type="file"
@@ -1041,7 +1079,9 @@ export function ReportingStageDraftEditor({
                 >
                   {reauthenticateFiling.isPending
                     ? "Verifying…"
-                    : "Reauthenticate for filing"}
+                    : obligation.isRehearsal
+                      ? "Reauthenticate for rehearsal evidence"
+                      : "Reauthenticate for filing"}
                 </Button>
                 <Button
                   size="sm"
@@ -1054,9 +1094,11 @@ export function ReportingStageDraftEditor({
                   }
                   onClick={recordExternalFiling}
                 >
-                  {recordFiling.isPending
+                  {recordFiling.isPending || recordRehearsalFiling.isPending
                     ? "Recording…"
-                    : "Record external filing"}
+                    : obligation.isRehearsal
+                      ? "Record synthetic rehearsal"
+                      : "Record external filing"}
                 </Button>
               </div>
               {filingProofId ? (

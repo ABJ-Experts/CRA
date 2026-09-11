@@ -4,6 +4,8 @@ import {
   cancelReportingObligationInputSchema,
   correctReportingObligationAnchorInputSchema,
   createReportingObligationInputSchema,
+  createReportingRehearsalInputSchema,
+  replayReportingRehearsalInputSchema,
   recordReportingObligationStageSubmissionInputSchema,
   reportingObligationDetailResponseSchema,
   reportingObligationListQuerySchema,
@@ -29,6 +31,37 @@ describe("reporting obligation contracts", () => {
       awarenessAt: "2026-04-14T09:20:00Z",
       source: { kind: "manual" },
     });
+  });
+
+  it("makes rehearsal creation synthetic-only and defaults list scope to real", () => {
+    expect(
+      createReportingRehearsalInputSchema.parse({
+        type: "severe_incident",
+        awarenessAt: "2026-04-14T09:20:00Z",
+        awarenessBasis: "Synthetic operational exercise.",
+        idempotencyKey: key,
+      }),
+    ).toMatchObject({ type: "severe_incident" });
+    expect(
+      reportingObligationListQuerySchema.parse({ limit: 50 }),
+    ).toMatchObject({ scope: "real" });
+    expect(() =>
+      createReportingRehearsalInputSchema.parse({
+        type: "severe_incident",
+        awarenessAt: "2026-04-14T09:20:00Z",
+        awarenessBasis: "Synthetic operational exercise.",
+        idempotencyKey: key,
+        source: { kind: "finding", findingId: uuid },
+      }),
+    ).toThrow();
+    expect(() =>
+      replayReportingRehearsalInputSchema.parse({
+        reason: "Replay",
+        expectedVersion: 1,
+        idempotencyKey: key,
+        source: { kind: "manual" },
+      }),
+    ).toThrow();
   });
 
   it("accepts finding-created obligations without assessment or evidence fields", () => {

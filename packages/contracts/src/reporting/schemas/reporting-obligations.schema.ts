@@ -22,6 +22,9 @@ export const reportingObligationStatusSchema = z.enum([
   "cancelled",
 ]);
 
+/** A rehearsal is synthetic operational training data, never a legal filing. */
+export const reportingObligationScopeSchema = z.enum(["real", "rehearsal"]);
+
 export const reportingObligationStageKindSchema = z.enum([
   "early_warning",
   "notification",
@@ -88,6 +91,27 @@ export const createReportingObligationInputSchema = z
   })
   .strict();
 
+/**
+ * Rehearsals deliberately cannot originate from a production finding.  The
+ * server is the authority that marks the resulting obligation as synthetic.
+ */
+export const createReportingRehearsalInputSchema = z
+  .object({
+    type: reportingObligationTypeSchema,
+    awarenessAt: utcSecondDateTimeSchema,
+    awarenessBasis: requiredText(4_000),
+    idempotencyKey: idempotencyKeySchema,
+  })
+  .strict();
+
+export const replayReportingRehearsalInputSchema = z
+  .object({
+    reason: requiredText(4_000),
+    expectedVersion: expectedVersionSchema,
+    idempotencyKey: idempotencyKeySchema,
+  })
+  .strict();
+
 export const correctReportingObligationAnchorInputSchema = z
   .object({
     anchor: reportingObligationAnchorKindSchema,
@@ -144,6 +168,8 @@ export const reportingObligationListQuerySchema = z
     type: reportingObligationTypeSchema.optional(),
     status: reportingObligationStatusSchema.optional(),
     findingId: z.uuid().optional(),
+    /** Real is the safe default; rehearsal screens must opt in explicitly. */
+    scope: reportingObligationScopeSchema.default("real"),
   })
   .strict();
 
@@ -224,6 +250,9 @@ const reportingObligationBaseSchema = z
     version: storedVersionSchema,
     cancelledAt: utcSecondDateTimeSchema.nullable(),
     cancellationReason: requiredText(4_000).nullable(),
+    /** Always server-derived; defaults preserve compatibility during rollout. */
+    isRehearsal: z.boolean().default(false),
+    rehearsalReplayOfId: z.uuid().nullable().default(null),
     stages: z.array(reportingObligationStageSchema).min(3).max(3),
     anchors: z.array(reportingObligationAnchorEventSchema).min(1).max(100),
   })
@@ -260,6 +289,20 @@ function refineReportingObligation(
       code: "custom",
       path: ["cancellationReason"],
       message: "Cancelled obligations require a cancellation reason",
+    });
+  }
+  if (!obligation.isRehearsal && obligation.rehearsalReplayOfId !== null) {
+    context.addIssue({
+      code: "custom",
+      path: ["rehearsalReplayOfId"],
+      message: "Only rehearsals can reference a prior rehearsal",
+    });
+  }
+  if (obligation.isRehearsal && obligation.source.kind !== "manual") {
+    context.addIssue({
+      code: "custom",
+      path: ["source"],
+      message: "Rehearsals cannot be sourced from production findings",
     });
   }
 }

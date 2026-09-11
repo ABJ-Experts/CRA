@@ -78,6 +78,7 @@ export const reportingStageEvidencePackageSchema = z
     approvalId: z.uuid(),
     draftRevision: revisionSchema,
     draftHash: reportingStageDraftHashSchema,
+    isRehearsal: z.boolean().default(false),
     status: reportingStageEvidencePackageStatusSchema,
     fileName: reportingEvidenceFileNameSchema,
     byteLength: z
@@ -148,7 +149,9 @@ export const reportingStageEvidencePackageParamsSchema = z
 
 /** Complete path boundary for a stage-package download. */
 export const reportingStageEvidencePackageRouteParamsSchema =
-  reportingStageDraftParamsSchema.merge(reportingStageEvidencePackageParamsSchema);
+  reportingStageDraftParamsSchema.merge(
+    reportingStageEvidencePackageParamsSchema,
+  );
 
 /** Credentials are verified immediately by the provider and never persist with a filing. */
 export const reauthenticateReportingStageFilingInputSchema = z
@@ -184,6 +187,16 @@ export const recordReportingStageExternalFilingFieldsSchema = z
   })
   .strict();
 
+/**
+ * A separate trust boundary prevents a crafted rehearsal request from being
+ * accepted by the real external-filing route.  This acknowledgement is kept
+ * in the immutable synthetic record; it is not a claim of legal filing.
+ */
+export const recordReportingStageRehearsalFilingFieldsSchema =
+  recordReportingStageExternalFilingFieldsSchema
+    .extend({ rehearsalAcknowledgement: z.literal(true) })
+    .strict();
+
 export const reportingStageReceiptSchema = z
   .object({
     id: z.uuid(),
@@ -217,6 +230,18 @@ export const reportingStageExternalFilingSchema = z
 
 export const reportingStageExternalFilingResponseSchema = z
   .object({ filing: reportingStageExternalFilingSchema })
+  .strict();
+
+export const reportingStageRehearsalFilingSchema =
+  reportingStageExternalFilingSchema
+    .extend({
+      isRehearsal: z.literal(true),
+      syntheticNotice: z.literal("SYNTHETIC / REHEARSAL — NOT A LEGAL FILING"),
+    })
+    .strict();
+
+export const reportingStageRehearsalFilingResponseSchema = z
+  .object({ filing: reportingStageRehearsalFilingSchema })
   .strict();
 
 export const createReportingStageAcknowledgementInputSchema = z
@@ -289,6 +314,7 @@ export const reportingObligationEvidencePackSchema = z
     id: z.uuid(),
     organizationId: z.uuid(),
     obligationId: z.uuid(),
+    isRehearsal: z.boolean().default(false),
     fileName: reportingEvidenceFileNameSchema,
     sha256: sha256Schema,
     manifestSha256: sha256Schema,
@@ -315,7 +341,9 @@ export const reportingObligationEvidencePackParamsSchema = z
 
 /** Complete path boundary for an obligation evidence-pack download. */
 export const reportingObligationEvidencePackRouteParamsSchema =
-  reportingObligationParamsSchema.merge(reportingObligationEvidencePackParamsSchema);
+  reportingObligationParamsSchema.merge(
+    reportingObligationEvidencePackParamsSchema,
+  );
 
 /** Public, rotation-aware verification material only. */
 export const reportingEvidencePublicVerificationKeySchema = z

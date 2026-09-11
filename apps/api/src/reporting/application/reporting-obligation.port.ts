@@ -10,6 +10,8 @@ import type {
   CorrectReportingObligationAnchorInput,
   CreateReportingStageDraftInput,
   CreateReportingObligationInput,
+  CreateReportingRehearsalInput,
+  ReplayReportingRehearsalInput,
   RecordReportingObligationStageSubmissionInput,
   RecordReportingStageExternalFilingFields,
   ReauthenticateReportingStageFilingResponse,
@@ -20,6 +22,7 @@ import type {
   ReportingStageEvidencePackageResponse,
   ReportingStageEvidenceTimelineResponse,
   ReportingStageExternalFilingResponse,
+  ReportingStageRehearsalFilingResponse,
   ReportingFamilyTemplateParams,
   ReportingFamilyTemplateResponse,
   ReportingFamilyTemplatesResponse,
@@ -131,6 +134,17 @@ export interface ReportingEvidenceWorkflowPort {
       receipt: ReportingStageReceiptUpload;
     }>,
   ): Promise<ReportingStageExternalFilingResponse | null>;
+  recordStageRehearsalFiling(
+    organizationId: string,
+    input: Readonly<{
+      actorId: string;
+      sessionId: string;
+      obligationId: string;
+      stageId: string;
+      fields: RecordReportingStageExternalFilingFields;
+      receipt: ReportingStageReceiptUpload;
+    }>,
+  ): Promise<ReportingStageRehearsalFilingResponse | null>;
   appendStageAcknowledgement(
     organizationId: string,
     input: Readonly<
@@ -270,6 +284,16 @@ export interface ReportingObligationRepository {
   create(
     organizationId: string,
     input: Readonly<{ actorId: string } & CreateReportingObligationInput>,
+  ): Promise<ReportingObligationMutationResponse | null>;
+  createRehearsal(
+    organizationId: string,
+    input: Readonly<{ actorId: string } & CreateReportingRehearsalInput>,
+  ): Promise<ReportingObligationMutationResponse | null>;
+  replayRehearsal(
+    organizationId: string,
+    input: Readonly<
+      { actorId: string; obligationId: string } & ReplayReportingRehearsalInput
+    >,
   ): Promise<ReportingObligationMutationResponse | null>;
   correctAnchor(
     organizationId: string,

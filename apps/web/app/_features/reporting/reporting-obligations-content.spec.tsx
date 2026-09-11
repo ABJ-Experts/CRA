@@ -15,6 +15,7 @@ const sessionState = vi.hoisted(() => ({
   isLoading: true,
 }));
 const permissionState = vi.hoisted(() => ({ canEdit: false, canView: false }));
+const querySpy = vi.hoisted(() => vi.fn());
 
 vi.mock("../../_providers/providers", () => ({
   useMocksReady: () => true,
@@ -28,7 +29,9 @@ vi.mock("../../_providers/session-provider", () => ({
   useHasPermission: (permission: string) =>
     permission === "can_view_findings"
       ? permissionState.canView
-      : permissionState.canEdit,
+      : permission === "can_edit_findings"
+        ? permissionState.canEdit
+        : permissionState.canEdit,
   useSession: () => sessionState,
 }));
 
@@ -36,14 +39,19 @@ vi.mock("./reporting.queries", () => ({
   useCancelReportingObligationMutation: () => ({ isPending: false }),
   useCorrectReportingAnchorMutation: () => ({ isPending: false }),
   useCreateReportingObligationMutation: () => ({ isPending: false }),
+  useCreateReportingRehearsalMutation: () => ({ isPending: false }),
+  useReplayReportingRehearsalMutation: () => ({ isPending: false }),
   useRecordReportingSubmissionMutation: () => ({ isPending: false }),
   useReportingDeadlineSummaryQuery: () => ({ data: undefined }),
-  useReportingObligationsQuery: () => ({
-    data: undefined,
-    isError: false,
-    isLoading: false,
-    refetch: vi.fn(),
-  }),
+  useReportingObligationsQuery: (...args: unknown[]) => {
+    querySpy(...args);
+    return {
+      data: undefined,
+      isError: false,
+      isLoading: false,
+      refetch: vi.fn(),
+    };
+  },
 }));
 
 describe("ReportingObligationsContent", () => {
@@ -54,6 +62,7 @@ describe("ReportingObligationsContent", () => {
     sessionState.isLoading = true;
     permissionState.canEdit = false;
     permissionState.canView = false;
+    querySpy.mockClear();
   });
 
   it("waits for session permissions instead of briefly rendering a false denial", () => {
@@ -89,5 +98,33 @@ describe("ReportingObligationsContent", () => {
     );
 
     expect(screen.getByText("1h 0m remaining")).toBeInTheDocument();
+  });
+
+  it("defaults to real reporting and requests rehearsals only after an explicit filter", async () => {
+    sessionState.isLoading = false;
+    permissionState.canView = true;
+    permissionState.canEdit = true;
+    const user = (await import("@testing-library/user-event")).default.setup();
+
+    render(<ReportingObligationsContent />);
+
+    expect(querySpy).toHaveBeenLastCalledWith(
+      expect.objectContaining({ scope: "real" }),
+      true,
+    );
+    await user.selectOptions(
+      screen.getByLabelText("Reporting view"),
+      "rehearsal",
+    );
+    expect(querySpy).toHaveBeenLastCalledWith(
+      expect.objectContaining({ scope: "rehearsal" }),
+      true,
+    );
+    expect(
+      screen.getByRole("button", { name: "Start rehearsal" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/cannot use a production finding/i),
+    ).toBeInTheDocument();
   });
 });

@@ -23,11 +23,12 @@ import { ExistingAuthReportingStageApprovalReauthenticationAdapter } from "./inf
 import { MailReportingDeadlineDeliveryAdapter } from "./infrastructure/mail-reporting-deadline-delivery.adapter";
 import { SupabaseReportingDeadlineMonitorRepository } from "./infrastructure/supabase-reporting-deadline-monitor.repository";
 import { ReportingObligationController } from "./reporting-obligation.controller";
+import { ReportingRehearsalController } from "./reporting-rehearsal.controller";
 import { ReportingDeadlineMonitorWorker } from "./worker/reporting-deadline-monitor-worker";
 
 @Module({
   imports: [SupabaseModule, MailModule, AuthModule],
-  controllers: [ReportingObligationController],
+  controllers: [ReportingObligationController, ReportingRehearsalController],
   providers: [
     SupabaseReportingObligationRepository,
     ReportingEvidenceWorkflowService,

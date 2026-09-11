@@ -8,6 +8,8 @@ import type {
   CorrectReportingObligationAnchorInput,
   CreateReportingStageDraftInput,
   CreateReportingObligationInput,
+  CreateReportingRehearsalInput,
+  ReplayReportingRehearsalInput,
   RecordReportingObligationStageSubmissionInput,
   ReportingFamilyTemplateParams,
   ReportingFamilyTemplateListQuery,
@@ -31,6 +33,7 @@ import type {
   ReportingStageApprovalReauthenticationPort,
   ReportingStageReceiptUpload,
 } from "./reporting-obligation.port";
+import { ReportingObligationInvalidStateError } from "./reporting-obligation.port";
 
 export class ReportingObligationUseCases {
   constructor(
@@ -164,7 +167,39 @@ export class ReportingObligationUseCases {
       receipt: ReportingStageReceiptUpload;
     }>,
   ) {
+    return this.recordRealStageFiling(organizationId, input);
+  }
+
+  private async recordRealStageFiling(
+    organizationId: string,
+    input: Readonly<{
+      actorId: string;
+      sessionId: string;
+      obligationId: string;
+      stageId: string;
+      fields: RecordReportingStageExternalFilingFields;
+      receipt: ReportingStageReceiptUpload;
+    }>,
+  ) {
+    const obligation = await this.repository.detail(organizationId, input);
+    if (obligation?.obligation.isRehearsal) {
+      throw new ReportingObligationInvalidStateError();
+    }
     return this.evidence.recordStageExternalFiling(organizationId, input);
+  }
+
+  recordStageRehearsalFiling(
+    organizationId: string,
+    input: Readonly<{
+      actorId: string;
+      sessionId: string;
+      obligationId: string;
+      stageId: string;
+      fields: RecordReportingStageExternalFilingFields;
+      receipt: ReportingStageReceiptUpload;
+    }>,
+  ) {
+    return this.evidence.recordStageRehearsalFiling(organizationId, input);
   }
 
   appendStageAcknowledgement(
@@ -335,6 +370,22 @@ export class ReportingObligationUseCases {
     input: Readonly<{ actorId: string } & CreateReportingObligationInput>,
   ) {
     return this.repository.create(organizationId, input);
+  }
+
+  createRehearsal(
+    organizationId: string,
+    input: Readonly<{ actorId: string } & CreateReportingRehearsalInput>,
+  ) {
+    return this.repository.createRehearsal(organizationId, input);
+  }
+
+  replayRehearsal(
+    organizationId: string,
+    input: Readonly<
+      { actorId: string; obligationId: string } & ReplayReportingRehearsalInput
+    >,
+  ) {
+    return this.repository.replayRehearsal(organizationId, input);
   }
 
   correctAnchor(

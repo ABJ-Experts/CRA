@@ -16,7 +16,6 @@ import {
 } from "@nestjs/common";
 import { FileInterceptor } from "@nestjs/platform-express";
 import { memoryStorage } from "multer";
-import { z } from "zod";
 import {
   acquireReportingStageDraftLockInputSchema,
   approveReportingStageDraftInputSchema,
@@ -883,6 +882,12 @@ function validatedReceipt(file: Express.Multer.File | undefined) {
 }
 
 function evidenceFailure(error: unknown): Error {
+  if (error instanceof ReportingObligationInvalidStateError)
+    return new ConflictException({
+      code: "rehearsal_filing_forbidden",
+      message:
+        "Synthetic rehearsals must use the rehearsal filing workflow and cannot be filed as real reports.",
+    });
   if (error instanceof ReportingEvidenceWorkflowError) {
     if (error.code === "conflict")
       return new ConflictException({

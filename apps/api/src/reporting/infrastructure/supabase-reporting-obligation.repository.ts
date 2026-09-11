@@ -20,8 +20,10 @@ import {
   type CreateReportingFamilyTemplateInput,
   type CreateReportingFamilyTemplateVersionInput,
   type CreateReportingObligationInput,
+  type CreateReportingRehearsalInput,
   type CreateReportingStageDraftInput,
   type RecordReportingObligationStageSubmissionInput,
+  type ReplayReportingRehearsalInput,
   type ReportingObligationDetailResponse,
   type ReportingObligationListQuery,
   type ReportingObligationListResponse,
@@ -384,6 +386,7 @@ export class SupabaseReportingObligationRepository implements ReportingObligatio
       p_type: input.type ?? null,
       p_status: input.status ?? null,
       p_finding_id: input.findingId ?? null,
+      p_scope: input.scope,
     });
     return payload === null
       ? null
@@ -420,6 +423,38 @@ export class SupabaseReportingObligationRepository implements ReportingObligatio
         input.source.kind === "finding" ? input.source.findingId : null,
       p_awareness_at: input.awarenessAt,
       p_awareness_basis: input.awarenessBasis,
+      p_idempotency_key: input.idempotencyKey,
+      p_correlation_id: null,
+    });
+  }
+
+  async createRehearsal(
+    organizationId: string,
+    input: Readonly<{ actorId: string } & CreateReportingRehearsalInput>,
+  ): Promise<ReportingObligationMutationResponse | null> {
+    return this.mutation("create_reporting_rehearsal_atomic", {
+      p_organization_id: organizationId,
+      p_actor_user_id: input.actorId,
+      p_obligation_type: input.type,
+      p_awareness_at: input.awarenessAt,
+      p_awareness_basis: input.awarenessBasis,
+      p_idempotency_key: input.idempotencyKey,
+      p_correlation_id: null,
+    });
+  }
+
+  async replayRehearsal(
+    organizationId: string,
+    input: Readonly<
+      { actorId: string; obligationId: string } & ReplayReportingRehearsalInput
+    >,
+  ): Promise<ReportingObligationMutationResponse | null> {
+    return this.mutation("replay_reporting_rehearsal_atomic", {
+      p_organization_id: organizationId,
+      p_actor_user_id: input.actorId,
+      p_rehearsal_id: input.obligationId,
+      p_replay_reason: input.reason,
+      p_expected_version: input.expectedVersion,
       p_idempotency_key: input.idempotencyKey,
       p_correlation_id: null,
     });

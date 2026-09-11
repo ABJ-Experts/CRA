@@ -25,7 +25,7 @@ describe("ReportingObligationController", () => {
     useCases.create.mockResolvedValue(mutationFixture());
     const controller = subject(useCases);
 
-    await expect(controller.list({ limit: 50 }, user)).resolves.toEqual({
+    await expect(controller.list({ limit: 50, scope: "real" }, user)).resolves.toEqual({
       obligations: [],
       nextCursor: null,
     });
@@ -45,6 +45,7 @@ describe("ReportingObligationController", () => {
     expect(useCases.list).toHaveBeenCalledWith(organizationId, {
       actorId,
       limit: 50,
+      scope: "real",
     });
     expect(useCases.create).toHaveBeenCalledWith(organizationId, {
       actorId,

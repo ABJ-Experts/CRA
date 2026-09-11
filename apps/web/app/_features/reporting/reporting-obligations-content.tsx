@@ -3,6 +3,7 @@
 import type {
   ReportingObligationAnchorKind,
   ReportingObligationListResponse,
+  ReportingObligationScope,
 } from "@repo/contracts/reporting";
 import { reportingObligationParamsSchema } from "@repo/contracts/reporting";
 import { Button } from "@repo/ui/button";
@@ -24,11 +25,14 @@ import {
   useCancelReportingObligationMutation,
   useCorrectReportingAnchorMutation,
   useCreateReportingObligationMutation,
+  useCreateReportingRehearsalMutation,
+  useReplayReportingRehearsalMutation,
   useRecordReportingSubmissionMutation,
   useReportingDeadlineSummaryQuery,
   useReportingObligationsQuery,
 } from "./reporting.queries";
 import { ReportingStageDraftEditor } from "./reporting-stage-draft-editor";
+import { ReportingRehearsalNotice } from "./reporting-rehearsal-notice";
 
 const TYPE_OPTIONS = [
   {
@@ -82,8 +86,10 @@ export function ReportingObligationsContent() {
   const { isLoading: sessionLoading } = useSession();
   const canView = useHasPermission("can_view_findings");
   const canEdit = useHasPermission("can_edit_findings");
+  const canSubmit = useHasPermission("can_submit_reporting");
+  const [scope, setScope] = useState<ReportingObligationScope>("real");
   const query = useReportingObligationsQuery(
-    { limit: 50 },
+    { limit: 50, scope },
     canView && !sessionLoading,
   );
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -103,7 +109,8 @@ export function ReportingObligationsContent() {
   const selected =
     selectedId === null
       ? (query.data?.obligations[0] ?? null)
-      : (query.data?.obligations.find((item) => item.id === selectedId) ?? null);
+      : (query.data?.obligations.find((item) => item.id === selectedId) ??
+        null);
 
   if (sessionLoading) {
     return (
@@ -147,7 +154,27 @@ export function ReportingObligationsContent() {
 
       <DeadlineMonitorStatus summary={summary.data?.summary} />
 
-      {canEdit ? <CreateObligationForm onCreated={setSelectedId} /> : null}
+      <label className="flex w-fit items-center gap-2 text-caption-1-regular text-fg-muted">
+        Reporting view
+        <select
+          className="rounded-lg border border-border bg-canvas px-3 py-2 text-caption-1-regular text-fg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+          value={scope}
+          onChange={(event) => {
+            setSelectedId(null);
+            setScope(event.target.value as ReportingObligationScope);
+          }}
+        >
+          <option value="real">Real reporting</option>
+          <option value="rehearsal">Synthetic rehearsals</option>
+        </select>
+      </label>
+
+      {scope === "real" && canEdit ? (
+        <CreateObligationForm onCreated={setSelectedId} />
+      ) : null}
+      {scope === "rehearsal" && canSubmit ? (
+        <CreateRehearsalForm onCreated={setSelectedId} />
+      ) : null}
 
       {query.isLoading ? (
         <SectionCard>
@@ -235,6 +262,8 @@ export function ReportingObligationsContent() {
             <ObligationDetail
               obligation={selected}
               canEdit={canEdit}
+              canSubmit={canSubmit}
+              onSelected={setSelectedId}
               serverNow={summary.data?.summary.serverNow}
             />
           ) : null}
@@ -360,13 +389,109 @@ function CreateObligationForm({
   );
 }
 
+function CreateRehearsalForm({
+  onCreated,
+}: Readonly<{ onCreated: (obligationId: string) => void }>) {
+  const create = useCreateReportingRehearsalMutation();
+  const [type, setType] = useState<(typeof TYPE_OPTIONS)[number]["value"]>(
+    "actively_exploited_vulnerability",
+  );
+  const [awarenessAt, setAwarenessAt] = useState(nowLocalMinute);
+  const [basis, setBasis] = useState("");
+  const [idempotencyKey, setIdempotencyKey] = useState(uuid);
+
+  return (
+    <SectionCard bodyClassName="space-y-4">
+      <ReportingRehearsalNotice />
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          create.mutate(
+            {
+              type,
+              awarenessAt: toUtcSecond(awarenessAt),
+              awarenessBasis: basis,
+              idempotencyKey,
+            },
+            {
+              onSuccess: (result) => {
+                onCreated(result.obligation.id);
+                setIdempotencyKey(uuid());
+              },
+            },
+          );
+        }}
+      >
+        <h2 className="text-subhead-semibold text-fg">Start rehearsal</h2>
+        <p className="mt-1 text-caption-1-regular text-fg-muted">
+          Create a separate synthetic lifecycle. It cannot use a production
+          finding, contact a recipient, or become a real obligation.
+        </p>
+        <div className="mt-3 grid gap-3 md:grid-cols-2">
+          <label className="text-caption-1-regular text-fg-muted">
+            Rehearsal type
+            <select
+              className="mt-1 w-full rounded-lg border border-border bg-canvas px-3 py-2 text-body-regular text-fg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+              value={type}
+              onChange={(event) => setType(event.target.value as typeof type)}
+            >
+              {TYPE_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="text-caption-1-regular text-fg-muted">
+            Synthetic awareness time
+            <Input
+              type="datetime-local"
+              value={awarenessAt}
+              onChange={(event) => setAwarenessAt(event.target.value)}
+              required
+            />
+          </label>
+        </div>
+        <label className="mt-3 block text-caption-1-regular text-fg-muted">
+          Exercise basis
+          <textarea
+            className="mt-1 min-h-24 w-full rounded-lg border border-border bg-canvas px-3 py-2 text-body-regular text-fg placeholder:text-fg-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+            value={basis}
+            maxLength={4000}
+            onChange={(event) => setBasis(event.target.value)}
+            placeholder="Explain the synthetic scenario and the operator's awareness assertion."
+            required
+          />
+        </label>
+        <div className="mt-3 flex items-center gap-3">
+          <Button type="submit" disabled={create.isPending}>
+            {create.isPending ? "Starting…" : "Start rehearsal"}
+          </Button>
+          <span className="text-caption-1-regular text-fg-muted">
+            {basis.length}/4,000
+          </span>
+        </div>
+        {create.isError ? (
+          <p role="alert" className="mt-3 text-caption-1-regular text-danger">
+            {requestMessage(create.error)}
+          </p>
+        ) : null}
+      </form>
+    </SectionCard>
+  );
+}
+
 function ObligationDetail({
   obligation,
   canEdit,
+  canSubmit,
+  onSelected,
   serverNow,
 }: Readonly<{
   obligation: ReportingObligation;
   canEdit: boolean;
+  canSubmit: boolean;
+  onSelected: (obligationId: string) => void;
   serverNow: string | undefined;
 }>) {
   return (
@@ -383,6 +508,7 @@ function ObligationDetail({
       <p className="mt-1 break-all text-caption-1-regular text-fg-muted">
         {obligation.id}
       </p>
+      {obligation.isRehearsal ? <ReportingRehearsalNotice /> : null}
       <dl className="mt-3 grid grid-cols-2 gap-3 text-caption-1-regular">
         <div>
           <dt className="text-fg-muted">Rule version</dt>
@@ -445,12 +571,84 @@ function ObligationDetail({
       {canEdit && obligation.status === "active" ? (
         <TransitionForms obligation={obligation} />
       ) : null}
+      {obligation.isRehearsal && canSubmit && obligation.status === "active" ? (
+        <ReplayRehearsalControl
+          obligation={obligation}
+          onSelected={onSelected}
+        />
+      ) : null}
       {obligation.status === "cancelled" ? (
         <p className="mt-4 text-caption-1-regular text-fg-muted">
           Cancelled: {obligation.cancellationReason}
         </p>
       ) : null}
     </aside>
+  );
+}
+
+function ReplayRehearsalControl({
+  obligation,
+  onSelected,
+}: Readonly<{
+  obligation: ReportingObligation;
+  onSelected: (obligationId: string) => void;
+}>) {
+  const replay = useReplayReportingRehearsalMutation();
+  const [reason, setReason] = useState("");
+  const [idempotencyKey, setIdempotencyKey] = useState(uuid);
+
+  return (
+    <form
+      className="mt-4 border-t border-border pt-4"
+      onSubmit={(event) => {
+        event.preventDefault();
+        replay.mutate(
+          {
+            obligationId: obligation.id,
+            input: {
+              reason,
+              expectedVersion: obligation.version,
+              idempotencyKey,
+            },
+          },
+          {
+            onSuccess: (result) => {
+              onSelected(result.obligation.id);
+              setIdempotencyKey(uuid());
+            },
+          },
+        );
+      }}
+    >
+      <h3 className="text-caption-1-semibold text-fg">Replay rehearsal</h3>
+      <p className="mt-1 text-caption-1-regular text-fg-muted">
+        This closes this synthetic run and starts a fresh linked lifecycle. No
+        draft, approval, package, receipt, or filing evidence is copied.
+      </p>
+      <label className="mt-3 block text-caption-1-regular text-fg-muted">
+        Replay reason
+        <Input
+          className="mt-1"
+          value={reason}
+          maxLength={4000}
+          onChange={(event) => setReason(event.target.value)}
+          required
+        />
+      </label>
+      <Button
+        className="mt-3"
+        size="sm"
+        type="submit"
+        disabled={replay.isPending || reason.trim().length === 0}
+      >
+        {replay.isPending ? "Replaying…" : "Replay rehearsal"}
+      </Button>
+      {replay.isError ? (
+        <p role="alert" className="mt-2 text-caption-1-regular text-danger">
+          {requestMessage(replay.error)}
+        </p>
+      ) : null}
+    </form>
   );
 }
 
@@ -645,62 +843,64 @@ function TransitionForms({
           </p>
         ) : null}
       </form>
-      <form
-        onSubmit={(event) => {
-          event.preventDefault();
-          submit.mutate(
-            {
-              obligationId: obligation.id,
-              input: {
-                stage,
-                submittedAt: toUtcSecond(submittedAt),
-                submissionReference: reference,
-                expectedVersion: obligation.version,
-                idempotencyKey: submissionIdempotencyKey,
+      {!obligation.isRehearsal ? (
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            submit.mutate(
+              {
+                obligationId: obligation.id,
+                input: {
+                  stage,
+                  submittedAt: toUtcSecond(submittedAt),
+                  submissionReference: reference,
+                  expectedVersion: obligation.version,
+                  idempotencyKey: submissionIdempotencyKey,
+                },
               },
-            },
-            { onSuccess: () => setSubmissionIdempotencyKey(uuid()) },
-          );
-        }}
-      >
-        <h3 className="text-caption-1-semibold text-fg">Record submission</h3>
-        <div className="mt-2 grid gap-2">
-          <select
-            className="rounded-lg border border-border bg-canvas px-3 py-2 text-caption-1-regular text-fg"
-            value={stage}
-            onChange={(event) => setStage(event.target.value as typeof stage)}
-          >
-            {obligation.stages.map((item) => (
-              <option key={item.kind} value={item.kind}>
-                {stageLabel(item.kind)}
-              </option>
-            ))}
-          </select>
-          <Input
-            value={reference}
-            onChange={(event) => setReference(event.target.value)}
-            placeholder="Submission reference"
-            required
-          />
-          <label className="text-caption-1-regular text-fg-muted">
-            Submission time
+              { onSuccess: () => setSubmissionIdempotencyKey(uuid()) },
+            );
+          }}
+        >
+          <h3 className="text-caption-1-semibold text-fg">Record submission</h3>
+          <div className="mt-2 grid gap-2">
+            <select
+              className="rounded-lg border border-border bg-canvas px-3 py-2 text-caption-1-regular text-fg"
+              value={stage}
+              onChange={(event) => setStage(event.target.value as typeof stage)}
+            >
+              {obligation.stages.map((item) => (
+                <option key={item.kind} value={item.kind}>
+                  {stageLabel(item.kind)}
+                </option>
+              ))}
+            </select>
             <Input
-              type="datetime-local"
-              value={submittedAt}
-              onChange={(event) => setSubmittedAt(event.target.value)}
+              value={reference}
+              onChange={(event) => setReference(event.target.value)}
+              placeholder="Submission reference"
               required
             />
-          </label>
-          <Button size="sm" type="submit" disabled={transitionPending}>
-            Record submission
-          </Button>
-        </div>
-        {submit.isError ? (
-          <p role="alert" className="mt-2 text-caption-1-regular text-danger">
-            {requestMessage(submit.error)}
-          </p>
-        ) : null}
-      </form>
+            <label className="text-caption-1-regular text-fg-muted">
+              Submission time
+              <Input
+                type="datetime-local"
+                value={submittedAt}
+                onChange={(event) => setSubmittedAt(event.target.value)}
+                required
+              />
+            </label>
+            <Button size="sm" type="submit" disabled={transitionPending}>
+              Record submission
+            </Button>
+          </div>
+          {submit.isError ? (
+            <p role="alert" className="mt-2 text-caption-1-regular text-danger">
+              {requestMessage(submit.error)}
+            </p>
+          ) : null}
+        </form>
+      ) : null}
       <form
         onSubmit={(event) => {
           event.preventDefault();

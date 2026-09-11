@@ -4,6 +4,8 @@ import type {
   cancelReportingObligationInputSchema,
   correctReportingObligationAnchorInputSchema,
   createReportingObligationInputSchema,
+  createReportingRehearsalInputSchema,
+  replayReportingRehearsalInputSchema,
   recordReportingObligationStageSubmissionInputSchema,
   reportingObligationAnchorKindSchema,
   reportingObligationDetailResponseSchema,
@@ -12,12 +14,19 @@ import type {
   reportingObligationListResponseSchema,
   reportingObligationMutationResponseSchema,
   reportingObligationParamsSchema,
+  reportingObligationScopeSchema,
   reportingDeadlineSummaryResponseSchema,
   reportingDeadlineSummaryQuerySchema,
 } from "../schemas/reporting-obligations.schema.js";
 
 export type CreateReportingObligationInput = z.output<
   typeof createReportingObligationInputSchema
+>;
+export type CreateReportingRehearsalInput = z.output<
+  typeof createReportingRehearsalInputSchema
+>;
+export type ReplayReportingRehearsalInput = z.output<
+  typeof replayReportingRehearsalInputSchema
 >;
 export type CorrectReportingObligationAnchorInput = z.output<
   typeof correctReportingObligationAnchorInputSchema
@@ -36,6 +45,9 @@ export type ReportingObligationParams = z.output<
 >;
 export type ReportingObligationAnchorKind = z.output<
   typeof reportingObligationAnchorKindSchema
+>;
+export type ReportingObligationScope = z.output<
+  typeof reportingObligationScopeSchema
 >;
 export type ReportingObligation = z.output<typeof reportingObligationSchema>;
 export type ReportingObligationListResponse = z.output<

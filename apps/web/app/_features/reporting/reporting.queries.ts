@@ -4,6 +4,7 @@ import type {
   CancelReportingObligationInput,
   CorrectReportingObligationAnchorInput,
   CreateReportingObligationInput,
+  CreateReportingRehearsalInput,
   RecordReportingObligationStageSubmissionInput,
   AcquireReportingStageDraftLockInput,
   ApplyReportingFamilyTemplateInput,
@@ -16,6 +17,8 @@ import type {
   GenerateReportingStageSubmissionPackageInput,
   ReauthenticateReportingStageFilingInput,
   RecordReportingStageExternalFilingFieldsInput,
+  RecordReportingStageRehearsalFilingFields,
+  ReplayReportingRehearsalInput,
   ReportingFamilyTemplateListQuery,
   ReportingObligationListQuery,
 } from "@repo/contracts/reporting";
@@ -78,6 +81,26 @@ export function useCreateReportingObligationMutation() {
   return useMutation({
     mutationFn: (input: CreateReportingObligationInput) =>
       reportingApi.create(input),
+    onSuccess: () => client.invalidateQueries({ queryKey: reportingKeys.all }),
+  });
+}
+
+export function useCreateReportingRehearsalMutation() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (input: CreateReportingRehearsalInput) =>
+      reportingApi.createRehearsal(input),
+    onSuccess: () => client.invalidateQueries({ queryKey: reportingKeys.all }),
+  });
+}
+
+export function useReplayReportingRehearsalMutation() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (variables: {
+      obligationId: string;
+      input: ReplayReportingRehearsalInput;
+    }) => reportingApi.replayRehearsal(variables.obligationId, variables.input),
     onSuccess: () => client.invalidateQueries({ queryKey: reportingKeys.all }),
   });
 }
@@ -315,6 +338,34 @@ export function useRecordReportingStageExternalFilingMutation() {
       receipt: File;
     }) =>
       reportingApi.recordStageExternalFiling(
+        variables.obligationId,
+        variables.stageId,
+        variables.fields,
+        variables.receipt,
+      ),
+    onSuccess: (_, variables) => {
+      invalidateStageDraft(client, variables.obligationId, variables.stageId);
+      client.invalidateQueries({ queryKey: reportingKeys.all });
+      client.invalidateQueries({
+        queryKey: reportingKeys.stageTimeline(
+          variables.obligationId,
+          variables.stageId,
+        ),
+      });
+    },
+  });
+}
+
+export function useRecordReportingStageRehearsalFilingMutation() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (variables: {
+      obligationId: string;
+      stageId: string;
+      fields: RecordReportingStageRehearsalFilingFields;
+      receipt: File;
+    }) =>
+      reportingApi.recordStageRehearsalFiling(
         variables.obligationId,
         variables.stageId,
         variables.fields,

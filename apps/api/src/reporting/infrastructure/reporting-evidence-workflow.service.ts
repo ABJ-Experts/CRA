@@ -5,8 +5,10 @@ import { ConfigService } from "@nestjs/config";
 import {
   reportingStageDraftApprovalSchema,
   reportingStageDraftResponseSchema,
+  reportingObligationDetailResponseSchema,
   reportingEvidenceTimelineEventSchema,
   reportingStageExternalFilingSchema,
+  reportingStageRehearsalFilingSchema,
   reportingStageAcknowledgementResponseSchema,
   type CreateReportingStageAcknowledgementInput,
   type GenerateReportingObligationEvidencePackInput,
@@ -19,6 +21,7 @@ import {
   type ReportingStageEvidencePackageResponse,
   type ReportingStageEvidenceTimelineResponse,
   type ReportingStageExternalFilingResponse,
+  type ReportingStageRehearsalFilingResponse,
 } from "@repo/contracts/reporting";
 import { z } from "zod";
 
@@ -88,6 +91,15 @@ export class ReportingEvidenceWorkflowService implements ReportingEvidenceWorkfl
       } & GenerateReportingStageSubmissionPackageInput
     >,
   ): Promise<ReportingStageEvidencePackageResponse | null> {
+    const obligationResult = await this.rpc("get_reporting_obligation", {
+      p_organization_id: organizationId,
+      p_actor_user_id: input.actorId,
+      p_obligation_id: input.obligationId,
+    });
+    if (obligationResult.outcome !== "found") return null;
+    const obligation = reportingObligationDetailResponseSchema.parse(
+      obligationResult.result,
+    ).obligation;
     const reservation = await this.rpc(
       "reserve_reporting_stage_package_atomic",
       {
@@ -129,6 +141,9 @@ export class ReportingEvidenceWorkflowService implements ReportingEvidenceWorkfl
     const signer = this.signer();
     const snapshot = stableJson({
       version: 1,
+      ...(obligation.isRehearsal
+        ? { syntheticNotice: rehearsalNotice }
+        : {}),
       approvalId: input.approvalId,
       organizationId,
       obligationId: input.obligationId,
@@ -138,6 +153,9 @@ export class ReportingEvidenceWorkflowService implements ReportingEvidenceWorkfl
     const snapshotBytes = Buffer.from(snapshot, "utf8");
     const manifest = stableJson({
       version: 1,
+      ...(obligation.isRehearsal
+        ? { syntheticNotice: rehearsalNotice }
+        : {}),
       algorithm: "Ed25519",
       keyId: signer.keyId,
       approvalId: input.approvalId,
@@ -207,8 +225,9 @@ export class ReportingEvidenceWorkflowService implements ReportingEvidenceWorkfl
         approvalId: input.approvalId,
         draftRevision: input.draftRevision,
         draftHash: input.draftHash,
+        isRehearsal: obligation.isRehearsal,
         status: "ready",
-        fileName: packageFileName(input.stageId),
+        fileName: packageFileName(input.stageId, obligation.isRehearsal),
         byteLength: archive.bytes.byteLength,
         sha256: archive.sha256,
         manifestSha256: digest(manifestBytes),
@@ -236,7 +255,10 @@ export class ReportingEvidenceWorkflowService implements ReportingEvidenceWorkfl
       input.packageId,
     );
     if (packageData === null || packageData.state !== "available") return null;
-    const fileName = packageFileName(packageData.stageId);
+    const fileName = packageFileName(
+      packageData.stageId,
+      packageData.isRehearsal,
+    );
     const response = await this.client()
       .storage.from(bucket)
       .createSignedUrl(packageData.objectPath, downloadTtlSeconds, {
@@ -317,6 +339,54 @@ export class ReportingEvidenceWorkflowService implements ReportingEvidenceWorkfl
       receipt: ReportingStageReceiptUpload;
     }>,
   ): Promise<ReportingStageExternalFilingResponse | null> {
+    return this.recordStageFiling(
+      organizationId,
+      input,
+      "record_reporting_stage_filing_atomic",
+    );
+  }
+
+  async recordStageRehearsalFiling(
+    organizationId: string,
+    input: Readonly<{
+      actorId: string;
+      sessionId: string;
+      obligationId: string;
+      stageId: string;
+      fields: RecordReportingStageExternalFilingFields;
+      receipt: ReportingStageReceiptUpload;
+    }>,
+  ): Promise<ReportingStageRehearsalFilingResponse | null> {
+    const result = await this.recordStageFiling(
+      organizationId,
+      input,
+      "record_reporting_stage_rehearsal_filing_atomic",
+    );
+    return result === null
+      ? null
+      : {
+          filing: reportingStageRehearsalFilingSchema.parse({
+            ...result.filing,
+            isRehearsal: true,
+            syntheticNotice: "SYNTHETIC / REHEARSAL — NOT A LEGAL FILING",
+          }),
+        };
+  }
+
+  private async recordStageFiling(
+    organizationId: string,
+    input: Readonly<{
+      actorId: string;
+      sessionId: string;
+      obligationId: string;
+      stageId: string;
+      fields: RecordReportingStageExternalFilingFields;
+      receipt: ReportingStageReceiptUpload;
+    }>,
+    rpcName:
+      | "record_reporting_stage_filing_atomic"
+      | "record_reporting_stage_rehearsal_filing_atomic",
+  ): Promise<ReportingStageExternalFilingResponse | null> {
     if (
       input.receipt.bytes.byteLength < 1 ||
       input.receipt.bytes.byteLength > receiptMaximumBytes
@@ -337,7 +407,7 @@ export class ReportingEvidenceWorkflowService implements ReportingEvidenceWorkfl
     )
       return null;
     const extension = extensionFor(input.receipt.mimeType);
-    const proofPath = `${organizationId}/${input.stageId}/filings/${input.fields.idempotencyKey}/receipt.${extension}`;
+    const proofPath = `${rpcName === "record_reporting_stage_rehearsal_filing_atomic" ? "rehearsals/" : ""}${organizationId}/${input.stageId}/filings/${input.fields.idempotencyKey}/receipt.${extension}`;
     const receiptDigest = digest(input.receipt.bytes);
     const upload = await this.client()
       .storage.from(bucket)
@@ -348,7 +418,7 @@ export class ReportingEvidenceWorkflowService implements ReportingEvidenceWorkfl
     if (upload.error && !alreadyExists(upload.error.message)) {
       throw new ReportingEvidenceWorkflowError("unavailable");
     }
-    const result = await this.rpc("record_reporting_stage_filing_atomic", {
+    const result = await this.rpc(rpcName, {
       p_organization_id: organizationId,
       p_actor_user_id: input.actorId,
       p_session_id: input.sessionId,
@@ -458,8 +528,35 @@ export class ReportingEvidenceWorkflowService implements ReportingEvidenceWorkfl
       p_obligation_id: input.obligationId,
     });
     if (obligation.outcome !== "found") return null;
-    const records = Buffer.from(stableJson({ version: 1, obligation: obligation.result }), "utf8");
-    const manifestBytes = Buffer.from(stableJson({ version: 1, files: [{ path: "reporting-evidence.json", sha256: digest(records), byteLength: records.byteLength }] }), "utf8");
+    const obligationData = reportingObligationDetailResponseSchema.parse(
+      obligation.result,
+    ).obligation;
+    const records = Buffer.from(
+      stableJson({
+        version: 1,
+        ...(obligationData.isRehearsal
+          ? { syntheticNotice: rehearsalNotice }
+          : {}),
+        obligation: obligation.result,
+      }),
+      "utf8",
+    );
+    const manifestBytes = Buffer.from(
+      stableJson({
+        version: 1,
+        ...(obligationData.isRehearsal
+          ? { syntheticNotice: rehearsalNotice }
+          : {}),
+        files: [
+          {
+            path: "reporting-evidence.json",
+            sha256: digest(records),
+            byteLength: records.byteLength,
+          },
+        ],
+      }),
+      "utf8",
+    );
     const archive = buildStoredZip([
       { path: "reporting-evidence.json", bytes: records },
       { path: "manifest.json", bytes: manifestBytes },
@@ -478,7 +575,8 @@ export class ReportingEvidenceWorkflowService implements ReportingEvidenceWorkfl
     });
     if (!['updated', 'idempotent'].includes(finalized.outcome)) throw new ReportingEvidenceWorkflowError("conflict");
     return { evidencePack: { id: reservation.id, organizationId, obligationId: input.obligationId,
-      fileName: `reporting-evidence-${input.obligationId}.zip`, sha256: archive.sha256,
+      isRehearsal: obligationData.isRehearsal,
+      fileName: evidencePackFileName(input.obligationId, obligationData.isRehearsal), sha256: archive.sha256,
       manifestSha256: digest(manifestBytes), byteLength: archive.bytes.byteLength,
       createdAt: utcSecond(new Date()) } };
   }
@@ -499,7 +597,7 @@ export class ReportingEvidenceWorkflowService implements ReportingEvidenceWorkfl
     if (result.outcome !== "found") throw new ReportingEvidenceWorkflowError("unavailable");
     const pack = evidencePackReadSchema.parse(result.result).evidencePack;
     if (pack.state !== "available") return null;
-    const fileName = `reporting-evidence-${input.obligationId}.zip`;
+    const fileName = evidencePackFileName(input.obligationId, pack.isRehearsal);
     const signed = await this.client().storage.from(bucket).createSignedUrl(pack.objectPath, downloadTtlSeconds, { download: fileName });
     if (signed.error || !signed.data) throw new ReportingEvidenceWorkflowError("unavailable");
     return { download: { fileName, downloadUrl: signed.data.signedUrl,
@@ -598,6 +696,7 @@ const reservedEvidencePackSchema = z.object({
 const evidencePackReadSchema = z.object({
   evidencePack: z.object({
     id: z.uuid(), state: z.string(), objectPath: z.string(),
+    isRehearsal: z.boolean().default(false),
     sha256: z.string().regex(/^[a-f0-9]{64}$/), byteLength: z.number().int().positive(),
   }).passthrough(),
 }).strict();
@@ -617,6 +716,7 @@ const evidenceReadSchema = z
           approvalId: z.uuid(),
           state: z.string(),
           objectPath: z.string(),
+          isRehearsal: z.boolean().default(false),
           sha256: z.string().regex(/^[a-f0-9]{64}$/),
           byteLength: z.number().int().positive(),
         })
@@ -669,8 +769,13 @@ function canonical(value: unknown): unknown {
     );
   return value;
 }
-function packageFileName(stageId: string): string {
-  return `manual-submission-${stageId}.zip`;
+const rehearsalNotice = "SYNTHETIC / REHEARSAL — NOT A LEGAL FILING";
+
+function packageFileName(stageId: string, isRehearsal = false): string {
+  return `${isRehearsal ? "synthetic-rehearsal-" : ""}manual-submission-${stageId}.zip`;
+}
+function evidencePackFileName(obligationId: string, isRehearsal = false): string {
+  return `${isRehearsal ? "synthetic-rehearsal-" : ""}reporting-evidence-${obligationId}.zip`;
 }
 function extensionFor(
   mimeType: ReportingStageReceiptUpload["mimeType"],

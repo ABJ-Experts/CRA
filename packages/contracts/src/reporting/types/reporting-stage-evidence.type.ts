@@ -7,6 +7,7 @@ import type {
   reauthenticateReportingStageFilingInputSchema,
   reauthenticateReportingStageFilingResponseSchema,
   recordReportingStageExternalFilingFieldsSchema,
+  recordReportingStageRehearsalFilingFieldsSchema,
   reportingEvidencePublicVerificationKeySchema,
   reportingEvidencePublicVerificationKeysResponseSchema,
   reportingObligationEvidencePackDownloadResponseSchema,
@@ -19,6 +20,7 @@ import type {
   reportingStageEvidencePackageSchema,
   reportingStageEvidenceTimelineResponseSchema,
   reportingStageExternalFilingResponseSchema,
+  reportingStageRehearsalFilingResponseSchema,
 } from "../schemas/reporting-stage-evidence.schema.js";
 
 export type GenerateReportingStageSubmissionPackageInput = z.output<
@@ -50,8 +52,14 @@ export type RecordReportingStageExternalFilingFieldsInput = z.input<
 export type RecordReportingStageExternalFilingFields = z.output<
   typeof recordReportingStageExternalFilingFieldsSchema
 >;
+export type RecordReportingStageRehearsalFilingFields = z.output<
+  typeof recordReportingStageRehearsalFilingFieldsSchema
+>;
 export type ReportingStageExternalFilingResponse = z.output<
   typeof reportingStageExternalFilingResponseSchema
+>;
+export type ReportingStageRehearsalFilingResponse = z.output<
+  typeof reportingStageRehearsalFilingResponseSchema
 >;
 export type CreateReportingStageAcknowledgementInput = z.output<
   typeof createReportingStageAcknowledgementInputSchema

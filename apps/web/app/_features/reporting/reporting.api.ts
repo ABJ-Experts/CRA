@@ -2,6 +2,8 @@ import {
   cancelReportingObligationInputSchema,
   correctReportingObligationAnchorInputSchema,
   createReportingObligationInputSchema,
+  createReportingRehearsalInputSchema,
+  replayReportingRehearsalInputSchema,
   recordReportingObligationStageSubmissionInputSchema,
   reportingObligationDetailResponseSchema,
   reportingObligationListQuerySchema,
@@ -31,6 +33,7 @@ import {
   reauthenticateReportingStageFilingInputSchema,
   reauthenticateReportingStageFilingResponseSchema,
   recordReportingStageExternalFilingFieldsSchema,
+  recordReportingStageRehearsalFilingFieldsSchema,
   reportingObligationEvidencePackDownloadResponseSchema,
   reportingObligationEvidencePackParamsSchema,
   reportingObligationEvidencePackResponseSchema,
@@ -40,11 +43,13 @@ import {
   reportingStageEvidencePackageResponseSchema,
   reportingStageEvidenceTimelineResponseSchema,
   reportingStageExternalFilingResponseSchema,
+  reportingStageRehearsalFilingResponseSchema,
   saveReportingStageDraftInputSchema,
   submitReportingStageDraftInputSchema,
   type CancelReportingObligationInput,
   type CorrectReportingObligationAnchorInput,
   type CreateReportingObligationInput,
+  type CreateReportingRehearsalInput,
   type RecordReportingObligationStageSubmissionInput,
   type ReportingObligationListQuery,
   type AcquireReportingStageDraftLockInput,
@@ -61,6 +66,8 @@ import {
   type GenerateReportingStageSubmissionPackageInput,
   type ReauthenticateReportingStageFilingInput,
   type RecordReportingStageExternalFilingFieldsInput,
+  type RecordReportingStageRehearsalFilingFields,
+  type ReplayReportingRehearsalInput,
 } from "@repo/contracts/reporting";
 
 import { ApiClientError, apiClient } from "../../_lib/http/api-client";
@@ -76,6 +83,19 @@ function obligationPath(obligationId?: string): `/${string}` {
     );
   }
   return `/api/v1/reporting/obligations/${parsed.data.obligationId}`;
+}
+
+function rehearsalPath(obligationId?: string): `/${string}` {
+  if (obligationId === undefined) return "/api/v1/reporting/rehearsals";
+  const parsed = reportingObligationParamsSchema.safeParse({ obligationId });
+  if (!parsed.success) {
+    throw new ApiClientError(
+      "invalid_request",
+      "The rehearsal identifier is invalid.",
+      400,
+    );
+  }
+  return `/api/v1/reporting/rehearsals/${parsed.data.obligationId}` as const;
 }
 
 function queryString(query: Readonly<Partial<ReportingObligationListQuery>>) {
@@ -192,6 +212,24 @@ export const reportingApi = Object.freeze({
       path: obligationPath(),
       method: "POST",
       inputSchema: createReportingObligationInputSchema,
+      body: input,
+      schema: reportingObligationMutationResponseSchema,
+    });
+  },
+  createRehearsal(input: CreateReportingRehearsalInput) {
+    return apiClient.request({
+      path: rehearsalPath(),
+      method: "POST",
+      inputSchema: createReportingRehearsalInputSchema,
+      body: input,
+      schema: reportingObligationMutationResponseSchema,
+    });
+  },
+  replayRehearsal(obligationId: string, input: ReplayReportingRehearsalInput) {
+    return apiClient.request({
+      path: `${rehearsalPath(obligationId)}/replay`,
+      method: "POST",
+      inputSchema: replayReportingRehearsalInputSchema,
       body: input,
       schema: reportingObligationMutationResponseSchema,
     });
@@ -363,6 +401,25 @@ export const reportingApi = Object.freeze({
       fields,
       files: [{ name: "receipt", value: receipt, filename: receipt.name }],
       schema: reportingStageExternalFilingResponseSchema,
+    });
+  },
+  recordStageRehearsalFiling(
+    obligationId: string,
+    stageId: string,
+    fields: RecordReportingStageRehearsalFilingFields,
+    receipt: File,
+  ) {
+    const stage = reportingStageDraftParamsSchema.parse({
+      obligationId,
+      stageId,
+    });
+    return apiClient.requestMultipart({
+      path: `${rehearsalPath(stage.obligationId)}/stages/${stage.stageId}/filings`,
+      method: "POST",
+      fieldsSchema: recordReportingStageRehearsalFilingFieldsSchema,
+      fields,
+      files: [{ name: "receipt", value: receipt, filename: receipt.name }],
+      schema: reportingStageRehearsalFilingResponseSchema,
     });
   },
   stageEvidenceTimeline(
