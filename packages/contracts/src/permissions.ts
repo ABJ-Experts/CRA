@@ -57,6 +57,7 @@ export const PERMISSION_ACTIONS = [
   "approve",
   "manage",
   "submit",
+  "snapshot",
 ] as const;
 export type PermissionAction = (typeof PERMISSION_ACTIONS)[number];
 
@@ -100,7 +101,7 @@ export const PERMISSION_MATRIX = {
   reporting: ["view", "submit"],
   // Annex VII technical-file editing is distinct from product editing. It is
   // intentionally absent from member/viewer presets but assignable by custom roles.
-  technical_files: ["view", "edit"],
+  technical_files: ["view", "edit", "snapshot"],
   // Logistics
   fleet: ["view", "create", "edit", "delete"],
   routes: ["view", "create", "edit", "delete"],
@@ -242,6 +243,7 @@ export const IMPLICATIONS: Readonly<
   approve: ["view"],
   manage: [],
   submit: ["view"],
+  snapshot: ["view"],
 };
 
 /** Parse `can_<action>_<module>` back into its parts. */

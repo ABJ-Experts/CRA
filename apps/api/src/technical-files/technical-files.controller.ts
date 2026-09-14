@@ -10,6 +10,7 @@ import {
   Delete,
   HttpException,
   Logger,
+  Query,
   ServiceUnavailableException,
 } from "@nestjs/common";
 import {
@@ -27,6 +28,16 @@ import {
   technicalFileReadinessResponseSchema,
   technicalFileReadinessSourceParamsSchema,
   technicalFileWorkspaceResponseSchema,
+  cancelTechnicalFileSnapshotExportRequestSchema,
+  createTechnicalFileSnapshotExportRequestSchema,
+  createTechnicalFileSnapshotRequestSchema,
+  technicalFileSnapshotDownloadQuerySchema,
+  technicalFileSnapshotDownloadResponseSchema,
+  technicalFileSnapshotExportParamsSchema,
+  technicalFileSnapshotExportResponseSchema,
+  technicalFileSnapshotParamsSchema,
+  technicalFileSnapshotResponseSchema,
+  technicalFileSnapshotsResponseSchema,
   technicalFileSectionParamsSchema,
   technicalFileSectionResponseSchema,
   updateTechnicalFileSectionRequestSchema,
@@ -36,6 +47,10 @@ import {
   type ReviewTechnicalFileSourceRequest,
   type SignalTechnicalFileSourceMaterialChangeRequest,
   type UpdateTechnicalFileSectionRequest,
+  type CancelTechnicalFileSnapshotExportRequest,
+  type CreateTechnicalFileSnapshotExportRequest,
+  type CreateTechnicalFileSnapshotRequest,
+  type TechnicalFileSnapshotDownloadQuery,
 } from "@repo/contracts/technical-files";
 import {
   acceptResidualRiskRequestSchema,
@@ -58,7 +73,11 @@ import {
   type RequestUser,
 } from "../auth/auth.types";
 import { ZodResponse } from "../common/http/zod-response.interceptor";
-import { zodBody, zodParams } from "../common/pipes/zod-validation.pipe";
+import {
+  zodBody,
+  zodParams,
+  zodQuery,
+} from "../common/pipes/zod-validation.pipe";
 import {
   TechnicalFileConflictError,
   TechnicalFileInvalidRequestError,
@@ -75,6 +94,11 @@ import {
   TechnicalFileReadinessInvalidRequestError,
 } from "./application/technical-file-readiness.port";
 import { TechnicalFileReadinessUseCases } from "./application/technical-file-readiness-use-cases";
+import { TechnicalFileSnapshotUseCases } from "./application/technical-file-snapshot-use-cases";
+import {
+  TechnicalFileSnapshotConflictError,
+  TechnicalFileSnapshotInvalidRequestError,
+} from "./application/technical-file-snapshot.port";
 
 @Controller("products/:productId/technical-file")
 export class TechnicalFilesController {
@@ -84,6 +108,7 @@ export class TechnicalFilesController {
     private readonly technicalFiles: TechnicalFileUseCases,
     private readonly riskRegisters: RiskRegisterUseCases,
     private readonly readiness: TechnicalFileReadinessUseCases,
+    private readonly snapshots: TechnicalFileSnapshotUseCases,
   ) {}
 
   @Get()
@@ -329,6 +354,170 @@ export class TechnicalFilesController {
       };
     } catch (error) {
       throw readinessMutationFailure(error);
+    }
+  }
+
+  @Get("snapshots")
+  @RequirePermissions("can_view_technical_files")
+  @ZodResponse(technicalFileSnapshotsResponseSchema)
+  async snapshotsList(
+    @Param(zodParams(technicalFileProductParamsSchema))
+    params: { productId: string },
+    @CurrentUser() user: RequestUser,
+  ) {
+    try {
+      return {
+        snapshots: this.require(
+          await this.snapshots.list(organizationId(user), {
+            actorId: user.id,
+            ...params,
+          }),
+        ),
+      };
+    } catch (error) {
+      throw snapshotReadFailure(error);
+    }
+  }
+
+  @Post("snapshots")
+  @RequirePermissions("can_snapshot_technical_files")
+  @ZodResponse(technicalFileSnapshotResponseSchema)
+  async createSnapshot(
+    @Param(zodParams(technicalFileProductParamsSchema))
+    params: { productId: string },
+    @Body(zodBody(createTechnicalFileSnapshotRequestSchema))
+    input: CreateTechnicalFileSnapshotRequest,
+    @CurrentUser() user: RequestUser,
+  ) {
+    try {
+      return {
+        snapshot: this.require(
+          await this.snapshots.create(organizationId(user), {
+            actorId: user.id,
+            ...params,
+            ...input,
+          }),
+        ),
+      };
+    } catch (error) {
+      throw snapshotMutationFailure(error);
+    }
+  }
+
+  @Get("snapshots/:snapshotId")
+  @RequirePermissions("can_view_technical_files")
+  @ZodResponse(technicalFileSnapshotResponseSchema)
+  async snapshot(
+    @Param(zodParams(technicalFileSnapshotParamsSchema))
+    params: { productId: string; snapshotId: string },
+    @CurrentUser() user: RequestUser,
+  ) {
+    try {
+      return {
+        snapshot: this.require(
+          await this.snapshots.get(organizationId(user), {
+            actorId: user.id,
+            ...params,
+          }),
+        ),
+      };
+    } catch (error) {
+      throw snapshotReadFailure(error);
+    }
+  }
+
+  @Post("snapshots/:snapshotId/exports")
+  @RequirePermissions("can_snapshot_technical_files")
+  @ZodResponse(technicalFileSnapshotExportResponseSchema)
+  async createSnapshotExport(
+    @Param(zodParams(technicalFileSnapshotParamsSchema))
+    params: { productId: string; snapshotId: string },
+    @Body(zodBody(createTechnicalFileSnapshotExportRequestSchema))
+    input: CreateTechnicalFileSnapshotExportRequest,
+    @CurrentUser() user: RequestUser,
+  ) {
+    try {
+      return {
+        export: this.require(
+          await this.snapshots.requestExport(organizationId(user), {
+            actorId: user.id,
+            ...params,
+            ...input,
+          }),
+        ),
+      };
+    } catch (error) {
+      throw snapshotMutationFailure(error);
+    }
+  }
+
+  @Get("snapshots/:snapshotId/exports/:exportId")
+  @RequirePermissions("can_view_technical_files")
+  @ZodResponse(technicalFileSnapshotExportResponseSchema)
+  async snapshotExport(
+    @Param(zodParams(technicalFileSnapshotExportParamsSchema))
+    params: { productId: string; snapshotId: string; exportId: string },
+    @CurrentUser() user: RequestUser,
+  ) {
+    try {
+      return {
+        export: this.require(
+          await this.snapshots.export(organizationId(user), {
+            actorId: user.id,
+            ...params,
+          }),
+        ),
+      };
+    } catch (error) {
+      throw snapshotReadFailure(error);
+    }
+  }
+
+  @Get("snapshots/:snapshotId/exports/:exportId/download")
+  @RequirePermissions("can_snapshot_technical_files")
+  @ZodResponse(technicalFileSnapshotDownloadResponseSchema)
+  async downloadSnapshotExport(
+    @Param(zodParams(technicalFileSnapshotExportParamsSchema))
+    params: { productId: string; snapshotId: string; exportId: string },
+    @Query(zodQuery(technicalFileSnapshotDownloadQuerySchema))
+    query: TechnicalFileSnapshotDownloadQuery,
+    @CurrentUser() user: RequestUser,
+  ) {
+    try {
+      return this.require(
+        await this.snapshots.download(organizationId(user), {
+          actorId: user.id,
+          ...params,
+          ...query,
+        }),
+      );
+    } catch (error) {
+      throw snapshotReadFailure(error);
+    }
+  }
+
+  @Delete("snapshots/:snapshotId/exports/:exportId")
+  @RequirePermissions("can_snapshot_technical_files")
+  @ZodResponse(technicalFileSnapshotExportResponseSchema)
+  async cancelSnapshotExport(
+    @Param(zodParams(technicalFileSnapshotExportParamsSchema))
+    params: { productId: string; snapshotId: string; exportId: string },
+    @Body(zodBody(cancelTechnicalFileSnapshotExportRequestSchema))
+    input: CancelTechnicalFileSnapshotExportRequest,
+    @CurrentUser() user: RequestUser,
+  ) {
+    try {
+      return {
+        export: this.require(
+          await this.snapshots.cancelExport(organizationId(user), {
+            actorId: user.id,
+            ...params,
+            ...input,
+          }),
+        ),
+      };
+    } catch (error) {
+      throw snapshotMutationFailure(error);
     }
   }
 
@@ -590,5 +779,36 @@ function readinessReadFailure(error: unknown): Error {
   return new ServiceUnavailableException({
     code: "technical_file_readiness_unavailable",
     message: "Technical-file readiness is temporarily unavailable.",
+  });
+}
+
+function snapshotMutationFailure(error: unknown): Error {
+  if (error instanceof HttpException) return error;
+  if (error instanceof TechnicalFileProductUnavailableError) return notFound();
+  if (error instanceof TechnicalFileSnapshotConflictError) {
+    return new ConflictException({
+      code: "version_conflict",
+      message: "The technical file changed. Reload before creating a snapshot.",
+      ...(error.currentVersion ? { currentVersion: error.currentVersion } : {}),
+    });
+  }
+  if (error instanceof TechnicalFileSnapshotInvalidRequestError)
+    return notFound();
+  return new ServiceUnavailableException({
+    code: "technical_file_snapshot_unavailable",
+    message: "Technical-file snapshots are temporarily unavailable.",
+  });
+}
+
+function snapshotReadFailure(error: unknown): Error {
+  if (error instanceof HttpException) return error;
+  if (
+    error instanceof TechnicalFileProductUnavailableError ||
+    error instanceof TechnicalFileSnapshotInvalidRequestError
+  )
+    return notFound();
+  return new ServiceUnavailableException({
+    code: "technical_file_snapshot_unavailable",
+    message: "Technical-file snapshots are temporarily unavailable.",
   });
 }

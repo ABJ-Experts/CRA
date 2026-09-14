@@ -198,3 +198,39 @@ test("owner can inspect the product-scoped cybersecurity risk register", async (
     fullPage: true,
   });
 });
+
+test("owner captures an immutable audit snapshot and queues its export", async ({
+  page,
+}, testInfo) => {
+  await signInAsLocalOwner(page);
+  await page.goto(`/products/${productId}/technical-file`);
+
+  await expect(
+    page.getByRole("heading", { name: "Technical-file snapshots" }),
+  ).toBeVisible();
+  await page
+    .getByLabel("Audit rationale")
+    .fill("Local M7-04 browser verification of immutable audit capture.");
+  const snapshotCreated = page.waitForResponse(
+    (response) =>
+      response.url().endsWith(`/products/${productId}/technical-file/snapshots`) &&
+      response.request().method() === "POST",
+  );
+  await page.getByRole("button", { name: "Create snapshot" }).click();
+  expect((await snapshotCreated).status()).toBe(201);
+  await expect(page.getByText(/audit snapshot/i).first()).toBeVisible();
+
+  const exportQueued = page.waitForResponse(
+    (response) =>
+      /\/snapshots\/[^/]+\/exports$/.test(response.url()) &&
+      response.request().method() === "POST",
+  );
+  await page.getByRole("button", { name: "Export snapshot" }).first().click();
+  expect((await exportQueued).status()).toBe(201);
+  await expect(page.getByText(/Export status: queued/i)).toBeVisible();
+
+  await page.screenshot({
+    path: testInfo.outputPath("technical-file-snapshot-queued.png"),
+    fullPage: true,
+  });
+});

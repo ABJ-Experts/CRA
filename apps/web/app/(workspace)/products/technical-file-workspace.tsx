@@ -21,6 +21,7 @@ import {
   useTechnicalFileReadinessQuery,
   useUpdateTechnicalFileSectionMutation,
 } from "../../_features/technical-files/technical-files.queries";
+import { TechnicalFileSnapshots } from "../../_features/technical-files/technical-file-snapshots";
 import { RiskRegisterWorkspace } from "../../_features/risk-register/risk-register-workspace";
 import { ApiClientError } from "../../_lib/http/api-client";
 import { useMocksReady } from "../../_providers/providers";
@@ -893,12 +894,16 @@ function TechnicalFileOverview({
   technicalFile,
   retention,
   canEdit,
+  canView,
+  canSnapshot,
   enabled,
 }: {
   productId: string;
   technicalFile: TechnicalFile;
   retention: ProductRetentionCalculation;
   canEdit: boolean;
+  canView: boolean;
+  canSnapshot: boolean;
   enabled: boolean;
 }) {
   const [selectedKey, setSelectedKey] = useState<
@@ -989,6 +994,13 @@ function TechnicalFileOverview({
           enabled={enabled}
           canEdit={canEdit}
         />
+        <TechnicalFileSnapshots
+          productId={productId}
+          technicalFileVersion={technicalFile.version}
+          enabled={enabled}
+          canView={canView}
+          canSnapshot={canSnapshot}
+        />
       </div>
     </SectionCard>
   );
@@ -1003,6 +1015,7 @@ export function TechnicalFileWorkspace({ productId }: { productId: string }) {
   const hasMembership = (session?.organizations.length ?? 0) > 0;
   const canView = permissions.can_view_technical_files === true;
   const canEdit = permissions.can_edit_technical_files === true;
+  const canSnapshot = permissions.can_snapshot_technical_files === true;
   const file = useTechnicalFileQuery(
     productId,
     liveApiEnabled && hasMembership && canView,
@@ -1123,6 +1136,8 @@ export function TechnicalFileWorkspace({ productId }: { productId: string }) {
           technicalFile={file.data.technicalFile}
           retention={file.data.retention}
           canEdit={canEdit}
+          canView={canView}
+          canSnapshot={canSnapshot}
           enabled={liveApiEnabled && hasMembership && canView}
         />
       ) : null}

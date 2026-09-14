@@ -21,8 +21,15 @@ import {
   type TechnicalFileReadinessRepository,
 } from "./application/technical-file-readiness.port";
 import { TechnicalFileReadinessUseCases } from "./application/technical-file-readiness-use-cases";
+import {
+  TECHNICAL_FILE_SNAPSHOT_REPOSITORY,
+  type TechnicalFileSnapshotRepository,
+} from "./application/technical-file-snapshot.port";
+import { TechnicalFileSnapshotUseCases } from "./application/technical-file-snapshot-use-cases";
 import { SupabaseRiskRegisterRepository } from "./infrastructure/supabase-risk-register.repository";
 import { SupabaseTechnicalFileReadinessRepository } from "./infrastructure/supabase-technical-file-readiness.repository";
+import { SupabaseTechnicalFileSnapshotRepository } from "./infrastructure/supabase-technical-file-snapshot.repository";
+import { TechnicalFileSnapshotExportWorker } from "./worker/technical-file-snapshot-export-worker";
 import { SupabaseTechnicalFileRepository } from "./infrastructure/supabase-technical-file.repository";
 import { TechnicalFilesController } from "./technical-files.controller";
 
@@ -33,6 +40,8 @@ import { TechnicalFilesController } from "./technical-files.controller";
     SupabaseTechnicalFileRepository,
     SupabaseRiskRegisterRepository,
     SupabaseTechnicalFileReadinessRepository,
+    SupabaseTechnicalFileSnapshotRepository,
+    TechnicalFileSnapshotExportWorker,
     {
       provide: TECHNICAL_FILE_REPOSITORY,
       useExisting: SupabaseTechnicalFileRepository,
@@ -68,6 +77,18 @@ import { TechnicalFilesController } from "./technical-files.controller";
         repository: TechnicalFileReadinessRepository,
         retention: ProductRetentionReaderPort,
       ) => new TechnicalFileReadinessUseCases(repository, retention),
+    },
+    {
+      provide: TECHNICAL_FILE_SNAPSHOT_REPOSITORY,
+      useExisting: SupabaseTechnicalFileSnapshotRepository,
+    },
+    {
+      provide: TechnicalFileSnapshotUseCases,
+      inject: [TECHNICAL_FILE_SNAPSHOT_REPOSITORY, PRODUCT_RETENTION_READER],
+      useFactory: (
+        repository: TechnicalFileSnapshotRepository,
+        retention: ProductRetentionReaderPort,
+      ) => new TechnicalFileSnapshotUseCases(repository, retention),
     },
   ],
 })

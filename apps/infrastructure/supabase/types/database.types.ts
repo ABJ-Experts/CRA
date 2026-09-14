@@ -10398,6 +10398,232 @@ export type Database = {
           },
         ]
       }
+      technical_file_snapshot_exports: {
+        Row: {
+          archive_bytes: number | null
+          archive_object_path: string | null
+          archive_sha256: string | null
+          attempt_count: number
+          cancellation_reason: string | null
+          cancelled_at: string | null
+          completed_at: string | null
+          created_at: string
+          failure_code: string | null
+          id: string
+          idempotency_key: string
+          lease_expires_at: string | null
+          lease_owner: string | null
+          manifest_bytes: number | null
+          manifest_object_path: string | null
+          manifest_sha256: string | null
+          organization_id: string
+          payload_digest: string
+          pdf_bytes: number | null
+          pdf_object_path: string | null
+          pdf_sha256: string | null
+          requested_by: string
+          snapshot_id: string
+          started_at: string | null
+          status: string
+        }
+        Insert: {
+          archive_bytes?: number | null
+          archive_object_path?: string | null
+          archive_sha256?: string | null
+          attempt_count?: number
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
+          completed_at?: string | null
+          created_at?: string
+          failure_code?: string | null
+          id?: string
+          idempotency_key: string
+          lease_expires_at?: string | null
+          lease_owner?: string | null
+          manifest_bytes?: number | null
+          manifest_object_path?: string | null
+          manifest_sha256?: string | null
+          organization_id: string
+          payload_digest: string
+          pdf_bytes?: number | null
+          pdf_object_path?: string | null
+          pdf_sha256?: string | null
+          requested_by: string
+          snapshot_id: string
+          started_at?: string | null
+          status?: string
+        }
+        Update: {
+          archive_bytes?: number | null
+          archive_object_path?: string | null
+          archive_sha256?: string | null
+          attempt_count?: number
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
+          completed_at?: string | null
+          created_at?: string
+          failure_code?: string | null
+          id?: string
+          idempotency_key?: string
+          lease_expires_at?: string | null
+          lease_owner?: string | null
+          manifest_bytes?: number | null
+          manifest_object_path?: string | null
+          manifest_sha256?: string | null
+          organization_id?: string
+          payload_digest?: string
+          pdf_bytes?: number | null
+          pdf_object_path?: string | null
+          pdf_sha256?: string | null
+          requested_by?: string
+          snapshot_id?: string
+          started_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "technical_file_snapshot_export_organization_id_snapshot_id_fkey"
+            columns: ["organization_id", "snapshot_id"]
+            isOneToOne: false
+            referencedRelation: "technical_file_snapshots"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "technical_file_snapshot_exports_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "technical_file_snapshot_exports_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      technical_file_snapshots: {
+        Row: {
+          audit_rationale: string | null
+          created_at: string
+          created_by: string
+          id: string
+          organization_id: string
+          payload: Json
+          payload_byte_length: number
+          payload_sha256: string
+          product_id: string
+          purpose: string
+          readiness_status: string
+          release_id: string | null
+          status: string
+          superseded_by_snapshot_id: string | null
+          technical_file_id: string
+          technical_file_version: number
+          template_key: string
+          template_version: string
+        }
+        Insert: {
+          audit_rationale?: string | null
+          created_at?: string
+          created_by: string
+          id?: string
+          organization_id: string
+          payload: Json
+          payload_byte_length?: number
+          payload_sha256: string
+          product_id: string
+          purpose: string
+          readiness_status: string
+          release_id?: string | null
+          status?: string
+          superseded_by_snapshot_id?: string | null
+          technical_file_id: string
+          technical_file_version: number
+          template_key: string
+          template_version: string
+        }
+        Update: {
+          audit_rationale?: string | null
+          created_at?: string
+          created_by?: string
+          id?: string
+          organization_id?: string
+          payload?: Json
+          payload_byte_length?: number
+          payload_sha256?: string
+          product_id?: string
+          purpose?: string
+          readiness_status?: string
+          release_id?: string | null
+          status?: string
+          superseded_by_snapshot_id?: string | null
+          technical_file_id?: string
+          technical_file_version?: number
+          template_key?: string
+          template_version?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "technical_file_snapshots_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "technical_file_snapshots_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "technical_file_snapshots_organization_id_product_id_fkey"
+            columns: ["organization_id", "product_id"]
+            isOneToOne: false
+            referencedRelation: "product_retention_alert_operations"
+            referencedColumns: ["organization_id", "product_id"]
+          },
+          {
+            foreignKeyName: "technical_file_snapshots_organization_id_product_id_fkey"
+            columns: ["organization_id", "product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "technical_file_snapshots_organization_id_release_id_fkey"
+            columns: ["organization_id", "release_id"]
+            isOneToOne: false
+            referencedRelation: "product_releases"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "technical_file_snapshots_organization_id_superseded_by_sna_fkey"
+            columns: ["organization_id", "superseded_by_snapshot_id"]
+            isOneToOne: false
+            referencedRelation: "technical_file_snapshots"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "technical_file_snapshots_organization_id_technical_file_id_fkey"
+            columns: ["organization_id", "technical_file_id"]
+            isOneToOne: false
+            referencedRelation: "technical_files"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "technical_file_snapshots_release_id_fkey"
+            columns: ["release_id"]
+            isOneToOne: false
+            referencedRelation: "product_releases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       technical_file_templates: {
         Row: {
           allowed_source_kinds: string[]
@@ -15136,6 +15362,21 @@ export type Database = {
           run: Json
         }[]
       }
+      cancel_technical_file_snapshot_export_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_export_id: string
+          p_idempotency_key: string
+          p_organization_id: string
+          p_product_id: string
+          p_reason: string
+          p_snapshot_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
       checkpoint_organization_export_atomic: {
         Args: {
           p_completed_parts: number
@@ -15446,6 +15687,13 @@ export type Database = {
         Returns: {
           outcome: string
           run: Json
+        }[]
+      }
+      claim_technical_file_snapshot_export: {
+        Args: { p_lease_seconds?: number; p_worker_id: string }
+        Returns: {
+          outcome: string
+          result: Json
         }[]
       }
       claim_vulnerability_feed_sync: {
@@ -16454,6 +16702,35 @@ export type Database = {
           result: Json
         }[]
       }
+      create_technical_file_snapshot_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_audit_rationale: string
+          p_expected_technical_file_version: number
+          p_idempotency_key: string
+          p_organization_id: string
+          p_product_id: string
+          p_purpose: string
+          p_release_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      create_technical_file_snapshot_export_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_idempotency_key: string
+          p_organization_id: string
+          p_product_id: string
+          p_snapshot_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
       create_vulnerability_assessment_bulk_preview_atomic: {
         Args: {
           p_actor_user_id: string
@@ -17006,6 +17283,18 @@ export type Database = {
           run: Json
         }[]
       }
+      fail_technical_file_snapshot_export_atomic: {
+        Args: {
+          p_export_id: string
+          p_failure_code: string
+          p_organization_id: string
+          p_worker_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
       fail_vulnerability_feed_sync: {
         Args: {
           p_failure_code: string
@@ -17244,6 +17533,26 @@ export type Database = {
           outcome: string
           source: Json
           submission: Json
+        }[]
+      }
+      finalize_technical_file_snapshot_export_atomic: {
+        Args: {
+          p_archive_bytes: number
+          p_archive_path: string
+          p_archive_sha256: string
+          p_export_id: string
+          p_manifest_bytes: number
+          p_manifest_path: string
+          p_manifest_sha256: string
+          p_organization_id: string
+          p_pdf_bytes: number
+          p_pdf_path: string
+          p_pdf_sha256: string
+          p_worker_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
         }[]
       }
       generate_sbom_composite_atomic: {
@@ -17997,6 +18306,56 @@ export type Database = {
           p_organization_id: string
           p_product_id: string
           p_section_key: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      get_technical_file_snapshot: {
+        Args: {
+          p_actor_user_id: string
+          p_organization_id: string
+          p_product_id: string
+          p_snapshot_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      get_technical_file_snapshot_export: {
+        Args: {
+          p_actor_user_id: string
+          p_export_id: string
+          p_organization_id: string
+          p_product_id: string
+          p_snapshot_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      get_technical_file_snapshot_export_download_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_artifact: string
+          p_export_id: string
+          p_organization_id: string
+          p_product_id: string
+          p_snapshot_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      get_technical_file_snapshots: {
+        Args: {
+          p_actor_user_id: string
+          p_organization_id: string
+          p_product_id: string
         }
         Returns: {
           outcome: string
@@ -19767,6 +20126,41 @@ export type Database = {
           title: string
         }[]
       }
+      m7_mark_technical_file_section_source_material_change_impl: {
+        Args: {
+          p_actor_user_id: string
+          p_current_fingerprint: string
+          p_current_observed_revision: string
+          p_expected_version: number
+          p_idempotency_key: string
+          p_organization_id: string
+          p_product_id: string
+          p_reason: string
+          p_section_key: string
+          p_source_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      m7_review_technical_file_section_source_impl: {
+        Args: {
+          p_actor_user_id: string
+          p_decision: string
+          p_expected_version: number
+          p_idempotency_key: string
+          p_organization_id: string
+          p_product_id: string
+          p_rationale: string
+          p_section_key: string
+          p_source_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
       m7_risk_actor_can_accept: {
         Args: { p_actor_user_id: string; p_organization_id: string }
         Returns: boolean
@@ -19815,6 +20209,15 @@ export type Database = {
         }
         Returns: Json
       }
+      m7_snapshot_export_json: {
+        Args: { p_export_id: string; p_organization_id: string }
+        Returns: Json
+      }
+      m7_snapshot_json: {
+        Args: { p_organization_id: string; p_snapshot_id: string }
+        Returns: Json
+      }
+      m7_snapshot_timestamp_utc: { Args: { p_value: string }; Returns: string }
       m7_technical_file_actor_can: {
         Args: {
           p_actor_user_id: string
@@ -20659,6 +21062,20 @@ export type Database = {
         Returns: {
           job: Json
           outcome: string
+        }[]
+      }
+      record_technical_file_snapshot_export_download_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_artifact: string
+          p_export_id: string
+          p_organization_id: string
+          p_product_id: string
+          p_snapshot_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
         }[]
       }
       record_vulnerability_finding_advisory_review_atomic: {

@@ -29,6 +29,9 @@ vi.mock("../../_features/technical-files/technical-files.queries", () => query);
 vi.mock("../../_features/risk-register/risk-register-workspace", () => ({
   RiskRegisterWorkspace: () => <div>Risk register</div>,
 }));
+vi.mock("../../_features/technical-files/technical-file-snapshots", () => ({
+  TechnicalFileSnapshots: () => <div>Technical-file snapshots</div>,
+}));
 
 const section = {
   id: "11111111-1111-4111-8111-111111111111",

@@ -3,6 +3,9 @@ import {
   createTechnicalFileRequestSchema,
   removeTechnicalFileSourceRequestSchema,
   removeTechnicalFileSourceParamsSchema,
+  cancelTechnicalFileSnapshotExportRequestSchema,
+  createTechnicalFileSnapshotExportRequestSchema,
+  createTechnicalFileSnapshotRequestSchema,
   technicalFileProductParamsSchema,
   technicalFileReadinessParamsSchema,
   technicalFileReadinessResponseSchema,
@@ -12,6 +15,13 @@ import {
   technicalFileWorkspaceResponseSchema,
   technicalFileSectionParamsSchema,
   technicalFileSectionResponseSchema,
+  technicalFileSnapshotDownloadResponseSchema,
+  technicalFileSnapshotDownloadQuerySchema,
+  technicalFileSnapshotExportParamsSchema,
+  technicalFileSnapshotExportResponseSchema,
+  technicalFileSnapshotParamsSchema,
+  technicalFileSnapshotResponseSchema,
+  technicalFileSnapshotsResponseSchema,
   updateTechnicalFileSectionRequestSchema,
   recalculateTechnicalFileReadinessRequestSchema,
   reviewTechnicalFileSourceRequestSchema,
@@ -22,6 +32,9 @@ import {
   type RecalculateTechnicalFileReadinessRequest,
   type ReviewTechnicalFileSourceRequest,
   type SignalTechnicalFileSourceMaterialChangeRequest,
+  type CancelTechnicalFileSnapshotExportRequest,
+  type CreateTechnicalFileSnapshotExportRequest,
+  type CreateTechnicalFileSnapshotRequest,
 } from "@repo/contracts/technical-files";
 
 import { authenticatedRequestJson } from "../../_lib/http/authenticated-request";
@@ -77,6 +90,45 @@ function readinessSourcePath(
     parsed.data.sectionKey,
     `/sources/${parsed.data.sourceId}${suffix}`,
   );
+}
+
+function snapshotPath(productId: string, snapshotId?: string): `/${string}` {
+  const parsed = snapshotId
+    ? technicalFileSnapshotParamsSchema.safeParse({ productId, snapshotId })
+    : technicalFileProductParamsSchema.safeParse({ productId });
+  if (!parsed.success) {
+    throw new ApiClientError(
+      "invalid_request",
+      "The technical-file snapshot identifier is invalid.",
+      400,
+    );
+  }
+  return productPath(
+    parsed.data.productId,
+    snapshotId ? `/snapshots/${snapshotId}` : "/snapshots",
+  );
+}
+
+function snapshotExportPath(
+  productId: string,
+  snapshotId: string,
+  exportId?: string,
+): `/${string}` {
+  const parsed = exportId
+    ? technicalFileSnapshotExportParamsSchema.safeParse({
+        productId,
+        snapshotId,
+        exportId,
+      })
+    : technicalFileSnapshotParamsSchema.safeParse({ productId, snapshotId });
+  if (!parsed.success) {
+    throw new ApiClientError(
+      "invalid_request",
+      "The technical-file export identifier is invalid.",
+      400,
+    );
+  }
+  return `${snapshotPath(productId, snapshotId)}/exports${exportId ? `/${exportId}` : ""}` as `/${string}`;
 }
 
 export const technicalFilesApi = Object.freeze({
@@ -205,6 +257,83 @@ export const technicalFilesApi = Object.freeze({
       method: "POST",
       schema: technicalFileEvidenceLinkResponseSchema,
       inputSchema: signalTechnicalFileSourceMaterialChangeRequestSchema,
+      body: input,
+    }),
+  listSnapshots: (productId: string, signal?: AbortSignal) =>
+    authenticatedRequestJson({
+      path: snapshotPath(productId),
+      schema: technicalFileSnapshotsResponseSchema,
+      signal,
+    }),
+  getSnapshot: (productId: string, snapshotId: string, signal?: AbortSignal) =>
+    authenticatedRequestJson({
+      path: snapshotPath(productId, snapshotId),
+      schema: technicalFileSnapshotResponseSchema,
+      signal,
+    }),
+  createSnapshot: (productId: string, input: CreateTechnicalFileSnapshotRequest) =>
+    authenticatedRequestJson({
+      path: snapshotPath(productId),
+      method: "POST",
+      schema: technicalFileSnapshotResponseSchema,
+      inputSchema: createTechnicalFileSnapshotRequestSchema,
+      body: input,
+    }),
+  createSnapshotExport: (
+    productId: string,
+    snapshotId: string,
+    input: CreateTechnicalFileSnapshotExportRequest,
+  ) =>
+    authenticatedRequestJson({
+      path: snapshotExportPath(productId, snapshotId),
+      method: "POST",
+      schema: technicalFileSnapshotExportResponseSchema,
+      inputSchema: createTechnicalFileSnapshotExportRequestSchema,
+      body: input,
+    }),
+  getSnapshotExport: (
+    productId: string,
+    snapshotId: string,
+    exportId: string,
+    signal?: AbortSignal,
+  ) =>
+    authenticatedRequestJson({
+      path: snapshotExportPath(productId, snapshotId, exportId),
+      schema: technicalFileSnapshotExportResponseSchema,
+      signal,
+    }),
+  downloadSnapshotExport: (
+    productId: string,
+    snapshotId: string,
+    exportId: string,
+    artifact: string,
+  ) => {
+    const parsedArtifact = technicalFileSnapshotDownloadQuerySchema.safeParse({
+      artifact,
+    });
+    if (!parsedArtifact.success) {
+      throw new ApiClientError(
+        "invalid_request",
+        "The requested export artifact is invalid.",
+        400,
+      );
+    }
+    return authenticatedRequestJson({
+      path: `${snapshotExportPath(productId, snapshotId, exportId)}/download?artifact=${parsedArtifact.data.artifact}` as `/${string}`,
+      schema: technicalFileSnapshotDownloadResponseSchema,
+    });
+  },
+  cancelSnapshotExport: (
+    productId: string,
+    snapshotId: string,
+    exportId: string,
+    input: CancelTechnicalFileSnapshotExportRequest,
+  ) =>
+    authenticatedRequestJson({
+      path: snapshotExportPath(productId, snapshotId, exportId),
+      method: "DELETE",
+      schema: technicalFileSnapshotExportResponseSchema,
+      inputSchema: cancelTechnicalFileSnapshotExportRequestSchema,
       body: input,
     }),
 });

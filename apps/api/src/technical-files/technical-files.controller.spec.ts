@@ -29,6 +29,7 @@ describe("TechnicalFilesController", () => {
       { get } as never,
       {} as never,
       {} as never,
+      {} as never,
     );
 
     await expect(
@@ -43,6 +44,7 @@ describe("TechnicalFilesController", () => {
     const get = jest.fn().mockRejectedValue(new Error("provider failure"));
     const controller = new TechnicalFilesController(
       { get } as never,
+      {} as never,
       {} as never,
       {} as never,
     );
@@ -60,6 +62,7 @@ describe("TechnicalFilesController", () => {
     const controller = new TechnicalFilesController(
       {} as never,
       { risk } as never,
+      {} as never,
       {} as never,
     );
 
@@ -82,6 +85,7 @@ describe("TechnicalFilesController", () => {
       {} as never,
       {} as never,
       { signalMaterialChange } as never,
+      {} as never,
     );
 
     await expect(

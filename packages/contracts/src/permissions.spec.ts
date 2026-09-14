@@ -70,6 +70,15 @@ describe("technical-file permissions", () => {
     expect(hasPermission(DEFAULT_PERMISSIONS_BY_ROLE.viewer, "can_edit_technical_files")).toBe(false);
     expect(hasPermission(resolveEffectivePermissions({ baseRole: "viewer", customRoles: [role({ permissions: { can_edit_technical_files: true } })] }), "can_view_technical_files")).toBe(true);
   });
+
+  it("reserves immutable snapshot and export actions for owner/admin, while keeping custom-role delegation narrow", () => {
+    expect(hasPermission(DEFAULT_PERMISSIONS_BY_ROLE.owner, "can_snapshot_technical_files")).toBe(true);
+    expect(hasPermission(DEFAULT_PERMISSIONS_BY_ROLE.admin, "can_snapshot_technical_files")).toBe(true);
+    expect(hasPermission(DEFAULT_PERMISSIONS_BY_ROLE.member, "can_snapshot_technical_files")).toBe(false);
+    expect(hasPermission(DEFAULT_PERMISSIONS_BY_ROLE.viewer, "can_snapshot_technical_files")).toBe(false);
+    expect(hasPermission(resolveEffectivePermissions({ baseRole: "viewer", customRoles: [role({ permissions: { can_snapshot_technical_files: true } })] }), "can_view_technical_files")).toBe(true);
+    expect(hasPermission(resolveEffectivePermissions({ baseRole: "viewer", baseRoleOverrides: { can_snapshot_technical_files: false }, customRoles: [role({ permissions: { can_snapshot_technical_files: true } })] }), "can_snapshot_technical_files")).toBe(false);
+  });
 });
 
 describe("hasPermission", () => {

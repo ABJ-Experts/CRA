@@ -83,6 +83,48 @@ reviews, change signals, and recalculations write their audit evidence in the
 same transaction. The reverse-link projection is tenant-scoped and returns
 relationship metadata only, preventing M8-04 from gaining document access.
 
+## M7-04 immutable snapshots and verifiable exports
+
+M7-04 captures an immutable, copied JSON payload of one technical-file state;
+it never rewrites the active file or substitutes a newer source. A `release`
+snapshot requires an active release belonging to the same product. An `audit`
+snapshot has no release and requires a bounded human rationale. The caller
+supplies the expected technical-file version. The database locks the relevant
+technical-file, section/source/review, risk, product, and release state before
+serialisation, so a concurrent change returns a conflict rather than producing
+a mixed-revision snapshot.
+
+The payload includes product/release identity, Annex VII template and legal
+source metadata, all section narratives and applicability decisions, pinned
+source and review metadata, readiness/gaps, current risk-register revisions
+and mappings, retention projection, and the actor/time. It records copied
+metadata only: M8 document bytes are not fetched, copied, or implied. A
+snapshot may be incomplete or stale and remains plainly labelled as
+documentation readiness rather than conformity, certification, or a qualified
+signature. Product, template, source, and risk changes after capture cannot
+alter it. A newer snapshot of the same purpose can supersede an earlier one
+without modifying the earlier payload.
+
+Export jobs are feature-local, leased, and explicit: `queued`, `generating`,
+`ready`, `failed`, `superseded`, or `cancelled`. They generate from exactly one
+immutable payload, with byte ceilings before allocation. The worker creates an
+escaped, built-in-font PDF with hierarchy, page numbers, linked-source metadata,
+gaps, and a non-certification notice; no renderer network or local-file access
+is permitted. It also creates canonical `snapshot.json` and a deterministic
+archive containing that JSON, the PDF, and `manifest.json`. The manifest pins
+SHA-256 hashes, byte lengths, MIME types, and safe generated names for each
+artifact. The manifest hash is anchored in the export row, while storage paths
+remain private implementation details.
+
+Every snapshot/export/retry/cancel/finalise/download-authorisation mutation
+writes an audit entry in its database transaction. A signed URL is issued only
+after the tenant-scoped download RPC authorises the actor and durably records
+the access audit; URLs and storage object keys are neither persisted in public
+responses nor exposed to the browser. Retention projections are captured with
+the snapshot. M8-02/M8-05 may later provide verified document-byte inclusion,
+but must do so through a narrow adapter without changing this V1 payload,
+readiness, or archive contract.
+
 ## Selected and rejected patterns
 
 - A feature-local application port and Supabase adapter are selected because
