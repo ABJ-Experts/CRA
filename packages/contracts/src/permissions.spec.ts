@@ -62,6 +62,16 @@ describe("key generation", () => {
   });
 });
 
+describe("technical-file permissions", () => {
+  it("gives only owner/admin default access while preserving custom-role reachability", () => {
+    expect(hasPermission(DEFAULT_PERMISSIONS_BY_ROLE.owner, "can_view_technical_files")).toBe(true);
+    expect(hasPermission(DEFAULT_PERMISSIONS_BY_ROLE.admin, "can_edit_technical_files")).toBe(true);
+    expect(hasPermission(DEFAULT_PERMISSIONS_BY_ROLE.member, "can_view_technical_files")).toBe(false);
+    expect(hasPermission(DEFAULT_PERMISSIONS_BY_ROLE.viewer, "can_edit_technical_files")).toBe(false);
+    expect(hasPermission(resolveEffectivePermissions({ baseRole: "viewer", customRoles: [role({ permissions: { can_edit_technical_files: true } })] }), "can_view_technical_files")).toBe(true);
+  });
+});
+
 describe("hasPermission", () => {
   it("treats undefined and false alike as denial", () => {
     const set = { can_view_orders: true, can_edit_orders: false } as const;

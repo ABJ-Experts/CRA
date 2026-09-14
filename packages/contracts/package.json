@@ -55,6 +55,18 @@
       "types": "./dist/reporting/types/index.d.ts",
       "default": "./dist/reporting/types/index.js"
     },
+    "./technical-files": {
+      "types": "./dist/technical-files/index.d.ts",
+      "default": "./dist/technical-files/index.js"
+    },
+    "./technical-files/schemas": {
+      "types": "./dist/technical-files/schemas/index.d.ts",
+      "default": "./dist/technical-files/schemas/index.js"
+    },
+    "./technical-files/types": {
+      "types": "./dist/technical-files/types/index.d.ts",
+      "default": "./dist/technical-files/types/index.js"
+    },
     "./http": {
       "types": "./dist/http.d.ts",
       "default": "./dist/http.js"

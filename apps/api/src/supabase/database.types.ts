@@ -9699,6 +9699,250 @@ export type Database = {
           },
         ]
       }
+      technical_file_section_sources: {
+        Row: {
+          created_at: string
+          edition_or_revision: string | null
+          id: string
+          issuer: string | null
+          locator: string | null
+          observed_revision: string | null
+          organization_id: string
+          rationale: string | null
+          record_id: string | null
+          section_id: string
+          source_kind: string
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          edition_or_revision?: string | null
+          id?: string
+          issuer?: string | null
+          locator?: string | null
+          observed_revision?: string | null
+          organization_id: string
+          rationale?: string | null
+          record_id?: string | null
+          section_id: string
+          source_kind: string
+          title: string
+        }
+        Update: {
+          created_at?: string
+          edition_or_revision?: string | null
+          id?: string
+          issuer?: string | null
+          locator?: string | null
+          observed_revision?: string | null
+          organization_id?: string
+          rationale?: string | null
+          record_id?: string | null
+          section_id?: string
+          source_kind?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "technical_file_section_sources_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "technical_file_section_sources_organization_id_section_id_fkey"
+            columns: ["organization_id", "section_id"]
+            isOneToOne: false
+            referencedRelation: "technical_file_sections"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      technical_file_sections: {
+        Row: {
+          applicability: string
+          created_at: string
+          heading: string
+          id: string
+          narrative: string | null
+          non_applicability_reason: string | null
+          organization_id: string
+          requirement_text: string
+          section_key: string
+          sort_order: number
+          technical_file_id: string
+          updated_at: string
+          updated_by: string
+          version: number
+        }
+        Insert: {
+          applicability?: string
+          created_at?: string
+          heading: string
+          id?: string
+          narrative?: string | null
+          non_applicability_reason?: string | null
+          organization_id: string
+          requirement_text: string
+          section_key: string
+          sort_order: number
+          technical_file_id: string
+          updated_at?: string
+          updated_by: string
+          version?: number
+        }
+        Update: {
+          applicability?: string
+          created_at?: string
+          heading?: string
+          id?: string
+          narrative?: string | null
+          non_applicability_reason?: string | null
+          organization_id?: string
+          requirement_text?: string
+          section_key?: string
+          sort_order?: number
+          technical_file_id?: string
+          updated_at?: string
+          updated_by?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "technical_file_sections_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "technical_file_sections_organization_id_technical_file_id_fkey"
+            columns: ["organization_id", "technical_file_id"]
+            isOneToOne: false
+            referencedRelation: "technical_files"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "technical_file_sections_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      technical_file_templates: {
+        Row: {
+          heading: string
+          legal_source: string
+          requirement_text: string
+          section_key: string
+          sort_order: number
+          template_key: string
+          template_version: string
+        }
+        Insert: {
+          heading: string
+          legal_source: string
+          requirement_text: string
+          section_key: string
+          sort_order: number
+          template_key: string
+          template_version: string
+        }
+        Update: {
+          heading?: string
+          legal_source?: string
+          requirement_text?: string
+          section_key?: string
+          sort_order?: number
+          template_key?: string
+          template_version?: string
+        }
+        Relationships: []
+      }
+      technical_files: {
+        Row: {
+          create_idempotency_key: string
+          created_at: string
+          created_by: string
+          id: string
+          organization_id: string
+          product_id: string
+          status: string
+          template_key: string
+          template_version: string
+          updated_at: string
+          updated_by: string
+          version: number
+        }
+        Insert: {
+          create_idempotency_key: string
+          created_at?: string
+          created_by: string
+          id?: string
+          organization_id: string
+          product_id: string
+          status?: string
+          template_key?: string
+          template_version: string
+          updated_at?: string
+          updated_by: string
+          version?: number
+        }
+        Update: {
+          create_idempotency_key?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          organization_id?: string
+          product_id?: string
+          status?: string
+          template_key?: string
+          template_version?: string
+          updated_at?: string
+          updated_by?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "technical_files_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "technical_files_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "technical_files_organization_id_product_id_fkey"
+            columns: ["organization_id", "product_id"]
+            isOneToOne: false
+            referencedRelation: "product_retention_alert_operations"
+            referencedColumns: ["organization_id", "product_id"]
+          },
+          {
+            foreignKeyName: "technical_files_organization_id_product_id_fkey"
+            columns: ["organization_id", "product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "technical_files_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tenant_settings_catalog: {
         Row: {
           category: string
@@ -13967,6 +14211,27 @@ export type Database = {
           release: Json
         }[]
       }
+      add_technical_file_section_source_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_edition_or_revision: string
+          p_expected_version: number
+          p_idempotency_key: string
+          p_issuer: string
+          p_locator: string
+          p_organization_id: string
+          p_product_id: string
+          p_rationale: string
+          p_record_id: string
+          p_section_key: string
+          p_source_kind: string
+          p_title: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
       append_reporting_stage_acknowledgement_atomic: {
         Args: {
           p_acknowledged_at: string
@@ -15559,6 +15824,18 @@ export type Database = {
           request: Json
         }[]
       }
+      create_technical_file_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_idempotency_key: string
+          p_organization_id: string
+          p_product_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
       create_vulnerability_assessment_bulk_preview_atomic: {
         Args: {
           p_actor_user_id: string
@@ -17049,6 +17326,29 @@ export type Database = {
         Returns: {
           outcome: string
           reservation: Json
+        }[]
+      }
+      get_technical_file: {
+        Args: {
+          p_actor_user_id: string
+          p_organization_id: string
+          p_product_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      get_technical_file_section: {
+        Args: {
+          p_actor_user_id: string
+          p_organization_id: string
+          p_product_id: string
+          p_section_key: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
         }[]
       }
       get_vulnerability_assessment_bulk_operation: {
@@ -18775,6 +19075,45 @@ export type Database = {
         Returns: boolean
       }
       m6_utc_second_z: { Args: { p_value: string }; Returns: string }
+      m7_technical_file_actor_can: {
+        Args: {
+          p_actor_user_id: string
+          p_organization_id: string
+          p_permission: string
+        }
+        Returns: boolean
+      }
+      m7_technical_file_mutation_replay: {
+        Args: {
+          p_action: string
+          p_actor_user_id: string
+          p_idempotency_key: string
+          p_organization_id: string
+          p_payload_digest: string
+        }
+        Returns: {
+          outcome: string
+          section_id: string
+        }[]
+      }
+      m7_technical_file_section_json: {
+        Args: { p_organization_id: string; p_section_id: string }
+        Returns: Json
+      }
+      m7_technical_file_source_current: {
+        Args: {
+          p_kind: string
+          p_observed_revision: string
+          p_organization_id: string
+          p_product_id: string
+          p_record_id: string
+        }
+        Returns: boolean
+      }
+      m7_technical_file_source_exists: {
+        Args: { p_kind: string; p_organization_id: string; p_record_id: string }
+        Returns: boolean
+      }
       mark_mfa_factors_removed: {
         Args: { p_operation_id: string; p_user_id: string }
         Returns: string
@@ -19775,6 +20114,21 @@ export type Database = {
         Returns: {
           outcome: string
           release: Json
+        }[]
+      }
+      remove_technical_file_section_source_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_expected_version: number
+          p_idempotency_key: string
+          p_organization_id: string
+          p_product_id: string
+          p_section_key: string
+          p_source_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
         }[]
       }
       replace_product_security_update_artifact_atomic: {
@@ -21070,6 +21424,23 @@ export type Database = {
           p_expected_version: number
           p_idempotency_key: string
           p_organization_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      update_technical_file_section_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_applicability: string
+          p_expected_version: number
+          p_idempotency_key: string
+          p_narrative: string
+          p_non_applicability_reason: string
+          p_organization_id: string
+          p_product_id: string
+          p_section_key: string
         }
         Returns: {
           outcome: string

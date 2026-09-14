@@ -98,6 +98,9 @@ export const PERMISSION_MATRIX = {
   // Regulatory reporting submission is intentionally separate from editing a
   // draft. It is granted only to owner/admin presets unless explicitly added.
   reporting: ["view", "submit"],
+  // Annex VII technical-file editing is distinct from product editing. It is
+  // intentionally absent from member/viewer presets but assignable by custom roles.
+  technical_files: ["view", "edit"],
   // Logistics
   fleet: ["view", "create", "edit", "delete"],
   routes: ["view", "create", "edit", "delete"],

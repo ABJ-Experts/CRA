@@ -19,6 +19,7 @@ import { SupabaseModule } from "./supabase/supabase.module";
 import { SbomModule } from "./sboms/sbom.module";
 import { UsersModule } from "./users/users.module";
 import { VulnerabilitiesModule } from "./vulnerabilities/vulnerabilities.module";
+import { TechnicalFilesModule } from "./technical-files/technical-files.module";
 
 @Module({
   imports: [
@@ -58,6 +59,7 @@ import { VulnerabilitiesModule } from "./vulnerabilities/vulnerabilities.module"
     InvitationsModule,
     SbomModule,
     VulnerabilitiesModule,
+    TechnicalFilesModule,
   ],
   controllers: [HealthController],
 })

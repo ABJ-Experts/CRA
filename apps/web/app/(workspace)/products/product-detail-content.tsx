@@ -20,6 +20,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/tabs";
 import {
   Boxes,
+  FileText,
   FilePenLine,
   GitBranch,
   ShieldCheck,
@@ -766,6 +767,7 @@ export function ProductDetailContent({ productId }: { productId: string }) {
   const canArchive = permissions.can_delete_products === true;
   const canApprove = permissions.can_approve_products === true;
   const canViewSboms = permissions.can_view_sboms === true;
+  const canViewTechnicalFiles = permissions.can_view_technical_files === true;
   const canUploadSboms = permissions.can_upload_sboms === true;
   const canReviewSboms = permissions.can_review_sboms === true;
   const [activePanel, setActivePanel] = useState<WorkbenchPanel | null>(null);
@@ -804,14 +806,29 @@ export function ProductDetailContent({ productId }: { productId: string }) {
         title={product.data?.product.name ?? "Product"}
         subtitle="Product identity, release history, and lifecycle state."
         actions={
-          <Button
-            type="button"
-            variant="outline"
-            tone="grey"
-            onClick={() => router.push("/products")}
-          >
-            Back to products
-          </Button>
+          <div className="flex flex-wrap gap-3">
+            {canViewTechnicalFiles ? (
+              <Button
+                type="button"
+                variant="outline"
+                tone="grey"
+                onClick={() =>
+                  router.push(`/products/${productId}/technical-file`)
+                }
+              >
+                <FileText aria-hidden="true" />
+                Technical file
+              </Button>
+            ) : null}
+            <Button
+              type="button"
+              variant="outline"
+              tone="grey"
+              onClick={() => router.push("/products")}
+            >
+              Back to products
+            </Button>
+          </div>
         }
       />
       {!liveApiEnabled ? (
