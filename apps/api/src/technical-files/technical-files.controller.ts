@@ -15,15 +15,26 @@ import {
 import {
   addTechnicalFileSourceRequestSchema,
   createTechnicalFileRequestSchema,
+  recalculateTechnicalFileReadinessRequestSchema,
   removeTechnicalFileSourceParamsSchema,
   removeTechnicalFileSourceRequestSchema,
+  reviewTechnicalFileSourceRequestSchema,
+  signalTechnicalFileSourceMaterialChangeRequestSchema,
+  technicalFileEvidenceLinkResponseSchema,
+  technicalFileEvidenceReviewResponseSchema,
   technicalFileProductParamsSchema,
+  technicalFileReadinessParamsSchema,
+  technicalFileReadinessResponseSchema,
+  technicalFileReadinessSourceParamsSchema,
   technicalFileWorkspaceResponseSchema,
   technicalFileSectionParamsSchema,
   technicalFileSectionResponseSchema,
   updateTechnicalFileSectionRequestSchema,
   type AddTechnicalFileSourceRequest,
   type CreateTechnicalFileRequest,
+  type RecalculateTechnicalFileReadinessRequest,
+  type ReviewTechnicalFileSourceRequest,
+  type SignalTechnicalFileSourceMaterialChangeRequest,
   type UpdateTechnicalFileSectionRequest,
 } from "@repo/contracts/technical-files";
 import {
@@ -59,6 +70,11 @@ import {
   RiskRegisterInvalidRequestError,
 } from "./application/risk-register.port";
 import { RiskRegisterUseCases } from "./application/risk-register-use-cases";
+import {
+  TechnicalFileReadinessConflictError,
+  TechnicalFileReadinessInvalidRequestError,
+} from "./application/technical-file-readiness.port";
+import { TechnicalFileReadinessUseCases } from "./application/technical-file-readiness-use-cases";
 
 @Controller("products/:productId/technical-file")
 export class TechnicalFilesController {
@@ -67,6 +83,7 @@ export class TechnicalFilesController {
   constructor(
     private readonly technicalFiles: TechnicalFileUseCases,
     private readonly riskRegisters: RiskRegisterUseCases,
+    private readonly readiness: TechnicalFileReadinessUseCases,
   ) {}
 
   @Get()
@@ -96,7 +113,9 @@ export class TechnicalFilesController {
       error instanceof TechnicalFileProductUnavailableError ||
       error instanceof TechnicalFileInvalidRequestError ||
       error instanceof RiskRegisterInvalidRequestError ||
-      error instanceof RiskRegisterConflictError
+      error instanceof RiskRegisterConflictError ||
+      error instanceof TechnicalFileReadinessInvalidRequestError ||
+      error instanceof TechnicalFileReadinessConflictError
     ) {
       return;
     }
@@ -214,6 +233,102 @@ export class TechnicalFilesController {
       );
     } catch (error) {
       throw mutationFailure(error);
+    }
+  }
+
+  @Get("readiness")
+  @RequirePermissions("can_view_technical_files")
+  @ZodResponse(technicalFileReadinessResponseSchema)
+  async readinessOverview(
+    @Param(zodParams(technicalFileReadinessParamsSchema))
+    params: { productId: string },
+    @CurrentUser() user: RequestUser,
+  ) {
+    try {
+      return {
+        readiness: this.require(
+          await this.readiness.get(organizationId(user), {
+            actorId: user.id,
+            ...params,
+          }),
+        ),
+      };
+    } catch (error) {
+      this.logUnexpected(error);
+      throw readinessReadFailure(error);
+    }
+  }
+
+  @Post("readiness/recalculate")
+  @RequirePermissions("can_edit_technical_files")
+  @ZodResponse(technicalFileReadinessResponseSchema)
+  async recalculateReadiness(
+    @Param(zodParams(technicalFileReadinessParamsSchema))
+    params: { productId: string },
+    @Body(zodBody(recalculateTechnicalFileReadinessRequestSchema))
+    input: RecalculateTechnicalFileReadinessRequest,
+    @CurrentUser() user: RequestUser,
+  ) {
+    try {
+      return {
+        readiness: this.require(
+          await this.readiness.recalculate(organizationId(user), {
+            actorId: user.id,
+            ...params,
+            ...input,
+          }),
+        ),
+      };
+    } catch (error) {
+      throw readinessMutationFailure(error);
+    }
+  }
+
+  @Post("sections/:sectionKey/sources/:sourceId/review")
+  @RequirePermissions("can_edit_technical_files")
+  @ZodResponse(technicalFileEvidenceReviewResponseSchema)
+  async reviewSource(
+    @Param(zodParams(technicalFileReadinessSourceParamsSchema))
+    params: { productId: string; sectionKey: string; sourceId: string },
+    @Body(zodBody(reviewTechnicalFileSourceRequestSchema))
+    input: ReviewTechnicalFileSourceRequest,
+    @CurrentUser() user: RequestUser,
+  ) {
+    try {
+      return this.require(
+        await this.readiness.reviewSource(organizationId(user), {
+          actorId: user.id,
+          ...params,
+          ...input,
+        }),
+      );
+    } catch (error) {
+      throw readinessMutationFailure(error);
+    }
+  }
+
+  @Post("sections/:sectionKey/sources/:sourceId/material-change")
+  @RequirePermissions("can_edit_technical_files")
+  @ZodResponse(technicalFileEvidenceLinkResponseSchema)
+  async signalMaterialChange(
+    @Param(zodParams(technicalFileReadinessSourceParamsSchema))
+    params: { productId: string; sectionKey: string; sourceId: string },
+    @Body(zodBody(signalTechnicalFileSourceMaterialChangeRequestSchema))
+    input: SignalTechnicalFileSourceMaterialChangeRequest,
+    @CurrentUser() user: RequestUser,
+  ) {
+    try {
+      return {
+        source: this.require(
+          await this.readiness.signalMaterialChange(organizationId(user), {
+            actorId: user.id,
+            ...params,
+            ...input,
+          }),
+        ),
+      };
+    } catch (error) {
+      throw readinessMutationFailure(error);
     }
   }
 
@@ -443,5 +558,37 @@ function riskReadFailure(error: unknown): Error {
   return new ServiceUnavailableException({
     code: "risk_register_unavailable",
     message: "The risk register is temporarily unavailable.",
+  });
+}
+
+function readinessMutationFailure(error: unknown): Error {
+  if (error instanceof HttpException) return error;
+  if (error instanceof TechnicalFileProductUnavailableError) return notFound();
+  if (error instanceof TechnicalFileReadinessConflictError) {
+    return new ConflictException({
+      code: "version_conflict",
+      message: "This evidence link changed. Reload before saving.",
+      ...(error.currentVersion ? { currentVersion: error.currentVersion } : {}),
+    });
+  }
+  if (error instanceof TechnicalFileReadinessInvalidRequestError)
+    return notFound();
+  return new ServiceUnavailableException({
+    code: "technical_file_readiness_unavailable",
+    message: "Technical-file readiness is temporarily unavailable.",
+  });
+}
+
+function readinessReadFailure(error: unknown): Error {
+  if (error instanceof HttpException) return error;
+  if (
+    error instanceof TechnicalFileProductUnavailableError ||
+    error instanceof TechnicalFileReadinessInvalidRequestError
+  ) {
+    return notFound();
+  }
+  return new ServiceUnavailableException({
+    code: "technical_file_readiness_unavailable",
+    message: "Technical-file readiness is temporarily unavailable.",
   });
 }

@@ -13,6 +13,10 @@ const query = vi.hoisted(() => ({
   useUpdateTechnicalFileSectionMutation: vi.fn(),
   useAddTechnicalFileSourceMutation: vi.fn(),
   useRemoveTechnicalFileSourceMutation: vi.fn(),
+  useTechnicalFileReadinessQuery: vi.fn(),
+  useRecalculateTechnicalFileReadinessMutation: vi.fn(),
+  useReviewTechnicalFileSourceMutation: vi.fn(),
+  useSignalTechnicalFileSourceMaterialChangeMutation: vi.fn(),
 }));
 const session = vi.hoisted(() => ({
   useSession: vi.fn(),
@@ -76,6 +80,58 @@ function prime(
     isPending: false,
     mutateAsync: vi.fn(),
   });
+  query.useTechnicalFileReadinessQuery.mockReturnValue({
+    isPending: false,
+    isError: false,
+    data: {
+      readiness: {
+        technicalFileId: "22222222-2222-4222-8222-222222222222",
+        overallStatus: "partial",
+        recalculationStatus: "current",
+        calculatedAt: "2026-09-14T00:00:00.000Z",
+        sections: [
+          {
+            sectionKey: "general_description",
+            status: "partial",
+            gapCount: 1,
+            validEvidenceCount: 0,
+            staleEvidenceCount: 0,
+            unavailableEvidenceCount: 0,
+            staleReasons: [],
+            gaps: [
+              {
+                sectionKey: "general_description",
+                code: "missing_evidence",
+                priority: 1,
+                actionLabel: "Link product evidence",
+              },
+            ],
+          },
+        ],
+        gaps: [
+          {
+            sectionKey: "general_description",
+            code: "missing_evidence",
+            priority: 1,
+            actionLabel: "Link product evidence",
+          },
+        ],
+      },
+    },
+    refetch: vi.fn(),
+  });
+  query.useRecalculateTechnicalFileReadinessMutation.mockReturnValue({
+    isPending: false,
+    mutateAsync: vi.fn(),
+  });
+  query.useReviewTechnicalFileSourceMutation.mockReturnValue({
+    isPending: false,
+    mutateAsync: vi.fn(),
+  });
+  query.useSignalTechnicalFileSourceMaterialChangeMutation.mockReturnValue({
+    isPending: false,
+    mutateAsync: vi.fn(),
+  });
 }
 
 afterEach(() => {
@@ -123,7 +179,9 @@ describe("TechnicalFileWorkspace", () => {
     render(
       <TechnicalFileWorkspace productId="33333333-3333-4333-8333-333333333333" />,
     );
-    fireEvent.click(screen.getByRole("button", { name: "Open section" }));
+    fireEvent.click(
+      screen.getAllByRole("button", { name: "Open section" }).at(-1)!,
+    );
 
     expect(screen.getByText("Annex VII requirement")).toBeInTheDocument();
     expect(
@@ -151,5 +209,141 @@ describe("TechnicalFileWorkspace", () => {
       screen.queryByRole("button", { name: "Create technical file" }),
     ).not.toBeInTheDocument();
     expect(screen.getByText(/cannot create or edit/i)).toBeInTheDocument();
+  });
+
+  it("shows documentation readiness and prioritised actions without claiming certification", () => {
+    prime({
+      data: {
+        technicalFile: {
+          id: "22222222-2222-4222-8222-222222222222",
+          organizationId: "00000000-0000-4000-8000-000000000001",
+          productId: "33333333-3333-4333-8333-333333333333",
+          templateKey: "annex_vii",
+          templateVersion: "2024-01",
+          legalSource: "Regulation (EU) 2024/2847, Annex VII",
+          status: "active",
+          version: 1,
+          sections: [section],
+          createdAt: "2026-09-14T00:00:00.000Z",
+          updatedAt: "2026-09-14T00:00:00.000Z",
+        },
+        retention: {
+          ruleVersion: "m2.v1.later_of_placement_plus_10y_or_support_end",
+          status: "incomplete",
+          placedOnMarketCandidate: null,
+          supportPeriodCandidate: null,
+          retentionUntil: null,
+          retentionProtectionUntil: null,
+          winningRule: null,
+          incompleteReasons: [],
+          legalHoldActive: false,
+          releaseCalculations: [],
+        },
+      },
+    });
+
+    render(
+      <TechnicalFileWorkspace productId="33333333-3333-4333-8333-333333333333" />,
+    );
+
+    expect(screen.getByText("Documentation readiness")).toBeInTheDocument();
+    expect(screen.getByText("partial")).toBeInTheDocument();
+    expect(screen.getByText("Link product evidence")).toBeInTheDocument();
+    expect(
+      screen.getAllByText(/does not certify legal completeness/i).length,
+    ).toBeGreaterThan(0);
+  });
+
+  it("preserves a stale-evidence review rationale when local validation fails", () => {
+    prime({
+      data: {
+        technicalFile: {
+          id: "22222222-2222-4222-8222-222222222222",
+          organizationId: "00000000-0000-4000-8000-000000000001",
+          productId: "33333333-3333-4333-8333-333333333333",
+          templateKey: "annex_vii",
+          templateVersion: "2024-01",
+          legalSource: "Regulation (EU) 2024/2847, Annex VII",
+          status: "active",
+          version: 1,
+          sections: [
+            {
+              ...section,
+              sources: [
+                {
+                  id: "44444444-4444-4444-8444-444444444444",
+                  kind: "manual_reference",
+                  recordId: null,
+                  observedRevision: "2024 edition",
+                  title: "Applicable standard",
+                  editionOrRevision: "2024 edition",
+                  issuer: null,
+                  locator: null,
+                  rationale: null,
+                  status: "stale",
+                  linkVersion: 1,
+                  sourceFingerprint: "edition-2024",
+                  staleAt: "2026-09-14T00:00:00.000Z",
+                  staleReason: "standard_edition_changed",
+                  currentObservedRevision: "2025 edition",
+                  currentFingerprint: "edition-2025",
+                  reviewedAt: "2026-09-14T00:00:00.000Z",
+                  reviews: [
+                    {
+                      id: "55555555-5555-4555-8555-555555555555",
+                      sourceId: "44444444-4444-4444-8444-444444444444",
+                      decision: "retain",
+                      rationale: "Prior edition remains applicable.",
+                      previousObservedRevision: "2024 edition",
+                      previousFingerprint: "edition-2024",
+                      reviewedObservedRevision: "2025 edition",
+                      reviewedFingerprint: "edition-2025",
+                      reviewedByUserId: "00000000-0000-4000-8000-000000000001",
+                      createdAt: "2026-09-14T00:00:00.000Z",
+                    },
+                  ],
+                  createdAt: "2026-09-14T00:00:00.000Z",
+                },
+              ],
+            },
+          ],
+          createdAt: "2026-09-14T00:00:00.000Z",
+          updatedAt: "2026-09-14T00:00:00.000Z",
+        },
+        retention: {
+          ruleVersion: "m2.v1.later_of_placement_plus_10y_or_support_end",
+          status: "incomplete",
+          placedOnMarketCandidate: null,
+          supportPeriodCandidate: null,
+          retentionUntil: null,
+          retentionProtectionUntil: null,
+          winningRule: null,
+          incompleteReasons: [],
+          legalHoldActive: false,
+          releaseCalculations: [],
+        },
+      },
+    });
+
+    render(
+      <TechnicalFileWorkspace productId="33333333-3333-4333-8333-333333333333" />,
+    );
+    fireEvent.click(
+      screen.getAllByRole("button", { name: "Open section" })[0]!,
+    );
+    expect(
+      screen.getByText(/Changed: standard edition changed/),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Review history")).toBeInTheDocument();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Review stale evidence" }),
+    );
+    const rationale = screen.getByLabelText("Review rationale");
+    fireEvent.change(rationale, {
+      target: { value: "Awaiting signed update." },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Record decision" }));
+
+    expect(rationale).toHaveValue("Awaiting signed update.");
   });
 });

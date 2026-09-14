@@ -641,8 +641,9 @@ function RiskEditor({
               <div>
                 <h2 className="text-h5 text-fg">Evidence references</h2>
                 <p className="mt-1 text-caption-1-regular text-fg-muted">
-                  Manual bibliographic references are allowed in V1. M7-03/M8
-                  attachment linking remains unavailable.
+                  Manual bibliographic references are allowed in V1. M7-03
+                  source readiness is available; M8 attachment versions remain
+                  unavailable.
                 </p>
               </div>
               {editable ? (
@@ -1040,9 +1041,9 @@ export function RiskRegisterWorkspace({
           </div>
         )}
         <p className="rounded-xl border border-border bg-surface-subtle p-3 text-caption-1-regular text-fg-muted">
-          M7-03/M8 evidence linking is not available yet. This V1 form retains
-          the requirement mapping and rationale without representing an
-          attachment as complete.
+          M7-03 source readiness is available. M8 attachment document versions
+          remain unavailable, so this form does not represent an attachment as
+          complete.
         </p>
       </div>
     </SectionCard>

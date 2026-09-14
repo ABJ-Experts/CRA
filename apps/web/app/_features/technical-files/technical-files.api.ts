@@ -4,13 +4,24 @@ import {
   removeTechnicalFileSourceRequestSchema,
   removeTechnicalFileSourceParamsSchema,
   technicalFileProductParamsSchema,
+  technicalFileReadinessParamsSchema,
+  technicalFileReadinessResponseSchema,
+  technicalFileReadinessSourceParamsSchema,
+  technicalFileEvidenceLinkResponseSchema,
+  technicalFileEvidenceReviewResponseSchema,
   technicalFileWorkspaceResponseSchema,
   technicalFileSectionParamsSchema,
   technicalFileSectionResponseSchema,
   updateTechnicalFileSectionRequestSchema,
+  recalculateTechnicalFileReadinessRequestSchema,
+  reviewTechnicalFileSourceRequestSchema,
+  signalTechnicalFileSourceMaterialChangeRequestSchema,
   type AddTechnicalFileSourceRequest,
   type CreateTechnicalFileRequest,
   type UpdateTechnicalFileSectionRequest,
+  type RecalculateTechnicalFileReadinessRequest,
+  type ReviewTechnicalFileSourceRequest,
+  type SignalTechnicalFileSourceMaterialChangeRequest,
 } from "@repo/contracts/technical-files";
 
 import { authenticatedRequestJson } from "../../_lib/http/authenticated-request";
@@ -41,6 +52,31 @@ function sectionPath(productId: string, sectionKey: string, suffix = "") {
     );
   }
   return `${productPath(productId, `/sections/${parsed.data.sectionKey}`)}${suffix}` as `/${string}`;
+}
+
+function readinessSourcePath(
+  productId: string,
+  sectionKey: string,
+  sourceId: string,
+  suffix: "/review" | "/material-change",
+): `/${string}` {
+  const parsed = technicalFileReadinessSourceParamsSchema.safeParse({
+    productId,
+    sectionKey,
+    sourceId,
+  });
+  if (!parsed.success) {
+    throw new ApiClientError(
+      "invalid_request",
+      "The technical-file evidence link is invalid.",
+      400,
+    );
+  }
+  return sectionPath(
+    parsed.data.productId,
+    parsed.data.sectionKey,
+    `/sources/${parsed.data.sourceId}${suffix}`,
+  );
 }
 
 export const technicalFilesApi = Object.freeze({
@@ -114,4 +150,61 @@ export const technicalFilesApi = Object.freeze({
       body: input,
     });
   },
+  getReadiness: (productId: string, signal?: AbortSignal) => {
+    const parsed = technicalFileReadinessParamsSchema.safeParse({ productId });
+    if (!parsed.success) {
+      throw new ApiClientError(
+        "invalid_request",
+        "The product identifier is invalid.",
+        400,
+      );
+    }
+    return authenticatedRequestJson({
+      path: productPath(parsed.data.productId, "/readiness"),
+      schema: technicalFileReadinessResponseSchema,
+      signal,
+    });
+  },
+  recalculateReadiness: (
+    productId: string,
+    input: RecalculateTechnicalFileReadinessRequest,
+  ) =>
+    authenticatedRequestJson({
+      path: productPath(productId, "/readiness/recalculate"),
+      method: "POST",
+      schema: technicalFileReadinessResponseSchema,
+      inputSchema: recalculateTechnicalFileReadinessRequestSchema,
+      body: input,
+    }),
+  reviewSource: (
+    productId: string,
+    sectionKey: string,
+    sourceId: string,
+    input: ReviewTechnicalFileSourceRequest,
+  ) =>
+    authenticatedRequestJson({
+      path: readinessSourcePath(productId, sectionKey, sourceId, "/review"),
+      method: "POST",
+      schema: technicalFileEvidenceReviewResponseSchema,
+      inputSchema: reviewTechnicalFileSourceRequestSchema,
+      body: input,
+    }),
+  signalSourceMaterialChange: (
+    productId: string,
+    sectionKey: string,
+    sourceId: string,
+    input: SignalTechnicalFileSourceMaterialChangeRequest,
+  ) =>
+    authenticatedRequestJson({
+      path: readinessSourcePath(
+        productId,
+        sectionKey,
+        sourceId,
+        "/material-change",
+      ),
+      method: "POST",
+      schema: technicalFileEvidenceLinkResponseSchema,
+      inputSchema: signalTechnicalFileSourceMaterialChangeRequestSchema,
+      body: input,
+    }),
 });

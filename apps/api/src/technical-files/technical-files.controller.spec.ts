@@ -1,6 +1,7 @@
 import { Logger, ServiceUnavailableException } from "@nestjs/common";
 
 import { TechnicalFilesController } from "./technical-files.controller";
+import { TechnicalFileReadinessConflictError } from "./application/technical-file-readiness.port";
 
 const user = {
   id: "00000000-0000-4000-8000-000000000001",
@@ -27,6 +28,7 @@ describe("TechnicalFilesController", () => {
     const controller = new TechnicalFilesController(
       { get } as never,
       {} as never,
+      {} as never,
     );
 
     await expect(
@@ -41,6 +43,7 @@ describe("TechnicalFilesController", () => {
     const get = jest.fn().mockRejectedValue(new Error("provider failure"));
     const controller = new TechnicalFilesController(
       { get } as never,
+      {} as never,
       {} as never,
     );
 
@@ -57,6 +60,7 @@ describe("TechnicalFilesController", () => {
     const controller = new TechnicalFilesController(
       {} as never,
       { risk } as never,
+      {} as never,
     );
 
     await expect(
@@ -68,5 +72,34 @@ describe("TechnicalFilesController", () => {
         user,
       ),
     ).rejects.toMatchObject({ status: 404 });
+  });
+
+  it("maps a stale evidence link to a version conflict", async () => {
+    const signalMaterialChange = jest
+      .fn()
+      .mockRejectedValue(new TechnicalFileReadinessConflictError(3));
+    const controller = new TechnicalFilesController(
+      {} as never,
+      {} as never,
+      { signalMaterialChange } as never,
+    );
+
+    await expect(
+      controller.signalMaterialChange(
+        {
+          productId: "00000000-0000-4000-8000-000000000004",
+          sectionKey: "standards_common_specifications",
+          sourceId: "00000000-0000-4000-8000-000000000005",
+        },
+        {
+          expectedVersion: 1,
+          reason: "standard_edition_changed",
+          currentObservedRevision: "2025",
+          currentFingerprint: "edition-2025",
+          idempotencyKey: "source-change-1",
+        },
+        user,
+      ),
+    ).rejects.toMatchObject({ status: 409 });
   });
 });

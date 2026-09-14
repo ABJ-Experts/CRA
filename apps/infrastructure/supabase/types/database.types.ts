@@ -10164,19 +10164,93 @@ export type Database = {
           },
         ]
       }
+      technical_file_section_source_reviews: {
+        Row: {
+          created_at: string
+          created_by: string
+          decision: string
+          id: string
+          linked_fingerprint: string | null
+          linked_revision: string | null
+          organization_id: string
+          rationale: string
+          reviewed_against_fingerprint: string | null
+          reviewed_against_revision: string | null
+          source_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          decision: string
+          id?: string
+          linked_fingerprint?: string | null
+          linked_revision?: string | null
+          organization_id: string
+          rationale: string
+          reviewed_against_fingerprint?: string | null
+          reviewed_against_revision?: string | null
+          source_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          decision?: string
+          id?: string
+          linked_fingerprint?: string | null
+          linked_revision?: string | null
+          organization_id?: string
+          rationale?: string
+          reviewed_against_fingerprint?: string | null
+          reviewed_against_revision?: string | null
+          source_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "technical_file_section_source_re_organization_id_source_id_fkey"
+            columns: ["organization_id", "source_id"]
+            isOneToOne: false
+            referencedRelation: "technical_file_section_sources"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "technical_file_section_source_reviews_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "technical_file_section_source_reviews_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       technical_file_section_sources: {
         Row: {
           created_at: string
           edition_or_revision: string | null
           id: string
           issuer: string | null
+          link_version: number
           locator: string | null
           observed_revision: string | null
           organization_id: string
           rationale: string | null
           record_id: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          reviewed_fingerprint: string | null
+          reviewed_revision: string | null
           section_id: string
+          source_fingerprint: string | null
           source_kind: string
+          stale_at: string | null
+          stale_current_fingerprint: string | null
+          stale_current_revision: string | null
+          stale_reason: string | null
           title: string
         }
         Insert: {
@@ -10184,13 +10258,23 @@ export type Database = {
           edition_or_revision?: string | null
           id?: string
           issuer?: string | null
+          link_version?: number
           locator?: string | null
           observed_revision?: string | null
           organization_id: string
           rationale?: string | null
           record_id?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          reviewed_fingerprint?: string | null
+          reviewed_revision?: string | null
           section_id: string
+          source_fingerprint?: string | null
           source_kind: string
+          stale_at?: string | null
+          stale_current_fingerprint?: string | null
+          stale_current_revision?: string | null
+          stale_reason?: string | null
           title: string
         }
         Update: {
@@ -10198,13 +10282,23 @@ export type Database = {
           edition_or_revision?: string | null
           id?: string
           issuer?: string | null
+          link_version?: number
           locator?: string | null
           observed_revision?: string | null
           organization_id?: string
           rationale?: string | null
           record_id?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          reviewed_fingerprint?: string | null
+          reviewed_revision?: string | null
           section_id?: string
+          source_fingerprint?: string | null
           source_kind?: string
+          stale_at?: string | null
+          stale_current_fingerprint?: string | null
+          stale_current_revision?: string | null
+          stale_reason?: string | null
           title?: string
         }
         Relationships: [
@@ -10221,6 +10315,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "technical_file_sections"
             referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "technical_file_section_sources_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -10299,27 +10400,36 @@ export type Database = {
       }
       technical_file_templates: {
         Row: {
+          allowed_source_kinds: string[]
           heading: string
           legal_source: string
           requirement_text: string
+          requires_evidence: boolean
+          requires_narrative: boolean
           section_key: string
           sort_order: number
           template_key: string
           template_version: string
         }
         Insert: {
+          allowed_source_kinds?: string[]
           heading: string
           legal_source: string
           requirement_text: string
+          requires_evidence?: boolean
+          requires_narrative?: boolean
           section_key: string
           sort_order: number
           template_key: string
           template_version: string
         }
         Update: {
+          allowed_source_kinds?: string[]
           heading?: string
           legal_source?: string
           requirement_text?: string
+          requires_evidence?: boolean
+          requires_narrative?: boolean
           section_key?: string
           sort_order?: number
           template_key?: string
@@ -17847,6 +17957,29 @@ export type Database = {
           result: Json
         }[]
       }
+      get_technical_file_evidence_reverse_links: {
+        Args: {
+          p_actor_user_id: string
+          p_organization_id: string
+          p_record_id: string
+          p_source_kind: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      get_technical_file_readiness: {
+        Args: {
+          p_actor_user_id: string
+          p_organization_id: string
+          p_product_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
       get_technical_file_risk_register: {
         Args: {
           p_actor_user_id: string
@@ -19594,6 +19727,46 @@ export type Database = {
         Returns: boolean
       }
       m6_utc_second_z: { Args: { p_value: string }; Returns: string }
+      m7_evidence_link_json: {
+        Args: {
+          p_organization_id: string
+          p_product_id: string
+          p_source_id: string
+        }
+        Returns: Json
+      }
+      m7_evidence_readiness_json: {
+        Args: { p_organization_id: string; p_product_id: string }
+        Returns: Json
+      }
+      m7_evidence_review_json: {
+        Args: { p_organization_id: string; p_review_id: string }
+        Returns: Json
+      }
+      m7_evidence_section_source_state: {
+        Args: {
+          p_organization_id: string
+          p_product_id: string
+          p_source_id: string
+        }
+        Returns: string
+      }
+      m7_evidence_source_snapshot: {
+        Args: {
+          p_kind: string
+          p_organization_id: string
+          p_product_id: string
+          p_record_id: string
+        }
+        Returns: {
+          availability_reason: string
+          exists_now: boolean
+          fingerprint: string
+          is_current: boolean
+          revision: string
+          title: string
+        }[]
+      }
       m7_risk_actor_can_accept: {
         Args: { p_actor_user_id: string; p_organization_id: string }
         Returns: boolean
@@ -19706,6 +19879,24 @@ export type Database = {
         Returns: {
           job: Json
           outcome: string
+        }[]
+      }
+      mark_technical_file_section_source_material_change_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_current_fingerprint: string
+          p_current_observed_revision: string
+          p_expected_version: number
+          p_idempotency_key: string
+          p_organization_id: string
+          p_product_id: string
+          p_reason: string
+          p_section_key: string
+          p_source_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
         }[]
       }
       mark_vulnerability_reachability_stale_for_finding: {
@@ -20176,6 +20367,18 @@ export type Database = {
         Returns: {
           artifact: Json
           outcome: string
+        }[]
+      }
+      recalculate_technical_file_readiness_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_idempotency_key: string
+          p_organization_id: string
+          p_product_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
         }[]
       }
       reconcile_organization_legal_entity_dependencies_atomic: {
@@ -21239,6 +21442,23 @@ export type Database = {
         Returns: {
           outcome: string
           submission: Json
+        }[]
+      }
+      review_technical_file_section_source_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_decision: string
+          p_expected_version: number
+          p_idempotency_key: string
+          p_organization_id: string
+          p_product_id: string
+          p_rationale: string
+          p_section_key: string
+          p_source_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
         }[]
       }
       revoke_invitation_atomic: {

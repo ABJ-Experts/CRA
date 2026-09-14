@@ -24,6 +24,7 @@ export const technicalFileSourceKindSchema = z.enum([
   "support_period",
   "sbom_document",
   "finding",
+  "risk_register",
   "manual_reference",
 ]);
 export const technicalFileSectionStatusSchema = z.enum([
@@ -33,6 +34,33 @@ export const technicalFileSectionStatusSchema = z.enum([
   "unavailable",
   "not_applicable",
 ]);
+
+export const technicalFileSourceStaleReasonSchema = z.enum([
+  "product_facts_changed",
+  "release_changed",
+  "support_basis_changed",
+  "risk_register_changed",
+  "sbom_revision_changed",
+  "source_validity_changed",
+  "source_quarantined",
+  "standard_edition_changed",
+  "document_version_changed",
+]);
+
+export const technicalFileSourceReviewSchema = z
+  .object({
+    id: z.uuid(),
+    sourceId: z.uuid(),
+    decision: z.enum(["retain", "update"]),
+    rationale: requiredText(4_000),
+    previousObservedRevision: optionalText(200),
+    previousFingerprint: optionalText(200),
+    reviewedObservedRevision: optionalText(200),
+    reviewedFingerprint: optionalText(200),
+    reviewedByUserId: z.uuid(),
+    createdAt: z.string().datetime({ offset: true }),
+  })
+  .strict();
 
 export const technicalFileSourceSchema = z
   .object({
@@ -46,6 +74,14 @@ export const technicalFileSourceSchema = z
     locator: optionalText(2_000),
     rationale: optionalText(2_000),
     status: z.enum(["current", "stale", "unavailable"]),
+    linkVersion: expectedVersionSchema,
+    sourceFingerprint: optionalText(200),
+    staleAt: z.string().datetime({ offset: true }).nullable(),
+    staleReason: technicalFileSourceStaleReasonSchema.nullable(),
+    currentObservedRevision: optionalText(200),
+    currentFingerprint: optionalText(200),
+    reviewedAt: z.string().datetime({ offset: true }).nullable(),
+    reviews: z.array(technicalFileSourceReviewSchema),
     createdAt: z.string().datetime({ offset: true }),
   })
   .strict();

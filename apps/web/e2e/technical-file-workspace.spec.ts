@@ -100,6 +100,10 @@ test("owner creates and edits the source-linked Annex VII workspace", async ({
   ]);
 
   const create = page.getByRole("button", { name: "Create technical file" });
+  const existingWorkspace = page.getByRole("heading", {
+    name: "Annex VII technical file",
+  });
+  await expect(create.or(existingWorkspace)).toBeVisible();
   if (await create.isVisible()) {
     const created = page.waitForResponse(
       (response) =>
@@ -127,15 +131,43 @@ test("owner creates and edits the source-linked Annex VII workspace", async ({
       "Local M7 browser verification: controlled product description reviewed.",
     );
   await page.getByRole("button", { name: "Save section" }).click();
-  await expect(page.getByRole("status")).toHaveText("Section saved.");
+  await expect(page.getByRole("status").last()).toHaveText("Section saved.");
 
-  await page.getByLabel("Title").fill("Local M7 browser verification");
+  await page.getByRole("button", { name: "Back to file" }).click();
+  const designSection = page
+    .getByRole("heading", { name: "Design, development, and production" })
+    .locator("xpath=../..");
+  await designSection.getByRole("button", { name: "Open section" }).click();
+
+  const sourceTitle = `Local M7 browser verification ${testInfo.retry}-${Date.now()}`;
+  await page.getByLabel("Title").fill(sourceTitle);
   await page.getByLabel("Edition or revision").fill("2026-09-14");
   await page.getByRole("button", { name: "Link source" }).click();
-  await expect(page.getByRole("status")).toContainText("Source linked.");
+  await expect(page.getByRole("status").last()).toContainText("Source linked.");
   await expect(
     page.getByRole("list", { name: "Linked source references" }),
-  ).toContainText("Local M7 browser verification");
+  ).toContainText(sourceTitle);
+
+  await page
+    .getByRole("button", { name: "Record changed standard edition" })
+    .last()
+    .click();
+  await page.getByLabel("Current edition or revision").fill("2026-09-15");
+  await page
+    .getByLabel("Current version fingerprint")
+    .fill("local-m7-readiness-edition-2026-09-15");
+  await page.getByRole("button", { name: "Mark for review" }).last().click();
+  await expect(page.getByRole("status").last()).toContainText("marked for review");
+
+  await page
+    .getByRole("button", { name: "Review stale evidence" })
+    .last()
+    .click();
+  await page
+    .getByLabel("Review rationale")
+    .fill("The locally pinned edition remains suitable for this test release.");
+  await page.getByRole("button", { name: "Record decision" }).last().click();
+  await expect(page.getByRole("status").last()).toContainText("retained");
 
   await page.screenshot({
     path: testInfo.outputPath("technical-file-section-editor.png"),
@@ -153,10 +185,12 @@ test("owner can inspect the product-scoped cybersecurity risk register", async (
     page.getByRole("heading", { name: "Cybersecurity risk register" }),
   ).toBeVisible();
   await expect(
-    page.getByText("Pinned method: CRA 5×5 v1. This is a risk method, not a compliance score."),
+    page.getByText(
+      "Pinned method: CRA 5×5 v1. This is a risk method, not a compliance score.",
+    ),
   ).toBeVisible();
   await expect(
-    page.getByText(/M7-03\/M8 evidence linking is not available yet/i),
+    page.getByText(/M7-03 source readiness is available/i),
   ).toBeVisible();
 
   await page.screenshot({

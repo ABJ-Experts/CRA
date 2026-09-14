@@ -13,8 +13,12 @@ import { useEffect, useState } from "react";
 import {
   useAddTechnicalFileSourceMutation,
   useCreateTechnicalFileMutation,
+  useRecalculateTechnicalFileReadinessMutation,
   useRemoveTechnicalFileSourceMutation,
+  useReviewTechnicalFileSourceMutation,
+  useSignalTechnicalFileSourceMaterialChangeMutation,
   useTechnicalFileQuery,
+  useTechnicalFileReadinessQuery,
   useUpdateTechnicalFileSectionMutation,
 } from "../../_features/technical-files/technical-files.queries";
 import { RiskRegisterWorkspace } from "../../_features/risk-register/risk-register-workspace";
@@ -43,6 +47,7 @@ const INTERNAL_SOURCE_KINDS = Object.freeze([
   "support_period",
   "sbom_document",
   "finding",
+  "risk_register",
 ] as const satisfies readonly TechnicalFileSourceKind[]);
 
 function requestId(): string {
@@ -69,6 +74,216 @@ function friendlyError(error: unknown, fallback: string): string {
 
 function statusLabel(status: TechnicalFileSection["status"]): string {
   return status.replaceAll("_", " ");
+}
+
+function readinessStatusLabel(status: string): string {
+  return status.replaceAll("_", " ");
+}
+
+function SourceReadinessControls({
+  productId,
+  section,
+  source,
+  canEdit,
+  onMessage,
+}: {
+  productId: string;
+  section: TechnicalFileSection;
+  source: TechnicalFileSection["sources"][number];
+  canEdit: boolean;
+  onMessage: (message: string) => void;
+}) {
+  const review = useReviewTechnicalFileSourceMutation(
+    productId,
+    section.key,
+    source.id,
+  );
+  const signal = useSignalTechnicalFileSourceMaterialChangeMutation(
+    productId,
+    section.key,
+    source.id,
+  );
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const [decision, setDecision] = useState<"retain" | "update">("retain");
+  const [reviewRationale, setReviewRationale] = useState("");
+  const [changeOpen, setChangeOpen] = useState(false);
+  const [observedRevision, setObservedRevision] = useState("");
+  const [fingerprint, setFingerprint] = useState("");
+
+  async function submitReview(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (reviewRationale.trim() === "") {
+      onMessage("Record a review rationale before resolving stale evidence.");
+      return;
+    }
+    try {
+      await review.mutateAsync({
+        expectedVersion: section.version,
+        decision,
+        rationale: reviewRationale,
+        idempotencyKey: requestId(),
+      });
+      setReviewOpen(false);
+      onMessage(
+        decision === "retain"
+          ? "The existing pinned evidence was retained with a review rationale."
+          : "The evidence link was updated to the reviewed revision.",
+      );
+    } catch (error) {
+      onMessage(
+        friendlyError(error, "The evidence review could not be saved."),
+      );
+    }
+  }
+
+  async function submitMaterialChange(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (fingerprint.trim() === "") {
+      onMessage("Provide the current edition or version fingerprint.");
+      return;
+    }
+    try {
+      await signal.mutateAsync({
+        expectedVersion: section.version,
+        reason: "standard_edition_changed",
+        currentObservedRevision:
+          observedRevision.trim() === "" ? null : observedRevision.trim(),
+        currentFingerprint: fingerprint.trim(),
+        idempotencyKey: requestId(),
+      });
+      setChangeOpen(false);
+      onMessage("The changed standard edition is now marked for review.");
+    } catch (error) {
+      onMessage(
+        friendlyError(
+          error,
+          "The material source change could not be recorded.",
+        ),
+      );
+    }
+  }
+
+  if (!canEdit) return null;
+  return (
+    <div className="mt-3 flex flex-col items-start gap-3">
+      {source.status === "stale" ? (
+        <>
+          <Button
+            type="button"
+            variant="outline"
+            tone="grey"
+            disabled={review.isPending}
+            onClick={() => setReviewOpen((open) => !open)}
+          >
+            Review stale evidence
+          </Button>
+          {reviewOpen ? (
+            <form
+              onSubmit={submitReview}
+              className="grid w-full gap-3"
+              noValidate
+            >
+              <fieldset className="flex flex-wrap gap-4">
+                <legend className="sr-only">Stale evidence decision</legend>
+                <label className="flex items-center gap-2 text-caption-1-regular text-fg">
+                  <input
+                    type="radio"
+                    name={`review-${source.id}`}
+                    checked={decision === "retain"}
+                    onChange={() => setDecision("retain")}
+                  />
+                  Retain pinned evidence
+                </label>
+                <label className="flex items-center gap-2 text-caption-1-regular text-fg">
+                  <input
+                    type="radio"
+                    name={`review-${source.id}`}
+                    checked={decision === "update"}
+                    onChange={() => setDecision("update")}
+                  />
+                  Update to reviewed version
+                </label>
+              </fieldset>
+              <label className="flex flex-col gap-1 text-caption-1-semibold text-fg">
+                Review rationale
+                <textarea
+                  value={reviewRationale}
+                  onChange={(event) => setReviewRationale(event.target.value)}
+                  maxLength={4_000}
+                  required
+                  rows={3}
+                  className="rounded-lg border border-border bg-canvas px-3 py-2 text-subhead-regular text-fg outline-none focus-visible:ring-2 focus-visible:ring-focus"
+                />
+              </label>
+              <div>
+                <Button
+                  type="submit"
+                  loading={review.isPending}
+                  loadingLabel="Saving review"
+                >
+                  Record decision
+                </Button>
+              </div>
+            </form>
+          ) : null}
+        </>
+      ) : null}
+      {source.kind === "manual_reference" ? (
+        <>
+          <Button
+            type="button"
+            variant="outline"
+            tone="grey"
+            disabled={signal.isPending}
+            onClick={() => setChangeOpen((open) => !open)}
+          >
+            Record changed standard edition
+          </Button>
+          {changeOpen ? (
+            <form
+              onSubmit={submitMaterialChange}
+              className="grid w-full gap-3"
+              noValidate
+            >
+              <label className="flex flex-col gap-1 text-caption-1-semibold text-fg">
+                Current edition or revision
+                <input
+                  value={observedRevision}
+                  onChange={(event) => setObservedRevision(event.target.value)}
+                  maxLength={200}
+                  className="rounded-lg border border-border bg-canvas px-3 py-2 text-subhead-regular text-fg outline-none focus-visible:ring-2 focus-visible:ring-focus"
+                />
+              </label>
+              <label className="flex flex-col gap-1 text-caption-1-semibold text-fg">
+                Current version fingerprint
+                <input
+                  value={fingerprint}
+                  onChange={(event) => setFingerprint(event.target.value)}
+                  maxLength={200}
+                  required
+                  className="rounded-lg border border-border bg-canvas px-3 py-2 text-subhead-regular text-fg outline-none focus-visible:ring-2 focus-visible:ring-focus"
+                />
+              </label>
+              <p className="text-caption-1-regular text-fg-muted">
+                M10 is not yet available to verify editions. This records a
+                reviewer-reported material change; it does not substitute a
+                newer reference.
+              </p>
+              <div>
+                <Button
+                  type="submit"
+                  loading={signal.isPending}
+                  loadingLabel="Recording change"
+                >
+                  Mark for review
+                </Button>
+              </div>
+            </form>
+          ) : null}
+        </>
+      ) : null}
+    </div>
+  );
 }
 
 function SectionEditor({
@@ -325,7 +540,23 @@ function SectionEditor({
                         {source.observedRevision
                           ? ` · observed ${source.observedRevision}`
                           : ""}
+                        {source.linkVersion
+                          ? ` · pinned link ${source.linkVersion}`
+                          : ""}
                       </p>
+                      {source.status === "stale" ? (
+                        <p className="mt-1 text-caption-1-regular text-fg-muted">
+                          Changed:{" "}
+                          {source.staleReason?.replaceAll("_", " ") ??
+                            "source revision requires review"}
+                          {source.currentObservedRevision
+                            ? ` · current ${source.currentObservedRevision}`
+                            : ""}
+                          {source.currentFingerprint
+                            ? ` · fingerprint ${source.currentFingerprint}`
+                            : ""}
+                        </p>
+                      ) : null}
                     </div>
                     {canEdit ? (
                       <Button
@@ -340,6 +571,34 @@ function SectionEditor({
                       </Button>
                     ) : null}
                   </div>
+                  <SourceReadinessControls
+                    productId={productId}
+                    section={section}
+                    source={source}
+                    canEdit={canEdit}
+                    onMessage={setMessage}
+                  />
+                  {(source.reviews ?? []).length > 0 ? (
+                    <div className="mt-3 border-t border-border pt-3">
+                      <h3 className="text-caption-1-semibold text-fg">
+                        Review history
+                      </h3>
+                      <ul
+                        className="mt-2 flex flex-col gap-2"
+                        aria-label={`Review history for ${source.title}`}
+                      >
+                        {(source.reviews ?? []).map((review) => (
+                          <li
+                            key={review.id}
+                            className="text-caption-1-regular text-fg-muted"
+                          >
+                            {review.decision} · {review.rationale} ·{" "}
+                            {review.createdAt}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null}
                 </li>
               ))}
             </ul>
@@ -463,6 +722,172 @@ function SectionEditor({
   );
 }
 
+function TechnicalFileReadinessOverview({
+  productId,
+  enabled,
+  canEdit,
+  onOpenSection,
+}: {
+  productId: string;
+  enabled: boolean;
+  canEdit: boolean;
+  onOpenSection: (key: TechnicalFileSection["key"]) => void;
+}) {
+  const readiness = useTechnicalFileReadinessQuery(productId, enabled);
+  const recalculate = useRecalculateTechnicalFileReadinessMutation(productId);
+  const [message, setMessage] = useState<string | null>(null);
+
+  async function recalculateReadiness() {
+    setMessage(null);
+    try {
+      await recalculate.mutateAsync({ idempotencyKey: requestId() });
+      setMessage("Readiness was recalculated from the pinned evidence links.");
+    } catch (error) {
+      setMessage(
+        friendlyError(
+          error,
+          "Readiness could not be recalculated. Try again later.",
+        ),
+      );
+    }
+  }
+
+  if (readiness.isPending) {
+    return (
+      <div className="rounded-xl border border-border bg-surface-subtle p-4">
+        <p role="status" className="text-subhead-regular text-fg-muted">
+          Calculating documentation readiness…
+        </p>
+      </div>
+    );
+  }
+  if (readiness.isError || !readiness.data) {
+    return (
+      <div className="rounded-xl border border-border bg-surface-subtle p-4">
+        <p className="text-subhead-semibold text-fg">
+          Readiness is temporarily unavailable.
+        </p>
+        <p className="mt-1 text-caption-1-regular text-fg-muted">
+          No evidence is treated as complete while this result is unavailable.
+        </p>
+        <Button
+          type="button"
+          variant="outline"
+          tone="grey"
+          className="mt-3"
+          onClick={() => void readiness.refetch()}
+        >
+          Try again
+        </Button>
+      </div>
+    );
+  }
+
+  const result = readiness.data.readiness;
+  return (
+    <section
+      aria-labelledby="technical-file-readiness-heading"
+      className="rounded-xl border border-border bg-surface-subtle p-4"
+    >
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 id="technical-file-readiness-heading" className="text-h4 text-fg">
+            Documentation readiness
+          </h2>
+          <p className="mt-1 text-subhead-semibold text-fg">
+            {readinessStatusLabel(result.overallStatus)}
+          </p>
+          <p className="mt-1 text-caption-1-regular text-fg-muted">
+            {result.recalculationStatus === "current"
+              ? "Calculated from the currently pinned source versions."
+              : `Recalculation status: ${readinessStatusLabel(result.recalculationStatus)}.`}{" "}
+            Documentation readiness does not certify legal completeness.
+          </p>
+        </div>
+        {canEdit ? (
+          <Button
+            type="button"
+            variant="outline"
+            tone="grey"
+            loading={recalculate.isPending}
+            loadingLabel="Recalculating readiness"
+            onClick={() => void recalculateReadiness()}
+          >
+            Recalculate
+          </Button>
+        ) : null}
+      </div>
+      {message ? (
+        <p
+          role="status"
+          aria-live="polite"
+          className="mt-3 text-caption-1-regular text-fg-muted"
+        >
+          {message}
+        </p>
+      ) : null}
+      {result.gaps.length === 0 ? (
+        <p className="mt-4 text-subhead-regular text-fg-muted">
+          No actionable documentation gaps are currently reported.
+        </p>
+      ) : (
+        <ol
+          className="mt-4 flex flex-col gap-2"
+          aria-label="Prioritised documentation gaps"
+        >
+          {[...result.gaps]
+            .sort((left, right) => left.priority - right.priority)
+            .map((gap) => (
+              <li
+                key={`${gap.sectionKey}-${gap.code}`}
+                className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-canvas p-3"
+              >
+                <div>
+                  <p className="text-subhead-semibold text-fg">
+                    {gap.actionLabel}
+                  </p>
+                  <p className="mt-1 text-caption-1-regular text-fg-muted">
+                    {SECTION_LABELS[gap.sectionKey]} · priority {gap.priority}
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  tone="grey"
+                  onClick={() => onOpenSection(gap.sectionKey)}
+                >
+                  Open section
+                </Button>
+              </li>
+            ))}
+        </ol>
+      )}
+      <ul className="mt-4 grid gap-2" aria-label="Section readiness states">
+        {result.sections.map((section) => (
+          <li
+            key={section.sectionKey}
+            className="flex flex-wrap items-center justify-between gap-2 border-t border-border pt-2"
+          >
+            <p className="text-caption-1-semibold text-fg">
+              {SECTION_LABELS[section.sectionKey]}
+            </p>
+            <p className="text-caption-1-regular text-fg-muted">
+              {readinessStatusLabel(section.status)} ·{" "}
+              {section.validEvidenceCount} valid evidence · {section.gapCount}{" "}
+              gap{section.gapCount === 1 ? "" : "s"}
+              {section.staleReasons.length > 0
+                ? ` · ${section.staleReasons
+                    .map(readinessStatusLabel)
+                    .join(", ")}`
+                : ""}
+            </p>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 function TechnicalFileOverview({
   productId,
   technicalFile,
@@ -526,6 +951,12 @@ function TechnicalFileOverview({
               : ""}
           </p>
         </div>
+        <TechnicalFileReadinessOverview
+          productId={productId}
+          enabled={enabled}
+          canEdit={canEdit}
+          onOpenSection={setSelectedKey}
+        />
         <div className="grid gap-3">
           {technicalFile.sections.map((section) => (
             <div

@@ -16,7 +16,13 @@ import {
   type RiskRegisterRepository,
 } from "./application/risk-register.port";
 import { RiskRegisterUseCases } from "./application/risk-register-use-cases";
+import {
+  TECHNICAL_FILE_READINESS_REPOSITORY,
+  type TechnicalFileReadinessRepository,
+} from "./application/technical-file-readiness.port";
+import { TechnicalFileReadinessUseCases } from "./application/technical-file-readiness-use-cases";
 import { SupabaseRiskRegisterRepository } from "./infrastructure/supabase-risk-register.repository";
+import { SupabaseTechnicalFileReadinessRepository } from "./infrastructure/supabase-technical-file-readiness.repository";
 import { SupabaseTechnicalFileRepository } from "./infrastructure/supabase-technical-file.repository";
 import { TechnicalFilesController } from "./technical-files.controller";
 
@@ -26,6 +32,7 @@ import { TechnicalFilesController } from "./technical-files.controller";
   providers: [
     SupabaseTechnicalFileRepository,
     SupabaseRiskRegisterRepository,
+    SupabaseTechnicalFileReadinessRepository,
     {
       provide: TECHNICAL_FILE_REPOSITORY,
       useExisting: SupabaseTechnicalFileRepository,
@@ -49,6 +56,18 @@ import { TechnicalFilesController } from "./technical-files.controller";
         repository: RiskRegisterRepository,
         retention: ProductRetentionReaderPort,
       ) => new RiskRegisterUseCases(repository, retention),
+    },
+    {
+      provide: TECHNICAL_FILE_READINESS_REPOSITORY,
+      useExisting: SupabaseTechnicalFileReadinessRepository,
+    },
+    {
+      provide: TechnicalFileReadinessUseCases,
+      inject: [TECHNICAL_FILE_READINESS_REPOSITORY, PRODUCT_RETENTION_READER],
+      useFactory: (
+        repository: TechnicalFileReadinessRepository,
+        retention: ProductRetentionReaderPort,
+      ) => new TechnicalFileReadinessUseCases(repository, retention),
     },
   ],
 })

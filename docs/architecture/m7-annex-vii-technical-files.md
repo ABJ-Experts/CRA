@@ -47,6 +47,42 @@ an explicit owner/admin action with a rationale and its own immutable event;
 it is never inferred from a low residual level. Risk deletion is archival only,
 so M7-04 snapshots can retain a stable risk/revision reference.
 
+## M7-03 evidence linkage, staleness, and readiness
+
+M7-03 extends the existing section-source relationship rather than creating a
+second document store. A link pins an authoritative record revision or
+fingerprint, has its own optimistic version, and can be reused by multiple
+technical-file sections without copying its source. Existing product, release,
+support-period, SBOM, finding, manual-reference, and risk-register evidence
+are valid V1 inputs. M8 remains the future authority for attachment document
+versions; its reverse-link consumer reads the M7 projection and does not
+change M7 readiness semantics.
+
+Applicable sections require their narrative and an allowed, valid pinned
+source: general description requires product evidence; support-period basis
+requires support-period evidence; vulnerability handling requires a finding or
+risk-register source; release SBOM requires SBOM evidence; other sections may
+use their allowed source/manual reference. Not-applicable sections are excluded.
+The state precedence is stale, then empty, partial, and complete; stale always
+wins over otherwise complete documentation. Overall readiness is documentation
+readiness only, never legal or compliance certification.
+
+Material changes compare the linked revision/fingerprint, not timestamps:
+product/release/support lifecycle and versions, completed SBOM hash/state,
+finding/risk revisions, and later M8 document validity/version/quarantine all
+make a link stale. A database-side recalculation is synchronous, idempotent,
+and recoverable. Before M10 supplies authoritative standards editions, an
+editor records an explicit, audited manual-reference material-change signal;
+there is no invented standards registry.
+
+Opening a workspace never clears staleness. A technical-file editor records an
+append-only retain/update decision with rationale and the reviewed-against
+version. Update substitutes only the current authoritative version; retain
+keeps the pinned version with its review baseline. Link mutations, stale
+reviews, change signals, and recalculations write their audit evidence in the
+same transaction. The reverse-link projection is tenant-scoped and returns
+relationship metadata only, preventing M8-04 from gaining document access.
+
 ## Selected and rejected patterns
 
 - A feature-local application port and Supabase adapter are selected because
