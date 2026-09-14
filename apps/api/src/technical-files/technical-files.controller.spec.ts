@@ -24,7 +24,10 @@ describe("TechnicalFilesController", () => {
 
   it("preserves the intentional no-active-file 404", async () => {
     const get = jest.fn().mockResolvedValue(null);
-    const controller = new TechnicalFilesController({ get } as never);
+    const controller = new TechnicalFilesController(
+      { get } as never,
+      {} as never,
+    );
 
     await expect(
       controller.get(
@@ -36,7 +39,10 @@ describe("TechnicalFilesController", () => {
 
   it("maps an unexpected read failure to a safe 503", async () => {
     const get = jest.fn().mockRejectedValue(new Error("provider failure"));
-    const controller = new TechnicalFilesController({ get } as never);
+    const controller = new TechnicalFilesController(
+      { get } as never,
+      {} as never,
+    );
 
     await expect(
       controller.get(
@@ -44,5 +50,23 @@ describe("TechnicalFilesController", () => {
         user,
       ),
     ).rejects.toBeInstanceOf(ServiceUnavailableException);
+  });
+
+  it("preserves a missing risk as a 404", async () => {
+    const risk = jest.fn().mockResolvedValue(null);
+    const controller = new TechnicalFilesController(
+      {} as never,
+      { risk } as never,
+    );
+
+    await expect(
+      controller.risk(
+        {
+          productId: "00000000-0000-4000-8000-000000000004",
+          riskId: "00000000-0000-4000-8000-000000000005",
+        },
+        user,
+      ),
+    ).rejects.toMatchObject({ status: 404 });
   });
 });

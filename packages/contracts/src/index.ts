@@ -13,3 +13,4 @@ export * from "./sboms.js";
 export * from "./vulnerabilities.js";
 export * from "./reporting.js";
 export * from "./technical-files.js";
+export * from "./risk-registers.js";

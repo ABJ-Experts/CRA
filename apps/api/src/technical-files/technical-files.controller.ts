@@ -26,6 +26,20 @@ import {
   type CreateTechnicalFileRequest,
   type UpdateTechnicalFileSectionRequest,
 } from "@repo/contracts/technical-files";
+import {
+  acceptResidualRiskRequestSchema,
+  archiveRiskRegisterRiskRequestSchema,
+  createRiskRegisterRiskRequestSchema,
+  riskRegisterProductParamsSchema,
+  riskRegisterRiskParamsSchema,
+  riskRegisterRiskResponseSchema,
+  riskRegisterWorkspaceResponseSchema,
+  updateRiskRegisterRiskRequestSchema,
+  type AcceptResidualRiskRequest,
+  type ArchiveRiskRegisterRiskRequest,
+  type CreateRiskRegisterRiskRequest,
+  type UpdateRiskRegisterRiskRequest,
+} from "@repo/contracts/risk-registers";
 
 import {
   CurrentUser,
@@ -40,12 +54,20 @@ import {
   TechnicalFileProductUnavailableError,
 } from "./application/technical-file.port";
 import { TechnicalFileUseCases } from "./application/technical-file-use-cases";
+import {
+  RiskRegisterConflictError,
+  RiskRegisterInvalidRequestError,
+} from "./application/risk-register.port";
+import { RiskRegisterUseCases } from "./application/risk-register-use-cases";
 
 @Controller("products/:productId/technical-file")
 export class TechnicalFilesController {
   private readonly logger = new Logger(TechnicalFilesController.name);
 
-  constructor(private readonly technicalFiles: TechnicalFileUseCases) {}
+  constructor(
+    private readonly technicalFiles: TechnicalFileUseCases,
+    private readonly riskRegisters: RiskRegisterUseCases,
+  ) {}
 
   @Get()
   @RequirePermissions("can_view_technical_files")
@@ -72,7 +94,9 @@ export class TechnicalFilesController {
     if (
       error instanceof HttpException ||
       error instanceof TechnicalFileProductUnavailableError ||
-      error instanceof TechnicalFileInvalidRequestError
+      error instanceof TechnicalFileInvalidRequestError ||
+      error instanceof RiskRegisterInvalidRequestError ||
+      error instanceof RiskRegisterConflictError
     ) {
       return;
     }
@@ -193,6 +217,140 @@ export class TechnicalFilesController {
     }
   }
 
+  @Get("risk-register")
+  @RequirePermissions("can_view_technical_files")
+  @ZodResponse(riskRegisterWorkspaceResponseSchema)
+  async riskRegister(
+    @Param(zodParams(riskRegisterProductParamsSchema))
+    params: { productId: string },
+    @CurrentUser() user: RequestUser,
+  ) {
+    try {
+      return {
+        riskRegister: await this.riskRegisters.get(organizationId(user), {
+          actorId: user.id,
+          ...params,
+        }),
+      };
+    } catch (error) {
+      this.logUnexpected(error);
+      throw riskReadFailure(error);
+    }
+  }
+
+  @Get("risk-register/risks/:riskId")
+  @RequirePermissions("can_view_technical_files")
+  @ZodResponse(riskRegisterRiskResponseSchema)
+  async risk(
+    @Param(zodParams(riskRegisterRiskParamsSchema))
+    params: { productId: string; riskId: string },
+    @CurrentUser() user: RequestUser,
+  ) {
+    try {
+      return this.requireRisk(
+        await this.riskRegisters.risk(organizationId(user), {
+          actorId: user.id,
+          ...params,
+        }),
+      );
+    } catch (error) {
+      this.logUnexpected(error);
+      throw riskReadFailure(error);
+    }
+  }
+
+  @Post("risk-register/risks")
+  @RequirePermissions("can_edit_technical_files")
+  @ZodResponse(riskRegisterRiskResponseSchema)
+  async createRisk(
+    @Param(zodParams(riskRegisterProductParamsSchema))
+    params: { productId: string },
+    @Body(zodBody(createRiskRegisterRiskRequestSchema))
+    input: CreateRiskRegisterRiskRequest,
+    @CurrentUser() user: RequestUser,
+  ) {
+    try {
+      return this.requireRisk(
+        await this.riskRegisters.createRisk(organizationId(user), {
+          actorId: user.id,
+          ...params,
+          ...input,
+        }),
+      );
+    } catch (error) {
+      throw riskMutationFailure(error);
+    }
+  }
+
+  @Patch("risk-register/risks/:riskId")
+  @RequirePermissions("can_edit_technical_files")
+  @ZodResponse(riskRegisterRiskResponseSchema)
+  async updateRisk(
+    @Param(zodParams(riskRegisterRiskParamsSchema))
+    params: { productId: string; riskId: string },
+    @Body(zodBody(updateRiskRegisterRiskRequestSchema))
+    input: UpdateRiskRegisterRiskRequest,
+    @CurrentUser() user: RequestUser,
+  ) {
+    try {
+      return this.requireRisk(
+        await this.riskRegisters.updateRisk(organizationId(user), {
+          actorId: user.id,
+          ...params,
+          ...input,
+        }),
+      );
+    } catch (error) {
+      throw riskMutationFailure(error);
+    }
+  }
+
+  @Post("risk-register/risks/:riskId/accept-residual-risk")
+  @RequirePermissions("can_edit_technical_files")
+  @ZodResponse(riskRegisterRiskResponseSchema)
+  async acceptResidualRisk(
+    @Param(zodParams(riskRegisterRiskParamsSchema))
+    params: { productId: string; riskId: string },
+    @Body(zodBody(acceptResidualRiskRequestSchema))
+    input: AcceptResidualRiskRequest,
+    @CurrentUser() user: RequestUser,
+  ) {
+    try {
+      return this.requireRisk(
+        await this.riskRegisters.acceptResidualRisk(organizationId(user), {
+          actorId: user.id,
+          ...params,
+          ...input,
+        }),
+      );
+    } catch (error) {
+      throw riskMutationFailure(error);
+    }
+  }
+
+  @Delete("risk-register/risks/:riskId")
+  @RequirePermissions("can_edit_technical_files")
+  @ZodResponse(riskRegisterRiskResponseSchema)
+  async archiveRisk(
+    @Param(zodParams(riskRegisterRiskParamsSchema))
+    params: { productId: string; riskId: string },
+    @Body(zodBody(archiveRiskRegisterRiskRequestSchema))
+    input: ArchiveRiskRegisterRiskRequest,
+    @CurrentUser() user: RequestUser,
+  ) {
+    try {
+      return this.requireRisk(
+        await this.riskRegisters.archiveRisk(organizationId(user), {
+          actorId: user.id,
+          ...params,
+          ...input,
+        }),
+      );
+    } catch (error) {
+      throw riskMutationFailure(error);
+    }
+  }
+
   private require<T>(value: T | null): T {
     if (value) return value;
     throw notFound();
@@ -200,6 +358,11 @@ export class TechnicalFilesController {
 
   private requireSection<T>(value: T | null): { section: T } {
     if (value) return { section: value };
+    throw notFound();
+  }
+
+  private requireRisk<T>(value: T | null): { risk: T } {
+    if (value) return { risk: value };
     throw notFound();
   }
 }
@@ -249,5 +412,36 @@ function readFailure(error: unknown): Error {
   return new ServiceUnavailableException({
     code: "technical_file_unavailable",
     message: "The technical file is temporarily unavailable.",
+  });
+}
+
+function riskMutationFailure(error: unknown): Error {
+  if (error instanceof HttpException) return error;
+  if (error instanceof TechnicalFileProductUnavailableError) return notFound();
+  if (error instanceof RiskRegisterConflictError) {
+    return new ConflictException({
+      code: "version_conflict",
+      message: "This risk changed. Reload before saving.",
+      ...(error.currentVersion ? { currentVersion: error.currentVersion } : {}),
+    });
+  }
+  if (error instanceof RiskRegisterInvalidRequestError) return notFound();
+  return new ServiceUnavailableException({
+    code: "risk_register_unavailable",
+    message: "The risk register is temporarily unavailable.",
+  });
+}
+
+function riskReadFailure(error: unknown): Error {
+  if (error instanceof HttpException) return error;
+  if (
+    error instanceof TechnicalFileProductUnavailableError ||
+    error instanceof RiskRegisterInvalidRequestError
+  ) {
+    return notFound();
+  }
+  return new ServiceUnavailableException({
+    code: "risk_register_unavailable",
+    message: "The risk register is temporarily unavailable.",
   });
 }

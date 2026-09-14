@@ -7,8 +7,9 @@
 - In scope: the Annex VII V1 template, section narrative, verified internal
   source references, manual bibliographic references, source staleness, and
   the product-scoped workspace.
-- Out of scope: M7-02 risk registers, M8 evidence attachments, snapshots,
-  exports, declarations, AI analysis, and legal-completeness certification.
+- Out of scope: M8 evidence attachments, snapshots, exports, declarations,
+  AI analysis, and legal-completeness certification. M7-02 owns the
+  structured cybersecurity risk register described below.
 - Preserved: `/api/v1`, existing product/support/SBOM/triage records, SBOM
   storage and downloads, session and permission contracts, and M3 immutability.
 
@@ -23,6 +24,29 @@ The existing retention projection is returned alongside the file, so the
 support-period basis shows incomplete facts, the strongest retained protection,
 and legal-hold state without creating a second authority.
 
+## M7-02 cybersecurity risk register
+
+Each active technical file has one register pinned to `cra_5x5_v1`. Likelihood
+and impact are mandatory 1--5 assessments with their own rationales; their
+product derives Low (1--4), Medium (5--9), High (10--16), or Critical
+(17--25). This is an assessment method, not a compliance score. Each update
+creates an immutable revision, preserving the original assessment, mitigations,
+residual assessment, actor, rationale, and exact linked-record revisions.
+
+Affected assets are completed-SBOM components reached through an active
+release of the same product. Annex I Part I mappings retain manually entered
+identifier, edition, and source metadata because M10 has not supplied an
+authoritative framework pack; they are visibly unresolved until that authority
+exists. Evidence references pin the referenced identifier/version and remain a
+compatibility boundary for M7-03/M8 rather than becoming an attachment store.
+Changed, archived, missing, or withdrawn linked records make the current risk
+review-required without rewriting prior revisions.
+
+Editors may create, revise, and archive records. Residual-risk acceptance is
+an explicit owner/admin action with a rationale and its own immutable event;
+it is never inferred from a low residual level. Risk deletion is archival only,
+so M7-04 snapshots can retain a stable risk/revision reference.
+
 ## Selected and rejected patterns
 
 - A feature-local application port and Supabase adapter are selected because
@@ -31,6 +55,8 @@ and legal-hold state without creating a second authority.
   they are the existing product/reporting consistency mechanism.
 - A generic evidence engine, workflow engine, event bus, new role system, or
   duplicate SBOM store is rejected. M8 owns documents and M3 owns SBOM bytes.
+- Revision-owned risk link rows are selected over JSON arrays because current
+  asset/evidence state must be tenant-scoped and independently verifiable.
 
 ## Data and tenant boundaries
 
@@ -48,6 +74,11 @@ archived, missing, or inaccessible sources are shown as stale rather than
 rewritten. The migration is additive; deploy it before API/web and roll API/web
 back before removing no schema, because no destructive schema change exists.
 
+Risk commands use a dedicated tenant/user/idempotency ledger with an operation
+and payload digest. Replays return their original result only for an exact
+match; key reuse is a controlled conflict. The same transaction persists the
+risk revision, link rows, command result, and audit record.
+
 ## API and frontend boundaries
 
 `@repo/contracts/technical-files` owns strict params, body, and response
@@ -55,6 +86,12 @@ schemas. Controllers parse inputs and declare responses; web transport supplies
 both `inputSchema` and response `schema`. The workspace is a product subroute,
 using functional rendering and existing semantic tokens. It provides explicit
 empty, stale, conflict, offline, forbidden, and attachment-unavailable states.
+
+`@repo/contracts/risk-registers` owns the M7-02 request, response, and method
+schemas. The register appears inside the existing technical-file workspace,
+not in global navigation. The interface remains a compact, keyboard-operable
+operational register with explicit incomplete, assessed, review-required,
+unresolved, withdrawn, archived, and conflict labels.
 
 ## Failure modes and rollback
 

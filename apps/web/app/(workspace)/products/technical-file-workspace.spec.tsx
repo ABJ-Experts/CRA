@@ -22,6 +22,9 @@ vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
 vi.mock("../../_providers/providers", () => ({ useMocksReady: () => true }));
 vi.mock("../../_providers/session-provider", () => session);
 vi.mock("../../_features/technical-files/technical-files.queries", () => query);
+vi.mock("../../_features/risk-register/risk-register-workspace", () => ({
+  RiskRegisterWorkspace: () => <div>Risk register</div>,
+}));
 
 const section = {
   id: "11111111-1111-4111-8111-111111111111",

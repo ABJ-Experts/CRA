@@ -67,6 +67,18 @@
       "types": "./dist/technical-files/types/index.d.ts",
       "default": "./dist/technical-files/types/index.js"
     },
+    "./risk-registers": {
+      "types": "./dist/risk-registers/index.d.ts",
+      "default": "./dist/risk-registers/index.js"
+    },
+    "./risk-registers/schemas": {
+      "types": "./dist/risk-registers/schemas/index.d.ts",
+      "default": "./dist/risk-registers/schemas/index.js"
+    },
+    "./risk-registers/types": {
+      "types": "./dist/risk-registers/types/index.d.ts",
+      "default": "./dist/risk-registers/types/index.js"
+    },
     "./http": {
       "types": "./dist/http.d.ts",
       "default": "./dist/http.js"

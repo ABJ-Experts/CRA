@@ -9697,6 +9697,473 @@ export type Database = {
           },
         ]
       }
+      technical_file_risk_commands: {
+        Row: {
+          actor_user_id: string
+          created_at: string
+          idempotency_key: string
+          operation: string
+          organization_id: string
+          payload_digest: string
+          result: Json
+          risk_id: string | null
+        }
+        Insert: {
+          actor_user_id: string
+          created_at?: string
+          idempotency_key: string
+          operation: string
+          organization_id: string
+          payload_digest: string
+          result: Json
+          risk_id?: string | null
+        }
+        Update: {
+          actor_user_id?: string
+          created_at?: string
+          idempotency_key?: string
+          operation?: string
+          organization_id?: string
+          payload_digest?: string
+          result?: Json
+          risk_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "technical_file_risk_commands_actor_user_id_fkey"
+            columns: ["actor_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "technical_file_risk_commands_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "technical_file_risk_commands_risk_id_fkey"
+            columns: ["risk_id"]
+            isOneToOne: false
+            referencedRelation: "technical_file_risks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      technical_file_risk_registers: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          method_key: string
+          method_version: string
+          organization_id: string
+          technical_file_id: string
+          updated_at: string
+          updated_by: string
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          method_key?: string
+          method_version?: string
+          organization_id: string
+          technical_file_id: string
+          updated_at?: string
+          updated_by: string
+          version?: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          method_key?: string
+          method_version?: string
+          organization_id?: string
+          technical_file_id?: string
+          updated_at?: string
+          updated_by?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "technical_file_risk_registers_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "technical_file_risk_registers_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "technical_file_risk_registers_organization_id_technical_fi_fkey"
+            columns: ["organization_id", "technical_file_id"]
+            isOneToOne: true
+            referencedRelation: "technical_files"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "technical_file_risk_registers_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      technical_file_risk_revision_assets: {
+        Row: {
+          component_id: string
+          document_id: string
+          observed_document_sha256: string
+          organization_id: string
+          revision_id: string
+        }
+        Insert: {
+          component_id: string
+          document_id: string
+          observed_document_sha256: string
+          organization_id: string
+          revision_id: string
+        }
+        Update: {
+          component_id?: string
+          document_id?: string
+          observed_document_sha256?: string
+          organization_id?: string
+          revision_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "technical_file_risk_revision__organization_id_document_id__fkey"
+            columns: ["organization_id", "document_id", "component_id"]
+            isOneToOne: false
+            referencedRelation: "sbom_components"
+            referencedColumns: ["organization_id", "document_id", "id"]
+          },
+          {
+            foreignKeyName: "technical_file_risk_revision_a_organization_id_revision_id_fkey"
+            columns: ["organization_id", "revision_id"]
+            isOneToOne: false
+            referencedRelation: "technical_file_risk_revisions"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "technical_file_risk_revision_assets_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      technical_file_risk_revision_evidence: {
+        Row: {
+          evidence_kind: string
+          id: string
+          locator: string | null
+          observed_revision: string | null
+          organization_id: string
+          rationale: string | null
+          revision_id: string
+          source_id: string | null
+          title: string
+        }
+        Insert: {
+          evidence_kind: string
+          id?: string
+          locator?: string | null
+          observed_revision?: string | null
+          organization_id: string
+          rationale?: string | null
+          revision_id: string
+          source_id?: string | null
+          title: string
+        }
+        Update: {
+          evidence_kind?: string
+          id?: string
+          locator?: string | null
+          observed_revision?: string | null
+          organization_id?: string
+          rationale?: string | null
+          revision_id?: string
+          source_id?: string | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "technical_file_risk_revision_e_organization_id_revision_id_fkey"
+            columns: ["organization_id", "revision_id"]
+            isOneToOne: false
+            referencedRelation: "technical_file_risk_revisions"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "technical_file_risk_revision_evi_organization_id_source_id_fkey"
+            columns: ["organization_id", "source_id"]
+            isOneToOne: false
+            referencedRelation: "technical_file_section_sources"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "technical_file_risk_revision_evidence_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      technical_file_risk_revision_requirements: {
+        Row: {
+          edition: string
+          id: string
+          identifier: string
+          organization_id: string
+          rationale: string | null
+          revision_id: string
+          source_reference: string
+          status: string
+        }
+        Insert: {
+          edition: string
+          id?: string
+          identifier: string
+          organization_id: string
+          rationale?: string | null
+          revision_id: string
+          source_reference: string
+          status?: string
+        }
+        Update: {
+          edition?: string
+          id?: string
+          identifier?: string
+          organization_id?: string
+          rationale?: string | null
+          revision_id?: string
+          source_reference?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "technical_file_risk_revision_r_organization_id_revision_id_fkey"
+            columns: ["organization_id", "revision_id"]
+            isOneToOne: false
+            referencedRelation: "technical_file_risk_revisions"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "technical_file_risk_revision_requirements_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      technical_file_risk_revisions: {
+        Row: {
+          affected_assets_rationale: string | null
+          created_at: string
+          created_by: string
+          id: string
+          inherent_impact: number | null
+          inherent_impact_rationale: string
+          inherent_likelihood: number | null
+          inherent_likelihood_rationale: string
+          mitigation: string
+          organization_id: string
+          residual_acceptance_rationale: string | null
+          residual_accepted_at: string | null
+          residual_accepted_by: string | null
+          residual_impact: number | null
+          residual_impact_rationale: string
+          residual_likelihood: number | null
+          residual_likelihood_rationale: string
+          revision: number
+          revision_rationale: string
+          risk_id: string
+          threat: string
+        }
+        Insert: {
+          affected_assets_rationale?: string | null
+          created_at?: string
+          created_by: string
+          id?: string
+          inherent_impact?: number | null
+          inherent_impact_rationale: string
+          inherent_likelihood?: number | null
+          inherent_likelihood_rationale: string
+          mitigation: string
+          organization_id: string
+          residual_acceptance_rationale?: string | null
+          residual_accepted_at?: string | null
+          residual_accepted_by?: string | null
+          residual_impact?: number | null
+          residual_impact_rationale: string
+          residual_likelihood?: number | null
+          residual_likelihood_rationale: string
+          revision: number
+          revision_rationale: string
+          risk_id: string
+          threat: string
+        }
+        Update: {
+          affected_assets_rationale?: string | null
+          created_at?: string
+          created_by?: string
+          id?: string
+          inherent_impact?: number | null
+          inherent_impact_rationale?: string
+          inherent_likelihood?: number | null
+          inherent_likelihood_rationale?: string
+          mitigation?: string
+          organization_id?: string
+          residual_acceptance_rationale?: string | null
+          residual_accepted_at?: string | null
+          residual_accepted_by?: string | null
+          residual_impact?: number | null
+          residual_impact_rationale?: string
+          residual_likelihood?: number | null
+          residual_likelihood_rationale?: string
+          revision?: number
+          revision_rationale?: string
+          risk_id?: string
+          threat?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "technical_file_risk_revisions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "technical_file_risk_revisions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "technical_file_risk_revisions_organization_id_risk_id_fkey"
+            columns: ["organization_id", "risk_id"]
+            isOneToOne: false
+            referencedRelation: "technical_file_risks"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "technical_file_risk_revisions_residual_accepted_by_fkey"
+            columns: ["residual_accepted_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      technical_file_risks: {
+        Row: {
+          archive_rationale: string | null
+          archived_at: string | null
+          archived_by: string | null
+          created_at: string
+          created_by: string
+          current_revision: number
+          id: string
+          organization_id: string
+          owner_user_id: string
+          risk_register_id: string
+          updated_at: string
+          updated_by: string
+          version: number
+        }
+        Insert: {
+          archive_rationale?: string | null
+          archived_at?: string | null
+          archived_by?: string | null
+          created_at?: string
+          created_by: string
+          current_revision?: number
+          id?: string
+          organization_id: string
+          owner_user_id: string
+          risk_register_id: string
+          updated_at?: string
+          updated_by: string
+          version?: number
+        }
+        Update: {
+          archive_rationale?: string | null
+          archived_at?: string | null
+          archived_by?: string | null
+          created_at?: string
+          created_by?: string
+          current_revision?: number
+          id?: string
+          organization_id?: string
+          owner_user_id?: string
+          risk_register_id?: string
+          updated_at?: string
+          updated_by?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "technical_file_risks_archived_by_fkey"
+            columns: ["archived_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "technical_file_risks_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "technical_file_risks_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "technical_file_risks_organization_id_risk_register_id_fkey"
+            columns: ["organization_id", "risk_register_id"]
+            isOneToOne: false
+            referencedRelation: "technical_file_risk_registers"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "technical_file_risks_owner_user_id_fkey"
+            columns: ["owner_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "technical_file_risks_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       technical_file_section_sources: {
         Row: {
           created_at: string
@@ -14153,6 +14620,21 @@ export type Database = {
           outcome: string
         }[]
       }
+      accept_technical_file_residual_risk_atomic: {
+        Args: {
+          p_acceptance_rationale: string
+          p_actor_user_id: string
+          p_expected_version: number
+          p_idempotency_key: string
+          p_organization_id: string
+          p_product_id: string
+          p_risk_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
       acknowledge_vulnerability_kev_alert_atomic:
         | {
             Args: {
@@ -14370,6 +14852,21 @@ export type Database = {
         Returns: {
           baseline: Json
           outcome: string
+        }[]
+      }
+      archive_technical_file_risk_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_archive_rationale: string
+          p_expected_version: number
+          p_idempotency_key: string
+          p_organization_id: string
+          p_product_id: string
+          p_risk_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
         }[]
       }
       assign_finding_triage_atomic: {
@@ -15827,6 +16324,19 @@ export type Database = {
           p_actor_user_id: string
           p_idempotency_key: string
           p_organization_id: string
+          p_product_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      create_technical_file_risk_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_idempotency_key: string
+          p_organization_id: string
+          p_payload: Json
           p_product_id: string
         }
         Returns: {
@@ -17327,6 +17837,17 @@ export type Database = {
         }[]
       }
       get_technical_file: {
+        Args: {
+          p_actor_user_id: string
+          p_organization_id: string
+          p_product_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      get_technical_file_risk_register: {
         Args: {
           p_actor_user_id: string
           p_organization_id: string
@@ -19073,6 +19594,54 @@ export type Database = {
         Returns: boolean
       }
       m6_utc_second_z: { Args: { p_value: string }; Returns: string }
+      m7_risk_actor_can_accept: {
+        Args: { p_actor_user_id: string; p_organization_id: string }
+        Returns: boolean
+      }
+      m7_risk_command_replay: {
+        Args: {
+          p_actor_user_id: string
+          p_idempotency_key: string
+          p_operation: string
+          p_organization_id: string
+          p_payload_digest: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      m7_risk_insert_links: {
+        Args: {
+          p_assets: Json
+          p_evidence: Json
+          p_organization_id: string
+          p_product_id: string
+          p_requirements: Json
+          p_revision_id: string
+        }
+        Returns: string
+      }
+      m7_risk_json: {
+        Args: {
+          p_organization_id: string
+          p_product_id: string
+          p_risk_id: string
+        }
+        Returns: Json
+      }
+      m7_risk_level: {
+        Args: { p_impact: number; p_likelihood: number }
+        Returns: string
+      }
+      m7_risk_register_json: {
+        Args: {
+          p_include_archived?: boolean
+          p_organization_id: string
+          p_product_id: string
+        }
+        Returns: Json
+      }
       m7_technical_file_actor_can: {
         Args: {
           p_actor_user_id: string
@@ -21422,6 +21991,21 @@ export type Database = {
           p_expected_version: number
           p_idempotency_key: string
           p_organization_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      update_technical_file_risk_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_expected_version: number
+          p_idempotency_key: string
+          p_organization_id: string
+          p_payload: Json
+          p_product_id: string
+          p_risk_id: string
         }
         Returns: {
           outcome: string

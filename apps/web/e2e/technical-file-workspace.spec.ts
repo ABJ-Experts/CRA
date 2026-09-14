@@ -142,3 +142,25 @@ test("owner creates and edits the source-linked Annex VII workspace", async ({
     fullPage: true,
   });
 });
+
+test("owner can inspect the product-scoped cybersecurity risk register", async ({
+  page,
+}, testInfo) => {
+  await signInAsLocalOwner(page);
+  await page.goto(`/products/${productId}/technical-file`);
+
+  await expect(
+    page.getByRole("heading", { name: "Cybersecurity risk register" }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Pinned method: CRA 5×5 v1. This is a risk method, not a compliance score."),
+  ).toBeVisible();
+  await expect(
+    page.getByText(/M7-03\/M8 evidence linking is not available yet/i),
+  ).toBeVisible();
+
+  await page.screenshot({
+    path: testInfo.outputPath("technical-file-risk-register.png"),
+    fullPage: true,
+  });
+});

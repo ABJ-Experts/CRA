@@ -17,6 +17,7 @@ import {
   useTechnicalFileQuery,
   useUpdateTechnicalFileSectionMutation,
 } from "../../_features/technical-files/technical-files.queries";
+import { RiskRegisterWorkspace } from "../../_features/risk-register/risk-register-workspace";
 import { ApiClientError } from "../../_lib/http/api-client";
 import { useMocksReady } from "../../_providers/providers";
 import { useSession } from "../../_providers/session-provider";
@@ -467,11 +468,13 @@ function TechnicalFileOverview({
   technicalFile,
   retention,
   canEdit,
+  enabled,
 }: {
   productId: string;
   technicalFile: TechnicalFile;
   retention: ProductRetentionCalculation;
   canEdit: boolean;
+  enabled: boolean;
 }) {
   const [selectedKey, setSelectedKey] = useState<
     TechnicalFileSection["key"] | null
@@ -550,6 +553,11 @@ function TechnicalFileOverview({
             </div>
           ))}
         </div>
+        <RiskRegisterWorkspace
+          productId={productId}
+          enabled={enabled}
+          canEdit={canEdit}
+        />
       </div>
     </SectionCard>
   );
@@ -684,6 +692,7 @@ export function TechnicalFileWorkspace({ productId }: { productId: string }) {
           technicalFile={file.data.technicalFile}
           retention={file.data.retention}
           canEdit={canEdit}
+          enabled={liveApiEnabled && hasMembership && canView}
         />
       ) : null}
     </div>
