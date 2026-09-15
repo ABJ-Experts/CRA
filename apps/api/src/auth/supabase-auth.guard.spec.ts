@@ -81,7 +81,9 @@ function createGuard(options: {
   } as unknown as MfaService;
 
   return {
-    guard: new SupabaseAuthGuard(reflector, tokens, supabase, config, mfa),
+    guard: new SupabaseAuthGuard(reflector, tokens, supabase, config, mfa, {
+      authorize: jest.fn().mockResolvedValue({ outcome: "allowed" }),
+    }),
     hasVerifiedFactor,
   };
 }

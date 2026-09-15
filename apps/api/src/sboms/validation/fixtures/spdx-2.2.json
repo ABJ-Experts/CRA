@@ -1,0 +1,22 @@
+{
+  "SPDXID": "SPDXRef-DOCUMENT",
+  "spdxVersion": "SPDX-2.2",
+  "creationInfo": {
+    "created": "2026-08-21T00:00:00Z",
+    "creators": ["Tool: CRA deterministic SBOM validator fixture"]
+  },
+  "dataLicense": "CC0-1.0",
+  "documentNamespace": "https://cra.test/spdx/2.2/example",
+  "name": "SPDX 2.2 fixture",
+  "packages": [
+    {
+      "SPDXID": "SPDXRef-Package",
+      "name": "example",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION"
+    }
+  ]
+}

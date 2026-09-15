@@ -167,4 +167,65 @@ describe("permission coverage", () => {
       expect(route.selfScoped!.length).toBeGreaterThan(15);
     }
   });
+
+  it("keeps SBOM upload/report/replay routes on explicit permission or role gates", () => {
+    const sbomRoutes = new Map(
+      routes.filter((r) => r.key.includes("sbom")).map((r) => [r.key, r]),
+    );
+
+    expect(
+      sbomRoutes.get(
+        "POST products/:productId/releases/:releaseId/sbom-uploads",
+      )?.permissions,
+    ).toEqual(["can_upload_sboms"]);
+    expect(
+      sbomRoutes.get("GET products/:productId/releases/:releaseId/sbom-sources")
+        ?.permissions,
+    ).toEqual(["can_view_sboms"]);
+    expect(
+      sbomRoutes.get(
+        "GET products/:productId/releases/:releaseId/sbom-documents",
+      )?.permissions,
+    ).toEqual(["can_view_sboms"]);
+    expect(
+      sbomRoutes.get("POST sbom-uploads/:sourceId/complete")?.permissions,
+    ).toEqual(["can_upload_sboms"]);
+    expect(sbomRoutes.get("GET sbom-jobs/:jobId")?.permissions).toEqual([
+      "can_view_sboms",
+    ]);
+    expect(sbomRoutes.get("POST sbom-jobs/:jobId/replay")?.role).toBe("owner");
+    expect(
+      sbomRoutes.get("GET sbom-sources/:sourceId/download")?.permissions,
+    ).toEqual(["can_view_sboms"]);
+    expect(
+      sbomRoutes.get("GET sbom-sources/:sourceId/validation-report")
+        ?.permissions,
+    ).toEqual(["can_view_sboms"]);
+    expect(
+      sbomRoutes.get("GET sbom-documents/:documentId")?.permissions,
+    ).toEqual(["can_view_sboms"]);
+    expect(
+      sbomRoutes.get("GET sbom-documents/:documentId/components")?.permissions,
+    ).toEqual(["can_view_sboms"]);
+    expect(
+      sbomRoutes.get("GET sbom-documents/:documentId/dependency-tree")
+        ?.permissions,
+    ).toEqual(["can_view_sboms"]);
+    expect(
+      sbomRoutes.get("POST sbom-sources/:sourceId/diff")?.permissions,
+    ).toEqual(["can_upload_sboms"]);
+    expect(
+      sbomRoutes.get("GET sbom-sources/:sourceId/diff")?.permissions,
+    ).toEqual(["can_view_sboms"]);
+    expect(sbomRoutes.get("GET sbom-diffs/:diffId")?.permissions).toEqual([
+      "can_view_sboms",
+    ]);
+    expect(
+      sbomRoutes.get("GET sbom-diffs/:diffId/components")?.permissions,
+    ).toEqual(["can_view_sboms"]);
+    expect(
+      sbomRoutes.get("GET sbom-diffs/:diffId/findings")?.permissions,
+    ).toEqual(["can_view_sboms"]);
+    expect(sbomRoutes.get("POST sbom-diffs/:diffId/retry")?.role).toBe("owner");
+  });
 });

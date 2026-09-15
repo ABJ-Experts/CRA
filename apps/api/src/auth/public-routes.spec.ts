@@ -47,6 +47,16 @@ const ALLOWED_PUBLIC: Record<string, string> = {
   "POST auth/forgot-password":
     "By definition the caller cannot sign in. Always returns ok to avoid account enumeration.",
   "POST auth/reset-password": "The emailed single-use token is the credential.",
+  "POST ci/sbom-uploads":
+    "CI cannot have a browser session; the dedicated SBOM CI credential guard authenticates this narrow intake route.",
+  "POST ci/sbom-uploads/:sourceId/complete":
+    "Continuation of the CI direct-upload protocol, guarded by the same organization-scoped credential.",
+  "POST supplier-sbom-portal/sessions":
+    "A supplier has no CRA session; the one-time opaque invitation bearer is the only credential accepted here.",
+  "POST supplier-sbom-portal/submissions":
+    "A short-lived opaque supplier session bearer scopes this upload reservation to one invitation and component.",
+  "POST supplier-sbom-portal/submissions/:sourceId/complete":
+    "Continuation of the supplier direct-upload protocol; the opaque session is rechecked and bytes are inspected server-side.",
 };
 
 interface RouteInfo {
@@ -172,6 +182,39 @@ describe("route guard coverage", () => {
     const session = routes.find((r) => r.path === "auth/session");
     expect(session).toBeDefined();
     expect(session?.isPublic).toBe(false);
+  });
+
+  it("keeps human SBOM routes behind the session guard while CI uses only the credential guard", () => {
+    const sbomRoutes = Object.fromEntries(
+      routes
+        .filter((r) => r.path.includes("sbom"))
+        .map((r) => [`${r.method} ${r.path}`, r.isPublic] as const),
+    );
+
+    expect(sbomRoutes).toMatchObject({
+      "POST products/:productId/releases/:releaseId/sbom-uploads": false,
+      "GET products/:productId/releases/:releaseId/sbom-sources": false,
+      "GET products/:productId/releases/:releaseId/sbom-documents": false,
+      "POST sbom-uploads/:sourceId/complete": false,
+      "GET sbom-jobs/:jobId": false,
+      "POST sbom-jobs/:jobId/replay": false,
+      "GET sbom-sources/:sourceId/download": false,
+      "GET sbom-sources/:sourceId/validation-report": false,
+      "GET sbom-documents/:documentId": false,
+      "GET sbom-documents/:documentId/components": false,
+      "GET sbom-documents/:documentId/dependency-tree": false,
+      "POST sbom-sources/:sourceId/diff": false,
+      "GET sbom-sources/:sourceId/diff": false,
+      "GET sbom-diffs/:diffId": false,
+      "GET sbom-diffs/:diffId/components": false,
+      "GET sbom-diffs/:diffId/findings": false,
+      "POST sbom-diffs/:diffId/retry": false,
+      "POST ci/sbom-uploads": true,
+      "POST ci/sbom-uploads/:sourceId/complete": true,
+      "POST supplier-sbom-portal/sessions": true,
+      "POST supplier-sbom-portal/submissions": true,
+      "POST supplier-sbom-portal/submissions/:sourceId/complete": true,
+    });
   });
 
   it("keeps sign-out authenticated", () => {

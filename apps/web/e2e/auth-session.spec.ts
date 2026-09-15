@@ -24,6 +24,7 @@ test("refreshes an expired access cookie, locks out, and clears the session", as
     expect(signedIn.status()).toBe(200);
     expect(await signedIn.json()).toMatchObject({ next: "dashboard" });
     await expect(page).toHaveURL(/\/dashboard$/);
+    await expect(page.getByRole("link", { name: "Products" })).toBeVisible();
 
     await page.context().clearCookies({ name: "cra_at" });
     const refreshResponse = page.waitForResponse((response) => {

@@ -3,7 +3,7 @@
 import { Button } from "@repo/ui/button";
 import { CircleAlert, CircleCheck } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 
 import { AuthOutcome } from "../_components/auth-outcome";
 import { AuthTitle } from "../_components/auth-chrome";
@@ -39,6 +39,7 @@ function AcceptInvitation() {
   const router = useRouter();
   const token = params.get("token") ?? "";
   const [state, setState] = useState<State>({ kind: "working" });
+  const automaticallyAcceptedToken = useRef<string | null>(null);
 
   const accept = useCallback(async () => {
     if (!token) {
@@ -81,8 +82,10 @@ function AcceptInvitation() {
   }, [token]);
 
   useEffect(() => {
+    if (automaticallyAcceptedToken.current === token) return;
+    automaticallyAcceptedToken.current = token;
     void accept();
-  }, [accept]);
+  }, [accept, token]);
 
   if (state.kind === "working") {
     return (

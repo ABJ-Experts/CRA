@@ -103,6 +103,9 @@ describe("Editor", () => {
     );
     expect(screen.getByRole("alert")).toHaveTextContent("Required");
     expect(screen.queryByText("Hint")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Post" })).toHaveClass(
+      "text-on-accent",
+    );
     expect(screen.getByRole("button", { name: "Post" })).toBeDisabled();
     expect(editor.setEditable).toHaveBeenCalledWith(false);
     rerender(<Editor toolbar={false} tools={false} submit="none" />);

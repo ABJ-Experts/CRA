@@ -31,6 +31,14 @@ export const invitationListResponseSchema = z
   .object({ rows: z.array(invitationSchema) })
   .strict();
 
+/** Only successful SMTP delivery can produce a successful resend response. */
+export const resendInvitationResponseSchema = z
+  .object({
+    id: z.uuid(),
+    delivery: z.literal("confirmed"),
+  })
+  .strict();
+
 export const acceptInvitationResponseSchema = z
   .object({
     ok: z.literal(true),

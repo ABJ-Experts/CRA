@@ -140,6 +140,22 @@ describe("token inspection fallbacks", () => {
 });
 
 describe("middleware integration", () => {
+  it("allows an ES256 JWKS-verified session through a protected SBOM product route", async () => {
+    jose.decodeProtectedHeader.mockReturnValue({ alg: "ES256" });
+    const token = tokenWithExpiry(Math.floor(Date.now() / 1000) + 60, "ES256");
+    const { middleware } = await loadMiddleware();
+    const response = await middleware(
+      new NextRequest("https://app.cra.test/products/product-123", {
+        headers: { cookie: `cra_at=${token}` },
+      }),
+    );
+
+    expect(response.headers.get("location")).toBeNull();
+    expect(jose.jwtVerify).toHaveBeenCalledWith(token, "test-jwks", {
+      issuer: "http://127.0.0.1:54321/auth/v1",
+    });
+  });
+
   it("maps an expired-away protected session to the refresh endpoint", async () => {
     const { middleware } = await loadMiddleware();
     const response = await middleware(
@@ -150,6 +166,22 @@ describe("middleware integration", () => {
 
     expect(response.headers.get("location")).toBe(
       "https://app.cra.test/api/v1/auth/refresh?redirectTo=%2Fdashboard%3Ftab%3Dsecurity",
+    );
+  });
+
+  it("maps SBOM product routes with a session marker to the narrow refresh endpoint", async () => {
+    const { middleware } = await loadMiddleware();
+    const response = await middleware(
+      new NextRequest(
+        "https://app.cra.test/products/product-123?releaseId=release-123&sbomSource=source-123",
+        {
+          headers: { cookie: "cra_session=1" },
+        },
+      ),
+    );
+
+    expect(response.headers.get("location")).toBe(
+      "https://app.cra.test/api/v1/auth/refresh?redirectTo=%2Fproducts%2Fproduct-123%3FreleaseId%3Drelease-123%26sbomSource%3Dsource-123",
     );
   });
 
@@ -243,6 +275,35 @@ describe("middleware integration", () => {
 
     expect(response.headers.get("location")).toBeNull();
   });
+
+  it.each([
+    ["/management", "/management"],
+    ["/organization", "/organization"],
+    ["/connectors", "/connectors"],
+    [
+      "/connectors/00000000-0000-4000-8000-000000000001",
+      "/connectors/00000000-0000-4000-8000-000000000001",
+    ],
+    ["/products", "/products"],
+    ["/products/product-123", "/products/product-123"],
+    ["/account", "/account"],
+    ["/security", "/security"],
+    ["/roles", "/roles"],
+    ["/permissions", "/permissions"],
+    ["/onboarding?stage=organization", "/onboarding?stage=organization"],
+  ] as const)(
+    "protects the canonical customer path %s",
+    async (pathname, returnUrl) => {
+      const { middleware } = await loadMiddleware();
+      const response = await middleware(
+        new NextRequest(`https://app.cra.test${pathname}`),
+      );
+
+      expect(response.headers.get("location")).toBe(
+        `https://app.cra.test/sign-in?returnUrl=${encodeURIComponent(returnUrl)}`,
+      );
+    },
+  );
 
   it("bypasses route gating while development mocks are enabled", async () => {
     const { middleware } = await loadMiddleware({

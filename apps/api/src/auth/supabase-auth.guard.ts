@@ -1,6 +1,8 @@
 import {
   CanActivate,
   ExecutionContext,
+  ForbiddenException,
+  Inject,
   Injectable,
   Logger,
   ServiceUnavailableException,
@@ -9,16 +11,22 @@ import {
 import { ConfigService } from "@nestjs/config";
 import { Reflector } from "@nestjs/core";
 import { coerceBaseRole } from "@repo/contracts/permissions";
+import { z } from "zod";
 
 import { SupabaseService } from "../supabase/supabase.service";
 import { ACCESS_COOKIE, ACTIVE_ORG_COOKIE, unsign } from "./cookies.util";
 import { MfaService } from "./mfa/mfa.service";
 import {
+  ALLOW_TENANT_RECOVERY_KEY,
   ALLOW_MFA_PENDING_KEY,
   IS_PUBLIC_KEY,
   type AuthedRequest,
   type RequestUser,
 } from "./auth.types";
+import {
+  TENANT_SCOPE_ACCESS_PORT,
+  type TenantScopeAccessPort,
+} from "./application/tenant-scope-access.port";
 import { TokenVerifierService } from "./token-verifier.service";
 
 interface ProfileRow {
@@ -63,6 +71,8 @@ export class SupabaseAuthGuard implements CanActivate {
     private readonly supabase: SupabaseService,
     private readonly config: ConfigService,
     private readonly mfa: MfaService,
+    @Inject(TENANT_SCOPE_ACCESS_PORT)
+    private readonly tenantAccess: TenantScopeAccessPort,
   ) {
     this.signingSecret = this.config.getOrThrow<string>(
       "COOKIE_SIGNING_SECRET",
@@ -177,7 +187,56 @@ export class SupabaseAuthGuard implements CanActivate {
     }
 
     // ---- 7. Organization scope -------------------------------------------
-    const membership = await this.resolveMembership(request, profile.id);
+    const recoveryReason = this.reflector.getAllAndOverride<string>(
+      ALLOW_TENANT_RECOVERY_KEY,
+      [context.getHandler(), context.getClass()],
+    );
+    const allowRecovery =
+      typeof recoveryReason === "string" && recoveryReason.trim().length > 0;
+    const membership = await this.resolveMembership(
+      request,
+      profile.id,
+      allowRecovery,
+    );
+    const sessionId = z.uuid().safeParse(claims.session_id);
+    if (membership) {
+      if (!sessionId.success || !Number.isFinite(claims.iat)) {
+        throw new ForbiddenException({
+          message: "This organization session is not valid.",
+          code: "organization_session_invalid",
+        });
+      }
+      const tenantOutcome = await this.tenantAccess.authorize({
+        organizationId: membership.organization_id,
+        userId: profile.id,
+        sessionId: sessionId.data,
+        issuedAt: new Date(claims.iat! * 1000).toISOString(),
+        allowRecovery,
+      });
+      if (tenantOutcome.outcome !== "allowed") {
+        if (
+          tenantOutcome.outcome === "unavailable" ||
+          tenantOutcome.outcome === "malformed"
+        ) {
+          throw new ServiceUnavailableException({
+            message: "Organization access is temporarily unavailable.",
+            code: "organization_unavailable",
+          });
+        }
+        const code =
+          tenantOutcome.outcome === "inactive"
+            ? "organization_inactive"
+            : tenantOutcome.outcome === "revoked"
+              ? "organization_session_revoked"
+              : tenantOutcome.outcome === "expired"
+                ? "organization_session_expired"
+                : "organization_not_found";
+        throw new ForbiddenException({
+          message: "This organization is not available for this request.",
+          code,
+        });
+      }
+    }
 
     const user: RequestUser = {
       id: profile.id,
@@ -192,6 +251,7 @@ export class SupabaseAuthGuard implements CanActivate {
       role: membership ? coerceBaseRole(membership.role) : null,
       accessToken: token,
       aal: typeof claims.aal === "string" ? claims.aal : null,
+      ...(membership && sessionId.success ? { sessionId: sessionId.data } : {}),
     };
 
     request.user = user;
@@ -266,13 +326,16 @@ export class SupabaseAuthGuard implements CanActivate {
    *
    * The signed `cra_org` cookie names one; it is verified against the user's
    * actual memberships before being trusted, so tampering with the cookie
-   * cannot scope a request to somebody else's organization. When it is absent
-   * or no longer valid, fall back to the user's oldest membership so a request
-   * is never left unscoped.
+   * cannot scope a request to somebody else's organization. Normal requests
+   * prefer an active verified membership, then fall back to the oldest one so
+   * the lifecycle boundary can deny it without treating a foreign tenant as
+   * selected. Explicit recovery retains only a signed membership and its port
+   * re-verifies owner role and lifecycle.
    */
   private async resolveMembership(
     request: AuthedRequest,
     userId: string,
+    allowRecovery: boolean,
   ): Promise<MembershipRow | null> {
     const { data, error } = await this.supabase
       .admin()
@@ -295,14 +358,56 @@ export class SupabaseAuthGuard implements CanActivate {
     const cookies = request.cookies as Record<string, string> | undefined;
     const requested = unsign(cookies?.[ACTIVE_ORG_COOKIE], this.signingSecret);
 
-    if (requested) {
-      const match = memberships.find((m) => m.organization_id === requested);
-      // Silently falling back rather than 403-ing is deliberate: losing access
-      // to an organization is a normal event (removed from a team), and it
-      // should drop you to another one, not lock you out of the whole app.
-      if (match) return match;
-    }
+    const requestedMembership = requested
+      ? memberships.find(
+          (membership) => membership.organization_id === requested,
+        )
+      : undefined;
 
-    return memberships[0] ?? null;
+    // Recovery is the one case allowed to retain a signed inactive selection;
+    // its tenant port immediately re-verifies owner role and lifecycle. Normal
+    // requests instead select an active verified membership so a deactivated
+    // organization cannot lock a multi-tenant user out of another active one.
+    if (allowRecovery && requestedMembership) return requestedMembership;
+
+    const activeOrganizationIds = await this.activeOrganizationIds(
+      memberships.map((membership) => membership.organization_id),
+    );
+    if (
+      requestedMembership &&
+      activeOrganizationIds.has(requestedMembership.organization_id)
+    ) {
+      return requestedMembership;
+    }
+    const active = memberships.find((membership) =>
+      activeOrganizationIds.has(membership.organization_id),
+    );
+    return active ?? memberships[0] ?? null;
+  }
+
+  private async activeOrganizationIds(
+    organizationIds: readonly string[],
+  ): Promise<ReadonlySet<string>> {
+    const { data, error } = await this.supabase
+      .admin()
+      .from("organization_lifecycles")
+      .select("organization_id, status")
+      .in("organization_id", [...organizationIds]);
+    if (error || !Array.isArray(data)) {
+      this.logger.error(
+        "Organization lifecycle lookup failed during scope resolution",
+      );
+      throw new ServiceUnavailableException({
+        message: "Sign-in is temporarily unavailable. Please try again.",
+        code: "auth_unavailable",
+      });
+    }
+    return new Set(
+      data.flatMap((row) =>
+        row.status === "active" && typeof row.organization_id === "string"
+          ? [row.organization_id]
+          : [],
+      ),
+    );
   }
 }
