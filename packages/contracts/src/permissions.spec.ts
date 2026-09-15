@@ -64,20 +64,138 @@ describe("key generation", () => {
 
 describe("technical-file permissions", () => {
   it("gives only owner/admin default access while preserving custom-role reachability", () => {
-    expect(hasPermission(DEFAULT_PERMISSIONS_BY_ROLE.owner, "can_view_technical_files")).toBe(true);
-    expect(hasPermission(DEFAULT_PERMISSIONS_BY_ROLE.admin, "can_edit_technical_files")).toBe(true);
-    expect(hasPermission(DEFAULT_PERMISSIONS_BY_ROLE.member, "can_view_technical_files")).toBe(false);
-    expect(hasPermission(DEFAULT_PERMISSIONS_BY_ROLE.viewer, "can_edit_technical_files")).toBe(false);
-    expect(hasPermission(resolveEffectivePermissions({ baseRole: "viewer", customRoles: [role({ permissions: { can_edit_technical_files: true } })] }), "can_view_technical_files")).toBe(true);
+    expect(
+      hasPermission(
+        DEFAULT_PERMISSIONS_BY_ROLE.owner,
+        "can_view_technical_files",
+      ),
+    ).toBe(true);
+    expect(
+      hasPermission(
+        DEFAULT_PERMISSIONS_BY_ROLE.admin,
+        "can_edit_technical_files",
+      ),
+    ).toBe(true);
+    expect(
+      hasPermission(
+        DEFAULT_PERMISSIONS_BY_ROLE.member,
+        "can_view_technical_files",
+      ),
+    ).toBe(false);
+    expect(
+      hasPermission(
+        DEFAULT_PERMISSIONS_BY_ROLE.viewer,
+        "can_edit_technical_files",
+      ),
+    ).toBe(false);
+    expect(
+      hasPermission(
+        resolveEffectivePermissions({
+          baseRole: "viewer",
+          customRoles: [
+            role({ permissions: { can_edit_technical_files: true } }),
+          ],
+        }),
+        "can_view_technical_files",
+      ),
+    ).toBe(true);
   });
 
   it("reserves immutable snapshot and export actions for owner/admin, while keeping custom-role delegation narrow", () => {
-    expect(hasPermission(DEFAULT_PERMISSIONS_BY_ROLE.owner, "can_snapshot_technical_files")).toBe(true);
-    expect(hasPermission(DEFAULT_PERMISSIONS_BY_ROLE.admin, "can_snapshot_technical_files")).toBe(true);
-    expect(hasPermission(DEFAULT_PERMISSIONS_BY_ROLE.member, "can_snapshot_technical_files")).toBe(false);
-    expect(hasPermission(DEFAULT_PERMISSIONS_BY_ROLE.viewer, "can_snapshot_technical_files")).toBe(false);
-    expect(hasPermission(resolveEffectivePermissions({ baseRole: "viewer", customRoles: [role({ permissions: { can_snapshot_technical_files: true } })] }), "can_view_technical_files")).toBe(true);
-    expect(hasPermission(resolveEffectivePermissions({ baseRole: "viewer", baseRoleOverrides: { can_snapshot_technical_files: false }, customRoles: [role({ permissions: { can_snapshot_technical_files: true } })] }), "can_snapshot_technical_files")).toBe(false);
+    expect(
+      hasPermission(
+        DEFAULT_PERMISSIONS_BY_ROLE.owner,
+        "can_snapshot_technical_files",
+      ),
+    ).toBe(true);
+    expect(
+      hasPermission(
+        DEFAULT_PERMISSIONS_BY_ROLE.admin,
+        "can_snapshot_technical_files",
+      ),
+    ).toBe(true);
+    expect(
+      hasPermission(
+        DEFAULT_PERMISSIONS_BY_ROLE.member,
+        "can_snapshot_technical_files",
+      ),
+    ).toBe(false);
+    expect(
+      hasPermission(
+        DEFAULT_PERMISSIONS_BY_ROLE.viewer,
+        "can_snapshot_technical_files",
+      ),
+    ).toBe(false);
+    expect(
+      hasPermission(
+        resolveEffectivePermissions({
+          baseRole: "viewer",
+          customRoles: [
+            role({ permissions: { can_snapshot_technical_files: true } }),
+          ],
+        }),
+        "can_view_technical_files",
+      ),
+    ).toBe(true);
+    expect(
+      hasPermission(
+        resolveEffectivePermissions({
+          baseRole: "viewer",
+          baseRoleOverrides: { can_snapshot_technical_files: false },
+          customRoles: [
+            role({ permissions: { can_snapshot_technical_files: true } }),
+          ],
+        }),
+        "can_snapshot_technical_files",
+      ),
+    ).toBe(false);
+  });
+
+  it("reserves declaration issuance for owner/admin and permits an explicit custom-role grant", () => {
+    expect(
+      hasPermission(
+        DEFAULT_PERMISSIONS_BY_ROLE.owner,
+        "can_issue_technical_files",
+      ),
+    ).toBe(true);
+    expect(
+      hasPermission(
+        DEFAULT_PERMISSIONS_BY_ROLE.admin,
+        "can_issue_technical_files",
+      ),
+    ).toBe(true);
+    expect(
+      hasPermission(
+        DEFAULT_PERMISSIONS_BY_ROLE.member,
+        "can_issue_technical_files",
+      ),
+    ).toBe(false);
+    expect(
+      hasPermission(
+        DEFAULT_PERMISSIONS_BY_ROLE.viewer,
+        "can_issue_technical_files",
+      ),
+    ).toBe(false);
+    expect(
+      hasPermission(
+        resolveEffectivePermissions({
+          baseRole: "viewer",
+          customRoles: [
+            role({ permissions: { can_issue_technical_files: true } }),
+          ],
+        }),
+        "can_view_technical_files",
+      ),
+    ).toBe(true);
+    expect(
+      hasPermission(
+        resolveEffectivePermissions({
+          baseRole: "owner",
+          baseRoleOverrides: { can_issue_technical_files: false },
+        }),
+        "can_issue_technical_files",
+      ),
+    ).toBe(false);
   });
 });
 
@@ -418,9 +536,9 @@ describe("presets", () => {
       baseRole: "admin",
       baseRoleOverrides: { can_manage_finding_publication: false },
     });
-    expect(
-      hasPermission(overridden, "can_manage_finding_publication"),
-    ).toBe(false);
+    expect(hasPermission(overridden, "can_manage_finding_publication")).toBe(
+      false,
+    );
   });
 
   it("privilege is monotonic across the base roles", () => {

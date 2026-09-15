@@ -22,6 +22,15 @@ import {
   technicalFileSnapshotParamsSchema,
   technicalFileSnapshotResponseSchema,
   technicalFileSnapshotsResponseSchema,
+  createTechnicalFileDeclarationDraftRequestSchema,
+  updateTechnicalFileDeclarationDraftRequestSchema,
+  issueTechnicalFileDeclarationRequestSchema,
+  reissueTechnicalFileDeclarationRequestSchema,
+  technicalFileDeclarationParamsSchema,
+  technicalFileDeclarationPreviewResponseSchema,
+  technicalFileDeclarationResponseSchema,
+  technicalFileDeclarationsResponseSchema,
+  technicalFileDeclarationDownloadResponseSchema,
   updateTechnicalFileSectionRequestSchema,
   recalculateTechnicalFileReadinessRequestSchema,
   reviewTechnicalFileSourceRequestSchema,
@@ -35,6 +44,10 @@ import {
   type CancelTechnicalFileSnapshotExportRequest,
   type CreateTechnicalFileSnapshotExportRequest,
   type CreateTechnicalFileSnapshotRequest,
+  type CreateTechnicalFileDeclarationDraftRequest,
+  type UpdateTechnicalFileDeclarationDraftRequest,
+  type IssueTechnicalFileDeclarationRequest,
+  type ReissueTechnicalFileDeclarationRequest,
 } from "@repo/contracts/technical-files";
 
 import { authenticatedRequestJson } from "../../_lib/http/authenticated-request";
@@ -129,6 +142,47 @@ function snapshotExportPath(
     );
   }
   return `${snapshotPath(productId, snapshotId)}/exports${exportId ? `/${exportId}` : ""}` as `/${string}`;
+}
+
+function declarationPath(
+  productId: string,
+  declarationId?: string,
+): `/${string}` {
+  const parsed = declarationId
+    ? technicalFileDeclarationParamsSchema.safeParse({
+        productId,
+        declarationId,
+      })
+    : technicalFileProductParamsSchema.safeParse({ productId });
+  if (!parsed.success) {
+    throw new ApiClientError(
+      "invalid_request",
+      "The declaration identifier is invalid.",
+      400,
+    );
+  }
+  return productPath(
+    parsed.data.productId,
+    declarationId ? `/declarations/${declarationId}` : "/declarations",
+  );
+}
+
+function declarationPreviewPath(
+  productId: string,
+  snapshotId: string,
+): `/${string}` {
+  const parsed = technicalFileSnapshotParamsSchema.safeParse({
+    productId,
+    snapshotId,
+  });
+  if (!parsed.success) {
+    throw new ApiClientError(
+      "invalid_request",
+      "The technical-file snapshot identifier is invalid.",
+      400,
+    );
+  }
+  return `${declarationPath(parsed.data.productId)}/preview/${parsed.data.snapshotId}` as `/${string}`;
 }
 
 export const technicalFilesApi = Object.freeze({
@@ -271,7 +325,10 @@ export const technicalFilesApi = Object.freeze({
       schema: technicalFileSnapshotResponseSchema,
       signal,
     }),
-  createSnapshot: (productId: string, input: CreateTechnicalFileSnapshotRequest) =>
+  createSnapshot: (
+    productId: string,
+    input: CreateTechnicalFileSnapshotRequest,
+  ) =>
     authenticatedRequestJson({
       path: snapshotPath(productId),
       method: "POST",
@@ -335,5 +392,73 @@ export const technicalFilesApi = Object.freeze({
       schema: technicalFileSnapshotExportResponseSchema,
       inputSchema: cancelTechnicalFileSnapshotExportRequestSchema,
       body: input,
+    }),
+  listDeclarations: (productId: string, signal?: AbortSignal) =>
+    authenticatedRequestJson({
+      path: declarationPath(productId),
+      schema: technicalFileDeclarationsResponseSchema,
+      signal,
+    }),
+  previewDeclaration: (
+    productId: string,
+    snapshotId: string,
+    signal?: AbortSignal,
+  ) =>
+    authenticatedRequestJson({
+      path: declarationPreviewPath(productId, snapshotId),
+      schema: technicalFileDeclarationPreviewResponseSchema,
+      signal,
+    }),
+  saveDeclarationDraft: (
+    productId: string,
+    input: CreateTechnicalFileDeclarationDraftRequest,
+  ) =>
+    authenticatedRequestJson({
+      path: declarationPath(productId),
+      method: "POST",
+      schema: technicalFileDeclarationResponseSchema,
+      inputSchema: createTechnicalFileDeclarationDraftRequestSchema,
+      body: input,
+    }),
+  updateDeclarationDraft: (
+    productId: string,
+    declarationId: string,
+    input: UpdateTechnicalFileDeclarationDraftRequest,
+  ) =>
+    authenticatedRequestJson({
+      path: declarationPath(productId, declarationId),
+      method: "PATCH",
+      schema: technicalFileDeclarationResponseSchema,
+      inputSchema: updateTechnicalFileDeclarationDraftRequestSchema,
+      body: input,
+    }),
+  issueDeclaration: (
+    productId: string,
+    declarationId: string,
+    input: IssueTechnicalFileDeclarationRequest,
+  ) =>
+    authenticatedRequestJson({
+      path: `${declarationPath(productId, declarationId)}/issue` as `/${string}`,
+      method: "POST",
+      schema: technicalFileDeclarationResponseSchema,
+      inputSchema: issueTechnicalFileDeclarationRequestSchema,
+      body: input,
+    }),
+  reissueDeclaration: (
+    productId: string,
+    declarationId: string,
+    input: ReissueTechnicalFileDeclarationRequest,
+  ) =>
+    authenticatedRequestJson({
+      path: `${declarationPath(productId, declarationId)}/reissue` as `/${string}`,
+      method: "POST",
+      schema: technicalFileDeclarationResponseSchema,
+      inputSchema: reissueTechnicalFileDeclarationRequestSchema,
+      body: input,
+    }),
+  downloadDeclaration: (productId: string, declarationId: string) =>
+    authenticatedRequestJson({
+      path: `${declarationPath(productId, declarationId)}/download` as `/${string}`,
+      schema: technicalFileDeclarationDownloadResponseSchema,
     }),
 });

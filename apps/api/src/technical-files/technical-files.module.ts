@@ -29,7 +29,14 @@ import { TechnicalFileSnapshotUseCases } from "./application/technical-file-snap
 import { SupabaseRiskRegisterRepository } from "./infrastructure/supabase-risk-register.repository";
 import { SupabaseTechnicalFileReadinessRepository } from "./infrastructure/supabase-technical-file-readiness.repository";
 import { SupabaseTechnicalFileSnapshotRepository } from "./infrastructure/supabase-technical-file-snapshot.repository";
+import { SupabaseTechnicalFileDeclarationRepository } from "./infrastructure/supabase-technical-file-declaration.repository";
+import { TechnicalFileDeclarationUseCases } from "./application/technical-file-declaration-use-cases";
+import {
+  TECHNICAL_FILE_DECLARATION_REPOSITORY,
+  type TechnicalFileDeclarationRepository,
+} from "./application/technical-file-declaration.port";
 import { TechnicalFileSnapshotExportWorker } from "./worker/technical-file-snapshot-export-worker";
+import { TechnicalFileDeclarationWorker } from "./worker/technical-file-declaration-worker";
 import { SupabaseTechnicalFileRepository } from "./infrastructure/supabase-technical-file.repository";
 import { TechnicalFilesController } from "./technical-files.controller";
 
@@ -41,7 +48,9 @@ import { TechnicalFilesController } from "./technical-files.controller";
     SupabaseRiskRegisterRepository,
     SupabaseTechnicalFileReadinessRepository,
     SupabaseTechnicalFileSnapshotRepository,
+    SupabaseTechnicalFileDeclarationRepository,
     TechnicalFileSnapshotExportWorker,
+    TechnicalFileDeclarationWorker,
     {
       provide: TECHNICAL_FILE_REPOSITORY,
       useExisting: SupabaseTechnicalFileRepository,
@@ -81,6 +90,18 @@ import { TechnicalFilesController } from "./technical-files.controller";
     {
       provide: TECHNICAL_FILE_SNAPSHOT_REPOSITORY,
       useExisting: SupabaseTechnicalFileSnapshotRepository,
+    },
+    {
+      provide: TECHNICAL_FILE_DECLARATION_REPOSITORY,
+      useExisting: SupabaseTechnicalFileDeclarationRepository,
+    },
+    {
+      provide: TechnicalFileDeclarationUseCases,
+      inject: [TECHNICAL_FILE_DECLARATION_REPOSITORY, PRODUCT_RETENTION_READER],
+      useFactory: (
+        repository: TechnicalFileDeclarationRepository,
+        retention: ProductRetentionReaderPort,
+      ) => new TechnicalFileDeclarationUseCases(repository, retention),
     },
     {
       provide: TechnicalFileSnapshotUseCases,

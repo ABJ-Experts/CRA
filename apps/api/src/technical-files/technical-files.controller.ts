@@ -38,6 +38,15 @@ import {
   technicalFileSnapshotParamsSchema,
   technicalFileSnapshotResponseSchema,
   technicalFileSnapshotsResponseSchema,
+  createTechnicalFileDeclarationDraftRequestSchema,
+  updateTechnicalFileDeclarationDraftRequestSchema,
+  issueTechnicalFileDeclarationRequestSchema,
+  reissueTechnicalFileDeclarationRequestSchema,
+  technicalFileDeclarationParamsSchema,
+  technicalFileDeclarationPreviewResponseSchema,
+  technicalFileDeclarationResponseSchema,
+  technicalFileDeclarationsResponseSchema,
+  technicalFileDeclarationDownloadResponseSchema,
   technicalFileSectionParamsSchema,
   technicalFileSectionResponseSchema,
   updateTechnicalFileSectionRequestSchema,
@@ -51,6 +60,10 @@ import {
   type CreateTechnicalFileSnapshotExportRequest,
   type CreateTechnicalFileSnapshotRequest,
   type TechnicalFileSnapshotDownloadQuery,
+  type CreateTechnicalFileDeclarationDraftRequest,
+  type UpdateTechnicalFileDeclarationDraftRequest,
+  type IssueTechnicalFileDeclarationRequest,
+  type ReissueTechnicalFileDeclarationRequest,
 } from "@repo/contracts/technical-files";
 import {
   acceptResidualRiskRequestSchema,
@@ -99,6 +112,11 @@ import {
   TechnicalFileSnapshotConflictError,
   TechnicalFileSnapshotInvalidRequestError,
 } from "./application/technical-file-snapshot.port";
+import { TechnicalFileDeclarationUseCases } from "./application/technical-file-declaration-use-cases";
+import {
+  TechnicalFileDeclarationConflictError,
+  TechnicalFileDeclarationInvalidRequestError,
+} from "./application/technical-file-declaration.port";
 
 @Controller("products/:productId/technical-file")
 export class TechnicalFilesController {
@@ -109,6 +127,7 @@ export class TechnicalFilesController {
     private readonly riskRegisters: RiskRegisterUseCases,
     private readonly readiness: TechnicalFileReadinessUseCases,
     private readonly snapshots: TechnicalFileSnapshotUseCases,
+    private readonly declarations: TechnicalFileDeclarationUseCases,
   ) {}
 
   @Get()
@@ -521,6 +540,170 @@ export class TechnicalFilesController {
     }
   }
 
+  @Get("declarations")
+  @RequirePermissions("can_view_technical_files")
+  @ZodResponse(technicalFileDeclarationsResponseSchema)
+  async declarationsList(
+    @Param(zodParams(technicalFileProductParamsSchema))
+    params: { productId: string },
+    @CurrentUser() user: RequestUser,
+  ) {
+    try {
+      return {
+        declarations: this.require(
+          await this.declarations.list(organizationId(user), {
+            actorId: user.id,
+            ...params,
+          }),
+        ),
+      };
+    } catch (error) {
+      throw declarationReadFailure(error);
+    }
+  }
+
+  @Get("declarations/preview/:snapshotId")
+  @RequirePermissions("can_view_technical_files")
+  @ZodResponse(technicalFileDeclarationPreviewResponseSchema)
+  async declarationPreview(
+    @Param(zodParams(technicalFileSnapshotParamsSchema))
+    params: { productId: string; snapshotId: string },
+    @CurrentUser() user: RequestUser,
+  ) {
+    try {
+      return {
+        preview: this.require(
+          await this.declarations.preview(organizationId(user), {
+            actorId: user.id,
+            ...params,
+          }),
+        ),
+      };
+    } catch (error) {
+      throw declarationReadFailure(error);
+    }
+  }
+
+  @Post("declarations")
+  @RequirePermissions("can_issue_technical_files")
+  @ZodResponse(technicalFileDeclarationResponseSchema)
+  async saveDeclarationDraft(
+    @Param(zodParams(technicalFileProductParamsSchema))
+    params: { productId: string },
+    @Body(zodBody(createTechnicalFileDeclarationDraftRequestSchema))
+    input: CreateTechnicalFileDeclarationDraftRequest,
+    @CurrentUser() user: RequestUser,
+  ) {
+    try {
+      return {
+        declaration: this.require(
+          await this.declarations.saveDraft(organizationId(user), {
+            actorId: user.id,
+            ...params,
+            ...input,
+          }),
+        ),
+      };
+    } catch (error) {
+      throw declarationMutationFailure(error);
+    }
+  }
+
+  @Patch("declarations/:declarationId")
+  @RequirePermissions("can_issue_technical_files")
+  @ZodResponse(technicalFileDeclarationResponseSchema)
+  async updateDeclarationDraft(
+    @Param(zodParams(technicalFileDeclarationParamsSchema))
+    params: { productId: string; declarationId: string },
+    @Body(zodBody(updateTechnicalFileDeclarationDraftRequestSchema))
+    input: UpdateTechnicalFileDeclarationDraftRequest,
+    @CurrentUser() user: RequestUser,
+  ) {
+    try {
+      return {
+        declaration: this.require(
+          await this.declarations.saveDraft(organizationId(user), {
+            actorId: user.id,
+            ...params,
+            ...input,
+          }),
+        ),
+      };
+    } catch (error) {
+      throw declarationMutationFailure(error);
+    }
+  }
+
+  @Post("declarations/:declarationId/issue")
+  @RequirePermissions("can_issue_technical_files")
+  @ZodResponse(technicalFileDeclarationResponseSchema)
+  async issueDeclaration(
+    @Param(zodParams(technicalFileDeclarationParamsSchema))
+    params: { productId: string; declarationId: string },
+    @Body(zodBody(issueTechnicalFileDeclarationRequestSchema))
+    input: IssueTechnicalFileDeclarationRequest,
+    @CurrentUser() user: RequestUser,
+  ) {
+    try {
+      return {
+        declaration: this.require(
+          await this.declarations.issue(organizationId(user), {
+            actorId: user.id,
+            ...params,
+            ...input,
+          }),
+        ),
+      };
+    } catch (error) {
+      throw declarationMutationFailure(error);
+    }
+  }
+
+  @Post("declarations/:declarationId/reissue")
+  @RequirePermissions("can_issue_technical_files")
+  @ZodResponse(technicalFileDeclarationResponseSchema)
+  async reissueDeclaration(
+    @Param(zodParams(technicalFileDeclarationParamsSchema))
+    params: { productId: string; declarationId: string },
+    @Body(zodBody(reissueTechnicalFileDeclarationRequestSchema))
+    input: ReissueTechnicalFileDeclarationRequest,
+    @CurrentUser() user: RequestUser,
+  ) {
+    try {
+      return {
+        declaration: this.require(
+          await this.declarations.reissue(organizationId(user), {
+            actorId: user.id,
+            ...params,
+            ...input,
+          }),
+        ),
+      };
+    } catch (error) {
+      throw declarationMutationFailure(error);
+    }
+  }
+
+  @Get("declarations/:declarationId/download")
+  @RequirePermissions("can_view_technical_files")
+  @ZodResponse(technicalFileDeclarationDownloadResponseSchema)
+  async downloadDeclaration(
+    @Param(zodParams(technicalFileDeclarationParamsSchema))
+    params: { productId: string; declarationId: string },
+    @CurrentUser() user: RequestUser,
+  ) {
+    try {
+      return this.require(
+        await this.declarations.download(organizationId(user), {
+          actorId: user.id,
+          ...params,
+        }),
+      );
+    } catch (error) {
+      throw declarationReadFailure(error);
+    }
+  }
+
   @Get("risk-register")
   @RequirePermissions("can_view_technical_files")
   @ZodResponse(riskRegisterWorkspaceResponseSchema)
@@ -810,5 +993,36 @@ function snapshotReadFailure(error: unknown): Error {
   return new ServiceUnavailableException({
     code: "technical_file_snapshot_unavailable",
     message: "Technical-file snapshots are temporarily unavailable.",
+  });
+}
+
+function declarationMutationFailure(error: unknown): Error {
+  if (error instanceof HttpException) return error;
+  if (error instanceof TechnicalFileProductUnavailableError) return notFound();
+  if (error instanceof TechnicalFileDeclarationConflictError) {
+    return new ConflictException({
+      code: "version_conflict",
+      message: "The declaration changed. Reload before issuing.",
+      ...(error.currentVersion ? { currentVersion: error.currentVersion } : {}),
+    });
+  }
+  if (error instanceof TechnicalFileDeclarationInvalidRequestError)
+    return notFound();
+  return new ServiceUnavailableException({
+    code: "technical_file_declaration_unavailable",
+    message: "Declarations are temporarily unavailable.",
+  });
+}
+
+function declarationReadFailure(error: unknown): Error {
+  if (error instanceof HttpException) return error;
+  if (
+    error instanceof TechnicalFileProductUnavailableError ||
+    error instanceof TechnicalFileDeclarationInvalidRequestError
+  )
+    return notFound();
+  return new ServiceUnavailableException({
+    code: "technical_file_declaration_unavailable",
+    message: "Declarations are temporarily unavailable.",
   });
 }

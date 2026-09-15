@@ -9697,6 +9697,213 @@ export type Database = {
           },
         ]
       }
+      technical_file_declaration_templates: {
+        Row: {
+          content: Json
+          created_at: string
+          id: string
+          mandatory_field_keys: Json
+          regulation_reference: string
+          template_key: string
+          template_version: string
+        }
+        Insert: {
+          content: Json
+          created_at?: string
+          id?: string
+          mandatory_field_keys: Json
+          regulation_reference: string
+          template_key: string
+          template_version: string
+        }
+        Update: {
+          content?: Json
+          created_at?: string
+          id?: string
+          mandatory_field_keys?: Json
+          regulation_reference?: string
+          template_key?: string
+          template_version?: string
+        }
+        Relationships: []
+      }
+      technical_file_declarations: {
+        Row: {
+          assessment_route: string | null
+          certificate_references: Json
+          command_digest: string
+          created_at: string
+          declaration_version: number
+          draft_version: number
+          failure_code: string | null
+          id: string
+          idempotency_key: string
+          immutable_payload: Json | null
+          immutable_payload_sha256: string | null
+          issue_place: string
+          issued_at: string | null
+          lease_expires_at: string | null
+          lease_owner: string | null
+          missing_facts: Json
+          notified_body: Json | null
+          notified_body_identifier: string | null
+          organization_id: string
+          pdf_bytes: number | null
+          pdf_object_path: string | null
+          pdf_sha256: string | null
+          preview_digest: string | null
+          product_id: string
+          reissue_reason: string | null
+          signatory_capacity: string
+          signatory_name: string
+          signatory_place: string | null
+          signatory_user_id: string
+          snapshot_id: string
+          snapshot_sha256: string | null
+          source_provenance: Json
+          status: string
+          superseded_by_declaration_id: string | null
+          supersedes_declaration_id: string | null
+          template_id: string
+          updated_at: string
+        }
+        Insert: {
+          assessment_route?: string | null
+          certificate_references?: Json
+          command_digest: string
+          created_at?: string
+          declaration_version: number
+          draft_version?: number
+          failure_code?: string | null
+          id?: string
+          idempotency_key: string
+          immutable_payload?: Json | null
+          immutable_payload_sha256?: string | null
+          issue_place: string
+          issued_at?: string | null
+          lease_expires_at?: string | null
+          lease_owner?: string | null
+          missing_facts?: Json
+          notified_body?: Json | null
+          notified_body_identifier?: string | null
+          organization_id: string
+          pdf_bytes?: number | null
+          pdf_object_path?: string | null
+          pdf_sha256?: string | null
+          preview_digest?: string | null
+          product_id: string
+          reissue_reason?: string | null
+          signatory_capacity: string
+          signatory_name: string
+          signatory_place?: string | null
+          signatory_user_id: string
+          snapshot_id: string
+          snapshot_sha256?: string | null
+          source_provenance?: Json
+          status?: string
+          superseded_by_declaration_id?: string | null
+          supersedes_declaration_id?: string | null
+          template_id: string
+          updated_at?: string
+        }
+        Update: {
+          assessment_route?: string | null
+          certificate_references?: Json
+          command_digest?: string
+          created_at?: string
+          declaration_version?: number
+          draft_version?: number
+          failure_code?: string | null
+          id?: string
+          idempotency_key?: string
+          immutable_payload?: Json | null
+          immutable_payload_sha256?: string | null
+          issue_place?: string
+          issued_at?: string | null
+          lease_expires_at?: string | null
+          lease_owner?: string | null
+          missing_facts?: Json
+          notified_body?: Json | null
+          notified_body_identifier?: string | null
+          organization_id?: string
+          pdf_bytes?: number | null
+          pdf_object_path?: string | null
+          pdf_sha256?: string | null
+          preview_digest?: string | null
+          product_id?: string
+          reissue_reason?: string | null
+          signatory_capacity?: string
+          signatory_name?: string
+          signatory_place?: string | null
+          signatory_user_id?: string
+          snapshot_id?: string
+          snapshot_sha256?: string | null
+          source_provenance?: Json
+          status?: string
+          superseded_by_declaration_id?: string | null
+          supersedes_declaration_id?: string | null
+          template_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "technical_file_declarations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "technical_file_declarations_organization_id_product_id_fkey"
+            columns: ["organization_id", "product_id"]
+            isOneToOne: false
+            referencedRelation: "product_retention_alert_operations"
+            referencedColumns: ["organization_id", "product_id"]
+          },
+          {
+            foreignKeyName: "technical_file_declarations_organization_id_product_id_fkey"
+            columns: ["organization_id", "product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "technical_file_declarations_organization_id_snapshot_id_fkey"
+            columns: ["organization_id", "snapshot_id"]
+            isOneToOne: false
+            referencedRelation: "technical_file_snapshots"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "technical_file_declarations_organization_id_superseded_by__fkey"
+            columns: ["organization_id", "superseded_by_declaration_id"]
+            isOneToOne: false
+            referencedRelation: "technical_file_declarations"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "technical_file_declarations_organization_id_supersedes_dec_fkey"
+            columns: ["organization_id", "supersedes_declaration_id"]
+            isOneToOne: false
+            referencedRelation: "technical_file_declarations"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "technical_file_declarations_signatory_user_id_fkey"
+            columns: ["signatory_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "technical_file_declarations_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "technical_file_declaration_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       technical_file_risk_commands: {
         Row: {
           actor_user_id: string
@@ -15689,6 +15896,13 @@ export type Database = {
           run: Json
         }[]
       }
+      claim_technical_file_declaration: {
+        Args: { p_lease_seconds?: number; p_worker_id: string }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
       claim_technical_file_snapshot_export: {
         Args: { p_lease_seconds?: number; p_worker_id: string }
         Returns: {
@@ -17283,6 +17497,18 @@ export type Database = {
           run: Json
         }[]
       }
+      fail_technical_file_declaration_atomic: {
+        Args: {
+          p_declaration_id: string
+          p_failure_code: string
+          p_organization_id: string
+          p_worker_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
       fail_technical_file_snapshot_export_atomic: {
         Args: {
           p_export_id: string
@@ -17533,6 +17759,20 @@ export type Database = {
           outcome: string
           source: Json
           submission: Json
+        }[]
+      }
+      finalize_technical_file_declaration_atomic: {
+        Args: {
+          p_declaration_id: string
+          p_organization_id: string
+          p_pdf_bytes: number
+          p_pdf_object_path: string
+          p_pdf_sha256: string
+          p_worker_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
         }[]
       }
       finalize_technical_file_snapshot_export_atomic: {
@@ -18266,6 +18506,63 @@ export type Database = {
           result: Json
         }[]
       }
+      get_technical_file_declaration_download_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_declaration_id: string
+          p_organization_id: string
+          p_product_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      get_technical_file_declaration_preview: {
+        Args: {
+          p_actor_user_id: string
+          p_assessment_route?: string
+          p_certificate_references?: Json
+          p_issue_place: string
+          p_notified_body_identifier?: string
+          p_organization_id: string
+          p_product_id: string
+          p_signatory_capacity: string
+          p_snapshot_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      get_technical_file_declaration_preview_contract: {
+        Args: {
+          p_actor_user_id: string
+          p_assessment_route?: string
+          p_certificate_references?: Json
+          p_issue_place?: string
+          p_notified_body_identifier?: string
+          p_organization_id: string
+          p_product_id: string
+          p_signatory_capacity?: string
+          p_snapshot_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      get_technical_file_declarations: {
+        Args: {
+          p_actor_user_id: string
+          p_organization_id: string
+          p_product_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
       get_technical_file_evidence_reverse_links: {
         Args: {
           p_actor_user_id: string
@@ -18465,6 +18762,23 @@ export type Database = {
       }
       is_iso_3166_alpha_2: { Args: { p_country: string }; Returns: boolean }
       is_login_locked: { Args: { p_email: string }; Returns: string }
+      issue_technical_file_declaration_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_confirmed: boolean
+          p_declaration_id: string
+          p_expected_draft_version: number
+          p_idempotency_key: string
+          p_organization_id: string
+          p_preview_digest: string
+          p_product_id: string
+          p_snapshot_sha256: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
       link_external_identity_atomic: {
         Args: {
           p_actor_user_id: string
@@ -20086,6 +20400,22 @@ export type Database = {
         Returns: boolean
       }
       m6_utc_second_z: { Args: { p_value: string }; Returns: string }
+      m7_declaration_json: {
+        Args: {
+          p_declaration_id: string
+          p_include_payload?: boolean
+          p_organization_id: string
+        }
+        Returns: Json
+      }
+      m7_declaration_missing_facts_contract: {
+        Args: { p_missing: Json }
+        Returns: Json
+      }
+      m7_declaration_template_contract: {
+        Args: { p_template_id: string }
+        Returns: Json
+      }
       m7_evidence_link_json: {
         Args: {
           p_organization_id: string
@@ -21221,6 +21551,48 @@ export type Database = {
         }
         Returns: {
           outcome: string
+        }[]
+      }
+      reissue_technical_file_declaration_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_assessment_route: string
+          p_certificate_references: Json
+          p_current_declaration_id: string
+          p_expected_declaration_version: number
+          p_idempotency_key: string
+          p_issue_place: string
+          p_notified_body_identifier: string
+          p_organization_id: string
+          p_product_id: string
+          p_reason: string
+          p_signatory_capacity: string
+          p_snapshot_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      reissue_technical_file_declaration_contract_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_assessment_route: string
+          p_certificate_references: Json
+          p_current_declaration_id: string
+          p_expected_declaration_version: number
+          p_idempotency_key: string
+          p_issue_place: string
+          p_notified_body_identifier: string
+          p_organization_id: string
+          p_product_id: string
+          p_reason: string
+          p_signatory_capacity: string
+          p_snapshot_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
         }[]
       }
       reject_sbom_source_integrity_atomic:
@@ -22681,6 +23053,46 @@ export type Database = {
         Returns: {
           outcome: string
           policy: Json
+        }[]
+      }
+      upsert_technical_file_declaration_draft_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_assessment_route: string
+          p_certificate_references: Json
+          p_declaration_id: string
+          p_expected_draft_version: number
+          p_idempotency_key: string
+          p_issue_place: string
+          p_notified_body_identifier: string
+          p_organization_id: string
+          p_product_id: string
+          p_signatory_capacity: string
+          p_snapshot_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      upsert_technical_file_declaration_draft_contract_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_assessment_route: string
+          p_certificate_references: Json
+          p_declaration_id: string
+          p_expected_draft_version: number
+          p_idempotency_key: string
+          p_issue_place: string
+          p_notified_body_identifier: string
+          p_organization_id: string
+          p_product_id: string
+          p_signatory_capacity: string
+          p_snapshot_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
         }[]
       }
       upsert_vulnerability_component_occurrence_m4_04: {

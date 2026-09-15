@@ -32,6 +32,9 @@ vi.mock("../../_features/risk-register/risk-register-workspace", () => ({
 vi.mock("../../_features/technical-files/technical-file-snapshots", () => ({
   TechnicalFileSnapshots: () => <div>Technical-file snapshots</div>,
 }));
+vi.mock("../../_features/technical-files/technical-file-declarations", () => ({
+  TechnicalFileDeclarations: () => <div>EU declarations of conformity</div>,
+}));
 
 const section = {
   id: "11111111-1111-4111-8111-111111111111",

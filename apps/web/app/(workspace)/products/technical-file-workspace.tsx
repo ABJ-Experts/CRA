@@ -22,6 +22,7 @@ import {
   useUpdateTechnicalFileSectionMutation,
 } from "../../_features/technical-files/technical-files.queries";
 import { TechnicalFileSnapshots } from "../../_features/technical-files/technical-file-snapshots";
+import { TechnicalFileDeclarations } from "../../_features/technical-files/technical-file-declarations";
 import { RiskRegisterWorkspace } from "../../_features/risk-register/risk-register-workspace";
 import { ApiClientError } from "../../_lib/http/api-client";
 import { useMocksReady } from "../../_providers/providers";
@@ -896,6 +897,7 @@ function TechnicalFileOverview({
   canEdit,
   canView,
   canSnapshot,
+  canIssue,
   enabled,
 }: {
   productId: string;
@@ -904,6 +906,7 @@ function TechnicalFileOverview({
   canEdit: boolean;
   canView: boolean;
   canSnapshot: boolean;
+  canIssue: boolean;
   enabled: boolean;
 }) {
   const [selectedKey, setSelectedKey] = useState<
@@ -1001,6 +1004,12 @@ function TechnicalFileOverview({
           canView={canView}
           canSnapshot={canSnapshot}
         />
+        <TechnicalFileDeclarations
+          productId={productId}
+          enabled={enabled}
+          canView={canView}
+          canIssue={canIssue}
+        />
       </div>
     </SectionCard>
   );
@@ -1016,6 +1025,7 @@ export function TechnicalFileWorkspace({ productId }: { productId: string }) {
   const canView = permissions.can_view_technical_files === true;
   const canEdit = permissions.can_edit_technical_files === true;
   const canSnapshot = permissions.can_snapshot_technical_files === true;
+  const canIssue = permissions.can_issue_technical_files === true;
   const file = useTechnicalFileQuery(
     productId,
     liveApiEnabled && hasMembership && canView,
@@ -1138,6 +1148,7 @@ export function TechnicalFileWorkspace({ productId }: { productId: string }) {
           canEdit={canEdit}
           canView={canView}
           canSnapshot={canSnapshot}
+          canIssue={canIssue}
           enabled={liveApiEnabled && hasMembership && canView}
         />
       ) : null}

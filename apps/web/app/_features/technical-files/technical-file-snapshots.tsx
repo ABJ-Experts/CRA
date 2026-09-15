@@ -95,6 +95,7 @@ export function TechnicalFileSnapshots({
   return (
     <section
       aria-labelledby="technical-file-snapshots-heading"
+      id="technical-file-snapshots"
       className="rounded-xl border border-border bg-surface-subtle p-4"
     >
       <div>

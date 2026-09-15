@@ -25,6 +25,7 @@
     "worker:sbom-diff": "node dist/sbom-diff-worker.js",
     "worker:sbom-composite": "node dist/sbom-composite-worker.js",
     "worker:technical-file-export": "node dist/technical-file-export-worker.js",
+    "worker:technical-file-declaration": "node dist/technical-file-declaration-worker.js",
     "worker:vulnerability-feeds": "node dist/vulnerability-feed-worker.js",
     "worker:vulnerability-matching": "node dist/vulnerability-matching-worker.js",
     "worker:vulnerability-reevaluation": "node dist/vulnerability-reevaluation-worker.js",

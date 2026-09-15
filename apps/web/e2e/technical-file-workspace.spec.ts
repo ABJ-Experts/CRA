@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { execFileSync } from "node:child_process";
 
 /* eslint-disable turbo/no-undeclared-env-vars -- Playwright is outside Turbo. */
 
@@ -231,6 +232,86 @@ test("owner captures an immutable audit snapshot and queues its export", async (
 
   await page.screenshot({
     path: testInfo.outputPath("technical-file-snapshot-queued.png"),
+    fullPage: true,
+  });
+});
+
+test("owner issues, downloads, and reissues an EU declaration", async ({
+  page,
+  context,
+}, testInfo) => {
+  await signInAsLocalOwner(page);
+  await page.goto(`/products/${productId}/technical-file`);
+
+  await expect(
+    page.getByRole("heading", { name: "EU declarations of conformity" }),
+  ).toBeVisible();
+
+  await page
+    .getByLabel("Responsible signatory capacity")
+    .fill("Head of Compliance");
+  await page.getByLabel("Place of issue").fill("Paris");
+  await page.screenshot({
+    path: testInfo.outputPath("technical-file-declaration-draft.png"),
+    fullPage: true,
+  });
+
+  const reissue = page.getByRole("button", { name: "Reissue" }).first();
+  if (await reissue.isVisible()) {
+    await reissue.click();
+    await page
+      .getByLabel("Reason for reissue")
+      .fill("Local E2E verifies immutable reissue and retained history.");
+    await page.getByRole("button", { name: "Create reissue draft" }).click();
+    await expect(page.getByRole("status").last()).toContainText(
+      "new declaration draft",
+    );
+  } else {
+    await page.getByRole("button", { name: "Save declaration draft" }).click();
+    await expect(page.getByRole("status").last()).toContainText(
+      "Declaration draft saved",
+    );
+  }
+
+  const issue = page
+    .getByRole("button", { name: /Review and issue version \d+/ })
+    .first();
+  await expect(issue).toBeVisible();
+  const issueLabel = (await issue.textContent()) ?? "";
+  const issuedVersion = issueLabel.match(/version (\d+)/)?.[1];
+  if (!issuedVersion) throw new Error("Issued declaration version not found");
+  await issue.click();
+  await expect(
+    page.getByRole("heading", {
+      name: new RegExp(`Issue declaration version ${issuedVersion}`),
+    }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Confirm issue" }).click();
+  await expect(page.getByRole("status").last()).toContainText(
+    "immutable payload",
+  );
+
+  execFileSync(
+    "pnpm",
+    ["--filter", "api", "exec", "ts-node", "src/technical-file-declaration-worker.ts"],
+    { cwd: "../..", env: process.env, stdio: "pipe" },
+  );
+
+  await page.reload();
+  await expect(
+    page.getByText(new RegExp(`Version ${issuedVersion} · issued`, "i")),
+  ).toBeVisible();
+  await expect(page.getByText(/Version \d+ · superseded/i).first()).toBeVisible();
+
+  const popup = context.waitForEvent("page");
+  await page.getByRole("button", { name: "Download PDF" }).first().click();
+  const downloadPage = await popup;
+  await downloadPage.waitForLoadState("domcontentloaded");
+  expect(downloadPage.url()).toContain("technical-file-declarations");
+  await downloadPage.close();
+
+  await page.screenshot({
+    path: testInfo.outputPath("technical-file-declaration-issued.png"),
     fullPage: true,
   });
 });
