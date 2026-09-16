@@ -333,6 +333,20 @@ export const envSchema = z.object({
    * Strict deployments quarantine instead, so an invalid value must fail boot.
    */
   BRANDING_SCANNER_STRICT: strictBoolean(false),
+  /** ClamD is intentionally optional at API boot: absent/unreachable scanning
+   * leaves newly uploaded evidence pending rather than making it usable. */
+  EVIDENCE_CLAMAV_HOST: z.string().trim().min(1).optional(),
+  EVIDENCE_CLAMAV_PORT: optionalBoundedInt(65_535, "must not exceed 65535"),
+  EVIDENCE_CLAMAV_CONNECT_TIMEOUT_MS: boundedInt(
+    3_000,
+    30_000,
+    "must not exceed 30000 milliseconds",
+  ),
+  EVIDENCE_CLAMAV_SCAN_TIMEOUT_MS: boundedInt(
+    120_000,
+    600_000,
+    "must not exceed 600000 milliseconds",
+  ),
   /**
    * Tolerance when comparing a JWT's `iat` against `users.session_epoch_at`.
    *

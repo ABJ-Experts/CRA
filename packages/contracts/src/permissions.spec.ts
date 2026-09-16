@@ -224,6 +224,56 @@ describe("technical-file permissions", () => {
   });
 });
 
+describe("evidence permissions", () => {
+  it("grants the planned evidence defaults without making manage implicit", () => {
+    for (const baseRole of ["owner", "admin"] as const) {
+      expect(
+        hasPermission(
+          DEFAULT_PERMISSIONS_BY_ROLE[baseRole],
+          "can_manage_evidence",
+        ),
+      ).toBe(true);
+    }
+    expect(
+      hasPermission(DEFAULT_PERMISSIONS_BY_ROLE.member, "can_view_evidence"),
+    ).toBe(true);
+    expect(
+      hasPermission(DEFAULT_PERMISSIONS_BY_ROLE.member, "can_upload_evidence"),
+    ).toBe(true);
+    expect(
+      hasPermission(DEFAULT_PERMISSIONS_BY_ROLE.member, "can_manage_evidence"),
+    ).toBe(false);
+    expect(
+      hasPermission(DEFAULT_PERMISSIONS_BY_ROLE.viewer, "can_view_evidence"),
+    ).toBe(true);
+    expect(
+      hasPermission(DEFAULT_PERMISSIONS_BY_ROLE.viewer, "can_upload_evidence"),
+    ).toBe(false);
+  });
+
+  it("keeps custom evidence grants additive and organization revocation final", () => {
+    expect(
+      hasPermission(
+        resolveEffectivePermissions({
+          baseRole: "viewer",
+          customRoles: [role({ permissions: { can_upload_evidence: true } })],
+        }),
+        "can_view_evidence",
+      ),
+    ).toBe(true);
+    expect(
+      hasPermission(
+        resolveEffectivePermissions({
+          baseRole: "member",
+          customRoles: [role({ permissions: { can_manage_evidence: true } })],
+          baseRoleOverrides: { can_manage_evidence: false },
+        }),
+        "can_manage_evidence",
+      ),
+    ).toBe(false);
+  });
+});
+
 describe("hasPermission", () => {
   it("treats undefined and false alike as denial", () => {
     const set = { can_view_orders: true, can_edit_orders: false } as const;

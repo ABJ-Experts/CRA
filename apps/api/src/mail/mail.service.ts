@@ -335,6 +335,28 @@ export class MailService {
   }
 
   /**
+   * Quarantine notifications deliberately contain no file name, URL, hash, or
+   * malware signature. The authenticated evidence surface rechecks access
+   * before showing any further metadata.
+   */
+  async sendEvidenceQuarantinedAlert(
+    to: string,
+    idempotencyKey: string,
+  ): Promise<void> {
+    await this.send(
+      to,
+      "Evidence upload requires review",
+      this.layout(
+        "Evidence upload requires review",
+        `<p style="color:#4b5058;font-size:14px">An evidence upload you own could not be cleared by the security scan and has been quarantined.</p>
+         <p style="color:#4b5058;font-size:14px">Open CRA to review the safe status details. Do not attempt to retrieve or redistribute the uploaded file.</p>`,
+      ),
+      true,
+      idempotencyKey,
+    );
+  }
+
+  /**
    * Reporting monitors own the outbox and pass no assessment, evidence, or
    * finding text into this mail boundary. The recipient still receives an
    * authenticated link; the reporting API rechecks access when it is opened.

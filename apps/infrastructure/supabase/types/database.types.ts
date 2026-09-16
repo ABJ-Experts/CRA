@@ -528,6 +528,370 @@ export type Database = {
           },
         ]
       }
+      evidence_document_notification_outbox: {
+        Row: {
+          attempt_count: number
+          created_at: string
+          event_type: string
+          id: string
+          last_error: string | null
+          lease_expires_at: string | null
+          lease_owner: string | null
+          next_attempt_at: string
+          organization_id: string
+          owner_user_id: string
+          sent_at: string | null
+          status: string
+          version_id: string
+        }
+        Insert: {
+          attempt_count?: number
+          created_at?: string
+          event_type: string
+          id?: string
+          last_error?: string | null
+          lease_expires_at?: string | null
+          lease_owner?: string | null
+          next_attempt_at?: string
+          organization_id: string
+          owner_user_id: string
+          sent_at?: string | null
+          status?: string
+          version_id: string
+        }
+        Update: {
+          attempt_count?: number
+          created_at?: string
+          event_type?: string
+          id?: string
+          last_error?: string | null
+          lease_expires_at?: string | null
+          lease_owner?: string | null
+          next_attempt_at?: string
+          organization_id?: string
+          owner_user_id?: string
+          sent_at?: string | null
+          status?: string
+          version_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evidence_document_notification__organization_id_version_id_fkey"
+            columns: ["organization_id", "version_id"]
+            isOneToOne: false
+            referencedRelation: "evidence_document_versions"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "evidence_document_notification_outbox_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evidence_document_notification_outbox_owner_user_id_fkey"
+            columns: ["owner_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      evidence_document_scan_jobs: {
+        Row: {
+          attempt_count: number
+          created_at: string
+          id: string
+          last_error: string | null
+          lease_expires_at: string | null
+          lease_owner: string | null
+          next_attempt_at: string
+          organization_id: string
+          status: string
+          updated_at: string
+          version_id: string
+        }
+        Insert: {
+          attempt_count?: number
+          created_at?: string
+          id?: string
+          last_error?: string | null
+          lease_expires_at?: string | null
+          lease_owner?: string | null
+          next_attempt_at?: string
+          organization_id: string
+          status?: string
+          updated_at?: string
+          version_id: string
+        }
+        Update: {
+          attempt_count?: number
+          created_at?: string
+          id?: string
+          last_error?: string | null
+          lease_expires_at?: string | null
+          lease_owner?: string | null
+          next_attempt_at?: string
+          organization_id?: string
+          status?: string
+          updated_at?: string
+          version_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evidence_document_scan_jobs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evidence_document_scan_jobs_organization_id_version_id_fkey"
+            columns: ["organization_id", "version_id"]
+            isOneToOne: true
+            referencedRelation: "evidence_document_versions"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      evidence_document_version_products: {
+        Row: {
+          organization_id: string
+          product_id: string
+          version_id: string
+        }
+        Insert: {
+          organization_id: string
+          product_id: string
+          version_id: string
+        }
+        Update: {
+          organization_id?: string
+          product_id?: string
+          version_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evidence_document_version_produ_organization_id_product_id_fkey"
+            columns: ["organization_id", "product_id"]
+            isOneToOne: false
+            referencedRelation: "product_retention_alert_operations"
+            referencedColumns: ["organization_id", "product_id"]
+          },
+          {
+            foreignKeyName: "evidence_document_version_produ_organization_id_product_id_fkey"
+            columns: ["organization_id", "product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "evidence_document_version_produ_organization_id_version_id_fkey"
+            columns: ["organization_id", "version_id"]
+            isOneToOne: false
+            referencedRelation: "evidence_document_versions"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "evidence_document_version_products_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      evidence_document_versions: {
+        Row: {
+          actual_size_bytes: number | null
+          created_at: string
+          declared_size_bytes: number
+          detected_media_type: string | null
+          document_class: string
+          document_id: string
+          failure_code: string | null
+          finalize_idempotency_key: string | null
+          finalize_request_digest: string | null
+          finalized_at: string | null
+          id: string
+          initialize_idempotency_key: string
+          initialize_request_digest: string
+          object_bucket: string
+          object_key: string
+          organization_id: string
+          original_filename: string
+          original_sha256: string | null
+          owner_user_id: string
+          processing_state: string
+          retention_evidence_class: string
+          scan_detection: string | null
+          scan_engine_name: string | null
+          scan_engine_version: string | null
+          scan_signature_version: string | null
+          scanned_at: string | null
+          title: string
+          upload_expires_at: string
+          uploader_user_id: string
+          validity_ends_on: string | null
+          validity_starts_on: string | null
+          version_number: number
+        }
+        Insert: {
+          actual_size_bytes?: number | null
+          created_at?: string
+          declared_size_bytes: number
+          detected_media_type?: string | null
+          document_class: string
+          document_id: string
+          failure_code?: string | null
+          finalize_idempotency_key?: string | null
+          finalize_request_digest?: string | null
+          finalized_at?: string | null
+          id?: string
+          initialize_idempotency_key: string
+          initialize_request_digest: string
+          object_bucket?: string
+          object_key: string
+          organization_id: string
+          original_filename: string
+          original_sha256?: string | null
+          owner_user_id: string
+          processing_state?: string
+          retention_evidence_class: string
+          scan_detection?: string | null
+          scan_engine_name?: string | null
+          scan_engine_version?: string | null
+          scan_signature_version?: string | null
+          scanned_at?: string | null
+          title: string
+          upload_expires_at: string
+          uploader_user_id: string
+          validity_ends_on?: string | null
+          validity_starts_on?: string | null
+          version_number: number
+        }
+        Update: {
+          actual_size_bytes?: number | null
+          created_at?: string
+          declared_size_bytes?: number
+          detected_media_type?: string | null
+          document_class?: string
+          document_id?: string
+          failure_code?: string | null
+          finalize_idempotency_key?: string | null
+          finalize_request_digest?: string | null
+          finalized_at?: string | null
+          id?: string
+          initialize_idempotency_key?: string
+          initialize_request_digest?: string
+          object_bucket?: string
+          object_key?: string
+          organization_id?: string
+          original_filename?: string
+          original_sha256?: string | null
+          owner_user_id?: string
+          processing_state?: string
+          retention_evidence_class?: string
+          scan_detection?: string | null
+          scan_engine_name?: string | null
+          scan_engine_version?: string | null
+          scan_signature_version?: string | null
+          scanned_at?: string | null
+          title?: string
+          upload_expires_at?: string
+          uploader_user_id?: string
+          validity_ends_on?: string | null
+          validity_starts_on?: string | null
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evidence_document_versions_organization_id_document_id_fkey"
+            columns: ["organization_id", "document_id"]
+            isOneToOne: false
+            referencedRelation: "evidence_documents"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "evidence_document_versions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evidence_document_versions_owner_user_id_fkey"
+            columns: ["owner_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evidence_document_versions_retention_evidence_class_fkey"
+            columns: ["retention_evidence_class"]
+            isOneToOne: false
+            referencedRelation: "retention_evidence_classes"
+            referencedColumns: ["identifier"]
+          },
+          {
+            foreignKeyName: "evidence_document_versions_uploader_user_id_fkey"
+            columns: ["uploader_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      evidence_documents: {
+        Row: {
+          created_at: string
+          created_by: string
+          current_version_id: string | null
+          id: string
+          organization_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          current_version_id?: string | null
+          id?: string
+          organization_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          current_version_id?: string | null
+          id?: string
+          organization_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evidence_documents_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evidence_documents_current_version_fkey"
+            columns: ["organization_id", "current_version_id"]
+            isOneToOne: false
+            referencedRelation: "evidence_document_versions"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "evidence_documents_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       evidence_protection_watermarks: {
         Row: {
           evidence_class: string
@@ -15879,6 +16243,22 @@ export type Database = {
         }
         Returns: string
       }
+      claim_evidence_document_notification_atomic: {
+        Args: {
+          p_lease_seconds: number
+          p_organization_id: string
+          p_worker_id: string
+        }
+        Returns: Json
+      }
+      claim_evidence_scan_job_atomic: {
+        Args: {
+          p_lease_seconds: number
+          p_organization_id: string
+          p_worker_id: string
+        }
+        Returns: Json
+      }
       claim_finding_propagation_job_atomic: {
         Args: {
           p_lease_owner: string
@@ -16254,6 +16634,31 @@ export type Database = {
           outcome: string
           run: Json
         }[]
+      }
+      complete_evidence_document_notification_atomic: {
+        Args: {
+          p_error?: string
+          p_organization_id: string
+          p_outbox_id: string
+          p_outcome: string
+          p_worker_id: string
+        }
+        Returns: string
+      }
+      complete_evidence_scan_job_atomic: {
+        Args: {
+          p_detection?: string
+          p_engine_name: string
+          p_engine_version: string
+          p_error?: string
+          p_organization_id: string
+          p_outcome: string
+          p_retry_after_seconds?: number
+          p_signature_version: string
+          p_version_id: string
+          p_worker_id: string
+        }
+        Returns: string
       }
       complete_finding_triage_note_mention: {
         Args: {
@@ -17826,6 +18231,22 @@ export type Database = {
           result: Json
         }[]
       }
+      finalize_evidence_document_upload_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_actual_size_bytes: number
+          p_detected_media_type: string
+          p_idempotency_key: string
+          p_organization_id: string
+          p_original_sha256: string
+          p_request_digest: string
+          p_version_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
       finalize_organization_branding_asset_upload_atomic: {
         Args: {
           p_actor_user_id: string
@@ -18045,6 +18466,18 @@ export type Database = {
         }[]
       }
       get_current_user_id: { Args: never; Returns: string }
+      get_evidence_document_download_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_idempotency_key: string
+          p_organization_id: string
+          p_version_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
       get_finding_product_impact_summary: {
         Args: {
           p_actor_user_id: string
@@ -19151,6 +19584,14 @@ export type Database = {
         Returns: {
           organization_id: string
         }[]
+      }
+      list_evidence_documents: {
+        Args: {
+          p_actor_user_id: string
+          p_organization_id: string
+          p_product_id: string
+        }
+        Returns: Json
       }
       list_field_authority_policies: {
         Args: {
@@ -20854,6 +21295,14 @@ export type Database = {
         Args: { p_kind: string; p_organization_id: string; p_record_id: string }
         Returns: boolean
       }
+      m8_evidence_actor_active: {
+        Args: { p_organization_id: string; p_user_id: string }
+        Returns: boolean
+      }
+      m8_evidence_retention_class: {
+        Args: { p_document_class: string }
+        Returns: string
+      }
       mark_mfa_factors_removed: {
         Args: { p_operation_id: string; p_user_id: string }
         Returns: string
@@ -21473,6 +21922,18 @@ export type Database = {
           connector: Json
           outcome: string
         }[]
+      }
+      record_evidence_document_scan_atomic: {
+        Args: {
+          p_detection?: string
+          p_engine_name: string
+          p_engine_version: string
+          p_organization_id: string
+          p_outcome: string
+          p_signature_version: string
+          p_version_id: string
+        }
+        Returns: string
       }
       record_finding_remediation_anchor_atomic: {
         Args: {
@@ -22165,6 +22626,28 @@ export type Database = {
           invitation_id: string
           organization_name: string
           outcome: string
+        }[]
+      }
+      reserve_evidence_document_upload_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_declared_size_bytes: number
+          p_document_class: string
+          p_idempotency_key: string
+          p_object_key: string
+          p_organization_id: string
+          p_original_filename: string
+          p_owner_user_id: string
+          p_product_ids: string[]
+          p_request_digest: string
+          p_title: string
+          p_upload_expires_at: string
+          p_validity_ends_on: string
+          p_validity_starts_on: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
         }[]
       }
       reserve_organization_branding_asset_upload_atomic: {

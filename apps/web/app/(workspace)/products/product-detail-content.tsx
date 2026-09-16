@@ -20,6 +20,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/tabs";
 import {
   Boxes,
+  FolderOpen,
   FileText,
   FilePenLine,
   GitBranch,
@@ -768,6 +769,7 @@ export function ProductDetailContent({ productId }: { productId: string }) {
   const canApprove = permissions.can_approve_products === true;
   const canViewSboms = permissions.can_view_sboms === true;
   const canViewTechnicalFiles = permissions.can_view_technical_files === true;
+  const canViewEvidence = permissions.can_view_evidence === true;
   const canUploadSboms = permissions.can_upload_sboms === true;
   const canReviewSboms = permissions.can_review_sboms === true;
   const [activePanel, setActivePanel] = useState<WorkbenchPanel | null>(null);
@@ -818,6 +820,17 @@ export function ProductDetailContent({ productId }: { productId: string }) {
               >
                 <FileText aria-hidden="true" />
                 Technical file
+              </Button>
+            ) : null}
+            {canViewEvidence ? (
+              <Button
+                type="button"
+                variant="outline"
+                tone="grey"
+                onClick={() => router.push(`/products/${productId}/evidence`)}
+              >
+                <FolderOpen aria-hidden="true" />
+                Evidence library
               </Button>
             ) : null}
             <Button

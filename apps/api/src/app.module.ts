@@ -20,6 +20,7 @@ import { SbomModule } from "./sboms/sbom.module";
 import { UsersModule } from "./users/users.module";
 import { VulnerabilitiesModule } from "./vulnerabilities/vulnerabilities.module";
 import { TechnicalFilesModule } from "./technical-files/technical-files.module";
+import { EvidenceModule } from "./evidence/evidence.module";
 
 @Module({
   imports: [
@@ -60,6 +61,7 @@ import { TechnicalFilesModule } from "./technical-files/technical-files.module";
     SbomModule,
     VulnerabilitiesModule,
     TechnicalFilesModule,
+    EvidenceModule,
   ],
   controllers: [HealthController],
 })

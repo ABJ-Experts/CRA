@@ -23,6 +23,7 @@ export const technicalFileSourceKindSchema = z.enum([
   "release",
   "support_period",
   "sbom_document",
+  "evidence_document",
   "finding",
   "risk_register",
   "manual_reference",

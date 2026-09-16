@@ -127,6 +127,10 @@ export const PERMISSION_MATRIX = {
   // distinct from upload: collecting evidence must not authorize accepting
   // it into an authoritative composition.
   sboms: ["view", "upload", "review"],
+  // Evidence files are distinct from SBOMs and technical-file links. Uploading
+  // never grants lifecycle control over a quarantined or otherwise immutable
+  // version; that is deliberately reserved for `manage`.
+  evidence: ["view", "upload", "manage"],
 } as const satisfies Record<string, readonly PermissionAction[]>;
 
 export type PermissionModule = keyof typeof PERMISSION_MATRIX;
@@ -357,6 +361,7 @@ const VIEWER_MODULES: readonly PermissionModule[] = [
   "findings",
   "connectors",
   "sboms",
+  "evidence",
 ];
 
 /** Modules a member may also create/edit in — day-to-day operational work. */
@@ -398,6 +403,7 @@ function memberPreset(): PermissionSet {
     out[`can_export_${module}` as PermissionKey] = true;
   }
   out.can_upload_sboms = true;
+  out.can_upload_evidence = true;
   return out;
 }
 

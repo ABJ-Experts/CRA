@@ -24,6 +24,7 @@
     "worker:sbom-quality": "node dist/sbom-quality-worker.js",
     "worker:sbom-diff": "node dist/sbom-diff-worker.js",
     "worker:sbom-composite": "node dist/sbom-composite-worker.js",
+    "worker:evidence-scan": "node dist/evidence-scan-worker.js",
     "worker:technical-file-export": "node dist/technical-file-export-worker.js",
     "worker:technical-file-declaration": "node dist/technical-file-declaration-worker.js",
     "worker:vulnerability-feeds": "node dist/vulnerability-feed-worker.js",
@@ -63,6 +64,7 @@
     "saxes": "6.0.0",
     "sharp": "^0.35.3",
     "stream-json": "^1.9.1",
+    "yauzl": "2.10.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {
@@ -81,6 +83,7 @@
     "@types/pdfkit": "^0.17.6",
     "@types/stream-json": "^1.7.8",
     "@types/supertest": "^7.0.0",
+    "@types/yauzl": "2.10.3",
     "eslint": "^9.39.1",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.6",

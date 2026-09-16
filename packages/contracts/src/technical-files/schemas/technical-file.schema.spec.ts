@@ -45,6 +45,12 @@ describe("technical-file schema boundaries", () => {
     );
   });
 
+  it("reserves evidence documents as an explicit, version-pinned internal source", () => {
+    expect(technicalFileSourceKindSchema.parse("evidence_document")).toBe(
+      "evidence_document",
+    );
+  });
+
   it("accepts the version-pinned source metadata emitted by the readiness projection", () => {
     expect(
       technicalFileSourceSchema.parse({
