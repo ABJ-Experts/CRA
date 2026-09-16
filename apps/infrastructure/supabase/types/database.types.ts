@@ -9697,6 +9697,221 @@ export type Database = {
           },
         ]
       }
+      technical_file_auditor_access_events: {
+        Row: {
+          action: string
+          artifact: string | null
+          client_source_hash: string | null
+          created_at: string
+          grant_id: string | null
+          id: string
+          organization_id: string | null
+          session_id: string | null
+          token_hash: string | null
+        }
+        Insert: {
+          action: string
+          artifact?: string | null
+          client_source_hash?: string | null
+          created_at?: string
+          grant_id?: string | null
+          id?: string
+          organization_id?: string | null
+          session_id?: string | null
+          token_hash?: string | null
+        }
+        Update: {
+          action?: string
+          artifact?: string | null
+          client_source_hash?: string | null
+          created_at?: string
+          grant_id?: string | null
+          id?: string
+          organization_id?: string | null
+          session_id?: string | null
+          token_hash?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "technical_file_auditor_access_events_grant_id_fkey"
+            columns: ["grant_id"]
+            isOneToOne: false
+            referencedRelation: "technical_file_auditor_snapshot_grants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "technical_file_auditor_access_events_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "technical_file_auditor_access_events_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "technical_file_auditor_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      technical_file_auditor_sessions: {
+        Row: {
+          created_at: string
+          expires_at: string
+          grant_id: string
+          id: string
+          last_used_at: string | null
+          revoked_at: string | null
+          session_token_hash: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at: string
+          grant_id: string
+          id: string
+          last_used_at?: string | null
+          revoked_at?: string | null
+          session_token_hash: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          grant_id?: string
+          id?: string
+          last_used_at?: string | null
+          revoked_at?: string | null
+          session_token_hash?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "technical_file_auditor_sessions_grant_id_fkey"
+            columns: ["grant_id"]
+            isOneToOne: false
+            referencedRelation: "technical_file_auditor_snapshot_grants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      technical_file_auditor_snapshot_grants: {
+        Row: {
+          created_at: string
+          created_by: string
+          expires_at: string
+          export_id: string
+          id: string
+          idempotency_key: string
+          organization_id: string
+          product_id: string
+          purpose: string
+          recipient_email: string
+          recipient_reference: string | null
+          redeemed_at: string | null
+          request_digest: string
+          revocation_reason: string | null
+          revoked_at: string | null
+          revoked_by: string | null
+          snapshot_id: string
+          status: string
+          token_hash: string
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          expires_at: string
+          export_id: string
+          id: string
+          idempotency_key: string
+          organization_id: string
+          product_id: string
+          purpose: string
+          recipient_email: string
+          recipient_reference?: string | null
+          redeemed_at?: string | null
+          request_digest: string
+          revocation_reason?: string | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+          snapshot_id: string
+          status?: string
+          token_hash: string
+          version?: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          expires_at?: string
+          export_id?: string
+          id?: string
+          idempotency_key?: string
+          organization_id?: string
+          product_id?: string
+          purpose?: string
+          recipient_email?: string
+          recipient_reference?: string | null
+          redeemed_at?: string | null
+          request_digest?: string
+          revocation_reason?: string | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+          snapshot_id?: string
+          status?: string
+          token_hash?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "technical_file_auditor_snapsho_organization_id_snapshot_id_fkey"
+            columns: ["organization_id", "snapshot_id"]
+            isOneToOne: false
+            referencedRelation: "technical_file_snapshots"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "technical_file_auditor_snapshot__organization_id_export_id_fkey"
+            columns: ["organization_id", "export_id"]
+            isOneToOne: false
+            referencedRelation: "technical_file_snapshot_exports"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "technical_file_auditor_snapshot_grants_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "technical_file_auditor_snapshot_grants_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "technical_file_auditor_snapshot_grants_revoked_by_fkey"
+            columns: ["revoked_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "technical_file_auditor_snapshot_organization_id_product_id_fkey"
+            columns: ["organization_id", "product_id"]
+            isOneToOne: false
+            referencedRelation: "product_retention_alert_operations"
+            referencedColumns: ["organization_id", "product_id"]
+          },
+          {
+            foreignKeyName: "technical_file_auditor_snapshot_organization_id_product_id_fkey"
+            columns: ["organization_id", "product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
       technical_file_declaration_templates: {
         Row: {
           content: Json
@@ -16903,6 +17118,27 @@ export type Database = {
           result: Json
         }[]
       }
+      create_technical_file_auditor_snapshot_grant_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_expires_at: string
+          p_export_id: string
+          p_grant_id: string
+          p_idempotency_key: string
+          p_organization_id: string
+          p_product_id: string
+          p_purpose: string
+          p_recipient_email: string
+          p_recipient_reference: string
+          p_request_digest: string
+          p_snapshot_id: string
+          p_token_hash: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
       create_technical_file_risk_atomic: {
         Args: {
           p_actor_user_id: string
@@ -18506,6 +18742,20 @@ export type Database = {
           result: Json
         }[]
       }
+      get_technical_file_auditor_snapshot_access_atomic: {
+        Args: { p_action: string; p_session_token_hash: string }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      get_technical_file_auditor_snapshot_artifact_atomic: {
+        Args: { p_artifact: string; p_session_token_hash: string }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
       get_technical_file_declaration_download_atomic: {
         Args: {
           p_actor_user_id: string
@@ -19275,6 +19525,18 @@ export type Database = {
           next_cursor: string
           outcome: string
           submissions: Json
+        }[]
+      }
+      list_technical_file_auditor_snapshot_grants: {
+        Args: {
+          p_actor_user_id: string
+          p_organization_id: string
+          p_product_id: string
+          p_snapshot_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
         }[]
       }
       list_vulnerability_assessment_approval_policy: {
@@ -20400,6 +20662,11 @@ export type Database = {
         Returns: boolean
       }
       m6_utc_second_z: { Args: { p_value: string }; Returns: string }
+      m7_auditor_grant_json: {
+        Args: { p_grant_id: string; p_organization_id: string }
+        Returns: Json
+      }
+      m7_auditor_scope_json: { Args: { p_grant_id: string }; Returns: Json }
       m7_declaration_json: {
         Args: {
           p_declaration_id: string
@@ -20954,6 +21221,19 @@ export type Database = {
         Returns: {
           outcome: string
           preview: Json
+        }[]
+      }
+      preview_technical_file_auditor_snapshot_grant: {
+        Args: {
+          p_actor_user_id: string
+          p_export_id: string
+          p_organization_id: string
+          p_product_id: string
+          p_snapshot_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
         }[]
       }
       preview_vulnerability_vex_export_scope: {
@@ -21511,6 +21791,19 @@ export type Database = {
         Returns: {
           lifecycle: Json
           outcome: string
+        }[]
+      }
+      redeem_technical_file_auditor_snapshot_grant_atomic: {
+        Args: {
+          p_client_source_hash?: string
+          p_session_expires_at: string
+          p_session_id: string
+          p_session_token_hash: string
+          p_token_hash: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
         }[]
       }
       refresh_sbom_composite_review_projection_atomic: {
@@ -22267,6 +22560,22 @@ export type Database = {
         }
         Returns: {
           outcome: string
+        }[]
+      }
+      revoke_technical_file_auditor_snapshot_grant_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_expected_version: number
+          p_grant_id: string
+          p_idempotency_key: string
+          p_organization_id: string
+          p_product_id: string
+          p_reason: string
+          p_snapshot_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
         }[]
       }
       save_organization_branding_draft_atomic: {

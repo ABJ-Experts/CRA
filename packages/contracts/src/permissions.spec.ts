@@ -197,6 +197,31 @@ describe("technical-file permissions", () => {
       ),
     ).toBe(false);
   });
+
+  it("reserves scoped auditor sharing for owner/admin and honours a revocation", () => {
+    expect(hasPermission(DEFAULT_PERMISSIONS_BY_ROLE.owner, "can_share_technical_files")).toBe(true);
+    expect(hasPermission(DEFAULT_PERMISSIONS_BY_ROLE.admin, "can_share_technical_files")).toBe(true);
+    expect(hasPermission(DEFAULT_PERMISSIONS_BY_ROLE.member, "can_share_technical_files")).toBe(false);
+    expect(hasPermission(DEFAULT_PERMISSIONS_BY_ROLE.viewer, "can_share_technical_files")).toBe(false);
+    expect(
+      hasPermission(
+        resolveEffectivePermissions({
+          baseRole: "viewer",
+          customRoles: [role({ permissions: { can_share_technical_files: true } })],
+        }),
+        "can_view_technical_files",
+      ),
+    ).toBe(true);
+    expect(
+      hasPermission(
+        resolveEffectivePermissions({
+          baseRole: "owner",
+          baseRoleOverrides: { can_share_technical_files: false },
+        }),
+        "can_share_technical_files",
+      ),
+    ).toBe(false);
+  });
 });
 
 describe("hasPermission", () => {

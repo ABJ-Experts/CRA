@@ -14,9 +14,7 @@ describe("technical-file declaration gateway", () => {
   afterEach(() => vi.unstubAllGlobals());
 
   it("uses product-scoped declaration history and preview endpoints", async () => {
-    const fetcher = vi.fn(async (_input: RequestInfo | URL) =>
-      json({ declarations: [] }),
-    );
+    const fetcher = vi.fn(async () => json({ declarations: [] }));
     vi.stubGlobal("fetch", fetcher);
 
     await expect(

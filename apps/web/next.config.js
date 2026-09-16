@@ -77,9 +77,9 @@ const nextConfig = {
   },
   async rewrites() {
     return {
-      // `beforeFiles` so the proxy wins before Next looks for a route handler
-      // or a static file at the same path.
-      beforeFiles: [
+      // Let the auditor redemption route preserve its Set-Cookie header; all
+      // other API paths remain proxied after local route handlers are checked.
+      afterFiles: [
         {
           source: "/api/v1/:path*",
           destination: `${API_ORIGIN}/api/v1/:path*`,

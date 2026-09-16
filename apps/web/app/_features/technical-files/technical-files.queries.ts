@@ -15,6 +15,12 @@ import type {
   SignalTechnicalFileSourceMaterialChangeRequest,
   TechnicalFileSnapshotExportResponse,
   TechnicalFileDeclarationPreviewResponse,
+  CreateTechnicalFileAuditorGrantRequest,
+  RevokeTechnicalFileAuditorGrantRequest,
+  RedeemTechnicalFileAuditorGrantRequest,
+  TechnicalFileAuditorGrantPreviewResponse,
+  TechnicalFileAuditorManifestResponse,
+  TechnicalFileAuditorSnapshotViewResponse,
   UpdateTechnicalFileSectionRequest,
 } from "@repo/contracts/technical-files";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -36,6 +42,12 @@ const snapshotExportKey = (
   exportId: string,
 ) =>
   ["technical-file-snapshot-export", productId, snapshotId, exportId] as const;
+const auditorGrantsKey = (productId: string, snapshotId: string) =>
+  ["technical-file-auditor-grants", productId, snapshotId] as const;
+const auditorGrantPreviewKey = (productId: string, snapshotId: string, exportId: string) =>
+  ["technical-file-auditor-grant-preview", productId, snapshotId, exportId] as const;
+const auditorSnapshotKey = ["technical-file-auditor-snapshot"] as const;
+const auditorManifestKey = ["technical-file-auditor-manifest"] as const;
 
 export function useTechnicalFileQuery(productId: string, enabled: boolean) {
   return useQuery({
@@ -350,5 +362,71 @@ export function useTechnicalFileDeclarationDownloadMutation() {
       productId: string;
       declarationId: string;
     }) => technicalFilesApi.downloadDeclaration(productId, declarationId),
+  });
+}
+
+export function useTechnicalFileAuditorGrantsQuery(
+  productId: string,
+  snapshotId: string | null,
+  enabled: boolean,
+) {
+  return useQuery({
+    queryKey: auditorGrantsKey(productId, snapshotId ?? ""),
+    enabled: enabled && productId !== "" && snapshotId !== null,
+    retry: false,
+    queryFn: ({ signal }) => technicalFilesApi.listAuditorGrants(productId, snapshotId ?? "", signal),
+  });
+}
+
+export function useTechnicalFileAuditorGrantPreviewQuery(
+  productId: string,
+  snapshotId: string | null,
+  exportId: string | null,
+  enabled: boolean,
+) {
+  return useQuery<TechnicalFileAuditorGrantPreviewResponse>({
+    queryKey: auditorGrantPreviewKey(productId, snapshotId ?? "", exportId ?? ""),
+    enabled: enabled && productId !== "" && snapshotId !== null && exportId !== null,
+    retry: false,
+    queryFn: ({ signal }) => technicalFilesApi.previewAuditorGrant(productId, snapshotId ?? "", exportId ?? "", signal),
+  });
+}
+
+export function useCreateTechnicalFileAuditorGrantMutation(productId: string, snapshotId: string | null) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: CreateTechnicalFileAuditorGrantRequest) => technicalFilesApi.createAuditorGrant(productId, snapshotId ?? "", input),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: auditorGrantsKey(productId, snapshotId ?? "") }),
+  });
+}
+
+export function useRevokeTechnicalFileAuditorGrantMutation(productId: string, snapshotId: string | null) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ grantId, ...input }: RevokeTechnicalFileAuditorGrantRequest & { grantId: string }) =>
+      technicalFilesApi.revokeAuditorGrant(productId, snapshotId ?? "", grantId, input),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: auditorGrantsKey(productId, snapshotId ?? "") }),
+  });
+}
+
+export function useRedeemTechnicalFileAuditorGrantMutation() {
+  return useMutation({ mutationFn: (input: RedeemTechnicalFileAuditorGrantRequest) => technicalFilesApi.redeemAuditorGrant(input) });
+}
+
+export function useTechnicalFileAuditorSnapshotQuery(enabled: boolean) {
+  return useQuery<TechnicalFileAuditorSnapshotViewResponse>({
+    queryKey: auditorSnapshotKey,
+    enabled,
+    retry: false,
+    queryFn: ({ signal }) => technicalFilesApi.getAuditorSnapshot(signal),
+  });
+}
+
+export function useTechnicalFileAuditorManifestQuery(enabled: boolean) {
+  return useQuery<TechnicalFileAuditorManifestResponse>({
+    queryKey: auditorManifestKey,
+    enabled,
+    retry: false,
+    queryFn: ({ signal }) => technicalFilesApi.getAuditorManifest(signal),
   });
 }

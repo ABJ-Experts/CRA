@@ -31,6 +31,20 @@ import {
   technicalFileDeclarationResponseSchema,
   technicalFileDeclarationsResponseSchema,
   technicalFileDeclarationDownloadResponseSchema,
+  technicalFileAuditorGrantCollectionParamsSchema,
+  technicalFileAuditorGrantParamsSchema,
+  technicalFileAuditorGrantPreviewQuerySchema,
+  createTechnicalFileAuditorGrantRequestSchema,
+  revokeTechnicalFileAuditorGrantRequestSchema,
+  redeemTechnicalFileAuditorGrantRequestSchema,
+  technicalFileAuditorGrantPreviewResponseSchema,
+  technicalFileAuditorGrantCreatedResponseSchema,
+  technicalFileAuditorGrantsResponseSchema,
+  technicalFileAuditorGrantResponseSchema,
+  technicalFileAuditorGrantRedemptionResponseSchema,
+  technicalFileAuditorSnapshotViewResponseSchema,
+  technicalFileAuditorManifestResponseSchema,
+  technicalFileAuditorArtifactParamsSchema,
   updateTechnicalFileSectionRequestSchema,
   recalculateTechnicalFileReadinessRequestSchema,
   reviewTechnicalFileSourceRequestSchema,
@@ -48,10 +62,13 @@ import {
   type UpdateTechnicalFileDeclarationDraftRequest,
   type IssueTechnicalFileDeclarationRequest,
   type ReissueTechnicalFileDeclarationRequest,
+  type CreateTechnicalFileAuditorGrantRequest,
+  type RevokeTechnicalFileAuditorGrantRequest,
+  type RedeemTechnicalFileAuditorGrantRequest,
 } from "@repo/contracts/technical-files";
 
 import { authenticatedRequestJson } from "../../_lib/http/authenticated-request";
-import { ApiClientError } from "../../_lib/http/api-client";
+import { apiClient, ApiClientError } from "../../_lib/http/api-client";
 
 function productPath(productId: string, suffix = ""): `/${string}` {
   const parsed = technicalFileProductParamsSchema.safeParse({ productId });
@@ -183,6 +200,20 @@ function declarationPreviewPath(
     );
   }
   return `${declarationPath(parsed.data.productId)}/preview/${parsed.data.snapshotId}` as `/${string}`;
+}
+
+function auditorGrantPath(
+  productId: string,
+  snapshotId: string,
+  grantId?: string,
+): `/${string}` {
+  const parsed = grantId
+    ? technicalFileAuditorGrantParamsSchema.safeParse({ productId, snapshotId, grantId })
+    : technicalFileAuditorGrantCollectionParamsSchema.safeParse({ productId, snapshotId });
+  if (!parsed.success) {
+    throw new ApiClientError("invalid_request", "The auditor access identifier is invalid.", 400);
+  }
+  return `${snapshotPath(parsed.data.productId, parsed.data.snapshotId)}/auditor-grants${grantId ? `/${grantId}` : ""}` as `/${string}`;
 }
 
 export const technicalFilesApi = Object.freeze({
@@ -461,4 +492,38 @@ export const technicalFilesApi = Object.freeze({
       path: `${declarationPath(productId, declarationId)}/download` as `/${string}`,
       schema: technicalFileDeclarationDownloadResponseSchema,
     }),
+  previewAuditorGrant: (productId: string, snapshotId: string, exportId: string, signal?: AbortSignal) => {
+    const query = technicalFileAuditorGrantPreviewQuerySchema.safeParse({ exportId });
+    if (!query.success) throw new ApiClientError("invalid_request", "The snapshot export identifier is invalid.", 400);
+    return authenticatedRequestJson({
+      path: `${auditorGrantPath(productId, snapshotId)}/preview?exportId=${query.data.exportId}` as `/${string}`,
+      schema: technicalFileAuditorGrantPreviewResponseSchema,
+      signal,
+    });
+  },
+  listAuditorGrants: (productId: string, snapshotId: string, signal?: AbortSignal) =>
+    authenticatedRequestJson({ path: auditorGrantPath(productId, snapshotId), schema: technicalFileAuditorGrantsResponseSchema, signal }),
+  createAuditorGrant: (productId: string, snapshotId: string, input: CreateTechnicalFileAuditorGrantRequest) =>
+    authenticatedRequestJson({
+      path: auditorGrantPath(productId, snapshotId), method: "POST",
+      schema: technicalFileAuditorGrantCreatedResponseSchema,
+      inputSchema: createTechnicalFileAuditorGrantRequestSchema, body: input,
+    }),
+  revokeAuditorGrant: (productId: string, snapshotId: string, grantId: string, input: RevokeTechnicalFileAuditorGrantRequest) =>
+    authenticatedRequestJson({
+      path: `${auditorGrantPath(productId, snapshotId, grantId)}/revoke` as `/${string}`, method: "POST",
+      schema: technicalFileAuditorGrantResponseSchema,
+      inputSchema: revokeTechnicalFileAuditorGrantRequestSchema, body: input,
+    }),
+  redeemAuditorGrant: (input: RedeemTechnicalFileAuditorGrantRequest) =>
+    apiClient.request({ path: "/api/v1/auditor/redeem", method: "POST", schema: technicalFileAuditorGrantRedemptionResponseSchema, inputSchema: redeemTechnicalFileAuditorGrantRequestSchema, body: input }),
+  getAuditorSnapshot: (signal?: AbortSignal) =>
+    apiClient.request({ path: "/api/v1/auditor/snapshot", schema: technicalFileAuditorSnapshotViewResponseSchema, signal }),
+  getAuditorManifest: (signal?: AbortSignal) =>
+    apiClient.request({ path: "/api/v1/auditor/snapshot/manifest", schema: technicalFileAuditorManifestResponseSchema, signal }),
+  auditorArtifactPath: (artifact: "pdf" | "archive"): `/${string}` => {
+    const parsed = technicalFileAuditorArtifactParamsSchema.safeParse({ artifact });
+    if (!parsed.success) throw new ApiClientError("invalid_request", "The requested auditor artifact is invalid.", 400);
+    return `/api/v1/auditor/snapshot/artifacts/${parsed.data.artifact}`;
+  },
 });

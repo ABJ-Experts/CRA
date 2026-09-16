@@ -17,6 +17,7 @@ import {
   useTechnicalFileSnapshotExportQuery,
   useTechnicalFileSnapshotsQuery,
 } from "./technical-files.queries";
+import { TechnicalFileAuditorGrants } from "./technical-file-auditor-grants";
 
 function requestId(): string {
   return crypto.randomUUID();
@@ -48,12 +49,14 @@ export function TechnicalFileSnapshots({
   enabled,
   canView,
   canSnapshot,
+  canShare = false,
 }: {
   productId: string;
   technicalFileVersion: number;
   enabled: boolean;
   canView: boolean;
   canSnapshot: boolean;
+  canShare?: boolean;
 }) {
   const snapshots = useTechnicalFileSnapshotsQuery(productId, enabled && canView);
   const createSnapshot = useCreateTechnicalFileSnapshotMutation(productId);
@@ -200,6 +203,7 @@ export function TechnicalFileSnapshots({
               productId={productId}
               snapshot={snapshot}
               canSnapshot={canSnapshot}
+              canShare={canShare}
               selectedExport={selectedExport}
               onSelectExport={setSelectedExport}
               onMessage={setMessage}
@@ -215,6 +219,7 @@ function SnapshotRow({
   productId,
   snapshot,
   canSnapshot,
+  canShare,
   selectedExport,
   onSelectExport,
   onMessage,
@@ -222,6 +227,7 @@ function SnapshotRow({
   productId: string;
   snapshot: TechnicalFileSnapshot;
   canSnapshot: boolean;
+  canShare: boolean;
   selectedExport: { snapshotId: string; exportId: string } | null;
   onSelectExport: (value: { snapshotId: string; exportId: string }) => void;
   onMessage: (value: string) => void;
@@ -287,6 +293,7 @@ function SnapshotRow({
           snapshotId={snapshot.id}
           exportId={current.exportId}
           exportStatus={exportStatus}
+          canShare={canShare}
           onMessage={onMessage}
         />
       ) : null}
@@ -299,12 +306,14 @@ function SnapshotExportStatus({
   snapshotId,
   exportId,
   exportStatus,
+  canShare,
   onMessage,
 }: {
   productId: string;
   snapshotId: string;
   exportId: string;
   exportStatus: UseQueryResult<TechnicalFileSnapshotExportResponse>;
+  canShare: boolean;
   onMessage: (value: string) => void;
 }) {
   const cancel = useCancelTechnicalFileSnapshotExportMutation(productId, snapshotId, exportId);
@@ -346,10 +355,18 @@ function SnapshotExportStatus({
       <p className="text-caption-1-semibold text-fg">Export status: {label(current.status)}</p>
       {current.status === "failed" ? <p className="mt-1 text-caption-1-regular text-fg-muted">Failure: {label(current.failureCode ?? "unknown")}</p> : null}
       {current.status === "ready" ? (
+        <>
         <div className="mt-3 flex flex-wrap gap-2">
           <Button type="button" variant="outline" tone="grey" loading={download.isPending} onClick={() => void downloadArtifact("pdf")}>Download PDF</Button>
           <Button type="button" variant="outline" tone="grey" loading={download.isPending} onClick={() => void downloadArtifact("archive")}>Download archive</Button>
         </div>
+        <TechnicalFileAuditorGrants
+          productId={productId}
+          snapshotId={snapshotId}
+          exportRecord={current}
+          canShare={canShare}
+        />
+        </>
       ) : null}
       {canCancel ? (
         <div className="mt-3 flex flex-wrap items-end gap-2">

@@ -30,25 +30,40 @@ import { SupabaseRiskRegisterRepository } from "./infrastructure/supabase-risk-r
 import { SupabaseTechnicalFileReadinessRepository } from "./infrastructure/supabase-technical-file-readiness.repository";
 import { SupabaseTechnicalFileSnapshotRepository } from "./infrastructure/supabase-technical-file-snapshot.repository";
 import { SupabaseTechnicalFileDeclarationRepository } from "./infrastructure/supabase-technical-file-declaration.repository";
+import { SupabaseTechnicalFileAuditorAccessRepository } from "./infrastructure/supabase-technical-file-auditor-access.repository";
 import { TechnicalFileDeclarationUseCases } from "./application/technical-file-declaration-use-cases";
 import {
   TECHNICAL_FILE_DECLARATION_REPOSITORY,
   type TechnicalFileDeclarationRepository,
 } from "./application/technical-file-declaration.port";
+import {
+  TECHNICAL_FILE_AUDITOR_ACCESS_REPOSITORY,
+  type TechnicalFileAuditorAccessRepository,
+} from "./application/technical-file-auditor-access.port";
+import { TechnicalFileAuditorAccessUseCases } from "./application/technical-file-auditor-access-use-cases";
 import { TechnicalFileSnapshotExportWorker } from "./worker/technical-file-snapshot-export-worker";
 import { TechnicalFileDeclarationWorker } from "./worker/technical-file-declaration-worker";
 import { SupabaseTechnicalFileRepository } from "./infrastructure/supabase-technical-file.repository";
 import { TechnicalFilesController } from "./technical-files.controller";
+import {
+  TechnicalFileAuditorAccessController,
+  TechnicalFileAuditorGrantsController,
+} from "./technical-file-auditor-access.controller";
 
 @Module({
   imports: [SupabaseModule, ProductsModule],
-  controllers: [TechnicalFilesController],
+  controllers: [
+    TechnicalFilesController,
+    TechnicalFileAuditorGrantsController,
+    TechnicalFileAuditorAccessController,
+  ],
   providers: [
     SupabaseTechnicalFileRepository,
     SupabaseRiskRegisterRepository,
     SupabaseTechnicalFileReadinessRepository,
     SupabaseTechnicalFileSnapshotRepository,
     SupabaseTechnicalFileDeclarationRepository,
+    SupabaseTechnicalFileAuditorAccessRepository,
     TechnicalFileSnapshotExportWorker,
     TechnicalFileDeclarationWorker,
     {
@@ -94,6 +109,21 @@ import { TechnicalFilesController } from "./technical-files.controller";
     {
       provide: TECHNICAL_FILE_DECLARATION_REPOSITORY,
       useExisting: SupabaseTechnicalFileDeclarationRepository,
+    },
+    {
+      provide: TECHNICAL_FILE_AUDITOR_ACCESS_REPOSITORY,
+      useExisting: SupabaseTechnicalFileAuditorAccessRepository,
+    },
+    {
+      provide: TechnicalFileAuditorAccessUseCases,
+      inject: [
+        TECHNICAL_FILE_AUDITOR_ACCESS_REPOSITORY,
+        PRODUCT_RETENTION_READER,
+      ],
+      useFactory: (
+        repository: TechnicalFileAuditorAccessRepository,
+        retention: ProductRetentionReaderPort,
+      ) => new TechnicalFileAuditorAccessUseCases(repository, retention),
     },
     {
       provide: TechnicalFileDeclarationUseCases,

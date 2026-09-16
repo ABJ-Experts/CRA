@@ -898,6 +898,7 @@ function TechnicalFileOverview({
   canView,
   canSnapshot,
   canIssue,
+  canShare,
   enabled,
 }: {
   productId: string;
@@ -907,6 +908,7 @@ function TechnicalFileOverview({
   canView: boolean;
   canSnapshot: boolean;
   canIssue: boolean;
+  canShare: boolean;
   enabled: boolean;
 }) {
   const [selectedKey, setSelectedKey] = useState<
@@ -1003,6 +1005,7 @@ function TechnicalFileOverview({
           enabled={enabled}
           canView={canView}
           canSnapshot={canSnapshot}
+          canShare={canShare}
         />
         <TechnicalFileDeclarations
           productId={productId}
@@ -1026,6 +1029,7 @@ export function TechnicalFileWorkspace({ productId }: { productId: string }) {
   const canEdit = permissions.can_edit_technical_files === true;
   const canSnapshot = permissions.can_snapshot_technical_files === true;
   const canIssue = permissions.can_issue_technical_files === true;
+  const canShare = permissions.can_share_technical_files === true;
   const file = useTechnicalFileQuery(
     productId,
     liveApiEnabled && hasMembership && canView,
@@ -1149,6 +1153,7 @@ export function TechnicalFileWorkspace({ productId }: { productId: string }) {
           canView={canView}
           canSnapshot={canSnapshot}
           canIssue={canIssue}
+          canShare={canShare}
           enabled={liveApiEnabled && hasMembership && canView}
         />
       ) : null}

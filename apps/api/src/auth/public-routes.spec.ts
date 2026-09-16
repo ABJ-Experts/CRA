@@ -57,6 +57,14 @@ const ALLOWED_PUBLIC: Record<string, string> = {
     "A short-lived opaque supplier session bearer scopes this upload reservation to one invitation and component.",
   "POST supplier-sbom-portal/submissions/:sourceId/complete":
     "Continuation of the supplier direct-upload protocol; the opaque session is rechecked and bytes are inspected server-side.",
+  "POST auditor/redeem":
+    "An auditor has no CRA session; the one-time opaque grant token is the only credential accepted here.",
+  "GET auditor/snapshot":
+    "The path-scoped opaque auditor session is rechecked against its grant for every snapshot read.",
+  "GET auditor/snapshot/manifest":
+    "The path-scoped opaque auditor session is rechecked before revealing the frozen manifest only.",
+  "GET auditor/snapshot/artifacts/:artifact":
+    "The path-scoped opaque auditor session is rechecked before streaming only the allowed frozen artifact.",
 };
 
 interface RouteInfo {
