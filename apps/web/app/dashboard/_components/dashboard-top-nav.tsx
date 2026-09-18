@@ -5,6 +5,8 @@ import { TopNav, TopNavTitle } from "@repo/ui/app-shell";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import { ReportingDeadlineHeaderIndicator } from "../../_features/reporting/reporting-deadline-header-indicator";
+
 /**
  * Route-aware TopNav content.
  *
@@ -86,7 +88,7 @@ export function DashboardTopNav() {
   return (
     <TopNav
       user={{ name: "Ada Foster" }}
-      notificationCount={7}
+      centre={<ReportingDeadlineHeaderIndicator />}
       className="max-lg:pl-20"
     >
       {left}

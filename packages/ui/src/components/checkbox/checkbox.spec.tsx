@@ -31,6 +31,13 @@ describe("Checkbox", () => {
     expect(checkbox).toHaveAccessibleDescription("Choose rows");
   });
 
+  it("uses the accent foreground for a selected indicator", () => {
+    render(<Checkbox label="Enabled" checked />);
+
+    const checkbox = screen.getByRole("checkbox", { name: "Enabled" });
+    expect(checkbox.firstElementChild).toHaveClass("text-on-accent");
+  });
+
   it("does not toggle while disabled and includes linked label content", async () => {
     const onCheckedChange = vi.fn();
     render(

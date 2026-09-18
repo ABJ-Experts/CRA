@@ -1,0 +1,3 @@
+-- Reserved after the M3-05 export-snapshot review. The finalized lock and
+-- registry update is deliberately kept in the following migration so fresh
+-- environments and upgraded local stacks share one authoritative definition.

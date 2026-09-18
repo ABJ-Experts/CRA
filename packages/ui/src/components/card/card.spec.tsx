@@ -25,10 +25,14 @@ describe("Card", () => {
     const card = screen.getByTestId("card");
     expect(card).toHaveAttribute("data-card-variant", "primary");
     expect(card).toHaveAttribute("data-card-size", "sm");
+    expect(card).toHaveClass("text-on-accent");
     expect(screen.getByRole("heading", { name: "Revenue" })).toHaveClass(
       "text-headline-semibold",
     );
     expect(screen.getByRole("button", { name: "Menu" })).toBeInTheDocument();
+    expect(screen.getByText("This month")).toHaveClass(
+      "[[data-card-variant=primary]_&]:text-on-accent/70",
+    );
   });
 
   it("renders an interactive card as its child", () => {

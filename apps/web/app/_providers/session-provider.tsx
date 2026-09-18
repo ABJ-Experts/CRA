@@ -103,14 +103,22 @@ export function useHasPermission(key: PermissionKey): boolean {
 /**
  * Whether a nav entry should render.
  *
- * Returns true for everything until the menu is known. Hiding items during the
- * first paint would make the sidebar visibly reshuffle on every load, and it
- * would empty the rail whenever the request fails.
+ * Returns true for everything during the initial live load. Hiding items on
+ * first paint would make the sidebar visibly reshuffle after every sign-in.
+ * Once loading has settled, a missing menu falls back to known local
+ * permissions so a failed menu request does not leave the rail empty forever.
  */
 export function useCanViewMenu(): (key: MenuKey) => boolean {
-  const { menu, permissions } = useSession();
+  const { menu, permissions, isLoading } = useSession();
 
   return useMemo(() => {
+    if (menu === null && isLoading) {
+      // The session, permissions, and server menu load in parallel. Do not
+      // interpret the initial empty permission snapshot as a denial while
+      // those requests are pending, or the rail visibly shrinks immediately
+      // after sign-in and expands again once the session settles.
+      return () => true;
+    }
     if (menu === null) {
       // Not known yet (or mocks are on): fall back to the local computation,
       // which still respects any permissions already loaded and shows the
@@ -120,7 +128,7 @@ export function useCanViewMenu(): (key: MenuKey) => boolean {
     }
     const allowed = new Set(menu);
     return (key: MenuKey) => allowed.has(key);
-  }, [menu, permissions]);
+  }, [isLoading, menu, permissions]);
 }
 
 /** Conditional render helper: `<Can permission="can_view_users">…</Can>`. */

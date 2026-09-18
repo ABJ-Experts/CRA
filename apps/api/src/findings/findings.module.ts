@@ -1,0 +1,274 @@
+import { randomUUID } from "node:crypto";
+import { Module } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
+
+import { ProductsModule } from "../products/products.module";
+import { MailModule } from "../mail/mail.module";
+import {
+  PRODUCT_RELATIONSHIP_GRAPH_EVENT_WORKER,
+  PRODUCT_RELATIONSHIP_PROPAGATION_WORKER,
+  type ProductRelationshipGraphEventWorkerPort,
+  type ProductRelationshipPropagationWorkerPort,
+} from "../products/application/product-relationship-worker.port";
+import { SupabaseModule } from "../supabase/supabase.module";
+import { SupabaseService } from "../supabase/supabase.service";
+import {
+  FINDING_PROPAGATION_REPOSITORY,
+  FindingPropagationUseCases,
+  type FindingPropagationRepository,
+} from "./application/finding-propagation-use-cases";
+import {
+  FindingPropagationSourcesController,
+  ProductFindingImpactSummaryController,
+} from "./findings.controller";
+import { FindingsService } from "./findings.service";
+import { SupabaseFindingPropagationRepository } from "./infrastructure/supabase-finding-propagation.repository";
+import { VulnerabilityAssessmentController } from "./assessments/vulnerability-assessment.controller";
+import { VulnerabilityAssessmentBulkController } from "./assessments/bulk/vulnerability-assessment-bulk.controller";
+import {
+  VULNERABILITY_ASSESSMENT_BULK_REPOSITORY,
+  type VulnerabilityAssessmentBulkRepository,
+} from "./assessments/bulk/application/vulnerability-assessment-bulk.port";
+import { VulnerabilityAssessmentBulkUseCases } from "./assessments/bulk/application/vulnerability-assessment-bulk-use-cases";
+import { SupabaseVulnerabilityAssessmentBulkRepository } from "./assessments/bulk/infrastructure/supabase-vulnerability-assessment-bulk.repository";
+import {
+  VULNERABILITY_ASSESSMENT_REPOSITORY,
+  type VulnerabilityAssessmentRepository,
+} from "./assessments/application/vulnerability-assessment.port";
+import { VulnerabilityAssessmentUseCases } from "./assessments/application/vulnerability-assessment-use-cases";
+import { SupabaseVulnerabilityAssessmentRepository } from "./assessments/infrastructure/supabase-vulnerability-assessment.repository";
+import {
+  VULNERABILITY_VEX_EXPORT_REPOSITORY,
+  type VulnerabilityVexExportRepository,
+} from "./exports/application/vulnerability-vex-export.port";
+import {
+  VULNERABILITY_VEX_PUBLICATION_DELIVERY,
+  VULNERABILITY_VEX_PUBLICATION_QUEUE,
+  type VulnerabilityVexPublicationDelivery,
+  type VulnerabilityVexPublicationQueue,
+} from "./exports/application/vulnerability-vex-publication.port";
+import { VulnerabilityVexExportUseCases } from "./exports/application/vulnerability-vex-export-use-cases";
+import { ConfiguredVexPublicationTargetRegistry } from "./exports/infrastructure/configured-vex-publication-target-registry";
+import { NodeVexPublicationDeliveryAdapter } from "./exports/infrastructure/node-vex-publication-delivery.adapter";
+import { SupabaseVexExportStorageAdapter } from "./exports/infrastructure/supabase-vex-export-storage.adapter";
+import { SupabaseVulnerabilityVexExportRepository } from "./exports/infrastructure/supabase-vulnerability-vex-export.repository";
+import { SupabaseVulnerabilityVexPublicationQueue } from "./exports/infrastructure/supabase-vulnerability-vex-publication-queue";
+import { VulnerabilityVexExportController } from "./exports/vulnerability-vex-export.controller";
+import type {
+  VexExportScopePort,
+  VexExportStoragePort,
+} from "./exports/vex-export.port";
+import { VulnerabilityVexPublicationWorker } from "./exports/worker/vulnerability-vex-publication-worker";
+import { VulnerabilityTriageController } from "./triage/vulnerability-triage.controller";
+import {
+  VULNERABILITY_TRIAGE_REPOSITORY,
+  type VulnerabilityTriageRepository,
+} from "./triage/application/vulnerability-triage.port";
+import { VulnerabilityTriageUseCases } from "./triage/application/vulnerability-triage-use-cases";
+import { SupabaseVulnerabilityTriageRepository } from "./triage/infrastructure/supabase-vulnerability-triage.repository";
+import { SupabaseVulnerabilityTriageNoteMentionQueue } from "./triage/infrastructure/supabase-vulnerability-triage-note-mention-queue";
+import { MailVulnerabilityTriageNoteMentionNotifierAdapter } from "./triage/infrastructure/mail-vulnerability-triage-note-mention-notifier.adapter";
+import { VulnerabilityTriageNoteMentionWorker } from "./triage/worker/vulnerability-triage-note-mention-worker";
+import {
+  VULNERABILITY_TRIAGE_NOTE_MENTION_NOTIFIER,
+  VULNERABILITY_TRIAGE_NOTE_MENTION_QUEUE,
+  type VulnerabilityTriageNoteMentionNotifier,
+  type VulnerabilityTriageNoteMentionQueue,
+} from "./triage/application/vulnerability-triage-note-mention.port";
+import {
+  FindingPropagationWorker,
+  type FindingPropagationWorkerRepository,
+} from "./worker/finding-propagation-worker";
+
+@Module({
+  imports: [SupabaseModule, ProductsModule, MailModule],
+  controllers: [
+    FindingPropagationSourcesController,
+    ProductFindingImpactSummaryController,
+    // This controller must precede triage's GET :findingId route so the
+    // policy static path cannot be parsed as a finding ID.
+    VulnerabilityAssessmentController,
+    VulnerabilityAssessmentBulkController,
+    // VEX static routes must register before the triage :findingId route.
+    VulnerabilityVexExportController,
+    VulnerabilityTriageController,
+  ],
+  providers: [
+    SupabaseFindingPropagationRepository,
+    SupabaseVulnerabilityAssessmentRepository,
+    SupabaseVulnerabilityAssessmentBulkRepository,
+    SupabaseVulnerabilityTriageRepository,
+    SupabaseVulnerabilityTriageNoteMentionQueue,
+    MailVulnerabilityTriageNoteMentionNotifierAdapter,
+    SupabaseVexExportStorageAdapter,
+    SupabaseVulnerabilityVexExportRepository,
+    SupabaseVulnerabilityVexPublicationQueue,
+    {
+      provide: ConfiguredVexPublicationTargetRegistry,
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) =>
+        new ConfiguredVexPublicationTargetRegistry(
+          config.get<string>("VULNERABILITY_VEX_PUBLICATION_TARGETS_JSON", ""),
+        ),
+    },
+    {
+      provide: VULNERABILITY_ASSESSMENT_REPOSITORY,
+      useExisting: SupabaseVulnerabilityAssessmentRepository,
+    },
+    {
+      provide: VULNERABILITY_ASSESSMENT_BULK_REPOSITORY,
+      useExisting: SupabaseVulnerabilityAssessmentBulkRepository,
+    },
+    {
+      provide: VulnerabilityAssessmentUseCases,
+      inject: [VULNERABILITY_ASSESSMENT_REPOSITORY],
+      useFactory: (repository: VulnerabilityAssessmentRepository) =>
+        new VulnerabilityAssessmentUseCases(repository),
+    },
+    {
+      provide: VulnerabilityAssessmentBulkUseCases,
+      inject: [VULNERABILITY_ASSESSMENT_BULK_REPOSITORY],
+      useFactory: (repository: VulnerabilityAssessmentBulkRepository) =>
+        new VulnerabilityAssessmentBulkUseCases(repository),
+    },
+    {
+      provide: VULNERABILITY_TRIAGE_REPOSITORY,
+      useExisting: SupabaseVulnerabilityTriageRepository,
+    },
+    {
+      provide: VULNERABILITY_TRIAGE_NOTE_MENTION_QUEUE,
+      useExisting: SupabaseVulnerabilityTriageNoteMentionQueue,
+    },
+    {
+      provide: VULNERABILITY_TRIAGE_NOTE_MENTION_NOTIFIER,
+      useExisting: MailVulnerabilityTriageNoteMentionNotifierAdapter,
+    },
+    {
+      provide: VulnerabilityTriageNoteMentionWorker,
+      inject: [
+        VULNERABILITY_TRIAGE_NOTE_MENTION_QUEUE,
+        VULNERABILITY_TRIAGE_NOTE_MENTION_NOTIFIER,
+        ConfigService,
+      ],
+      useFactory: (
+        queue: VulnerabilityTriageNoteMentionQueue,
+        notifier: VulnerabilityTriageNoteMentionNotifier,
+        config: ConfigService,
+      ) =>
+        new VulnerabilityTriageNoteMentionWorker({
+          workerId: randomUUID(),
+          leaseSeconds: config.get<number>(
+            "VULNERABILITY_TRIAGE_NOTE_MENTION_LEASE_SECONDS",
+            120,
+          ),
+          queue,
+          notifier,
+        }),
+    },
+    {
+      provide: VULNERABILITY_VEX_EXPORT_REPOSITORY,
+      useExisting: SupabaseVulnerabilityVexExportRepository,
+    },
+    {
+      provide: VulnerabilityVexExportUseCases,
+      inject: [
+        VULNERABILITY_VEX_EXPORT_REPOSITORY,
+        SupabaseVulnerabilityVexExportRepository,
+        SupabaseVexExportStorageAdapter,
+      ],
+      useFactory: (
+        repository: VulnerabilityVexExportRepository,
+        scopes: VexExportScopePort,
+        storage: VexExportStoragePort,
+      ) => new VulnerabilityVexExportUseCases(repository, scopes, storage),
+    },
+    {
+      provide: VULNERABILITY_VEX_PUBLICATION_QUEUE,
+      useExisting: SupabaseVulnerabilityVexPublicationQueue,
+    },
+    {
+      provide: VULNERABILITY_VEX_PUBLICATION_DELIVERY,
+      inject: [
+        SupabaseVexExportStorageAdapter,
+        ConfiguredVexPublicationTargetRegistry,
+        SupabaseService,
+      ],
+      useFactory: (
+        storage: VexExportStoragePort,
+        targets: ConfiguredVexPublicationTargetRegistry,
+        supabase: SupabaseService,
+      ) => new NodeVexPublicationDeliveryAdapter(storage, targets, supabase),
+    },
+    {
+      provide: VulnerabilityVexPublicationWorker,
+      inject: [
+        VULNERABILITY_VEX_PUBLICATION_QUEUE,
+        VULNERABILITY_VEX_PUBLICATION_DELIVERY,
+        ConfigService,
+      ],
+      useFactory: (
+        queue: VulnerabilityVexPublicationQueue,
+        delivery: VulnerabilityVexPublicationDelivery,
+        config: ConfigService,
+      ) =>
+        new VulnerabilityVexPublicationWorker({
+          workerId: randomUUID(),
+          leaseSeconds: config.get<number>(
+            "VULNERABILITY_VEX_PUBLICATION_LEASE_SECONDS",
+            120,
+          ),
+          queue,
+          delivery,
+        }),
+    },
+    {
+      provide: VulnerabilityTriageUseCases,
+      inject: [VULNERABILITY_TRIAGE_REPOSITORY],
+      useFactory: (repository: VulnerabilityTriageRepository) =>
+        new VulnerabilityTriageUseCases(repository),
+    },
+    {
+      provide: FINDING_PROPAGATION_REPOSITORY,
+      useExisting: SupabaseFindingPropagationRepository,
+    },
+    {
+      provide: FindingPropagationUseCases,
+      inject: [FINDING_PROPAGATION_REPOSITORY],
+      useFactory: (repository: FindingPropagationRepository) =>
+        new FindingPropagationUseCases(repository),
+    },
+    {
+      provide: FindingPropagationWorker,
+      inject: [
+        SupabaseFindingPropagationRepository,
+        PRODUCT_RELATIONSHIP_GRAPH_EVENT_WORKER,
+        PRODUCT_RELATIONSHIP_PROPAGATION_WORKER,
+        ConfigService,
+      ],
+      useFactory: (
+        queue: FindingPropagationWorkerRepository,
+        productEvents: ProductRelationshipGraphEventWorkerPort,
+        relationships: ProductRelationshipPropagationWorkerPort,
+        config: ConfigService,
+      ) =>
+        new FindingPropagationWorker({
+          workerId: randomUUID(),
+          leaseSeconds: config.get<number>(
+            "FINDING_PROPAGATION_LEASE_SECONDS",
+            60,
+          ),
+          queue,
+          productEvents,
+          relationships,
+        }),
+    },
+    FindingsService,
+  ],
+  exports: [
+    FindingPropagationUseCases,
+    FindingPropagationWorker,
+    VulnerabilityVexPublicationWorker,
+    VulnerabilityTriageNoteMentionWorker,
+  ],
+})
+export class FindingsModule {}

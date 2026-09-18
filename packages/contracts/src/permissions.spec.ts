@@ -62,6 +62,218 @@ describe("key generation", () => {
   });
 });
 
+describe("technical-file permissions", () => {
+  it("gives only owner/admin default access while preserving custom-role reachability", () => {
+    expect(
+      hasPermission(
+        DEFAULT_PERMISSIONS_BY_ROLE.owner,
+        "can_view_technical_files",
+      ),
+    ).toBe(true);
+    expect(
+      hasPermission(
+        DEFAULT_PERMISSIONS_BY_ROLE.admin,
+        "can_edit_technical_files",
+      ),
+    ).toBe(true);
+    expect(
+      hasPermission(
+        DEFAULT_PERMISSIONS_BY_ROLE.member,
+        "can_view_technical_files",
+      ),
+    ).toBe(false);
+    expect(
+      hasPermission(
+        DEFAULT_PERMISSIONS_BY_ROLE.viewer,
+        "can_edit_technical_files",
+      ),
+    ).toBe(false);
+    expect(
+      hasPermission(
+        resolveEffectivePermissions({
+          baseRole: "viewer",
+          customRoles: [
+            role({ permissions: { can_edit_technical_files: true } }),
+          ],
+        }),
+        "can_view_technical_files",
+      ),
+    ).toBe(true);
+  });
+
+  it("reserves immutable snapshot and export actions for owner/admin, while keeping custom-role delegation narrow", () => {
+    expect(
+      hasPermission(
+        DEFAULT_PERMISSIONS_BY_ROLE.owner,
+        "can_snapshot_technical_files",
+      ),
+    ).toBe(true);
+    expect(
+      hasPermission(
+        DEFAULT_PERMISSIONS_BY_ROLE.admin,
+        "can_snapshot_technical_files",
+      ),
+    ).toBe(true);
+    expect(
+      hasPermission(
+        DEFAULT_PERMISSIONS_BY_ROLE.member,
+        "can_snapshot_technical_files",
+      ),
+    ).toBe(false);
+    expect(
+      hasPermission(
+        DEFAULT_PERMISSIONS_BY_ROLE.viewer,
+        "can_snapshot_technical_files",
+      ),
+    ).toBe(false);
+    expect(
+      hasPermission(
+        resolveEffectivePermissions({
+          baseRole: "viewer",
+          customRoles: [
+            role({ permissions: { can_snapshot_technical_files: true } }),
+          ],
+        }),
+        "can_view_technical_files",
+      ),
+    ).toBe(true);
+    expect(
+      hasPermission(
+        resolveEffectivePermissions({
+          baseRole: "viewer",
+          baseRoleOverrides: { can_snapshot_technical_files: false },
+          customRoles: [
+            role({ permissions: { can_snapshot_technical_files: true } }),
+          ],
+        }),
+        "can_snapshot_technical_files",
+      ),
+    ).toBe(false);
+  });
+
+  it("reserves declaration issuance for owner/admin and permits an explicit custom-role grant", () => {
+    expect(
+      hasPermission(
+        DEFAULT_PERMISSIONS_BY_ROLE.owner,
+        "can_issue_technical_files",
+      ),
+    ).toBe(true);
+    expect(
+      hasPermission(
+        DEFAULT_PERMISSIONS_BY_ROLE.admin,
+        "can_issue_technical_files",
+      ),
+    ).toBe(true);
+    expect(
+      hasPermission(
+        DEFAULT_PERMISSIONS_BY_ROLE.member,
+        "can_issue_technical_files",
+      ),
+    ).toBe(false);
+    expect(
+      hasPermission(
+        DEFAULT_PERMISSIONS_BY_ROLE.viewer,
+        "can_issue_technical_files",
+      ),
+    ).toBe(false);
+    expect(
+      hasPermission(
+        resolveEffectivePermissions({
+          baseRole: "viewer",
+          customRoles: [
+            role({ permissions: { can_issue_technical_files: true } }),
+          ],
+        }),
+        "can_view_technical_files",
+      ),
+    ).toBe(true);
+    expect(
+      hasPermission(
+        resolveEffectivePermissions({
+          baseRole: "owner",
+          baseRoleOverrides: { can_issue_technical_files: false },
+        }),
+        "can_issue_technical_files",
+      ),
+    ).toBe(false);
+  });
+
+  it("reserves scoped auditor sharing for owner/admin and honours a revocation", () => {
+    expect(hasPermission(DEFAULT_PERMISSIONS_BY_ROLE.owner, "can_share_technical_files")).toBe(true);
+    expect(hasPermission(DEFAULT_PERMISSIONS_BY_ROLE.admin, "can_share_technical_files")).toBe(true);
+    expect(hasPermission(DEFAULT_PERMISSIONS_BY_ROLE.member, "can_share_technical_files")).toBe(false);
+    expect(hasPermission(DEFAULT_PERMISSIONS_BY_ROLE.viewer, "can_share_technical_files")).toBe(false);
+    expect(
+      hasPermission(
+        resolveEffectivePermissions({
+          baseRole: "viewer",
+          customRoles: [role({ permissions: { can_share_technical_files: true } })],
+        }),
+        "can_view_technical_files",
+      ),
+    ).toBe(true);
+    expect(
+      hasPermission(
+        resolveEffectivePermissions({
+          baseRole: "owner",
+          baseRoleOverrides: { can_share_technical_files: false },
+        }),
+        "can_share_technical_files",
+      ),
+    ).toBe(false);
+  });
+});
+
+describe("evidence permissions", () => {
+  it("grants the planned evidence defaults without making manage implicit", () => {
+    for (const baseRole of ["owner", "admin"] as const) {
+      expect(
+        hasPermission(
+          DEFAULT_PERMISSIONS_BY_ROLE[baseRole],
+          "can_manage_evidence",
+        ),
+      ).toBe(true);
+    }
+    expect(
+      hasPermission(DEFAULT_PERMISSIONS_BY_ROLE.member, "can_view_evidence"),
+    ).toBe(true);
+    expect(
+      hasPermission(DEFAULT_PERMISSIONS_BY_ROLE.member, "can_upload_evidence"),
+    ).toBe(true);
+    expect(
+      hasPermission(DEFAULT_PERMISSIONS_BY_ROLE.member, "can_manage_evidence"),
+    ).toBe(false);
+    expect(
+      hasPermission(DEFAULT_PERMISSIONS_BY_ROLE.viewer, "can_view_evidence"),
+    ).toBe(true);
+    expect(
+      hasPermission(DEFAULT_PERMISSIONS_BY_ROLE.viewer, "can_upload_evidence"),
+    ).toBe(false);
+  });
+
+  it("keeps custom evidence grants additive and organization revocation final", () => {
+    expect(
+      hasPermission(
+        resolveEffectivePermissions({
+          baseRole: "viewer",
+          customRoles: [role({ permissions: { can_upload_evidence: true } })],
+        }),
+        "can_view_evidence",
+      ),
+    ).toBe(true);
+    expect(
+      hasPermission(
+        resolveEffectivePermissions({
+          baseRole: "member",
+          customRoles: [role({ permissions: { can_manage_evidence: true } })],
+          baseRoleOverrides: { can_manage_evidence: false },
+        }),
+        "can_manage_evidence",
+      ),
+    ).toBe(false);
+  });
+});
+
 describe("hasPermission", () => {
   it("treats undefined and false alike as denial", () => {
     const set = { can_view_orders: true, can_edit_orders: false } as const;
@@ -127,6 +339,18 @@ describe("merges", () => {
 });
 
 describe("normalizePermissions", () => {
+  it("grants view for SBOM upload without introducing a product-edit grant", () => {
+    const out = normalizePermissions({ can_upload_sboms: true });
+    expect(hasPermission(out, "can_view_sboms")).toBe(true);
+    expect(hasPermission(out, "can_edit_products")).toBe(false);
+  });
+
+  it("grants SBOM visibility for review without treating upload as approval", () => {
+    const out = normalizePermissions({ can_review_sboms: true });
+    expect(hasPermission(out, "can_view_sboms")).toBe(true);
+    expect(hasPermission(out, "can_upload_sboms")).toBe(false);
+  });
+
   it("grants view for any acting permission", () => {
     const out = normalizePermissions({ can_delete_orders: true });
     expect(hasPermission(out, "can_view_orders")).toBe(true);
@@ -147,10 +371,100 @@ describe("normalizePermissions", () => {
 });
 
 describe("presets", () => {
+  it("grants explicit SBOM view/upload/review defaults without changing permission resolution", () => {
+    expect(PERMISSION_MATRIX.sboms).toEqual(["view", "upload", "review"]);
+    for (const baseRole of BASE_ROLES) {
+      expect(
+        hasPermission(DEFAULT_PERMISSIONS_BY_ROLE[baseRole], "can_view_sboms"),
+      ).toBe(true);
+    }
+    for (const baseRole of ["owner", "admin", "member"] as const) {
+      expect(
+        hasPermission(
+          DEFAULT_PERMISSIONS_BY_ROLE[baseRole],
+          "can_upload_sboms",
+        ),
+      ).toBe(true);
+    }
+    expect(
+      hasPermission(DEFAULT_PERMISSIONS_BY_ROLE.viewer, "can_upload_sboms"),
+    ).toBe(false);
+    for (const baseRole of ["owner", "admin"] as const) {
+      expect(
+        hasPermission(
+          DEFAULT_PERMISSIONS_BY_ROLE[baseRole],
+          "can_review_sboms",
+        ),
+      ).toBe(true);
+    }
+    for (const baseRole of ["member", "viewer"] as const) {
+      expect(
+        hasPermission(
+          DEFAULT_PERMISSIONS_BY_ROLE[baseRole],
+          "can_review_sboms",
+        ),
+      ).toBe(false);
+    }
+  });
+
+  it("adds product approval only for owners and admins", () => {
+    expect(PERMISSION_MATRIX.products).toContain("approve");
+    expect(isPermissionKey("can_approve_products")).toBe(true);
+    expect(
+      hasPermission(DEFAULT_PERMISSIONS_BY_ROLE.owner, "can_approve_products"),
+    ).toBe(true);
+    expect(
+      hasPermission(DEFAULT_PERMISSIONS_BY_ROLE.admin, "can_approve_products"),
+    ).toBe(true);
+    expect(
+      hasPermission(DEFAULT_PERMISSIONS_BY_ROLE.member, "can_approve_products"),
+    ).toBe(false);
+    expect(
+      hasPermission(DEFAULT_PERMISSIONS_BY_ROLE.viewer, "can_approve_products"),
+    ).toBe(false);
+  });
+
   it("owner has every permission", () => {
     for (const key of PERMISSION_KEYS) {
       expect(hasPermission(DEFAULT_PERMISSIONS_BY_ROLE.owner, key)).toBe(true);
     }
+  });
+
+  it("reserves organization export and deletion for owners", () => {
+    expect(
+      hasPermission(
+        DEFAULT_PERMISSIONS_BY_ROLE.owner,
+        "can_export_organization",
+      ),
+    ).toBe(true);
+    expect(
+      hasPermission(
+        DEFAULT_PERMISSIONS_BY_ROLE.owner,
+        "can_delete_organization",
+      ),
+    ).toBe(true);
+    for (const baseRole of ["admin", "member", "viewer"] as const) {
+      expect(
+        hasPermission(
+          DEFAULT_PERMISSIONS_BY_ROLE[baseRole],
+          "can_export_organization",
+        ),
+      ).toBe(false);
+      expect(
+        hasPermission(
+          DEFAULT_PERMISSIONS_BY_ROLE[baseRole],
+          "can_delete_organization",
+        ),
+      ).toBe(false);
+    }
+  });
+
+  it("keeps custom-role permission merging additive, so destructive routes must also require owner", () => {
+    const out = resolveEffectivePermissions({
+      baseRole: "viewer",
+      customRoles: [role({ permissions: { can_delete_organization: true } })],
+    });
+    expect(hasPermission(out, "can_delete_organization")).toBe(true);
   });
 
   it("admin has everything except organization editing", () => {
@@ -184,6 +498,122 @@ describe("presets", () => {
       if (key.startsWith("can_view_")) continue;
       expect(hasPermission(viewer, key)).toBe(false);
     }
+  });
+
+  it("defaults finding read access to every live role, but finding changes to owner and admin", () => {
+    for (const baseRole of BASE_ROLES) {
+      expect(
+        hasPermission(
+          DEFAULT_PERMISSIONS_BY_ROLE[baseRole],
+          "can_view_findings",
+        ),
+      ).toBe(true);
+    }
+    for (const baseRole of ["owner", "admin"] as const) {
+      expect(
+        hasPermission(
+          DEFAULT_PERMISSIONS_BY_ROLE[baseRole],
+          "can_edit_findings",
+        ),
+      ).toBe(true);
+    }
+    for (const baseRole of ["member", "viewer"] as const) {
+      expect(
+        hasPermission(
+          DEFAULT_PERMISSIONS_BY_ROLE[baseRole],
+          "can_edit_findings",
+        ),
+      ).toBe(false);
+      expect(
+        hasPermission(
+          DEFAULT_PERMISSIONS_BY_ROLE[baseRole],
+          "can_manage_finding_views",
+        ),
+      ).toBe(false);
+    }
+    for (const baseRole of ["owner", "admin"] as const) {
+      expect(
+        hasPermission(
+          DEFAULT_PERMISSIONS_BY_ROLE[baseRole],
+          "can_manage_finding_views",
+        ),
+      ).toBe(true);
+      expect(
+        hasPermission(
+          DEFAULT_PERMISSIONS_BY_ROLE[baseRole],
+          "can_approve_findings",
+        ),
+      ).toBe(true);
+      expect(
+        hasPermission(
+          DEFAULT_PERMISSIONS_BY_ROLE[baseRole],
+          "can_manage_finding_approval_policy",
+        ),
+      ).toBe(true);
+    }
+    for (const baseRole of ["member", "viewer"] as const) {
+      expect(
+        hasPermission(
+          DEFAULT_PERMISSIONS_BY_ROLE[baseRole],
+          "can_approve_findings",
+        ),
+      ).toBe(false);
+      expect(
+        hasPermission(
+          DEFAULT_PERMISSIONS_BY_ROLE[baseRole],
+          "can_manage_finding_approval_policy",
+        ),
+      ).toBe(false);
+    }
+  });
+
+  it("adds export and controlled-publication grants only for owners and admins", () => {
+    expect(PERMISSION_MATRIX.findings).toContain("export");
+    expect(PERMISSION_MATRIX.finding_publication).toEqual(["manage"]);
+    for (const baseRole of ["owner", "admin"] as const) {
+      expect(
+        hasPermission(
+          DEFAULT_PERMISSIONS_BY_ROLE[baseRole],
+          "can_export_findings",
+        ),
+      ).toBe(true);
+      expect(
+        hasPermission(
+          DEFAULT_PERMISSIONS_BY_ROLE[baseRole],
+          "can_manage_finding_publication",
+        ),
+      ).toBe(true);
+    }
+    for (const baseRole of ["member", "viewer"] as const) {
+      expect(
+        hasPermission(
+          DEFAULT_PERMISSIONS_BY_ROLE[baseRole],
+          "can_export_findings",
+        ),
+      ).toBe(false);
+      expect(
+        hasPermission(
+          DEFAULT_PERMISSIONS_BY_ROLE[baseRole],
+          "can_manage_finding_publication",
+        ),
+      ).toBe(false);
+    }
+    const customRoleGrant = resolveEffectivePermissions({
+      baseRole: "viewer",
+      customRoles: [
+        role({ permissions: { can_manage_finding_publication: true } }),
+      ],
+    });
+    expect(
+      hasPermission(customRoleGrant, "can_manage_finding_publication"),
+    ).toBe(true);
+    const overridden = resolveEffectivePermissions({
+      baseRole: "admin",
+      baseRoleOverrides: { can_manage_finding_publication: false },
+    });
+    expect(hasPermission(overridden, "can_manage_finding_publication")).toBe(
+      false,
+    );
   });
 
   it("privilege is monotonic across the base roles", () => {

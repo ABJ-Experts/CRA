@@ -47,6 +47,8 @@ import { SupabaseMfaRecoveryRepository } from "./infrastructure/supabase-mfa-rec
 import { MfaController } from "./mfa/mfa.controller";
 import { MfaService } from "./mfa/mfa.service";
 import { TokenVerifierService } from "./token-verifier.service";
+import { TENANT_SCOPE_ACCESS_PORT } from "./application/tenant-scope-access.port";
+import { SupabaseTenantScopeAccessAdapter } from "./infrastructure/supabase-tenant-scope-access.adapter";
 
 @Module({
   imports: [AuditModule, SupabaseModule, MailModule],
@@ -62,6 +64,11 @@ import { TokenVerifierService } from "./token-verifier.service";
     NodeAuthRandomAdapter,
     SystemClockAdapter,
     SystemDelayAdapter,
+    SupabaseTenantScopeAccessAdapter,
+    {
+      provide: TENANT_SCOPE_ACCESS_PORT,
+      useExisting: SupabaseTenantScopeAccessAdapter,
+    },
     {
       provide: IssueVerificationArtifactUseCase,
       inject: [
@@ -288,6 +295,11 @@ import { TokenVerifierService } from "./token-verifier.service";
       ) => new UnenrollMfaUseCase(identity, profiles, audit),
     },
   ],
-  exports: [AuthService, MfaService, TokenVerifierService],
+  exports: [
+    AuthService,
+    MfaService,
+    TokenVerifierService,
+    TENANT_SCOPE_ACCESS_PORT,
+  ],
 })
 export class AuthModule {}
