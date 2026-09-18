@@ -5,6 +5,9 @@ import type {
   EvidenceDocumentListQuery,
   EvidenceDocumentListResponse,
   EvidenceDocumentVersionsResponse,
+  EvidenceExtractedTextResponse,
+  EvidenceSearchQuery,
+  EvidenceSearchResponse,
   InitializeEvidenceUploadInput,
 } from "@repo/contracts/evidence";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -67,6 +70,68 @@ export function useCompleteEvidenceUploadMutation(productId: string) {
 export const evidenceVersionsKey = (productId: string, documentId: string) =>
   ["evidence", productId, "versions", documentId] as const;
 
+export const evidenceSearchKey = (
+  productId: string,
+  query: EvidenceSearchQuery,
+) =>
+  [
+    "evidence",
+    productId,
+    "search",
+    query.q,
+    query.documentClass ?? null,
+    query.includeHistorical,
+    query.limit,
+    query.cursor ?? null,
+  ] as const;
+
+export function useEvidenceSearchQuery(
+  productId: string,
+  query: EvidenceSearchQuery,
+  enabled: boolean,
+) {
+  return useQuery<EvidenceSearchResponse>({
+    queryKey: evidenceSearchKey(productId, query),
+    enabled: enabled && productId !== "",
+    retry: false,
+    queryFn: ({ signal }) => evidenceApi.search(productId, query, signal),
+  });
+}
+
+export const evidenceExtractedTextKey = (
+  productId: string,
+  documentId: string,
+  versionId: string,
+) => ["evidence", productId, "extracted-text", documentId, versionId] as const;
+
+export function useEvidenceExtractedTextQuery(
+  productId: string,
+  documentId: string | null,
+  versionId: string | null,
+  enabled: boolean,
+) {
+  return useQuery<EvidenceExtractedTextResponse>({
+    queryKey: evidenceExtractedTextKey(
+      productId,
+      documentId ?? "",
+      versionId ?? "",
+    ),
+    enabled: enabled && documentId !== null && versionId !== null,
+    retry: false,
+    refetchInterval: (query) => {
+      const status = query.state.data?.extractedText.extraction.status;
+      return status === "queued" || status === "running" ? 5_000 : false;
+    },
+    queryFn: ({ signal }) =>
+      evidenceApi.extractedText(
+        productId,
+        documentId ?? "",
+        versionId ?? "",
+        signal,
+      ),
+  });
+}
+
 export function useEvidenceVersionsQuery(
   productId: string,
   documentId: string | null,
@@ -96,6 +161,40 @@ export function useReplaceEvidenceMutation(productId: string) {
       void client.invalidateQueries({ queryKey: evidenceKey(productId) });
       void client.invalidateQueries({
         queryKey: evidenceVersionsKey(productId, response.document.id),
+      });
+    },
+  });
+}
+
+export function useRetryEvidenceExtractionMutation(productId: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      documentId,
+      versionId,
+      idempotencyKey,
+    }: Readonly<{
+      documentId: string;
+      versionId: string;
+      idempotencyKey: string;
+    }>) =>
+      evidenceApi.retryExtraction(productId, documentId, versionId, {
+        idempotencyKey,
+      }),
+    onSuccess: (_, variables) => {
+      void client.invalidateQueries({ queryKey: evidenceKey(productId) });
+      void client.invalidateQueries({
+        queryKey: evidenceVersionsKey(productId, variables.documentId),
+      });
+      void client.invalidateQueries({
+        queryKey: evidenceExtractedTextKey(
+          productId,
+          variables.documentId,
+          variables.versionId,
+        ),
+      });
+      void client.invalidateQueries({
+        queryKey: ["evidence", productId, "search"],
       });
     },
   });

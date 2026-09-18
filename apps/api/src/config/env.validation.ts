@@ -107,10 +107,18 @@ export const envSchema = z.object({
    * keep the private key in their secret manager; retained public keys make
    * old packages independently verifiable after rotation.
    */
-  REPORTING_EVIDENCE_SIGNING_KEY_ID: z.string().trim().min(1).max(200).optional(),
+  REPORTING_EVIDENCE_SIGNING_KEY_ID: z
+    .string()
+    .trim()
+    .min(1)
+    .max(200)
+    .optional(),
   REPORTING_EVIDENCE_SIGNING_PRIVATE_KEY: z.string().min(1).optional(),
   REPORTING_EVIDENCE_SIGNING_PUBLIC_KEY: z.string().min(1).optional(),
-  REPORTING_EVIDENCE_RETAINED_PUBLIC_KEYS_JSON: z.string().optional().default("[]"),
+  REPORTING_EVIDENCE_RETAINED_PUBLIC_KEYS_JSON: z
+    .string()
+    .optional()
+    .default("[]"),
   /**
    * pgcrypto pgp_sym_encrypt/decrypt key for connector_secrets.ciphertext.
    * Postgres functions can't read env vars, so this is threaded in as an RPC
@@ -346,6 +354,35 @@ export const envSchema = z.object({
     120_000,
     600_000,
     "must not exceed 600000 milliseconds",
+  ),
+  /** Local-only extraction. Empty paths intentionally make just OCR unavailable. */
+  EVIDENCE_PDFTOTEXT_PATH: z.string().trim().min(1).max(1_024).optional(),
+  EVIDENCE_PDFTOPPM_PATH: z.string().trim().min(1).max(1_024).optional(),
+  EVIDENCE_TESSERACT_PATH: z.string().trim().min(1).max(1_024).optional(),
+  EVIDENCE_OCR_LANGUAGE: z
+    .string()
+    .trim()
+    .regex(/^[A-Za-z0-9_+-]{2,32}$/)
+    .default("eng"),
+  EVIDENCE_EXTRACTION_COMMAND_TIMEOUT_MS: boundedInt(
+    30_000,
+    300_000,
+    "must not exceed 300000 milliseconds",
+  ),
+  EVIDENCE_EXTRACTION_JOB_TIMEOUT_MS: boundedInt(
+    120_000,
+    600_000,
+    "must not exceed 600000 milliseconds",
+  ),
+  EVIDENCE_EXTRACTION_LEASE_SECONDS: boundedInt(
+    120,
+    900,
+    "must not exceed 900 seconds",
+  ),
+  EVIDENCE_OCR_MAX_PIXELS: boundedInt(
+    40_000_000,
+    100_000_000,
+    "must not exceed 100000000 pixels",
   ),
   /**
    * Tolerance when comparing a JWT's `iat` against `users.session_epoch_at`.

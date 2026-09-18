@@ -3,11 +3,7 @@ import { randomUUID } from "node:crypto";
 export const EVIDENCE_REPOSITORY = Symbol("EVIDENCE_REPOSITORY");
 
 export type EvidenceState =
-  | "uploading"
-  | "scan_pending"
-  | "clean"
-  | "quarantined"
-  | "failed";
+  "uploading" | "scan_pending" | "clean" | "quarantined" | "failed";
 
 export type EvidenceReservation = Readonly<{
   documentId: string;
@@ -35,12 +31,19 @@ export interface EvidenceRepository {
       correlationId: string;
     }>,
   ): Promise<
-    | Readonly<{ outcome: "created" | "replayed"; reservation: EvidenceReservation }>
-    | Readonly<{ outcome: "not_found" | "conflict" | "idempotency_mismatch" | "invalid_request" }>
+    | Readonly<{
+        outcome: "created" | "replayed";
+        reservation: EvidenceReservation;
+      }>
+    | Readonly<{
+        outcome:
+          "not_found" | "conflict" | "idempotency_mismatch" | "invalid_request";
+      }>
   >;
   reserveReplacement(
     organizationId: string,
-    input: Parameters<EvidenceRepository["reserve"]>[1] & Readonly<{ documentId: string; expectedCurrentVersionId: string }>,
+    input: Parameters<EvidenceRepository["reserve"]>[1] &
+      Readonly<{ documentId: string; expectedCurrentVersionId: string }>,
   ): ReturnType<EvidenceRepository["reserve"]>;
   finalize(
     organizationId: string,
@@ -55,33 +58,72 @@ export interface EvidenceRepository {
       correlationId: string;
     }>,
   ): Promise<
-    | Readonly<{ outcome: "queued" | "failed" | "replayed"; state: EvidenceState }>
+    | Readonly<{
+        outcome: "queued" | "failed" | "replayed";
+        state: EvidenceState;
+      }>
     | Readonly<{ outcome: "not_found" | "conflict" | "idempotency_mismatch" }>
   >;
-  getUploadVersion(organizationId: string, input: Readonly<{ actorId: string; versionId: string }>): Promise<Readonly<{ objectKey: string; productId: string }> | null>;
+  getUploadVersion(
+    organizationId: string,
+    input: Readonly<{ actorId: string; versionId: string }>,
+  ): Promise<Readonly<{ objectKey: string; productId: string }> | null>;
   list(
     organizationId: string,
-    input: Readonly<{ actorId: string; productId: string; limit: number; cursor?: string }>,
+    input: Readonly<{
+      actorId: string;
+      productId: string;
+      limit: number;
+      cursor?: string;
+      status?: EvidenceState;
+      documentClass?: string;
+    }>,
   ): Promise<unknown>;
-  versions(organizationId: string, input: Readonly<{ actorId: string; productId: string; documentId: string }>): Promise<unknown>;
+  versions(
+    organizationId: string,
+    input: Readonly<{ actorId: string; productId: string; documentId: string }>,
+  ): Promise<unknown>;
 }
 
 export interface EvidenceStoragePort {
-  createSignedUpload(input: Readonly<{ objectKey: string; contentType: string; byteSize: number }>): Promise<Readonly<{ uploadUrl: string; expiresAt: string }>>;
-  inspect(input: Readonly<{ objectKey: string; maximumByteSize: number }>): Promise<
-    | Readonly<{ outcome: "verified"; sha256: string; byteSize: number; mediaType: string }>
-    | Readonly<{ outcome: "missing" | "unavailable" | "rejected"; code: string }>
+  createSignedUpload(
+    input: Readonly<{
+      objectKey: string;
+      contentType: string;
+      byteSize: number;
+    }>,
+  ): Promise<Readonly<{ uploadUrl: string; expiresAt: string }>>;
+  inspect(
+    input: Readonly<{ objectKey: string; maximumByteSize: number }>,
+  ): Promise<
+    | Readonly<{
+        outcome: "verified";
+        sha256: string;
+        byteSize: number;
+        mediaType: string;
+      }>
+    | Readonly<{
+        outcome: "missing" | "unavailable" | "rejected";
+        code: string;
+      }>
   >;
 }
 
 /** Coordinates a reservation with storage inspection. Business authorization is
  * transactionally enforced in the repository; browser claims are never trusted. */
 export class EvidenceIntakeUseCases {
-  constructor(private readonly repository: EvidenceRepository, private readonly storage: EvidenceStoragePort) {}
+  constructor(
+    private readonly repository: EvidenceRepository,
+    private readonly storage: EvidenceStoragePort,
+  ) {}
 
-  async initialize(input: Parameters<EvidenceRepository["reserve"]>[1] & Readonly<{ organizationId: string }>) {
+  async initialize(
+    input: Parameters<EvidenceRepository["reserve"]>[1] &
+      Readonly<{ organizationId: string }>,
+  ) {
     const reserved = await this.repository.reserve(input.organizationId, input);
-    if (reserved.outcome !== "created" && reserved.outcome !== "replayed") return reserved;
+    if (reserved.outcome !== "created" && reserved.outcome !== "replayed")
+      return reserved;
     const reservation = reserved.reservation;
     const upload = await this.storage.createSignedUpload({
       objectKey: reservation.objectKey,
@@ -91,15 +133,38 @@ export class EvidenceIntakeUseCases {
     return Object.freeze({ ...reserved, upload });
   }
 
-  async initializeReplacement(input: Parameters<EvidenceRepository["reserveReplacement"]>[1] & Readonly<{ organizationId: string }>) {
-    const reserved = await this.repository.reserveReplacement(input.organizationId, input);
-    if (reserved.outcome !== "created" && reserved.outcome !== "replayed") return reserved;
-    const upload = await this.storage.createSignedUpload({ objectKey: reserved.reservation.objectKey, contentType: "application/octet-stream", byteSize: input.declaredByteSize });
+  async initializeReplacement(
+    input: Parameters<EvidenceRepository["reserveReplacement"]>[1] &
+      Readonly<{ organizationId: string }>,
+  ) {
+    const reserved = await this.repository.reserveReplacement(
+      input.organizationId,
+      input,
+    );
+    if (reserved.outcome !== "created" && reserved.outcome !== "replayed")
+      return reserved;
+    const upload = await this.storage.createSignedUpload({
+      objectKey: reserved.reservation.objectKey,
+      contentType: "application/octet-stream",
+      byteSize: input.declaredByteSize,
+    });
     return Object.freeze({ ...reserved, upload });
   }
 
-  async complete(input: Readonly<{ organizationId: string; actorId: string; versionId: string; objectKey: string; idempotencyKey: string; correlationId?: string }>) {
-    const inspected = await this.storage.inspect({ objectKey: input.objectKey, maximumByteSize: 50 * 1024 * 1024 });
+  async complete(
+    input: Readonly<{
+      organizationId: string;
+      actorId: string;
+      versionId: string;
+      objectKey: string;
+      idempotencyKey: string;
+      correlationId?: string;
+    }>,
+  ) {
+    const inspected = await this.storage.inspect({
+      objectKey: input.objectKey,
+      maximumByteSize: 50 * 1024 * 1024,
+    });
     const finalized = await this.repository.finalize(input.organizationId, {
       actorId: input.actorId,
       versionId: input.versionId,

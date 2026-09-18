@@ -11,6 +11,18 @@ const utcDateTimeSchema = z.string().datetime({ offset: true });
 const sha256Schema = z
   .string()
   .regex(/^[a-f0-9]{64}$/, "Use a lowercase SHA-256");
+const evidenceSearchCursorSchema = z
+  .string()
+  .regex(/^[A-Za-z0-9_-]{1,2048}$/, "Use an opaque search cursor")
+  .brand<"EvidenceSearchCursor">();
+const safeExtractedTextSchema = z
+  .string()
+  .min(1)
+  .max(1_000)
+  .refine(
+    (value) => !/[\p{Cc}\p{Cf}]/u.test(value),
+    "Use normalized display text without control characters",
+  );
 
 /**
  * Browser filenames are display/download metadata only. They cannot select a
@@ -63,6 +75,87 @@ export const evidenceDocumentStatusSchema = z.enum([
   "quarantined",
   "failed",
 ]);
+
+/** Visible lifecycle of the locally-derived text, independent of malware scan. */
+export const evidenceExtractionStatusSchema = z.enum([
+  "queued",
+  "running",
+  "complete",
+  "failed",
+]);
+
+/** Safe labels only. Detailed parser output must remain server-side. */
+export const evidenceExtractionFailureCodeSchema = z.enum([
+  "unavailable",
+  "unsupported_media_type",
+  "encrypted",
+  "malformed",
+  "resource_limit",
+  "timeout",
+  "output_limit",
+  "empty",
+  "low_quality",
+  "failed",
+]);
+
+export const evidenceExtractionQualitySchema = z.enum([
+  "not_assessed",
+  "sufficient",
+  "low",
+]);
+
+/**
+ * Provenance is kept with the immutable evidence version, rather than treated
+ * as a claim made by extracted text. A failed extraction never means no match.
+ */
+export const evidenceExtractionMetadataSchema = z
+  .object({
+    status: evidenceExtractionStatusSchema,
+    sourceSha256: sha256Schema,
+    extractorVersion: requiredText(120),
+    updatedAt: utcDateTimeSchema,
+    failureCode: evidenceExtractionFailureCodeSchema.nullable(),
+    truncated: z.boolean(),
+    quality: evidenceExtractionQualitySchema,
+  })
+  .strict()
+  .superRefine((value, context) => {
+    if (value.status === "failed" && value.failureCode === null) {
+      context.addIssue({
+        code: "custom",
+        path: ["failureCode"],
+        message: "Failed extraction requires a safe failure code",
+      });
+    }
+    if (value.status !== "failed" && value.failureCode !== null) {
+      context.addIssue({
+        code: "custom",
+        path: ["failureCode"],
+        message: "Only failed extraction may carry a failure code",
+      });
+    }
+    if (value.status === "complete" && value.quality !== "sufficient") {
+      context.addIssue({
+        code: "custom",
+        path: ["quality"],
+        message: "Complete extraction requires sufficient quality",
+      });
+    }
+    if (value.status !== "complete" && value.truncated) {
+      context.addIssue({
+        code: "custom",
+        path: ["truncated"],
+        message: "Only completed extraction may report truncation",
+      });
+    }
+    if (value.failureCode === "low_quality" && value.quality !== "low") {
+      context.addIssue({
+        code: "custom",
+        path: ["quality"],
+        message: "Low-quality extraction requires low quality state",
+      });
+    }
+  });
 
 export const evidenceScanOutcomeSchema = z.enum([
   "clean",
@@ -206,6 +299,145 @@ export const evidenceDocumentListQuerySchema = z
   })
   .strict();
 
+const normalizedEvidenceSearchQuerySchema = z
+  .string()
+  .trim()
+  .min(2)
+  .max(200)
+  .refine(
+    (value) => !/[\p{Cc}\p{Cf}]/u.test(value),
+    "Use a search query without control characters",
+  )
+  .transform((value) => value.normalize("NFC").replace(/\s+/g, " "));
+
+const queryBooleanSchema = z.preprocess((value) => {
+  if (value === "true") return true;
+  if (value === "false") return false;
+  return value;
+}, z.boolean());
+
+/** Product-scoped full-text query. The cursor never defines authorization. */
+export const evidenceSearchQuerySchema = z
+  .object({
+    q: normalizedEvidenceSearchQuerySchema,
+    documentClass: evidenceDocumentClassSchema.optional(),
+    includeHistorical: queryBooleanSchema.default(false),
+    limit: z.coerce.number().int().min(1).max(50).default(25),
+    cursor: evidenceSearchCursorSchema.optional(),
+  })
+  .strict();
+
+/** Text is always rendered as text, never as HTML. */
+export const evidenceSearchSnippetSegmentSchema = z
+  .object({ text: safeExtractedTextSchema, highlighted: z.boolean() })
+  .strict();
+
+export const evidenceSearchSnippetSchema = z
+  .object({
+    segments: z.array(evidenceSearchSnippetSegmentSchema).min(1).max(32),
+    truncated: z.boolean(),
+  })
+  .strict();
+
+/**
+ * Counts describe the searchable eligible-version population, not a global
+ * tenant total. They let the UI distinguish no matches from incomplete index.
+ */
+export const evidenceSearchCoverageSchema = z
+  .object({
+    indexed: z.number().int().nonnegative(),
+    pending: z.number().int().nonnegative(),
+    unavailable: z.number().int().nonnegative(),
+  })
+  .strict();
+
+export const evidenceSearchFacetSchema = z
+  .object({
+    documentClass: evidenceDocumentClassSchema,
+    count: z.number().int().nonnegative(),
+  })
+  .strict();
+
+export const evidenceSearchResultSchema = z
+  .object({
+    documentId: z.uuid(),
+    versionId: z.uuid(),
+    versionNumber: z.number().int().positive(),
+    title: requiredText(500),
+    documentClass: evidenceDocumentClassSchema,
+    fileName: safeEvidenceFileNameSchema,
+    createdAt: utcDateTimeSchema,
+    validUntil: utcDateTimeSchema.nullable(),
+    currentVersion: z.boolean(),
+    score: z.number().finite().min(0).max(1_000_000),
+    snippet: evidenceSearchSnippetSchema,
+    extraction: evidenceExtractionMetadataSchema,
+  })
+  .strict()
+  .superRefine((value, context) => {
+    if (value.extraction.status !== "complete") {
+      context.addIssue({
+        code: "custom",
+        path: ["extraction", "status"],
+        message: "Search results require a completed extraction",
+      });
+    }
+  });
+
+export const evidenceSearchResponseSchema = z
+  .object({
+    results: z.array(evidenceSearchResultSchema).max(50),
+    totalCount: z.number().int().nonnegative(),
+    facets: z.array(evidenceSearchFacetSchema).max(8),
+    coverage: evidenceSearchCoverageSchema,
+    nextCursor: evidenceSearchCursorSchema.nullable(),
+  })
+  .strict();
+
+/** Product, document, and immutable version are all route-scoped. */
+export const evidenceExtractedTextParamsSchema =
+  evidenceDocumentAccessParamsSchema;
+export const evidenceExtractionRetryParamsSchema =
+  evidenceDocumentAccessParamsSchema;
+
+/** A caller-generated key makes manual retry safe to explicitly repeat. */
+export const retryEvidenceExtractionInputSchema = z
+  .object({ idempotencyKey: idempotencyKeySchema })
+  .strict();
+
+export const evidenceExtractedTextResponseSchema = z
+  .object({
+    extractedText: z
+      .object({
+        documentId: z.uuid(),
+        versionId: z.uuid(),
+        extraction: evidenceExtractionMetadataSchema,
+        snippet: evidenceSearchSnippetSchema.nullable(),
+      })
+      .strict()
+      .superRefine((value, context) => {
+        if (value.extraction.status === "complete" && value.snippet === null) {
+          context.addIssue({
+            code: "custom",
+            path: ["snippet"],
+            message: "Completed extraction requires an extracted-text snippet",
+          });
+        }
+        if (value.extraction.status !== "complete" && value.snippet !== null) {
+          context.addIssue({
+            code: "custom",
+            path: ["snippet"],
+            message: "Only completed extraction may return text",
+          });
+        }
+      }),
+  })
+  .strict();
+
+export const retryEvidenceExtractionResponseSchema = z
+  .object({ extraction: evidenceExtractionMetadataSchema })
+  .strict();
+
 export const evidenceDocumentVersionSchema = z
   .object({
     id: z.uuid(),
@@ -224,6 +456,8 @@ export const evidenceDocumentVersionSchema = z
     sha256: sha256Schema.nullable(),
     status: evidenceDocumentStatusSchema,
     scan: evidenceScanProvenanceSchema.nullable(),
+    /** Null for versions created before M8-03 or without a derived text row. */
+    extraction: evidenceExtractionMetadataSchema.nullable(),
     uploadExpiresAt: utcDateTimeSchema.nullable(),
     uploadedByUserId: z.uuid(),
     completedAt: utcDateTimeSchema.nullable(),

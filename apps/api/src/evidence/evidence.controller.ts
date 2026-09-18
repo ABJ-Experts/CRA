@@ -35,6 +35,17 @@ import {
   evidenceUploadVersionParamsSchema,
   type CreateEvidenceReplacementInput,
   type EvidenceDocumentAccessInput,
+  evidenceSearchQuerySchema,
+  evidenceSearchResponseSchema,
+  evidenceExtractedTextParamsSchema,
+  evidenceExtractedTextResponseSchema,
+  evidenceExtractionRetryParamsSchema,
+  retryEvidenceExtractionInputSchema,
+  retryEvidenceExtractionResponseSchema,
+  type EvidenceSearchQuery,
+  type EvidenceExtractedTextParams,
+  type EvidenceExtractionRetryParams,
+  type RetryEvidenceExtractionInput,
 } from "@repo/contracts/evidence";
 import {
   CurrentUser,
@@ -55,6 +66,7 @@ import {
 } from "./application/evidence-intake-use-cases";
 import { EvidenceAccessUseCases } from "./application/evidence-access-use-cases";
 import { SupabaseEvidenceStorageAdapter } from "./infrastructure/supabase-evidence-storage.adapter";
+import { EvidenceTextSearchUseCases } from "./application/evidence-text-search-use-cases";
 
 @Controller()
 export class EvidenceController {
@@ -65,6 +77,7 @@ export class EvidenceController {
     @Inject(EVIDENCE_REPOSITORY)
     private readonly repository: EvidenceRepository,
     private readonly storage: SupabaseEvidenceStorageAdapter,
+    private readonly textSearch: EvidenceTextSearchUseCases,
   ) {}
 
   @RequirePermissions("can_upload_evidence")
@@ -205,7 +218,72 @@ export class EvidenceController {
       productId: params.productId,
       limit: query.limit,
       cursor: query.cursor,
+      status: query.status,
+      documentClass: query.documentClass,
     });
+  }
+
+  @RequirePermissions("can_view_evidence")
+  @Get("products/:productId/evidence-search")
+  @ZodResponse(evidenceSearchResponseSchema)
+  async search(
+    @Param(zodParams(evidenceProductParamsSchema))
+    params: EvidenceProductParams,
+    @Query(zodQuery(evidenceSearchQuerySchema)) query: EvidenceSearchQuery,
+    @CurrentUser() user: RequestUser,
+  ) {
+    const result = await this.textSearch.search({
+      organizationId: organizationId(user),
+      actorId: user.id,
+      productId: params.productId,
+      query,
+    });
+    if (!result)
+      throw new NotFoundException({ code: "evidence_search_unavailable" });
+    return result;
+  }
+
+  @RequirePermissions("can_view_evidence")
+  @Get(
+    "products/:productId/evidence-documents/:documentId/versions/:versionId/extracted-text",
+  )
+  @ZodResponse(evidenceExtractedTextResponseSchema)
+  async extractedText(
+    @Param(zodParams(evidenceExtractedTextParamsSchema))
+    params: EvidenceExtractedTextParams,
+    @CurrentUser() user: RequestUser,
+  ) {
+    const result = await this.textSearch.extractedText({
+      organizationId: organizationId(user),
+      actorId: user.id,
+      ...params,
+    });
+    if (!result)
+      throw new NotFoundException({ code: "extraction_unavailable" });
+    return result;
+  }
+
+  @RequirePermissions("can_upload_evidence")
+  @Post(
+    "products/:productId/evidence-documents/:documentId/versions/:versionId/extraction/retry",
+  )
+  @ZodResponse(retryEvidenceExtractionResponseSchema)
+  async retryExtraction(
+    @Param(zodParams(evidenceExtractionRetryParamsSchema))
+    params: EvidenceExtractionRetryParams,
+    @Body(zodBody(retryEvidenceExtractionInputSchema))
+    input: RetryEvidenceExtractionInput,
+    @CurrentUser() user: RequestUser,
+  ) {
+    const result = await this.textSearch.retry({
+      organizationId: organizationId(user),
+      actorId: user.id,
+      ...params,
+      retry: input,
+    });
+    if (!result)
+      throw new NotFoundException({ code: "extraction_unavailable" });
+    return result;
   }
 
   @RequirePermissions("can_view_evidence")

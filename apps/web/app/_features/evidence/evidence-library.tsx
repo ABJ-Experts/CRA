@@ -17,6 +17,7 @@ import {
   ShieldCheck,
   Upload,
 } from "lucide-react";
+import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
 
 import { ApiClientError } from "../../_lib/http/api-client";
@@ -27,6 +28,7 @@ import {
   SectionCard,
 } from "../../dashboard/_components/dashboard-chrome";
 import { evidenceApi } from "./evidence.api";
+import { EvidenceExtractedText } from "./evidence-extracted-text";
 import {
   useCompleteEvidenceUploadMutation,
   useEvidenceDocumentsQuery,
@@ -34,6 +36,23 @@ import {
   useInitializeEvidenceUploadMutation,
   useReplaceEvidenceMutation,
 } from "./evidence.queries";
+
+const EvidenceSearchPanel = dynamic(
+  () =>
+    import("./evidence-search-panel").then(
+      (module) => module.EvidenceSearchPanel,
+    ),
+  {
+    loading: () => (
+      <p
+        role="status"
+        className="rounded-xl border border-border bg-surface p-4 text-caption-1-regular text-fg-muted"
+      >
+        Loading evidence search…
+      </p>
+    ),
+  },
+);
 
 type DocumentClass = EvidenceDocumentVersion["documentClass"];
 type Mode = "new" | "replacement";
@@ -434,6 +453,7 @@ export function EvidenceLibrary({
               {message}
             </p>
           ) : null}
+          <EvidenceSearchPanel productId={productId} enabled={enabled} />
           <SectionCard title="Evidence records">
             {list.isLoading ? (
               <p role="status" className="text-subhead-regular text-fg-muted">
@@ -601,6 +621,13 @@ export function EvidenceLibrary({
                       <p className="text-caption-1-regular text-fg-muted">
                         Created {date(selectedVersion.createdAt)}
                       </p>
+                      <EvidenceExtractedText
+                        productId={productId}
+                        documentId={selected.id}
+                        version={selectedVersion}
+                        enabled={enabled}
+                        canRetry={canUpload}
+                      />
                       {selectedVersion.status !== "clean" ? (
                         <p className="text-subhead-regular text-fg-muted">
                           This version is {label(selectedVersion.status)} and

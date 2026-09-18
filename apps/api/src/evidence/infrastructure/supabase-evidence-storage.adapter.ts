@@ -203,13 +203,18 @@ async function digest(blob: Blob) {
   const probeChunks: Buffer[] = [];
   let remaining = 8192;
   let size = 0;
-  for await (const value of Readable.fromWeb(blob.stream() as never)) {
-    const bytes = Buffer.isBuffer(value) ? value : Buffer.from(value);
+  const stream = Readable.fromWeb(
+    blob.stream() as ReadableStream<Uint8Array>,
+  ) as AsyncIterable<Buffer | Uint8Array>;
+  for await (const value of stream) {
+    const bytes = Buffer.isBuffer(value)
+      ? value
+      : Buffer.from(value.buffer, value.byteOffset, value.byteLength);
     size += bytes.byteLength;
     if (size > maximumBytes) throw new EvidenceStorageError("malformed");
     hash.update(bytes);
     if (remaining > 0) {
-      const part = bytes.subarray(0, remaining);
+      const part = Buffer.from(bytes.subarray(0, remaining));
       probeChunks.push(part);
       remaining -= part.byteLength;
     }

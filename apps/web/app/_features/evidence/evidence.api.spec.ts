@@ -37,6 +37,47 @@ describe("EvidenceApi", () => {
     );
   });
 
+  it("uses a product-scoped, normalized search route", () => {
+    const api = new EvidenceApi();
+
+    api.search(PRODUCT_ID, {
+      q: "  secure   boot ",
+      includeHistorical: true,
+      limit: 25,
+    });
+
+    expect(request).toHaveBeenCalledWith(
+      expect.objectContaining({
+        path: `/api/v1/products/${PRODUCT_ID}/evidence-search?q=secure+boot&includeHistorical=true`,
+      }),
+    );
+  });
+
+  it("keeps extracted-text reads and explicit retries within the product version route", () => {
+    const api = new EvidenceApi();
+
+    api.extractedText(PRODUCT_ID, DOCUMENT_ID, VERSION_ID);
+    api.retryExtraction(PRODUCT_ID, DOCUMENT_ID, VERSION_ID, {
+      idempotencyKey: KEY,
+    });
+
+    expect(request).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        path: `/api/v1/products/${PRODUCT_ID}/evidence-documents/${DOCUMENT_ID}/versions/${VERSION_ID}/extracted-text`,
+      }),
+    );
+    expect(request).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        path: `/api/v1/products/${PRODUCT_ID}/evidence-documents/${DOCUMENT_ID}/versions/${VERSION_ID}/extraction/retry`,
+        method: "POST",
+        body: { idempotencyKey: KEY },
+        inputSchema: expect.anything(),
+      }),
+    );
+  });
+
   it("keeps upload commands at a schema boundary", () => {
     const api = new EvidenceApi();
     api.complete(VERSION_ID, { idempotencyKey: KEY });

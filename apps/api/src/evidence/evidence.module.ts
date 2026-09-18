@@ -11,6 +11,10 @@ import {
   EvidenceAccessUseCases,
   EVIDENCE_ACCESS_REPOSITORY,
 } from "./application/evidence-access-use-cases";
+import {
+  EvidenceTextSearchUseCases,
+  EVIDENCE_TEXT_SEARCH_REPOSITORY,
+} from "./application/evidence-text-search-use-cases";
 
 @Module({
   imports: [SupabaseModule],
@@ -36,6 +40,16 @@ import {
       inject: [EVIDENCE_ACCESS_REPOSITORY],
       useFactory: (repository: SupabaseEvidenceRepository) =>
         new EvidenceAccessUseCases(repository),
+    },
+    {
+      provide: EVIDENCE_TEXT_SEARCH_REPOSITORY,
+      useExisting: SupabaseEvidenceRepository,
+    },
+    {
+      provide: EvidenceTextSearchUseCases,
+      inject: [EVIDENCE_TEXT_SEARCH_REPOSITORY],
+      useFactory: (repository: SupabaseEvidenceRepository) =>
+        new EvidenceTextSearchUseCases(repository),
     },
   ],
 })

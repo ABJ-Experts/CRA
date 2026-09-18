@@ -4,6 +4,13 @@ import type {
   createEvidenceReplacementInputSchema,
   evidenceDocumentAccessInputSchema,
   evidenceDocumentAccessResponseSchema,
+  evidenceExtractedTextParamsSchema,
+  evidenceExtractedTextResponseSchema,
+  evidenceExtractionFailureCodeSchema,
+  evidenceExtractionMetadataSchema,
+  evidenceExtractionQualitySchema,
+  evidenceExtractionRetryParamsSchema,
+  evidenceExtractionStatusSchema,
   evidenceDocumentListResponseSchema,
   evidenceDocumentParamsSchema,
   evidenceDocumentResponseSchema,
@@ -15,6 +22,15 @@ import type {
   evidenceDocumentVersionsResponseSchema,
   evidenceOriginalDownloadResponseSchema,
   evidenceProductParamsSchema,
+  evidenceSearchCoverageSchema,
+  evidenceSearchFacetSchema,
+  evidenceSearchQuerySchema,
+  evidenceSearchResponseSchema,
+  evidenceSearchResultSchema,
+  evidenceSearchSnippetSchema,
+  evidenceSearchSnippetSegmentSchema,
+  retryEvidenceExtractionInputSchema,
+  retryEvidenceExtractionResponseSchema,
   evidenceUploadCompletionResponseSchema,
   evidenceUploadInitializationResponseSchema,
   initializeEvidenceUploadInputSchema,
@@ -51,8 +67,50 @@ export type EvidenceUploadVersionParams = z.output<
 export type EvidenceProductParams = z.output<
   typeof evidenceProductParamsSchema
 >;
+export type EvidenceExtractedTextParams = z.output<
+  typeof evidenceExtractedTextParamsSchema
+>;
+export type EvidenceExtractionRetryParams = z.output<
+  typeof evidenceExtractionRetryParamsSchema
+>;
+export type RetryEvidenceExtractionInput = z.output<
+  typeof retryEvidenceExtractionInputSchema
+>;
+export type RetryEvidenceExtractionResponse = z.output<
+  typeof retryEvidenceExtractionResponseSchema
+>;
 export type EvidenceDocumentListQuery = z.output<
   typeof evidenceDocumentListQuerySchema
+>;
+export type EvidenceExtractionMetadata = z.output<
+  typeof evidenceExtractionMetadataSchema
+>;
+export type EvidenceExtractionStatus = z.output<
+  typeof evidenceExtractionStatusSchema
+>;
+export type EvidenceExtractionFailureCode = z.output<
+  typeof evidenceExtractionFailureCodeSchema
+>;
+export type EvidenceExtractionQuality = z.output<
+  typeof evidenceExtractionQualitySchema
+>;
+export type EvidenceSearchQuery = z.output<typeof evidenceSearchQuerySchema>;
+export type EvidenceSearchSnippetSegment = z.output<
+  typeof evidenceSearchSnippetSegmentSchema
+>;
+export type EvidenceSearchSnippet = z.output<
+  typeof evidenceSearchSnippetSchema
+>;
+export type EvidenceSearchCoverage = z.output<
+  typeof evidenceSearchCoverageSchema
+>;
+export type EvidenceSearchFacet = z.output<typeof evidenceSearchFacetSchema>;
+export type EvidenceSearchResult = z.output<typeof evidenceSearchResultSchema>;
+export type EvidenceSearchResponse = z.output<
+  typeof evidenceSearchResponseSchema
+>;
+export type EvidenceExtractedTextResponse = z.output<
+  typeof evidenceExtractedTextResponseSchema
 >;
 export type EvidenceDocument = z.output<typeof evidenceDocumentSchema>;
 export type EvidenceDocumentVersion = z.output<

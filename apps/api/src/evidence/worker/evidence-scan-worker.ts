@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import type { ClamAvScannerAdapter } from "../infrastructure/clamav-scanner.adapter";
 import type { SupabaseEvidenceStorageAdapter } from "../infrastructure/supabase-evidence-storage.adapter";
 import { SupabaseService } from "../../supabase/supabase.service";
@@ -23,6 +24,7 @@ type UntypedClient = {
 /** Fair, bounded scanner. A provider outage is recorded as a retryable pending
  * job; it can never accidentally promote an unscanned version to clean. */
 export class EvidenceScanWorker {
+  private readonly instanceWorkerId: string;
   constructor(
     private readonly dependencies: Readonly<{
       supabase: SupabaseService;
@@ -32,7 +34,9 @@ export class EvidenceScanWorker {
       workerId?: string;
       leaseSeconds: number;
     }>,
-  ) {}
+  ) {
+    this.instanceWorkerId = dependencies.workerId ?? randomUUID();
+  }
 
   async runOnce(): Promise<number> {
     const scanned = await this.runCycle();
@@ -52,8 +56,7 @@ export class EvidenceScanWorker {
     for (const organizationId of ids) {
       const claim = await client.rpc("claim_evidence_scan_job_atomic", {
         p_organization_id: organizationId,
-        p_worker_id:
-          this.dependencies.workerId ?? "00000000-0000-4000-8000-000000000001",
+        p_worker_id: this.instanceWorkerId,
         p_lease_seconds: this.dependencies.leaseSeconds,
       });
       const job = object(claim.data);
@@ -76,7 +79,7 @@ export class EvidenceScanWorker {
         await complete(
           client,
           organizationId,
-          this.dependencies.workerId,
+          this.instanceWorkerId,
           versionId,
           "unavailable",
           null,
@@ -92,7 +95,7 @@ export class EvidenceScanWorker {
         await complete(
           client,
           organizationId,
-          this.dependencies.workerId,
+          this.instanceWorkerId,
           versionId,
           "unavailable",
           null,
@@ -103,7 +106,7 @@ export class EvidenceScanWorker {
       await complete(
         client,
         organizationId,
-        this.dependencies.workerId,
+        this.instanceWorkerId,
         versionId,
         result.outcome === "infected" ? "detected" : result.outcome,
         result.outcome === "infected" ? result.detection : null,
@@ -173,21 +176,21 @@ export class EvidenceScanWorker {
   }
 
   private workerId(): string {
-    return this.dependencies.workerId ?? "00000000-0000-4000-8000-000000000001";
+    return this.instanceWorkerId;
   }
 }
 
 async function complete(
   client: Rpc,
   organizationId: string,
-  workerId: string | undefined,
+  workerId: string,
   versionId: string,
   outcome: "clean" | "detected" | "unavailable",
   detection: string | null,
 ) {
   await client.rpc("complete_evidence_scan_job_atomic", {
     p_organization_id: organizationId,
-    p_worker_id: workerId ?? "00000000-0000-4000-8000-000000000001",
+    p_worker_id: workerId,
     p_version_id: versionId,
     p_engine_name: "clamav",
     p_engine_version: null,

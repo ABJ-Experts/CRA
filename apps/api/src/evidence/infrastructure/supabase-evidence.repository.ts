@@ -1,6 +1,16 @@
 import { createHash, randomUUID } from "node:crypto";
 import { Injectable } from "@nestjs/common";
 import { SupabaseService } from "../../supabase/supabase.service";
+import {
+  evidenceExtractedTextResponseSchema,
+  evidenceSearchResponseSchema,
+  retryEvidenceExtractionResponseSchema,
+  type EvidenceExtractedTextResponse,
+  type EvidenceSearchQuery,
+  type EvidenceSearchResponse,
+  type RetryEvidenceExtractionInput,
+  type RetryEvidenceExtractionResponse,
+} from "@repo/contracts/evidence";
 import type {
   EvidenceRepository,
   EvidenceReservation,
@@ -9,6 +19,7 @@ import type {
   EvidenceAccessRepository,
   EvidenceAccessSource,
 } from "../application/evidence-access-use-cases";
+import type { EvidenceTextSearchRepository } from "../application/evidence-text-search-use-cases";
 
 type Rpc = {
   rpc(
@@ -20,7 +31,10 @@ type Row = Readonly<{ outcome?: unknown; result?: unknown }>;
 
 @Injectable()
 export class SupabaseEvidenceRepository
-  implements EvidenceRepository, EvidenceAccessRepository
+  implements
+    EvidenceRepository,
+    EvidenceAccessRepository,
+    EvidenceTextSearchRepository
 {
   constructor(private readonly supabase: SupabaseService) {}
   private client(): Rpc {
@@ -185,7 +199,10 @@ export class SupabaseEvidenceRepository
             eq(
               column: string,
               value: string,
-            ): { maybeSingle(): Promise<{ data: unknown; error: unknown }> };
+            ): {
+              maybeSingle(): Promise<{ data: unknown; error: unknown }>;
+              limit(value: number): Promise<{ data: unknown; error: unknown }>;
+            };
           };
         };
       };
@@ -203,8 +220,10 @@ export class SupabaseEvidenceRepository
       .select("product_id")
       .eq("organization_id", orgId)
       .eq("version_id", input.versionId)
-      .maybeSingle();
-    const productId = asObject(products.data).product_id;
+      .limit(1);
+    const productId = asObject(
+      Array.isArray(products.data) ? products.data[0] : null,
+    ).product_id;
     return typeof productId === "string"
       ? { objectKey: row.object_key, productId }
       : null;
@@ -217,14 +236,149 @@ export class SupabaseEvidenceRepository
       productId: string;
       limit: number;
       cursor?: string;
+      status?: string;
+      documentClass?: string;
     }>,
   ) {
+    const cursor = decodeListCursor(input.cursor);
+    if (input.cursor && !cursor) return null;
     const response = await this.client().rpc("list_evidence_documents", {
       p_organization_id: organizationId,
       p_actor_user_id: input.actorId,
       p_product_id: input.productId,
+      p_status: input.status ?? null,
+      p_document_class: input.documentClass ?? null,
+      p_cursor_created_at: cursor?.createdAt ?? null,
+      p_cursor_id: cursor?.id ?? null,
+      p_limit: input.limit,
     });
     return response.error ? null : response.data;
+  }
+
+  async search(
+    organizationId: string,
+    input: Readonly<{
+      actorId: string;
+      productId: string;
+      query: EvidenceSearchQuery;
+    }>,
+  ): Promise<EvidenceSearchResponse | null> {
+    const cursor = decodeSearchCursor(input.query.cursor, input.query);
+    if (input.query.cursor && !cursor) return null;
+    const response = await this.client().rpc(
+      "search_evidence_documents_atomic",
+      {
+        p_organization_id: organizationId,
+        p_actor_user_id: input.actorId,
+        p_product_id: input.productId,
+        p_query: input.query.q,
+        p_document_class: input.query.documentClass ?? null,
+        p_include_historical: input.query.includeHistorical,
+        p_limit: input.query.limit,
+        p_after_rank: cursor?.rank ?? null,
+        p_after_created_at: cursor?.createdAt ?? null,
+        p_after_version_id: cursor?.versionId ?? null,
+      },
+    );
+    const row = firstRow(response.data);
+    const result = asObject(row?.result);
+    if (response.error || row?.outcome !== "found") return null;
+    const items = Array.isArray(result.items)
+      ? result.items.map((item) =>
+          mapSearchResult(asObject(item), input.query.q),
+        )
+      : [];
+    const rawItems = Array.isArray(result.items) ? result.items : [];
+    const last =
+      rawItems.length === input.query.limit
+        ? asObject(rawItems.at(-1)).cursor
+        : null;
+    const output = {
+      results: items,
+      totalCount: numberValue(result.total) ?? 0,
+      facets: Array.isArray(result.facets) ? result.facets : [],
+      coverage: asObject(result.coverage),
+      nextCursor: last ? encodeSearchCursor(asObject(last), input.query) : null,
+    };
+    const parsed = evidenceSearchResponseSchema.safeParse(output);
+    return parsed.success ? parsed.data : null;
+  }
+
+  async extractedText(
+    organizationId: string,
+    input: Readonly<{
+      actorId: string;
+      productId: string;
+      documentId: string;
+      versionId: string;
+    }>,
+  ): Promise<EvidenceExtractedTextResponse | null> {
+    const response = await this.client().rpc(
+      "get_evidence_document_extracted_text_atomic",
+      {
+        p_organization_id: organizationId,
+        p_actor_user_id: input.actorId,
+        p_product_id: input.productId,
+        p_document_id: input.documentId,
+        p_version_id: input.versionId,
+      },
+    );
+    const row = firstRow(response.data);
+    const result = asObject(row?.result);
+    if (
+      response.error ||
+      !row ||
+      !["found", "unavailable"].includes(String(row.outcome))
+    )
+      return null;
+    const metadata = mapExtraction(result);
+    const output = {
+      extractedText: {
+        documentId: stringValue(result.documentId) ?? input.documentId,
+        versionId: stringValue(result.versionId) ?? input.versionId,
+        extraction: metadata,
+        snippet:
+          row.outcome === "found"
+            ? snippet(stringValue(result.snippetText) ?? "")
+            : null,
+      },
+    };
+    const parsed = evidenceExtractedTextResponseSchema.safeParse(output);
+    return parsed.success ? parsed.data : null;
+  }
+
+  async retryExtraction(
+    organizationId: string,
+    input: Readonly<{
+      actorId: string;
+      productId: string;
+      documentId: string;
+      versionId: string;
+      retry: RetryEvidenceExtractionInput;
+    }>,
+  ): Promise<RetryEvidenceExtractionResponse | null> {
+    const response = await this.client().rpc(
+      "retry_evidence_text_extraction_atomic",
+      {
+        p_organization_id: organizationId,
+        p_actor_user_id: input.actorId,
+        p_product_id: input.productId,
+        p_document_id: input.documentId,
+        p_version_id: input.versionId,
+      },
+    );
+    const row = firstRow(response.data);
+    const result = asObject(row?.result);
+    if (
+      response.error ||
+      !row ||
+      !["queued", "replayed"].includes(String(row.outcome))
+    )
+      return null;
+    const parsed = retryEvidenceExtractionResponseSchema.safeParse({
+      extraction: mapExtraction(result),
+    });
+    return parsed.success ? parsed.data : null;
   }
 
   async versions(
@@ -365,4 +519,193 @@ function numberAt(value: Record<string, unknown>, key: string) {
   if (typeof result !== "number" || !Number.isSafeInteger(result))
     throw new Error(`Evidence RPC returned an invalid ${key}`);
   return result;
+}
+
+type SearchCursor = Readonly<{
+  rank: number;
+  createdAt: string;
+  versionId: string;
+}>;
+
+function cursorFingerprint(query: EvidenceSearchQuery) {
+  return createHash("sha256")
+    .update(
+      JSON.stringify({
+        q: query.q,
+        documentClass: query.documentClass ?? null,
+        includeHistorical: query.includeHistorical,
+      }),
+    )
+    .digest("base64url");
+}
+function decodeSearchCursor(
+  cursor: string | undefined,
+  query: EvidenceSearchQuery,
+): SearchCursor | null {
+  if (!cursor) return null;
+  try {
+    const value = JSON.parse(
+      Buffer.from(cursor, "base64url").toString("utf8"),
+    ) as Record<string, unknown>;
+    return value.fingerprint === cursorFingerprint(query) &&
+      typeof value.rank === "number" &&
+      Number.isSafeInteger(value.rank) &&
+      typeof value.createdAt === "string" &&
+      typeof value.versionId === "string"
+      ? Object.freeze({
+          rank: value.rank,
+          createdAt: value.createdAt,
+          versionId: value.versionId,
+        })
+      : null;
+  } catch {
+    return null;
+  }
+}
+function encodeSearchCursor(
+  value: Record<string, unknown>,
+  query: EvidenceSearchQuery,
+) {
+  const rank = numberValue(value.rank);
+  const createdAt = stringValue(value.createdAt);
+  const versionId = stringValue(value.versionId);
+  if (rank === null || !createdAt || !versionId) return null;
+  return Buffer.from(
+    JSON.stringify({
+      fingerprint: cursorFingerprint(query),
+      rank,
+      createdAt,
+      versionId,
+    }),
+  ).toString("base64url");
+}
+function mapSearchResult(value: Record<string, unknown>, query: string) {
+  return {
+    documentId: stringValue(value.documentId),
+    versionId: stringValue(value.versionId),
+    versionNumber: numberValue(value.versionNumber),
+    title: stringValue(value.title),
+    documentClass: stringValue(value.documentClass),
+    fileName: stringValue(value.fileName),
+    createdAt: stringValue(value.createdAt),
+    validUntil: stringValue(value.validUntil),
+    currentVersion: Boolean(value.currentVersion),
+    score: numberValue(value.score) ?? 0,
+    snippet: snippet(stringValue(value.snippetText) ?? "", query),
+    extraction: mapExtraction(value),
+  };
+}
+function mapExtraction(value: Record<string, unknown>) {
+  const status =
+    stringValue(value.status) ??
+    stringValue(asObject(value.extraction).status) ??
+    "failed";
+  const sourceSha256 =
+    stringValue(value.sourceSha256) ??
+    stringValue(asObject(value.extraction).sourceSha256) ??
+    "0".repeat(64);
+  const extractorVersion =
+    stringValue(value.extractorVersion) ??
+    stringValue(asObject(value.extraction).extractorVersion) ??
+    "m8-03-local-v1";
+  const updatedAt =
+    stringValue(value.updatedAt) ??
+    stringValue(asObject(value.extraction).updatedAt) ??
+    new Date(0).toISOString();
+  const failureCode =
+    stringValue(value.failureCode) ??
+    stringValue(asObject(value.extraction).failureCode);
+  return {
+    status,
+    sourceSha256,
+    extractorVersion,
+    updatedAt,
+    failureCode:
+      status === "failed"
+        ? failureCode === "unsupported"
+          ? "unsupported_media_type"
+          : (failureCode ?? "failed")
+        : null,
+    truncated: Boolean(
+      value.truncated ??
+      value.isTruncated ??
+      asObject(value.extraction).truncated,
+    ),
+    quality:
+      status === "complete"
+        ? "sufficient"
+        : failureCode === "low_quality"
+          ? "low"
+          : "not_assessed",
+  };
+}
+function snippet(text: string, query?: string) {
+  const normalized = text
+    .split("")
+    .map((character) => {
+      const code = character.charCodeAt(0);
+      return code <= 31 || code === 127 ? " " : character;
+    })
+    .join("")
+    .replace(/\s+/gu, " ")
+    .trim();
+  const safe = normalized.slice(0, 1_000) || "Extraction unavailable";
+  const terms = query?.toLocaleLowerCase().match(/[\p{L}\p{N}]+/gu) ?? [];
+  const segments: Array<{ text: string; highlighted: boolean }> = [];
+  let offset = 0;
+  while (offset < safe.length && segments.length < 31) {
+    const lower = safe.slice(offset).toLocaleLowerCase();
+    const hits = terms
+      .map((term) => lower.indexOf(term))
+      .filter((position) => position >= 0);
+    const position = hits.length === 0 ? -1 : Math.min(...hits);
+    if (position < 0) {
+      segments.push({ text: safe.slice(offset), highlighted: false });
+      break;
+    }
+    if (position > 0)
+      segments.push({
+        text: safe.slice(offset, offset + position),
+        highlighted: false,
+      });
+    const term = terms.find((candidate) =>
+      lower.startsWith(candidate, position),
+    )!;
+    segments.push({
+      text: safe.slice(offset + position, offset + position + term.length),
+      highlighted: true,
+    });
+    offset += position + term.length;
+  }
+  if (offset < safe.length)
+    segments.push({ text: safe.slice(offset), highlighted: false });
+  return {
+    segments: segments
+      .filter((segment) => segment.text.length > 0)
+      .slice(0, 32),
+    truncated: normalized.length > safe.length,
+  };
+}
+function stringValue(value: unknown) {
+  return typeof value === "string" ? value : null;
+}
+function numberValue(value: unknown) {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+function decodeListCursor(cursor: string | undefined) {
+  if (!cursor) return null;
+  try {
+    const [createdAt, id, ...rest] = Buffer.from(cursor, "base64url")
+      .toString("utf8")
+      .split("|");
+    return rest.length === 0 &&
+      createdAt &&
+      /^\d{4}-\d\d-\d\dT/.test(createdAt) &&
+      id &&
+      /^[0-9a-f-]{36}$/i.test(id)
+      ? { createdAt, id }
+      : null;
+  } catch {
+    return null;
+  }
 }

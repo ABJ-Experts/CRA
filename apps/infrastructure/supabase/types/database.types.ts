@@ -647,6 +647,82 @@ export type Database = {
           },
         ]
       }
+      evidence_document_extraction_jobs: {
+        Row: {
+          attempt_count: number
+          completed_at: string | null
+          created_at: string
+          extractor_version: string
+          id: string
+          last_error: string | null
+          lease_expires_at: string | null
+          lease_owner: string | null
+          max_attempts: number
+          next_attempt_at: string
+          organization_id: string
+          source_sha256: string
+          status: string
+          updated_at: string
+          version_id: string
+        }
+        Insert: {
+          attempt_count?: number
+          completed_at?: string | null
+          created_at?: string
+          extractor_version: string
+          id?: string
+          last_error?: string | null
+          lease_expires_at?: string | null
+          lease_owner?: string | null
+          max_attempts?: number
+          next_attempt_at?: string
+          organization_id: string
+          source_sha256: string
+          status?: string
+          updated_at?: string
+          version_id: string
+        }
+        Update: {
+          attempt_count?: number
+          completed_at?: string | null
+          created_at?: string
+          extractor_version?: string
+          id?: string
+          last_error?: string | null
+          lease_expires_at?: string | null
+          lease_owner?: string | null
+          max_attempts?: number
+          next_attempt_at?: string
+          organization_id?: string
+          source_sha256?: string
+          status?: string
+          updated_at?: string
+          version_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evidence_document_extraction_j_organization_id_version_id_fkey1"
+            columns: ["organization_id", "version_id"]
+            isOneToOne: true
+            referencedRelation: "evidence_document_version_texts"
+            referencedColumns: ["organization_id", "version_id"]
+          },
+          {
+            foreignKeyName: "evidence_document_extraction_jo_organization_id_version_id_fkey"
+            columns: ["organization_id", "version_id"]
+            isOneToOne: true
+            referencedRelation: "evidence_document_versions"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "evidence_document_extraction_jobs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       evidence_document_notification_outbox: {
         Row: {
           attempt_count: number
@@ -818,6 +894,69 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      evidence_document_version_texts: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          extracted_text: string | null
+          extraction_status: string
+          extractor_version: string
+          failure_code: string | null
+          is_truncated: boolean
+          organization_id: string
+          quality: string
+          search_document: unknown
+          source_sha256: string
+          updated_at: string
+          version_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          extracted_text?: string | null
+          extraction_status?: string
+          extractor_version: string
+          failure_code?: string | null
+          is_truncated?: boolean
+          organization_id: string
+          quality?: string
+          search_document?: unknown
+          source_sha256: string
+          updated_at?: string
+          version_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          extracted_text?: string | null
+          extraction_status?: string
+          extractor_version?: string
+          failure_code?: string | null
+          is_truncated?: boolean
+          organization_id?: string
+          quality?: string
+          search_document?: unknown
+          source_sha256?: string
+          updated_at?: string
+          version_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evidence_document_version_texts_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evidence_document_version_texts_organization_id_version_id_fkey"
+            columns: ["organization_id", "version_id"]
+            isOneToOne: true
+            referencedRelation: "evidence_document_versions"
+            referencedColumns: ["organization_id", "id"]
           },
         ]
       }
@@ -16396,6 +16535,14 @@ export type Database = {
         }
         Returns: Json
       }
+      claim_evidence_text_extraction_job_atomic: {
+        Args: {
+          p_lease_seconds: number
+          p_organization_id: string
+          p_worker_id: string
+        }
+        Returns: Json
+      }
       claim_finding_propagation_job_atomic: {
         Args: {
           p_lease_owner: string
@@ -16792,6 +16939,22 @@ export type Database = {
           p_outcome: string
           p_retry_after_seconds?: number
           p_signature_version: string
+          p_version_id: string
+          p_worker_id: string
+        }
+        Returns: string
+      }
+      complete_evidence_text_extraction_job_atomic: {
+        Args: {
+          p_extracted_text?: string
+          p_extractor_version: string
+          p_failure_code?: string
+          p_is_truncated?: boolean
+          p_organization_id: string
+          p_outcome: string
+          p_quality?: string
+          p_retry_after_seconds?: number
+          p_source_sha256: string
           p_version_id: string
           p_worker_id: string
         }
@@ -18615,6 +18778,19 @@ export type Database = {
           result: Json
         }[]
       }
+      get_evidence_document_extracted_text_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_document_id: string
+          p_organization_id: string
+          p_product_id: string
+          p_version_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
       get_finding_product_impact_summary: {
         Args: {
           p_actor_user_id: string
@@ -19731,14 +19907,28 @@ export type Database = {
         }
         Returns: Json
       }
-      list_evidence_documents: {
-        Args: {
-          p_actor_user_id: string
-          p_organization_id: string
-          p_product_id: string
-        }
-        Returns: Json
-      }
+      list_evidence_documents:
+        | {
+            Args: {
+              p_actor_user_id: string
+              p_organization_id: string
+              p_product_id: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_actor_user_id: string
+              p_cursor_created_at?: string
+              p_cursor_id?: string
+              p_document_class?: string
+              p_limit?: number
+              p_organization_id: string
+              p_product_id: string
+              p_status?: string
+            }
+            Returns: Json
+          }
       list_field_authority_policies: {
         Args: {
           p_actor_user_id: string
@@ -23075,6 +23265,19 @@ export type Database = {
           outcome: string
         }[]
       }
+      retry_evidence_text_extraction_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_document_id: string
+          p_organization_id: string
+          p_product_id: string
+          p_version_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
       retry_sbom_diff_report_atomic: {
         Args: {
           p_actor_user_id: string
@@ -23439,6 +23642,24 @@ export type Database = {
         Returns: {
           artifact: Json
           outcome: string
+        }[]
+      }
+      search_evidence_documents_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_after_created_at?: string
+          p_after_rank?: number
+          p_after_version_id?: string
+          p_document_class?: string
+          p_include_historical?: boolean
+          p_limit?: number
+          p_organization_id: string
+          p_product_id: string
+          p_query: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
         }[]
       }
       search_sbom_components: {

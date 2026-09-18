@@ -3,19 +3,27 @@ import {
   createEvidenceReplacementInputSchema,
   evidenceDocumentAccessInputSchema,
   evidenceDocumentAccessResponseSchema,
+  evidenceDocumentAccessParamsSchema,
   evidenceDocumentListQuerySchema,
   evidenceDocumentListResponseSchema,
   evidenceDocumentVersionParamsSchema,
   evidenceDocumentVersionsResponseSchema,
+  evidenceExtractedTextResponseSchema,
   evidenceProductParamsSchema,
+  evidenceSearchQuerySchema,
+  evidenceSearchResponseSchema,
   evidenceUploadCompletionResponseSchema,
   evidenceUploadInitializationResponseSchema,
   initializeEvidenceUploadInputSchema,
+  retryEvidenceExtractionInputSchema,
+  retryEvidenceExtractionResponseSchema,
   type CompleteEvidenceUploadInput,
   type CreateEvidenceReplacementInput,
   type EvidenceDocumentAccessInput,
   type EvidenceDocumentListQuery,
+  type EvidenceSearchQuery,
   type InitializeEvidenceUploadInput,
+  type RetryEvidenceExtractionInput,
 } from "@repo/contracts/evidence";
 
 import { authenticatedRequestJson } from "../../_lib/http/authenticated-request";
@@ -98,6 +106,59 @@ function queryString(query: Partial<EvidenceDocumentListQuery>): string {
   return value === "" ? "" : `?${value}`;
 }
 
+function evidenceSearchPath(productId: string): `/${string}` {
+  const parsed = evidenceProductParamsSchema.safeParse({ productId });
+  if (!parsed.success) {
+    throw new ApiClientError(
+      "invalid_request",
+      "The product identifier is invalid.",
+      400,
+    );
+  }
+  return `/api/v1/products/${parsed.data.productId}/evidence-search`;
+}
+
+function extractionPath(
+  productId: string,
+  documentId: string,
+  versionId: string,
+  suffix: "extracted-text" | "extraction/retry",
+): `/${string}` {
+  const parsed = evidenceDocumentAccessParamsSchema.safeParse({
+    productId,
+    documentId,
+    versionId,
+  });
+  if (!parsed.success) {
+    throw new ApiClientError(
+      "invalid_request",
+      "The product, evidence document, or version identifier is invalid.",
+      400,
+    );
+  }
+  return `${productPath(parsed.data.productId)}/${parsed.data.documentId}/versions/${parsed.data.versionId}/${suffix}`;
+}
+
+function searchQueryString(query: EvidenceSearchQuery): string {
+  const parsed = evidenceSearchQuerySchema.safeParse(query);
+  if (!parsed.success) {
+    throw new ApiClientError(
+      "invalid_request",
+      "The evidence search query is invalid.",
+      400,
+    );
+  }
+  const parameters = new URLSearchParams({ q: parsed.data.q });
+  if (parsed.data.documentClass)
+    parameters.set("documentClass", parsed.data.documentClass);
+  if (parsed.data.includeHistorical)
+    parameters.set("includeHistorical", "true");
+  if (parsed.data.limit !== 25)
+    parameters.set("limit", String(parsed.data.limit));
+  if (parsed.data.cursor) parameters.set("cursor", parsed.data.cursor);
+  return `?${parameters.toString()}`;
+}
+
 /** Focused gateway for parsed evidence HTTP and private-storage transfer. */
 export class EvidenceApi {
   list(
@@ -108,6 +169,14 @@ export class EvidenceApi {
     return authenticatedRequestJson<typeof evidenceDocumentListResponseSchema>({
       path: `${productPath(productId)}${queryString(query)}` as `/${string}`,
       schema: evidenceDocumentListResponseSchema,
+      signal,
+    });
+  }
+
+  search(productId: string, query: EvidenceSearchQuery, signal?: AbortSignal) {
+    return authenticatedRequestJson<typeof evidenceSearchResponseSchema>({
+      path: `${evidenceSearchPath(productId)}${searchQueryString(query)}` as `/${string}`,
+      schema: evidenceSearchResponseSchema,
       signal,
     });
   }
@@ -185,6 +254,51 @@ export class EvidenceApi {
       body: input,
       inputSchema: evidenceDocumentAccessInputSchema,
       schema: evidenceDocumentAccessResponseSchema,
+      signal,
+    });
+  }
+
+  extractedText(
+    productId: string,
+    documentId: string,
+    versionId: string,
+    signal?: AbortSignal,
+  ) {
+    return authenticatedRequestJson<typeof evidenceExtractedTextResponseSchema>(
+      {
+        path: extractionPath(
+          productId,
+          documentId,
+          versionId,
+          "extracted-text",
+        ),
+        schema: evidenceExtractedTextResponseSchema,
+        signal,
+      },
+    );
+  }
+
+  retryExtraction(
+    productId: string,
+    documentId: string,
+    versionId: string,
+    input: RetryEvidenceExtractionInput,
+    signal?: AbortSignal,
+  ) {
+    return authenticatedRequestJson<
+      typeof retryEvidenceExtractionResponseSchema,
+      typeof retryEvidenceExtractionInputSchema
+    >({
+      path: extractionPath(
+        productId,
+        documentId,
+        versionId,
+        "extraction/retry",
+      ),
+      method: "POST",
+      body: input,
+      inputSchema: retryEvidenceExtractionInputSchema,
+      schema: retryEvidenceExtractionResponseSchema,
       signal,
     });
   }
