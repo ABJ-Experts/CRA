@@ -530,6 +530,125 @@ export type Database = {
           },
         ]
       }
+      evidence_document_access_grants: {
+        Row: {
+          access_mode: string
+          actor_user_id: string
+          document_id: string
+          expires_at: string
+          first_range_end: number | null
+          first_range_start: number | null
+          first_redeemed_at: string | null
+          id: string
+          issued_at: string
+          last_range_end: number | null
+          last_range_start: number | null
+          last_redeemed_at: string | null
+          organization_id: string
+          product_id: string
+          purpose: string | null
+          redemption_count: number
+          request_correlation_id: string
+          terminal_outcome: string | null
+          token_sha256: string
+          version_id: string
+        }
+        Insert: {
+          access_mode: string
+          actor_user_id: string
+          document_id: string
+          expires_at: string
+          first_range_end?: number | null
+          first_range_start?: number | null
+          first_redeemed_at?: string | null
+          id?: string
+          issued_at?: string
+          last_range_end?: number | null
+          last_range_start?: number | null
+          last_redeemed_at?: string | null
+          organization_id: string
+          product_id: string
+          purpose?: string | null
+          redemption_count?: number
+          request_correlation_id: string
+          terminal_outcome?: string | null
+          token_sha256: string
+          version_id: string
+        }
+        Update: {
+          access_mode?: string
+          actor_user_id?: string
+          document_id?: string
+          expires_at?: string
+          first_range_end?: number | null
+          first_range_start?: number | null
+          first_redeemed_at?: string | null
+          id?: string
+          issued_at?: string
+          last_range_end?: number | null
+          last_range_start?: number | null
+          last_redeemed_at?: string | null
+          organization_id?: string
+          product_id?: string
+          purpose?: string | null
+          redemption_count?: number
+          request_correlation_id?: string
+          terminal_outcome?: string | null
+          token_sha256?: string
+          version_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evidence_access_grants_document_fkey"
+            columns: ["organization_id", "document_id"]
+            isOneToOne: false
+            referencedRelation: "evidence_documents"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "evidence_access_grants_product_fkey"
+            columns: ["organization_id", "product_id"]
+            isOneToOne: false
+            referencedRelation: "product_retention_alert_operations"
+            referencedColumns: ["organization_id", "product_id"]
+          },
+          {
+            foreignKeyName: "evidence_access_grants_product_fkey"
+            columns: ["organization_id", "product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "evidence_access_grants_version_document_fkey"
+            columns: ["organization_id", "version_id", "document_id"]
+            isOneToOne: false
+            referencedRelation: "evidence_document_versions"
+            referencedColumns: ["organization_id", "id", "document_id"]
+          },
+          {
+            foreignKeyName: "evidence_access_grants_version_fkey"
+            columns: ["organization_id", "version_id"]
+            isOneToOne: false
+            referencedRelation: "evidence_document_versions"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "evidence_document_access_grants_actor_user_id_fkey"
+            columns: ["actor_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evidence_document_access_grants_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       evidence_document_notification_outbox: {
         Row: {
           attempt_count: number
@@ -16054,6 +16173,24 @@ export type Database = {
           outcome: string
         }[]
       }
+      authorize_evidence_document_access_atomic: {
+        Args: {
+          p_access_mode: string
+          p_actor_user_id: string
+          p_document_id: string
+          p_expires_at: string
+          p_organization_id: string
+          p_product_id: string
+          p_purpose: string
+          p_request_correlation_id: string
+          p_token_sha256: string
+          p_version_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
       backfill_organization_legal_entities: { Args: never; Returns: undefined }
       begin_product_security_update_artifact_cleanup_atomic: {
         Args: {
@@ -19587,6 +19724,15 @@ export type Database = {
           organization_id: string
         }[]
       }
+      list_evidence_document_versions: {
+        Args: {
+          p_actor_user_id: string
+          p_document_id: string
+          p_organization_id: string
+          p_product_id: string
+        }
+        Returns: Json
+      }
       list_evidence_documents: {
         Args: {
           p_actor_user_id: string
@@ -21925,6 +22071,18 @@ export type Database = {
           outcome: string
         }[]
       }
+      record_evidence_document_integrity_failure_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_observed_media_type: string
+          p_observed_sha256: string
+          p_observed_size_bytes: number
+          p_organization_id: string
+          p_request_correlation_id: string
+          p_version_id: string
+        }
+        Returns: string
+      }
       record_evidence_document_scan_atomic: {
         Args: {
           p_detection?: string
@@ -22254,6 +22412,20 @@ export type Database = {
         Returns: {
           lifecycle: Json
           outcome: string
+        }[]
+      }
+      redeem_evidence_document_access_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_organization_id: string
+          p_range_end?: number
+          p_range_start?: number
+          p_request_correlation_id: string
+          p_token_sha256: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
         }[]
       }
       redeem_technical_file_auditor_snapshot_grant_atomic: {
@@ -22628,6 +22800,30 @@ export type Database = {
           invitation_id: string
           organization_name: string
           outcome: string
+        }[]
+      }
+      reserve_evidence_document_replacement_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_declared_size_bytes: number
+          p_document_class: string
+          p_document_id: string
+          p_expected_current_version_id: string
+          p_idempotency_key: string
+          p_object_key: string
+          p_organization_id: string
+          p_original_filename: string
+          p_owner_user_id: string
+          p_product_ids: string[]
+          p_request_digest: string
+          p_title: string
+          p_upload_expires_at: string
+          p_validity_ends_on: string
+          p_validity_starts_on: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
         }[]
       }
       reserve_evidence_document_upload_atomic: {

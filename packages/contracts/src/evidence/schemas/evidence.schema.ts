@@ -51,6 +51,9 @@ export const evidenceMediaTypeSchema = z.enum([
   "application/vnd.openxmlformats-officedocument.presentationml.presentation",
   "text/csv",
   "text/plain",
+  "image/jpeg",
+  "image/png",
+  "image/webp",
 ]);
 
 export const evidenceDocumentStatusSchema = z.enum([
@@ -164,6 +167,13 @@ const evidenceUploadFieldsSchema = z
   });
 
 export const initializeEvidenceUploadInputSchema = evidenceUploadFieldsSchema;
+/** Appends an immutable version; the expected id makes stale edits explicit. */
+export const createEvidenceReplacementInputSchema = evidenceUploadFieldsSchema
+  .extend({
+    documentId: z.uuid(),
+    expectedCurrentVersionId: z.uuid(),
+  })
+  .strict();
 export const completeEvidenceUploadInputSchema = z
   .object({ idempotencyKey: idempotencyKeySchema })
   .strict();
@@ -173,6 +183,12 @@ export const evidenceDocumentParamsSchema = z
   .strict();
 export const evidenceDocumentVersionParamsSchema = z
   .object({ documentId: z.uuid(), versionId: z.uuid() })
+  .strict();
+export const evidenceDocumentAccessParamsSchema = z
+  .object({ productId: z.uuid(), documentId: z.uuid(), versionId: z.uuid() })
+  .strict();
+export const evidenceDeliveryParamsSchema = z
+  .object({ token: z.string().regex(/^[A-Za-z0-9_-]{43}$/) })
   .strict();
 export const evidenceUploadVersionParamsSchema = z
   .object({ versionId: z.uuid() })
@@ -298,21 +314,38 @@ export const evidenceDocumentResponseSchema = z
 export const evidenceDocumentVersionsResponseSchema = z
   .object({ versions: z.array(evidenceDocumentVersionSchema).max(100) })
   .strict();
+export const evidenceDocumentVersionResponseSchema = z
+  .object({ version: evidenceDocumentVersionSchema })
+  .strict();
 export const evidenceDocumentListResponseSchema = z
   .object({
     items: z.array(evidenceDocumentListItemSchema).max(100),
     nextCursor: z.string().trim().min(1).max(500).nullable(),
   })
   .strict();
-export const evidenceOriginalDownloadResponseSchema = z
+export const evidenceDocumentAccessInputSchema = z
   .object({
-    download: z
+    purpose: requiredText(500).optional(),
+    disposition: z.enum(["inline", "attachment"]).default("attachment"),
+  })
+  .strict();
+
+export const evidenceDocumentAccessResponseSchema = z
+  .object({
+    access: z
       .object({
-        downloadUrl: signedStorageUrlSchema,
+        /** Opaque same-origin, application-mediated delivery URL; never Storage. */
+        deliveryUrl: z.string().startsWith("/api/v1/evidence-delivery/"),
         expiresAt: utcDateTimeSchema,
         fileName: safeEvidenceFileNameSchema,
         mediaType: evidenceMediaTypeSchema,
+        disposition: z.enum(["inline", "attachment"]),
+        previewSupported: z.boolean(),
       })
       .strict(),
   })
   .strict();
+
+/** @deprecated Use evidenceDocumentAccessResponseSchema. */
+export const evidenceOriginalDownloadResponseSchema =
+  evidenceDocumentAccessResponseSchema;

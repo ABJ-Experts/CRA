@@ -356,6 +356,25 @@ export class MailService {
     );
   }
 
+  /** Integrity failures are distinct from malware quarantine: no bytes were
+   * delivered and the historical version was taken out of the clean state. */
+  async sendEvidenceIntegrityFailureAlert(
+    to: string,
+    idempotencyKey: string,
+  ): Promise<void> {
+    await this.send(
+      to,
+      "Evidence integrity verification failed",
+      this.layout(
+        "Evidence integrity verification failed",
+        `<p style="color:#4b5058;font-size:14px">A previously clean evidence version could not be verified before delivery and has been blocked.</p>
+         <p style="color:#4b5058;font-size:14px">Open CRA to review the safe status details. Do not try to retrieve or redistribute the file.</p>`,
+      ),
+      true,
+      idempotencyKey,
+    );
+  }
+
   /**
    * Reporting monitors own the outbox and pass no assessment, evidence, or
    * finding text into this mail boundary. The recipient still receives an

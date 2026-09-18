@@ -5,6 +5,7 @@ import {
   evidenceDocumentStatusSchema,
   evidenceMediaTypeSchema,
   evidenceScanProvenanceSchema,
+  evidenceDeliveryParamsSchema,
   initializeEvidenceUploadInputSchema,
 } from "./evidence.schema.js";
 
@@ -33,6 +34,7 @@ describe("evidence schema boundaries", () => {
     expect(evidenceMediaTypeSchema.parse("application/pdf")).toBe(
       "application/pdf",
     );
+    expect(evidenceMediaTypeSchema.parse("image/webp")).toBe("image/webp");
   });
 
   it("rejects duplicate products, paths, reverse validity, and oversized claims", () => {
@@ -72,6 +74,9 @@ describe("evidence schema boundaries", () => {
     ).toThrow();
     expect(() => evidenceMediaTypeSchema.parse("application/zip")).toThrow();
     expect(() => evidenceDocumentStatusSchema.parse("verified")).toThrow();
+    expect(() =>
+      evidenceDeliveryParamsSchema.parse({ token: "not-a-grant" }),
+    ).toThrow();
   });
 
   it("keeps detection provenance bounded and internally consistent", () => {

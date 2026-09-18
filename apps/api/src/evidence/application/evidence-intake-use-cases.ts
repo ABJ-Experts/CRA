@@ -38,6 +38,10 @@ export interface EvidenceRepository {
     | Readonly<{ outcome: "created" | "replayed"; reservation: EvidenceReservation }>
     | Readonly<{ outcome: "not_found" | "conflict" | "idempotency_mismatch" | "invalid_request" }>
   >;
+  reserveReplacement(
+    organizationId: string,
+    input: Parameters<EvidenceRepository["reserve"]>[1] & Readonly<{ documentId: string; expectedCurrentVersionId: string }>,
+  ): ReturnType<EvidenceRepository["reserve"]>;
   finalize(
     organizationId: string,
     input: Readonly<{
@@ -59,10 +63,7 @@ export interface EvidenceRepository {
     organizationId: string,
     input: Readonly<{ actorId: string; productId: string; limit: number; cursor?: string }>,
   ): Promise<unknown>;
-  download(
-    organizationId: string,
-    input: Readonly<{ actorId: string; documentId: string; versionId: string; correlationId: string }>,
-  ): Promise<Readonly<{ objectKey: string; fileName: string; mediaType: string }> | null>;
+  versions(organizationId: string, input: Readonly<{ actorId: string; productId: string; documentId: string }>): Promise<unknown>;
 }
 
 export interface EvidenceStoragePort {
@@ -71,7 +72,6 @@ export interface EvidenceStoragePort {
     | Readonly<{ outcome: "verified"; sha256: string; byteSize: number; mediaType: string }>
     | Readonly<{ outcome: "missing" | "unavailable" | "rejected"; code: string }>
   >;
-  createSignedDownload(input: Readonly<{ objectKey: string; fileName: string; contentType: string }>): Promise<Readonly<{ downloadUrl: string; expiresAt: string; fileName: string; contentType: string }>>;
 }
 
 /** Coordinates a reservation with storage inspection. Business authorization is
@@ -88,6 +88,13 @@ export class EvidenceIntakeUseCases {
       contentType: "application/octet-stream",
       byteSize: input.declaredByteSize,
     });
+    return Object.freeze({ ...reserved, upload });
+  }
+
+  async initializeReplacement(input: Parameters<EvidenceRepository["reserveReplacement"]>[1] & Readonly<{ organizationId: string }>) {
+    const reserved = await this.repository.reserveReplacement(input.organizationId, input);
+    if (reserved.outcome !== "created" && reserved.outcome !== "replayed") return reserved;
+    const upload = await this.storage.createSignedUpload({ objectKey: reserved.reservation.objectKey, contentType: "application/octet-stream", byteSize: input.declaredByteSize });
     return Object.freeze({ ...reserved, upload });
   }
 

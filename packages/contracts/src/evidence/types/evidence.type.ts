@@ -1,11 +1,15 @@
 import type {
   completeEvidenceUploadInputSchema,
   evidenceDocumentListQuerySchema,
+  createEvidenceReplacementInputSchema,
+  evidenceDocumentAccessInputSchema,
+  evidenceDocumentAccessResponseSchema,
   evidenceDocumentListResponseSchema,
   evidenceDocumentParamsSchema,
   evidenceDocumentResponseSchema,
   evidenceDocumentSchema,
   evidenceDocumentVersionParamsSchema,
+  evidenceDocumentAccessParamsSchema,
   evidenceUploadVersionParamsSchema,
   evidenceDocumentVersionSchema,
   evidenceDocumentVersionsResponseSchema,
@@ -23,11 +27,23 @@ export type InitializeEvidenceUploadInput = z.output<
 export type CompleteEvidenceUploadInput = z.output<
   typeof completeEvidenceUploadInputSchema
 >;
+export type CreateEvidenceReplacementInput = z.output<
+  typeof createEvidenceReplacementInputSchema
+>;
+export type EvidenceDocumentAccessInput = z.output<
+  typeof evidenceDocumentAccessInputSchema
+>;
+export type EvidenceDocumentAccessResponse = z.output<
+  typeof evidenceDocumentAccessResponseSchema
+>;
 export type EvidenceDocumentParams = z.output<
   typeof evidenceDocumentParamsSchema
 >;
 export type EvidenceDocumentVersionParams = z.output<
   typeof evidenceDocumentVersionParamsSchema
+>;
+export type EvidenceDocumentAccessParams = z.output<
+  typeof evidenceDocumentAccessParamsSchema
 >;
 export type EvidenceUploadVersionParams = z.output<
   typeof evidenceUploadVersionParamsSchema

@@ -8,8 +8,8 @@
 - **In scope:** metadata, taxonomy, private direct upload, immutable versions,
   hash/type/size verification, durable scan and notification work, quarantine,
   product retention projection, and M7 readiness evidence.
-- **Out of scope:** previews, OCR, extraction, public sharing, supplier portal,
-  SBOM changes, AI classification, and bulk-upload UX.
+- **Out of scope:** OCR, extraction, public sharing, supplier portal, SBOM
+  changes, AI classification, and bulk-upload UX.
 - **Preserved:** `/api/v1`, auth cookies/JWKS verification, permission merge
   order, M3 SBOM contracts/storage, M7 source-link behaviour, and the existing
   product workspace navigation.
@@ -59,6 +59,33 @@ not access Supabase.
 - Contracts live under `@repo/contracts/evidence`. Each controller parses
   params/body/query with Zod and declares parsed success responses. The web
   gateway supplies both outgoing `inputSchema` and incoming `schema`.
+
+## M8-02 version access and verified delivery
+
+- A replacement locks the logical document row, compares the caller's expected
+  current version ID, and appends a new version number. It never rewrites an
+  older object key, hash, size, metadata, or version-pinned reference. The
+  row lock gives concurrent successful replacements deterministic ordering;
+  stale callers receive a conflict without losing entered metadata.
+- Preview and download authorization creates an opaque, actor-bound five-minute
+  application grant. The URL is not a Supabase Storage URL. At redemption the
+  authenticated actor, active organization, product applicability, clean and
+  non-expired version state, and grant expiry are checked again. Issuance and
+  byte-delivery-start are separate durable audit facts, including a correlation
+  ID and each valid byte range.
+- The application obtains private bytes and verifies full SHA-256, byte size,
+  and detected media type before it sends bytes. A mismatch fails closed,
+  records an integrity audit/outbox fact in the same database transaction, and
+  blocks the version. This protects against object tampering after scan; a
+  stored digest alone is not treated as immutable storage proof.
+- Only PDF, JPEG, PNG, and WebP can be delivered inline. The delivery response
+  is same-origin with `no-store`, `no-referrer`, `nosniff`, restrictive CSP,
+  safe content disposition, and no active HTML/SVG preview. Attachment grants
+  remain attachments even if the browser can render the media type.
+- A copied grant is not an authorization bypass: normal session, tenant, and
+  permission revocation are rechecked at redemption. Already-started browser
+  responses cannot be revoked mid-stream, so the short TTL limits new starts;
+  browser receipt after bytes leave the server is not observable.
 
 ## Lifecycle and failure behaviour
 

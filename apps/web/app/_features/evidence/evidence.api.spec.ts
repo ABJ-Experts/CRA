@@ -52,10 +52,49 @@ describe("EvidenceApi", () => {
     );
   });
 
-  it("rejects invalid identifiers before requesting a clean-only download", () => {
+  it("rejects invalid identifiers before requesting version history", () => {
     const api = new EvidenceApi();
 
-    expect(() => api.download(DOCUMENT_ID, "unsafe")).toThrow(ApiClientError);
+    expect(() => api.versions(PRODUCT_ID, "unsafe")).toThrow(ApiClientError);
     expect(request).not.toHaveBeenCalled();
+  });
+
+  it("uses the product-scoped access route and validates both evidence ids", () => {
+    const api = new EvidenceApi();
+
+    api.access(PRODUCT_ID, DOCUMENT_ID, VERSION_ID, { disposition: "inline" });
+
+    expect(request).toHaveBeenCalledWith(
+      expect.objectContaining({
+        path: `/api/v1/products/${PRODUCT_ID}/evidence-documents/${DOCUMENT_ID}/versions/${VERSION_ID}/access`,
+        method: "POST",
+        body: { disposition: "inline" },
+      }),
+    );
+  });
+
+  it("keeps replacement creation at the runtime schema boundary", () => {
+    const api = new EvidenceApi();
+    api.replace({
+      documentId: DOCUMENT_ID,
+      expectedCurrentVersionId: VERSION_ID,
+      title: "Updated risk assessment",
+      documentClass: "risk_assessment",
+      ownerUserId: PRODUCT_ID,
+      productIds: [PRODUCT_ID],
+      validFrom: null,
+      validUntil: null,
+      fileName: "updated.pdf",
+      byteSize: 10,
+      idempotencyKey: KEY,
+    });
+
+    expect(request).toHaveBeenCalledWith(
+      expect.objectContaining({
+        path: `/api/v1/evidence-documents/${DOCUMENT_ID}/versions`,
+        method: "POST",
+        inputSchema: expect.anything(),
+      }),
+    );
   });
 });
