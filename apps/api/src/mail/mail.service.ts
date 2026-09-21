@@ -375,6 +375,37 @@ export class MailService {
     );
   }
 
+  /** Validity alerts are an outbox-owned effect and do not change retention. */
+  async sendEvidenceValidityExpiryAlert(
+    to: string,
+    input: Readonly<{
+      title: string;
+      validUntil: string;
+      thresholdDays: number;
+      productId: string | null;
+    }>,
+    idempotencyKey: string,
+  ): Promise<void> {
+    const subjectTitle = input.title.replace(/[\r\n]+/g, " ").trim();
+    const title = escapeHtml(subjectTitle);
+    const date = escapeHtml(input.validUntil);
+    const href = input.productId
+      ? `${this.appUrl}/products/${encodeURIComponent(input.productId)}/evidence`
+      : null;
+    await this.send(
+      to,
+      `Evidence validity alert: ${subjectTitle}`,
+      this.layout(
+        "Evidence validity alert",
+        `<p style="color:#4b5058;font-size:14px"><strong>${title}</strong> reaches its ${input.thresholdDays}-day validity threshold on <strong>${date}</strong>.</p>
+         <p style="color:#4b5058;font-size:14px">Validity expiry does not delete evidence or change its retention requirements.</p>
+         ${href ? `<p style="color:#4b5058;font-size:14px"><a href="${escapeHtml(href)}">Open Evidence Library in CRA</a></p>` : ""}`,
+      ),
+      true,
+      idempotencyKey,
+    );
+  }
+
   /**
    * Reporting monitors own the outbox and pass no assessment, evidence, or
    * finding text into this mail boundary. The recipient still receives an

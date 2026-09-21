@@ -7,6 +7,7 @@ import {
   initializeEvidenceUploadInputSchema,
   type EvidenceDocument,
   type EvidenceDocumentVersion,
+  type EvidenceValidityStatus as EvidenceValidityStatusValue,
 } from "@repo/contracts/evidence";
 import { Button } from "@repo/ui/button";
 import {
@@ -29,9 +30,13 @@ import {
 } from "../../dashboard/_components/dashboard-chrome";
 import { evidenceApi } from "./evidence.api";
 import { EvidenceExtractedText } from "./evidence-extracted-text";
+import { EvidenceExpiryAlertSettings } from "./evidence-expiry-alert-settings";
+import { EvidenceReusePanel } from "./evidence-reuse-panel";
+import { EvidenceValidityStatus } from "./evidence-validity-status";
 import {
   useCompleteEvidenceUploadMutation,
   useEvidenceDocumentsQuery,
+  useEvidenceVersionReuseQuery,
   useEvidenceVersionsQuery,
   useInitializeEvidenceUploadMutation,
   useReplaceEvidenceMutation,
@@ -56,6 +61,7 @@ const EvidenceSearchPanel = dynamic(
 
 type DocumentClass = EvidenceDocumentVersion["documentClass"];
 type Mode = "new" | "replacement";
+type ValidityFilter = EvidenceValidityStatusValue | "all";
 type Delivery = Readonly<{
   url: string;
   mediaType: string;
@@ -138,8 +144,12 @@ export function EvidenceLibrary({
   const member = (session?.organizations.length ?? 0) > 0;
   const canView = permissions.can_view_evidence === true;
   const canUpload = permissions.can_upload_evidence === true;
+  const canManageOrganization = permissions.can_edit_organization === true;
   const enabled = live && member && canView;
-  const list = useEvidenceDocumentsQuery(productId, enabled);
+  const [validityFilter, setValidityFilter] = useState<ValidityFilter>("all");
+  const list = useEvidenceDocumentsQuery(productId, enabled, {
+    validity: validityFilter === "all" ? undefined : validityFilter,
+  });
   const initialize = useInitializeEvidenceUploadMutation(productId);
   const replace = useReplaceEvidenceMutation(productId);
   const complete = useCompleteEvidenceUploadMutation(productId);
@@ -150,6 +160,7 @@ export function EvidenceLibrary({
     enabled,
   );
   const [versionId, setVersionId] = useState<string | null>(null);
+  const [showReuse, setShowReuse] = useState(false);
   const [delivery, setDelivery] = useState<Delivery | null>(null);
   const [mode, setMode] = useState<Mode>("new");
   const [file, setFile] = useState<File | null>(null);
@@ -165,6 +176,12 @@ export function EvidenceLibrary({
     versions.data?.versions.find((version) => version.id === versionId) ??
     selected?.currentVersion ??
     null;
+  const reuse = useEvidenceVersionReuseQuery(
+    productId,
+    selected?.id ?? null,
+    selectedVersion?.id ?? null,
+    enabled && showReuse,
+  );
 
   useEffect(() => {
     if (selected) {
@@ -183,6 +200,7 @@ export function EvidenceLibrary({
 
   function replaceDocument(document: EvidenceDocument) {
     setSelected(document);
+    setShowReuse(false);
     setMode("replacement");
     setTitle(document.currentVersion.title);
     setDocumentClass(document.currentVersion.documentClass);
@@ -454,7 +472,36 @@ export function EvidenceLibrary({
             </p>
           ) : null}
           <EvidenceSearchPanel productId={productId} enabled={enabled} />
+          {canManageOrganization ? (
+            <SectionCard>
+              <EvidenceExpiryAlertSettings enabled={enabled} />
+            </SectionCard>
+          ) : null}
           <SectionCard title="Evidence records">
+            <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+              <label
+                className="grid gap-1 text-caption-1-semibold text-fg"
+                htmlFor="evidence-validity-filter"
+              >
+                Filter by validity
+                <select
+                  id="evidence-validity-filter"
+                  value={validityFilter}
+                  onChange={(event) =>
+                    setValidityFilter(event.target.value as ValidityFilter)
+                  }
+                  className="rounded-lg border border-border bg-canvas px-3 py-2 text-subhead-regular text-fg outline-none focus-visible:ring-2 focus-visible:ring-focus"
+                >
+                  <option value="all">All validity states</option>
+                  <option value="current">Current</option>
+                  <option value="expiring_soon">Expiring soon</option>
+                  <option value="expired">Expired</option>
+                  <option value="not_yet_valid">Not yet valid</option>
+                  <option value="open_ended">Open-ended validity</option>
+                  <option value="missing">Validity not supplied</option>
+                </select>
+              </label>
+            </div>
             {list.isLoading ? (
               <p role="status" className="text-subhead-regular text-fg-muted">
                 Loading evidence records…
@@ -475,14 +522,18 @@ export function EvidenceLibrary({
               </div>
             ) : list.data?.items.length === 0 ? (
               <p className="text-subhead-regular text-fg-muted">
-                No evidence has been uploaded for this product.
+                {validityFilter === "all"
+                  ? "No evidence has been uploaded for this product."
+                  : "No evidence matches this validity filter."}
               </p>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[760px] text-left">
+                <table className="w-full min-w-[980px] text-left">
                   <thead className="border-b border-border text-caption-1-semibold text-fg-muted">
                     <tr>
                       <th className="px-3 py-2">Document</th>
+                      <th className="px-3 py-2">Class</th>
+                      <th className="px-3 py-2">Owner</th>
                       <th className="px-3 py-2">Status</th>
                       <th className="px-3 py-2">Validity</th>
                       <th className="px-3 py-2">SHA-256</th>
@@ -493,76 +544,104 @@ export function EvidenceLibrary({
                     </tr>
                   </thead>
                   <tbody>
-                    {list.data?.items.map(({ document, linkageCount }) => {
-                      const version = document.currentVersion;
-                      const clean = version.status === "clean";
-                      return (
-                        <tr
-                          key={document.id}
-                          className="border-b border-border align-top"
-                        >
-                          <td className="px-3 py-3">
-                            <p className="text-subhead-semibold text-fg">
-                              {version.title}
-                            </p>
-                            <p className="text-caption-1-regular text-fg-muted">
-                              {version.fileName} · v{version.versionNumber}
-                            </p>
-                          </td>
-                          <td className="px-3 py-3">
-                            <span className="inline-flex items-center gap-1 text-caption-1-semibold text-fg">
-                              {clean ? (
-                                <ShieldCheck
-                                  aria-hidden="true"
-                                  className="size-4"
-                                />
-                              ) : (
-                                <FileWarning
-                                  aria-hidden="true"
-                                  className="size-4"
-                                />
-                              )}
-                              {label(version.status)}
-                            </span>
-                          </td>
-                          <td className="px-3 py-3 text-caption-1-regular text-fg-muted">
-                            {date(version.validFrom)} –{" "}
-                            {date(version.validUntil)}
-                          </td>
-                          <td className="px-3 py-3 font-mono text-caption-1-regular text-fg-muted">
-                            {version.sha256
-                              ? `${version.sha256.slice(0, 12)}…`
-                              : "Pending"}
-                          </td>
-                          <td className="px-3 py-3 text-caption-1-regular text-fg-muted">
-                            {linkageCount}
-                          </td>
-                          <td className="px-3 py-3">
-                            <Button
-                              type="button"
-                              variant="outline"
-                              tone="grey"
-                              onClick={() => setSelected(document)}
+                    {list.data?.items.map(
+                      ({ document, linkageCount, validityStatus }) => {
+                        const version = document.currentVersion;
+                        const clean = version.status === "clean";
+                        return (
+                          <tr
+                            key={document.id}
+                            className="border-b border-border align-top"
+                          >
+                            <td className="px-3 py-3">
+                              <p className="text-subhead-semibold text-fg">
+                                {version.title}
+                              </p>
+                              <p className="text-caption-1-regular text-fg-muted">
+                                {version.fileName} · v{version.versionNumber}
+                              </p>
+                            </td>
+                            <td className="px-3 py-3 text-caption-1-regular text-fg-muted">
+                              {label(version.documentClass)}
+                            </td>
+                            <td
+                              className="px-3 py-3 font-mono text-caption-1-regular text-fg-muted"
+                              title={version.ownerUserId}
                             >
-                              <Eye aria-hidden="true" />
-                              View versions
-                            </Button>
-                            {canUpload ? (
+                              {version.ownerUserId.slice(0, 8)}…
+                            </td>
+                            <td className="px-3 py-3">
+                              <span className="inline-flex items-center gap-1 text-caption-1-semibold text-fg">
+                                {clean ? (
+                                  <ShieldCheck
+                                    aria-hidden="true"
+                                    className="size-4"
+                                  />
+                                ) : (
+                                  <FileWarning
+                                    aria-hidden="true"
+                                    className="size-4"
+                                  />
+                                )}
+                                {label(version.status)}
+                              </span>
+                            </td>
+                            <td className="px-3 py-3">
+                              <EvidenceValidityStatus
+                                status={validityStatus}
+                                validFrom={version.validFrom}
+                                validUntil={version.validUntil}
+                              />
+                            </td>
+                            <td className="px-3 py-3 font-mono text-caption-1-regular text-fg-muted">
+                              {version.sha256
+                                ? `${version.sha256.slice(0, 12)}…`
+                                : "Pending"}
+                            </td>
+                            <td className="px-3 py-3">
+                              <button
+                                type="button"
+                                className="text-caption-1-semibold text-active-500 underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+                                onClick={() => {
+                                  setSelected(document);
+                                  setVersionId(document.currentVersionId);
+                                  setShowReuse(true);
+                                }}
+                              >
+                                {linkageCount} link
+                                {linkageCount === 1 ? "" : "s"}
+                              </button>
+                            </td>
+                            <td className="px-3 py-3">
                               <Button
                                 type="button"
-                                variant="invisible"
+                                variant="outline"
                                 tone="grey"
-                                className="mt-2"
-                                onClick={() => replaceDocument(document)}
+                                onClick={() => {
+                                  setSelected(document);
+                                  setShowReuse(false);
+                                }}
                               >
-                                <Replace aria-hidden="true" />
-                                Replace
+                                <Eye aria-hidden="true" />
+                                View versions
                               </Button>
-                            ) : null}
-                          </td>
-                        </tr>
-                      );
-                    })}
+                              {canUpload ? (
+                                <Button
+                                  type="button"
+                                  variant="invisible"
+                                  tone="grey"
+                                  className="mt-2"
+                                  onClick={() => replaceDocument(document)}
+                                >
+                                  <Replace aria-hidden="true" />
+                                  Replace
+                                </Button>
+                              ) : null}
+                            </td>
+                          </tr>
+                        );
+                      },
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -695,6 +774,31 @@ export function EvidenceLibrary({
                   )}
                 </div>
               </div>
+            </SectionCard>
+          ) : null}
+          {selected && showReuse ? (
+            <SectionCard title="Evidence reuse">
+              {reuse.isLoading ? (
+                <p role="status" className="text-subhead-regular text-fg-muted">
+                  Loading authorized reuse links…
+                </p>
+              ) : reuse.isError ? (
+                <div className="grid gap-3">
+                  <p role="alert" className="text-subhead-regular text-danger">
+                    Evidence reuse links could not be loaded.
+                  </p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    tone="grey"
+                    onClick={() => void reuse.refetch()}
+                  >
+                    Retry
+                  </Button>
+                </div>
+              ) : reuse.data ? (
+                <EvidenceReusePanel reuse={reuse.data.reuse} />
+              ) : null}
             </SectionCard>
           ) : null}
         </>

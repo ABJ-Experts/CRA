@@ -1,11 +1,13 @@
 import {
   Body,
   Controller,
+  ConflictException,
   Get,
   Inject,
   NotFoundException,
   Param,
   Post,
+  Patch,
   Query,
   Req,
   Res,
@@ -40,12 +42,18 @@ import {
   evidenceExtractedTextParamsSchema,
   evidenceExtractedTextResponseSchema,
   evidenceExtractionRetryParamsSchema,
+  evidenceExpiryAlertIntervalsResponseSchema,
+  evidenceVersionReuseParamsSchema,
+  evidenceVersionReuseResponseSchema,
   retryEvidenceExtractionInputSchema,
   retryEvidenceExtractionResponseSchema,
   type EvidenceSearchQuery,
   type EvidenceExtractedTextParams,
   type EvidenceExtractionRetryParams,
   type RetryEvidenceExtractionInput,
+  type EvidenceVersionReuseParams,
+  type UpdateEvidenceExpiryAlertIntervalsInput,
+  updateEvidenceExpiryAlertIntervalsInputSchema,
 } from "@repo/contracts/evidence";
 import {
   CurrentUser,
@@ -67,6 +75,7 @@ import {
 import { EvidenceAccessUseCases } from "./application/evidence-access-use-cases";
 import { SupabaseEvidenceStorageAdapter } from "./infrastructure/supabase-evidence-storage.adapter";
 import { EvidenceTextSearchUseCases } from "./application/evidence-text-search-use-cases";
+import { EvidenceReuseValidityUseCases } from "./application/evidence-reuse-validity-use-cases";
 
 @Controller()
 export class EvidenceController {
@@ -78,6 +87,7 @@ export class EvidenceController {
     private readonly repository: EvidenceRepository,
     private readonly storage: SupabaseEvidenceStorageAdapter,
     private readonly textSearch: EvidenceTextSearchUseCases,
+    private readonly reuseValidity: EvidenceReuseValidityUseCases,
   ) {}
 
   @RequirePermissions("can_upload_evidence")
@@ -213,14 +223,18 @@ export class EvidenceController {
     query: EvidenceDocumentListQuery,
     @CurrentUser() user: RequestUser,
   ) {
-    return this.repository.list(organizationId(user), {
+    const result = await this.repository.list(organizationId(user), {
       actorId: user.id,
       productId: params.productId,
       limit: query.limit,
       cursor: query.cursor,
       status: query.status,
       documentClass: query.documentClass,
+      validity: query.validity,
     });
+    if (!result)
+      throw new NotFoundException({ code: "evidence_documents_unavailable" });
+    return result;
   }
 
   @RequirePermissions("can_view_evidence")
@@ -261,6 +275,60 @@ export class EvidenceController {
     if (!result)
       throw new NotFoundException({ code: "extraction_unavailable" });
     return result;
+  }
+
+  @RequirePermissions("can_view_evidence")
+  @Get(
+    "products/:productId/evidence-documents/:documentId/versions/:versionId/reuse",
+  )
+  @ZodResponse(evidenceVersionReuseResponseSchema)
+  async reuse(
+    @Param(zodParams(evidenceVersionReuseParamsSchema))
+    params: EvidenceVersionReuseParams,
+    @CurrentUser() user: RequestUser,
+  ) {
+    const reuse = await this.reuseValidity.reuse({
+      organizationId: organizationId(user),
+      actorId: user.id,
+      ...params,
+    });
+    if (!reuse)
+      throw new NotFoundException({ code: "evidence_reuse_unavailable" });
+    return reuse;
+  }
+
+  @RequirePermissions("can_edit_organization")
+  @Get("evidence-expiry-alert-intervals")
+  @ZodResponse(evidenceExpiryAlertIntervalsResponseSchema)
+  async expiryAlertIntervals(@CurrentUser() user: RequestUser) {
+    const result = await this.reuseValidity.expiryAlertIntervals({
+      organizationId: organizationId(user),
+      actorId: user.id,
+    });
+    if (!result)
+      throw new NotFoundException({ code: "expiry_alerts_unavailable" });
+    return result;
+  }
+
+  @RequirePermissions("can_edit_organization")
+  @Patch("evidence-expiry-alert-intervals")
+  @ZodResponse(evidenceExpiryAlertIntervalsResponseSchema)
+  async updateExpiryAlertIntervals(
+    @Body(zodBody(updateEvidenceExpiryAlertIntervalsInputSchema))
+    input: UpdateEvidenceExpiryAlertIntervalsInput,
+    @CurrentUser() user: RequestUser,
+  ) {
+    const result = await this.reuseValidity.updateExpiryAlertIntervals({
+      organizationId: organizationId(user),
+      actorId: user.id,
+      input,
+    });
+    if (result.outcome === "updated") return result.value;
+    if (result.outcome === "forbidden")
+      throw new NotFoundException({ code: "expiry_alerts_unavailable" });
+    if (result.outcome === "not_found")
+      throw new NotFoundException({ code: "organization_required" });
+    throw new ConflictException({ code: "expiry_alert_intervals_conflict" });
   }
 
   @RequirePermissions("can_upload_evidence")

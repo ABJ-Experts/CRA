@@ -50,6 +50,7 @@ const INTERNAL_SOURCE_KINDS = Object.freeze([
   "sbom_document",
   "finding",
   "risk_register",
+  "evidence_document",
 ] as const satisfies readonly TechnicalFileSourceKind[]);
 
 function requestId(): string {

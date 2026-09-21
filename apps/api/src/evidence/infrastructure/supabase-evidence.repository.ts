@@ -2,14 +2,20 @@ import { createHash, randomUUID } from "node:crypto";
 import { Injectable } from "@nestjs/common";
 import { SupabaseService } from "../../supabase/supabase.service";
 import {
+  evidenceDocumentListResponseSchema,
   evidenceExtractedTextResponseSchema,
+  evidenceExpiryAlertIntervalsResponseSchema,
   evidenceSearchResponseSchema,
+  evidenceVersionReuseResponseSchema,
   retryEvidenceExtractionResponseSchema,
+  type EvidenceExpiryAlertIntervalsResponse,
   type EvidenceExtractedTextResponse,
   type EvidenceSearchQuery,
   type EvidenceSearchResponse,
+  type EvidenceVersionReuseResponse,
   type RetryEvidenceExtractionInput,
   type RetryEvidenceExtractionResponse,
+  type UpdateEvidenceExpiryAlertIntervalsInput,
 } from "@repo/contracts/evidence";
 import type {
   EvidenceRepository,
@@ -20,6 +26,7 @@ import type {
   EvidenceAccessSource,
 } from "../application/evidence-access-use-cases";
 import type { EvidenceTextSearchRepository } from "../application/evidence-text-search-use-cases";
+import type { EvidenceReuseValidityRepository } from "../application/evidence-reuse-validity-use-cases";
 
 type Rpc = {
   rpc(
@@ -34,7 +41,8 @@ export class SupabaseEvidenceRepository
   implements
     EvidenceRepository,
     EvidenceAccessRepository,
-    EvidenceTextSearchRepository
+    EvidenceTextSearchRepository,
+    EvidenceReuseValidityRepository
 {
   constructor(private readonly supabase: SupabaseService) {}
   private client(): Rpc {
@@ -238,6 +246,7 @@ export class SupabaseEvidenceRepository
       cursor?: string;
       status?: string;
       documentClass?: string;
+      validity?: string;
     }>,
   ) {
     const cursor = decodeListCursor(input.cursor);
@@ -248,11 +257,14 @@ export class SupabaseEvidenceRepository
       p_product_id: input.productId,
       p_status: input.status ?? null,
       p_document_class: input.documentClass ?? null,
+      p_validity_status: input.validity ?? null,
       p_cursor_created_at: cursor?.createdAt ?? null,
       p_cursor_id: cursor?.id ?? null,
       p_limit: input.limit,
     });
-    return response.error ? null : response.data;
+    if (response.error) return null;
+    const parsed = evidenceDocumentListResponseSchema.safeParse(response.data);
+    return parsed.success ? parsed.data : null;
   }
 
   async search(
@@ -379,6 +391,81 @@ export class SupabaseEvidenceRepository
       extraction: mapExtraction(result),
     });
     return parsed.success ? parsed.data : null;
+  }
+
+  async reuse(
+    organizationId: string,
+    input: Readonly<{
+      actorId: string;
+      productId: string;
+      documentId: string;
+      versionId: string;
+    }>,
+  ): Promise<EvidenceVersionReuseResponse | null> {
+    const response = await this.client().rpc(
+      "get_evidence_document_reuse_atomic",
+      {
+        p_organization_id: organizationId,
+        p_actor_user_id: input.actorId,
+        p_product_id: input.productId,
+        p_document_id: input.documentId,
+        p_version_id: input.versionId,
+      },
+    );
+    const row = firstRow(response.data);
+    if (response.error || row?.outcome !== "found") return null;
+    const parsed = evidenceVersionReuseResponseSchema.safeParse({
+      reuse: asObject(row.result),
+    });
+    return parsed.success ? parsed.data : null;
+  }
+
+  async expiryAlertIntervals(
+    organizationId: string,
+    input: Readonly<{ actorId: string }>,
+  ): Promise<EvidenceExpiryAlertIntervalsResponse | null> {
+    const response = await this.client().rpc(
+      "get_evidence_expiry_alert_intervals_atomic",
+      { p_organization_id: organizationId, p_actor_user_id: input.actorId },
+    );
+    const row = firstRow(response.data);
+    if (response.error || row?.outcome !== "found") return null;
+    const parsed = evidenceExpiryAlertIntervalsResponseSchema.safeParse({
+      expiryAlertIntervals: asObject(row.result),
+    });
+    return parsed.success ? parsed.data : null;
+  }
+
+  async updateExpiryAlertIntervals(
+    organizationId: string,
+    input: Readonly<{
+      actorId: string;
+      input: UpdateEvidenceExpiryAlertIntervalsInput;
+    }>,
+  ) {
+    const response = await this.client().rpc(
+      "update_evidence_expiry_alert_intervals_atomic",
+      {
+        p_organization_id: organizationId,
+        p_actor_user_id: input.actorId,
+        p_expected_version: input.input.expectedVersion,
+        p_threshold_days: [...input.input.thresholdDays],
+        p_idempotency_key: input.input.idempotencyKey,
+      },
+    );
+    const row = firstRow(response.data);
+    if (response.error) return { outcome: "conflict" as const };
+    if (row?.outcome === "updated" || row?.outcome === "replayed") {
+      const parsed = evidenceExpiryAlertIntervalsResponseSchema.safeParse({
+        expiryAlertIntervals: asObject(row.result),
+      });
+      return parsed.success
+        ? { outcome: "updated" as const, value: parsed.data }
+        : { outcome: "conflict" as const };
+    }
+    if (row?.outcome === "forbidden") return { outcome: "forbidden" as const };
+    if (row?.outcome === "not_found") return { outcome: "not_found" as const };
+    return { outcome: "conflict" as const };
   }
 
   async versions(

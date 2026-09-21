@@ -6,6 +6,7 @@ import {
   evidenceDocumentAccessParamsSchema,
   evidenceDocumentListQuerySchema,
   evidenceDocumentListResponseSchema,
+  evidenceExpiryAlertIntervalsResponseSchema,
   evidenceDocumentVersionParamsSchema,
   evidenceDocumentVersionsResponseSchema,
   evidenceExtractedTextResponseSchema,
@@ -17,10 +18,14 @@ import {
   initializeEvidenceUploadInputSchema,
   retryEvidenceExtractionInputSchema,
   retryEvidenceExtractionResponseSchema,
+  updateEvidenceExpiryAlertIntervalsInputSchema,
+  evidenceVersionReuseParamsSchema,
+  evidenceVersionReuseResponseSchema,
   type CompleteEvidenceUploadInput,
   type CreateEvidenceReplacementInput,
   type EvidenceDocumentAccessInput,
   type EvidenceDocumentListQuery,
+  type UpdateEvidenceExpiryAlertIntervalsInput,
   type EvidenceSearchQuery,
   type InitializeEvidenceUploadInput,
   type RetryEvidenceExtractionInput,
@@ -99,6 +104,7 @@ function queryString(query: Partial<EvidenceDocumentListQuery>): string {
   if (parsed.data.status) parameters.set("status", parsed.data.status);
   if (parsed.data.documentClass)
     parameters.set("documentClass", parsed.data.documentClass);
+  if (parsed.data.validity) parameters.set("validity", parsed.data.validity);
   if (parsed.data.cursor) parameters.set("cursor", parsed.data.cursor);
   if (parsed.data.limit !== 50)
     parameters.set("limit", String(parsed.data.limit));
@@ -139,6 +145,26 @@ function extractionPath(
   return `${productPath(parsed.data.productId)}/${parsed.data.documentId}/versions/${parsed.data.versionId}/${suffix}`;
 }
 
+function reusePath(
+  productId: string,
+  documentId: string,
+  versionId: string,
+): `/${string}` {
+  const parsed = evidenceVersionReuseParamsSchema.safeParse({
+    productId,
+    documentId,
+    versionId,
+  });
+  if (!parsed.success) {
+    throw new ApiClientError(
+      "invalid_request",
+      "The product, evidence document, or version identifier is invalid.",
+      400,
+    );
+  }
+  return `${productPath(parsed.data.productId)}/${parsed.data.documentId}/versions/${parsed.data.versionId}/reuse`;
+}
+
 function searchQueryString(query: EvidenceSearchQuery): string {
   const parsed = evidenceSearchQuerySchema.safeParse(query);
   if (!parsed.success) {
@@ -169,6 +195,46 @@ export class EvidenceApi {
     return authenticatedRequestJson<typeof evidenceDocumentListResponseSchema>({
       path: `${productPath(productId)}${queryString(query)}` as `/${string}`,
       schema: evidenceDocumentListResponseSchema,
+      signal,
+    });
+  }
+
+  reuse(
+    productId: string,
+    documentId: string,
+    versionId: string,
+    signal?: AbortSignal,
+  ) {
+    return authenticatedRequestJson<typeof evidenceVersionReuseResponseSchema>({
+      path: reusePath(productId, documentId, versionId),
+      schema: evidenceVersionReuseResponseSchema,
+      signal,
+    });
+  }
+
+  expiryAlertIntervals(signal?: AbortSignal) {
+    return authenticatedRequestJson<
+      typeof evidenceExpiryAlertIntervalsResponseSchema
+    >({
+      path: "/api/v1/evidence-expiry-alert-intervals",
+      schema: evidenceExpiryAlertIntervalsResponseSchema,
+      signal,
+    });
+  }
+
+  updateExpiryAlertIntervals(
+    input: UpdateEvidenceExpiryAlertIntervalsInput,
+    signal?: AbortSignal,
+  ) {
+    return authenticatedRequestJson<
+      typeof evidenceExpiryAlertIntervalsResponseSchema,
+      typeof updateEvidenceExpiryAlertIntervalsInputSchema
+    >({
+      path: "/api/v1/evidence-expiry-alert-intervals",
+      method: "PATCH",
+      body: input,
+      inputSchema: updateEvidenceExpiryAlertIntervalsInputSchema,
+      schema: evidenceExpiryAlertIntervalsResponseSchema,
       signal,
     });
   }

@@ -260,6 +260,49 @@ describe("TechnicalFileWorkspace", () => {
     ).toBeGreaterThan(0);
   });
 
+  it("offers evidence documents as an internal source kind", () => {
+    prime({
+      data: {
+        technicalFile: {
+          id: "22222222-2222-4222-8222-222222222222",
+          organizationId: "00000000-0000-4000-8000-000000000001",
+          productId: "33333333-3333-4333-8333-333333333333",
+          templateKey: "annex_vii",
+          templateVersion: "2024-01",
+          legalSource: "Regulation (EU) 2024/2847, Annex VII",
+          status: "active",
+          version: 1,
+          sections: [section],
+          createdAt: "2026-09-14T00:00:00.000Z",
+          updatedAt: "2026-09-14T00:00:00.000Z",
+        },
+        retention: {
+          ruleVersion: "m2.v1.later_of_placement_plus_10y_or_support_end",
+          status: "incomplete",
+          placedOnMarketCandidate: null,
+          supportPeriodCandidate: null,
+          retentionUntil: null,
+          retentionProtectionUntil: null,
+          winningRule: null,
+          incompleteReasons: [],
+          legalHoldActive: false,
+          releaseCalculations: [],
+        },
+      },
+    });
+
+    render(
+      <TechnicalFileWorkspace productId="33333333-3333-4333-8333-333333333333" />,
+    );
+    fireEvent.click(
+      screen.getAllByRole("button", { name: "Open section" })[0]!,
+    );
+
+    expect(
+      screen.getByRole("option", { name: "evidence document" }),
+    ).toBeInTheDocument();
+  });
+
   it("preserves a stale-evidence review rationale when local validation fails", () => {
     prime({
       data: {

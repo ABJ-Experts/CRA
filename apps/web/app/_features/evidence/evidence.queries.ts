@@ -5,10 +5,13 @@ import type {
   EvidenceDocumentListQuery,
   EvidenceDocumentListResponse,
   EvidenceDocumentVersionsResponse,
+  EvidenceExpiryAlertIntervalsResponse,
   EvidenceExtractedTextResponse,
   EvidenceSearchQuery,
   EvidenceSearchResponse,
+  EvidenceVersionReuseResponse,
   InitializeEvidenceUploadInput,
+  UpdateEvidenceExpiryAlertIntervalsInput,
 } from "@repo/contracts/evidence";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -23,13 +26,18 @@ export const evidenceKey = (
     productId,
     query.status ?? null,
     query.documentClass ?? null,
+    query.validity ?? null,
     query.cursor ?? null,
     query.limit ?? 50,
   ] as const;
 
-export function useEvidenceDocumentsQuery(productId: string, enabled: boolean) {
+export function useEvidenceDocumentsQuery(
+  productId: string,
+  enabled: boolean,
+  query: Partial<EvidenceDocumentListQuery> = {},
+) {
   return useQuery<EvidenceDocumentListResponse>({
-    queryKey: evidenceKey(productId),
+    queryKey: evidenceKey(productId, query),
     enabled: enabled && productId !== "",
     retry: false,
     refetchInterval: (query) =>
@@ -40,7 +48,56 @@ export function useEvidenceDocumentsQuery(productId: string, enabled: boolean) {
       )
         ? 5_000
         : false,
-    queryFn: ({ signal }) => evidenceApi.list(productId, {}, signal),
+    queryFn: ({ signal }) => evidenceApi.list(productId, query, signal),
+  });
+}
+
+export const evidenceVersionReuseKey = (
+  productId: string,
+  documentId: string,
+  versionId: string,
+) => ["evidence", productId, "reuse", documentId, versionId] as const;
+
+export function useEvidenceVersionReuseQuery(
+  productId: string,
+  documentId: string | null,
+  versionId: string | null,
+  enabled: boolean,
+) {
+  return useQuery<EvidenceVersionReuseResponse>({
+    queryKey: evidenceVersionReuseKey(
+      productId,
+      documentId ?? "",
+      versionId ?? "",
+    ),
+    enabled: enabled && documentId !== null && versionId !== null,
+    retry: false,
+    queryFn: ({ signal }) =>
+      evidenceApi.reuse(productId, documentId ?? "", versionId ?? "", signal),
+  });
+}
+
+export const evidenceExpiryAlertIntervalsKey = [
+  "evidence",
+  "expiry-alert-intervals",
+] as const;
+
+export function useEvidenceExpiryAlertIntervalsQuery(enabled: boolean) {
+  return useQuery<EvidenceExpiryAlertIntervalsResponse>({
+    queryKey: evidenceExpiryAlertIntervalsKey,
+    enabled,
+    retry: false,
+    queryFn: ({ signal }) => evidenceApi.expiryAlertIntervals(signal),
+  });
+}
+
+export function useUpdateEvidenceExpiryAlertIntervalsMutation() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (input: UpdateEvidenceExpiryAlertIntervalsInput) =>
+      evidenceApi.updateExpiryAlertIntervals(input),
+    onSuccess: () =>
+      client.invalidateQueries({ queryKey: evidenceExpiryAlertIntervalsKey }),
   });
 }
 

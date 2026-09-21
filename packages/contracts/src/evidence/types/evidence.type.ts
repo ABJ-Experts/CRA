@@ -16,11 +16,20 @@ import type {
   evidenceDocumentResponseSchema,
   evidenceDocumentSchema,
   evidenceDocumentVersionParamsSchema,
+  evidenceVersionReuseParamsSchema,
   evidenceDocumentAccessParamsSchema,
   evidenceUploadVersionParamsSchema,
   evidenceDocumentVersionSchema,
   evidenceDocumentVersionsResponseSchema,
   evidenceOriginalDownloadResponseSchema,
+  evidenceValidityFilterSchema,
+  evidenceValidityStatusSchema,
+  evidenceExpiryAlertIntervalsSchema,
+  evidenceExpiryAlertIntervalsResponseSchema,
+  updateEvidenceExpiryAlertIntervalsInputSchema,
+  evidenceTechnicalFileReuseLinkSchema,
+  evidenceVersionReuseSchema,
+  evidenceVersionReuseResponseSchema,
   evidenceProductParamsSchema,
   evidenceSearchCoverageSchema,
   evidenceSearchFacetSchema,
@@ -58,6 +67,9 @@ export type EvidenceDocumentParams = z.output<
 export type EvidenceDocumentVersionParams = z.output<
   typeof evidenceDocumentVersionParamsSchema
 >;
+export type EvidenceVersionReuseParams = z.output<
+  typeof evidenceVersionReuseParamsSchema
+>;
 export type EvidenceDocumentAccessParams = z.output<
   typeof evidenceDocumentAccessParamsSchema
 >;
@@ -81,6 +93,24 @@ export type RetryEvidenceExtractionResponse = z.output<
 >;
 export type EvidenceDocumentListQuery = z.output<
   typeof evidenceDocumentListQuerySchema
+>;
+export type EvidenceValidityStatus = z.output<typeof evidenceValidityStatusSchema>;
+export type EvidenceValidityFilter = z.output<typeof evidenceValidityFilterSchema>;
+export type EvidenceExpiryAlertIntervals = z.output<
+  typeof evidenceExpiryAlertIntervalsSchema
+>;
+export type UpdateEvidenceExpiryAlertIntervalsInput = z.output<
+  typeof updateEvidenceExpiryAlertIntervalsInputSchema
+>;
+export type EvidenceExpiryAlertIntervalsResponse = z.output<
+  typeof evidenceExpiryAlertIntervalsResponseSchema
+>;
+export type EvidenceTechnicalFileReuseLink = z.output<
+  typeof evidenceTechnicalFileReuseLinkSchema
+>;
+export type EvidenceVersionReuse = z.output<typeof evidenceVersionReuseSchema>;
+export type EvidenceVersionReuseResponse = z.output<
+  typeof evidenceVersionReuseResponseSchema
 >;
 export type EvidenceExtractionMetadata = z.output<
   typeof evidenceExtractionMetadataSchema

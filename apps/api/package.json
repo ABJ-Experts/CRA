@@ -26,6 +26,7 @@
     "worker:sbom-composite": "node dist/sbom-composite-worker.js",
     "worker:evidence-scan": "node dist/evidence-scan-worker.js",
     "worker:evidence-text-extraction": "node dist/evidence-text-extraction-worker.js",
+    "worker:evidence-validity-alerts": "node dist/evidence-validity-alert-worker.js",
     "worker:technical-file-export": "node dist/technical-file-export-worker.js",
     "worker:technical-file-declaration": "node dist/technical-file-declaration-worker.js",
     "worker:vulnerability-feeds": "node dist/vulnerability-feed-worker.js",

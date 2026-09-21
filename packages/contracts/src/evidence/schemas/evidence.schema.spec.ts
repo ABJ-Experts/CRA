@@ -3,8 +3,11 @@ import { describe, expect, it } from "vitest";
 import {
   EVIDENCE_MAX_UPLOAD_BYTES,
   evidenceDocumentStatusSchema,
+  evidenceDocumentListQuerySchema,
   evidenceExtractedTextResponseSchema,
   evidenceExtractionMetadataSchema,
+  evidenceExpiryAlertIntervalsResponseSchema,
+  evidenceVersionReuseResponseSchema,
   evidenceMediaTypeSchema,
   evidenceScanProvenanceSchema,
   evidenceSearchQuerySchema,
@@ -12,6 +15,7 @@ import {
   evidenceDeliveryParamsSchema,
   initializeEvidenceUploadInputSchema,
   retryEvidenceExtractionInputSchema,
+  updateEvidenceExpiryAlertIntervalsInputSchema,
 } from "./evidence.schema.js";
 
 const id = "00000000-0000-4000-8000-000000000001";
@@ -265,5 +269,96 @@ describe("evidence schema boundaries", () => {
       idempotencyKey: "00000000-0000-4000-8000-000000000005",
     });
     expect(() => retryEvidenceExtractionInputSchema.parse({})).toThrow();
+  });
+
+  it("normalizes the validity filter without conflating it with retention", () => {
+    expect(
+      evidenceDocumentListQuerySchema.parse({ validity: "expired" }),
+    ).toMatchObject({ validity: "expired", limit: 50 });
+    expect(() =>
+      evidenceDocumentListQuerySchema.parse({ validity: "retention_expired" }),
+    ).toThrow();
+  });
+
+  it("requires a bounded, unique, optimistic expiry-alert configuration", () => {
+    expect(
+      updateEvidenceExpiryAlertIntervalsInputSchema.parse({
+        thresholdDays: [30, 14, 7, 1],
+        expectedVersion: 4,
+        idempotencyKey: "00000000-0000-4000-8000-000000000005",
+      }),
+    ).toMatchObject({ thresholdDays: [30, 14, 7, 1], expectedVersion: 4 });
+    expect(() =>
+      updateEvidenceExpiryAlertIntervalsInputSchema.parse({
+        thresholdDays: [30, 30],
+        expectedVersion: 4,
+        idempotencyKey: "00000000-0000-4000-8000-000000000005",
+      }),
+    ).toThrow();
+    expect(() =>
+      updateEvidenceExpiryAlertIntervalsInputSchema.parse({
+        thresholdDays: [0],
+        expectedVersion: 4,
+        idempotencyKey: "00000000-0000-4000-8000-000000000005",
+      }),
+    ).toThrow();
+    expect(() =>
+      updateEvidenceExpiryAlertIntervalsInputSchema.parse({
+        thresholdDays: Array.from({ length: 13 }, (_, index) => index + 1),
+        expectedVersion: 4,
+        idempotencyKey: "00000000-0000-4000-8000-000000000005",
+      }),
+    ).toThrow();
+  });
+
+  it("returns the active expiry intervals with durable revision metadata", () => {
+    expect(
+      evidenceExpiryAlertIntervalsResponseSchema.parse({
+        expiryAlertIntervals: {
+          thresholdDays: [30, 14, 7, 1],
+          version: 4,
+          updatedAt: "2026-09-18T10:00:00.000Z",
+          updatedByUserId: id,
+        },
+      }),
+    ).toMatchObject({
+      expiryAlertIntervals: { version: 4, thresholdDays: [30, 14, 7, 1] },
+    });
+  });
+
+  it("exposes only safe exact reverse links and an honest empty M10 projection", () => {
+    expect(
+      evidenceVersionReuseResponseSchema.parse({
+        reuse: {
+          technicalFileLinks: [
+            {
+              technicalFileId: "00000000-0000-4000-8000-000000000006",
+              productId: "00000000-0000-4000-8000-000000000002",
+              productName: "Secure widget",
+              sectionId: "00000000-0000-4000-8000-000000000007",
+              sectionKey: "test_reports",
+              sectionHeading: "Test reports",
+              linkedVersionId: "00000000-0000-4000-8000-000000000004",
+              linkedVersionNumber: 2,
+              status: "stale",
+              reviewedAt: null,
+              navigationPath:
+                "/products/00000000-0000-4000-8000-000000000002/technical-file",
+            },
+          ],
+          frameworkControls: [],
+        },
+      }),
+    ).toMatchObject({
+      reuse: { technicalFileLinks: [{ status: "stale" }], frameworkControls: [] },
+    });
+    expect(() =>
+      evidenceVersionReuseResponseSchema.parse({
+        reuse: {
+          technicalFileLinks: [],
+          frameworkControls: [{ controlId: "not-a-supported-m10-contract" }],
+        },
+      }),
+    ).toThrow();
   });
 });

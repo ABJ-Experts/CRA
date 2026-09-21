@@ -28,11 +28,45 @@ describe("EvidenceApi", () => {
 
   it("uses the parsed product route and bounded list query", () => {
     const api = new EvidenceApi();
-    api.list(PRODUCT_ID, { status: "scan_pending", limit: 25 });
+    api.list(PRODUCT_ID, {
+      status: "scan_pending",
+      validity: "expiring_soon",
+      limit: 25,
+    });
 
     expect(request).toHaveBeenCalledWith(
       expect.objectContaining({
-        path: `/api/v1/products/${PRODUCT_ID}/evidence-documents?status=scan_pending&limit=25`,
+        path: `/api/v1/products/${PRODUCT_ID}/evidence-documents?status=scan_pending&validity=expiring_soon&limit=25`,
+      }),
+    );
+  });
+
+  it("uses validated product and version ids for reuse details", () => {
+    const api = new EvidenceApi();
+
+    api.reuse(PRODUCT_ID, DOCUMENT_ID, VERSION_ID);
+
+    expect(request).toHaveBeenCalledWith(
+      expect.objectContaining({
+        path: `/api/v1/products/${PRODUCT_ID}/evidence-documents/${DOCUMENT_ID}/versions/${VERSION_ID}/reuse`,
+      }),
+    );
+  });
+
+  it("keeps expiry-interval updates at an explicit schema boundary", () => {
+    const api = new EvidenceApi();
+
+    api.updateExpiryAlertIntervals({
+      thresholdDays: [30, 14, 7, 1],
+      expectedVersion: 0,
+      idempotencyKey: KEY,
+    });
+
+    expect(request).toHaveBeenCalledWith(
+      expect.objectContaining({
+        path: "/api/v1/evidence-expiry-alert-intervals",
+        method: "PATCH",
+        inputSchema: expect.anything(),
       }),
     );
   });

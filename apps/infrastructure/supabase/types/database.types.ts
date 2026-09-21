@@ -737,6 +737,7 @@ export type Database = {
           owner_user_id: string
           sent_at: string | null
           status: string
+          threshold_days: number | null
           version_id: string
         }
         Insert: {
@@ -752,6 +753,7 @@ export type Database = {
           owner_user_id: string
           sent_at?: string | null
           status?: string
+          threshold_days?: number | null
           version_id: string
         }
         Update: {
@@ -767,6 +769,7 @@ export type Database = {
           owner_user_id?: string
           sent_at?: string | null
           status?: string
+          threshold_days?: number | null
           version_id?: string
         }
         Relationships: [
@@ -3842,6 +3845,10 @@ export type Database = {
           configured: boolean
           created_at: string
           data_residency_id: string | null
+          evidence_expiry_alert_intervals: number[]
+          evidence_expiry_alerts_updated_at: string
+          evidence_expiry_alerts_updated_by: string | null
+          evidence_expiry_alerts_version: number
           holidays: string[] | null
           maximum_session_age_minutes: number | null
           mfa_enforcement_date: string | null
@@ -3863,6 +3870,10 @@ export type Database = {
           configured?: boolean
           created_at?: string
           data_residency_id?: string | null
+          evidence_expiry_alert_intervals?: number[]
+          evidence_expiry_alerts_updated_at?: string
+          evidence_expiry_alerts_updated_by?: string | null
+          evidence_expiry_alerts_version?: number
           holidays?: string[] | null
           maximum_session_age_minutes?: number | null
           mfa_enforcement_date?: string | null
@@ -3884,6 +3895,10 @@ export type Database = {
           configured?: boolean
           created_at?: string
           data_residency_id?: string | null
+          evidence_expiry_alert_intervals?: number[]
+          evidence_expiry_alerts_updated_at?: string
+          evidence_expiry_alerts_updated_by?: string | null
+          evidence_expiry_alerts_version?: number
           holidays?: string[] | null
           maximum_session_age_minutes?: number | null
           mfa_enforcement_date?: string | null
@@ -3901,6 +3916,13 @@ export type Database = {
           working_days?: string[] | null
         }
         Relationships: [
+          {
+            foreignKeyName: "organization_settings_evidence_expiry_alerts_updated_by_fkey"
+            columns: ["evidence_expiry_alerts_updated_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "organization_settings_organization_id_fkey"
             columns: ["organization_id"]
@@ -16543,6 +16565,14 @@ export type Database = {
         }
         Returns: Json
       }
+      claim_evidence_validity_notification_atomic: {
+        Args: {
+          p_lease_seconds: number
+          p_organization_id: string
+          p_worker_id: string
+        }
+        Returns: Json
+      }
       claim_finding_propagation_job_atomic: {
         Args: {
           p_lease_owner: string
@@ -16956,6 +16986,16 @@ export type Database = {
           p_retry_after_seconds?: number
           p_source_sha256: string
           p_version_id: string
+          p_worker_id: string
+        }
+        Returns: string
+      }
+      complete_evidence_validity_notification_atomic: {
+        Args: {
+          p_error: string
+          p_organization_id: string
+          p_outbox_id: string
+          p_outcome: string
           p_worker_id: string
         }
         Returns: string
@@ -18791,6 +18831,26 @@ export type Database = {
           result: Json
         }[]
       }
+      get_evidence_document_reuse_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_document_id: string
+          p_organization_id: string
+          p_product_id: string
+          p_version_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      get_evidence_expiry_alert_intervals_atomic: {
+        Args: { p_actor_user_id: string; p_organization_id: string }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
       get_finding_product_impact_summary: {
         Args: {
           p_actor_user_id: string
@@ -19929,6 +19989,26 @@ export type Database = {
             }
             Returns: Json
           }
+        | {
+            Args: {
+              p_actor_user_id: string
+              p_cursor_created_at?: string
+              p_cursor_id?: string
+              p_document_class?: string
+              p_limit?: number
+              p_organization_id: string
+              p_product_id: string
+              p_status?: string
+              p_validity_status?: string
+            }
+            Returns: Json
+          }
+      list_evidence_validity_alert_organization_ids_atomic: {
+        Args: { p_after_organization_id: string; p_limit: number }
+        Returns: {
+          organization_id: string
+        }[]
+      }
       list_field_authority_policies: {
         Args: {
           p_actor_user_id: string
@@ -21635,8 +21715,16 @@ export type Database = {
         Args: { p_organization_id: string; p_user_id: string }
         Returns: boolean
       }
+      m8_evidence_expiry_thresholds_valid: {
+        Args: { p_threshold_days: number[] }
+        Returns: boolean
+      }
       m8_evidence_retention_class: {
         Args: { p_document_class: string }
+        Returns: string
+      }
+      m8_evidence_validity_status: {
+        Args: { p_ends_on: string; p_starts_on: string; p_thresholds: number[] }
         Returns: string
       }
       mark_mfa_factors_removed: {
@@ -22178,6 +22266,10 @@ export type Database = {
           outcome: string
           result: Json
         }[]
+      }
+      reconcile_evidence_validity_alerts_atomic: {
+        Args: { p_organization_id: string; p_worker_id: string }
+        Returns: Json
       }
       reconcile_organization_legal_entity_dependencies_atomic: {
         Args: {
@@ -23963,6 +24055,19 @@ export type Database = {
         Returns: {
           connector: Json
           outcome: string
+        }[]
+      }
+      update_evidence_expiry_alert_intervals_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_expected_version: number
+          p_idempotency_key: string
+          p_organization_id: string
+          p_threshold_days: number[]
+        }
+        Returns: {
+          outcome: string
+          result: Json
         }[]
       }
       update_finding_propagation_source_atomic: {

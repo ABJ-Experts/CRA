@@ -77,6 +77,13 @@ export interface EvidenceRepository {
       cursor?: string;
       status?: EvidenceState;
       documentClass?: string;
+      validity?:
+        | "current"
+        | "expiring_soon"
+        | "expired"
+        | "not_yet_valid"
+        | "open_ended"
+        | "missing";
     }>,
   ): Promise<unknown>;
   versions(

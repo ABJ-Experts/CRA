@@ -1,4 +1,5 @@
 import { idempotencyKeySchema } from "../../organizations/schemas/organization-input.schema.js";
+import { technicalFileSectionKeySchema } from "../../technical-files/schemas/technical-file.schema.js";
 import { z } from "zod";
 
 /** The policy limit is enforced again by private Storage and server inspection. */
@@ -75,6 +76,21 @@ export const evidenceDocumentStatusSchema = z.enum([
   "quarantined",
   "failed",
 ]);
+
+/**
+ * Version validity is separate from product retention. Missing and open-ended
+ * values are deliberately visible states, never an inferred perpetual grant.
+ */
+export const evidenceValidityStatusSchema = z.enum([
+  "current",
+  "expiring_soon",
+  "expired",
+  "not_yet_valid",
+  "open_ended",
+  "missing",
+]);
+
+export const evidenceValidityFilterSchema = evidenceValidityStatusSchema;
 
 /** Visible lifecycle of the locally-derived text, independent of malware scan. */
 export const evidenceExtractionStatusSchema = z.enum([
@@ -280,6 +296,8 @@ export const evidenceDocumentVersionParamsSchema = z
 export const evidenceDocumentAccessParamsSchema = z
   .object({ productId: z.uuid(), documentId: z.uuid(), versionId: z.uuid() })
   .strict();
+/** Product, document, and immutable version are all required for reverse links. */
+export const evidenceVersionReuseParamsSchema = evidenceDocumentAccessParamsSchema;
 export const evidenceDeliveryParamsSchema = z
   .object({ token: z.string().regex(/^[A-Za-z0-9_-]{43}$/) })
   .strict();
@@ -294,6 +312,7 @@ export const evidenceDocumentListQuerySchema = z
   .object({
     status: evidenceDocumentStatusSchema.optional(),
     documentClass: evidenceDocumentClassSchema.optional(),
+    validity: evidenceValidityFilterSchema.optional(),
     cursor: z.string().trim().min(1).max(500).optional(),
     limit: z.coerce.number().int().min(1).max(100).default(50),
   })
@@ -511,8 +530,95 @@ export const evidenceDocumentSchema = z
 export const evidenceDocumentListItemSchema = z
   .object({
     document: evidenceDocumentSchema,
+    validityStatus: evidenceValidityStatusSchema,
     linkageCount: z.number().int().nonnegative(),
   })
+  .strict();
+
+const evidenceExpiryAlertThresholdDaysSchema = z.number().int().min(1).max(3650);
+const evidenceExpiryAlertThresholdsSchema = z
+  .array(evidenceExpiryAlertThresholdDaysSchema)
+  .min(1)
+  .max(12)
+  .superRefine((value, context) => {
+    if (new Set(value).size !== value.length) {
+      context.addIssue({
+        code: "custom",
+        message: "Expiry alert thresholds must be unique",
+      });
+    }
+  });
+
+/** Mutable organization-wide notification configuration, not evidence validity. */
+export const evidenceExpiryAlertIntervalsSchema = z
+  .object({
+    thresholdDays: evidenceExpiryAlertThresholdsSchema,
+    version: z.number().int().nonnegative(),
+    updatedAt: utcDateTimeSchema,
+    updatedByUserId: z.uuid().nullable(),
+  })
+  .strict();
+
+export const updateEvidenceExpiryAlertIntervalsInputSchema = z
+  .object({
+    thresholdDays: evidenceExpiryAlertThresholdsSchema,
+    expectedVersion: z.number().int().nonnegative(),
+    idempotencyKey: idempotencyKeySchema,
+  })
+  .strict();
+
+export const evidenceExpiryAlertIntervalsResponseSchema = z
+  .object({ expiryAlertIntervals: evidenceExpiryAlertIntervalsSchema })
+  .strict();
+
+const technicalFileNavigationPathSchema = z
+  .string()
+  .regex(
+    /^\/products\/[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\/technical-file$/i,
+    "Use the product's technical-file path",
+  );
+
+/**
+ * A permission-filtered reverse projection of an immutable M7 evidence link.
+ * M8 only consumes it; M7 remains the sole writer of technical-file sources.
+ */
+export const evidenceTechnicalFileReuseLinkSchema = z
+  .object({
+    technicalFileId: z.uuid(),
+    productId: z.uuid(),
+    productName: requiredText(500),
+    sectionId: z.uuid(),
+    sectionKey: technicalFileSectionKeySchema,
+    sectionHeading: requiredText(500),
+    linkedVersionId: z.uuid(),
+    linkedVersionNumber: z.number().int().positive(),
+    status: z.enum(["current", "stale", "unavailable"]),
+    reviewedAt: utcDateTimeSchema.nullable(),
+    navigationPath: technicalFileNavigationPathSchema,
+  })
+  .strict()
+  .superRefine((value, context) => {
+    if (value.navigationPath !== `/products/${value.productId}/technical-file`) {
+      context.addIssue({
+        code: "custom",
+        path: ["navigationPath"],
+        message: "Technical-file navigation must match the linked product",
+      });
+    }
+  });
+
+/** M10 has no producer in V1, so no control mappings can be returned. */
+export const evidenceFrameworkControlReuseLinkSchema = z.never();
+
+export const evidenceVersionReuseSchema = z
+  .object({
+    technicalFileLinks: z.array(evidenceTechnicalFileReuseLinkSchema).max(100),
+    frameworkControls: z.array(evidenceFrameworkControlReuseLinkSchema).max(0),
+  })
+  .strict();
+
+export const evidenceVersionReuseResponseSchema = z
+  .object({ reuse: evidenceVersionReuseSchema })
   .strict();
 
 export const evidenceUploadInstructionSchema = z
