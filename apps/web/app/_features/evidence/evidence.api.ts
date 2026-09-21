@@ -1,5 +1,6 @@
 import {
   completeEvidenceUploadInputSchema,
+  createEvidenceDeletionIntentInputSchema,
   createEvidenceReplacementInputSchema,
   evidenceDocumentAccessInputSchema,
   evidenceDocumentAccessResponseSchema,
@@ -9,24 +10,37 @@ import {
   evidenceExpiryAlertIntervalsResponseSchema,
   evidenceDocumentVersionParamsSchema,
   evidenceDocumentVersionsResponseSchema,
+  evidenceDeletionIntentResponseSchema,
   evidenceExtractedTextResponseSchema,
+  evidenceLegalHoldListParamsSchema,
+  evidenceLegalHoldListResponseSchema,
+  evidenceLegalHoldParamsSchema,
   evidenceProductParamsSchema,
+  evidenceRetentionReviewParamsSchema,
+  evidenceRetentionReviewResponseSchema,
   evidenceSearchQuerySchema,
   evidenceSearchResponseSchema,
   evidenceUploadCompletionResponseSchema,
   evidenceUploadInitializationResponseSchema,
   initializeEvidenceUploadInputSchema,
+  placeEvidenceLegalHoldInputSchema,
+  placeEvidenceLegalHoldResponseSchema,
+  releaseEvidenceLegalHoldInputSchema,
+  releaseEvidenceLegalHoldResponseSchema,
   retryEvidenceExtractionInputSchema,
   retryEvidenceExtractionResponseSchema,
   updateEvidenceExpiryAlertIntervalsInputSchema,
   evidenceVersionReuseParamsSchema,
   evidenceVersionReuseResponseSchema,
   type CompleteEvidenceUploadInput,
+  type CreateEvidenceDeletionIntentInput,
   type CreateEvidenceReplacementInput,
   type EvidenceDocumentAccessInput,
   type EvidenceDocumentListQuery,
   type UpdateEvidenceExpiryAlertIntervalsInput,
   type EvidenceSearchQuery,
+  type PlaceEvidenceLegalHoldInput,
+  type ReleaseEvidenceLegalHoldInput,
   type InitializeEvidenceUploadInput,
   type RetryEvidenceExtractionInput,
 } from "@repo/contracts/evidence";
@@ -89,6 +103,46 @@ function versionsPath(productId: string, documentId: string): `/${string}` {
     );
   }
   return `${productPath(productId)}/${parsed.data.documentId}/versions`;
+}
+
+function evidenceDocumentPath(documentId: string): `/api/v1/evidence/${string}` {
+  const parsed = evidenceRetentionReviewParamsSchema.safeParse({ documentId });
+  if (!parsed.success) {
+    throw new ApiClientError(
+      "invalid_request",
+      "The evidence document identifier is invalid.",
+      400,
+    );
+  }
+  return `/api/v1/evidence/${parsed.data.documentId}`;
+}
+
+function retentionReviewPath(documentId: string): `/${string}` {
+  return `${evidenceDocumentPath(documentId)}/retention-review`;
+}
+
+function legalHoldsPath(documentId: string): `/${string}` {
+  const parsed = evidenceLegalHoldListParamsSchema.safeParse({ documentId });
+  if (!parsed.success) {
+    throw new ApiClientError(
+      "invalid_request",
+      "The evidence document identifier is invalid.",
+      400,
+    );
+  }
+  return `${evidenceDocumentPath(parsed.data.documentId)}/legal-holds`;
+}
+
+function releaseLegalHoldPath(documentId: string, holdId: string): `/${string}` {
+  const parsed = evidenceLegalHoldParamsSchema.safeParse({ documentId, holdId });
+  if (!parsed.success) {
+    throw new ApiClientError(
+      "invalid_request",
+      "The evidence document or legal hold identifier is invalid.",
+      400,
+    );
+  }
+  return `${legalHoldsPath(parsed.data.documentId)}/${parsed.data.holdId}/release`;
 }
 
 function queryString(query: Partial<EvidenceDocumentListQuery>): string {
@@ -285,6 +339,79 @@ export class EvidenceApi {
     >({
       path: versionsPath(productId, documentId),
       schema: evidenceDocumentVersionsResponseSchema,
+      signal,
+    });
+  }
+
+  retentionReview(documentId: string, signal?: AbortSignal) {
+    return authenticatedRequestJson<typeof evidenceRetentionReviewResponseSchema>(
+      {
+        path: retentionReviewPath(documentId),
+        schema: evidenceRetentionReviewResponseSchema,
+        signal,
+      },
+    );
+  }
+
+  createDeletionIntent(
+    documentId: string,
+    input: CreateEvidenceDeletionIntentInput,
+    signal?: AbortSignal,
+  ) {
+    return authenticatedRequestJson<
+      typeof evidenceDeletionIntentResponseSchema,
+      typeof createEvidenceDeletionIntentInputSchema
+    >({
+      path: `${evidenceDocumentPath(documentId)}/deletion-intents`,
+      method: "POST",
+      body: input,
+      inputSchema: createEvidenceDeletionIntentInputSchema,
+      schema: evidenceDeletionIntentResponseSchema,
+      signal,
+    });
+  }
+
+  legalHolds(documentId: string, signal?: AbortSignal) {
+    return authenticatedRequestJson<typeof evidenceLegalHoldListResponseSchema>({
+      path: legalHoldsPath(documentId),
+      schema: evidenceLegalHoldListResponseSchema,
+      signal,
+    });
+  }
+
+  placeLegalHold(
+    documentId: string,
+    input: PlaceEvidenceLegalHoldInput,
+    signal?: AbortSignal,
+  ) {
+    return authenticatedRequestJson<
+      typeof placeEvidenceLegalHoldResponseSchema,
+      typeof placeEvidenceLegalHoldInputSchema
+    >({
+      path: legalHoldsPath(documentId),
+      method: "POST",
+      body: input,
+      inputSchema: placeEvidenceLegalHoldInputSchema,
+      schema: placeEvidenceLegalHoldResponseSchema,
+      signal,
+    });
+  }
+
+  releaseLegalHold(
+    documentId: string,
+    holdId: string,
+    input: ReleaseEvidenceLegalHoldInput,
+    signal?: AbortSignal,
+  ) {
+    return authenticatedRequestJson<
+      typeof releaseEvidenceLegalHoldResponseSchema,
+      typeof releaseEvidenceLegalHoldInputSchema
+    >({
+      path: releaseLegalHoldPath(documentId, holdId),
+      method: "POST",
+      body: input,
+      inputSchema: releaseEvidenceLegalHoldInputSchema,
+      schema: releaseEvidenceLegalHoldResponseSchema,
       signal,
     });
   }

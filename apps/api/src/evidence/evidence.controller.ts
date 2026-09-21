@@ -54,6 +54,24 @@ import {
   type EvidenceVersionReuseParams,
   type UpdateEvidenceExpiryAlertIntervalsInput,
   updateEvidenceExpiryAlertIntervalsInputSchema,
+  createEvidenceDeletionIntentInputSchema,
+  evidenceDeletionIntentResponseSchema,
+  evidenceLegalHoldListParamsSchema,
+  evidenceLegalHoldListResponseSchema,
+  evidenceLegalHoldParamsSchema,
+  evidenceRetentionReviewParamsSchema,
+  evidenceRetentionReviewResponseSchema,
+  placeEvidenceLegalHoldInputSchema,
+  placeEvidenceLegalHoldResponseSchema,
+  releaseEvidenceLegalHoldInputSchema,
+  releaseEvidenceLegalHoldResponseSchema,
+  type CreateEvidenceDeletionIntentInput,
+  type EvidenceLegalHoldListParams,
+  type EvidenceLegalHoldParams,
+  type EvidenceRetentionReviewParams,
+  type EvidenceRetentionReview,
+  type PlaceEvidenceLegalHoldInput,
+  type ReleaseEvidenceLegalHoldInput,
 } from "@repo/contracts/evidence";
 import {
   CurrentUser,
@@ -76,6 +94,7 @@ import { EvidenceAccessUseCases } from "./application/evidence-access-use-cases"
 import { SupabaseEvidenceStorageAdapter } from "./infrastructure/supabase-evidence-storage.adapter";
 import { EvidenceTextSearchUseCases } from "./application/evidence-text-search-use-cases";
 import { EvidenceReuseValidityUseCases } from "./application/evidence-reuse-validity-use-cases";
+import { EvidenceRetentionUseCases } from "./application/evidence-retention-use-cases";
 
 @Controller()
 export class EvidenceController {
@@ -88,6 +107,7 @@ export class EvidenceController {
     private readonly storage: SupabaseEvidenceStorageAdapter,
     private readonly textSearch: EvidenceTextSearchUseCases,
     private readonly reuseValidity: EvidenceReuseValidityUseCases,
+    private readonly retention: EvidenceRetentionUseCases,
   ) {}
 
   @RequirePermissions("can_upload_evidence")
@@ -235,6 +255,132 @@ export class EvidenceController {
     if (!result)
       throw new NotFoundException({ code: "evidence_documents_unavailable" });
     return result;
+  }
+
+  @RequirePermissions("can_view_evidence")
+  @Get("evidence/:documentId/retention-review")
+  @ZodResponse(evidenceRetentionReviewResponseSchema)
+  async retentionReview(
+    @Param(zodParams(evidenceRetentionReviewParamsSchema))
+    params: EvidenceRetentionReviewParams,
+    @CurrentUser() user: RequestUser,
+  ) {
+    const review = await this.retention.review({
+      organizationId: organizationId(user),
+      actorId: user.id,
+      documentId: params.documentId,
+    });
+    if (!review) throw new NotFoundException({ code: "not_found" });
+    return { review: publicRetentionReview(review) };
+  }
+
+  @RequirePermissions("can_manage_evidence")
+  @Post("evidence/:documentId/deletion-intents")
+  @ZodResponse(evidenceDeletionIntentResponseSchema)
+  async confirmDeletion(
+    @Param(zodParams(evidenceRetentionReviewParamsSchema))
+    params: EvidenceRetentionReviewParams,
+    @Body(zodBody(createEvidenceDeletionIntentInputSchema))
+    input: CreateEvidenceDeletionIntentInput,
+    @CurrentUser() user: RequestUser,
+  ) {
+    const result = await this.retention.confirmDeletion({
+      organizationId: organizationId(user),
+      actorId: user.id,
+      documentId: params.documentId,
+      expectedCurrentVersionId: input.expectedCurrentVersionId,
+      reviewFingerprint: input.reviewFingerprint,
+      reason: input.reason,
+      idempotencyKey: input.idempotencyKey,
+    });
+    const deletion = asRecord(result.value).deletion ?? result.value;
+    if (result.outcome === "queued" || result.outcome === "replayed") {
+      const parsed = evidenceDeletionIntentResponseSchema.safeParse({
+        outcome: result.outcome,
+        deletion,
+      });
+      if (parsed.success) return parsed.data;
+      throw new ConflictException({ code: "deletion_intent_unavailable" });
+    }
+    throw retentionMutationException(result.outcome);
+  }
+
+  @RequirePermissions("can_view_evidence")
+  @Get("evidence/:documentId/legal-holds")
+  @ZodResponse(evidenceLegalHoldListResponseSchema)
+  async legalHolds(
+    @Param(zodParams(evidenceLegalHoldListParamsSchema))
+    params: EvidenceLegalHoldListParams,
+    @CurrentUser() user: RequestUser,
+  ) {
+    const legalHolds = evidenceLegalHoldListResponseSchema.safeParse(
+      await this.retention.legalHolds({
+        organizationId: organizationId(user),
+        actorId: user.id,
+        documentId: params.documentId,
+      }),
+    );
+    if (!legalHolds.success) throw new NotFoundException({ code: "not_found" });
+    return legalHolds.data;
+  }
+
+  @RequirePermissions("can_manage_evidence")
+  @Post("evidence/:documentId/legal-holds")
+  @ZodResponse(placeEvidenceLegalHoldResponseSchema)
+  async placeLegalHold(
+    @Param(zodParams(evidenceLegalHoldListParamsSchema))
+    params: EvidenceLegalHoldListParams,
+    @Body(zodBody(placeEvidenceLegalHoldInputSchema))
+    input: PlaceEvidenceLegalHoldInput,
+    @CurrentUser() user: RequestUser,
+  ) {
+    const result = await this.retention.placeLegalHold({
+      organizationId: organizationId(user),
+      actorId: user.id,
+      documentId: params.documentId,
+      reason: input.reason,
+      idempotencyKey: input.idempotencyKey,
+    });
+    const legalHold = asRecord(result.value).legalHold ?? result.value;
+    if (result.outcome === "placed" || result.outcome === "replayed") {
+      const parsed = placeEvidenceLegalHoldResponseSchema.safeParse({
+        outcome: result.outcome,
+        legalHold,
+      });
+      if (parsed.success) return parsed.data;
+      throw new ConflictException({ code: "legal_hold_unavailable" });
+    }
+    throw retentionMutationException(result.outcome);
+  }
+
+  @RequirePermissions("can_manage_evidence")
+  @Post("evidence/:documentId/legal-holds/:holdId/release")
+  @ZodResponse(releaseEvidenceLegalHoldResponseSchema)
+  async releaseLegalHold(
+    @Param(zodParams(evidenceLegalHoldParamsSchema))
+    params: EvidenceLegalHoldParams,
+    @Body(zodBody(releaseEvidenceLegalHoldInputSchema))
+    input: ReleaseEvidenceLegalHoldInput,
+    @CurrentUser() user: RequestUser,
+  ) {
+    const result = await this.retention.releaseLegalHold({
+      organizationId: organizationId(user),
+      actorId: user.id,
+      documentId: params.documentId,
+      holdId: params.holdId,
+      reason: input.reason,
+      idempotencyKey: input.idempotencyKey,
+    });
+    const legalHold = asRecord(result.value).legalHold ?? result.value;
+    if (result.outcome === "released" || result.outcome === "replayed") {
+      const parsed = releaseEvidenceLegalHoldResponseSchema.safeParse({
+        outcome: result.outcome,
+        legalHold,
+      });
+      if (parsed.success) return parsed.data;
+      throw new ConflictException({ code: "legal_hold_unavailable" });
+    }
+    throw retentionMutationException(result.outcome);
   }
 
   @RequirePermissions("can_view_evidence")
@@ -514,6 +660,61 @@ function organizationId(user: RequestUser): string {
   if (!user.organizationId)
     throw new NotFoundException({ code: "organization_required" });
   return user.organizationId;
+}
+function publicRetentionReview(
+  review: EvidenceRetentionReview &
+    Readonly<{ linkedProductIds: readonly string[] }>,
+): EvidenceRetentionReview {
+  return {
+    documentId: review.documentId,
+    currentVersionId: review.currentVersionId,
+    lifecycle: review.lifecycle,
+    reviewedAt: review.reviewedAt,
+    reviewFingerprint: review.reviewFingerprint,
+    eligibleForDeletion: review.eligibleForDeletion,
+    blockers: review.blockers,
+    protection: review.protection,
+  };
+}
+function asRecord(value: unknown): Record<string, unknown> {
+  return typeof value === "object" && value !== null
+    ? (value as Record<string, unknown>)
+    : {};
+}
+function retentionMutationException(
+  outcome:
+    | "placed"
+    | "released"
+    | "queued"
+    | "replayed"
+    | "idempotency_mismatch"
+    | "forbidden"
+    | "not_found"
+    | "conflict"
+    | "blocked"
+    | "invalid_request",
+): Error {
+  if (
+    outcome === "placed" ||
+    outcome === "released" ||
+    outcome === "queued" ||
+    outcome === "replayed"
+  )
+    return new ConflictException({ code: "evidence_retention_conflict" });
+  if (outcome === "not_found" || outcome === "forbidden")
+    return new NotFoundException({ code: "not_found" });
+  if (outcome === "invalid_request")
+    return new UnprocessableEntityException({
+      code: "invalid_retention_request",
+    });
+  return new ConflictException({
+    code:
+      outcome === "blocked"
+        ? "evidence_retention_blocked"
+        : outcome === "idempotency_mismatch"
+          ? "idempotency_mismatch"
+          : "evidence_retention_conflict",
+  });
 }
 function parseRange(
   value: string | undefined,

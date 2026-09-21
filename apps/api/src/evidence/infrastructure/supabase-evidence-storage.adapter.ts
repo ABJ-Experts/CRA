@@ -163,6 +163,29 @@ export class SupabaseEvidenceStorageAdapter implements EvidenceStoragePort {
     return Buffer.from(await result.data.arrayBuffer());
   }
 
+  /**
+   * Cleanup is deliberately narrow: only a database-claimed key with the
+   * evidence bucket's UUID path shape can be removed. Storage's not-found
+   * response is idempotent success; the durable cleanup RPC decides whether a
+   * retry is needed before this method is ever called.
+   */
+  async remove(
+    input: Readonly<{ objectKey: string }>,
+  ): Promise<"deleted" | "missing" | "unavailable"> {
+    if (!objectKey.test(input.objectKey))
+      throw new EvidenceStorageError("malformed");
+    try {
+      const result = (await this.supabase
+        .admin()
+        .storage.from(bucket)
+        .remove([input.objectKey])) as StorageResponse<unknown>;
+      if (!result.error) return "deleted";
+      return isNotFound(result.error) ? "missing" : "unavailable";
+    } catch {
+      return "unavailable";
+    }
+  }
+
   private providerError(error: unknown) {
     return error instanceof EvidenceStorageError
       ? error

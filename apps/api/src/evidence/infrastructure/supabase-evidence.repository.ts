@@ -5,6 +5,7 @@ import {
   evidenceDocumentListResponseSchema,
   evidenceExtractedTextResponseSchema,
   evidenceExpiryAlertIntervalsResponseSchema,
+  evidenceRetentionReviewResponseSchema,
   evidenceSearchResponseSchema,
   evidenceVersionReuseResponseSchema,
   retryEvidenceExtractionResponseSchema,
@@ -13,6 +14,7 @@ import {
   type EvidenceSearchQuery,
   type EvidenceSearchResponse,
   type EvidenceVersionReuseResponse,
+  type EvidenceRetentionBlocker,
   type RetryEvidenceExtractionInput,
   type RetryEvidenceExtractionResponse,
   type UpdateEvidenceExpiryAlertIntervalsInput,
@@ -27,6 +29,11 @@ import type {
 } from "../application/evidence-access-use-cases";
 import type { EvidenceTextSearchRepository } from "../application/evidence-text-search-use-cases";
 import type { EvidenceReuseValidityRepository } from "../application/evidence-reuse-validity-use-cases";
+import type {
+  EvidenceRetentionMutationResult,
+  EvidenceRetentionRepository,
+  EvidenceRetentionReview,
+} from "../application/evidence-retention-use-cases";
 
 type Rpc = {
   rpc(
@@ -42,7 +49,8 @@ export class SupabaseEvidenceRepository
     EvidenceRepository,
     EvidenceAccessRepository,
     EvidenceTextSearchRepository,
-    EvidenceReuseValidityRepository
+    EvidenceReuseValidityRepository,
+    EvidenceRetentionRepository
 {
   constructor(private readonly supabase: SupabaseService) {}
   private client(): Rpc {
@@ -468,6 +476,115 @@ export class SupabaseEvidenceRepository
     return { outcome: "conflict" as const };
   }
 
+  async retentionReview(
+    organizationId: string,
+    input: Readonly<{ actorId: string; documentId: string }>,
+  ): Promise<EvidenceRetentionReview | null> {
+    const response = await this.client().rpc(
+      "get_evidence_document_retention_review_atomic",
+      {
+        p_organization_id: organizationId,
+        p_actor_user_id: input.actorId,
+        p_document_id: input.documentId,
+      },
+    );
+    const row = firstRow(response.data);
+    if (response.error || row?.outcome !== "found") return null;
+    return retentionReview(asObject(row.result));
+  }
+
+  async legalHolds(
+    organizationId: string,
+    input: Readonly<{ actorId: string; documentId: string }>,
+  ): Promise<Readonly<{ legalHolds: readonly unknown[] }> | null> {
+    const response = await this.client().rpc(
+      "list_evidence_document_legal_holds_atomic",
+      {
+        p_organization_id: organizationId,
+        p_actor_user_id: input.actorId,
+        p_document_id: input.documentId,
+      },
+    );
+    const row = firstRow(response.data);
+    if (response.error || row?.outcome !== "found") return null;
+    const result = asObject(row.result);
+    return Array.isArray(result.legalHolds)
+      ? { legalHolds: result.legalHolds }
+      : null;
+  }
+
+  async placeLegalHold(
+    organizationId: string,
+    input: Readonly<{
+      actorId: string;
+      documentId: string;
+      reason: string;
+      idempotencyKey: string;
+    }>,
+  ): Promise<EvidenceRetentionMutationResult> {
+    const response = await this.client().rpc(
+      "place_evidence_document_legal_hold_atomic",
+      {
+        p_organization_id: organizationId,
+        p_actor_user_id: input.actorId,
+        p_document_id: input.documentId,
+        p_reason: input.reason,
+        p_idempotency_key: input.idempotencyKey,
+      },
+    );
+    return retentionMutation(response, ["placed", "replayed"]);
+  }
+
+  async releaseLegalHold(
+    organizationId: string,
+    input: Readonly<{
+      actorId: string;
+      documentId: string;
+      holdId: string;
+      reason: string;
+      idempotencyKey: string;
+    }>,
+  ): Promise<EvidenceRetentionMutationResult> {
+    const response = await this.client().rpc(
+      "release_evidence_document_legal_hold_atomic",
+      {
+        p_organization_id: organizationId,
+        p_actor_user_id: input.actorId,
+        p_document_id: input.documentId,
+        p_hold_id: input.holdId,
+        p_reason: input.reason,
+        p_idempotency_key: input.idempotencyKey,
+      },
+    );
+    return retentionMutation(response, ["released", "replayed"]);
+  }
+
+  async confirmDeletion(
+    organizationId: string,
+    input: Readonly<{
+      actorId: string;
+      documentId: string;
+      expectedCurrentVersionId: string;
+      reviewFingerprint: string;
+      reason: string;
+      idempotencyKey: string;
+    }>,
+  ): Promise<EvidenceRetentionMutationResult> {
+    const response = await this.client().rpc(
+      "confirm_evidence_document_deletion_atomic",
+      {
+        p_organization_id: organizationId,
+        p_actor_user_id: input.actorId,
+        p_document_id: input.documentId,
+        p_expected_current_version_id: input.expectedCurrentVersionId,
+        p_review_fingerprint: input.reviewFingerprint,
+        p_reason: input.reason,
+        p_idempotency_key: input.idempotencyKey,
+      },
+    );
+    return retentionMutation(response, ["queued", "replayed"]);
+  }
+
   async versions(
     organizationId: string,
     input: Readonly<{ actorId: string; productId: string; documentId: string }>,
@@ -574,6 +691,168 @@ function accessResult(
   if (outcome === "unavailable" || outcome === "not_clean")
     return { outcome: "not_clean" as const };
   return { outcome: "not_found" as const };
+}
+
+function retentionReview(
+  value: Record<string, unknown>,
+): EvidenceRetentionReview | null {
+  const linkedProductIds = Array.isArray(value.linkedProductIds)
+    ? value.linkedProductIds.filter(
+        (productId): productId is string => typeof productId === "string",
+      )
+    : [];
+  if (!Array.isArray(value.linkedProductIds)) return null;
+  const reviewedAt = stringValue(value.reviewedAt);
+  const retentionUntil = stringValue(value.retentionUntil);
+  const retentionProtectionUntil = stringValue(value.retentionProtectionUntil);
+  const retentionIncomplete = value.retentionIncomplete === true;
+  const legalHoldActive =
+    value.productLegalHoldActive === true ||
+    (Array.isArray(value.activeHolds) && value.activeHolds.length > 0);
+  const status = retentionIncomplete
+    ? "incomplete"
+    : retentionUntil && retentionProtectionUntil
+      ? "current"
+      : "unavailable";
+  const blockers: EvidenceRetentionBlocker[] = Array.isArray(
+    value.blockingReasons,
+  )
+    ? value.blockingReasons.map(mapRetentionBlocker).filter(isDefined)
+    : [];
+  if (status === "unavailable") {
+    blockers.push({
+      visibility: "visible",
+      kind: "protection_unavailable",
+      obligation: "Retention protection could not be verified.",
+      productId: null,
+      productName: null,
+      protectThrough: null,
+    });
+  }
+  const publicLifecycle = lifecycle(value.lifecycleState);
+  const eligibleForDeletion =
+    status === "current" &&
+    !legalHoldActive &&
+    blockers.length === 0 &&
+    publicLifecycle === "active" &&
+    retentionUntil !== null &&
+    retentionProtectionUntil !== null &&
+    Date.parse(retentionUntil) <= Date.parse(reviewedAt ?? "") &&
+    Date.parse(retentionProtectionUntil) <= Date.parse(reviewedAt ?? "");
+  const parsed = evidenceRetentionReviewResponseSchema.safeParse({
+    review: {
+      documentId: value.documentId,
+      currentVersionId: value.currentVersionId,
+      lifecycle: publicLifecycle,
+      reviewedAt,
+      reviewFingerprint: value.reviewFingerprint,
+      eligibleForDeletion,
+      blockers,
+      protection: {
+        status,
+        retentionUntil: status === "current" ? retentionUntil : null,
+        retentionProtectionUntil:
+          status === "current" ? retentionProtectionUntil : null,
+        legalHoldActive,
+        identityHandling: "legal_review_required",
+      },
+    },
+  });
+  return parsed.success
+    ? Object.freeze({
+        ...parsed.data.review,
+        linkedProductIds: Object.freeze(linkedProductIds),
+      })
+    : null;
+}
+
+function mapRetentionBlocker(value: unknown) {
+  const row = asObject(value);
+  const kind = stringValue(row.kind);
+  if (!kind) return null;
+  if (kind === "reference") {
+    return {
+      visibility: "restricted" as const,
+      kind: "protected_reference" as const,
+      message: "A protected related record prevents deletion." as const,
+    };
+  }
+  if (kind === "retention" && typeof row.productId === "string") {
+    if (typeof row.productName !== "string") {
+      return {
+        visibility: "restricted" as const,
+        kind: "protected_reference" as const,
+        message: "A protected related record prevents deletion." as const,
+      };
+    }
+    return {
+      visibility: "visible" as const,
+      kind: "product_retention" as const,
+      obligation: "A linked product retention obligation prevents deletion.",
+      productId: row.productId,
+      productName: row.productName,
+      protectThrough: stringValue(row.retentionProtectionUntil),
+    };
+  }
+  return {
+    visibility: "visible" as const,
+    kind:
+      kind === "legal_hold"
+        ? ("legal_hold" as const)
+        : kind === "lifecycle"
+          ? ("deletion_in_progress" as const)
+          : ("incomplete_retention" as const),
+    obligation:
+      kind === "legal_hold"
+        ? "An active legal hold prevents deletion."
+        : kind === "lifecycle"
+          ? "Deletion is already in progress."
+          : "Retention information is incomplete; deletion cannot be approved.",
+    productId: null,
+    productName: null,
+    protectThrough: null,
+  };
+}
+
+function lifecycle(value: unknown) {
+  if (value === "queued_cleanup") return "cleanup_queued" as const;
+  if (value === "cleanup_claimed") return "cleanup_claimed" as const;
+  if (value === "cleanup_failed") return "cleanup_failed" as const;
+  if (value === "deleted") return "deleted" as const;
+  return "active" as const;
+}
+
+function retentionMutation(
+  response: Awaited<ReturnType<Rpc["rpc"]>>,
+  successful: readonly ("placed" | "released" | "queued" | "replayed")[],
+): EvidenceRetentionMutationResult {
+  const row = firstRow(response.data);
+  const outcome = response.error ? "conflict" : row?.outcome;
+  if (
+    outcome === "placed" ||
+    outcome === "released" ||
+    outcome === "queued" ||
+    outcome === "replayed"
+  ) {
+    return successful.includes(outcome)
+      ? { outcome, value: asObject(row?.result) }
+      : { outcome: "conflict" };
+  }
+  if (outcome === "idempotency_conflict")
+    return { outcome: "idempotency_mismatch" };
+  if (
+    outcome === "forbidden" ||
+    outcome === "not_found" ||
+    outcome === "blocked" ||
+    outcome === "invalid_request" ||
+    outcome === "conflict"
+  )
+    return { outcome };
+  return { outcome: "conflict" };
+}
+
+function isDefined<T>(value: T | null): value is T {
+  return value !== null;
 }
 
 function requestDigest(value: unknown) {

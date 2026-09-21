@@ -32,6 +32,7 @@ import { evidenceApi } from "./evidence.api";
 import { EvidenceExtractedText } from "./evidence-extracted-text";
 import { EvidenceExpiryAlertSettings } from "./evidence-expiry-alert-settings";
 import { EvidenceReusePanel } from "./evidence-reuse-panel";
+import { EvidenceRetentionPanel } from "./evidence-retention-panel";
 import { EvidenceValidityStatus } from "./evidence-validity-status";
 import {
   useCompleteEvidenceUploadMutation,
@@ -144,6 +145,7 @@ export function EvidenceLibrary({
   const member = (session?.organizations.length ?? 0) > 0;
   const canView = permissions.can_view_evidence === true;
   const canUpload = permissions.can_upload_evidence === true;
+  const canManageEvidence = permissions.can_manage_evidence === true;
   const canManageOrganization = permissions.can_edit_organization === true;
   const enabled = live && member && canView;
   const [validityFilter, setValidityFilter] = useState<ValidityFilter>("all");
@@ -774,6 +776,12 @@ export function EvidenceLibrary({
                   )}
                 </div>
               </div>
+              <EvidenceRetentionPanel
+                productId={productId}
+                documentId={selected.id}
+                enabled={enabled}
+                canManage={canManageEvidence}
+              />
             </SectionCard>
           ) : null}
           {selected && showReuse ? (

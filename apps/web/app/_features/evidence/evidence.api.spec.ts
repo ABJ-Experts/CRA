@@ -172,4 +172,60 @@ describe("EvidenceApi", () => {
       }),
     );
   });
+
+  it("keeps the retention review and reviewed deletion command at parsed document boundaries", () => {
+    const api = new EvidenceApi();
+    api.retentionReview(DOCUMENT_ID);
+    api.createDeletionIntent(DOCUMENT_ID, {
+      expectedCurrentVersionId: VERSION_ID,
+      reviewFingerprint: "a".repeat(64),
+      confirmed: true,
+      reason: "No longer required after review.",
+      idempotencyKey: KEY,
+    });
+
+    expect(request).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        path: `/api/v1/evidence/${DOCUMENT_ID}/retention-review`,
+      }),
+    );
+    expect(request).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        path: `/api/v1/evidence/${DOCUMENT_ID}/deletion-intents`,
+        method: "POST",
+        inputSchema: expect.anything(),
+      }),
+    );
+  });
+
+  it("keeps legal-hold placement and individual release at explicit schema boundaries", () => {
+    const api = new EvidenceApi();
+    api.placeLegalHold(DOCUMENT_ID, {
+      reason: "Preserve for regulator request.",
+      idempotencyKey: KEY,
+    });
+    api.releaseLegalHold(DOCUMENT_ID, VERSION_ID, {
+      reason: "Matter closed.",
+      idempotencyKey: KEY,
+    });
+
+    expect(request).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        path: `/api/v1/evidence/${DOCUMENT_ID}/legal-holds`,
+        method: "POST",
+        inputSchema: expect.anything(),
+      }),
+    );
+    expect(request).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        path: `/api/v1/evidence/${DOCUMENT_ID}/legal-holds/${VERSION_ID}/release`,
+        method: "POST",
+        inputSchema: expect.anything(),
+      }),
+    );
+  });
 });

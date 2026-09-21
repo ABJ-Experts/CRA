@@ -60,6 +60,20 @@ test("evidence validity settings and reuse projection stay permission-scoped", a
   await expect(
     page.getByRole("heading", { name: "Expiry alerts" }),
   ).toBeVisible();
+  await expect(page.getByText("Loading evidence search…")).toBeHidden();
+  await expect(page.getByText("Loading expiry alert schedule…")).toBeHidden();
+  await expect(page.getByText("Loading evidence records.")).toBeHidden();
+  const retentionReviewResponse = page.waitForResponse((response) =>
+    response.url().includes("/retention-review"),
+  );
+  await page.getByRole("button", { name: "View versions" }).first().click();
+  expect((await retentionReviewResponse).status()).toBe(200);
+  await expect(
+    page.getByRole("heading", { name: "Retention and deletion review" }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Retention protection could not be loaded."),
+  ).toBeHidden();
   const reuseLink = page.getByRole("button", { name: /link/ }).first();
   if (await reuseLink.isVisible()) {
     await reuseLink.click();
@@ -83,6 +97,7 @@ test("evidence validity controls remain usable on a narrow viewport", async ({
 
   await page.goto(`/products/${productId}/evidence`);
   await expect(page.getByLabel("Filter by validity")).toBeVisible();
+  await expect(page.getByText("Loading evidence records.")).toBeHidden();
   await page.getByLabel("Filter by validity").selectOption("expired");
   await page.screenshot({
     path: testInfo.outputPath("m8-evidence-validity-mobile.png"),

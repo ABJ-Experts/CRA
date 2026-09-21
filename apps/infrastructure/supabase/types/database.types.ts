@@ -647,6 +647,162 @@ export type Database = {
           },
         ]
       }
+      evidence_document_deletion_cleanup_items: {
+        Row: {
+          attempt_count: number
+          completed_at: string | null
+          created_at: string
+          id: string
+          intent_id: string
+          last_error: string | null
+          lease_expires_at: string | null
+          lease_owner: string | null
+          object_bucket: string
+          object_key: string
+          organization_id: string
+          state: string
+          version_id: string
+        }
+        Insert: {
+          attempt_count?: number
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          intent_id: string
+          last_error?: string | null
+          lease_expires_at?: string | null
+          lease_owner?: string | null
+          object_bucket: string
+          object_key: string
+          organization_id: string
+          state?: string
+          version_id: string
+        }
+        Update: {
+          attempt_count?: number
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          intent_id?: string
+          last_error?: string | null
+          lease_expires_at?: string | null
+          lease_owner?: string | null
+          object_bucket?: string
+          object_key?: string
+          organization_id?: string
+          state?: string
+          version_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evidence_document_deletion_clea_organization_id_version_id_fkey"
+            columns: ["organization_id", "version_id"]
+            isOneToOne: false
+            referencedRelation: "evidence_document_versions"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "evidence_document_deletion_clean_organization_id_intent_id_fkey"
+            columns: ["organization_id", "intent_id"]
+            isOneToOne: false
+            referencedRelation: "evidence_document_deletion_intents"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "evidence_document_deletion_cleanup_items_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      evidence_document_deletion_intents: {
+        Row: {
+          attempt_count: number
+          completed_at: string | null
+          document_id: string
+          expected_current_version_id: string
+          id: string
+          idempotency_key: string
+          last_error: string | null
+          lease_expires_at: string | null
+          lease_owner: string | null
+          organization_id: string
+          payload_digest: string
+          reason: string
+          requested_at: string
+          requested_by_user_id: string
+          review_fingerprint: string
+          state: string
+        }
+        Insert: {
+          attempt_count?: number
+          completed_at?: string | null
+          document_id: string
+          expected_current_version_id: string
+          id?: string
+          idempotency_key: string
+          last_error?: string | null
+          lease_expires_at?: string | null
+          lease_owner?: string | null
+          organization_id: string
+          payload_digest: string
+          reason: string
+          requested_at?: string
+          requested_by_user_id: string
+          review_fingerprint: string
+          state?: string
+        }
+        Update: {
+          attempt_count?: number
+          completed_at?: string | null
+          document_id?: string
+          expected_current_version_id?: string
+          id?: string
+          idempotency_key?: string
+          last_error?: string | null
+          lease_expires_at?: string | null
+          lease_owner?: string | null
+          organization_id?: string
+          payload_digest?: string
+          reason?: string
+          requested_at?: string
+          requested_by_user_id?: string
+          review_fingerprint?: string
+          state?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evidence_document_deletion_in_organization_id_expected_cur_fkey"
+            columns: ["organization_id", "expected_current_version_id"]
+            isOneToOne: false
+            referencedRelation: "evidence_document_versions"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "evidence_document_deletion_int_organization_id_document_id_fkey"
+            columns: ["organization_id", "document_id"]
+            isOneToOne: false
+            referencedRelation: "evidence_documents"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "evidence_document_deletion_intents_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evidence_document_deletion_intents_requested_by_user_id_fkey"
+            columns: ["requested_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       evidence_document_extraction_jobs: {
         Row: {
           attempt_count: number
@@ -719,6 +875,83 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      evidence_document_legal_holds: {
+        Row: {
+          document_id: string
+          id: string
+          organization_id: string
+          place_idempotency_key: string
+          place_payload_digest: string
+          placed_at: string
+          placed_by_user_id: string
+          reason: string
+          release_idempotency_key: string | null
+          release_payload_digest: string | null
+          release_reason: string | null
+          released_at: string | null
+          released_by_user_id: string | null
+        }
+        Insert: {
+          document_id: string
+          id?: string
+          organization_id: string
+          place_idempotency_key: string
+          place_payload_digest: string
+          placed_at?: string
+          placed_by_user_id: string
+          reason: string
+          release_idempotency_key?: string | null
+          release_payload_digest?: string | null
+          release_reason?: string | null
+          released_at?: string | null
+          released_by_user_id?: string | null
+        }
+        Update: {
+          document_id?: string
+          id?: string
+          organization_id?: string
+          place_idempotency_key?: string
+          place_payload_digest?: string
+          placed_at?: string
+          placed_by_user_id?: string
+          reason?: string
+          release_idempotency_key?: string | null
+          release_payload_digest?: string | null
+          release_reason?: string | null
+          released_at?: string | null
+          released_by_user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evidence_document_legal_holds_organization_id_document_id_fkey"
+            columns: ["organization_id", "document_id"]
+            isOneToOne: false
+            referencedRelation: "evidence_documents"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "evidence_document_legal_holds_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evidence_document_legal_holds_placed_by_user_id_fkey"
+            columns: ["placed_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evidence_document_legal_holds_released_by_user_id_fkey"
+            columns: ["released_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
@@ -893,6 +1126,66 @@ export type Database = {
           },
           {
             foreignKeyName: "evidence_document_version_products_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      evidence_document_version_retention_protections: {
+        Row: {
+          linked_product_count: number
+          linked_product_ids: string[]
+          observed_protection_until: string | null
+          observed_retention_until: string | null
+          organization_id: string
+          product_legal_hold_active: boolean
+          refreshed_at: string
+          source_incomplete: boolean
+          source_status: string
+          strongest_protection_until: string | null
+          strongest_retention_until: string | null
+          version_id: string
+        }
+        Insert: {
+          linked_product_count?: number
+          linked_product_ids?: string[]
+          observed_protection_until?: string | null
+          observed_retention_until?: string | null
+          organization_id: string
+          product_legal_hold_active?: boolean
+          refreshed_at?: string
+          source_incomplete?: boolean
+          source_status?: string
+          strongest_protection_until?: string | null
+          strongest_retention_until?: string | null
+          version_id: string
+        }
+        Update: {
+          linked_product_count?: number
+          linked_product_ids?: string[]
+          observed_protection_until?: string | null
+          observed_retention_until?: string | null
+          organization_id?: string
+          product_legal_hold_active?: boolean
+          refreshed_at?: string
+          source_incomplete?: boolean
+          source_status?: string
+          strongest_protection_until?: string | null
+          strongest_retention_until?: string | null
+          version_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evidence_document_version_reten_organization_id_version_id_fkey"
+            columns: ["organization_id", "version_id"]
+            isOneToOne: true
+            referencedRelation: "evidence_document_versions"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "evidence_document_version_retention_protec_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
@@ -1109,7 +1402,10 @@ export type Database = {
           created_at: string
           created_by: string
           current_version_id: string | null
+          deleted_at: string | null
+          deletion_requested_at: string | null
           id: string
+          lifecycle_state: string
           organization_id: string
           updated_at: string
         }
@@ -1117,7 +1413,10 @@ export type Database = {
           created_at?: string
           created_by: string
           current_version_id?: string | null
+          deleted_at?: string | null
+          deletion_requested_at?: string | null
           id?: string
+          lifecycle_state?: string
           organization_id: string
           updated_at?: string
         }
@@ -1125,7 +1424,10 @@ export type Database = {
           created_at?: string
           created_by?: string
           current_version_id?: string | null
+          deleted_at?: string | null
+          deletion_requested_at?: string | null
           id?: string
+          lifecycle_state?: string
           organization_id?: string
           updated_at?: string
         }
@@ -16541,6 +16843,14 @@ export type Database = {
         }
         Returns: string
       }
+      claim_evidence_document_deletion_cleanup_atomic: {
+        Args: {
+          p_lease_seconds: number
+          p_organization_id: string
+          p_worker_id: string
+        }
+        Returns: Json
+      }
       claim_evidence_document_notification_atomic: {
         Args: {
           p_lease_seconds: number
@@ -16949,6 +17259,17 @@ export type Database = {
           run: Json
         }[]
       }
+      complete_evidence_document_deletion_cleanup_atomic: {
+        Args: {
+          p_cleanup_item_id: string
+          p_error?: string
+          p_intent_id: string
+          p_organization_id: string
+          p_outcome: string
+          p_worker_id: string
+        }
+        Returns: string
+      }
       complete_evidence_document_notification_atomic: {
         Args: {
           p_error?: string
@@ -17241,6 +17562,21 @@ export type Database = {
           p_organization_id: string
           p_remote_version?: string
           p_worker_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      confirm_evidence_document_deletion_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_document_id: string
+          p_expected_current_version_id: string
+          p_idempotency_key: string
+          p_organization_id: string
+          p_reason: string
+          p_review_fingerprint: string
         }
         Returns: {
           outcome: string
@@ -18831,6 +19167,17 @@ export type Database = {
           result: Json
         }[]
       }
+      get_evidence_document_retention_review_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_document_id: string
+          p_organization_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
       get_evidence_document_reuse_atomic: {
         Args: {
           p_actor_user_id: string
@@ -19956,6 +20303,23 @@ export type Database = {
         Args: { p_limit?: number }
         Returns: {
           organization_id: string
+        }[]
+      }
+      list_evidence_document_deletion_cleanup_organizations_atomic: {
+        Args: { p_limit: number }
+        Returns: {
+          organization_id: string
+        }[]
+      }
+      list_evidence_document_legal_holds_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_document_id: string
+          p_organization_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
         }[]
       }
       list_evidence_document_versions: {
@@ -21711,6 +22075,30 @@ export type Database = {
         Args: { p_kind: string; p_organization_id: string; p_record_id: string }
         Returns: boolean
       }
+      m8_05_actor_can_manage_evidence: {
+        Args: { p_actor_user_id: string; p_organization_id: string }
+        Returns: boolean
+      }
+      m8_05_deletion_intent_json: {
+        Args: {
+          p_intent: Database["public"]["Tables"]["evidence_document_deletion_intents"]["Row"]
+        }
+        Returns: Json
+      }
+      m8_05_legal_hold_json: {
+        Args: {
+          p_hold: Database["public"]["Tables"]["evidence_document_legal_holds"]["Row"]
+        }
+        Returns: Json
+      }
+      m8_05_retention_review_json: {
+        Args: {
+          p_actor_user_id: string
+          p_document_id: string
+          p_organization_id: string
+        }
+        Returns: Json
+      }
       m8_evidence_actor_active: {
         Args: { p_organization_id: string; p_user_id: string }
         Returns: boolean
@@ -22022,6 +22410,19 @@ export type Database = {
           outcome: string
           processed_count: number
           review_required_count: number
+        }[]
+      }
+      place_evidence_document_legal_hold_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_document_id: string
+          p_idempotency_key: string
+          p_organization_id: string
+          p_reason: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
         }[]
       }
       preflight_vulnerability_offline_bundle_import: {
@@ -22721,6 +23122,10 @@ export type Database = {
           result: Json
         }[]
       }
+      refresh_evidence_document_retention_protection_atomic: {
+        Args: { p_organization_id: string; p_version_id: string }
+        Returns: Json
+      }
       refresh_sbom_composite_review_projection_atomic: {
         Args: { p_organization_id: string; p_review_id: string }
         Returns: {
@@ -22847,6 +23252,20 @@ export type Database = {
           p_idempotency_key: string
           p_organization_id: string
           p_request_digest: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      release_evidence_document_legal_hold_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_document_id: string
+          p_hold_id: string
+          p_idempotency_key: string
+          p_organization_id: string
+          p_reason: string
         }
         Returns: {
           outcome: string

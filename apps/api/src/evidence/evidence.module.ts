@@ -1,5 +1,8 @@
 import { Module } from "@nestjs/common";
 import { SupabaseModule } from "../supabase/supabase.module";
+import { ProductsModule } from "../products/products.module";
+import { PRODUCT_RETENTION_PROJECTION } from "../products/application/product-retention-reader.port";
+import type { ProductRetentionProjectionPort } from "../products/application/product-retention-reader.port";
 import { EvidenceController } from "./evidence.controller";
 import {
   EvidenceIntakeUseCases,
@@ -19,9 +22,14 @@ import {
   EvidenceReuseValidityUseCases,
   EVIDENCE_REUSE_VALIDITY_REPOSITORY,
 } from "./application/evidence-reuse-validity-use-cases";
+import {
+  EvidenceRetentionUseCases,
+  EVIDENCE_RETENTION_REPOSITORY,
+  type EvidenceRetentionRepository,
+} from "./application/evidence-retention-use-cases";
 
 @Module({
-  imports: [SupabaseModule],
+  imports: [SupabaseModule, ProductsModule],
   controllers: [EvidenceController],
   providers: [
     SupabaseEvidenceRepository,
@@ -60,10 +68,22 @@ import {
       useExisting: SupabaseEvidenceRepository,
     },
     {
+      provide: EVIDENCE_RETENTION_REPOSITORY,
+      useExisting: SupabaseEvidenceRepository,
+    },
+    {
       provide: EvidenceReuseValidityUseCases,
       inject: [EVIDENCE_REUSE_VALIDITY_REPOSITORY],
       useFactory: (repository: SupabaseEvidenceRepository) =>
         new EvidenceReuseValidityUseCases(repository),
+    },
+    {
+      provide: EvidenceRetentionUseCases,
+      inject: [EVIDENCE_RETENTION_REPOSITORY, PRODUCT_RETENTION_PROJECTION],
+      useFactory: (
+        repository: EvidenceRetentionRepository,
+        productRetention: ProductRetentionProjectionPort,
+      ) => new EvidenceRetentionUseCases(repository, productRetention),
     },
   ],
 })

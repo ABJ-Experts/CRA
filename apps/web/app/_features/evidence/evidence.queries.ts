@@ -2,15 +2,20 @@
 
 import type {
   CreateEvidenceReplacementInput,
+  CreateEvidenceDeletionIntentInput,
   EvidenceDocumentListQuery,
   EvidenceDocumentListResponse,
   EvidenceDocumentVersionsResponse,
+  EvidenceLegalHoldListResponse,
+  EvidenceRetentionReviewResponse,
   EvidenceExpiryAlertIntervalsResponse,
   EvidenceExtractedTextResponse,
   EvidenceSearchQuery,
   EvidenceSearchResponse,
   EvidenceVersionReuseResponse,
   InitializeEvidenceUploadInput,
+  PlaceEvidenceLegalHoldInput,
+  ReleaseEvidenceLegalHoldInput,
   UpdateEvidenceExpiryAlertIntervalsInput,
 } from "@repo/contracts/evidence";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -206,6 +211,100 @@ export function useEvidenceVersionsQuery(
         : false,
     queryFn: ({ signal }) =>
       evidenceApi.versions(productId, documentId ?? "", signal),
+  });
+}
+
+export const evidenceRetentionReviewKey = (documentId: string) =>
+  ["evidence", "retention-review", documentId] as const;
+
+export function useEvidenceRetentionReviewQuery(
+  documentId: string | null,
+  enabled: boolean,
+) {
+  return useQuery<EvidenceRetentionReviewResponse>({
+    queryKey: evidenceRetentionReviewKey(documentId ?? ""),
+    enabled: enabled && documentId !== null,
+    retry: false,
+    queryFn: ({ signal }) =>
+      evidenceApi.retentionReview(documentId ?? "", signal),
+  });
+}
+
+export const evidenceLegalHoldsKey = (documentId: string) =>
+  ["evidence", "legal-holds", documentId] as const;
+
+export function useEvidenceLegalHoldsQuery(
+  documentId: string | null,
+  enabled: boolean,
+) {
+  return useQuery<EvidenceLegalHoldListResponse>({
+    queryKey: evidenceLegalHoldsKey(documentId ?? ""),
+    enabled: enabled && documentId !== null,
+    retry: false,
+    queryFn: ({ signal }) => evidenceApi.legalHolds(documentId ?? "", signal),
+  });
+}
+
+function invalidateEvidenceRetention(
+  client: ReturnType<typeof useQueryClient>,
+  documentId: string,
+  productId: string,
+) {
+  void client.invalidateQueries({
+    queryKey: evidenceRetentionReviewKey(documentId),
+  });
+  void client.invalidateQueries({ queryKey: evidenceLegalHoldsKey(documentId) });
+  void client.invalidateQueries({ queryKey: evidenceKey(productId) });
+  void client.invalidateQueries({
+    queryKey: evidenceVersionsKey(productId, documentId),
+  });
+}
+
+export function useCreateEvidenceDeletionIntentMutation(productId: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (
+      variables: Readonly<{
+        documentId: string;
+        input: CreateEvidenceDeletionIntentInput;
+      }>,
+    ) => evidenceApi.createDeletionIntent(variables.documentId, variables.input),
+    onSuccess: (_, variables) =>
+      invalidateEvidenceRetention(client, variables.documentId, productId),
+  });
+}
+
+export function usePlaceEvidenceLegalHoldMutation(productId: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (
+      variables: Readonly<{
+        documentId: string;
+        input: PlaceEvidenceLegalHoldInput;
+      }>,
+    ) => evidenceApi.placeLegalHold(variables.documentId, variables.input),
+    onSuccess: (_, variables) =>
+      invalidateEvidenceRetention(client, variables.documentId, productId),
+  });
+}
+
+export function useReleaseEvidenceLegalHoldMutation(productId: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (
+      variables: Readonly<{
+        documentId: string;
+        holdId: string;
+        input: ReleaseEvidenceLegalHoldInput;
+      }>,
+    ) =>
+      evidenceApi.releaseLegalHold(
+        variables.documentId,
+        variables.holdId,
+        variables.input,
+      ),
+    onSuccess: (_, variables) =>
+      invalidateEvidenceRetention(client, variables.documentId, productId),
   });
 }
 
