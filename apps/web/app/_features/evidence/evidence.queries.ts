@@ -1,11 +1,15 @@
 "use client";
 
 import type {
+  CancelEvidenceBulkIntakeItemInput,
+  CompleteEvidenceBulkIntakeItemInput,
+  CreateEvidenceBulkIntakeBatchInput,
   CreateEvidenceReplacementInput,
   CreateEvidenceDeletionIntentInput,
   EvidenceDocumentListQuery,
   EvidenceDocumentListResponse,
   EvidenceDocumentVersionsResponse,
+  EvidenceBulkIntakeBatchResponse,
   EvidenceLegalHoldListResponse,
   EvidenceRetentionReviewResponse,
   EvidenceExpiryAlertIntervalsResponse,
@@ -13,10 +17,16 @@ import type {
   EvidenceSearchQuery,
   EvidenceSearchResponse,
   EvidenceVersionReuseResponse,
+  EvidenceWatermarkExportDeliveryInput,
+  EvidenceWatermarkExportPreviewInput,
+  EvidenceWatermarkExportResponse,
+  CreateEvidenceWatermarkExportInput,
+  InitializeEvidenceBulkIntakeItemInput,
   InitializeEvidenceUploadInput,
   PlaceEvidenceLegalHoldInput,
   ReleaseEvidenceLegalHoldInput,
   UpdateEvidenceExpiryAlertIntervalsInput,
+  RetryEvidenceBulkIntakeItemInput,
 } from "@repo/contracts/evidence";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -54,6 +64,289 @@ export function useEvidenceDocumentsQuery(
         ? 5_000
         : false,
     queryFn: ({ signal }) => evidenceApi.list(productId, query, signal),
+  });
+}
+
+export const evidenceBulkIntakeBatchKey = (
+  productId: string,
+  batchId: string,
+) => ["evidence", productId, "bulk-intake", batchId] as const;
+
+export function useEvidenceBulkIntakeBatchQuery(
+  productId: string,
+  batchId: string | null,
+  enabled: boolean,
+) {
+  return useQuery<EvidenceBulkIntakeBatchResponse>({
+    queryKey: evidenceBulkIntakeBatchKey(productId, batchId ?? ""),
+    enabled: enabled && productId !== "" && batchId !== null,
+    retry: false,
+    refetchInterval: (query) => {
+      const counts = query.state.data?.batch.counts;
+      return counts && (counts.uploading > 0 || counts.scanPending > 0)
+        ? 3_000
+        : false;
+    },
+    queryFn: ({ signal }) =>
+      evidenceApi.bulkIntakeBatch(productId, batchId ?? "", signal),
+  });
+}
+
+function invalidateBulkIntake(
+  client: ReturnType<typeof useQueryClient>,
+  productId: string,
+  batchId: string,
+) {
+  void client.invalidateQueries({
+    queryKey: evidenceBulkIntakeBatchKey(productId, batchId),
+  });
+  void client.invalidateQueries({ queryKey: evidenceKey(productId) });
+}
+
+export function useCreateEvidenceBulkIntakeBatchMutation(productId: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (input: CreateEvidenceBulkIntakeBatchInput) =>
+      evidenceApi.createBulkIntakeBatch(productId, input),
+    onSuccess: (response) =>
+      invalidateBulkIntake(client, productId, response.batch.id),
+  });
+}
+
+export function useInitializeEvidenceBulkIntakeItemMutation(productId: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (
+      variables: Readonly<{
+        batchId: string;
+        itemId: string;
+        input: InitializeEvidenceBulkIntakeItemInput;
+      }>,
+    ) =>
+      evidenceApi.initializeBulkIntakeItem(
+        productId,
+        variables.batchId,
+        variables.itemId,
+        variables.input,
+      ),
+    onSuccess: (_, variables) =>
+      invalidateBulkIntake(client, productId, variables.batchId),
+  });
+}
+
+export function useCompleteEvidenceBulkIntakeItemMutation(productId: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (
+      variables: Readonly<{
+        batchId: string;
+        itemId: string;
+        input: CompleteEvidenceBulkIntakeItemInput;
+      }>,
+    ) =>
+      evidenceApi.completeBulkIntakeItem(
+        productId,
+        variables.batchId,
+        variables.itemId,
+        variables.input,
+      ),
+    onSuccess: (_, variables) =>
+      invalidateBulkIntake(client, productId, variables.batchId),
+  });
+}
+
+export function useCancelEvidenceBulkIntakeItemMutation(productId: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (
+      variables: Readonly<{
+        batchId: string;
+        itemId: string;
+        input: CancelEvidenceBulkIntakeItemInput;
+      }>,
+    ) =>
+      evidenceApi.cancelBulkIntakeItem(
+        productId,
+        variables.batchId,
+        variables.itemId,
+        variables.input,
+      ),
+    onSuccess: (_, variables) =>
+      invalidateBulkIntake(client, productId, variables.batchId),
+  });
+}
+
+export function useRetryEvidenceBulkIntakeItemMutation(productId: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (
+      variables: Readonly<{
+        batchId: string;
+        itemId: string;
+        input: RetryEvidenceBulkIntakeItemInput;
+      }>,
+    ) =>
+      evidenceApi.retryBulkIntakeItem(
+        productId,
+        variables.batchId,
+        variables.itemId,
+        variables.input,
+      ),
+    onSuccess: (_, variables) =>
+      invalidateBulkIntake(client, productId, variables.batchId),
+  });
+}
+
+export const evidenceWatermarkExportKey = (
+  productId: string,
+  documentId: string,
+  versionId: string,
+  exportId: string,
+) =>
+  [
+    "evidence",
+    productId,
+    "watermark-export",
+    documentId,
+    versionId,
+    exportId,
+  ] as const;
+
+export function useEvidenceWatermarkExportQuery(
+  productId: string,
+  documentId: string | null,
+  versionId: string | null,
+  exportId: string | null,
+  enabled: boolean,
+) {
+  return useQuery<EvidenceWatermarkExportResponse>({
+    queryKey: evidenceWatermarkExportKey(
+      productId,
+      documentId ?? "",
+      versionId ?? "",
+      exportId ?? "",
+    ),
+    enabled:
+      enabled &&
+      productId !== "" &&
+      documentId !== null &&
+      versionId !== null &&
+      exportId !== null,
+    retry: false,
+    refetchInterval: (query) => {
+      const status = query.state.data?.export.status;
+      return status === "queued" || status === "claimed" ? 2_000 : false;
+    },
+    queryFn: ({ signal }) =>
+      evidenceApi.watermarkExport(
+        productId,
+        documentId ?? "",
+        versionId ?? "",
+        exportId ?? "",
+        signal,
+      ),
+  });
+}
+
+function invalidateWatermarkExport(
+  client: ReturnType<typeof useQueryClient>,
+  productId: string,
+  documentId: string,
+  versionId: string,
+  exportId: string,
+) {
+  void client.invalidateQueries({
+    queryKey: evidenceWatermarkExportKey(
+      productId,
+      documentId,
+      versionId,
+      exportId,
+    ),
+  });
+}
+
+export function useCreateEvidenceWatermarkExportMutation(productId: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (
+      variables: Readonly<{
+        documentId: string;
+        versionId: string;
+        input: CreateEvidenceWatermarkExportInput;
+      }>,
+    ) =>
+      evidenceApi.createWatermarkExport(
+        productId,
+        variables.documentId,
+        variables.versionId,
+        variables.input,
+      ),
+    onSuccess: (response) =>
+      invalidateWatermarkExport(
+        client,
+        productId,
+        response.export.documentId,
+        response.export.sourceVersionId,
+        response.export.id,
+      ),
+  });
+}
+
+export function usePreviewEvidenceWatermarkExportMutation(productId: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (
+      variables: Readonly<{
+        documentId: string;
+        versionId: string;
+        exportId: string;
+        input: EvidenceWatermarkExportPreviewInput;
+      }>,
+    ) =>
+      evidenceApi.previewWatermarkExport(
+        productId,
+        variables.documentId,
+        variables.versionId,
+        variables.exportId,
+        variables.input,
+      ),
+    onSuccess: (_, variables) =>
+      invalidateWatermarkExport(
+        client,
+        productId,
+        variables.documentId,
+        variables.versionId,
+        variables.exportId,
+      ),
+  });
+}
+
+export function useDeliverEvidenceWatermarkExportMutation(productId: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (
+      variables: Readonly<{
+        documentId: string;
+        versionId: string;
+        exportId: string;
+        input: EvidenceWatermarkExportDeliveryInput;
+      }>,
+    ) =>
+      evidenceApi.deliverWatermarkExport(
+        productId,
+        variables.documentId,
+        variables.versionId,
+        variables.exportId,
+        variables.input,
+      ),
+    onSuccess: (_, variables) =>
+      invalidateWatermarkExport(
+        client,
+        productId,
+        variables.documentId,
+        variables.versionId,
+        variables.exportId,
+      ),
   });
 }
 
@@ -253,7 +546,9 @@ function invalidateEvidenceRetention(
   void client.invalidateQueries({
     queryKey: evidenceRetentionReviewKey(documentId),
   });
-  void client.invalidateQueries({ queryKey: evidenceLegalHoldsKey(documentId) });
+  void client.invalidateQueries({
+    queryKey: evidenceLegalHoldsKey(documentId),
+  });
   void client.invalidateQueries({ queryKey: evidenceKey(productId) });
   void client.invalidateQueries({
     queryKey: evidenceVersionsKey(productId, documentId),
@@ -268,7 +563,8 @@ export function useCreateEvidenceDeletionIntentMutation(productId: string) {
         documentId: string;
         input: CreateEvidenceDeletionIntentInput;
       }>,
-    ) => evidenceApi.createDeletionIntent(variables.documentId, variables.input),
+    ) =>
+      evidenceApi.createDeletionIntent(variables.documentId, variables.input),
     onSuccess: (_, variables) =>
       invalidateEvidenceRetention(client, variables.documentId, productId),
   });

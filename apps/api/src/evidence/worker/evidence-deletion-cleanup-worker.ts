@@ -6,7 +6,7 @@ export type EvidenceDeletionCleanupClaim = Readonly<{
   intentId: string;
   cleanupItemId: string;
   documentId: string;
-  bucket: string;
+  bucket: "evidence-documents" | "evidence-watermark-exports";
   objectKey: string;
 }>;
 
@@ -31,7 +31,10 @@ export interface EvidenceDeletionCleanupQueue {
 
 export interface EvidenceDeletionStorage {
   remove(
-    input: Readonly<{ objectKey: string }>,
+    input: Readonly<{
+      bucket: "evidence-documents" | "evidence-watermark-exports";
+      objectKey: string;
+    }>,
   ): Promise<"deleted" | "missing" | "unavailable">;
 }
 
@@ -85,6 +88,7 @@ export class EvidenceDeletionCleanupWorker {
   ): Promise<boolean> {
     try {
       const storage = await this.dependencies.storage.remove({
+        bucket: claim.bucket,
         objectKey: claim.objectKey,
       });
       await this.dependencies.queue.complete(claim.organizationId, {

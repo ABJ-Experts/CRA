@@ -228,4 +228,91 @@ describe("EvidenceApi", () => {
       }),
     );
   });
+
+  it("keeps durable bulk-intake batch and item mutations at parsed product boundaries", () => {
+    const api = new EvidenceApi();
+    api.createBulkIntakeBatch(PRODUCT_ID, {
+      idempotencyKey: KEY,
+      items: [
+        {
+          clientItemId: DOCUMENT_ID,
+          idempotencyKey: VERSION_ID,
+          title: "Gateway test report",
+          ownerUserId: PRODUCT_ID,
+          productIds: [PRODUCT_ID],
+          validFrom: null,
+          validUntil: null,
+          fileName: "gateway.pdf",
+          byteSize: 1,
+        },
+      ],
+    });
+    api.initializeBulkIntakeItem(PRODUCT_ID, DOCUMENT_ID, VERSION_ID, {
+      documentClass: "test_report",
+      classificationDecision: "accepted",
+      idempotencyKey: KEY,
+    });
+    api.completeBulkIntakeItem(PRODUCT_ID, DOCUMENT_ID, VERSION_ID, {
+      idempotencyKey: KEY,
+    });
+
+    expect(request).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        path: `/api/v1/products/${PRODUCT_ID}/evidence-bulk-intake-batches`,
+        method: "POST",
+        inputSchema: expect.anything(),
+      }),
+    );
+    expect(request).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        path: `/api/v1/products/${PRODUCT_ID}/evidence-bulk-intake-batches/${DOCUMENT_ID}/items/${VERSION_ID}/initialize`,
+        method: "POST",
+        inputSchema: expect.anything(),
+      }),
+    );
+    expect(request).toHaveBeenNthCalledWith(
+      3,
+      expect.objectContaining({
+        path: `/api/v1/products/${PRODUCT_ID}/evidence-bulk-intake-batches/${DOCUMENT_ID}/items/${VERSION_ID}/complete`,
+        method: "POST",
+        body: { idempotencyKey: KEY },
+        inputSchema: expect.anything(),
+      }),
+    );
+  });
+
+  it("uses the pinned source-version watermark export routes with parsed bodies", () => {
+    const api = new EvidenceApi();
+    api.createWatermarkExport(PRODUCT_ID, DOCUMENT_ID, VERSION_ID, {
+      recipient: "Zoë Auditor",
+      purpose: "External review",
+      idempotencyKey: KEY,
+    });
+    api.previewWatermarkExport(PRODUCT_ID, DOCUMENT_ID, VERSION_ID, KEY, {
+      idempotencyKey: KEY,
+    });
+    api.deliverWatermarkExport(PRODUCT_ID, DOCUMENT_ID, VERSION_ID, KEY, {
+      idempotencyKey: KEY,
+    });
+
+    const root = `/api/v1/products/${PRODUCT_ID}/evidence-documents/${DOCUMENT_ID}/versions/${VERSION_ID}/watermark-exports/${KEY}`;
+    expect(request).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        path: root.slice(0, -KEY.length - 1),
+        method: "POST",
+        inputSchema: expect.anything(),
+      }),
+    );
+    expect(request).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ path: `${root}/preview`, method: "POST" }),
+    );
+    expect(request).toHaveBeenNthCalledWith(
+      3,
+      expect.objectContaining({ path: `${root}/delivery`, method: "POST" }),
+    );
+  });
 });

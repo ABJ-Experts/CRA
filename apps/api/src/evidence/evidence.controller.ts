@@ -72,6 +72,36 @@ import {
   type EvidenceRetentionReview,
   type PlaceEvidenceLegalHoldInput,
   type ReleaseEvidenceLegalHoldInput,
+  cancelEvidenceBulkIntakeItemInputSchema,
+  completeEvidenceBulkIntakeItemInputSchema,
+  createEvidenceBulkIntakeBatchInputSchema,
+  evidenceBulkIntakeBatchParamsSchema,
+  evidenceBulkIntakeBatchResponseSchema,
+  evidenceBulkIntakeItemInitializationResponseSchema,
+  evidenceBulkIntakeItemParamsSchema,
+  evidenceBulkIntakeItemResponseSchema,
+  initializeEvidenceBulkIntakeItemInputSchema,
+  retryEvidenceBulkIntakeItemInputSchema,
+  type CancelEvidenceBulkIntakeItemInput,
+  type CompleteEvidenceBulkIntakeItemInput,
+  type CreateEvidenceBulkIntakeBatchInput,
+  type EvidenceBulkIntakeBatchParams,
+  type EvidenceBulkIntakeItemParams,
+  type InitializeEvidenceBulkIntakeItemInput,
+  type RetryEvidenceBulkIntakeItemInput,
+  createEvidenceWatermarkExportInputSchema,
+  evidenceWatermarkExportDeliveryInputSchema,
+  evidenceWatermarkExportDeliveryParamsSchema,
+  evidenceWatermarkExportDeliveryResponseSchema,
+  evidenceWatermarkExportParamsSchema,
+  evidenceWatermarkExportPreviewInputSchema,
+  evidenceWatermarkExportPreviewResponseSchema,
+  evidenceWatermarkExportResponseSchema,
+  type CreateEvidenceWatermarkExportInput,
+  type EvidenceWatermarkExportDeliveryInput,
+  type EvidenceWatermarkExportDeliveryParams,
+  type EvidenceWatermarkExportParams,
+  type EvidenceWatermarkExportPreviewInput,
 } from "@repo/contracts/evidence";
 import {
   CurrentUser,
@@ -95,6 +125,9 @@ import { SupabaseEvidenceStorageAdapter } from "./infrastructure/supabase-eviden
 import { EvidenceTextSearchUseCases } from "./application/evidence-text-search-use-cases";
 import { EvidenceReuseValidityUseCases } from "./application/evidence-reuse-validity-use-cases";
 import { EvidenceRetentionUseCases } from "./application/evidence-retention-use-cases";
+import { EvidenceBulkIntakeUseCases } from "./application/evidence-bulk-intake-use-cases";
+import { EvidenceWatermarkExportUseCases } from "./application/evidence-watermark-export-use-cases";
+import { SupabaseEvidenceWatermarkExportStorageAdapter } from "./infrastructure/supabase-evidence-watermark-export-storage.adapter";
 
 @Controller()
 export class EvidenceController {
@@ -108,6 +141,9 @@ export class EvidenceController {
     private readonly textSearch: EvidenceTextSearchUseCases,
     private readonly reuseValidity: EvidenceReuseValidityUseCases,
     private readonly retention: EvidenceRetentionUseCases,
+    private readonly bulkIntake: EvidenceBulkIntakeUseCases,
+    private readonly watermarkExports: EvidenceWatermarkExportUseCases,
+    private readonly watermarkStorage: SupabaseEvidenceWatermarkExportStorageAdapter,
   ) {}
 
   @RequirePermissions("can_upload_evidence")
@@ -231,6 +267,341 @@ export class EvidenceController {
         version,
       },
     };
+  }
+
+  @RequirePermissions("can_upload_evidence")
+  @Post("products/:productId/evidence-bulk-intake-batches")
+  @ZodResponse(evidenceBulkIntakeBatchResponseSchema)
+  async createBulkIntakeBatch(
+    @Param(zodParams(evidenceProductParamsSchema))
+    params: EvidenceProductParams,
+    @Body(zodBody(createEvidenceBulkIntakeBatchInputSchema))
+    input: CreateEvidenceBulkIntakeBatchInput,
+    @CurrentUser() user: RequestUser,
+  ) {
+    const result = await this.bulkIntake.create({
+      organizationId: organizationId(user),
+      actorId: user.id,
+      productId: params.productId,
+      items: input.items,
+      idempotencyKey: input.idempotencyKey,
+    });
+    return bulkBatchOrThrow(result);
+  }
+
+  @RequirePermissions("can_upload_evidence")
+  @Get("products/:productId/evidence-bulk-intake-batches/:batchId")
+  @ZodResponse(evidenceBulkIntakeBatchResponseSchema)
+  async bulkIntakeBatch(
+    @Param(zodParams(evidenceBulkIntakeBatchParamsSchema))
+    params: EvidenceBulkIntakeBatchParams,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return bulkBatchOrThrow(
+      await this.bulkIntake.get({
+        organizationId: organizationId(user),
+        actorId: user.id,
+        productId: params.productId,
+        batchId: params.batchId,
+      }),
+    );
+  }
+
+  @RequirePermissions("can_upload_evidence")
+  @Post(
+    "products/:productId/evidence-bulk-intake-batches/:batchId/items/:itemId/initialize",
+  )
+  @ZodResponse(evidenceBulkIntakeItemInitializationResponseSchema)
+  async initializeBulkIntakeItem(
+    @Param(zodParams(evidenceBulkIntakeItemParamsSchema))
+    params: EvidenceBulkIntakeItemParams,
+    @Body(zodBody(initializeEvidenceBulkIntakeItemInputSchema))
+    input: InitializeEvidenceBulkIntakeItemInput,
+    @CurrentUser() user: RequestUser,
+  ) {
+    const result = await this.bulkIntake.initialize({
+      organizationId: organizationId(user),
+      actorId: user.id,
+      productId: params.productId,
+      batchId: params.batchId,
+      itemId: params.itemId,
+      documentClass: input.documentClass,
+      classificationDecision: input.classificationDecision,
+      idempotencyKey: input.idempotencyKey,
+    });
+    return this.bulkInitializationResponse(
+      result,
+      organizationId(user),
+      user.id,
+      params.productId,
+    );
+  }
+
+  @RequirePermissions("can_upload_evidence")
+  @Post(
+    "products/:productId/evidence-bulk-intake-batches/:batchId/items/:itemId/complete",
+  )
+  @ZodResponse(evidenceBulkIntakeItemResponseSchema)
+  async completeBulkIntakeItem(
+    @Param(zodParams(evidenceBulkIntakeItemParamsSchema))
+    params: EvidenceBulkIntakeItemParams,
+    @Body(zodBody(completeEvidenceBulkIntakeItemInputSchema))
+    input: CompleteEvidenceBulkIntakeItemInput,
+    @CurrentUser() user: RequestUser,
+  ) {
+    const result = await this.bulkIntake.complete({
+      organizationId: organizationId(user),
+      actorId: user.id,
+      productId: params.productId,
+      batchId: params.batchId,
+      itemId: params.itemId,
+      idempotencyKey: input.idempotencyKey,
+    });
+    return bulkItemOrThrow(result);
+  }
+
+  @RequirePermissions("can_upload_evidence")
+  @Post(
+    "products/:productId/evidence-bulk-intake-batches/:batchId/items/:itemId/cancel",
+  )
+  @ZodResponse(evidenceBulkIntakeItemResponseSchema)
+  async cancelBulkIntakeItem(
+    @Param(zodParams(evidenceBulkIntakeItemParamsSchema))
+    params: EvidenceBulkIntakeItemParams,
+    @Body(zodBody(cancelEvidenceBulkIntakeItemInputSchema))
+    input: CancelEvidenceBulkIntakeItemInput,
+    @CurrentUser() user: RequestUser,
+  ) {
+    const result = await this.bulkIntake.cancel({
+      organizationId: organizationId(user),
+      actorId: user.id,
+      productId: params.productId,
+      batchId: params.batchId,
+      itemId: params.itemId,
+      idempotencyKey: input.idempotencyKey,
+    });
+    return bulkItemOrThrow(result);
+  }
+
+  @RequirePermissions("can_upload_evidence")
+  @Post(
+    "products/:productId/evidence-bulk-intake-batches/:batchId/items/:itemId/retry",
+  )
+  @ZodResponse(evidenceBulkIntakeItemInitializationResponseSchema)
+  async retryBulkIntakeItem(
+    @Param(zodParams(evidenceBulkIntakeItemParamsSchema))
+    params: EvidenceBulkIntakeItemParams,
+    @Body(zodBody(retryEvidenceBulkIntakeItemInputSchema))
+    input: RetryEvidenceBulkIntakeItemInput,
+    @CurrentUser() user: RequestUser,
+  ) {
+    const result = await this.bulkIntake.retry({
+      organizationId: organizationId(user),
+      actorId: user.id,
+      productId: params.productId,
+      batchId: params.batchId,
+      itemId: params.itemId,
+      documentClass: input.documentClass,
+      classificationDecision: input.classificationDecision,
+      fileName: input.fileName,
+      byteSize: input.byteSize,
+      idempotencyKey: input.idempotencyKey,
+    });
+    return this.bulkInitializationResponse(
+      result,
+      organizationId(user),
+      user.id,
+      params.productId,
+    );
+  }
+
+  @RequirePermissions("can_manage_evidence")
+  @Post(
+    "products/:productId/evidence-documents/:documentId/versions/:versionId/watermark-exports",
+  )
+  @ZodResponse(evidenceWatermarkExportResponseSchema)
+  async createWatermarkExport(
+    @Param(
+      zodParams(
+        evidenceWatermarkExportParamsSchema.pick({
+          productId: true,
+          documentId: true,
+          versionId: true,
+        }),
+      ),
+    )
+    params: Omit<EvidenceWatermarkExportParams, "exportId">,
+    @Body(zodBody(createEvidenceWatermarkExportInputSchema))
+    input: CreateEvidenceWatermarkExportInput,
+    @CurrentUser() user: RequestUser,
+  ) {
+    const result = await this.watermarkExports.createExport({
+      organizationId: organizationId(user),
+      actorId: user.id,
+      productId: params.productId,
+      documentId: params.documentId,
+      versionId: params.versionId,
+      recipient: input.recipient,
+      purpose: input.purpose,
+      idempotencyKey: input.idempotencyKey,
+    });
+    if (result.outcome === "queued" || result.outcome === "replayed")
+      return { export: result.export };
+    throw watermarkExportException(result.outcome);
+  }
+
+  @RequirePermissions("can_manage_evidence")
+  @Get(
+    "products/:productId/evidence-documents/:documentId/versions/:versionId/watermark-exports/:exportId",
+  )
+  @ZodResponse(evidenceWatermarkExportResponseSchema)
+  async watermarkExport(
+    @Param(zodParams(evidenceWatermarkExportParamsSchema))
+    params: EvidenceWatermarkExportParams,
+    @CurrentUser() user: RequestUser,
+  ) {
+    const record = await this.watermarkExports.getExport({
+      organizationId: organizationId(user),
+      actorId: user.id,
+      ...params,
+    });
+    if (!record) throw new NotFoundException({ code: "not_found" });
+    return { export: record };
+  }
+
+  @RequirePermissions("can_manage_evidence")
+  @Post(
+    "products/:productId/evidence-documents/:documentId/versions/:versionId/watermark-exports/:exportId/preview",
+  )
+  @ZodResponse(evidenceWatermarkExportPreviewResponseSchema)
+  async previewWatermarkExport(
+    @Param(zodParams(evidenceWatermarkExportParamsSchema))
+    params: EvidenceWatermarkExportParams,
+    @Body(zodBody(evidenceWatermarkExportPreviewInputSchema))
+    input: EvidenceWatermarkExportPreviewInput,
+    @CurrentUser() user: RequestUser,
+  ) {
+    const result = await this.watermarkExports.preview({
+      organizationId: organizationId(user),
+      actorId: user.id,
+      exportId: params.exportId,
+      idempotencyKey: input.idempotencyKey,
+    });
+    if (result.outcome !== "ready")
+      throw watermarkExportException(result.outcome);
+    return {
+      preview: {
+        deliveryUrl: `/api/v1/evidence-watermark-preview/${params.exportId}/${result.access.token}`,
+        expiresAt: result.access.expiresAt,
+        fileName: result.access.fileName,
+        mediaType: result.access.mediaType as never,
+        disposition: "inline" as const,
+      },
+    };
+  }
+
+  @RequirePermissions("can_manage_evidence")
+  @Post(
+    "products/:productId/evidence-documents/:documentId/versions/:versionId/watermark-exports/:exportId/delivery",
+  )
+  @ZodResponse(evidenceWatermarkExportDeliveryResponseSchema)
+  async deliverWatermarkExport(
+    @Param(zodParams(evidenceWatermarkExportParamsSchema))
+    params: EvidenceWatermarkExportParams,
+    @Body(zodBody(evidenceWatermarkExportDeliveryInputSchema))
+    input: EvidenceWatermarkExportDeliveryInput,
+    @CurrentUser() user: RequestUser,
+  ) {
+    const result = await this.watermarkExports.deliver({
+      organizationId: organizationId(user),
+      actorId: user.id,
+      exportId: params.exportId,
+      idempotencyKey: input.idempotencyKey,
+    });
+    if (result.outcome !== "ready")
+      throw watermarkExportException(result.outcome);
+    return {
+      access: {
+        deliveryUrl: `/api/v1/evidence-watermark-delivery/${params.exportId}/${result.access.token}`,
+        expiresAt: result.access.expiresAt,
+        fileName: result.access.fileName,
+        mediaType: result.access.mediaType as never,
+        disposition: "attachment" as const,
+      },
+    };
+  }
+
+  @RequirePermissions("can_manage_evidence")
+  @Get("evidence-watermark-preview/:exportId/:token")
+  @NonJsonResponse("stream")
+  async previewWatermarkDelivery(
+    @Param(zodParams(evidenceWatermarkExportDeliveryParamsSchema))
+    params: EvidenceWatermarkExportDeliveryParams,
+    @CurrentUser() user: RequestUser,
+    @Res() response: Response,
+  ) {
+    const redeemed = await this.watermarkExports.redeemDelivery({
+      organizationId: organizationId(user),
+      actorId: user.id,
+      exportId: params.exportId,
+      token: params.token,
+      delivery: false,
+    });
+    if (redeemed.outcome !== "ready")
+      throw watermarkExportException(redeemed.outcome);
+    const bytes = await this.watermarkStorage.readVerified(redeemed.source);
+    if (!bytes)
+      throw new UnprocessableEntityException({
+        code: "watermark_integrity_failure",
+      });
+    response.status(200).set({
+      "Cache-Control": "no-store, private",
+      "Referrer-Policy": "no-referrer",
+      "X-Content-Type-Options": "nosniff",
+      "Content-Security-Policy": "sandbox; default-src 'none'",
+      "Content-Type": redeemed.source.mediaType,
+      "Content-Disposition": contentDisposition(true, redeemed.source.fileName),
+      "Content-Length": String(bytes.byteLength),
+    });
+    response.send(bytes);
+  }
+
+  @RequirePermissions("can_manage_evidence")
+  @Get("evidence-watermark-delivery/:exportId/:token")
+  @NonJsonResponse("stream")
+  async watermarkDelivery(
+    @Param(zodParams(evidenceWatermarkExportDeliveryParamsSchema))
+    params: EvidenceWatermarkExportDeliveryParams,
+    @CurrentUser() user: RequestUser,
+    @Res() response: Response,
+  ) {
+    const redeemed = await this.watermarkExports.redeemDelivery({
+      organizationId: organizationId(user),
+      actorId: user.id,
+      exportId: params.exportId,
+      token: params.token,
+      delivery: true,
+    });
+    if (redeemed.outcome !== "ready")
+      throw watermarkExportException(redeemed.outcome);
+    const bytes = await this.watermarkStorage.readVerified(redeemed.source);
+    if (!bytes)
+      throw new UnprocessableEntityException({
+        code: "watermark_integrity_failure",
+      });
+    response.status(200).set({
+      "Cache-Control": "no-store, private",
+      "Referrer-Policy": "no-referrer",
+      "X-Content-Type-Options": "nosniff",
+      "Content-Security-Policy": "sandbox; default-src 'none'",
+      "Content-Type": redeemed.source.mediaType,
+      "Content-Disposition": contentDisposition(
+        false,
+        redeemed.source.fileName,
+      ),
+      "Content-Length": String(bytes.byteLength),
+    });
+    response.send(bytes);
   }
 
   @RequirePermissions("can_view_evidence")
@@ -654,6 +1025,35 @@ export class EvidenceController {
       throw new NotFoundException({ code: "evidence_projection_unavailable" });
     return document;
   }
+
+  private async bulkInitializationResponse(
+    result: Readonly<{ outcome: string; value?: Record<string, unknown> }>,
+    organizationId: string,
+    actorId: string,
+    productId: string,
+  ) {
+    const initialization = bulkInitializationPartsOrThrow(result);
+    if (!initialization.item.versionId)
+      throw new ConflictException({ code: "bulk_intake_version_unavailable" });
+    const document = await this.documentForVersion(
+      organizationId,
+      actorId,
+      productId,
+      initialization.item.versionId,
+    );
+    const parsed = evidenceBulkIntakeItemInitializationResponseSchema.safeParse(
+      {
+        item: initialization.item,
+        document,
+        upload: initialization.upload,
+      },
+    );
+    if (!parsed.success)
+      throw new ConflictException({
+        code: "bulk_intake_initialization_unavailable",
+      });
+    return parsed.data;
+  }
 }
 
 function organizationId(user: RequestUser): string {
@@ -661,6 +1061,76 @@ function organizationId(user: RequestUser): string {
     throw new NotFoundException({ code: "organization_required" });
   return user.organizationId;
 }
+
+function bulkBatchOrThrow(
+  result: Readonly<{ outcome: string; value?: Record<string, unknown> }>,
+) {
+  if (!["created", "replayed", "found"].includes(result.outcome))
+    throw bulkIntakeException(result.outcome);
+  const parsed = evidenceBulkIntakeBatchResponseSchema.safeParse({
+    batch: result.value?.batch ?? result.value,
+  });
+  if (!parsed.success)
+    throw new ConflictException({ code: "bulk_intake_unavailable" });
+  return parsed.data;
+}
+
+function bulkItemOrThrow(
+  result: Readonly<{ outcome: string; value?: Record<string, unknown> }>,
+) {
+  if (
+    !["scan_pending", "failed", "replayed", "cancelled"].includes(
+      result.outcome,
+    )
+  )
+    throw bulkIntakeException(result.outcome);
+  const parsed = evidenceBulkIntakeItemResponseSchema.safeParse({
+    item: result.value?.item ?? result.value,
+  });
+  if (!parsed.success)
+    throw new ConflictException({ code: "bulk_intake_item_unavailable" });
+  return parsed.data;
+}
+
+function bulkInitializationPartsOrThrow(
+  result: Readonly<{ outcome: string; value?: Record<string, unknown> }>,
+) {
+  if (!["reserved", "replayed"].includes(result.outcome))
+    throw bulkIntakeException(result.outcome);
+  const value = result.value ?? {};
+  const parsed = evidenceBulkIntakeItemResponseSchema.safeParse({
+    item: value.item,
+  });
+  if (!parsed.success)
+    throw new ConflictException({
+      code: "bulk_intake_initialization_unavailable",
+    });
+  return { item: parsed.data.item, upload: value.upload };
+}
+
+function bulkIntakeException(outcome: string): Error {
+  if (outcome === "not_found" || outcome === "forbidden")
+    return new NotFoundException({ code: outcome });
+  if (outcome === "idempotency_mismatch")
+    return new ConflictException({ code: outcome });
+  return new UnprocessableEntityException({ code: outcome });
+}
+function watermarkExportException(outcome: string): Error {
+  if (outcome === "not_found" || outcome === "forbidden")
+    return new NotFoundException({ code: "not_found" });
+  if (outcome === "unsupported" || outcome === "not_clean")
+    return new UnprocessableEntityException({
+      code: "watermark_export_unavailable",
+    });
+  if (outcome === "preview_required")
+    return new ConflictException({ code: "watermark_preview_required" });
+  if (outcome === "expired")
+    return new ConflictException({ code: "watermark_access_expired" });
+  if (outcome === "idempotency_mismatch")
+    return new ConflictException({ code: "idempotency_mismatch" });
+  return new ConflictException({ code: "watermark_export_conflict" });
+}
+
 function publicRetentionReview(
   review: EvidenceRetentionReview &
     Readonly<{ linkedProductIds: readonly string[] }>,

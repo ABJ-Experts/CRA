@@ -34,6 +34,9 @@ describe("EvidenceDeletionCleanupWorker", () => {
     }).runOnce();
 
     expect(result).toBe(1);
+    expect(storage.remove).toHaveBeenCalledWith(
+      expect.objectContaining({ bucket: "evidence-documents" }),
+    );
     // eslint-disable-next-line @typescript-eslint/unbound-method -- Jest mock assertion.
     expect(queue.complete).toHaveBeenCalledWith(
       organizationId,

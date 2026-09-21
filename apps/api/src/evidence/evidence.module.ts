@@ -27,6 +27,16 @@ import {
   EVIDENCE_RETENTION_REPOSITORY,
   type EvidenceRetentionRepository,
 } from "./application/evidence-retention-use-cases";
+import {
+  EvidenceWatermarkExportUseCases,
+  EVIDENCE_WATERMARK_EXPORT_REPOSITORY,
+} from "./application/evidence-watermark-export-use-cases";
+import { EvidenceWatermarkRenderer } from "./infrastructure/evidence-watermark-renderer";
+import { SupabaseEvidenceWatermarkExportStorageAdapter } from "./infrastructure/supabase-evidence-watermark-export-storage.adapter";
+import {
+  EvidenceBulkIntakeUseCases,
+  EVIDENCE_BULK_INTAKE_REPOSITORY,
+} from "./application/evidence-bulk-intake-use-cases";
 
 @Module({
   imports: [SupabaseModule, ProductsModule],
@@ -34,9 +44,15 @@ import {
   providers: [
     SupabaseEvidenceRepository,
     SupabaseEvidenceStorageAdapter,
+    SupabaseEvidenceWatermarkExportStorageAdapter,
+    EvidenceWatermarkRenderer,
     { provide: EVIDENCE_REPOSITORY, useExisting: SupabaseEvidenceRepository },
     {
       provide: EVIDENCE_ACCESS_REPOSITORY,
+      useExisting: SupabaseEvidenceRepository,
+    },
+    {
+      provide: EVIDENCE_BULK_INTAKE_REPOSITORY,
       useExisting: SupabaseEvidenceRepository,
     },
     {
@@ -52,6 +68,14 @@ import {
       inject: [EVIDENCE_ACCESS_REPOSITORY],
       useFactory: (repository: SupabaseEvidenceRepository) =>
         new EvidenceAccessUseCases(repository),
+    },
+    {
+      provide: EvidenceBulkIntakeUseCases,
+      inject: [EVIDENCE_BULK_INTAKE_REPOSITORY, SupabaseEvidenceStorageAdapter],
+      useFactory: (
+        repository: SupabaseEvidenceRepository,
+        storage: SupabaseEvidenceStorageAdapter,
+      ) => new EvidenceBulkIntakeUseCases(repository, storage),
     },
     {
       provide: EVIDENCE_TEXT_SEARCH_REPOSITORY,
@@ -72,6 +96,10 @@ import {
       useExisting: SupabaseEvidenceRepository,
     },
     {
+      provide: EVIDENCE_WATERMARK_EXPORT_REPOSITORY,
+      useExisting: SupabaseEvidenceRepository,
+    },
+    {
       provide: EvidenceReuseValidityUseCases,
       inject: [EVIDENCE_REUSE_VALIDITY_REPOSITORY],
       useFactory: (repository: SupabaseEvidenceRepository) =>
@@ -84,6 +112,12 @@ import {
         repository: EvidenceRetentionRepository,
         productRetention: ProductRetentionProjectionPort,
       ) => new EvidenceRetentionUseCases(repository, productRetention),
+    },
+    {
+      provide: EvidenceWatermarkExportUseCases,
+      inject: [EVIDENCE_WATERMARK_EXPORT_REPOSITORY],
+      useFactory: (repository: SupabaseEvidenceRepository) =>
+        new EvidenceWatermarkExportUseCases(repository),
     },
   ],
 })

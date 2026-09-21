@@ -528,6 +528,266 @@ export type Database = {
           },
         ]
       }
+      evidence_bulk_intake_attempts: {
+        Row: {
+          attempt_number: number
+          batch_item_id: string
+          created_at: string
+          document_id: string
+          id: string
+          initialize_idempotency_key: string
+          object_key: string
+          organization_id: string
+          version_id: string
+        }
+        Insert: {
+          attempt_number: number
+          batch_item_id: string
+          created_at?: string
+          document_id: string
+          id?: string
+          initialize_idempotency_key: string
+          object_key: string
+          organization_id: string
+          version_id: string
+        }
+        Update: {
+          attempt_number?: number
+          batch_item_id?: string
+          created_at?: string
+          document_id?: string
+          id?: string
+          initialize_idempotency_key?: string
+          object_key?: string
+          organization_id?: string
+          version_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evidence_bulk_intake_attempts_organization_id_batch_item_i_fkey"
+            columns: ["organization_id", "batch_item_id"]
+            isOneToOne: false
+            referencedRelation: "evidence_bulk_intake_items"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "evidence_bulk_intake_attempts_organization_id_document_id_fkey"
+            columns: ["organization_id", "document_id"]
+            isOneToOne: false
+            referencedRelation: "evidence_documents"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "evidence_bulk_intake_attempts_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evidence_bulk_intake_attempts_organization_id_version_id_fkey"
+            columns: ["organization_id", "version_id"]
+            isOneToOne: true
+            referencedRelation: "evidence_document_versions"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      evidence_bulk_intake_batches: {
+        Row: {
+          created_at: string
+          created_by_user_id: string
+          id: string
+          idempotency_key: string
+          organization_id: string
+          product_id: string
+          request_digest: string
+          state: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by_user_id: string
+          id?: string
+          idempotency_key: string
+          organization_id: string
+          product_id: string
+          request_digest: string
+          state?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by_user_id?: string
+          id?: string
+          idempotency_key?: string
+          organization_id?: string
+          product_id?: string
+          request_digest?: string
+          state?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evidence_bulk_intake_batches_created_by_user_id_fkey"
+            columns: ["created_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evidence_bulk_intake_batches_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evidence_bulk_intake_batches_organization_id_product_id_fkey"
+            columns: ["organization_id", "product_id"]
+            isOneToOne: false
+            referencedRelation: "product_retention_alert_operations"
+            referencedColumns: ["organization_id", "product_id"]
+          },
+          {
+            foreignKeyName: "evidence_bulk_intake_batches_organization_id_product_id_fkey"
+            columns: ["organization_id", "product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      evidence_bulk_intake_items: {
+        Row: {
+          batch_id: string
+          cancelled_at: string | null
+          classification_confirmed_at: string | null
+          classification_confirmed_by_user_id: string | null
+          classification_decision: string
+          client_item_id: string
+          created_at: string
+          current_version_id: string | null
+          declared_size_bytes: number
+          document_id: string | null
+          error_code: string | null
+          id: string
+          intake_idempotency_key: string
+          ordinal: number
+          organization_id: string
+          original_filename: string
+          owner_user_id: string
+          product_ids: string[]
+          selected_document_class: string | null
+          state: string
+          suggested_document_class: string
+          suggestion_source: string
+          title: string
+          updated_at: string
+          valid_from: string | null
+          valid_until: string | null
+        }
+        Insert: {
+          batch_id: string
+          cancelled_at?: string | null
+          classification_confirmed_at?: string | null
+          classification_confirmed_by_user_id?: string | null
+          classification_decision?: string
+          client_item_id: string
+          created_at?: string
+          current_version_id?: string | null
+          declared_size_bytes: number
+          document_id?: string | null
+          error_code?: string | null
+          id?: string
+          intake_idempotency_key: string
+          ordinal: number
+          organization_id: string
+          original_filename: string
+          owner_user_id: string
+          product_ids: string[]
+          selected_document_class?: string | null
+          state?: string
+          suggested_document_class: string
+          suggestion_source: string
+          title: string
+          updated_at?: string
+          valid_from?: string | null
+          valid_until?: string | null
+        }
+        Update: {
+          batch_id?: string
+          cancelled_at?: string | null
+          classification_confirmed_at?: string | null
+          classification_confirmed_by_user_id?: string | null
+          classification_decision?: string
+          client_item_id?: string
+          created_at?: string
+          current_version_id?: string | null
+          declared_size_bytes?: number
+          document_id?: string | null
+          error_code?: string | null
+          id?: string
+          intake_idempotency_key?: string
+          ordinal?: number
+          organization_id?: string
+          original_filename?: string
+          owner_user_id?: string
+          product_ids?: string[]
+          selected_document_class?: string | null
+          state?: string
+          suggested_document_class?: string
+          suggestion_source?: string
+          title?: string
+          updated_at?: string
+          valid_from?: string | null
+          valid_until?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evidence_bulk_intake_items_classification_confirmed_by_use_fkey"
+            columns: ["classification_confirmed_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evidence_bulk_intake_items_organization_id_batch_id_fkey"
+            columns: ["organization_id", "batch_id"]
+            isOneToOne: false
+            referencedRelation: "evidence_bulk_intake_batches"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "evidence_bulk_intake_items_organization_id_current_version_fkey"
+            columns: ["organization_id", "current_version_id"]
+            isOneToOne: false
+            referencedRelation: "evidence_document_versions"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "evidence_bulk_intake_items_organization_id_document_id_fkey"
+            columns: ["organization_id", "document_id"]
+            isOneToOne: false
+            referencedRelation: "evidence_documents"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "evidence_bulk_intake_items_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evidence_bulk_intake_items_owner_user_id_fkey"
+            columns: ["owner_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       evidence_document_access_grants: {
         Row: {
           access_mode: string
@@ -1391,6 +1651,206 @@ export type Database = {
           {
             foreignKeyName: "evidence_document_versions_uploader_user_id_fkey"
             columns: ["uploader_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      evidence_document_watermark_export_access_grants: {
+        Row: {
+          access_mode: string
+          actor_user_id: string
+          delivered_at: string | null
+          expires_at: string
+          export_id: string
+          id: string
+          idempotency_key: string
+          issued_at: string
+          organization_id: string
+          previewed_at: string | null
+          request_digest: string
+          terminal_outcome: string | null
+          token_sha256: string
+        }
+        Insert: {
+          access_mode?: string
+          actor_user_id: string
+          delivered_at?: string | null
+          expires_at: string
+          export_id: string
+          id?: string
+          idempotency_key: string
+          issued_at?: string
+          organization_id: string
+          previewed_at?: string | null
+          request_digest: string
+          terminal_outcome?: string | null
+          token_sha256: string
+        }
+        Update: {
+          access_mode?: string
+          actor_user_id?: string
+          delivered_at?: string | null
+          expires_at?: string
+          export_id?: string
+          id?: string
+          idempotency_key?: string
+          issued_at?: string
+          organization_id?: string
+          previewed_at?: string | null
+          request_digest?: string
+          terminal_outcome?: string | null
+          token_sha256?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evidence_document_watermark_expo_organization_id_export_id_fkey"
+            columns: ["organization_id", "export_id"]
+            isOneToOne: false
+            referencedRelation: "evidence_document_watermark_exports"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "evidence_document_watermark_export_access__organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evidence_document_watermark_export_access_gr_actor_user_id_fkey"
+            columns: ["actor_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      evidence_document_watermark_exports: {
+        Row: {
+          attempt_count: number
+          completed_at: string | null
+          created_at: string
+          derivative_byte_size: number | null
+          derivative_media_type: string | null
+          derivative_object_key: string | null
+          derivative_sha256: string | null
+          document_id: string
+          failure_code: string | null
+          id: string
+          idempotency_key: string
+          lease_expires_at: string | null
+          lease_owner: string | null
+          organization_id: string
+          original_byte_size: number
+          original_media_type: string
+          original_sha256: string
+          product_id: string
+          purpose: string
+          recipient: string
+          request_digest: string
+          requested_at: string
+          requested_by_user_id: string
+          started_at: string | null
+          status: string
+          version_id: string
+        }
+        Insert: {
+          attempt_count?: number
+          completed_at?: string | null
+          created_at?: string
+          derivative_byte_size?: number | null
+          derivative_media_type?: string | null
+          derivative_object_key?: string | null
+          derivative_sha256?: string | null
+          document_id: string
+          failure_code?: string | null
+          id?: string
+          idempotency_key: string
+          lease_expires_at?: string | null
+          lease_owner?: string | null
+          organization_id: string
+          original_byte_size: number
+          original_media_type: string
+          original_sha256: string
+          product_id: string
+          purpose: string
+          recipient: string
+          request_digest: string
+          requested_at?: string
+          requested_by_user_id: string
+          started_at?: string | null
+          status?: string
+          version_id: string
+        }
+        Update: {
+          attempt_count?: number
+          completed_at?: string | null
+          created_at?: string
+          derivative_byte_size?: number | null
+          derivative_media_type?: string | null
+          derivative_object_key?: string | null
+          derivative_sha256?: string | null
+          document_id?: string
+          failure_code?: string | null
+          id?: string
+          idempotency_key?: string
+          lease_expires_at?: string | null
+          lease_owner?: string | null
+          organization_id?: string
+          original_byte_size?: number
+          original_media_type?: string
+          original_sha256?: string
+          product_id?: string
+          purpose?: string
+          recipient?: string
+          request_digest?: string
+          requested_at?: string
+          requested_by_user_id?: string
+          started_at?: string | null
+          status?: string
+          version_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evidence_document_watermark_ex_organization_id_document_id_fkey"
+            columns: ["organization_id", "document_id"]
+            isOneToOne: false
+            referencedRelation: "evidence_documents"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "evidence_document_watermark_exp_organization_id_product_id_fkey"
+            columns: ["organization_id", "product_id"]
+            isOneToOne: false
+            referencedRelation: "product_retention_alert_operations"
+            referencedColumns: ["organization_id", "product_id"]
+          },
+          {
+            foreignKeyName: "evidence_document_watermark_exp_organization_id_product_id_fkey"
+            columns: ["organization_id", "product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "evidence_document_watermark_exp_organization_id_version_id_fkey"
+            columns: ["organization_id", "version_id"]
+            isOneToOne: false
+            referencedRelation: "evidence_document_versions"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "evidence_document_watermark_exports_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evidence_document_watermark_exports_requested_by_user_id_fkey"
+            columns: ["requested_by_user_id"]
             isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
@@ -16709,6 +17169,20 @@ export type Database = {
         }[]
       }
       bump_session_epoch: { Args: { p_user_id: string }; Returns: undefined }
+      cancel_evidence_bulk_intake_item_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_batch_id: string
+          p_idempotency_key: string
+          p_item_id: string
+          p_organization_id: string
+          p_product_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
       cancel_product_import_job: {
         Args: {
           p_actor_user_id: string
@@ -16858,6 +17332,13 @@ export type Database = {
           p_worker_id: string
         }
         Returns: Json
+      }
+      claim_evidence_document_watermark_export: {
+        Args: { p_lease_seconds?: number; p_worker_id: string }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
       }
       claim_evidence_scan_job_atomic: {
         Args: {
@@ -17257,6 +17738,26 @@ export type Database = {
         Returns: {
           outcome: string
           run: Json
+        }[]
+      }
+      complete_evidence_bulk_intake_item_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_actual_size_bytes: number
+          p_batch_id: string
+          p_detected_media_type: string
+          p_failure_code: string
+          p_idempotency_key: string
+          p_item_id: string
+          p_organization_id: string
+          p_original_sha256: string
+          p_product_id: string
+          p_request_digest: string
+          p_version_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
         }[]
       }
       complete_evidence_document_deletion_cleanup_atomic: {
@@ -17715,6 +18216,49 @@ export type Database = {
           expires_at: string
           grant_id: string
           outcome: string
+        }[]
+      }
+      create_evidence_bulk_intake_batch_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_idempotency_key: string
+          p_items: Json
+          p_organization_id: string
+          p_product_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      create_evidence_document_watermark_export_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_document_id: string
+          p_idempotency_key: string
+          p_organization_id: string
+          p_product_id: string
+          p_purpose: string
+          p_recipient: string
+          p_request_digest: string
+          p_version_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      create_evidence_document_watermark_export_delivery_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_export_id: string
+          p_idempotency_key: string
+          p_organization_id: string
+          p_request_digest: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
         }[]
       }
       create_finding_product_impact_override_atomic: {
@@ -18587,6 +19131,18 @@ export type Database = {
         }[]
       }
       expire_stale_invitations: { Args: never; Returns: number }
+      fail_evidence_document_watermark_export_atomic: {
+        Args: {
+          p_export_id: string
+          p_failure_code: string
+          p_organization_id: string
+          p_worker_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
       fail_finding_propagation_job_atomic: {
         Args: {
           p_error_code: string
@@ -18923,6 +19479,21 @@ export type Database = {
           result: Json
         }[]
       }
+      finalize_evidence_document_watermark_export_atomic: {
+        Args: {
+          p_derivative_media_type: string
+          p_derivative_object_key: string
+          p_derivative_sha256: string
+          p_derivative_size_bytes: number
+          p_export_id: string
+          p_organization_id: string
+          p_worker_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
       finalize_organization_branding_asset_upload_atomic: {
         Args: {
           p_actor_user_id: string
@@ -19142,6 +19713,31 @@ export type Database = {
         }[]
       }
       get_current_user_id: { Args: never; Returns: string }
+      get_evidence_bulk_intake_batch_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_batch_id: string
+          p_organization_id: string
+          p_product_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      get_evidence_bulk_intake_item_upload_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_batch_id: string
+          p_item_id: string
+          p_organization_id: string
+          p_product_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
       get_evidence_document_download_atomic: {
         Args: {
           p_actor_user_id: string
@@ -19182,6 +19778,20 @@ export type Database = {
         Args: {
           p_actor_user_id: string
           p_document_id: string
+          p_organization_id: string
+          p_product_id: string
+          p_version_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      get_evidence_document_watermark_export_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_document_id: string
+          p_export_id: string
           p_organization_id: string
           p_product_id: string
           p_version_id: string
@@ -20157,6 +20767,25 @@ export type Database = {
           p_actor_user_id: string
           p_organization_id: string
           p_snapshot_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      initialize_evidence_bulk_intake_item_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_batch_id: string
+          p_classification_decision: string
+          p_document_class: string
+          p_idempotency_key: string
+          p_item_id: string
+          p_object_key: string
+          p_organization_id: string
+          p_product_id: string
+          p_request_digest: string
+          p_upload_expires_at: string
         }
         Returns: {
           outcome: string
@@ -22099,6 +22728,27 @@ export type Database = {
         }
         Returns: Json
       }
+      m8_06_bulk_batch_json: {
+        Args: { p_batch_id: string; p_organization_id: string }
+        Returns: Json
+      }
+      m8_06_bulk_item_json: {
+        Args: { p_item_id: string; p_organization_id: string }
+        Returns: Json
+      }
+      m8_06_bulk_suggested_class: {
+        Args: { p_filename: string }
+        Returns: string
+      }
+      m8_06_digest_parts: { Args: { p_parts: string[] }; Returns: string }
+      m8_06_watermark_export_json: {
+        Args: {
+          p_export_id: string
+          p_include_confidential?: boolean
+          p_organization_id: string
+        }
+        Returns: Json
+      }
       m8_evidence_actor_active: {
         Args: { p_organization_id: string; p_user_id: string }
         Returns: boolean
@@ -22442,6 +23092,19 @@ export type Database = {
         Returns: {
           import: Json
           outcome: string
+        }[]
+      }
+      preview_evidence_document_watermark_export_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_export_id: string
+          p_idempotency_key: string
+          p_organization_id: string
+          p_request_digest: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
         }[]
       }
       preview_field_authority_policy: {
@@ -23102,6 +23765,20 @@ export type Database = {
           p_range_end?: number
           p_range_start?: number
           p_request_correlation_id: string
+          p_token_sha256: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      redeem_evidence_document_watermark_export_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_correlation_id: string
+          p_delivery: boolean
+          p_export_id: string
+          p_organization_id: string
           p_token_sha256: string
         }
         Returns: {
@@ -23774,6 +24451,27 @@ export type Database = {
         Returns: {
           conflict: Json
           outcome: string
+        }[]
+      }
+      retry_evidence_bulk_intake_item_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_batch_id: string
+          p_classification_decision: string
+          p_declared_size_bytes: number
+          p_document_class: string
+          p_idempotency_key: string
+          p_item_id: string
+          p_object_key: string
+          p_organization_id: string
+          p_original_filename: string
+          p_product_id: string
+          p_request_digest: string
+          p_upload_expires_at: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
         }[]
       }
       retry_evidence_text_extraction_atomic: {

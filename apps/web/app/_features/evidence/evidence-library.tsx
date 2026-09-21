@@ -60,6 +60,34 @@ const EvidenceSearchPanel = dynamic(
   },
 );
 
+const EvidenceBulkIntakePanel = dynamic(
+  () =>
+    import("./evidence-bulk-intake-panel").then(
+      (module) => module.EvidenceBulkIntakePanel,
+    ),
+  {
+    loading: () => (
+      <p role="status" className="text-caption-1-regular text-fg-muted">
+        Loading bulk intake…
+      </p>
+    ),
+  },
+);
+
+const EvidenceWatermarkExportPanel = dynamic(
+  () =>
+    import("./evidence-watermark-export-panel").then(
+      (module) => module.EvidenceWatermarkExportPanel,
+    ),
+  {
+    loading: () => (
+      <p role="status" className="text-caption-1-regular text-fg-muted">
+        Loading export controls…
+      </p>
+    ),
+  },
+);
+
 type DocumentClass = EvidenceDocumentVersion["documentClass"];
 type Mode = "new" | "replacement";
 type ValidityFilter = EvidenceValidityStatusValue | "all";
@@ -465,6 +493,13 @@ export function EvidenceLibrary({
       ) : (
         <>
           {uploadForm}
+          {canUpload && session ? (
+            <EvidenceBulkIntakePanel
+              productId={productId}
+              ownerUserId={session.user.id}
+              enabled={enabled}
+            />
+          ) : null}
           {message ? (
             <p
               role="status"
@@ -709,6 +744,15 @@ export function EvidenceLibrary({
                         enabled={enabled}
                         canRetry={canUpload}
                       />
+                      {selectedVersion.status === "clean" ? (
+                        <EvidenceWatermarkExportPanel
+                          productId={productId}
+                          documentId={selected.id}
+                          version={selectedVersion}
+                          enabled={enabled}
+                          canManage={canManageEvidence}
+                        />
+                      ) : null}
                       {selectedVersion.status !== "clean" ? (
                         <p className="text-subhead-regular text-fg-muted">
                           This version is {label(selectedVersion.status)} and

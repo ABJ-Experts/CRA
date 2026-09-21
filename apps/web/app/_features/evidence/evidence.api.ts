@@ -1,7 +1,16 @@
 import {
+  cancelEvidenceBulkIntakeItemInputSchema,
+  completeEvidenceBulkIntakeItemInputSchema,
   completeEvidenceUploadInputSchema,
+  createEvidenceBulkIntakeBatchInputSchema,
   createEvidenceDeletionIntentInputSchema,
   createEvidenceReplacementInputSchema,
+  createEvidenceWatermarkExportInputSchema,
+  evidenceBulkIntakeBatchParamsSchema,
+  evidenceBulkIntakeBatchResponseSchema,
+  evidenceBulkIntakeItemInitializationResponseSchema,
+  evidenceBulkIntakeItemParamsSchema,
+  evidenceBulkIntakeItemResponseSchema,
   evidenceDocumentAccessInputSchema,
   evidenceDocumentAccessResponseSchema,
   evidenceDocumentAccessParamsSchema,
@@ -32,17 +41,34 @@ import {
   updateEvidenceExpiryAlertIntervalsInputSchema,
   evidenceVersionReuseParamsSchema,
   evidenceVersionReuseResponseSchema,
+  evidenceWatermarkExportCollectionParamsSchema,
+  evidenceWatermarkExportDeliveryInputSchema,
+  evidenceWatermarkExportDeliveryResponseSchema,
+  evidenceWatermarkExportParamsSchema,
+  evidenceWatermarkExportPreviewInputSchema,
+  evidenceWatermarkExportPreviewResponseSchema,
+  evidenceWatermarkExportResponseSchema,
+  initializeEvidenceBulkIntakeItemInputSchema,
+  retryEvidenceBulkIntakeItemInputSchema,
+  type CancelEvidenceBulkIntakeItemInput,
+  type CompleteEvidenceBulkIntakeItemInput,
   type CompleteEvidenceUploadInput,
+  type CreateEvidenceBulkIntakeBatchInput,
   type CreateEvidenceDeletionIntentInput,
   type CreateEvidenceReplacementInput,
+  type CreateEvidenceWatermarkExportInput,
   type EvidenceDocumentAccessInput,
   type EvidenceDocumentListQuery,
   type UpdateEvidenceExpiryAlertIntervalsInput,
   type EvidenceSearchQuery,
+  type EvidenceWatermarkExportDeliveryInput,
+  type EvidenceWatermarkExportPreviewInput,
+  type InitializeEvidenceBulkIntakeItemInput,
   type PlaceEvidenceLegalHoldInput,
   type ReleaseEvidenceLegalHoldInput,
   type InitializeEvidenceUploadInput,
   type RetryEvidenceExtractionInput,
+  type RetryEvidenceBulkIntakeItemInput,
 } from "@repo/contracts/evidence";
 
 import { authenticatedRequestJson } from "../../_lib/http/authenticated-request";
@@ -105,7 +131,9 @@ function versionsPath(productId: string, documentId: string): `/${string}` {
   return `${productPath(productId)}/${parsed.data.documentId}/versions`;
 }
 
-function evidenceDocumentPath(documentId: string): `/api/v1/evidence/${string}` {
+function evidenceDocumentPath(
+  documentId: string,
+): `/api/v1/evidence/${string}` {
   const parsed = evidenceRetentionReviewParamsSchema.safeParse({ documentId });
   if (!parsed.success) {
     throw new ApiClientError(
@@ -115,6 +143,73 @@ function evidenceDocumentPath(documentId: string): `/api/v1/evidence/${string}` 
     );
   }
   return `/api/v1/evidence/${parsed.data.documentId}`;
+}
+
+function bulkIntakeBatchPath(
+  productId: string,
+  batchId?: string,
+): `/${string}` {
+  const parsed = evidenceBulkIntakeBatchParamsSchema.safeParse({
+    productId,
+    batchId: batchId ?? "00000000-0000-4000-8000-000000000000",
+  });
+  if (!parsed.success) {
+    throw new ApiClientError(
+      "invalid_request",
+      "The product or bulk-intake batch identifier is invalid.",
+      400,
+    );
+  }
+  const root = `/api/v1/products/${parsed.data.productId}/evidence-bulk-intake-batches`;
+  return (batchId ? `${root}/${parsed.data.batchId}` : root) as `/${string}`;
+}
+
+function bulkIntakeItemPath(
+  productId: string,
+  batchId: string,
+  itemId: string,
+  suffix: "initialize" | "complete" | "cancel" | "retry",
+): `/${string}` {
+  const parsed = evidenceBulkIntakeItemParamsSchema.safeParse({
+    productId,
+    batchId,
+    itemId,
+  });
+  if (!parsed.success) {
+    throw new ApiClientError(
+      "invalid_request",
+      "The bulk-intake item identifier is invalid.",
+      400,
+    );
+  }
+  return `${bulkIntakeBatchPath(parsed.data.productId, parsed.data.batchId)}/items/${parsed.data.itemId}/${suffix}` as `/${string}`;
+}
+
+function watermarkExportsPath(
+  productId: string,
+  documentId: string,
+  versionId: string,
+  exportId?: string,
+): `/${string}` {
+  const parsed = (
+    exportId
+      ? evidenceWatermarkExportParamsSchema
+      : evidenceWatermarkExportCollectionParamsSchema
+  ).safeParse({
+    productId,
+    documentId,
+    versionId,
+    ...(exportId ? { exportId } : {}),
+  });
+  if (!parsed.success) {
+    throw new ApiClientError(
+      "invalid_request",
+      "The product, evidence document, version, or export identifier is invalid.",
+      400,
+    );
+  }
+  const root = `/api/v1/products/${parsed.data.productId}/evidence-documents/${parsed.data.documentId}/versions/${parsed.data.versionId}/watermark-exports`;
+  return (exportId ? `${root}/${exportId}` : root) as `/${string}`;
 }
 
 function retentionReviewPath(documentId: string): `/${string}` {
@@ -133,8 +228,14 @@ function legalHoldsPath(documentId: string): `/${string}` {
   return `${evidenceDocumentPath(parsed.data.documentId)}/legal-holds`;
 }
 
-function releaseLegalHoldPath(documentId: string, holdId: string): `/${string}` {
-  const parsed = evidenceLegalHoldParamsSchema.safeParse({ documentId, holdId });
+function releaseLegalHoldPath(
+  documentId: string,
+  holdId: string,
+): `/${string}` {
+  const parsed = evidenceLegalHoldParamsSchema.safeParse({
+    documentId,
+    holdId,
+  });
   if (!parsed.success) {
     throw new ApiClientError(
       "invalid_request",
@@ -333,6 +434,192 @@ export class EvidenceApi {
     });
   }
 
+  createBulkIntakeBatch(
+    productId: string,
+    input: CreateEvidenceBulkIntakeBatchInput,
+    signal?: AbortSignal,
+  ) {
+    return authenticatedRequestJson<
+      typeof evidenceBulkIntakeBatchResponseSchema,
+      typeof createEvidenceBulkIntakeBatchInputSchema
+    >({
+      path: bulkIntakeBatchPath(productId),
+      method: "POST",
+      body: input,
+      inputSchema: createEvidenceBulkIntakeBatchInputSchema,
+      schema: evidenceBulkIntakeBatchResponseSchema,
+      signal,
+    });
+  }
+
+  bulkIntakeBatch(productId: string, batchId: string, signal?: AbortSignal) {
+    return authenticatedRequestJson<
+      typeof evidenceBulkIntakeBatchResponseSchema
+    >({
+      path: bulkIntakeBatchPath(productId, batchId),
+      schema: evidenceBulkIntakeBatchResponseSchema,
+      signal,
+    });
+  }
+
+  initializeBulkIntakeItem(
+    productId: string,
+    batchId: string,
+    itemId: string,
+    input: InitializeEvidenceBulkIntakeItemInput,
+    signal?: AbortSignal,
+  ) {
+    return authenticatedRequestJson<
+      typeof evidenceBulkIntakeItemInitializationResponseSchema,
+      typeof initializeEvidenceBulkIntakeItemInputSchema
+    >({
+      path: bulkIntakeItemPath(productId, batchId, itemId, "initialize"),
+      method: "POST",
+      body: input,
+      inputSchema: initializeEvidenceBulkIntakeItemInputSchema,
+      schema: evidenceBulkIntakeItemInitializationResponseSchema,
+      signal,
+    });
+  }
+
+  completeBulkIntakeItem(
+    productId: string,
+    batchId: string,
+    itemId: string,
+    input: CompleteEvidenceBulkIntakeItemInput,
+    signal?: AbortSignal,
+  ) {
+    return authenticatedRequestJson<
+      typeof evidenceBulkIntakeItemResponseSchema,
+      typeof completeEvidenceBulkIntakeItemInputSchema
+    >({
+      path: bulkIntakeItemPath(productId, batchId, itemId, "complete"),
+      method: "POST",
+      body: input,
+      inputSchema: completeEvidenceBulkIntakeItemInputSchema,
+      schema: evidenceBulkIntakeItemResponseSchema,
+      signal,
+    });
+  }
+
+  cancelBulkIntakeItem(
+    productId: string,
+    batchId: string,
+    itemId: string,
+    input: CancelEvidenceBulkIntakeItemInput,
+    signal?: AbortSignal,
+  ) {
+    return authenticatedRequestJson<
+      typeof evidenceBulkIntakeItemResponseSchema,
+      typeof cancelEvidenceBulkIntakeItemInputSchema
+    >({
+      path: bulkIntakeItemPath(productId, batchId, itemId, "cancel"),
+      method: "POST",
+      body: input,
+      inputSchema: cancelEvidenceBulkIntakeItemInputSchema,
+      schema: evidenceBulkIntakeItemResponseSchema,
+      signal,
+    });
+  }
+
+  retryBulkIntakeItem(
+    productId: string,
+    batchId: string,
+    itemId: string,
+    input: RetryEvidenceBulkIntakeItemInput,
+    signal?: AbortSignal,
+  ) {
+    return authenticatedRequestJson<
+      typeof evidenceBulkIntakeItemInitializationResponseSchema,
+      typeof retryEvidenceBulkIntakeItemInputSchema
+    >({
+      path: bulkIntakeItemPath(productId, batchId, itemId, "retry"),
+      method: "POST",
+      body: input,
+      inputSchema: retryEvidenceBulkIntakeItemInputSchema,
+      schema: evidenceBulkIntakeItemInitializationResponseSchema,
+      signal,
+    });
+  }
+
+  createWatermarkExport(
+    productId: string,
+    documentId: string,
+    versionId: string,
+    input: CreateEvidenceWatermarkExportInput,
+    signal?: AbortSignal,
+  ) {
+    return authenticatedRequestJson<
+      typeof evidenceWatermarkExportResponseSchema,
+      typeof createEvidenceWatermarkExportInputSchema
+    >({
+      path: watermarkExportsPath(productId, documentId, versionId),
+      method: "POST",
+      body: input,
+      inputSchema: createEvidenceWatermarkExportInputSchema,
+      schema: evidenceWatermarkExportResponseSchema,
+      signal,
+    });
+  }
+
+  watermarkExport(
+    productId: string,
+    documentId: string,
+    versionId: string,
+    exportId: string,
+    signal?: AbortSignal,
+  ) {
+    return authenticatedRequestJson<
+      typeof evidenceWatermarkExportResponseSchema
+    >({
+      path: watermarkExportsPath(productId, documentId, versionId, exportId),
+      schema: evidenceWatermarkExportResponseSchema,
+      signal,
+    });
+  }
+
+  previewWatermarkExport(
+    productId: string,
+    documentId: string,
+    versionId: string,
+    exportId: string,
+    input: EvidenceWatermarkExportPreviewInput,
+    signal?: AbortSignal,
+  ) {
+    return authenticatedRequestJson<
+      typeof evidenceWatermarkExportPreviewResponseSchema,
+      typeof evidenceWatermarkExportPreviewInputSchema
+    >({
+      path: `${watermarkExportsPath(productId, documentId, versionId, exportId)}/preview` as `/${string}`,
+      method: "POST",
+      body: input,
+      inputSchema: evidenceWatermarkExportPreviewInputSchema,
+      schema: evidenceWatermarkExportPreviewResponseSchema,
+      signal,
+    });
+  }
+
+  deliverWatermarkExport(
+    productId: string,
+    documentId: string,
+    versionId: string,
+    exportId: string,
+    input: EvidenceWatermarkExportDeliveryInput,
+    signal?: AbortSignal,
+  ) {
+    return authenticatedRequestJson<
+      typeof evidenceWatermarkExportDeliveryResponseSchema,
+      typeof evidenceWatermarkExportDeliveryInputSchema
+    >({
+      path: `${watermarkExportsPath(productId, documentId, versionId, exportId)}/delivery` as `/${string}`,
+      method: "POST",
+      body: input,
+      inputSchema: evidenceWatermarkExportDeliveryInputSchema,
+      schema: evidenceWatermarkExportDeliveryResponseSchema,
+      signal,
+    });
+  }
+
   versions(productId: string, documentId: string, signal?: AbortSignal) {
     return authenticatedRequestJson<
       typeof evidenceDocumentVersionsResponseSchema
@@ -344,13 +631,13 @@ export class EvidenceApi {
   }
 
   retentionReview(documentId: string, signal?: AbortSignal) {
-    return authenticatedRequestJson<typeof evidenceRetentionReviewResponseSchema>(
-      {
-        path: retentionReviewPath(documentId),
-        schema: evidenceRetentionReviewResponseSchema,
-        signal,
-      },
-    );
+    return authenticatedRequestJson<
+      typeof evidenceRetentionReviewResponseSchema
+    >({
+      path: retentionReviewPath(documentId),
+      schema: evidenceRetentionReviewResponseSchema,
+      signal,
+    });
   }
 
   createDeletionIntent(
@@ -372,11 +659,13 @@ export class EvidenceApi {
   }
 
   legalHolds(documentId: string, signal?: AbortSignal) {
-    return authenticatedRequestJson<typeof evidenceLegalHoldListResponseSchema>({
-      path: legalHoldsPath(documentId),
-      schema: evidenceLegalHoldListResponseSchema,
-      signal,
-    });
+    return authenticatedRequestJson<typeof evidenceLegalHoldListResponseSchema>(
+      {
+        path: legalHoldsPath(documentId),
+        schema: evidenceLegalHoldListResponseSchema,
+        signal,
+      },
+    );
   }
 
   placeLegalHold(
@@ -500,9 +789,13 @@ export class EvidenceApi {
     uploadUrl: string,
     file: File,
     onProgress?: (progress: number) => void,
+    signal?: AbortSignal,
   ): Promise<void> {
     return new Promise((resolve, reject) => {
       const request = new XMLHttpRequest();
+      const abort = () => {
+        request.abort();
+      };
       request.open("PUT", uploadUrl);
       request.setRequestHeader(
         "content-type",
@@ -518,6 +811,10 @@ export class EvidenceApi {
             "The evidence upload could not reach private storage.",
           ),
         );
+      request.onabort = () =>
+        reject(
+          new ApiClientError("network", "The evidence upload was cancelled."),
+        );
       request.onload = () => {
         if (request.status >= 200 && request.status < 300) {
           resolve();
@@ -531,6 +828,12 @@ export class EvidenceApi {
           ),
         );
       };
+      signal?.addEventListener("abort", abort, { once: true });
+      if (signal?.aborted) {
+        abort();
+        return;
+      }
+      request.onloadend = () => signal?.removeEventListener("abort", abort);
       request.send(file);
     });
   }

@@ -18,6 +18,8 @@ import {
   type RetryEvidenceExtractionInput,
   type RetryEvidenceExtractionResponse,
   type UpdateEvidenceExpiryAlertIntervalsInput,
+  evidenceWatermarkExportSchema,
+  type EvidenceWatermarkExport,
 } from "@repo/contracts/evidence";
 import type {
   EvidenceRepository,
@@ -34,6 +36,16 @@ import type {
   EvidenceRetentionRepository,
   EvidenceRetentionReview,
 } from "../application/evidence-retention-use-cases";
+import type {
+  BulkIntakeCreateItem,
+  BulkIntakeMutation,
+  EvidenceBulkIntakeRepository,
+} from "../application/evidence-bulk-intake-use-cases";
+import {
+  evidenceWatermarkExportRequestDigest,
+  type EvidenceWatermarkExportClaim,
+  type EvidenceWatermarkExportRepository,
+} from "../application/evidence-watermark-export-use-cases";
 
 type Rpc = {
   rpc(
@@ -42,6 +54,18 @@ type Rpc = {
   ): Promise<{ data: unknown; error: { message?: string } | null }>;
 };
 type Row = Readonly<{ outcome?: unknown; result?: unknown }>;
+type WatermarkCreateResult = Awaited<
+  ReturnType<EvidenceWatermarkExportRepository["createWatermarkExport"]>
+>;
+type WatermarkPreviewResult = Awaited<
+  ReturnType<EvidenceWatermarkExportRepository["createWatermarkPreviewAccess"]>
+>;
+type WatermarkDeliveryResult = Awaited<
+  ReturnType<EvidenceWatermarkExportRepository["createWatermarkDeliveryAccess"]>
+>;
+type WatermarkRedeemResult = Awaited<
+  ReturnType<EvidenceWatermarkExportRepository["redeemWatermarkDelivery"]>
+>;
 
 @Injectable()
 export class SupabaseEvidenceRepository
@@ -50,7 +74,9 @@ export class SupabaseEvidenceRepository
     EvidenceAccessRepository,
     EvidenceTextSearchRepository,
     EvidenceReuseValidityRepository,
-    EvidenceRetentionRepository
+    EvidenceRetentionRepository,
+    EvidenceBulkIntakeRepository,
+    EvidenceWatermarkExportRepository
 {
   constructor(private readonly supabase: SupabaseService) {}
   private client(): Rpc {
@@ -109,6 +135,206 @@ export class SupabaseEvidenceRepository
             ? ("not_found" as const)
             : ("invalid_request" as const),
     };
+  }
+
+  async createBatch(
+    organizationId: string,
+    input: Readonly<{
+      actorId: string;
+      productId: string;
+      items: readonly BulkIntakeCreateItem[];
+      idempotencyKey: string;
+    }>,
+  ) {
+    const response = await this.client().rpc(
+      "create_evidence_bulk_intake_batch_atomic",
+      {
+        p_organization_id: organizationId,
+        p_actor_user_id: input.actorId,
+        p_product_id: input.productId,
+        p_items: input.items,
+        p_idempotency_key: input.idempotencyKey,
+      },
+    );
+    return bulkMutation(response, ["created", "replayed"]);
+  }
+
+  async batch(
+    organizationId: string,
+    input: Readonly<{ actorId: string; productId: string; batchId: string }>,
+  ) {
+    const response = await this.client().rpc(
+      "get_evidence_bulk_intake_batch_atomic",
+      {
+        p_organization_id: organizationId,
+        p_actor_user_id: input.actorId,
+        p_product_id: input.productId,
+        p_batch_id: input.batchId,
+      },
+    );
+    return bulkMutation(response, ["found"]);
+  }
+
+  async initializeItem(
+    organizationId: string,
+    input: Readonly<{
+      actorId: string;
+      productId: string;
+      batchId: string;
+      itemId: string;
+      idempotencyKey: string;
+      documentClass: string;
+      classificationDecision: "accepted" | "corrected";
+      objectKey: string;
+      uploadExpiresAt: string;
+      requestDigest: string;
+    }>,
+  ) {
+    const response = await this.client().rpc(
+      "initialize_evidence_bulk_intake_item_atomic",
+      {
+        p_organization_id: organizationId,
+        p_actor_user_id: input.actorId,
+        p_product_id: input.productId,
+        p_batch_id: input.batchId,
+        p_item_id: input.itemId,
+        p_document_class: input.documentClass,
+        p_classification_decision: input.classificationDecision,
+        p_object_key: input.objectKey,
+        p_upload_expires_at: input.uploadExpiresAt,
+        p_idempotency_key: input.idempotencyKey,
+        p_request_digest: input.requestDigest,
+      },
+    );
+    return bulkMutation(response, ["reserved", "replayed"]);
+  }
+
+  async getUploadItem(
+    organizationId: string,
+    input: Readonly<{
+      actorId: string;
+      productId: string;
+      batchId: string;
+      itemId: string;
+    }>,
+  ) {
+    const response = await this.client().rpc(
+      "get_evidence_bulk_intake_item_upload_atomic",
+      {
+        p_organization_id: organizationId,
+        p_actor_user_id: input.actorId,
+        p_product_id: input.productId,
+        p_batch_id: input.batchId,
+        p_item_id: input.itemId,
+      },
+    );
+    const row = firstRow(response.data);
+    const result = asObject(row?.result);
+    if (response.error || row?.outcome !== "found") return null;
+    const objectKey = stringValue(result.objectKey);
+    const versionId = stringValue(result.versionId);
+    const declaredByteSize = numberValue(result.declaredByteSize);
+    return objectKey && versionId && declaredByteSize !== null
+      ? { objectKey, versionId, declaredByteSize }
+      : null;
+  }
+
+  async completeItem(
+    organizationId: string,
+    input: Readonly<{
+      actorId: string;
+      productId: string;
+      batchId: string;
+      itemId: string;
+      versionId: string;
+      idempotencyKey: string;
+      sha256: string | null;
+      byteSize: number | null;
+      mediaType: string | null;
+      failureCode: string | null;
+      requestDigest: string;
+    }>,
+  ) {
+    const response = await this.client().rpc(
+      "complete_evidence_bulk_intake_item_atomic",
+      {
+        p_organization_id: organizationId,
+        p_actor_user_id: input.actorId,
+        p_product_id: input.productId,
+        p_batch_id: input.batchId,
+        p_item_id: input.itemId,
+        p_version_id: input.versionId,
+        p_actual_size_bytes: input.byteSize,
+        p_detected_media_type: input.mediaType,
+        p_original_sha256: input.sha256,
+        p_failure_code: input.failureCode,
+        p_idempotency_key: input.idempotencyKey,
+        p_request_digest: input.requestDigest,
+      },
+    );
+    return bulkMutation(response, ["scan_pending", "failed", "replayed"]);
+  }
+
+  async cancelItem(
+    organizationId: string,
+    input: Readonly<{
+      actorId: string;
+      productId: string;
+      batchId: string;
+      itemId: string;
+      idempotencyKey: string;
+    }>,
+  ) {
+    const response = await this.client().rpc(
+      "cancel_evidence_bulk_intake_item_atomic",
+      {
+        p_organization_id: organizationId,
+        p_actor_user_id: input.actorId,
+        p_product_id: input.productId,
+        p_batch_id: input.batchId,
+        p_item_id: input.itemId,
+        p_idempotency_key: input.idempotencyKey,
+      },
+    );
+    return bulkMutation(response, ["cancelled", "replayed"]);
+  }
+
+  async retryItem(
+    organizationId: string,
+    input: Readonly<{
+      actorId: string;
+      productId: string;
+      batchId: string;
+      itemId: string;
+      idempotencyKey: string;
+      documentClass: string;
+      classificationDecision: "accepted" | "corrected";
+      fileName: string;
+      declaredByteSize: number;
+      objectKey: string;
+      uploadExpiresAt: string;
+      requestDigest: string;
+    }>,
+  ) {
+    const response = await this.client().rpc(
+      "retry_evidence_bulk_intake_item_atomic",
+      {
+        p_organization_id: organizationId,
+        p_actor_user_id: input.actorId,
+        p_product_id: input.productId,
+        p_batch_id: input.batchId,
+        p_item_id: input.itemId,
+        p_document_class: input.documentClass,
+        p_classification_decision: input.classificationDecision,
+        p_original_filename: input.fileName,
+        p_declared_size_bytes: input.declaredByteSize,
+        p_object_key: input.objectKey,
+        p_upload_expires_at: input.uploadExpiresAt,
+        p_idempotency_key: input.idempotencyKey,
+        p_request_digest: input.requestDigest,
+      },
+    );
+    return bulkMutation(response, ["reserved", "replayed"]);
   }
 
   async reserveReplacement(
@@ -585,6 +811,270 @@ export class SupabaseEvidenceRepository
     return retentionMutation(response, ["queued", "replayed"]);
   }
 
+  async createWatermarkExport(
+    organizationId: string,
+    input: Parameters<
+      EvidenceWatermarkExportRepository["createWatermarkExport"]
+    >[1],
+  ): Promise<WatermarkCreateResult> {
+    const response = await this.client().rpc(
+      "create_evidence_document_watermark_export_atomic",
+      {
+        p_organization_id: organizationId,
+        p_actor_user_id: input.actorId,
+        p_product_id: input.productId,
+        p_document_id: input.documentId,
+        p_version_id: input.versionId,
+        p_recipient: input.recipient,
+        p_purpose: input.purpose,
+        p_idempotency_key: input.idempotencyKey,
+        p_request_digest: evidenceWatermarkExportRequestDigest({
+          productId: input.productId,
+          documentId: input.documentId,
+          versionId: input.versionId,
+          recipient: input.recipient,
+          purpose: input.purpose,
+        }),
+      },
+    );
+    const row = firstRow(response.data);
+    const exportRecord = watermarkExport(asObject(row?.result));
+    if (
+      !response.error &&
+      exportRecord &&
+      (row?.outcome === "queued" || row?.outcome === "replayed")
+    )
+      return {
+        outcome: row.outcome === "queued" ? "queued" : "replayed",
+        export: exportRecord,
+      };
+    return { outcome: watermarkMutationOutcome(row?.outcome) };
+  }
+
+  async getWatermarkExport(
+    organizationId: string,
+    input: Parameters<
+      EvidenceWatermarkExportRepository["getWatermarkExport"]
+    >[1],
+  ): Promise<EvidenceWatermarkExport | null> {
+    const response = await this.client().rpc(
+      "get_evidence_document_watermark_export_atomic",
+      {
+        p_organization_id: organizationId,
+        p_actor_user_id: input.actorId,
+        p_product_id: input.productId,
+        p_document_id: input.documentId,
+        p_version_id: input.versionId,
+        p_export_id: input.exportId,
+      },
+    );
+    const row = firstRow(response.data);
+    return !response.error && row?.outcome === "found"
+      ? watermarkExport(asObject(row.result))
+      : null;
+  }
+
+  async createWatermarkPreviewAccess(
+    organizationId: string,
+    input: Parameters<
+      EvidenceWatermarkExportRepository["createWatermarkPreviewAccess"]
+    >[1],
+  ): Promise<WatermarkPreviewResult> {
+    const result = await this.createWatermarkAccess(
+      "preview_evidence_document_watermark_export_atomic",
+      organizationId,
+      input,
+    );
+    return result.outcome === "ready"
+      ? result
+      : { outcome: watermarkPreviewOutcome(result.outcome) };
+  }
+
+  async createWatermarkDeliveryAccess(
+    organizationId: string,
+    input: Parameters<
+      EvidenceWatermarkExportRepository["createWatermarkDeliveryAccess"]
+    >[1],
+  ): Promise<WatermarkDeliveryResult> {
+    const result = await this.createWatermarkAccess(
+      "create_evidence_document_watermark_export_delivery_atomic",
+      organizationId,
+      input,
+    );
+    return result.outcome === "ready"
+      ? result
+      : { outcome: watermarkDeliveryOutcome(result.outcome) };
+  }
+
+  async redeemWatermarkDelivery(
+    organizationId: string,
+    input: Parameters<
+      EvidenceWatermarkExportRepository["redeemWatermarkDelivery"]
+    >[1],
+  ): Promise<WatermarkRedeemResult> {
+    const response = await this.client().rpc(
+      "redeem_evidence_document_watermark_export_atomic",
+      {
+        p_organization_id: organizationId,
+        p_actor_user_id: input.actorId,
+        p_export_id: input.exportId,
+        p_token_sha256: input.tokenDigest,
+        p_delivery: input.delivery,
+        p_correlation_id: input.correlationId,
+      },
+    );
+    const row = firstRow(response.data);
+    if (!response.error && row?.outcome === "redeemed") {
+      const source = watermarkDelivery(asObject(row.result));
+      if (source) return { outcome: "ready" as const, source };
+    }
+    return { outcome: watermarkRedeemOutcome(row?.outcome) };
+  }
+
+  async claimWatermarkExport(
+    input: Parameters<
+      EvidenceWatermarkExportRepository["claimWatermarkExport"]
+    >[0],
+  ): Promise<EvidenceWatermarkExportClaim | null> {
+    const response = await this.client().rpc(
+      "claim_evidence_document_watermark_export",
+      { p_worker_id: input.workerId, p_lease_seconds: input.leaseSeconds },
+    );
+    const row = firstRow(response.data);
+    if (response.error || row?.outcome !== "claimed") return null;
+    const result = asObject(row.result);
+    const exportRecord = watermarkExport(asObject(result.export));
+    const organizationId = stringValue(result.organizationId);
+    const objectKey = stringValue(result.objectKey);
+    const sourceByteSize = numberValue(result.sourceByteSize);
+    const sourceMediaType = stringValue(result.sourceMediaType);
+    if (
+      !exportRecord ||
+      !organizationId ||
+      !objectKey ||
+      !sourceByteSize ||
+      !sourceMediaType
+    )
+      return null;
+    return {
+      export: exportRecord,
+      organizationId,
+      objectKey,
+      sourceByteSize,
+      sourceMediaType,
+    };
+  }
+
+  async finalizeWatermarkExport(
+    organizationId: string,
+    input: Parameters<
+      EvidenceWatermarkExportRepository["finalizeWatermarkExport"]
+    >[1],
+  ) {
+    const response = await this.client().rpc(
+      "finalize_evidence_document_watermark_export_atomic",
+      {
+        p_organization_id: organizationId,
+        p_export_id: input.exportId,
+        p_worker_id: input.workerId,
+        p_derivative_object_key: input.objectKey,
+        p_derivative_sha256: input.sha256,
+        p_derivative_size_bytes: input.byteSize,
+        p_derivative_media_type: input.mediaType,
+      },
+    );
+    return !response.error && firstRow(response.data)?.outcome === "ready";
+  }
+
+  async failWatermarkExport(
+    organizationId: string,
+    input: Parameters<
+      EvidenceWatermarkExportRepository["failWatermarkExport"]
+    >[1],
+  ) {
+    const response = await this.client().rpc(
+      "fail_evidence_document_watermark_export_atomic",
+      {
+        p_organization_id: organizationId,
+        p_export_id: input.exportId,
+        p_worker_id: input.workerId,
+        p_failure_code: input.failureCode,
+      },
+    );
+    return !response.error && firstRow(response.data)?.outcome === "failed";
+  }
+
+  async isWatermarkExportDurablyFailed(
+    orgId: string,
+    input: Parameters<
+      EvidenceWatermarkExportRepository["isWatermarkExportDurablyFailed"]
+    >[1],
+  ) {
+    const client = this.supabase.admin() as unknown as {
+      from(table: "evidence_document_watermark_exports"): {
+        select(columns: "status, lease_owner"): {
+          eq(
+            column: "organization_id",
+            value: string,
+          ): {
+            eq(
+              column: "id",
+              value: string,
+            ): {
+              maybeSingle(): Promise<{ data: unknown; error: unknown }>;
+            };
+          };
+        };
+      };
+    };
+    const response = await client
+      .from("evidence_document_watermark_exports")
+      .select("status, lease_owner")
+      .eq("organization_id", orgId)
+      .eq("id", input.exportId)
+      .maybeSingle();
+    const row = asObject(response.data);
+    return row.status === "failed" && row.lease_owner === null;
+  }
+
+  private async createWatermarkAccess(
+    functionName: string,
+    organizationId: string,
+    input: Readonly<{
+      actorId: string;
+      exportId: string;
+      idempotencyKey: string;
+      requestDigest: string;
+    }>,
+  ) {
+    const response = await this.client().rpc(functionName, {
+      p_organization_id: organizationId,
+      p_actor_user_id: input.actorId,
+      p_export_id: input.exportId,
+      p_idempotency_key: input.idempotencyKey,
+      p_request_digest: input.requestDigest,
+    });
+    const row = firstRow(response.data);
+    const result = asObject(row?.result);
+    const token = stringValue(result.token);
+    const fileName = stringValue(result.fileName);
+    const mediaType = stringValue(result.mediaType);
+    const expiresAt = stringValue(result.expiresAt);
+    if (
+      !response.error &&
+      (row?.outcome === "ready" || row?.outcome === "replayed") &&
+      token &&
+      fileName &&
+      mediaType &&
+      expiresAt
+    )
+      return {
+        outcome: "ready" as const,
+        access: { token, fileName, mediaType, expiresAt },
+      };
+    return { outcome: watermarkAccessOutcome(row?.outcome) };
+  }
+
   async versions(
     organizationId: string,
     input: Readonly<{ actorId: string; productId: string; documentId: string }>,
@@ -851,6 +1341,39 @@ function retentionMutation(
   return { outcome: "conflict" };
 }
 
+function bulkMutation(
+  response: Awaited<ReturnType<Rpc["rpc"]>>,
+  successful: readonly string[],
+): BulkIntakeMutation {
+  const row = firstRow(response.data);
+  const outcome = response.error ? "conflict" : row?.outcome;
+  if (typeof outcome === "string" && successful.includes(outcome)) {
+    return {
+      outcome: outcome as Extract<
+        BulkIntakeMutation["outcome"],
+        | "created"
+        | "found"
+        | "replayed"
+        | "reserved"
+        | "scan_pending"
+        | "failed"
+        | "cancelled"
+      >,
+      value: asObject(row?.result),
+    };
+  }
+  if (outcome === "idempotency_conflict")
+    return { outcome: "idempotency_mismatch" as const };
+  if (
+    outcome === "not_found" ||
+    outcome === "forbidden" ||
+    outcome === "invalid_request" ||
+    outcome === "conflict"
+  )
+    return { outcome };
+  return { outcome: "conflict" as const };
+}
+
 function isDefined<T>(value: T | null): value is T {
   return value !== null;
 }
@@ -1057,6 +1580,113 @@ function stringValue(value: unknown) {
 }
 function numberValue(value: unknown) {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+function watermarkExport(
+  value: Record<string, unknown>,
+): EvidenceWatermarkExport | null {
+  const derivativeValue = asObject(value.derivative);
+  const derivative =
+    Object.keys(derivativeValue).length === 0
+      ? null
+      : {
+          fileName: stringValue(derivativeValue.fileName),
+          mediaType: stringValue(derivativeValue.mediaType),
+          byteSize: numberValue(derivativeValue.byteSize),
+          sha256: stringValue(derivativeValue.sha256),
+          createdAt: stringValue(derivativeValue.createdAt),
+        };
+  const parsed = evidenceWatermarkExportSchema.safeParse({
+    id: stringValue(value.id),
+    organizationId: stringValue(value.organizationId),
+    productId: stringValue(value.productId),
+    documentId: stringValue(value.documentId),
+    sourceVersionId: stringValue(value.sourceVersionId),
+    sourceSha256: stringValue(value.sourceSha256),
+    requestedByUserId: stringValue(value.requestedByUserId),
+    requestedAt: stringValue(value.requestedAt),
+    recipient: stringValue(value.recipient),
+    purpose: stringValue(value.purpose),
+    status: stringValue(value.status),
+    failureCode: stringValue(value.failureCode),
+    derivative,
+    previewedAt: stringValue(value.previewedAt),
+    deliveredAt: stringValue(value.deliveredAt),
+  });
+  return parsed.success ? parsed.data : null;
+}
+function watermarkDelivery(value: Record<string, unknown>) {
+  const objectKey = stringValue(value.objectKey);
+  const sha256 = stringValue(value.sha256);
+  const byteSize = numberValue(value.byteSize);
+  const mediaType = stringValue(value.mediaType);
+  const fileName = stringValue(value.fileName);
+  return objectKey && sha256 && byteSize && mediaType && fileName
+    ? { objectKey, sha256, byteSize, mediaType, fileName }
+    : null;
+}
+function watermarkMutationOutcome(
+  value: unknown,
+):
+  | "not_found"
+  | "forbidden"
+  | "not_clean"
+  | "unsupported"
+  | "lifecycle_blocked"
+  | "idempotency_mismatch"
+  | "conflict" {
+  switch (value) {
+    case "not_found":
+    case "forbidden":
+    case "not_clean":
+    case "unsupported":
+    case "lifecycle_blocked":
+    case "idempotency_mismatch":
+      return value;
+    default:
+      return "conflict";
+  }
+}
+function watermarkAccessOutcome(
+  value: unknown,
+):
+  | "not_found"
+  | "forbidden"
+  | "not_ready"
+  | "preview_required"
+  | "idempotency_mismatch"
+  | "expired"
+  | "conflict" {
+  switch (value) {
+    case "not_found":
+    case "forbidden":
+    case "not_ready":
+    case "preview_required":
+    case "idempotency_mismatch":
+    case "expired":
+      return value;
+    default:
+      return "conflict";
+  }
+}
+function watermarkPreviewOutcome(
+  outcome: ReturnType<typeof watermarkAccessOutcome>,
+): Exclude<WatermarkPreviewResult, { outcome: "ready" }>["outcome"] {
+  return outcome === "expired" || outcome === "preview_required"
+    ? "conflict"
+    : outcome;
+}
+function watermarkDeliveryOutcome(
+  outcome: ReturnType<typeof watermarkAccessOutcome>,
+): Exclude<WatermarkDeliveryResult, { outcome: "ready" }>["outcome"] {
+  return outcome === "expired" ? "conflict" : outcome;
+}
+function watermarkRedeemOutcome(
+  value: unknown,
+): Exclude<WatermarkRedeemResult, { outcome: "ready" }>["outcome"] {
+  const outcome = watermarkAccessOutcome(value);
+  return outcome === "idempotency_mismatch" || outcome === "preview_required"
+    ? "conflict"
+    : outcome;
 }
 function decodeListCursor(cursor: string | undefined) {
   if (!cursor) return null;

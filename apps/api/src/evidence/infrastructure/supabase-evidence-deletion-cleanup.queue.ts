@@ -56,14 +56,15 @@ export class SupabaseEvidenceDeletionCleanupQueue implements EvidenceDeletionCle
     const intentId = text(result.intentId);
     const cleanupItemId = text(result.cleanupItemId);
     const documentId = text(result.documentId);
-    // The durable RPC owns the Storage bucket selection. Older RPC clients
-    // called this field objectBucket; accept only the fixed evidence bucket.
+    // The durable RPC owns the Storage bucket selection. Keep the allowlist
+    // narrow so a malformed cleanup row can never select arbitrary Storage.
     const bucket = text(result.bucket ?? result.objectBucket);
     const objectKey = text(result.objectKey);
     return intentId &&
       cleanupItemId &&
       documentId &&
-      bucket === "evidence-documents" &&
+      (bucket === "evidence-documents" ||
+        bucket === "evidence-watermark-exports") &&
       objectKey
       ? Object.freeze({
           organizationId: text(result.organizationId) ?? organizationId,
