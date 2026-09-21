@@ -7,6 +7,11 @@ export const apiErrorSchema = z
     message: z.string().min(1),
     code: z.string().min(1).optional(),
     fieldErrors: z.record(z.string(), z.string()).optional(),
+    /**
+     * Public, feature-specific recovery data for a handled 4xx response.
+     * Callers must parse this with their own contract before using it.
+     */
+    details: z.unknown().optional(),
   })
   .strict();
 

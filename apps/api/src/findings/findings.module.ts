@@ -3,6 +3,7 @@ import { Module } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 
 import { ProductsModule } from "../products/products.module";
+import { SuppliersModule } from "../suppliers/suppliers.module";
 import { MailModule } from "../mail/mail.module";
 import {
   PRODUCT_RELATIONSHIP_GRAPH_EVENT_WORKER,
@@ -21,6 +22,7 @@ import {
   FindingPropagationSourcesController,
   ProductFindingImpactSummaryController,
 } from "./findings.controller";
+import { FindingResponsibleSuppliersController } from "../suppliers/supplier-registry.controller";
 import { FindingsService } from "./findings.service";
 import { SupabaseFindingPropagationRepository } from "./infrastructure/supabase-finding-propagation.repository";
 import { VulnerabilityAssessmentController } from "./assessments/vulnerability-assessment.controller";
@@ -81,8 +83,10 @@ import {
 } from "./worker/finding-propagation-worker";
 
 @Module({
-  imports: [SupabaseModule, ProductsModule, MailModule],
+  imports: [SupabaseModule, ProductsModule, MailModule, SuppliersModule],
   controllers: [
+    // Static supplier resolution must register before generic :findingId routes.
+    FindingResponsibleSuppliersController,
     FindingPropagationSourcesController,
     ProductFindingImpactSummaryController,
     // This controller must precede triage's GET :findingId route so the

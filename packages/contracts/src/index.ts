@@ -15,3 +15,4 @@ export * from "./reporting.js";
 export * from "./technical-files.js";
 export * from "./risk-registers.js";
 export * from "./evidence.js";
+export * from "./suppliers.js";

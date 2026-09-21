@@ -62,6 +62,36 @@ describe("key generation", () => {
   });
 });
 
+describe("supplier registry permissions", () => {
+  it("reserves registry management for owner/admin while allowing a narrow custom grant", () => {
+    expect(
+      hasPermission(DEFAULT_PERMISSIONS_BY_ROLE.owner, "can_manage_suppliers"),
+    ).toBe(true);
+    expect(
+      hasPermission(DEFAULT_PERMISSIONS_BY_ROLE.admin, "can_view_suppliers"),
+    ).toBe(true);
+    expect(
+      hasPermission(DEFAULT_PERMISSIONS_BY_ROLE.member, "can_view_suppliers"),
+    ).toBe(false);
+    expect(
+      hasPermission(
+        resolveEffectivePermissions({
+          baseRole: "viewer",
+          customRoles: [
+            role({
+              permissions: {
+                can_view_suppliers: true,
+                can_manage_suppliers: true,
+              },
+            }),
+          ],
+        }),
+        "can_view_suppliers",
+      ),
+    ).toBe(true);
+  });
+});
+
 describe("technical-file permissions", () => {
   it("gives only owner/admin default access while preserving custom-role reachability", () => {
     expect(
@@ -199,15 +229,37 @@ describe("technical-file permissions", () => {
   });
 
   it("reserves scoped auditor sharing for owner/admin and honours a revocation", () => {
-    expect(hasPermission(DEFAULT_PERMISSIONS_BY_ROLE.owner, "can_share_technical_files")).toBe(true);
-    expect(hasPermission(DEFAULT_PERMISSIONS_BY_ROLE.admin, "can_share_technical_files")).toBe(true);
-    expect(hasPermission(DEFAULT_PERMISSIONS_BY_ROLE.member, "can_share_technical_files")).toBe(false);
-    expect(hasPermission(DEFAULT_PERMISSIONS_BY_ROLE.viewer, "can_share_technical_files")).toBe(false);
+    expect(
+      hasPermission(
+        DEFAULT_PERMISSIONS_BY_ROLE.owner,
+        "can_share_technical_files",
+      ),
+    ).toBe(true);
+    expect(
+      hasPermission(
+        DEFAULT_PERMISSIONS_BY_ROLE.admin,
+        "can_share_technical_files",
+      ),
+    ).toBe(true);
+    expect(
+      hasPermission(
+        DEFAULT_PERMISSIONS_BY_ROLE.member,
+        "can_share_technical_files",
+      ),
+    ).toBe(false);
+    expect(
+      hasPermission(
+        DEFAULT_PERMISSIONS_BY_ROLE.viewer,
+        "can_share_technical_files",
+      ),
+    ).toBe(false);
     expect(
       hasPermission(
         resolveEffectivePermissions({
           baseRole: "viewer",
-          customRoles: [role({ permissions: { can_share_technical_files: true } })],
+          customRoles: [
+            role({ permissions: { can_share_technical_files: true } }),
+          ],
         }),
         "can_view_technical_files",
       ),

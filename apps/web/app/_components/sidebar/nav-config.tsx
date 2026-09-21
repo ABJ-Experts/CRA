@@ -2,6 +2,7 @@ import {
   Building2,
   Cable,
   Clock3,
+  Factory,
   LayoutGrid,
   Package,
   Settings2,
@@ -59,6 +60,12 @@ export const NAV: NavSection[] = [
         href: "/products",
         icon: Package,
         menuKey: "products",
+      },
+      {
+        label: "Suppliers",
+        href: "/suppliers",
+        icon: Factory,
+        menuKey: "suppliers",
       },
       {
         label: "Findings",

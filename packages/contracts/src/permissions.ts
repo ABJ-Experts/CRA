@@ -131,6 +131,9 @@ export const PERMISSION_MATRIX = {
   // never grants lifecycle control over a quarantined or otherwise immutable
   // version; that is deliberately reserved for `manage`.
   evidence: ["view", "upload", "manage"],
+  // Internal supplier registry. These permissions never authorize the public
+  // supplier-SBOM portal, whose opaque invitation/session remains separate.
+  suppliers: ["view", "manage"],
 } as const satisfies Record<string, readonly PermissionAction[]>;
 
 export type PermissionModule = keyof typeof PERMISSION_MATRIX;

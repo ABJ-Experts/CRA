@@ -10264,6 +10264,7 @@ export type Database = {
           request_digest: string
           status: string
           supplier_display_name: string
+          supplier_id: string | null
           updated_at: string
         }
         Insert: {
@@ -10281,6 +10282,7 @@ export type Database = {
           request_digest: string
           status?: string
           supplier_display_name: string
+          supplier_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -10298,6 +10300,7 @@ export type Database = {
           request_digest?: string
           status?: string
           supplier_display_name?: string
+          supplier_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -10328,6 +10331,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "product_releases"
             referencedColumns: ["organization_id", "product_id", "id"]
+          },
+          {
+            foreignKeyName: "sbom_supplier_requests_supplier_organization_fk"
+            columns: ["organization_id", "supplier_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_organizations"
+            referencedColumns: ["organization_id", "id"]
           },
         ]
       }
@@ -10646,6 +10656,370 @@ export type Database = {
             columns: ["updated_by"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      supplier_component_responsibilities: {
+        Row: {
+          canonical_purl: string | null
+          component_id: string
+          component_identity: string
+          component_occurrence_id: string
+          component_version: string | null
+          created_at: string
+          created_by: string
+          document_id: string
+          end_reason: string | null
+          ended_at: string | null
+          ended_by: string | null
+          id: string
+          identity_kind: string
+          organization_id: string
+          product_id: string
+          provenance: string
+          release_id: string
+          state: string
+          superseded_by_responsibility_id: string | null
+          supplier_id: string
+          supplier_request_id: string | null
+          version: number
+        }
+        Insert: {
+          canonical_purl?: string | null
+          component_id: string
+          component_identity: string
+          component_occurrence_id: string
+          component_version?: string | null
+          created_at?: string
+          created_by: string
+          document_id: string
+          end_reason?: string | null
+          ended_at?: string | null
+          ended_by?: string | null
+          id?: string
+          identity_kind: string
+          organization_id: string
+          product_id: string
+          provenance?: string
+          release_id: string
+          state?: string
+          superseded_by_responsibility_id?: string | null
+          supplier_id: string
+          supplier_request_id?: string | null
+          version?: number
+        }
+        Update: {
+          canonical_purl?: string | null
+          component_id?: string
+          component_identity?: string
+          component_occurrence_id?: string
+          component_version?: string | null
+          created_at?: string
+          created_by?: string
+          document_id?: string
+          end_reason?: string | null
+          ended_at?: string | null
+          ended_by?: string | null
+          id?: string
+          identity_kind?: string
+          organization_id?: string
+          product_id?: string
+          provenance?: string
+          release_id?: string
+          state?: string
+          superseded_by_responsibility_id?: string | null
+          supplier_id?: string
+          supplier_request_id?: string | null
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_component_responsibi_organization_id_component_id_fkey"
+            columns: ["organization_id", "component_id"]
+            isOneToOne: false
+            referencedRelation: "sbom_components"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "supplier_component_responsibi_organization_id_component_oc_fkey"
+            columns: ["organization_id", "component_occurrence_id"]
+            isOneToOne: false
+            referencedRelation: "vulnerability_component_occurrences"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "supplier_component_responsibi_organization_id_product_id_r_fkey"
+            columns: ["organization_id", "product_id", "release_id"]
+            isOneToOne: false
+            referencedRelation: "product_releases"
+            referencedColumns: ["organization_id", "product_id", "id"]
+          },
+          {
+            foreignKeyName: "supplier_component_responsibi_organization_id_superseded_b_fkey"
+            columns: ["organization_id", "superseded_by_responsibility_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_component_responsibilities"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "supplier_component_responsibi_organization_id_supplier_req_fkey"
+            columns: ["organization_id", "supplier_request_id"]
+            isOneToOne: false
+            referencedRelation: "sbom_supplier_requests"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "supplier_component_responsibil_organization_id_document_id_fkey"
+            columns: ["organization_id", "document_id"]
+            isOneToOne: false
+            referencedRelation: "sbom_documents"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "supplier_component_responsibil_organization_id_supplier_id_fkey"
+            columns: ["organization_id", "supplier_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_organizations"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "supplier_component_responsibilities_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_component_responsibilities_ended_by_fkey"
+            columns: ["ended_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_component_responsibilities_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      supplier_contacts: {
+        Row: {
+          archive_reason: string | null
+          archived_at: string | null
+          archived_by: string | null
+          created_at: string
+          created_by: string
+          email: string | null
+          id: string
+          name: string
+          organization_id: string
+          phone: string | null
+          role: string | null
+          supplier_id: string
+          updated_at: string
+          updated_by: string
+          version: number
+        }
+        Insert: {
+          archive_reason?: string | null
+          archived_at?: string | null
+          archived_by?: string | null
+          created_at?: string
+          created_by: string
+          email?: string | null
+          id?: string
+          name: string
+          organization_id: string
+          phone?: string | null
+          role?: string | null
+          supplier_id: string
+          updated_at?: string
+          updated_by: string
+          version?: number
+        }
+        Update: {
+          archive_reason?: string | null
+          archived_at?: string | null
+          archived_by?: string | null
+          created_at?: string
+          created_by?: string
+          email?: string | null
+          id?: string
+          name?: string
+          organization_id?: string
+          phone?: string | null
+          role?: string | null
+          supplier_id?: string
+          updated_at?: string
+          updated_by?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_contacts_archived_by_fkey"
+            columns: ["archived_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_contacts_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_contacts_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_contacts_organization_id_supplier_id_fkey"
+            columns: ["organization_id", "supplier_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_organizations"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "supplier_contacts_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      supplier_organizations: {
+        Row: {
+          archive_reason: string | null
+          archived_at: string | null
+          archived_by: string | null
+          created_at: string
+          created_by: string
+          criticality: string
+          id: string
+          legal_name: string | null
+          name: string
+          organization_id: string
+          updated_at: string
+          updated_by: string
+          version: number
+          website: string | null
+        }
+        Insert: {
+          archive_reason?: string | null
+          archived_at?: string | null
+          archived_by?: string | null
+          created_at?: string
+          created_by: string
+          criticality?: string
+          id?: string
+          legal_name?: string | null
+          name: string
+          organization_id: string
+          updated_at?: string
+          updated_by: string
+          version?: number
+          website?: string | null
+        }
+        Update: {
+          archive_reason?: string | null
+          archived_at?: string | null
+          archived_by?: string | null
+          created_at?: string
+          created_by?: string
+          criticality?: string
+          id?: string
+          legal_name?: string | null
+          name?: string
+          organization_id?: string
+          updated_at?: string
+          updated_by?: string
+          version?: number
+          website?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_organizations_archived_by_fkey"
+            columns: ["archived_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_organizations_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_organizations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_organizations_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      supplier_registry_commands: {
+        Row: {
+          actor_user_id: string
+          created_at: string
+          id: string
+          idempotency_key: string
+          operation: string
+          organization_id: string
+          request_digest: string
+          result: Json
+        }
+        Insert: {
+          actor_user_id: string
+          created_at?: string
+          id?: string
+          idempotency_key: string
+          operation: string
+          organization_id: string
+          request_digest: string
+          result: Json
+        }
+        Update: {
+          actor_user_id?: string
+          created_at?: string
+          id?: string
+          idempotency_key?: string
+          operation?: string
+          organization_id?: string
+          request_digest?: string
+          result?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_registry_commands_actor_user_id_fkey"
+            columns: ["actor_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_registry_commands_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
@@ -17018,6 +17392,35 @@ export type Database = {
           outcome: string
         }[]
       }
+      archive_supplier_contact_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_contact_id: string
+          p_expected_version: number
+          p_idempotency_key: string
+          p_organization_id: string
+          p_reason: string
+          p_supplier_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      archive_supplier_organization_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_expected_version: number
+          p_idempotency_key: string
+          p_organization_id: string
+          p_reason: string
+          p_supplier_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
       archive_technical_file_risk_atomic: {
         Args: {
           p_actor_user_id: string
@@ -17081,6 +17484,19 @@ export type Database = {
         Returns: {
           membership: Json
           outcome: string
+        }[]
+      }
+      associate_supplier_sbom_request_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_idempotency_key: string
+          p_organization_id: string
+          p_request_id: string
+          p_supplier_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
         }[]
       }
       attach_sbom_composite_generated_source_atomic: {
@@ -18695,6 +19111,55 @@ export type Database = {
           outcome: string
         }[]
       }
+      create_supplier_component_responsibility_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_idempotency_key: string
+          p_occurrence_id: string
+          p_organization_id: string
+          p_product_id: string
+          p_provenance: string
+          p_release_id: string
+          p_supplier_id: string
+          p_supplier_request_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      create_supplier_contact_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_email: string
+          p_idempotency_key: string
+          p_name: string
+          p_organization_id: string
+          p_phone: string
+          p_role: string
+          p_supplier_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      create_supplier_organization_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_criticality: string
+          p_duplicate_candidate_ids: string[]
+          p_idempotency_key: string
+          p_legal_name: string
+          p_name: string
+          p_organization_id: string
+          p_website: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
       create_supplier_sbom_invitation_atomic: {
         Args: {
           p_actor_user_id: string
@@ -18999,6 +19464,22 @@ export type Database = {
         Returns: {
           membership: Json
           outcome: string
+        }[]
+      }
+      end_supplier_component_responsibility_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_expected_version: number
+          p_idempotency_key: string
+          p_organization_id: string
+          p_reason: string
+          p_responsibility_id: string
+          p_superseded_by_responsibility_id: string
+          p_supplier_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
         }[]
       }
       enqueue_finding_propagation_source_page_atomic: {
@@ -19831,6 +20312,17 @@ export type Database = {
           result: Json
         }[]
       }
+      get_finding_responsible_suppliers_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_finding_id: string
+          p_organization_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
       get_finding_triage_detail: {
         Args: {
           p_actor_user_id: string
@@ -20474,6 +20966,17 @@ export type Database = {
         Returns: {
           baselines: Json
           outcome: string
+        }[]
+      }
+      get_supplier_organization_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_organization_id: string
+          p_supplier_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
         }[]
       }
       get_supplier_sbom_submission_upload: {
@@ -21344,6 +21847,20 @@ export type Database = {
         Returns: {
           baselines: Json
           outcome: string
+        }[]
+      }
+      list_supplier_organizations_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_cursor: string
+          p_include_archived: boolean
+          p_limit: number
+          p_organization_id: string
+          p_search: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
         }[]
       }
       list_supplier_sbom_requests: {
@@ -22764,6 +23281,40 @@ export type Database = {
       m8_evidence_validity_status: {
         Args: { p_ends_on: string; p_starts_on: string; p_thresholds: number[] }
         Returns: string
+      }
+      m9_supplier_actor_can: {
+        Args: {
+          p_actor_user_id: string
+          p_organization_id: string
+          p_permission_key: string
+        }
+        Returns: boolean
+      }
+      m9_supplier_command_replay: {
+        Args: {
+          p_actor_user_id: string
+          p_digest: string
+          p_idempotency_key: string
+          p_operation: string
+          p_organization_id: string
+        }
+        Returns: Json
+      }
+      m9_supplier_contact_json: {
+        Args: { p_contact_id: string; p_organization_id: string }
+        Returns: Json
+      }
+      m9_supplier_detail_json: {
+        Args: { p_organization_id: string; p_supplier_id: string }
+        Returns: Json
+      }
+      m9_supplier_json: {
+        Args: { p_organization_id: string; p_supplier_id: string }
+        Returns: Json
+      }
+      m9_supplier_responsibility_json: {
+        Args: { p_organization_id: string; p_responsibility_id: string }
+        Returns: Json
       }
       mark_mfa_factors_removed: {
         Args: { p_operation_id: string; p_user_id: string }
@@ -25431,6 +25982,35 @@ export type Database = {
           p_expected_version: number
           p_idempotency_key: string
           p_organization_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      update_supplier_contact_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_contact_id: string
+          p_expected_version: number
+          p_idempotency_key: string
+          p_organization_id: string
+          p_patch: Json
+          p_supplier_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      update_supplier_organization_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_expected_version: number
+          p_idempotency_key: string
+          p_organization_id: string
+          p_patch: Json
+          p_supplier_id: string
         }
         Returns: {
           outcome: string

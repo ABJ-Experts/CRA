@@ -21,6 +21,7 @@ import { UsersModule } from "./users/users.module";
 import { VulnerabilitiesModule } from "./vulnerabilities/vulnerabilities.module";
 import { TechnicalFilesModule } from "./technical-files/technical-files.module";
 import { EvidenceModule } from "./evidence/evidence.module";
+import { SuppliersModule } from "./suppliers/suppliers.module";
 
 @Module({
   imports: [
@@ -62,6 +63,7 @@ import { EvidenceModule } from "./evidence/evidence.module";
     VulnerabilitiesModule,
     TechnicalFilesModule,
     EvidenceModule,
+    SuppliersModule,
   ],
   controllers: [HealthController],
 })

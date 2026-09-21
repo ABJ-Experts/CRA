@@ -31,6 +31,7 @@ interface HttpExceptionShape {
   message?: unknown;
   code?: unknown;
   fieldErrors?: unknown;
+  details?: unknown;
 }
 
 function isStringRecord(value: unknown): value is Record<string, string> {
@@ -61,6 +62,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
     let message = "Something went wrong. Please try again.";
     let code: string | undefined;
     let fieldErrors: Record<string, string> | undefined;
+    let details: unknown;
 
     if (exception instanceof HttpException) {
       status = exception.getStatus();
@@ -82,6 +84,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
         fieldErrors = isStringRecord(shape.fieldErrors)
           ? { ...shape.fieldErrors }
           : undefined;
+        details = shape.details;
       }
     }
 
@@ -100,6 +103,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
       message = "Something went wrong. Please try again.";
       code = safeServerCode;
       fieldErrors = undefined;
+      details = undefined;
     } else {
       /*
        * 4xx bodies are logged with IDs only — never the email, password, token
@@ -116,6 +120,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
       message,
       ...(code ? { code } : {}),
       ...(fieldErrors ? { fieldErrors } : {}),
+      ...(details === undefined ? {} : { details }),
     });
 
     res.status(status).json(body);
