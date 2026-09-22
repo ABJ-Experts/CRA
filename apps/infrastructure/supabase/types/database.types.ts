@@ -10896,6 +10896,493 @@ export type Database = {
           },
         ]
       }
+      supplier_evidence_invitations: {
+        Row: {
+          created_at: string
+          created_by_user_id: string
+          expires_at: string
+          id: string
+          organization_id: string
+          request_id: string
+          revision_id: string
+          revoked_at: string | null
+          revoked_by_user_id: string | null
+          session_expires_at: string | null
+          session_token_hash: string | null
+          state: string
+          token_hash: string
+          token_prefix: string
+          used_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by_user_id: string
+          expires_at: string
+          id?: string
+          organization_id: string
+          request_id: string
+          revision_id: string
+          revoked_at?: string | null
+          revoked_by_user_id?: string | null
+          session_expires_at?: string | null
+          session_token_hash?: string | null
+          state?: string
+          token_hash: string
+          token_prefix: string
+          used_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by_user_id?: string
+          expires_at?: string
+          id?: string
+          organization_id?: string
+          request_id?: string
+          revision_id?: string
+          revoked_at?: string | null
+          revoked_by_user_id?: string | null
+          session_expires_at?: string | null
+          session_token_hash?: string | null
+          state?: string
+          token_hash?: string
+          token_prefix?: string
+          used_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_evidence_invitations_created_by_user_id_fkey"
+            columns: ["created_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_evidence_invitations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_evidence_invitations_organization_id_request_id_fkey"
+            columns: ["organization_id", "request_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_evidence_requests"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "supplier_evidence_invitations_organization_id_revision_id_fkey"
+            columns: ["organization_id", "revision_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_evidence_request_revisions"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "supplier_evidence_invitations_revoked_by_user_id_fkey"
+            columns: ["revoked_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      supplier_evidence_request_commands: {
+        Row: {
+          actor_user_id: string
+          created_at: string
+          id: string
+          idempotency_key: string
+          operation: string
+          organization_id: string
+          request_digest: string
+          result: Json
+        }
+        Insert: {
+          actor_user_id: string
+          created_at?: string
+          id?: string
+          idempotency_key: string
+          operation: string
+          organization_id: string
+          request_digest: string
+          result: Json
+        }
+        Update: {
+          actor_user_id?: string
+          created_at?: string
+          id?: string
+          idempotency_key?: string
+          operation?: string
+          organization_id?: string
+          request_digest?: string
+          result?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_evidence_request_commands_actor_user_id_fkey"
+            columns: ["actor_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_evidence_request_commands_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      supplier_evidence_request_items: {
+        Row: {
+          created_at: string
+          document_class: string
+          id: string
+          instructions: string | null
+          ordinal: number
+          organization_id: string
+          required: boolean
+          revision_id: string
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          document_class: string
+          id?: string
+          instructions?: string | null
+          ordinal: number
+          organization_id: string
+          required?: boolean
+          revision_id: string
+          title: string
+        }
+        Update: {
+          created_at?: string
+          document_class?: string
+          id?: string
+          instructions?: string | null
+          ordinal?: number
+          organization_id?: string
+          required?: boolean
+          revision_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_evidence_request_item_organization_id_revision_id_fkey"
+            columns: ["organization_id", "revision_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_evidence_request_revisions"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "supplier_evidence_request_items_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      supplier_evidence_request_revisions: {
+        Row: {
+          created_at: string
+          created_by_user_id: string
+          disclosure_digest: string
+          disclosure_payload: Json
+          due_at: string
+          id: string
+          instructions: string
+          organization_id: string
+          portal_title: string
+          request_id: string
+          revision_number: number
+        }
+        Insert: {
+          created_at?: string
+          created_by_user_id: string
+          disclosure_digest: string
+          disclosure_payload: Json
+          due_at: string
+          id?: string
+          instructions: string
+          organization_id: string
+          portal_title: string
+          request_id: string
+          revision_number: number
+        }
+        Update: {
+          created_at?: string
+          created_by_user_id?: string
+          disclosure_digest?: string
+          disclosure_payload?: Json
+          due_at?: string
+          id?: string
+          instructions?: string
+          organization_id?: string
+          portal_title?: string
+          request_id?: string
+          revision_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_evidence_request_revis_organization_id_request_id_fkey"
+            columns: ["organization_id", "request_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_evidence_requests"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "supplier_evidence_request_revisions_created_by_user_id_fkey"
+            columns: ["created_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_evidence_request_revisions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      supplier_evidence_requests: {
+        Row: {
+          closed_at: string | null
+          closed_by_user_id: string | null
+          created_at: string
+          created_by_user_id: string
+          current_revision_id: string | null
+          id: string
+          internal_owner_user_id: string
+          organization_id: string
+          product_id: string
+          recipient_contact_id: string
+          recipient_email: string
+          recipient_name: string
+          state: string
+          supplier_id: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          closed_at?: string | null
+          closed_by_user_id?: string | null
+          created_at?: string
+          created_by_user_id: string
+          current_revision_id?: string | null
+          id?: string
+          internal_owner_user_id: string
+          organization_id: string
+          product_id: string
+          recipient_contact_id: string
+          recipient_email: string
+          recipient_name: string
+          state?: string
+          supplier_id: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          closed_at?: string | null
+          closed_by_user_id?: string | null
+          created_at?: string
+          created_by_user_id?: string
+          current_revision_id?: string | null
+          id?: string
+          internal_owner_user_id?: string
+          organization_id?: string
+          product_id?: string
+          recipient_contact_id?: string
+          recipient_email?: string
+          recipient_name?: string
+          state?: string
+          supplier_id?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_evidence_requests_closed_by_user_id_fkey"
+            columns: ["closed_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_evidence_requests_created_by_user_id_fkey"
+            columns: ["created_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_evidence_requests_current_revision_fk"
+            columns: ["organization_id", "current_revision_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_evidence_request_revisions"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "supplier_evidence_requests_internal_owner_user_id_fkey"
+            columns: ["internal_owner_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_evidence_requests_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_evidence_requests_organization_id_product_id_fkey"
+            columns: ["organization_id", "product_id"]
+            isOneToOne: false
+            referencedRelation: "product_retention_alert_operations"
+            referencedColumns: ["organization_id", "product_id"]
+          },
+          {
+            foreignKeyName: "supplier_evidence_requests_organization_id_product_id_fkey"
+            columns: ["organization_id", "product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "supplier_evidence_requests_organization_id_recipient_conta_fkey"
+            columns: ["organization_id", "recipient_contact_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_contacts"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "supplier_evidence_requests_organization_id_supplier_id_fkey"
+            columns: ["organization_id", "supplier_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_organizations"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      supplier_evidence_submissions: {
+        Row: {
+          created_at: string
+          declared_media_type: string
+          declared_sha256: string
+          declared_size_bytes: number
+          evidence_document_id: string
+          evidence_version_id: string
+          id: string
+          idempotency_key: string
+          invitation_id: string
+          organization_id: string
+          original_filename: string
+          request_digest: string
+          request_id: string
+          request_item_id: string
+          revision_id: string
+          state: string
+          supplier_visible_reason: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          declared_media_type: string
+          declared_sha256: string
+          declared_size_bytes: number
+          evidence_document_id: string
+          evidence_version_id: string
+          id?: string
+          idempotency_key: string
+          invitation_id: string
+          organization_id: string
+          original_filename: string
+          request_digest: string
+          request_id: string
+          request_item_id: string
+          revision_id: string
+          state?: string
+          supplier_visible_reason?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          declared_media_type?: string
+          declared_sha256?: string
+          declared_size_bytes?: number
+          evidence_document_id?: string
+          evidence_version_id?: string
+          id?: string
+          idempotency_key?: string
+          invitation_id?: string
+          organization_id?: string
+          original_filename?: string
+          request_digest?: string
+          request_id?: string
+          request_item_id?: string
+          revision_id?: string
+          state?: string
+          supplier_visible_reason?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_evidence_submissions_organization_id_evidence_doc_fkey"
+            columns: ["organization_id", "evidence_document_id"]
+            isOneToOne: false
+            referencedRelation: "evidence_documents"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "supplier_evidence_submissions_organization_id_evidence_ver_fkey"
+            columns: ["organization_id", "evidence_version_id"]
+            isOneToOne: true
+            referencedRelation: "evidence_document_versions"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "supplier_evidence_submissions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_evidence_submissions_organization_id_invitation_i_fkey"
+            columns: ["organization_id", "invitation_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_evidence_invitations"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "supplier_evidence_submissions_organization_id_request_id_fkey"
+            columns: ["organization_id", "request_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_evidence_requests"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "supplier_evidence_submissions_organization_id_request_item_fkey"
+            columns: ["organization_id", "request_item_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_evidence_request_items"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "supplier_evidence_submissions_organization_id_revision_id_fkey"
+            columns: ["organization_id", "revision_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_evidence_request_revisions"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
       supplier_organizations: {
         Row: {
           archive_reason: string | null
@@ -18116,6 +18603,19 @@ export type Database = {
         }[]
       }
       clear_login_attempts: { Args: { p_email: string }; Returns: undefined }
+      close_supplier_evidence_request_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_expected_version: number
+          p_idempotency_key: string
+          p_organization_id: string
+          p_request_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
       commit_product_import_atomic: {
         Args: {
           p_actor_user_id: string
@@ -19144,6 +19644,18 @@ export type Database = {
           result: Json
         }[]
       }
+      create_supplier_evidence_request_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_idempotency_key: string
+          p_organization_id: string
+          p_payload: Json
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
       create_supplier_organization_atomic: {
         Args: {
           p_actor_user_id: string
@@ -20129,6 +20641,21 @@ export type Database = {
           source: Json
         }[]
       }
+      finalize_supplier_evidence_submission_atomic: {
+        Args: {
+          p_actual_size: number
+          p_idempotency_key: string
+          p_media_type: string
+          p_request_digest: string
+          p_session_token_hash: string
+          p_sha256: string
+          p_version_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
       finalize_supplier_sbom_submission_atomic: {
         Args: {
           p_actual_byte_size: number
@@ -20968,6 +21495,31 @@ export type Database = {
           outcome: string
         }[]
       }
+      get_supplier_evidence_portal_request_atomic: {
+        Args: { p_session_token_hash: string }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      get_supplier_evidence_request_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_organization_id: string
+          p_request_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      get_supplier_evidence_submission_upload_atomic: {
+        Args: { p_session_token_hash: string; p_version_id: string }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
       get_supplier_organization_atomic: {
         Args: {
           p_actor_user_id: string
@@ -21297,6 +21849,22 @@ export type Database = {
       }
       is_iso_3166_alpha_2: { Args: { p_country: string }; Returns: boolean }
       is_login_locked: { Args: { p_email: string }; Returns: string }
+      issue_supplier_evidence_request_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_expected_version: number
+          p_expires_at: string
+          p_idempotency_key: string
+          p_organization_id: string
+          p_preview_fingerprint: string
+          p_request_id: string
+          p_token_hash: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
       issue_technical_file_declaration_atomic: {
         Args: {
           p_actor_user_id: string
@@ -21847,6 +22415,19 @@ export type Database = {
         Returns: {
           baselines: Json
           outcome: string
+        }[]
+      }
+      list_supplier_evidence_requests_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_cursor?: string
+          p_limit: number
+          p_organization_id: string
+          p_supplier_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
         }[]
       }
       list_supplier_organizations_atomic: {
@@ -23282,6 +23863,76 @@ export type Database = {
         Args: { p_ends_on: string; p_starts_on: string; p_thresholds: number[] }
         Returns: string
       }
+      m9_02_current_draft: {
+        Args: { p_organization_id: string; p_request_id: string }
+        Returns: Json
+      }
+      m9_02_insert_revision: {
+        Args: {
+          p_actor_user_id: string
+          p_draft: Json
+          p_organization_id: string
+          p_request_id: string
+        }
+        Returns: string
+      }
+      m9_02_internal_can: {
+        Args: {
+          p_actor_user_id: string
+          p_manage: boolean
+          p_organization_id: string
+        }
+        Returns: boolean
+      }
+      m9_02_invitation_json: {
+        Args: { p_invitation_id: string; p_organization_id: string }
+        Returns: Json
+      }
+      m9_02_issue_invitation: {
+        Args: {
+          p_actor_user_id: string
+          p_expected_version: number
+          p_expires_at: string
+          p_idempotency_key: string
+          p_operation: string
+          p_organization_id: string
+          p_preview_fingerprint: string
+          p_request_id: string
+          p_token_hash: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      m9_02_portal_json: {
+        Args: { p_invitation_id: string; p_organization_id: string }
+        Returns: Json
+      }
+      m9_02_request_json: {
+        Args: { p_organization_id: string; p_request_id: string }
+        Returns: Json
+      }
+      m9_02_request_summary_json: {
+        Args: { p_organization_id: string; p_request_id: string }
+        Returns: Json
+      }
+      m9_02_revision_json: {
+        Args: {
+          p_organization_id: string
+          p_portal?: boolean
+          p_revision_id: string
+        }
+        Returns: Json
+      }
+      m9_02_validate_draft: {
+        Args: {
+          p_actor_user_id: string
+          p_organization_id: string
+          p_payload: Json
+        }
+        Returns: Json
+      }
       m9_supplier_actor_can: {
         Args: {
           p_actor_user_id: string
@@ -23709,6 +24360,17 @@ export type Database = {
         Returns: {
           outcome: string
           preview: Json
+        }[]
+      }
+      preview_supplier_evidence_request_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_organization_id: string
+          p_payload: Json
+        }
+        Returns: {
+          outcome: string
+          result: Json
         }[]
       }
       preview_technical_file_auditor_snapshot_grant: {
@@ -24337,6 +24999,17 @@ export type Database = {
           result: Json
         }[]
       }
+      redeem_supplier_evidence_invitation_atomic: {
+        Args: {
+          p_invitation_token_hash: string
+          p_session_expires_at: string
+          p_session_token_hash: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
       redeem_technical_file_auditor_snapshot_grant_atomic: {
         Args: {
           p_client_source_hash?: string
@@ -24392,6 +25065,22 @@ export type Database = {
         }
         Returns: {
           outcome: string
+        }[]
+      }
+      reissue_supplier_evidence_request_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_expected_version: number
+          p_expires_at: string
+          p_idempotency_key: string
+          p_organization_id: string
+          p_preview_fingerprint: string
+          p_request_id: string
+          p_token_hash: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
         }[]
       }
       reissue_technical_file_declaration_atomic: {
@@ -24895,6 +25584,24 @@ export type Database = {
               source: Json
             }[]
           }
+      reserve_supplier_evidence_submission_atomic: {
+        Args: {
+          p_declared_media_type: string
+          p_declared_sha256: string
+          p_declared_size_bytes: number
+          p_idempotency_key: string
+          p_object_key: string
+          p_original_filename: string
+          p_request_digest: string
+          p_request_item_id: string
+          p_session_token_hash: string
+          p_upload_expires_at: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
       reserve_supplier_sbom_submission_atomic: {
         Args: {
           p_correlation_id: string
@@ -25185,6 +25892,21 @@ export type Database = {
           result: Json
         }[]
       }
+      revise_supplier_evidence_request_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_expected_version: number
+          p_idempotency_key: string
+          p_organization_id: string
+          p_payload: Json
+          p_preview_fingerprint: string
+          p_request_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
       revoke_invitation_atomic: {
         Args: {
           p_actor_email: string
@@ -25202,6 +25924,20 @@ export type Database = {
         }
         Returns: {
           outcome: string
+        }[]
+      }
+      revoke_supplier_evidence_invitation_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_expected_version: number
+          p_idempotency_key: string
+          p_invitation_id: string
+          p_organization_id: string
+          p_request_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
         }[]
       }
       revoke_technical_file_auditor_snapshot_grant_atomic: {

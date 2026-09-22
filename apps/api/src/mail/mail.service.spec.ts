@@ -142,6 +142,26 @@ describe("MailService", () => {
     expect(message?.html).not.toContain("https://cra.test///reset-password");
   });
 
+  it("delivers the supplier portal bearer only in a URL fragment", async () => {
+    const service = new MailService(enabledConfig());
+
+    await service.sendSupplierEvidenceInvitation(
+      "supplier@example.test",
+      "token/with spaces",
+      "11111111-1111-4111-8111-111111111111",
+    );
+
+    const message = mockSendMail.mock.calls[0]?.[0];
+    expect(message).toMatchObject({
+      to: "supplier@example.test",
+      subject: "Supplier evidence request",
+    });
+    expect(message?.html).toContain(
+      "https://cra.test/supplier-evidence#token%2Fwith%20spaces",
+    );
+    expect(message?.html).not.toContain("?token=");
+  });
+
   it.each([
     ["Grace", "Grace has invited"],
     [null, "You have been invited"],

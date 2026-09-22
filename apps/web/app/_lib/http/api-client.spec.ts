@@ -134,6 +134,28 @@ describe("requestJson", () => {
     });
   });
 
+  it("allows a scoped external bearer while explicitly omitting internal cookies", async () => {
+    const fetcher = vi.fn(
+      async () => new Response(JSON.stringify({ ok: true }), { status: 200 }),
+    );
+
+    await requestJson({
+      path: "/api/v1/test",
+      schema: successSchema,
+      credentials: "omit",
+      headers: { "x-supplier-evidence-session": "opaque-session" },
+      fetcher,
+    });
+
+    expect(fetcher).toHaveBeenCalledWith(
+      "/api/v1/test",
+      expect.objectContaining({
+        credentials: "omit",
+        headers: { "x-supplier-evidence-session": "opaque-session" },
+      }),
+    );
+  });
+
   it("serializes a body once and forwards a custom signal", async () => {
     const controller = new AbortController();
     const body = { email: "person@example.com", enabled: true };

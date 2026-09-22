@@ -34,6 +34,10 @@ export interface RequestJsonOptions<
   readonly body?: z.input<TInputSchema>;
   readonly signal?: AbortSignal;
   readonly fetcher?: typeof fetch;
+  /** Feature-scoped headers, e.g. an opaque external portal session bearer. */
+  readonly headers?: HeadersInit;
+  /** External bearer flows must not attach CRA's internal cookies. */
+  readonly credentials?: RequestCredentials;
 }
 
 export interface RequestMultipartOptions<
@@ -172,6 +176,8 @@ export class ApiClient {
     body,
     signal,
     fetcher = fetch,
+    headers,
+    credentials = "same-origin",
   }: RequestJsonOptions<TResponseSchema, TInputSchema>): Promise<
     z.output<TResponseSchema>
   > {
@@ -183,15 +189,19 @@ export class ApiClient {
       ? this.parseInput(inputSchema, body)
       : undefined;
 
+    const requestHeaders: Record<string, string> = {};
+    new Headers(headers).forEach((value, key) => {
+      requestHeaders[key] = value;
+    });
+    if (parsedBody !== undefined)
+      requestHeaders["content-type"] = "application/json";
     const response = await fetchResponse(fetcher, path, {
       method,
-      credentials: "same-origin",
+      credentials,
       cache: "no-store",
       signal,
       headers:
-        parsedBody === undefined
-          ? undefined
-          : { "content-type": "application/json" },
+        Object.keys(requestHeaders).length === 0 ? undefined : requestHeaders,
       body: parsedBody === undefined ? undefined : JSON.stringify(parsedBody),
     });
 

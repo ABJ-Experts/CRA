@@ -30,6 +30,7 @@ import {
   useEndSupplierResponsibilityMutation,
   useSupplierQuery,
 } from "./suppliers.queries";
+import { SupplierEvidenceRequestPanel } from "../supplier-evidence/supplier-evidence-request-panel";
 
 function errorMessage(error: unknown): string {
   if (error instanceof ApiClientError && error.status === 403)
@@ -505,13 +506,16 @@ export function SupplierDetailContent({
     }
   }
   return (
-    <main className="mx-auto w-full max-w-[1440px] space-y-6 px-4 py-6 sm:px-6 lg:px-8">
-      <Link
-        href="/suppliers"
-        className="text-caption-1-regular text-link underline"
-      >
-        Back to suppliers
-      </Link>
+    <main className="flex flex-col gap-6 px-6 py-6 lg:px-[30px]">
+      <PageHeading
+        title={supplier?.name ?? "Supplier"}
+        subtitle={supplier?.legalName ?? "Internal supplier record"}
+        actions={
+          <Button asChild type="button" variant="outline" tone="grey">
+            <Link href="/suppliers">Back to suppliers</Link>
+          </Button>
+        }
+      />
       {!live ? (
         <SectionCard title="Local data connection required">
           <p className="text-caption-1-regular text-fg-muted">
@@ -554,10 +558,6 @@ export function SupplierDetailContent({
       ) : null}
       {supplier ? (
         <>
-          <PageHeading
-            title={supplier.name}
-            subtitle={supplier.legalName ?? "Internal supplier record"}
-          />
           <SectionCard title="Supplier status">
             <div className="flex flex-wrap items-center gap-3">
               <Tag variant="dot" tone={criticalityTone(supplier.criticality)}>
@@ -696,6 +696,23 @@ export function SupplierDetailContent({
               />
             ) : null}
           </SectionCard>
+          {supplier.state === "active" ? (
+            <SupplierEvidenceRequestPanel
+              supplierId={supplier.id}
+              contacts={supplier.contacts}
+              ownerUserId={session?.user.id ?? null}
+              readEnabled={
+                enabled &&
+                permissions.can_view_products === true &&
+                permissions.can_view_evidence === true
+              }
+              disabled={
+                !canManage ||
+                permissions.can_view_products !== true ||
+                permissions.can_upload_evidence !== true
+              }
+            />
+          ) : null}
           {canManage && supplier.state === "active" ? (
             <SectionCard title="Archive supplier">
               <p className="text-caption-1-regular text-fg-muted">

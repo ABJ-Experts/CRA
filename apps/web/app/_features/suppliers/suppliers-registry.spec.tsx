@@ -52,11 +52,14 @@ describe("SuppliersRegistryContent", () => {
     process.env.NEXT_PUBLIC_ENABLE_MOCKS = previousMocks;
   });
 
-  it("renders operational supplier counts without offering management controls to a read-only user", () => {
+  it("uses the workspace registry hierarchy without offering management controls to a read-only user", () => {
     process.env.NEXT_PUBLIC_ENABLE_MOCKS = "false";
     render(<SuppliersRegistryContent />);
     expect(
-      screen.getByRole("heading", { name: "Supplier registry" }),
+      screen.getByRole("heading", { name: "Suppliers", level: 1 }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Supplier registry", level: 2 }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("link", { name: "Example Components" }),

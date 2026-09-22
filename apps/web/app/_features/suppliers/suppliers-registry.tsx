@@ -262,16 +262,27 @@ export function SuppliersRegistryContent() {
   const enabled = live && (session?.organizations.length ?? 0) > 0 && canView;
   const [search, setSearch] = useState("");
   const [includeArchived, setIncludeArchived] = useState(false);
+  const [showCreate, setShowCreate] = useState(false);
   const list = useSuppliersQuery(
     { search: search.trim() || undefined, includeArchived },
     enabled,
   );
 
   return (
-    <main className="mx-auto w-full max-w-[1440px] space-y-6 px-4 py-6 sm:px-6 lg:px-8">
+    <main className="flex flex-col gap-6 px-6 py-6 lg:px-[30px]">
       <PageHeading
-        title="Supplier registry"
+        title="Suppliers"
         subtitle="Internal supplier responsibility records. Supplier portal access and immutable SBOM evidence remain separate."
+        actions={
+          canManage ? (
+            <Button
+              type="button"
+              onClick={() => setShowCreate((value) => !value)}
+            >
+              {showCreate ? "Close form" : "Add supplier"}
+            </Button>
+          ) : undefined
+        }
       />
       {!live ? (
         <SectionCard title="Local data connection required">
@@ -296,7 +307,9 @@ export function SuppliersRegistryContent() {
       {enabled ? (
         <>
           {canManage ? (
-            <SupplierCreateForm onCreated={() => void list.refetch()} />
+            showCreate ? (
+              <SupplierCreateForm onCreated={() => void list.refetch()} />
+            ) : null
           ) : (
             <SectionCard title="Supplier access">
               <p className="text-caption-1-regular text-fg-muted">
@@ -305,35 +318,32 @@ export function SuppliersRegistryContent() {
               </p>
             </SectionCard>
           )}
-          <SectionCard title="Suppliers">
-            <div className="flex flex-wrap items-end justify-between gap-3">
-              <label className="min-w-[16rem] flex-1 text-caption-1-regular text-fg">
-                Search suppliers
-                <SearchInput
-                  value={search}
-                  onChange={(event) => setSearch(event.target.value)}
-                  placeholder="Name or legal name"
-                  className="mt-1"
-                />
-              </label>
+          <SectionCard title="Supplier registry">
+            <div className="mb-6 flex flex-col gap-3 border-b border-border pb-5 lg:flex-row lg:items-center lg:justify-between">
+              <SearchInput
+                aria-label="Search suppliers"
+                value={search}
+                onValueChange={setSearch}
+                placeholder="Search name or legal name"
+                clearable
+                wrapperClassName="max-w-xl"
+              />
               <Checkbox
                 checked={includeArchived}
                 onCheckedChange={(checked) =>
                   setIncludeArchived(checked === true)
                 }
-                label="Include archived"
+                label="Include archived suppliers"
+                wrapperClassName="shrink-0"
               />
             </div>
             {list.isLoading ? (
-              <p
-                role="status"
-                className="mt-4 text-caption-1-regular text-fg-muted"
-              >
+              <p role="status" className="text-caption-1-regular text-fg-muted">
                 Loading suppliers…
               </p>
             ) : null}
             {list.isError ? (
-              <div className="mt-4">
+              <div>
                 <p role="alert" className="text-caption-1-regular text-danger">
                   Supplier records are unavailable. No data has been changed.
                 </p>
@@ -350,13 +360,13 @@ export function SuppliersRegistryContent() {
             {!list.isLoading &&
             !list.isError &&
             list.data?.suppliers.items.length === 0 ? (
-              <p className="mt-4 text-caption-1-regular text-fg-muted">
+              <p className="text-caption-1-regular text-fg-muted">
                 No suppliers match this view. Add a supplier only after checking
                 likely duplicates.
               </p>
             ) : null}
             {list.data && list.data.suppliers.items.length > 0 ? (
-              <div className="mt-4 overflow-x-auto">
+              <div className="overflow-x-auto">
                 <table className="w-full min-w-[640px] border-separate border-spacing-0 text-left text-caption-1-regular">
                   <thead>
                     <tr className="text-fg-muted">

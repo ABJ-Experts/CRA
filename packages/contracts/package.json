@@ -91,6 +91,18 @@
       "types": "./dist/suppliers/types/index.d.ts",
       "default": "./dist/suppliers/types/index.js"
     },
+    "./supplier-evidence": {
+      "types": "./dist/supplier-evidence/index.d.ts",
+      "default": "./dist/supplier-evidence/index.js"
+    },
+    "./supplier-evidence/schemas": {
+      "types": "./dist/supplier-evidence/schemas/index.d.ts",
+      "default": "./dist/supplier-evidence/schemas/index.js"
+    },
+    "./supplier-evidence/types": {
+      "types": "./dist/supplier-evidence/types/index.d.ts",
+      "default": "./dist/supplier-evidence/types/index.js"
+    },
     "./risk-registers": {
       "types": "./dist/risk-registers/index.d.ts",
       "default": "./dist/risk-registers/index.js"

@@ -183,6 +183,31 @@ export class MailService {
   }
 
   /**
+   * Supplier evidence access is an opaque, one-time portal credential, never
+   * an organization membership invitation. The bearer sits in a URL fragment
+   * so reverse proxies and route logs never receive it.
+   */
+  async sendSupplierEvidenceInvitation(
+    to: string,
+    token: string,
+    idempotencyKey: string,
+  ): Promise<void> {
+    const url = `${this.appUrl}/supplier-evidence#${encodeURIComponent(token)}`;
+    await this.send(
+      to,
+      "Supplier evidence request",
+      this.layout(
+        "Evidence requested",
+        `<p style="color:#4b5058;font-size:14px">You have been asked to provide evidence through the CRA supplier portal.</p>
+         <p style="margin:24px 0"><a href="${url}" style="background:#4a50d6;color:#fff;padding:12px 20px;border-radius:8px;text-decoration:none;font-size:14px">Open evidence request</a></p>
+         <p style="color:#8a8f98;font-size:12px;word-break:break-all">${url}</p>`,
+      ),
+      true,
+      idempotencyKey,
+    );
+  }
+
+  /**
    * Compliance alerts are an outbox-owned effect. Unlike account mail, a
    * delivery failure must reach the worker so it can persist retry state.
    */

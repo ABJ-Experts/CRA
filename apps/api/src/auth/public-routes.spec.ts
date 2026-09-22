@@ -57,6 +57,14 @@ const ALLOWED_PUBLIC: Record<string, string> = {
     "A short-lived opaque supplier session bearer scopes this upload reservation to one invitation and component.",
   "POST supplier-sbom-portal/submissions/:sourceId/complete":
     "Continuation of the supplier direct-upload protocol; the opaque session is rechecked and bytes are inspected server-side.",
+  "POST supplier-evidence-portal/sessions":
+    "An evidence recipient has no CRA session; the invitation bearer is exchanged for a short-lived scoped session.",
+  "GET supplier-evidence-portal/request":
+    "The opaque supplier-evidence session is rechecked before revealing only the issued disclosure revision.",
+  "POST supplier-evidence-portal/submissions":
+    "A short-lived opaque supplier-evidence session scopes an upload reservation to one approved checklist item.",
+  "POST supplier-evidence-portal/submissions/:versionId/complete":
+    "Continuation of supplier evidence upload; private bytes are inspected before scan submission.",
   "POST auditor/redeem":
     "An auditor has no CRA session; the one-time opaque grant token is the only credential accepted here.",
   "GET auditor/snapshot":
