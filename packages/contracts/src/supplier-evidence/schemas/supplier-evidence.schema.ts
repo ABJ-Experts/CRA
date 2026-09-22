@@ -54,7 +54,49 @@ export const supplierEvidenceSubmissionStateSchema = z.enum([
   "uploading",
   "scan_pending",
   "submitted_pending_review",
+  "accepted",
   "rejected",
+  "re_requested",
+  "failed",
+  "cancelled",
+]);
+/** The supplier-visible result of the latest immutable review decision. */
+export const supplierEvidenceReviewDecisionSchema = z.enum([
+  "accepted",
+  "rejected",
+]);
+/** Review is independent of M8 scan/quarantine status. */
+export const supplierEvidenceSubmissionReviewStateSchema = z.enum([
+  "pending",
+  "accepted",
+  "rejected",
+  "re_requested",
+]);
+/** Current checklist-item state; this never replaces an immutable submission or review. */
+export const supplierEvidenceChecklistReviewStateSchema = z.enum([
+  "missing",
+  "pending_response",
+  "uploading",
+  "pending_processing",
+  "awaiting_review",
+  "accepted",
+  "rejected",
+  "re_requested",
+  "failed",
+]);
+/** Aggregate state is a projection of the current request revision only. */
+export const supplierEvidenceAggregateReviewStateSchema = z.enum([
+  "pending_response",
+  "partial_response",
+  "pending_processing",
+  "awaiting_review",
+  "accepted",
+  "rejected",
+  "re_requested",
+]);
+export const supplierEvidenceInvitationDeliveryStateSchema = z.enum([
+  "pending",
+  "delivered",
   "failed",
 ]);
 
@@ -66,6 +108,12 @@ export const supplierEvidenceRevisionParamsSchema = z
   .strict();
 export const supplierEvidencePortalSubmissionParamsSchema = z
   .object({ versionId: z.uuid() })
+  .strict();
+export const supplierEvidenceSubmissionParamsSchema = z
+  .object({ requestId: z.uuid(), submissionId: z.uuid() })
+  .strict();
+export const supplierEvidenceInvitationParamsSchema = z
+  .object({ requestId: z.uuid(), invitationId: z.uuid() })
   .strict();
 
 export const supplierEvidenceChecklistItemInputSchema = z
@@ -151,13 +199,86 @@ export const closeSupplierEvidenceRequestInputSchema = z
   })
   .strict();
 
+export const reviewSupplierEvidenceSubmissionInputSchema = z
+  .object({
+    expectedRequestVersion: z.number().int().nonnegative(),
+    expectedSubmissionUpdatedAt: timestamp,
+    expectedEvidenceVersionId: z.uuid(),
+    expectedSha256: sha256,
+    decision: z.enum(["accept", "reject"]),
+    supplierVisibleReason: safeText(500).optional(),
+    internalNote: safeText(2_000).optional(),
+    idempotencyKey: idempotencyKeySchema,
+  })
+  .strict()
+  .superRefine((value, context) => {
+    if (value.decision === "reject" && !value.supplierVisibleReason) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["supplierVisibleReason"],
+        message: "A supplier-visible rejection reason is required.",
+      });
+    }
+    if (value.decision === "accept" && value.supplierVisibleReason) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["supplierVisibleReason"],
+        message: "Supplier-visible reason is only allowed for rejection.",
+      });
+    }
+  });
+
+const reRequestChecklistItemSchema = supplierEvidenceChecklistItemInputSchema
+  .extend({ sourceRequestItemId: z.uuid() })
+  .strict();
+
+export const reRequestSupplierEvidenceRequestInputSchema = z
+  .object({
+    expectedVersion: z.number().int().nonnegative(),
+    dueAt: timestamp,
+    items: z.array(reRequestChecklistItemSchema).min(1).max(25),
+    idempotencyKey: idempotencyKeySchema,
+  })
+  .strict()
+  .superRefine((value, context) => {
+    const sourceIds = new Set<string>();
+    for (const [index, item] of value.items.entries()) {
+      if (sourceIds.has(item.sourceRequestItemId)) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["items", index, "sourceRequestItemId"],
+          message: "Each follow-up item must have a unique source item.",
+        });
+      }
+      sourceIds.add(item.sourceRequestItemId);
+    }
+  });
+
+export const markSupplierEvidenceInvitationDeliveryInputSchema = z
+  .object({
+    status: z.enum(["delivered", "failed"]),
+    failureMessage: safeText(1_000).optional(),
+    expectedRequestVersion: z.number().int().nonnegative(),
+    idempotencyKey: idempotencyKeySchema,
+  })
+  .strict()
+  .superRefine((value, context) => {
+    if (value.status === "failed" && !value.failureMessage) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["failureMessage"],
+        message: "A delivery failure message is required.",
+      });
+    }
+  });
+
 export const supplierEvidenceRequestListQuerySchema = z
   .object({
     productId: z.uuid().optional(),
     supplierId: z.uuid().optional(),
     state: supplierEvidenceRequestStateSchema.optional(),
     limit: z.coerce.number().int().min(1).max(100).default(25),
-    cursor: z.string().trim().min(1).max(512).optional(),
+    cursor: z.uuid().optional(),
   })
   .strict();
 
@@ -194,6 +315,75 @@ export const supplierEvidenceInvitationSchema = z
     issuedAt: timestamp,
     revokedAt: timestamp.nullable(),
     revisionId: z.uuid(),
+    deliveryState: supplierEvidenceInvitationDeliveryStateSchema,
+    deliveryAttemptCount: z.number().int().nonnegative(),
+    deliveryError: safeText(1_000).nullable(),
+    deliveryFailureMessage: safeText(1_000).nullable(),
+    deliveredAt: timestamp.nullable(),
+  })
+  .strict();
+
+export const supplierEvidenceSubmissionReviewSchema = z
+  .object({
+    id: z.uuid(),
+    submissionId: z.uuid(),
+    checklistItemId: z.uuid(),
+    decision: supplierEvidenceReviewDecisionSchema,
+    supplierVisibleReason: safeText(500).nullable(),
+    internalNote: safeText(2_000).nullable(),
+    reviewerUserId: z.uuid(),
+    reviewedByUserId: z.uuid(),
+    reviewedAt: timestamp,
+    createdAt: timestamp,
+    requestVersion: z.number().int().nonnegative(),
+    submissionUpdatedAt: timestamp,
+    evidenceDocumentId: z.uuid(),
+    evidenceVersionId: z.uuid(),
+    sha256,
+    evidenceSha256: sha256,
+  })
+  .strict();
+
+export const supplierEvidenceInternalSubmissionSchema = z
+  .object({
+    id: z.uuid(),
+    checklistItemId: z.uuid(),
+    revisionId: z.uuid(),
+    state: supplierEvidenceSubmissionStateSchema,
+    fileName: safeEvidenceFileNameSchema,
+    mediaType: supplierEvidenceUploadMediaTypeSchema,
+    byteSize: z.number().int().nonnegative().max(EVIDENCE_MAX_UPLOAD_BYTES),
+    sha256,
+    evidenceDocumentId: z.uuid(),
+    evidenceVersionId: z.uuid(),
+    evidenceProcessingState: z.enum([
+      "uploading",
+      "scan_pending",
+      "clean",
+      "quarantined",
+      "failed",
+    ]),
+    processingState: z.enum([
+      "uploading",
+      "scan_pending",
+      "clean",
+      "quarantined",
+      "failed",
+    ]),
+    reviewState: supplierEvidenceSubmissionReviewStateSchema.nullable(),
+    rejectionReason: safeText(500).nullable(),
+    createdAt: timestamp,
+    updatedAt: timestamp,
+    reviews: z.array(supplierEvidenceSubmissionReviewSchema),
+  })
+  .strict();
+
+export const supplierEvidenceReviewItemSchema = supplierEvidenceChecklistItemSchema
+  .extend({
+    sourceRequestItemId: z.uuid().nullable(),
+    reRequestReason: safeText(500).nullable(),
+    state: supplierEvidenceChecklistReviewStateSchema,
+    submissions: z.array(supplierEvidenceInternalSubmissionSchema),
   })
   .strict();
 
@@ -208,6 +398,8 @@ export const supplierEvidenceRequestSummarySchema = z
     version: z.number().int().nonnegative(),
     currentRevision: supplierEvidenceRevisionSchema,
     activeInvitation: supplierEvidenceInvitationSchema.nullable(),
+    reviewState: supplierEvidenceAggregateReviewStateSchema,
+    aggregateReviewState: supplierEvidenceAggregateReviewStateSchema,
     createdAt: timestamp,
     updatedAt: timestamp,
   })
@@ -218,6 +410,16 @@ export const supplierEvidenceRequestDetailSchema =
     .extend({
       revisions: z.array(supplierEvidenceRevisionSchema),
       invitations: z.array(supplierEvidenceInvitationSchema),
+    })
+    .strict();
+
+/** Reviewer-only projection. It intentionally contains internal notes and immutable evidence provenance. */
+export const supplierEvidenceReviewRequestDetailSchema =
+  supplierEvidenceRequestDetailSchema
+    .extend({
+      submissions: z.array(supplierEvidenceInternalSubmissionSchema),
+      reviewItems: z.array(supplierEvidenceReviewItemSchema),
+      reviews: z.array(supplierEvidenceSubmissionReviewSchema),
     })
     .strict();
 
@@ -255,6 +457,10 @@ export const supplierEvidenceIssuedResponseSchema = z
   })
   .strict();
 
+export const supplierEvidenceReviewResponseSchema = z
+  .object({ request: supplierEvidenceReviewRequestDetailSchema })
+  .strict();
+
 export const supplierEvidencePortalSessionInputSchema = z
   .object({
     invitationToken: token,
@@ -276,6 +482,12 @@ export const supplierEvidencePortalSubmissionSchema = z
   })
   .strict();
 
+/** Supplier portal projection intentionally exposes only the safe re-request rationale. */
+export const supplierEvidencePortalChecklistItemSchema =
+  supplierEvidenceChecklistItemSchema
+    .extend({ reRequestReason: safeText(500).nullable() })
+    .strict();
+
 export const supplierEvidencePortalRequestSchema = z
   .object({
     requestReference: z.string().trim().min(8).max(120),
@@ -283,7 +495,7 @@ export const supplierEvidencePortalRequestSchema = z
     instructions: safeText(10_000).nullable(),
     disclosureContent: safeText(10_000).nullable(),
     dueAt: timestamp,
-    items: z.array(supplierEvidenceChecklistItemSchema),
+    items: z.array(supplierEvidencePortalChecklistItemSchema),
     submissions: z.array(supplierEvidencePortalSubmissionSchema),
   })
   .strict();

@@ -5,6 +5,7 @@ import {
   supplierEvidencePortalSubmissionSchema,
   supplierEvidencePreviewSchema,
   supplierEvidenceRequestDetailSchema,
+  supplierEvidenceReviewRequestDetailSchema,
   supplierEvidenceRequestsResponseSchema,
 } from "@repo/contracts/supplier-evidence";
 
@@ -102,6 +103,76 @@ export class SupabaseSupplierEvidenceRepository implements SupplierEvidenceRepos
       input,
     );
   }
+  async review(
+    organizationId: string,
+    input: Parameters<SupplierEvidenceRepository["review"]>[1],
+  ) {
+    return this.reviewRequest(
+      "review_supplier_evidence_submission_atomic",
+      {
+        p_organization_id: organizationId,
+        p_actor_user_id: input.actorId,
+        p_request_id: input.requestId,
+        p_submission_id: input.submissionId,
+        p_expected_request_version: input.expectedRequestVersion,
+        p_expected_submission_updated_at: input.expectedSubmissionUpdatedAt,
+        p_expected_evidence_version_id: input.expectedEvidenceVersionId,
+        p_expected_sha256: input.expectedSha256,
+        p_decision: input.decision === "accept" ? "accepted" : "rejected",
+        p_supplier_visible_reason: input.supplierVisibleReason ?? null,
+        p_internal_note: input.internalNote ?? null,
+        p_idempotency_key: input.idempotencyKey,
+      },
+      ["accepted", "rejected", "replayed"],
+    );
+  }
+  async reRequest(
+    organizationId: string,
+    input: Parameters<SupplierEvidenceRepository["reRequest"]>[1],
+  ) {
+    const row = await this.row("re_request_supplier_evidence_request_atomic", {
+      p_organization_id: organizationId,
+      p_actor_user_id: input.actorId,
+      p_request_id: input.requestId,
+      p_expected_version: input.expectedVersion,
+      p_follow_up_payload: {
+        dueAt: input.dueAt,
+        items: input.items,
+      },
+      p_token_hash: input.tokenHash,
+      p_expires_at: input.expiresAt,
+      p_idempotency_key: input.idempotencyKey,
+    });
+    this.raise(row);
+    if (row?.outcome !== "re_requested" && row?.outcome !== "replayed")
+      throw unavailable();
+    const value = record(row.result);
+    return Object.freeze({
+      outcome: string(row.outcome) as "re_requested" | "replayed",
+      request: supplierEvidenceRequestDetailSchema.parse(value.request),
+      invitation: supplierEvidenceInvitationSchema.parse(value.invitation),
+      recipientEmail: string(value.recipientEmail),
+    });
+  }
+  async markInvitationDelivery(
+    organizationId: string,
+    input: Parameters<SupplierEvidenceRepository["markInvitationDelivery"]>[1],
+  ) {
+    return this.request(
+      "mark_supplier_evidence_invitation_delivery_atomic",
+      {
+        p_organization_id: organizationId,
+        p_actor_user_id: input.actorId,
+        p_request_id: input.requestId,
+        p_invitation_id: input.invitationId,
+        p_expected_request_version: input.expectedRequestVersion,
+        p_delivery_state: input.status,
+        p_delivery_error: input.failureMessage ?? null,
+        p_idempotency_key: input.idempotencyKey,
+      },
+      ["delivered", "failed", "replayed"],
+    );
+  }
   async revoke(
     organizationId: string,
     input: Parameters<SupplierEvidenceRepository["revoke"]>[1],
@@ -139,10 +210,12 @@ export class SupabaseSupplierEvidenceRepository implements SupplierEvidenceRepos
     organizationId: string,
     input: Parameters<SupplierEvidenceRepository["list"]>[1],
   ) {
-    const row = await this.row("list_supplier_evidence_requests_atomic", {
+    const row = await this.row("list_supplier_evidence_requests_filtered_atomic", {
       p_organization_id: organizationId,
       p_actor_user_id: input.actorId,
+      p_product_id: input.productId ?? null,
       p_supplier_id: input.supplierId ?? null,
+      p_state: input.state ?? null,
       p_limit: input.limit,
       p_cursor: input.cursor ?? null,
     });
@@ -167,6 +240,20 @@ export class SupabaseSupplierEvidenceRepository implements SupplierEvidenceRepos
     if (row?.outcome === "not_found") return null;
     if (row?.outcome !== "found") throw unavailable();
     return supplierEvidenceRequestDetailSchema.parse(row.result);
+  }
+  async reviewDetail(
+    organizationId: string,
+    input: Parameters<SupplierEvidenceRepository["reviewDetail"]>[1],
+  ) {
+    const row = await this.row("get_supplier_evidence_request_review_atomic", {
+      p_organization_id: organizationId,
+      p_actor_user_id: input.actorId,
+      p_request_id: input.requestId,
+    });
+    this.raise(row);
+    if (row?.outcome === "not_found") return null;
+    if (row?.outcome !== "found") throw unavailable();
+    return supplierEvidenceReviewRequestDetailSchema.parse(row.result);
   }
   async redeem(input: Parameters<SupplierEvidenceRepository["redeem"]>[0]) {
     const row = await this.row("redeem_supplier_evidence_invitation_atomic", {
@@ -293,6 +380,18 @@ export class SupabaseSupplierEvidenceRepository implements SupplierEvidenceRepos
     this.raise(row);
     if (!row || !success.includes(string(row.outcome))) throw unavailable();
     return supplierEvidenceRequestDetailSchema.parse(row.result);
+  }
+  private async reviewRequest(
+    name: string,
+    args: Record<string, unknown>,
+    success: readonly string[],
+  ) {
+    const row = await this.row(name, args);
+    this.raise(row);
+    if (!row || !success.includes(string(row.outcome))) throw unavailable();
+    return supplierEvidenceReviewRequestDetailSchema.parse(
+      record(row.result).request,
+    );
   }
   private async row(
     name: string,

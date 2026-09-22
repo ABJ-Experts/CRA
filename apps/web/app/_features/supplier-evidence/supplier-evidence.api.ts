@@ -5,7 +5,9 @@ import {
   initializeSupplierEvidencePortalUploadInputSchema,
   issueSupplierEvidenceRequestInputSchema,
   previewSupplierEvidenceRequestInputSchema,
+  reRequestSupplierEvidenceRequestInputSchema,
   reissueSupplierEvidenceRequestInputSchema,
+  reviewSupplierEvidenceSubmissionInputSchema,
   revokeSupplierEvidenceRequestInputSchema,
   reviseSupplierEvidenceRequestInputSchema,
   supplierEvidenceIssuedResponseSchema,
@@ -19,13 +21,17 @@ import {
   supplierEvidenceRequestParamsSchema,
   supplierEvidenceRequestResponseSchema,
   supplierEvidenceRequestsResponseSchema,
+  supplierEvidenceReviewResponseSchema,
+  supplierEvidenceSubmissionParamsSchema,
   type CloseSupplierEvidenceRequestInput,
   type CompleteSupplierEvidencePortalUploadInput,
   type CreateSupplierEvidenceRequestInput,
   type InitializeSupplierEvidencePortalUploadInput,
   type IssueSupplierEvidenceRequestInput,
   type PreviewSupplierEvidenceRequestInput,
+  type ReRequestSupplierEvidenceRequestInput,
   type ReissueSupplierEvidenceRequestInput,
+  type ReviewSupplierEvidenceSubmissionInput,
   type RevokeSupplierEvidenceRequestInput,
   type ReviseSupplierEvidenceRequestInput,
   type SupplierEvidencePortalSessionInput,
@@ -59,6 +65,24 @@ function portalSubmissionPath(versionId: string, suffix = ""): `/${string}` {
   return `/api/v1/supplier-evidence-portal/submissions/${parsed.data.versionId}${suffix}`;
 }
 
+function submissionPath(
+  requestId: string,
+  submissionId: string,
+  suffix = "",
+): `/${string}` {
+  const parsed = supplierEvidenceSubmissionParamsSchema.safeParse({
+    requestId,
+    submissionId,
+  });
+  if (!parsed.success)
+    throw new ApiClientError(
+      "invalid_request",
+      "The evidence submission identifier is invalid.",
+      400,
+    );
+  return `/api/v1/supplier-evidence-requests/${parsed.data.requestId}/submissions/${parsed.data.submissionId}${suffix}`;
+}
+
 /** Typed feature-local boundary for internal request management and public portal calls. */
 export class SupplierEvidenceApi {
   list(signal?: AbortSignal) {
@@ -73,6 +97,14 @@ export class SupplierEvidenceApi {
     return authenticatedRequestJson({
       path: requestPath(requestId),
       schema: supplierEvidenceRequestResponseSchema,
+      signal,
+    });
+  }
+
+  reviewDetail(requestId: string, signal?: AbortSignal) {
+    return authenticatedRequestJson({
+      path: requestPath(requestId, "/review"),
+      schema: supplierEvidenceReviewResponseSchema,
       signal,
     });
   }
@@ -144,6 +176,30 @@ export class SupplierEvidenceApi {
       body: input,
       inputSchema: closeSupplierEvidenceRequestInputSchema,
       schema: supplierEvidenceRequestResponseSchema,
+    });
+  }
+
+  reviewSubmission(
+    requestId: string,
+    submissionId: string,
+    input: ReviewSupplierEvidenceSubmissionInput,
+  ) {
+    return authenticatedRequestJson({
+      path: submissionPath(requestId, submissionId, "/review"),
+      method: "POST",
+      body: input,
+      inputSchema: reviewSupplierEvidenceSubmissionInputSchema,
+      schema: supplierEvidenceReviewResponseSchema,
+    });
+  }
+
+  reRequest(requestId: string, input: ReRequestSupplierEvidenceRequestInput) {
+    return authenticatedRequestJson({
+      path: requestPath(requestId, "/re-request"),
+      method: "POST",
+      body: input,
+      inputSchema: reRequestSupplierEvidenceRequestInputSchema,
+      schema: supplierEvidenceIssuedResponseSchema,
     });
   }
 

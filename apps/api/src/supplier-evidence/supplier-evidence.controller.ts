@@ -13,6 +13,7 @@ import {
   Query,
   ServiceUnavailableException,
 } from "@nestjs/common";
+import { createHash } from "node:crypto";
 import { Throttle } from "@nestjs/throttler";
 import {
   closeSupplierEvidenceRequestInputSchema,
@@ -20,8 +21,10 @@ import {
   createSupplierEvidenceRequestInputSchema,
   initializeSupplierEvidencePortalUploadInputSchema,
   issueSupplierEvidenceRequestInputSchema,
+  reRequestSupplierEvidenceRequestInputSchema,
   previewSupplierEvidenceRequestInputSchema,
   reissueSupplierEvidenceRequestInputSchema,
+  reviewSupplierEvidenceSubmissionInputSchema,
   revokeSupplierEvidenceRequestInputSchema,
   reviseSupplierEvidenceRequestInputSchema,
   supplierEvidenceIssuedResponseSchema,
@@ -36,19 +39,26 @@ import {
   supplierEvidenceRequestParamsSchema,
   supplierEvidenceRequestResponseSchema,
   supplierEvidenceRequestsResponseSchema,
+  supplierEvidenceReviewResponseSchema,
+  supplierEvidenceSubmissionParamsSchema,
   type CloseSupplierEvidenceRequestInput,
   type CompleteSupplierEvidencePortalUploadInput,
   type CreateSupplierEvidenceRequestInput,
   type InitializeSupplierEvidencePortalUploadInput,
   type IssueSupplierEvidenceRequestInput,
   type PreviewSupplierEvidenceRequestInput,
+  type ReRequestSupplierEvidenceRequestInput,
   type ReissueSupplierEvidenceRequestInput,
+  type ReviewSupplierEvidenceSubmissionInput,
   type RevokeSupplierEvidenceRequestInput,
   type ReviseSupplierEvidenceRequestInput,
   type SupplierEvidencePortalSessionInput,
   type SupplierEvidencePortalSubmissionParams,
+  type SupplierEvidenceInvitation,
+  type SupplierEvidenceRequestDetail,
   type SupplierEvidenceRequestListQuery,
   type SupplierEvidenceRequestParams,
+  type SupplierEvidenceSubmissionParams,
 } from "@repo/contracts/supplier-evidence";
 
 import {
@@ -216,16 +226,13 @@ export class SupplierEvidenceRequestsController {
         requestId: params.requestId,
         ...input,
       });
-      if (issued.outcome !== "replayed") {
-        if (!issued.invitationToken)
-          throw new Error("Missing invitation bearer");
-        await this.mail.sendSupplierEvidenceInvitation(
-          issued.recipientEmail,
-          issued.invitationToken,
-          input.idempotencyKey,
-        );
-      }
-      return { request: issued.request, invitation: issued.invitation };
+      const delivery = await this.deliverInvitation(
+        user,
+        params.requestId,
+        issued,
+        input.idempotencyKey,
+      );
+      return { request: delivery.request, invitation: issued.invitation };
     } catch (error) {
       throw internalFailure(error);
     }
@@ -251,16 +258,100 @@ export class SupplierEvidenceRequestsController {
         requestId: params.requestId,
         ...input,
       });
-      if (issued.outcome !== "replayed") {
-        if (!issued.invitationToken)
-          throw new Error("Missing invitation bearer");
-        await this.mail.sendSupplierEvidenceInvitation(
-          issued.recipientEmail,
-          issued.invitationToken,
-          input.idempotencyKey,
-        );
-      }
-      return { request: issued.request, invitation: issued.invitation };
+      const delivery = await this.deliverInvitation(
+        user,
+        params.requestId,
+        issued,
+        input.idempotencyKey,
+      );
+      return { request: delivery.request, invitation: issued.invitation };
+    } catch (error) {
+      throw internalFailure(error);
+    }
+  }
+
+  @Post(":requestId/submissions/:submissionId/review")
+  @RequirePermissions(
+    "can_view_suppliers",
+    "can_view_products",
+    "can_view_evidence",
+    "can_review_evidence",
+  )
+  @ZodResponse(supplierEvidenceReviewResponseSchema)
+  async review(
+    @Param(zodParams(supplierEvidenceSubmissionParamsSchema))
+    params: SupplierEvidenceSubmissionParams,
+    @Body(zodBody(reviewSupplierEvidenceSubmissionInputSchema))
+    input: ReviewSupplierEvidenceSubmissionInput,
+    @CurrentUser() user: RequestUser,
+  ) {
+    try {
+      return {
+        request: await this.evidence.review(org(user), {
+          actorId: user.id,
+          requestId: params.requestId,
+          submissionId: params.submissionId,
+          ...input,
+        }),
+      };
+    } catch (error) {
+      throw internalFailure(error);
+    }
+  }
+
+  @Get(":requestId/review")
+  @RequirePermissions(
+    "can_view_suppliers",
+    "can_view_products",
+    "can_view_evidence",
+    "can_review_evidence",
+  )
+  @ZodResponse(supplierEvidenceReviewResponseSchema)
+  async reviewDetail(
+    @Param(zodParams(supplierEvidenceRequestParamsSchema))
+    params: SupplierEvidenceRequestParams,
+    @CurrentUser() user: RequestUser,
+  ) {
+    try {
+      const request = await this.evidence.reviewDetail(org(user), {
+        actorId: user.id,
+        requestId: params.requestId,
+      });
+      if (request) return { request };
+    } catch (error) {
+      throw internalFailure(error);
+    }
+    throw notFound();
+  }
+
+  @Post(":requestId/re-request")
+  @RequirePermissions(
+    "can_view_suppliers",
+    "can_view_products",
+    "can_view_evidence",
+    "can_review_evidence",
+  )
+  @ZodResponse(supplierEvidenceIssuedResponseSchema)
+  async reRequest(
+    @Param(zodParams(supplierEvidenceRequestParamsSchema))
+    params: SupplierEvidenceRequestParams,
+    @Body(zodBody(reRequestSupplierEvidenceRequestInputSchema))
+    input: ReRequestSupplierEvidenceRequestInput,
+    @CurrentUser() user: RequestUser,
+  ) {
+    try {
+      const requested = await this.evidence.reRequest(org(user), {
+        actorId: user.id,
+        requestId: params.requestId,
+        ...input,
+      });
+      const delivery = await this.deliverInvitation(
+        user,
+        params.requestId,
+        requested,
+        input.idempotencyKey,
+      );
+      return { request: delivery.request, invitation: requested.invitation };
     } catch (error) {
       throw internalFailure(error);
     }
@@ -319,6 +410,74 @@ export class SupplierEvidenceRequestsController {
       throw internalFailure(error);
     }
   }
+
+  private async deliverInvitation(
+    user: RequestUser,
+    requestId: string,
+    issued: Readonly<{
+      outcome: "issued" | "reissued" | "re_requested" | "replayed";
+      request: SupplierEvidenceRequestDetail;
+      invitation: SupplierEvidenceInvitation;
+      recipientEmail: string;
+      invitationToken?: string;
+    }>,
+    idempotencyKey: string,
+  ): Promise<Readonly<{ request: SupplierEvidenceRequestDetail }>> {
+    if (issued.outcome === "replayed") return { request: issued.request };
+    if (!issued.invitationToken) throw new Error("Missing invitation bearer");
+    try {
+      await this.mail.sendSupplierEvidenceInvitation(
+        issued.recipientEmail,
+        issued.invitationToken,
+        idempotencyKey,
+      );
+    } catch (error) {
+      try {
+        const request = await this.evidence.markInvitationDelivery(org(user), {
+          actorId: user.id,
+          requestId,
+          invitationId: issued.invitation.id,
+          status: "failed",
+          failureMessage: "Delivery could not be completed. Issue a replacement invitation.",
+          expectedRequestVersion: issued.request.version,
+          idempotencyKey: deliveryIdempotencyKey(
+            idempotencyKey,
+            issued.invitation.id,
+            "failed",
+          ),
+        });
+        return { request };
+      } catch {
+        // The original mail failure is more actionable at this boundary; the
+        // durable transition is retried through the replacement-invitation flow.
+        throw error;
+      }
+    }
+    const request = await this.evidence.markInvitationDelivery(org(user), {
+      actorId: user.id,
+      requestId,
+      invitationId: issued.invitation.id,
+      status: "delivered",
+      expectedRequestVersion: issued.request.version,
+      idempotencyKey: deliveryIdempotencyKey(
+        idempotencyKey,
+        issued.invitation.id,
+        "delivered",
+      ),
+    });
+    return { request };
+  }
+}
+
+function deliveryIdempotencyKey(
+  requestIdempotencyKey: string,
+  invitationId: string,
+  status: "delivered" | "failed",
+): string {
+  const value = createHash("sha256")
+    .update(`${requestIdempotencyKey}:${invitationId}:${status}`)
+    .digest("hex");
+  return `${value.slice(0, 8)}-${value.slice(8, 12)}-4${value.slice(13, 16)}-8${value.slice(17, 20)}-${value.slice(20, 32)}`;
 }
 
 /** No authenticated CRA identity is read at this boundary; the opaque external session is revalidated for every request. */

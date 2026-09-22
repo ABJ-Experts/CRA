@@ -10902,6 +10902,10 @@ export type Database = {
         Row: {
           created_at: string
           created_by_user_id: string
+          delivered_at: string | null
+          delivery_attempt_count: number
+          delivery_error: string | null
+          delivery_state: string
           expires_at: string
           id: string
           organization_id: string
@@ -10919,6 +10923,10 @@ export type Database = {
         Insert: {
           created_at?: string
           created_by_user_id: string
+          delivered_at?: string | null
+          delivery_attempt_count?: number
+          delivery_error?: string | null
+          delivery_state?: string
           expires_at: string
           id?: string
           organization_id: string
@@ -10936,6 +10944,10 @@ export type Database = {
         Update: {
           created_at?: string
           created_by_user_id?: string
+          delivered_at?: string | null
+          delivery_attempt_count?: number
+          delivery_error?: string | null
+          delivery_state?: string
           expires_at?: string
           id?: string
           organization_id?: string
@@ -11044,8 +11056,10 @@ export type Database = {
           instructions: string | null
           ordinal: number
           organization_id: string
+          re_request_reason: string | null
           required: boolean
           revision_id: string
+          source_request_item_id: string | null
           title: string
         }
         Insert: {
@@ -11055,8 +11069,10 @@ export type Database = {
           instructions?: string | null
           ordinal: number
           organization_id: string
+          re_request_reason?: string | null
           required?: boolean
           revision_id: string
+          source_request_item_id?: string | null
           title: string
         }
         Update: {
@@ -11066,8 +11082,10 @@ export type Database = {
           instructions?: string | null
           ordinal?: number
           organization_id?: string
+          re_request_reason?: string | null
           required?: boolean
           revision_id?: string
+          source_request_item_id?: string | null
           title?: string
         }
         Relationships: [
@@ -11084,6 +11102,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_evidence_request_items_source_fk"
+            columns: ["organization_id", "source_request_item_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_evidence_request_items"
+            referencedColumns: ["organization_id", "id"]
           },
         ]
       }
@@ -11165,6 +11190,7 @@ export type Database = {
           recipient_contact_id: string
           recipient_email: string
           recipient_name: string
+          review_state: string
           state: string
           supplier_id: string
           updated_at: string
@@ -11183,6 +11209,7 @@ export type Database = {
           recipient_contact_id: string
           recipient_email: string
           recipient_name: string
+          review_state?: string
           state?: string
           supplier_id: string
           updated_at?: string
@@ -11201,6 +11228,7 @@ export type Database = {
           recipient_contact_id?: string
           recipient_email?: string
           recipient_name?: string
+          review_state?: string
           state?: string
           supplier_id?: string
           updated_at?: string
@@ -11269,6 +11297,116 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "supplier_organizations"
             referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      supplier_evidence_submission_reviews: {
+        Row: {
+          created_at: string
+          decision: string
+          evidence_document_id: string
+          evidence_sha256: string
+          evidence_version_id: string
+          id: string
+          idempotency_key: string
+          internal_note: string | null
+          organization_id: string
+          request_digest: string
+          request_id: string
+          request_item_id: string
+          request_version: number
+          reviewer_user_id: string
+          submission_id: string
+          submission_updated_at: string
+          supplier_visible_reason: string | null
+        }
+        Insert: {
+          created_at?: string
+          decision: string
+          evidence_document_id: string
+          evidence_sha256: string
+          evidence_version_id: string
+          id?: string
+          idempotency_key: string
+          internal_note?: string | null
+          organization_id: string
+          request_digest: string
+          request_id: string
+          request_item_id: string
+          request_version: number
+          reviewer_user_id: string
+          submission_id: string
+          submission_updated_at: string
+          supplier_visible_reason?: string | null
+        }
+        Update: {
+          created_at?: string
+          decision?: string
+          evidence_document_id?: string
+          evidence_sha256?: string
+          evidence_version_id?: string
+          id?: string
+          idempotency_key?: string
+          internal_note?: string | null
+          organization_id?: string
+          request_digest?: string
+          request_id?: string
+          request_item_id?: string
+          request_version?: number
+          reviewer_user_id?: string
+          submission_id?: string
+          submission_updated_at?: string
+          supplier_visible_reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_evidence_submission__organization_id_evidence_doc_fkey"
+            columns: ["organization_id", "evidence_document_id"]
+            isOneToOne: false
+            referencedRelation: "evidence_documents"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "supplier_evidence_submission__organization_id_evidence_ver_fkey"
+            columns: ["organization_id", "evidence_version_id"]
+            isOneToOne: false
+            referencedRelation: "evidence_document_versions"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "supplier_evidence_submission__organization_id_request_item_fkey"
+            columns: ["organization_id", "request_item_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_evidence_request_items"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "supplier_evidence_submission__organization_id_submission_i_fkey"
+            columns: ["organization_id", "submission_id"]
+            isOneToOne: true
+            referencedRelation: "supplier_evidence_submissions"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "supplier_evidence_submission_re_organization_id_request_id_fkey"
+            columns: ["organization_id", "request_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_evidence_requests"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "supplier_evidence_submission_reviews_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_evidence_submission_reviews_reviewer_user_id_fkey"
+            columns: ["reviewer_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -21515,6 +21653,17 @@ export type Database = {
           result: Json
         }[]
       }
+      get_supplier_evidence_request_review_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_organization_id: string
+          p_request_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
       get_supplier_evidence_submission_upload_atomic: {
         Args: { p_session_token_hash: string; p_version_id: string }
         Returns: {
@@ -22419,6 +22568,21 @@ export type Database = {
           outcome: string
         }[]
       }
+      list_supplier_evidence_request_reviews_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_cursor?: string
+          p_limit?: number
+          p_organization_id: string
+          p_product_id?: string
+          p_state?: string
+          p_supplier_id?: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
       list_supplier_evidence_requests_atomic: {
         Args: {
           p_actor_user_id: string
@@ -22426,6 +22590,21 @@ export type Database = {
           p_limit: number
           p_organization_id: string
           p_supplier_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      list_supplier_evidence_requests_filtered_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_cursor?: string
+          p_limit?: number
+          p_organization_id: string
+          p_product_id?: string
+          p_state?: string
+          p_supplier_id?: string
         }
         Returns: {
           outcome: string
@@ -23935,6 +24114,46 @@ export type Database = {
         }
         Returns: Json
       }
+      m9_03_internal_can_review: {
+        Args: { p_actor_user_id: string; p_organization_id: string }
+        Returns: boolean
+      }
+      m9_03_refresh_request_review_state: {
+        Args: {
+          p_organization_id: string
+          p_preserve_rerequest?: boolean
+          p_request_id: string
+        }
+        Returns: string
+      }
+      m9_03_request_review_json: {
+        Args: { p_organization_id: string; p_request_id: string }
+        Returns: Json
+      }
+      m9_03_review_item_json: {
+        Args: { p_organization_id: string; p_request_item_id: string }
+        Returns: Json
+      }
+      m9_03_review_json: {
+        Args: {
+          p_include_internal?: boolean
+          p_organization_id: string
+          p_review_id: string
+        }
+        Returns: Json
+      }
+      m9_03_submission_json: {
+        Args: { p_organization_id: string; p_submission_id: string }
+        Returns: Json
+      }
+      m9_03_validate_follow_up_payload: {
+        Args: {
+          p_organization_id: string
+          p_payload: Json
+          p_request_id: string
+        }
+        Returns: Json
+      }
       m9_supplier_actor_can: {
         Args: {
           p_actor_user_id: string
@@ -23994,6 +24213,22 @@ export type Database = {
         Returns: {
           job: Json
           outcome: string
+        }[]
+      }
+      mark_supplier_evidence_invitation_delivery_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_delivery_error: string
+          p_delivery_state: string
+          p_expected_request_version: number
+          p_idempotency_key: string
+          p_invitation_id: string
+          p_organization_id: string
+          p_request_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
         }[]
       }
       mark_technical_file_section_source_material_change_atomic: {
@@ -24478,6 +24713,22 @@ export type Database = {
         Returns: {
           artifact: Json
           outcome: string
+        }[]
+      }
+      re_request_supplier_evidence_request_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_expected_version: number
+          p_expires_at: string
+          p_follow_up_payload: Json
+          p_idempotency_key: string
+          p_organization_id: string
+          p_request_id: string
+          p_token_hash: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
         }[]
       }
       reassess_product_substantial_modification_atomic: {
@@ -25860,6 +26111,26 @@ export type Database = {
         Returns: {
           assessment: Json
           outcome: string
+        }[]
+      }
+      review_supplier_evidence_submission_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_decision: string
+          p_expected_evidence_version_id: string
+          p_expected_request_version: number
+          p_expected_sha256: string
+          p_expected_submission_updated_at: string
+          p_idempotency_key: string
+          p_internal_note: string
+          p_organization_id: string
+          p_request_id: string
+          p_submission_id: string
+          p_supplier_visible_reason: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
         }[]
       }
       review_supplier_sbom_submission_atomic: {

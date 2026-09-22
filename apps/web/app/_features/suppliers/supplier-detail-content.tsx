@@ -706,6 +706,12 @@ export function SupplierDetailContent({
                 permissions.can_view_products === true &&
                 permissions.can_view_evidence === true
               }
+              canReview={
+                enabled &&
+                permissions.can_view_products === true &&
+                permissions.can_view_evidence === true &&
+                permissions.can_review_evidence === true
+              }
               disabled={
                 !canManage ||
                 permissions.can_view_products !== true ||

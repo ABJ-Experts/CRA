@@ -92,7 +92,10 @@ function SubmissionState({ state }: Readonly<{ state: string }>) {
     uploading: "Upload in progress",
     scan_pending: "Awaiting malware scan",
     submitted_pending_review: "Submitted for internal review",
+    accepted: "Accepted for authorized reuse eligibility",
     rejected: "Rejected",
+    re_requested: "Re-requested",
+    failed: "Processing failed",
   };
   return (
     <span className="text-caption-1-regular text-fg-muted">
@@ -125,7 +128,8 @@ function PortalRequest({
           !request.submissions.some(
             (submission) =>
               submission.checklistItemId === item.id &&
-              submission.state !== "rejected",
+              submission.state !== "rejected" &&
+              submission.state !== "re_requested",
           ),
       ),
     [request.items, request.submissions],
@@ -268,6 +272,14 @@ function PortalRequest({
                     {item.instructions}
                   </p>
                 ) : null}
+                {item.reRequestReason ? (
+                  <p
+                    role="status"
+                    className="mt-2 whitespace-pre-wrap text-caption-1-regular text-fg-muted"
+                  >
+                    Re-request reason: {item.reRequestReason}
+                  </p>
+                ) : null}
                 <div className="mt-2 grid gap-1">
                   {submissions.length === 0 ? (
                     <span className="text-caption-1-regular text-fg-muted">
@@ -312,7 +324,7 @@ function PortalRequest({
         {active.length === 0 ? (
           <div className="mt-3 grid gap-3">
             <p role="status" className="text-caption-1-regular text-fg-muted">
-              All assigned items have an active submission.
+              All assigned items have a submitted or accepted version.
             </p>
             {pending ? (
               <Button

@@ -277,12 +277,18 @@ describe("technical-file permissions", () => {
 });
 
 describe("evidence permissions", () => {
-  it("grants the planned evidence defaults without making manage implicit", () => {
+  it("grants review to administrators without making it implicit for uploaders", () => {
     for (const baseRole of ["owner", "admin"] as const) {
       expect(
         hasPermission(
           DEFAULT_PERMISSIONS_BY_ROLE[baseRole],
           "can_manage_evidence",
+        ),
+      ).toBe(true);
+      expect(
+        hasPermission(
+          DEFAULT_PERMISSIONS_BY_ROLE[baseRole],
+          "can_review_evidence",
         ),
       ).toBe(true);
     }
@@ -296,10 +302,16 @@ describe("evidence permissions", () => {
       hasPermission(DEFAULT_PERMISSIONS_BY_ROLE.member, "can_manage_evidence"),
     ).toBe(false);
     expect(
+      hasPermission(DEFAULT_PERMISSIONS_BY_ROLE.member, "can_review_evidence"),
+    ).toBe(false);
+    expect(
       hasPermission(DEFAULT_PERMISSIONS_BY_ROLE.viewer, "can_view_evidence"),
     ).toBe(true);
     expect(
       hasPermission(DEFAULT_PERMISSIONS_BY_ROLE.viewer, "can_upload_evidence"),
+    ).toBe(false);
+    expect(
+      hasPermission(DEFAULT_PERMISSIONS_BY_ROLE.viewer, "can_review_evidence"),
     ).toBe(false);
   });
 
@@ -323,6 +335,15 @@ describe("evidence permissions", () => {
         "can_manage_evidence",
       ),
     ).toBe(false);
+    expect(
+      hasPermission(
+        resolveEffectivePermissions({
+          baseRole: "member",
+          customRoles: [role({ permissions: { can_review_evidence: true } })],
+        }),
+        "can_review_evidence",
+      ),
+    ).toBe(true);
   });
 });
 

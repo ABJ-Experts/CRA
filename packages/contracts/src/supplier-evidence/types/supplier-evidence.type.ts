@@ -22,6 +22,15 @@ export type RevokeSupplierEvidenceRequestInput = z.output<
 export type CloseSupplierEvidenceRequestInput = z.output<
   typeof schemas.closeSupplierEvidenceRequestInputSchema
 >;
+export type ReviewSupplierEvidenceSubmissionInput = z.output<
+  typeof schemas.reviewSupplierEvidenceSubmissionInputSchema
+>;
+export type ReRequestSupplierEvidenceRequestInput = z.output<
+  typeof schemas.reRequestSupplierEvidenceRequestInputSchema
+>;
+export type MarkSupplierEvidenceInvitationDeliveryInput = z.output<
+  typeof schemas.markSupplierEvidenceInvitationDeliveryInputSchema
+>;
 export type SupplierEvidenceRequestParams = z.output<
   typeof schemas.supplierEvidenceRequestParamsSchema
 >;
@@ -31,11 +40,29 @@ export type SupplierEvidenceRevisionParams = z.output<
 export type SupplierEvidenceRequestListQuery = z.output<
   typeof schemas.supplierEvidenceRequestListQuerySchema
 >;
+export type SupplierEvidenceSubmissionParams = z.output<
+  typeof schemas.supplierEvidenceSubmissionParamsSchema
+>;
+export type SupplierEvidenceInvitationParams = z.output<
+  typeof schemas.supplierEvidenceInvitationParamsSchema
+>;
 export type SupplierEvidenceRequestDetail = z.output<
   typeof schemas.supplierEvidenceRequestDetailSchema
 >;
+export type SupplierEvidenceReviewRequestDetail = z.output<
+  typeof schemas.supplierEvidenceReviewRequestDetailSchema
+>;
 export type SupplierEvidenceRequestSummary = z.output<
   typeof schemas.supplierEvidenceRequestSummarySchema
+>;
+export type SupplierEvidenceInvitation = z.output<
+  typeof schemas.supplierEvidenceInvitationSchema
+>;
+export type SupplierEvidenceInternalSubmission = z.output<
+  typeof schemas.supplierEvidenceInternalSubmissionSchema
+>;
+export type SupplierEvidenceSubmissionReview = z.output<
+  typeof schemas.supplierEvidenceSubmissionReviewSchema
 >;
 export type SupplierEvidencePreview = z.output<
   typeof schemas.supplierEvidencePreviewSchema

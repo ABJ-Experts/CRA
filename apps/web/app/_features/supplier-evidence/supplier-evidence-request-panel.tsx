@@ -13,6 +13,7 @@ import {
 } from "@repo/contracts/supplier-evidence";
 import { Button } from "@repo/ui/button";
 import { Tag } from "@repo/ui/tag";
+import dynamic from "next/dynamic";
 import { useMemo, useState } from "react";
 
 import { ApiClientError } from "../../_lib/http/api-client";
@@ -23,6 +24,20 @@ import {
   useSupplierEvidenceRequestsQuery,
 } from "./supplier-evidence.queries";
 import { supplierEvidenceApi } from "./supplier-evidence.api";
+
+const SupplierEvidenceReviewPanel = dynamic(
+  () =>
+    import("./supplier-evidence-review-panel").then(
+      (module) => module.SupplierEvidenceReviewPanel,
+    ),
+  {
+    loading: () => (
+      <p role="status" className="mt-6 text-caption-1-regular text-fg-muted">
+        Loading supplier evidence review…
+      </p>
+    ),
+  },
+);
 
 type ItemDraft = Readonly<{
   key: string;
@@ -236,6 +251,21 @@ function IssuedRequestHistory({
             {request.currentRevision.items.length} requested item
             {request.currentRevision.items.length === 1 ? "" : "s"}
           </p>
+          {request.activeInvitation ? (
+            <p
+              role={
+                request.activeInvitation.deliveryState === "failed"
+                  ? "alert"
+                  : "status"
+              }
+              className="mt-1 text-fg-muted"
+            >
+              Invitation delivery: {request.activeInvitation.deliveryState}
+              {request.activeInvitation.deliveryFailureMessage
+                ? ` · ${request.activeInvitation.deliveryFailureMessage}`
+                : ""}
+            </p>
+          ) : null}
           <RequestActions request={request} onChanged={onChanged} />
         </li>
       ))}
@@ -249,6 +279,7 @@ export function SupplierEvidenceRequestPanel({
   contacts,
   ownerUserId,
   readEnabled,
+  canReview,
   disabled,
 }: Readonly<{
   supplierId: string;
@@ -260,6 +291,7 @@ export function SupplierEvidenceRequestPanel({
   }>[];
   ownerUserId: string | null;
   readEnabled: boolean;
+  canReview: boolean;
   disabled: boolean;
 }>) {
   const create = useCreateSupplierEvidenceRequestMutation();
@@ -675,6 +707,13 @@ export function SupplierEvidenceRequestPanel({
           )}
         </div>
       </div>
+      {canReview ? (
+        <SupplierEvidenceReviewPanel
+          requests={history}
+          canReview={canReview}
+          enabled={readEnabled}
+        />
+      ) : null}
     </SectionCard>
   );
 }

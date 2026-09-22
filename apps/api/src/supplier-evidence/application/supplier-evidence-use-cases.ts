@@ -4,12 +4,17 @@ import type {
   CreateSupplierEvidenceRequestInput,
   InitializeSupplierEvidencePortalUploadInput,
   IssueSupplierEvidenceRequestInput,
+  MarkSupplierEvidenceInvitationDeliveryInput,
   PreviewSupplierEvidenceRequestInput,
+  ReRequestSupplierEvidenceRequestInput,
   ReissueSupplierEvidenceRequestInput,
+  ReviewSupplierEvidenceSubmissionInput,
   RevokeSupplierEvidenceRequestInput,
   ReviseSupplierEvidenceRequestInput,
   SupplierEvidencePortalSession,
+  SupplierEvidenceInvitation,
   SupplierEvidenceRequestDetail,
+  SupplierEvidenceReviewRequestDetail,
   SupplierEvidenceRequestListQuery,
 } from "@repo/contracts/supplier-evidence";
 
@@ -79,7 +84,7 @@ export interface SupplierEvidenceRepository {
     Readonly<{
       outcome: "issued" | "reissued" | "replayed";
       request: SupplierEvidenceRequestDetail;
-      invitation: unknown;
+      invitation: SupplierEvidenceInvitation;
       recipientEmail: string;
     }>
   >;
@@ -98,10 +103,49 @@ export interface SupplierEvidenceRepository {
     Readonly<{
       outcome: "issued" | "reissued" | "replayed";
       request: SupplierEvidenceRequestDetail;
-      invitation: unknown;
+      invitation: SupplierEvidenceInvitation;
       recipientEmail: string;
     }>
   >;
+  review(
+    organizationId: string,
+    input: Readonly<
+      {
+        actorId: string;
+        requestId: string;
+        submissionId: string;
+      } & ReviewSupplierEvidenceSubmissionInput
+    >,
+  ): Promise<SupplierEvidenceReviewRequestDetail>;
+  reRequest(
+    organizationId: string,
+    input: Readonly<
+      {
+        actorId: string;
+        requestId: string;
+      } & ReRequestSupplierEvidenceRequestInput & {
+          tokenHash: string;
+          expiresAt: string;
+        }
+    >,
+  ): Promise<
+    Readonly<{
+      outcome: "re_requested" | "replayed";
+      request: SupplierEvidenceRequestDetail;
+      invitation: SupplierEvidenceInvitation;
+      recipientEmail: string;
+    }>
+  >;
+  markInvitationDelivery(
+    organizationId: string,
+    input: Readonly<
+      {
+        actorId: string;
+        requestId: string;
+        invitationId: string;
+      } & MarkSupplierEvidenceInvitationDeliveryInput
+    >,
+  ): Promise<SupplierEvidenceRequestDetail>;
   revoke(
     organizationId: string,
     input: Readonly<
@@ -125,6 +169,10 @@ export interface SupplierEvidenceRepository {
     organizationId: string,
     input: Readonly<{ actorId: string; requestId: string }>,
   ): Promise<SupplierEvidenceRequestDetail | null>;
+  reviewDetail(
+    organizationId: string,
+    input: Readonly<{ actorId: string; requestId: string }>,
+  ): Promise<SupplierEvidenceReviewRequestDetail | null>;
   redeem(
     input: Readonly<{
       invitationTokenHash: string;
@@ -214,6 +262,12 @@ export class SupplierEvidenceUseCases {
   ) {
     return this.repository.detail(organizationId, input);
   }
+  reviewDetail(
+    organizationId: string,
+    input: Readonly<{ actorId: string; requestId: string }>,
+  ) {
+    return this.repository.reviewDetail(organizationId, input);
+  }
 
   async issue(
     organizationId: string,
@@ -251,6 +305,50 @@ export class SupplierEvidenceUseCases {
       ...issued,
       ...(issued.outcome === "replayed" ? {} : { invitationToken }),
     });
+  }
+  review(
+    organizationId: string,
+    input: Readonly<
+      {
+        actorId: string;
+        requestId: string;
+        submissionId: string;
+      } & ReviewSupplierEvidenceSubmissionInput
+    >,
+  ) {
+    return this.repository.review(organizationId, input);
+  }
+  async reRequest(
+    organizationId: string,
+    input: Readonly<
+      {
+        actorId: string;
+        requestId: string;
+      } & ReRequestSupplierEvidenceRequestInput
+    >,
+  ) {
+    const invitationToken = secret();
+    const requested = await this.repository.reRequest(organizationId, {
+      ...input,
+      tokenHash: hash(invitationToken),
+      expiresAt: invitationExpiry(),
+    });
+    return Object.freeze({
+      ...requested,
+      ...(requested.outcome === "replayed" ? {} : { invitationToken }),
+    });
+  }
+  markInvitationDelivery(
+    organizationId: string,
+    input: Readonly<
+      {
+        actorId: string;
+        requestId: string;
+        invitationId: string;
+      } & MarkSupplierEvidenceInvitationDeliveryInput
+    >,
+  ) {
+    return this.repository.markInvitationDelivery(organizationId, input);
   }
   revoke(
     organizationId: string,

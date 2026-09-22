@@ -5,7 +5,9 @@ import type {
   CreateSupplierEvidenceRequestInput,
   IssueSupplierEvidenceRequestInput,
   PreviewSupplierEvidenceRequestInput,
+  ReRequestSupplierEvidenceRequestInput,
   ReissueSupplierEvidenceRequestInput,
+  ReviewSupplierEvidenceSubmissionInput,
   RevokeSupplierEvidenceRequestInput,
 } from "@repo/contracts/supplier-evidence";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -20,6 +22,10 @@ function useInvalidateRequests() {
     if (requestId)
       void client.invalidateQueries({
         queryKey: supplierEvidenceKeys.request(requestId),
+      });
+    if (requestId)
+      void client.invalidateQueries({
+        queryKey: supplierEvidenceKeys.reviewRequest(requestId),
       });
   };
 }
@@ -47,6 +53,25 @@ export function useSupplierEvidenceRequestQuery(
       if (!requestId)
         throw new Error("An evidence request identifier is required.");
       return supplierEvidenceApi.detail(requestId, signal);
+    },
+  });
+}
+
+/** Reviewer-only data remains separate from the ordinary request-detail cache. */
+export function useSupplierEvidenceReviewRequestQuery(
+  requestId: string | null,
+  enabled: boolean,
+) {
+  return useQuery({
+    queryKey: requestId
+      ? supplierEvidenceKeys.reviewRequest(requestId)
+      : supplierEvidenceKeys.requests,
+    enabled: enabled && requestId !== null,
+    retry: false,
+    queryFn: ({ signal }) => {
+      if (!requestId)
+        throw new Error("An evidence request identifier is required.");
+      return supplierEvidenceApi.reviewDetail(requestId, signal);
     },
   });
 }
@@ -94,6 +119,29 @@ export function useCloseSupplierEvidenceRequestMutation(requestId: string) {
   return useMutation({
     mutationFn: (input: CloseSupplierEvidenceRequestInput) =>
       supplierEvidenceApi.close(requestId, input),
+    onSuccess: () => invalidate(requestId),
+  });
+}
+
+export function useReviewSupplierEvidenceSubmissionMutation(requestId: string) {
+  const invalidate = useInvalidateRequests();
+  return useMutation({
+    mutationFn: ({
+      submissionId,
+      input,
+    }: Readonly<{
+      submissionId: string;
+      input: ReviewSupplierEvidenceSubmissionInput;
+    }>) => supplierEvidenceApi.reviewSubmission(requestId, submissionId, input),
+    onSuccess: () => invalidate(requestId),
+  });
+}
+
+export function useReRequestSupplierEvidenceRequestMutation(requestId: string) {
+  const invalidate = useInvalidateRequests();
+  return useMutation({
+    mutationFn: (input: ReRequestSupplierEvidenceRequestInput) =>
+      supplierEvidenceApi.reRequest(requestId, input),
     onSuccess: () => invalidate(requestId),
   });
 }

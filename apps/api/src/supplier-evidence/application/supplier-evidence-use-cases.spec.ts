@@ -1,4 +1,7 @@
-import type { SupplierEvidenceRequestDetail } from "@repo/contracts/supplier-evidence";
+import type {
+  SupplierEvidenceInvitation,
+  SupplierEvidenceRequestDetail,
+} from "@repo/contracts/supplier-evidence";
 import {
   type SupplierEvidenceRepository,
   type SupplierEvidenceStoragePort,
@@ -14,10 +17,14 @@ describe("SupplierEvidenceUseCases", () => {
     revise: jest.fn(),
     issue: jest.fn(),
     reissue: jest.fn(),
+    review: jest.fn(),
+    reRequest: jest.fn(),
+    markInvitationDelivery: jest.fn(),
     revoke: jest.fn(),
     close: jest.fn(),
     list: jest.fn(),
     detail: jest.fn(),
+    reviewDetail: jest.fn(),
     redeem: jest.fn(),
     portalRequest: jest.fn(),
     reserve: jest.fn(),
@@ -35,7 +42,7 @@ describe("SupplierEvidenceUseCases", () => {
     repository.issue.mockResolvedValue({
       outcome: "issued",
       request: {} as SupplierEvidenceRequestDetail,
-      invitation: {},
+      invitation: {} as SupplierEvidenceInvitation,
       recipientEmail: "supplier@example.test",
     });
     const useCases = new SupplierEvidenceUseCases(repository, storage);
@@ -61,7 +68,7 @@ describe("SupplierEvidenceUseCases", () => {
     repository.issue.mockResolvedValue({
       outcome: "replayed",
       request: {} as SupplierEvidenceRequestDetail,
-      invitation: {},
+      invitation: {} as SupplierEvidenceInvitation,
       recipientEmail: "supplier@example.test",
     });
     const useCases = new SupplierEvidenceUseCases(repository, storage);
@@ -78,6 +85,37 @@ describe("SupplierEvidenceUseCases", () => {
     );
     expect(result.outcome).toBe("replayed");
     expect(result.invitationToken).toBeUndefined();
+  });
+
+  it("hashes a fresh bearer for a re-request cycle without persisting it", async () => {
+    repository.reRequest.mockResolvedValue({
+      outcome: "re_requested",
+      request: {} as SupplierEvidenceRequestDetail,
+      invitation: {} as SupplierEvidenceInvitation,
+      recipientEmail: "supplier@example.test",
+    });
+    const useCases = new SupplierEvidenceUseCases(repository, storage);
+    const result = await useCases.reRequest(
+      "00000000-0000-4000-8000-0000000000ca",
+      {
+        actorId: requestId,
+        requestId,
+        expectedVersion: 3,
+        dueAt: "2026-10-01T10:00:00.000Z",
+        items: [
+          {
+            sourceRequestItemId: requestId,
+            title: "Current declaration",
+            documentClass: "supplier_attestation",
+          },
+        ],
+        idempotencyKey: "00000000-0000-4000-8000-000000000002",
+      },
+    );
+    const call = repository.reRequest.mock.calls.at(0);
+    expect(call?.[1].tokenHash).toMatch(/^[a-f0-9]{64}$/);
+    expect(result.invitationToken).toMatch(/^[A-Za-z0-9_-]+$/);
+    expect(JSON.stringify(call)).not.toContain(result.invitationToken ?? "");
   });
 
   it("inspects the private object before finalizing an external submission", async () => {
