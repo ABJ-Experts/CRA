@@ -99,6 +99,53 @@ export const supplierEvidenceInvitationDeliveryStateSchema = z.enum([
   "delivered",
   "failed",
 ]);
+/** Configured hours relative to a request revision's due timestamp. */
+export const SUPPLIER_EVIDENCE_REMINDER_MIN_OFFSET_HOURS = -720;
+export const SUPPLIER_EVIDENCE_REMINDER_MAX_OFFSET_HOURS = 720;
+export const SUPPLIER_EVIDENCE_REMINDER_MAX_OFFSETS = 3;
+
+export const supplierEvidenceReminderOffsetHoursSchema = z
+  .number()
+  .int()
+  .min(SUPPLIER_EVIDENCE_REMINDER_MIN_OFFSET_HOURS)
+  .max(SUPPLIER_EVIDENCE_REMINDER_MAX_OFFSET_HOURS)
+  .refine((value) => value !== 0, "Reminder offsets cannot be zero");
+
+const supplierEvidenceReminderOffsetsSchema = z
+  .array(supplierEvidenceReminderOffsetHoursSchema)
+  .min(1)
+  .max(SUPPLIER_EVIDENCE_REMINDER_MAX_OFFSETS)
+  .superRefine((offsets, context) => {
+    if (new Set(offsets).size !== offsets.length) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Reminder offsets must be unique",
+      });
+    }
+    if (!offsets.includes(24)) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Reminder cadence must include the 24-hour overdue milestone",
+      });
+    }
+  });
+
+export const supplierEvidenceReminderRecipientSchema = z.enum([
+  "supplier",
+  "owner",
+]);
+export const supplierEvidenceReminderKindSchema = z.enum([
+  "supplier_reminder",
+  "owner_escalation",
+]);
+export const supplierEvidenceReminderDeliveryStateSchema = z.enum([
+  "pending",
+  "processing",
+  "delivered",
+  "failed",
+  "cancelled",
+  "superseded",
+]);
 
 export const supplierEvidenceRequestParamsSchema = z
   .object({ requestId: z.uuid() })
@@ -114,6 +161,24 @@ export const supplierEvidenceSubmissionParamsSchema = z
   .strict();
 export const supplierEvidenceInvitationParamsSchema = z
   .object({ requestId: z.uuid(), invitationId: z.uuid() })
+  .strict();
+export const supplierEvidenceReminderDeliveryParamsSchema = z
+  .object({ requestId: z.uuid(), deliveryId: z.uuid() })
+  .strict();
+
+export const supplierEvidenceReminderSettingsInputSchema = z
+  .object({
+    expectedVersion: z.number().int().nonnegative(),
+    offsetsHours: supplierEvidenceReminderOffsetsSchema,
+    idempotencyKey: idempotencyKeySchema,
+  })
+  .strict();
+
+export const retrySupplierEvidenceReminderDeliveryInputSchema = z
+  .object({
+    expectedVersion: z.number().int().nonnegative(),
+    idempotencyKey: idempotencyKeySchema,
+  })
   .strict();
 
 export const supplierEvidenceChecklistItemInputSchema = z
@@ -282,6 +347,33 @@ export const supplierEvidenceRequestListQuerySchema = z
   })
   .strict();
 
+export const supplierEvidenceMetricsQuerySchema = z
+  .object({
+    from: timestamp,
+    to: timestamp,
+    productId: z.uuid().optional(),
+    supplierId: z.uuid().optional(),
+  })
+  .strict()
+  .superRefine((value, context) => {
+    if (Date.parse(value.from) >= Date.parse(value.to)) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["from"],
+        message: "Metrics window start must precede its end",
+      });
+    }
+  });
+
+export const supplierEvidenceOverdueListQuerySchema = z
+  .object({
+    productId: z.uuid().optional(),
+    supplierId: z.uuid().optional(),
+    limit: z.coerce.number().int().min(1).max(100).default(25),
+    cursor: z.string().trim().min(1).max(512).optional(),
+  })
+  .strict();
+
 export const supplierEvidenceChecklistItemSchema = z
   .object({
     id: z.uuid(),
@@ -320,6 +412,102 @@ export const supplierEvidenceInvitationSchema = z
     deliveryError: safeText(1_000).nullable(),
     deliveryFailureMessage: safeText(1_000).nullable(),
     deliveredAt: timestamp.nullable(),
+  })
+  .strict();
+
+export const supplierEvidenceReminderSettingsSchema = z
+  .object({
+    version: z.number().int().nonnegative(),
+    offsetsHours: supplierEvidenceReminderOffsetsSchema,
+  })
+  .strict();
+
+/** Internal-only delivery projection. It deliberately contains no raw bearer or recipient address. */
+export const supplierEvidenceReminderDeliverySchema = z
+  .object({
+    id: z.uuid(),
+    requestId: z.uuid(),
+    revisionId: z.uuid(),
+    dueAt: timestamp,
+    offsetHours: supplierEvidenceReminderOffsetHoursSchema,
+    recipient: supplierEvidenceReminderRecipientSchema,
+    kind: supplierEvidenceReminderKindSchema,
+    state: supplierEvidenceReminderDeliveryStateSchema,
+    attemptCount: z.number().int().nonnegative(),
+    nextAttemptAt: timestamp.nullable(),
+    leasedUntil: timestamp.nullable(),
+    failureMessage: safeText(1_000).nullable(),
+    invitationId: z.uuid().nullable(),
+    deliveredAt: timestamp.nullable(),
+    version: z.number().int().nonnegative(),
+    createdAt: timestamp,
+    updatedAt: timestamp,
+  })
+  .strict();
+
+const supplierEvidenceRateSchema = z
+  .object({
+    numerator: z.number().int().nonnegative(),
+    denominator: z.number().int().nonnegative(),
+    value: z.number().min(0).max(1).nullable(),
+  })
+  .strict()
+  .superRefine((value, context) => {
+    const mustBeUnavailable = value.denominator === 0;
+    if (mustBeUnavailable !== (value.value === null)) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["value"],
+        message: "A rate is unavailable exactly when its denominator is zero",
+      });
+    }
+    if (value.numerator > value.denominator) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["numerator"],
+        message: "A rate numerator cannot exceed its denominator",
+      });
+    }
+  });
+
+export const supplierEvidenceMetricsSummarySchema = z
+  .object({
+    from: timestamp,
+    to: timestamp,
+    outstandingCount: z.number().int().nonnegative(),
+    overdueCount: z.number().int().nonnegative(),
+    firstSubmissionResponseRate: supplierEvidenceRateSchema,
+    acceptedCompletionRate: supplierEvidenceRateSchema,
+    averageFirstSubmissionTurnaroundHours: z.number().nonnegative().nullable(),
+    turnaroundSampleCount: z.number().int().nonnegative(),
+  })
+  .strict()
+  .superRefine((value, context) => {
+    if (
+      (value.turnaroundSampleCount === 0) !==
+      (value.averageFirstSubmissionTurnaroundHours === null)
+    ) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["averageFirstSubmissionTurnaroundHours"],
+        message:
+          "Average turnaround is unavailable exactly when no turnaround samples exist",
+      });
+    }
+  });
+
+export const supplierEvidenceOverdueRowSchema = z
+  .object({
+    requestId: z.uuid(),
+    revisionId: z.uuid(),
+    supplierId: z.uuid(),
+    productId: z.uuid(),
+    requestTitle: safeText(160),
+    supplierDisplayName: safeText(200),
+    dueAt: timestamp,
+    daysOverdue: z.number().int().positive(),
+    state: supplierEvidenceAggregateReviewStateSchema,
+    latestDelivery: supplierEvidenceReminderDeliverySchema.nullable(),
   })
   .strict();
 
@@ -378,14 +566,15 @@ export const supplierEvidenceInternalSubmissionSchema = z
   })
   .strict();
 
-export const supplierEvidenceReviewItemSchema = supplierEvidenceChecklistItemSchema
-  .extend({
-    sourceRequestItemId: z.uuid().nullable(),
-    reRequestReason: safeText(500).nullable(),
-    state: supplierEvidenceChecklistReviewStateSchema,
-    submissions: z.array(supplierEvidenceInternalSubmissionSchema),
-  })
-  .strict();
+export const supplierEvidenceReviewItemSchema =
+  supplierEvidenceChecklistItemSchema
+    .extend({
+      sourceRequestItemId: z.uuid().nullable(),
+      reRequestReason: safeText(500).nullable(),
+      state: supplierEvidenceChecklistReviewStateSchema,
+      submissions: z.array(supplierEvidenceInternalSubmissionSchema),
+    })
+    .strict();
 
 export const supplierEvidenceRequestSummarySchema = z
   .object({
@@ -425,6 +614,21 @@ export const supplierEvidenceReviewRequestDetailSchema =
 
 export const supplierEvidenceRequestResponseSchema = z
   .object({ request: supplierEvidenceRequestDetailSchema })
+  .strict();
+export const supplierEvidenceReminderSettingsResponseSchema = z
+  .object({ settings: supplierEvidenceReminderSettingsSchema })
+  .strict();
+export const supplierEvidenceReminderDeliveryResponseSchema = z
+  .object({ delivery: supplierEvidenceReminderDeliverySchema })
+  .strict();
+export const supplierEvidenceMetricsResponseSchema = z
+  .object({ summary: supplierEvidenceMetricsSummarySchema })
+  .strict();
+export const supplierEvidenceOverdueListResponseSchema = z
+  .object({
+    overdue: z.array(supplierEvidenceOverdueRowSchema),
+    nextCursor: z.string().nullable(),
+  })
   .strict();
 export const supplierEvidenceRequestsResponseSchema = z
   .object({

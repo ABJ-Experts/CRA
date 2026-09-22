@@ -7,6 +7,7 @@ import {
   previewSupplierEvidenceRequestInputSchema,
   reRequestSupplierEvidenceRequestInputSchema,
   reissueSupplierEvidenceRequestInputSchema,
+  retrySupplierEvidenceReminderDeliveryInputSchema,
   reviewSupplierEvidenceSubmissionInputSchema,
   revokeSupplierEvidenceRequestInputSchema,
   reviseSupplierEvidenceRequestInputSchema,
@@ -18,6 +19,15 @@ import {
   supplierEvidencePortalUploadCompletionResponseSchema,
   supplierEvidencePortalUploadInitializationResponseSchema,
   supplierEvidencePreviewResponseSchema,
+  supplierEvidenceMetricsQuerySchema,
+  supplierEvidenceMetricsResponseSchema,
+  supplierEvidenceOverdueListQuerySchema,
+  supplierEvidenceOverdueListResponseSchema,
+  supplierEvidenceReminderDeliveryParamsSchema,
+  supplierEvidenceReminderDeliveryResponseSchema,
+  supplierEvidenceReminderSettingsInputSchema,
+  supplierEvidenceReminderSettingsResponseSchema,
+  supplierEvidenceRequestListQuerySchema,
   supplierEvidenceRequestParamsSchema,
   supplierEvidenceRequestResponseSchema,
   supplierEvidenceRequestsResponseSchema,
@@ -35,6 +45,11 @@ import {
   type RevokeSupplierEvidenceRequestInput,
   type ReviseSupplierEvidenceRequestInput,
   type SupplierEvidencePortalSessionInput,
+  type SupplierEvidenceMetricsQuery,
+  type SupplierEvidenceOverdueListQuery,
+  type SupplierEvidenceReminderSettingsInput,
+  type RetrySupplierEvidenceReminderDeliveryInput,
+  type SupplierEvidenceRequestListQuery,
 } from "@repo/contracts/supplier-evidence";
 
 import { authenticatedRequestJson } from "../../_lib/http/authenticated-request";
@@ -50,6 +65,56 @@ function requestPath(requestId?: string, suffix = ""): `/${string}` {
       400,
     );
   return `/api/v1/supplier-evidence-requests/${parsed.data.requestId}${suffix}`;
+}
+
+function requestListPath(
+  query: Partial<SupplierEvidenceRequestListQuery>,
+): `/${string}` {
+  const parsed = supplierEvidenceRequestListQuerySchema.safeParse(query);
+  if (!parsed.success)
+    throw new ApiClientError(
+      "invalid_request",
+      "The evidence request filters are invalid.",
+      400,
+    );
+  const search = new URLSearchParams();
+  if (parsed.data.productId) search.set("productId", parsed.data.productId);
+  if (parsed.data.supplierId) search.set("supplierId", parsed.data.supplierId);
+  if (parsed.data.state) search.set("state", parsed.data.state);
+  search.set("limit", String(parsed.data.limit));
+  if (parsed.data.cursor) search.set("cursor", parsed.data.cursor);
+  return `${requestPath()}?${search.toString()}`;
+}
+
+function queryPath(
+  path: `/${string}`,
+  values: Readonly<Record<string, string | number | undefined>>,
+): `/${string}` {
+  const search = new URLSearchParams();
+  for (const [key, value] of Object.entries(values)) {
+    if (value !== undefined) search.set(key, String(value));
+  }
+  return search.size === 0 ? path : `${path}?${search.toString()}`;
+}
+
+function reminderDeliveryPath(
+  requestId: string,
+  deliveryId: string,
+): `/${string}` {
+  const parsed = supplierEvidenceReminderDeliveryParamsSchema.safeParse({
+    requestId,
+    deliveryId,
+  });
+  if (!parsed.success)
+    throw new ApiClientError(
+      "invalid_request",
+      "The reminder delivery identifier is invalid.",
+      400,
+    );
+  return requestPath(
+    parsed.data.requestId,
+    `/reminder-deliveries/${parsed.data.deliveryId}/retry`,
+  );
 }
 
 function portalSubmissionPath(versionId: string, suffix = ""): `/${string}` {
@@ -85,9 +150,12 @@ function submissionPath(
 
 /** Typed feature-local boundary for internal request management and public portal calls. */
 export class SupplierEvidenceApi {
-  list(signal?: AbortSignal) {
+  list(
+    query: Partial<SupplierEvidenceRequestListQuery> = {},
+    signal?: AbortSignal,
+  ) {
     return authenticatedRequestJson({
-      path: requestPath(),
+      path: requestListPath(query),
       schema: supplierEvidenceRequestsResponseSchema,
       signal,
     });
@@ -106,6 +174,77 @@ export class SupplierEvidenceApi {
       path: requestPath(requestId, "/review"),
       schema: supplierEvidenceReviewResponseSchema,
       signal,
+    });
+  }
+
+  reminderSettings(signal?: AbortSignal) {
+    return authenticatedRequestJson({
+      path: "/api/v1/supplier-evidence-requests/reminder-settings",
+      schema: supplierEvidenceReminderSettingsResponseSchema,
+      signal,
+    });
+  }
+
+  updateReminderSettings(input: SupplierEvidenceReminderSettingsInput) {
+    return authenticatedRequestJson({
+      path: "/api/v1/supplier-evidence-requests/reminder-settings",
+      method: "PATCH",
+      body: input,
+      inputSchema: supplierEvidenceReminderSettingsInputSchema,
+      schema: supplierEvidenceReminderSettingsResponseSchema,
+    });
+  }
+
+  metrics(input: SupplierEvidenceMetricsQuery, signal?: AbortSignal) {
+    const parsed = supplierEvidenceMetricsQuerySchema.safeParse(input);
+    if (!parsed.success)
+      throw new ApiClientError(
+        "invalid_request",
+        "The supplier evidence metrics window is invalid.",
+        400,
+      );
+    return authenticatedRequestJson({
+      path: queryPath(
+        "/api/v1/supplier-evidence-requests/metrics",
+        parsed.data,
+      ),
+      schema: supplierEvidenceMetricsResponseSchema,
+      signal,
+    });
+  }
+
+  overdue(
+    query: Partial<SupplierEvidenceOverdueListQuery> = {},
+    signal?: AbortSignal,
+  ) {
+    const parsed = supplierEvidenceOverdueListQuerySchema.safeParse(query);
+    if (!parsed.success)
+      throw new ApiClientError(
+        "invalid_request",
+        "The supplier evidence overdue filters are invalid.",
+        400,
+      );
+    return authenticatedRequestJson({
+      path: queryPath(
+        "/api/v1/supplier-evidence-requests/overdue",
+        parsed.data,
+      ),
+      schema: supplierEvidenceOverdueListResponseSchema,
+      signal,
+    });
+  }
+
+  retryReminder(
+    requestId: string,
+    deliveryId: string,
+    input: RetrySupplierEvidenceReminderDeliveryInput,
+  ) {
+    return authenticatedRequestJson({
+      path: reminderDeliveryPath(requestId, deliveryId),
+      method: "POST",
+      body: input,
+      inputSchema: retrySupplierEvidenceReminderDeliveryInputSchema,
+      schema: supplierEvidenceReminderDeliveryResponseSchema,
     });
   }
 

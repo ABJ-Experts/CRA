@@ -4617,6 +4617,10 @@ export type Database = {
           notification_channel_ids: string[] | null
           organization_id: string
           product_relationship_graph_version: number
+          supplier_evidence_reminder_offsets_hours: number[]
+          supplier_evidence_reminders_updated_at: string
+          supplier_evidence_reminders_updated_by: string | null
+          supplier_evidence_reminders_version: number
           support_alert_intervals: number[]
           support_alert_intervals_updated_at: string
           support_alert_intervals_updated_by: string | null
@@ -4642,6 +4646,10 @@ export type Database = {
           notification_channel_ids?: string[] | null
           organization_id: string
           product_relationship_graph_version?: number
+          supplier_evidence_reminder_offsets_hours?: number[]
+          supplier_evidence_reminders_updated_at?: string
+          supplier_evidence_reminders_updated_by?: string | null
+          supplier_evidence_reminders_version?: number
           support_alert_intervals?: number[]
           support_alert_intervals_updated_at?: string
           support_alert_intervals_updated_by?: string | null
@@ -4667,6 +4675,10 @@ export type Database = {
           notification_channel_ids?: string[] | null
           organization_id?: string
           product_relationship_graph_version?: number
+          supplier_evidence_reminder_offsets_hours?: number[]
+          supplier_evidence_reminders_updated_at?: string
+          supplier_evidence_reminders_updated_by?: string | null
+          supplier_evidence_reminders_version?: number
           support_alert_intervals?: number[]
           support_alert_intervals_updated_at?: string
           support_alert_intervals_updated_by?: string | null
@@ -4690,6 +4702,13 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: true
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_settings_supplier_evidence_reminders_updated__fkey"
+            columns: ["supplier_evidence_reminders_updated_by"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
           {
@@ -10992,6 +11011,121 @@ export type Database = {
           {
             foreignKeyName: "supplier_evidence_invitations_revoked_by_user_id_fkey"
             columns: ["revoked_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      supplier_evidence_reminder_deliveries: {
+        Row: {
+          attempt_count: number
+          created_at: string
+          due_at_snapshot: string
+          event_kind: string
+          id: string
+          invitation_id: string | null
+          last_error: string | null
+          lease_expires_at: string | null
+          lease_owner: string | null
+          next_attempt_at: string
+          offset_hours: number
+          organization_id: string
+          owner_user_id: string | null
+          recipient_kind: string
+          request_id: string
+          revision_id: string
+          scheduled_for: string
+          sent_at: string | null
+          state: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          attempt_count?: number
+          created_at?: string
+          due_at_snapshot: string
+          event_kind: string
+          id?: string
+          invitation_id?: string | null
+          last_error?: string | null
+          lease_expires_at?: string | null
+          lease_owner?: string | null
+          next_attempt_at?: string
+          offset_hours: number
+          organization_id: string
+          owner_user_id?: string | null
+          recipient_kind: string
+          request_id: string
+          revision_id: string
+          scheduled_for: string
+          sent_at?: string | null
+          state?: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          attempt_count?: number
+          created_at?: string
+          due_at_snapshot?: string
+          event_kind?: string
+          id?: string
+          invitation_id?: string | null
+          last_error?: string | null
+          lease_expires_at?: string | null
+          lease_owner?: string | null
+          next_attempt_at?: string
+          offset_hours?: number
+          organization_id?: string
+          owner_user_id?: string | null
+          recipient_kind?: string
+          request_id?: string
+          revision_id?: string
+          scheduled_for?: string
+          sent_at?: string | null
+          state?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_evidence_reminder_de_organization_id_invitation_i_fkey"
+            columns: ["organization_id", "invitation_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_evidence_invitations"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "supplier_evidence_reminder_de_organization_id_owner_user_i_fkey"
+            columns: ["organization_id", "owner_user_id"]
+            isOneToOne: false
+            referencedRelation: "organization_members"
+            referencedColumns: ["organization_id", "user_id"]
+          },
+          {
+            foreignKeyName: "supplier_evidence_reminder_del_organization_id_revision_id_fkey"
+            columns: ["organization_id", "revision_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_evidence_request_revisions"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "supplier_evidence_reminder_deli_organization_id_request_id_fkey"
+            columns: ["organization_id", "request_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_evidence_requests"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "supplier_evidence_reminder_deliveries_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_evidence_reminder_deliveries_owner_user_id_fkey"
+            columns: ["owner_user_id"]
             isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
@@ -18626,6 +18760,14 @@ export type Database = {
           work: Json
         }[]
       }
+      claim_supplier_evidence_reminder_delivery_atomic: {
+        Args: {
+          p_lease_seconds: number
+          p_organization_id: string
+          p_worker_id: string
+        }
+        Returns: Json
+      }
       claim_sync_run: {
         Args: {
           p_lease_seconds: number
@@ -19062,6 +19204,16 @@ export type Database = {
           artifact: Json
           outcome: string
         }[]
+      }
+      complete_supplier_evidence_reminder_delivery_atomic: {
+        Args: {
+          p_delivery_id: string
+          p_error?: string
+          p_organization_id: string
+          p_outcome: string
+          p_worker_id: string
+        }
+        Returns: string
       }
       complete_vulnerability_feed_staging: {
         Args: {
@@ -21640,6 +21792,13 @@ export type Database = {
           result: Json
         }[]
       }
+      get_supplier_evidence_reminder_settings_atomic: {
+        Args: { p_actor_user_id: string; p_organization_id: string }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
       get_supplier_evidence_request_atomic: {
         Args: {
           p_actor_user_id: string
@@ -21656,6 +21815,20 @@ export type Database = {
           p_actor_user_id: string
           p_organization_id: string
           p_request_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      get_supplier_evidence_response_metrics_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_from: string
+          p_organization_id: string
+          p_product_id?: string
+          p_supplier_id?: string
+          p_to: string
         }
         Returns: {
           outcome: string
@@ -22564,6 +22737,26 @@ export type Database = {
         Returns: {
           baselines: Json
           outcome: string
+        }[]
+      }
+      list_supplier_evidence_overdue_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_cursor?: string
+          p_limit?: number
+          p_organization_id: string
+          p_product_id?: string
+          p_supplier_id?: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      list_supplier_evidence_reminder_organization_ids_atomic: {
+        Args: { p_after_organization_id: string; p_limit: number }
+        Returns: {
+          organization_id: string
         }[]
       }
       list_supplier_evidence_request_reviews_atomic: {
@@ -24152,6 +24345,35 @@ export type Database = {
         }
         Returns: Json
       }
+      m9_04_active_owner: {
+        Args: { p_organization_id: string; p_preferred_user_id: string }
+        Returns: string
+      }
+      m9_04_can_manage: {
+        Args: { p_actor_user_id: string; p_organization_id: string }
+        Returns: boolean
+      }
+      m9_04_can_view: {
+        Args: { p_actor_user_id: string; p_organization_id: string }
+        Returns: boolean
+      }
+      m9_04_delivery_json: {
+        Args: { p_delivery_id: string; p_organization_id: string }
+        Returns: Json
+      }
+      m9_04_delivery_state_json: { Args: { p_state: string }; Returns: string }
+      m9_04_reminder_offsets_valid: {
+        Args: { p_offset_hours: number[] }
+        Returns: boolean
+      }
+      m9_04_request_has_outstanding_required: {
+        Args: { p_organization_id: string; p_revision_id: string }
+        Returns: boolean
+      }
+      m9_04_settings_json: {
+        Args: { p_organization_id: string }
+        Returns: Json
+      }
       m9_supplier_actor_can: {
         Args: {
           p_actor_user_id: string
@@ -24531,6 +24753,18 @@ export type Database = {
           outcome: string
         }[]
       }
+      prepare_supplier_evidence_reminder_delivery_atomic: {
+        Args: {
+          p_delivery_id: string
+          p_organization_id: string
+          p_token_hash: string
+          p_worker_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
       preview_evidence_document_watermark_export_atomic: {
         Args: {
           p_actor_user_id: string
@@ -24848,6 +25082,10 @@ export type Database = {
           generated_document_id: string
           outcome: string
         }[]
+      }
+      reconcile_supplier_evidence_reminders_atomic: {
+        Args: { p_organization_id: string; p_worker_id: string }
+        Returns: Json
       }
       reconcile_vendor_csaf_source_record: {
         Args: {
@@ -26008,6 +26246,33 @@ export type Database = {
           report: Json
         }[]
       }
+      retry_supplier_evidence_reminder_delivery_atomic:
+        | {
+            Args: {
+              p_actor_user_id: string
+              p_delivery_id: string
+              p_idempotency_key: string
+              p_organization_id: string
+            }
+            Returns: {
+              outcome: string
+              result: Json
+            }[]
+          }
+        | {
+            Args: {
+              p_actor_user_id: string
+              p_delivery_id: string
+              p_expected_version: number
+              p_idempotency_key: string
+              p_organization_id: string
+              p_request_id: string
+            }
+            Returns: {
+              outcome: string
+              result: Json
+            }[]
+          }
       retry_sync_run_atomic: {
         Args: {
           p_actor_user_id: string
@@ -27004,6 +27269,19 @@ export type Database = {
           p_organization_id: string
           p_patch: Json
           p_supplier_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      update_supplier_evidence_reminder_settings_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_expected_version: number
+          p_idempotency_key: string
+          p_offset_hours: number[]
+          p_organization_id: string
         }
         Returns: {
           outcome: string

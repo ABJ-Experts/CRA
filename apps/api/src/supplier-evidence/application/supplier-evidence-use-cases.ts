@@ -13,9 +13,17 @@ import type {
   ReviseSupplierEvidenceRequestInput,
   SupplierEvidencePortalSession,
   SupplierEvidenceInvitation,
+  SupplierEvidenceMetricsSummary,
+  SupplierEvidenceMetricsQuery,
+  SupplierEvidenceOverdueRow,
+  SupplierEvidenceOverdueListQuery,
+  SupplierEvidenceReminderDelivery,
+  SupplierEvidenceReminderSettings,
+  SupplierEvidenceReminderSettingsInput,
   SupplierEvidenceRequestDetail,
   SupplierEvidenceReviewRequestDetail,
   SupplierEvidenceRequestListQuery,
+  RetrySupplierEvidenceReminderDeliveryInput,
 } from "@repo/contracts/supplier-evidence";
 
 export const SUPPLIER_EVIDENCE_REPOSITORY = Symbol(
@@ -173,6 +181,39 @@ export interface SupplierEvidenceRepository {
     organizationId: string,
     input: Readonly<{ actorId: string; requestId: string }>,
   ): Promise<SupplierEvidenceReviewRequestDetail | null>;
+  getReminderSettings(
+    organizationId: string,
+    input: Readonly<{ actorId: string }>,
+  ): Promise<SupplierEvidenceReminderSettings>;
+  updateReminderSettings(
+    organizationId: string,
+    input: Readonly<
+      { actorId: string } & SupplierEvidenceReminderSettingsInput
+    >,
+  ): Promise<SupplierEvidenceReminderSettings>;
+  metrics(
+    organizationId: string,
+    input: Readonly<{ actorId: string } & SupplierEvidenceMetricsQuery>,
+  ): Promise<SupplierEvidenceMetricsSummary>;
+  overdue(
+    organizationId: string,
+    input: Readonly<{ actorId: string } & SupplierEvidenceOverdueListQuery>,
+  ): Promise<
+    Readonly<{
+      overdue: readonly SupplierEvidenceOverdueRow[];
+      nextCursor: string | null;
+    }>
+  >;
+  retryReminderDelivery(
+    organizationId: string,
+    input: Readonly<
+      {
+        actorId: string;
+        requestId: string;
+        deliveryId: string;
+      } & RetrySupplierEvidenceReminderDeliveryInput
+    >,
+  ): Promise<SupplierEvidenceReminderDelivery>;
   redeem(
     input: Readonly<{
       invitationTokenHash: string;
@@ -267,6 +308,44 @@ export class SupplierEvidenceUseCases {
     input: Readonly<{ actorId: string; requestId: string }>,
   ) {
     return this.repository.reviewDetail(organizationId, input);
+  }
+  getReminderSettings(
+    organizationId: string,
+    input: Readonly<{ actorId: string }>,
+  ) {
+    return this.repository.getReminderSettings(organizationId, input);
+  }
+  updateReminderSettings(
+    organizationId: string,
+    input: Readonly<
+      { actorId: string } & SupplierEvidenceReminderSettingsInput
+    >,
+  ) {
+    return this.repository.updateReminderSettings(organizationId, input);
+  }
+  metrics(
+    organizationId: string,
+    input: Readonly<{ actorId: string } & SupplierEvidenceMetricsQuery>,
+  ) {
+    return this.repository.metrics(organizationId, input);
+  }
+  overdue(
+    organizationId: string,
+    input: Readonly<{ actorId: string } & SupplierEvidenceOverdueListQuery>,
+  ) {
+    return this.repository.overdue(organizationId, input);
+  }
+  retryReminderDelivery(
+    organizationId: string,
+    input: Readonly<
+      {
+        actorId: string;
+        requestId: string;
+        deliveryId: string;
+      } & RetrySupplierEvidenceReminderDeliveryInput
+    >,
+  ) {
+    return this.repository.retryReminderDelivery(organizationId, input);
   }
 
   async issue(

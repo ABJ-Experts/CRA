@@ -5,7 +5,9 @@ import {
   initializeSupplierEvidencePortalUploadInputSchema,
   reRequestSupplierEvidenceRequestInputSchema,
   reviewSupplierEvidenceSubmissionInputSchema,
+  supplierEvidenceMetricsQuerySchema,
   supplierEvidencePortalSessionInputSchema,
+  supplierEvidenceReminderSettingsInputSchema,
 } from "./supplier-evidence.schema.js";
 
 const id = "00000000-0000-4000-8000-000000000001";
@@ -99,5 +101,70 @@ describe("supplier evidence contracts", () => {
         ],
       }),
     ).toThrow();
+  });
+
+  it("accepts a bounded, unique reminder cadence and rejects a zero or duplicate offset", () => {
+    expect(
+      supplierEvidenceReminderSettingsInputSchema.parse({
+        expectedVersion: 2,
+        offsetsHours: [-168, -24, 24],
+        idempotencyKey: key,
+      }),
+    ).toEqual({
+      expectedVersion: 2,
+      offsetsHours: [-168, -24, 24],
+      idempotencyKey: key,
+    });
+
+    expect(() =>
+      supplierEvidenceReminderSettingsInputSchema.parse({
+        expectedVersion: 2,
+        offsetsHours: [-168, -24, 24],
+      }),
+    ).toThrow();
+
+    expect(() =>
+      supplierEvidenceReminderSettingsInputSchema.parse({
+        expectedVersion: 2,
+        offsetsHours: [-24, -24],
+      }),
+    ).toThrow("Reminder offsets must be unique");
+    expect(() =>
+      supplierEvidenceReminderSettingsInputSchema.parse({
+        expectedVersion: 2,
+        offsetsHours: [0],
+        idempotencyKey: key,
+      }),
+    ).toThrow("Reminder offsets cannot be zero");
+    expect(() =>
+      supplierEvidenceReminderSettingsInputSchema.parse({
+        expectedVersion: 2,
+        offsetsHours: [-24, 48],
+        idempotencyKey: key,
+      }),
+    ).toThrow("Reminder cadence must include the 24-hour overdue milestone");
+  });
+
+  it("uses a half-open, ordered metrics window and preserves optional scope filters", () => {
+    expect(
+      supplierEvidenceMetricsQuerySchema.parse({
+        from: "2026-09-01T00:00:00.000Z",
+        to: "2026-10-01T00:00:00.000Z",
+        productId: id,
+        supplierId: id,
+      }),
+    ).toMatchObject({
+      from: "2026-09-01T00:00:00.000Z",
+      to: "2026-10-01T00:00:00.000Z",
+      productId: id,
+      supplierId: id,
+    });
+
+    expect(() =>
+      supplierEvidenceMetricsQuerySchema.parse({
+        from: "2026-10-01T00:00:00.000Z",
+        to: "2026-10-01T00:00:00.000Z",
+      }),
+    ).toThrow("Metrics window start must precede its end");
   });
 });

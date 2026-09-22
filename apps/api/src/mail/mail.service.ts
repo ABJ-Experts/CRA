@@ -208,6 +208,61 @@ export class MailService {
   }
 
   /**
+   * Reminder content deliberately stays within the supplier portal disclosure
+   * boundary. The worker creates the opaque bearer in memory and this method
+   * places it only in the URL fragment, never in a query string or logs.
+   */
+  async sendSupplierEvidenceReminder(
+    to: string,
+    input: Readonly<{
+      portalTitle: string;
+      instructions: string | null;
+      dueAt: string;
+    }>,
+    token: string,
+    idempotencyKey: string,
+  ): Promise<void> {
+    const url = `${this.appUrl}/supplier-evidence#${encodeURIComponent(token)}`;
+    const title = escapeHtml(input.portalTitle);
+    const instructions = input.instructions
+      ? `<p style="color:#4b5058;font-size:14px">${escapeHtml(input.instructions)}</p>`
+      : "";
+    await this.send(
+      to,
+      "Reminder: supplier evidence request",
+      this.layout(
+        "Evidence request reminder",
+        `<p style="color:#4b5058;font-size:14px"><strong>${title}</strong> is awaiting your response.</p>
+         ${instructions}
+         <p style="color:#4b5058;font-size:14px">Due date: <strong>${escapeHtml(input.dueAt)}</strong>.</p>
+         <p style="margin:24px 0"><a href="${url}" style="background:#4a50d6;color:#fff;padding:12px 20px;border-radius:8px;text-decoration:none;font-size:14px">Open evidence request</a></p>
+         <p style="color:#8a8f98;font-size:12px;word-break:break-all">${url}</p>`,
+      ),
+      true,
+      idempotencyKey,
+    );
+  }
+
+  /** Owner escalation never exposes a supplier portal bearer. */
+  async sendSupplierEvidenceReminderEscalation(
+    to: string,
+    input: Readonly<{ portalTitle: string; dueAt: string }>,
+    idempotencyKey: string,
+  ): Promise<void> {
+    await this.send(
+      to,
+      "Overdue supplier evidence escalation",
+      this.layout(
+        "Supplier evidence overdue",
+        `<p style="color:#4b5058;font-size:14px"><strong>${escapeHtml(input.portalTitle)}</strong> is overdue as of <strong>${escapeHtml(input.dueAt)}</strong>.</p>
+         <p style="color:#4b5058;font-size:14px">Review the request in CRA and take the appropriate follow-up action.</p>`,
+      ),
+      true,
+      idempotencyKey,
+    );
+  }
+
+  /**
    * Compliance alerts are an outbox-owned effect. Unlike account mail, a
    * delivery failure must reach the worker so it can persist retry state.
    */

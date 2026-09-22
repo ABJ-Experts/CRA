@@ -7,7 +7,12 @@ import type {
   PreviewSupplierEvidenceRequestInput,
   ReRequestSupplierEvidenceRequestInput,
   ReissueSupplierEvidenceRequestInput,
+  RetrySupplierEvidenceReminderDeliveryInput,
   ReviewSupplierEvidenceSubmissionInput,
+  SupplierEvidenceMetricsQuery,
+  SupplierEvidenceOverdueListQuery,
+  SupplierEvidenceReminderSettingsInput,
+  SupplierEvidenceRequestListQuery,
   RevokeSupplierEvidenceRequestInput,
 } from "@repo/contracts/supplier-evidence";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -30,12 +35,15 @@ function useInvalidateRequests() {
   };
 }
 
-export function useSupplierEvidenceRequestsQuery(enabled: boolean) {
+export function useSupplierEvidenceRequestsQuery(
+  enabled: boolean,
+  query: Partial<SupplierEvidenceRequestListQuery> = {},
+) {
   return useQuery({
-    queryKey: supplierEvidenceKeys.requests,
+    queryKey: [...supplierEvidenceKeys.requests, query],
     enabled,
     retry: false,
-    queryFn: ({ signal }) => supplierEvidenceApi.list(signal),
+    queryFn: ({ signal }) => supplierEvidenceApi.list(query, signal),
   });
 }
 
@@ -143,5 +151,73 @@ export function useReRequestSupplierEvidenceRequestMutation(requestId: string) {
     mutationFn: (input: ReRequestSupplierEvidenceRequestInput) =>
       supplierEvidenceApi.reRequest(requestId, input),
     onSuccess: () => invalidate(requestId),
+  });
+}
+
+export function useSupplierEvidenceReminderSettingsQuery(enabled: boolean) {
+  return useQuery({
+    queryKey: supplierEvidenceKeys.reminderSettings,
+    enabled,
+    retry: false,
+    queryFn: ({ signal }) => supplierEvidenceApi.reminderSettings(signal),
+  });
+}
+
+export function useUpdateSupplierEvidenceReminderSettingsMutation() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (input: SupplierEvidenceReminderSettingsInput) =>
+      supplierEvidenceApi.updateReminderSettings(input),
+    onSuccess: () =>
+      void client.invalidateQueries({
+        queryKey: supplierEvidenceKeys.reminderSettings,
+      }),
+  });
+}
+
+export function useSupplierEvidenceMetricsQuery(
+  query: SupplierEvidenceMetricsQuery,
+  enabled: boolean,
+) {
+  return useQuery({
+    queryKey: supplierEvidenceKeys.metrics(query),
+    enabled,
+    retry: false,
+    queryFn: ({ signal }) => supplierEvidenceApi.metrics(query, signal),
+  });
+}
+
+export function useSupplierEvidenceOverdueQuery(
+  query: Partial<SupplierEvidenceOverdueListQuery>,
+  enabled: boolean,
+) {
+  return useQuery({
+    queryKey: supplierEvidenceKeys.overdue(query),
+    enabled,
+    retry: false,
+    queryFn: ({ signal }) => supplierEvidenceApi.overdue(query, signal),
+  });
+}
+
+export function useRetrySupplierEvidenceReminderMutation() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      requestId,
+      deliveryId,
+      input,
+    }: Readonly<{
+      requestId: string;
+      deliveryId: string;
+      input: RetrySupplierEvidenceReminderDeliveryInput;
+    }>) => supplierEvidenceApi.retryReminder(requestId, deliveryId, input),
+    onSuccess: () => {
+      void client.invalidateQueries({
+        queryKey: supplierEvidenceKeys.overdueRoot,
+      });
+      void client.invalidateQueries({
+        queryKey: supplierEvidenceKeys.metricsRoot,
+      });
+    },
   });
 }

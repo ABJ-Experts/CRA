@@ -15,6 +15,7 @@ const FINGERPRINT = "a".repeat(64);
 const SUBMISSION_ID = "44444444-4444-4444-8444-444444444444";
 const EVIDENCE_VERSION_ID = "55555555-5555-4555-8555-555555555555";
 const UPDATED_AT = "2026-09-22T00:00:00.000Z";
+const DELIVERY_ID = "99999999-9999-4999-8999-999999999999";
 
 describe("SupplierEvidenceApi", () => {
   beforeEach(() => request.mockReset());
@@ -49,6 +50,81 @@ describe("SupplierEvidenceApi", () => {
       expect.objectContaining({
         path: `/api/v1/supplier-evidence-requests/${REQUEST_ID}/review`,
         schema: expect.anything(),
+      }),
+    );
+  });
+
+  it("forwards supplier, product, state, and pagination filters through the typed request-list boundary", () => {
+    const api = new SupplierEvidenceApi();
+    api.list({
+      productId: "66666666-6666-4666-8666-666666666666",
+      supplierId: "77777777-7777-4777-8777-777777777777",
+      state: "open",
+      limit: 10,
+      cursor: "88888888-8888-4888-8888-888888888888",
+    });
+    expect(request).toHaveBeenCalledWith(
+      expect.objectContaining({
+        path: "/api/v1/supplier-evidence-requests?productId=66666666-6666-4666-8666-666666666666&supplierId=77777777-7777-4777-8777-777777777777&state=open&limit=10&cursor=88888888-8888-4888-8888-888888888888",
+        schema: expect.anything(),
+      }),
+    );
+  });
+
+  it("uses typed boundaries for reminder settings, metrics, overdue rows, and an explicit delivery retry", () => {
+    const api = new SupplierEvidenceApi();
+    api.reminderSettings();
+    api.updateReminderSettings({
+      expectedVersion: 2,
+      offsetsHours: [-168, -24, 24],
+      idempotencyKey: KEY,
+    });
+    api.metrics({
+      from: "2026-08-22T00:00:00.000Z",
+      to: "2026-09-22T00:00:00.000Z",
+      supplierId: "77777777-7777-4777-8777-777777777777",
+    });
+    api.overdue({ supplierId: "77777777-7777-4777-8777-777777777777" });
+    api.retryReminder(REQUEST_ID, DELIVERY_ID, {
+      expectedVersion: 3,
+      idempotencyKey: KEY,
+    });
+
+    expect(request).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        path: "/api/v1/supplier-evidence-requests/reminder-settings",
+        schema: expect.anything(),
+      }),
+    );
+    expect(request).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        path: "/api/v1/supplier-evidence-requests/reminder-settings",
+        method: "PATCH",
+        inputSchema: expect.anything(),
+      }),
+    );
+    expect(request).toHaveBeenNthCalledWith(
+      3,
+      expect.objectContaining({
+        path: "/api/v1/supplier-evidence-requests/metrics?from=2026-08-22T00%3A00%3A00.000Z&to=2026-09-22T00%3A00%3A00.000Z&supplierId=77777777-7777-4777-8777-777777777777",
+        schema: expect.anything(),
+      }),
+    );
+    expect(request).toHaveBeenNthCalledWith(
+      4,
+      expect.objectContaining({
+        path: "/api/v1/supplier-evidence-requests/overdue?supplierId=77777777-7777-4777-8777-777777777777&limit=25",
+        schema: expect.anything(),
+      }),
+    );
+    expect(request).toHaveBeenNthCalledWith(
+      5,
+      expect.objectContaining({
+        path: `/api/v1/supplier-evidence-requests/${REQUEST_ID}/reminder-deliveries/${DELIVERY_ID}/retry`,
+        method: "POST",
+        inputSchema: expect.anything(),
       }),
     );
   });

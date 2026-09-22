@@ -162,6 +162,54 @@ describe("MailService", () => {
     expect(message?.html).not.toContain("?token=");
   });
 
+  it("sends a supplier-safe reminder with a replacement portal bearer", async () => {
+    const service = new MailService(enabledConfig());
+
+    await service.sendSupplierEvidenceReminder(
+      "supplier@example.test",
+      {
+        portalTitle: "Security evidence update",
+        instructions: "Please provide the requested documents.",
+        dueAt: "2026-10-01T09:00:00.000Z",
+      },
+      "replacement/token",
+      "11111111-1111-4111-8111-111111111111",
+    );
+
+    const message = mockSendMail.mock.calls[0]?.[0];
+    expect(message).toMatchObject({
+      to: "supplier@example.test",
+      subject: "Reminder: supplier evidence request",
+    });
+    expect(message?.html).toContain("Security evidence update");
+    expect(message?.html).toContain("Please provide the requested documents.");
+    expect(message?.html).toContain(
+      "https://cra.test/supplier-evidence#replacement%2Ftoken",
+    );
+    expect(message?.html).not.toContain("?token=");
+  });
+
+  it("sends owner escalation without supplier portal credentials", async () => {
+    const service = new MailService(enabledConfig());
+
+    await service.sendSupplierEvidenceReminderEscalation(
+      "owner@cra.test",
+      {
+        portalTitle: "Security evidence update",
+        dueAt: "2026-10-01T09:00:00.000Z",
+      },
+      "22222222-2222-4222-8222-222222222222",
+    );
+
+    const message = mockSendMail.mock.calls[0]?.[0];
+    expect(message).toMatchObject({
+      to: "owner@cra.test",
+      subject: "Overdue supplier evidence escalation",
+    });
+    expect(message?.html).toContain("Security evidence update");
+    expect(message?.html).not.toContain("supplier-evidence#");
+  });
+
   it.each([
     ["Grace", "Grace has invited"],
     [null, "You have been invited"],

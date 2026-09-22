@@ -39,6 +39,20 @@ const SupplierEvidenceReviewPanel = dynamic(
   },
 );
 
+const SupplierEvidenceRemindersPanel = dynamic(
+  () =>
+    import("./supplier-evidence-reminders-panel").then(
+      (module) => module.SupplierEvidenceRemindersPanel,
+    ),
+  {
+    loading: () => (
+      <p role="status" className="mt-6 text-caption-1-regular text-fg-muted">
+        Loading supplier follow-up…
+      </p>
+    ),
+  },
+);
+
 type ItemDraft = Readonly<{
   key: string;
   title: string;
@@ -280,6 +294,7 @@ export function SupplierEvidenceRequestPanel({
   ownerUserId,
   readEnabled,
   canReview,
+  canManage,
   disabled,
 }: Readonly<{
   supplierId: string;
@@ -292,6 +307,7 @@ export function SupplierEvidenceRequestPanel({
   ownerUserId: string | null;
   readEnabled: boolean;
   canReview: boolean;
+  canManage: boolean;
   disabled: boolean;
 }>) {
   const create = useCreateSupplierEvidenceRequestMutation();
@@ -712,6 +728,13 @@ export function SupplierEvidenceRequestPanel({
           requests={history}
           canReview={canReview}
           enabled={readEnabled}
+        />
+      ) : null}
+      {readEnabled ? (
+        <SupplierEvidenceRemindersPanel
+          supplierId={supplierId}
+          readEnabled={readEnabled}
+          canManage={canManage}
         />
       ) : null}
     </SectionCard>

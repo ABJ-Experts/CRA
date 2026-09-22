@@ -1,9 +1,13 @@
 import { Injectable } from "@nestjs/common";
 import {
   supplierEvidenceInvitationSchema,
+  supplierEvidenceMetricsSummarySchema,
+  supplierEvidenceOverdueListResponseSchema,
   supplierEvidencePortalRequestSchema,
   supplierEvidencePortalSubmissionSchema,
   supplierEvidencePreviewSchema,
+  supplierEvidenceReminderDeliverySchema,
+  supplierEvidenceReminderSettingsSchema,
   supplierEvidenceRequestDetailSchema,
   supplierEvidenceReviewRequestDetailSchema,
   supplierEvidenceRequestsResponseSchema,
@@ -210,15 +214,18 @@ export class SupabaseSupplierEvidenceRepository implements SupplierEvidenceRepos
     organizationId: string,
     input: Parameters<SupplierEvidenceRepository["list"]>[1],
   ) {
-    const row = await this.row("list_supplier_evidence_requests_filtered_atomic", {
-      p_organization_id: organizationId,
-      p_actor_user_id: input.actorId,
-      p_product_id: input.productId ?? null,
-      p_supplier_id: input.supplierId ?? null,
-      p_state: input.state ?? null,
-      p_limit: input.limit,
-      p_cursor: input.cursor ?? null,
-    });
+    const row = await this.row(
+      "list_supplier_evidence_requests_filtered_atomic",
+      {
+        p_organization_id: organizationId,
+        p_actor_user_id: input.actorId,
+        p_product_id: input.productId ?? null,
+        p_supplier_id: input.supplierId ?? null,
+        p_state: input.state ?? null,
+        p_limit: input.limit,
+        p_cursor: input.cursor ?? null,
+      },
+    );
     this.raise(row);
     if (row?.outcome !== "found") throw unavailable();
     const value = record(row.result);
@@ -254,6 +261,95 @@ export class SupabaseSupplierEvidenceRepository implements SupplierEvidenceRepos
     if (row?.outcome === "not_found") return null;
     if (row?.outcome !== "found") throw unavailable();
     return supplierEvidenceReviewRequestDetailSchema.parse(row.result);
+  }
+  async getReminderSettings(
+    organizationId: string,
+    input: Parameters<SupplierEvidenceRepository["getReminderSettings"]>[1],
+  ) {
+    const row = await this.row(
+      "get_supplier_evidence_reminder_settings_atomic",
+      {
+        p_organization_id: organizationId,
+        p_actor_user_id: input.actorId,
+      },
+    );
+    this.raise(row);
+    if (row?.outcome !== "found") throw unavailable();
+    return supplierEvidenceReminderSettingsSchema.parse(row.result);
+  }
+  async updateReminderSettings(
+    organizationId: string,
+    input: Parameters<SupplierEvidenceRepository["updateReminderSettings"]>[1],
+  ) {
+    const row = await this.row(
+      "update_supplier_evidence_reminder_settings_atomic",
+      {
+        p_organization_id: organizationId,
+        p_actor_user_id: input.actorId,
+        p_expected_version: input.expectedVersion,
+        p_offset_hours: input.offsetsHours,
+        p_idempotency_key: input.idempotencyKey,
+      },
+    );
+    this.raise(row);
+    if (row?.outcome !== "updated" && row?.outcome !== "replayed")
+      throw unavailable();
+    return supplierEvidenceReminderSettingsSchema.parse(row.result);
+  }
+  async metrics(
+    organizationId: string,
+    input: Parameters<SupplierEvidenceRepository["metrics"]>[1],
+  ) {
+    const row = await this.row(
+      "get_supplier_evidence_response_metrics_atomic",
+      {
+        p_organization_id: organizationId,
+        p_actor_user_id: input.actorId,
+        p_from: input.from,
+        p_to: input.to,
+        p_product_id: input.productId ?? null,
+        p_supplier_id: input.supplierId ?? null,
+      },
+    );
+    this.raise(row);
+    if (row?.outcome !== "found") throw unavailable();
+    return supplierEvidenceMetricsSummarySchema.parse(row.result);
+  }
+  async overdue(
+    organizationId: string,
+    input: Parameters<SupplierEvidenceRepository["overdue"]>[1],
+  ) {
+    const row = await this.row("list_supplier_evidence_overdue_atomic", {
+      p_organization_id: organizationId,
+      p_actor_user_id: input.actorId,
+      p_product_id: input.productId ?? null,
+      p_supplier_id: input.supplierId ?? null,
+      p_limit: input.limit,
+      p_cursor: input.cursor ?? null,
+    });
+    this.raise(row);
+    if (row?.outcome !== "found") throw unavailable();
+    return supplierEvidenceOverdueListResponseSchema.parse(row.result);
+  }
+  async retryReminderDelivery(
+    organizationId: string,
+    input: Parameters<SupplierEvidenceRepository["retryReminderDelivery"]>[1],
+  ) {
+    const row = await this.row(
+      "retry_supplier_evidence_reminder_delivery_atomic",
+      {
+        p_organization_id: organizationId,
+        p_actor_user_id: input.actorId,
+        p_request_id: input.requestId,
+        p_delivery_id: input.deliveryId,
+        p_expected_version: input.expectedVersion,
+        p_idempotency_key: input.idempotencyKey,
+      },
+    );
+    this.raise(row);
+    if (row?.outcome !== "queued" && row?.outcome !== "replayed")
+      throw unavailable();
+    return supplierEvidenceReminderDeliverySchema.parse(row.result);
   }
   async redeem(input: Parameters<SupplierEvidenceRepository["redeem"]>[0]) {
     const row = await this.row("redeem_supplier_evidence_invitation_atomic", {

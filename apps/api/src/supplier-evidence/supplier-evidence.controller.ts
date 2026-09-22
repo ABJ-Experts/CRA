@@ -9,6 +9,7 @@ import {
   HttpStatus,
   NotFoundException,
   Param,
+  Patch,
   Post,
   Query,
   ServiceUnavailableException,
@@ -35,6 +36,14 @@ import {
   supplierEvidencePortalUploadCompletionResponseSchema,
   supplierEvidencePortalUploadInitializationResponseSchema,
   supplierEvidencePreviewResponseSchema,
+  supplierEvidenceMetricsQuerySchema,
+  supplierEvidenceMetricsResponseSchema,
+  supplierEvidenceOverdueListQuerySchema,
+  supplierEvidenceOverdueListResponseSchema,
+  supplierEvidenceReminderDeliveryParamsSchema,
+  supplierEvidenceReminderDeliveryResponseSchema,
+  supplierEvidenceReminderSettingsInputSchema,
+  supplierEvidenceReminderSettingsResponseSchema,
   supplierEvidenceRequestListQuerySchema,
   supplierEvidenceRequestParamsSchema,
   supplierEvidenceRequestResponseSchema,
@@ -55,10 +64,16 @@ import {
   type SupplierEvidencePortalSessionInput,
   type SupplierEvidencePortalSubmissionParams,
   type SupplierEvidenceInvitation,
+  type SupplierEvidenceMetricsQuery,
+  type SupplierEvidenceOverdueListQuery,
+  type SupplierEvidenceReminderDeliveryParams,
+  type SupplierEvidenceReminderSettingsInput,
   type SupplierEvidenceRequestDetail,
   type SupplierEvidenceRequestListQuery,
   type SupplierEvidenceRequestParams,
   type SupplierEvidenceSubmissionParams,
+  type RetrySupplierEvidenceReminderDeliveryInput,
+  retrySupplierEvidenceReminderDeliveryInputSchema,
 } from "@repo/contracts/supplier-evidence";
 
 import {
@@ -123,6 +138,124 @@ export class SupplierEvidenceRequestsController {
       return {
         request: await this.evidence.create(org(user), {
           actorId: user.id,
+          ...input,
+        }),
+      };
+    } catch (error) {
+      throw internalFailure(error);
+    }
+  }
+
+  @Get("reminder-settings")
+  @RequirePermissions(
+    "can_view_suppliers",
+    "can_view_products",
+    "can_view_evidence",
+  )
+  @ZodResponse(supplierEvidenceReminderSettingsResponseSchema)
+  async reminderSettings(@CurrentUser() user: RequestUser) {
+    try {
+      return {
+        settings: await this.evidence.getReminderSettings(org(user), {
+          actorId: user.id,
+        }),
+      };
+    } catch (error) {
+      throw internalFailure(error);
+    }
+  }
+
+  @Patch("reminder-settings")
+  @RequirePermissions(
+    "can_manage_suppliers",
+    "can_view_suppliers",
+    "can_view_products",
+    "can_view_evidence",
+  )
+  @ZodResponse(supplierEvidenceReminderSettingsResponseSchema)
+  async updateReminderSettings(
+    @Body(zodBody(supplierEvidenceReminderSettingsInputSchema))
+    input: SupplierEvidenceReminderSettingsInput,
+    @CurrentUser() user: RequestUser,
+  ) {
+    try {
+      return {
+        settings: await this.evidence.updateReminderSettings(org(user), {
+          actorId: user.id,
+          ...input,
+        }),
+      };
+    } catch (error) {
+      throw internalFailure(error);
+    }
+  }
+
+  @Get("metrics")
+  @RequirePermissions(
+    "can_view_suppliers",
+    "can_view_products",
+    "can_view_evidence",
+  )
+  @ZodResponse(supplierEvidenceMetricsResponseSchema)
+  async metrics(
+    @Query(zodQuery(supplierEvidenceMetricsQuerySchema))
+    query: SupplierEvidenceMetricsQuery,
+    @CurrentUser() user: RequestUser,
+  ) {
+    try {
+      return {
+        summary: await this.evidence.metrics(org(user), {
+          actorId: user.id,
+          ...query,
+        }),
+      };
+    } catch (error) {
+      throw internalFailure(error);
+    }
+  }
+
+  @Get("overdue")
+  @RequirePermissions(
+    "can_view_suppliers",
+    "can_view_products",
+    "can_view_evidence",
+  )
+  @ZodResponse(supplierEvidenceOverdueListResponseSchema)
+  async overdue(
+    @Query(zodQuery(supplierEvidenceOverdueListQuerySchema))
+    query: SupplierEvidenceOverdueListQuery,
+    @CurrentUser() user: RequestUser,
+  ) {
+    try {
+      return await this.evidence.overdue(org(user), {
+        actorId: user.id,
+        ...query,
+      });
+    } catch (error) {
+      throw internalFailure(error);
+    }
+  }
+
+  @Post(":requestId/reminder-deliveries/:deliveryId/retry")
+  @RequirePermissions(
+    "can_manage_suppliers",
+    "can_view_suppliers",
+    "can_view_products",
+    "can_view_evidence",
+  )
+  @ZodResponse(supplierEvidenceReminderDeliveryResponseSchema)
+  async retryReminderDelivery(
+    @Param(zodParams(supplierEvidenceReminderDeliveryParamsSchema))
+    params: SupplierEvidenceReminderDeliveryParams,
+    @Body(zodBody(retrySupplierEvidenceReminderDeliveryInputSchema))
+    input: RetrySupplierEvidenceReminderDeliveryInput,
+    @CurrentUser() user: RequestUser,
+  ) {
+    try {
+      return {
+        delivery: await this.evidence.retryReminderDelivery(org(user), {
+          actorId: user.id,
+          ...params,
           ...input,
         }),
       };
@@ -438,7 +571,8 @@ export class SupplierEvidenceRequestsController {
           requestId,
           invitationId: issued.invitation.id,
           status: "failed",
-          failureMessage: "Delivery could not be completed. Issue a replacement invitation.",
+          failureMessage:
+            "Delivery could not be completed. Issue a replacement invitation.",
           expectedRequestVersion: issued.request.version,
           idempotencyKey: deliveryIdempotencyKey(
             idempotencyKey,
