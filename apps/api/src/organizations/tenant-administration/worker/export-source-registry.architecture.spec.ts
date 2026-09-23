@@ -80,6 +80,23 @@ const dynamicSnapshotLockAdditions = (sql: string): readonly string[] =>
   );
 
 describe("tenant export source registry architecture", () => {
+  it("does not export partial M9-05 source evidence or worker security state", () => {
+    const exported = exportSourceRegistry.flatMap((source) => source.tables);
+    expect(exported).not.toContain("ai_inference_runs");
+    expect(exported).not.toContain("supplier_document_fields");
+    expect(exportSourceExclusions.ai_inference_runs).toMatch(
+      /security|lease|idempotency/i,
+    );
+    expect(exportSourceExclusions.supplier_document_fields).toMatch(
+      /source evidence|idempotency/i,
+    );
+    expect(() =>
+      validateExportRegistryCoverage([
+        "ai_inference_runs",
+        "supplier_document_fields",
+      ]),
+    ).not.toThrow();
+  });
   it("covers every current migration-defined tenant table or explains its exclusion", () => {
     const tenantTables = tenantTablesFromMigrations();
 

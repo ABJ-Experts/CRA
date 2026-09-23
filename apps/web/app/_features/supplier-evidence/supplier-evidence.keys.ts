@@ -5,6 +5,15 @@ const request = Object.freeze((requestId: string) =>
 const reviewRequest = Object.freeze((requestId: string) =>
   Object.freeze([...request(requestId), "review"] as const),
 );
+const extraction = Object.freeze(
+  (requestId: string, submissionId: string, productId: string) =>
+    Object.freeze([
+      ...reviewRequest(requestId),
+      "extraction",
+      submissionId,
+      productId,
+    ] as const),
+);
 const reminderSettings = Object.freeze([
   "supplier-evidence",
   "reminder-settings",
@@ -36,6 +45,7 @@ export const supplierEvidenceKeys = Object.freeze({
   requests,
   request,
   reviewRequest,
+  extraction,
   reminderSettings,
   metricsRoot,
   metrics,

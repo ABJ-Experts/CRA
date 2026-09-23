@@ -109,3 +109,45 @@ export type CompleteSupplierEvidencePortalUploadInput = z.output<
 export type SupplierEvidencePortalSubmissionParams = z.output<
   typeof schemas.supplierEvidencePortalSubmissionParamsSchema
 >;
+export type SupplierDocumentFieldKey = z.output<
+  typeof schemas.supplierDocumentFieldKeySchema
+>;
+export type SupplierDocumentSourceSpan = z.output<
+  typeof schemas.supplierDocumentSourceSpanSchema
+>;
+export type SupplierDocumentCandidate = z.output<
+  typeof schemas.supplierDocumentCandidateSchema
+>;
+export type SupplierDocumentModelOutput = z.output<
+  typeof schemas.supplierDocumentModelOutputSchema
+>;
+export type StartSupplierDocumentExtractionInput = z.output<
+  typeof schemas.startSupplierDocumentExtractionInputSchema
+>;
+export type SupplierDocumentExtractionQuery = z.output<
+  typeof schemas.supplierDocumentExtractionQuerySchema
+>;
+export type DecideSupplierDocumentFieldInput = z.output<
+  typeof schemas.decideSupplierDocumentFieldInputSchema
+>;
+export type CreateManualSupplierDocumentFieldInput = z.output<
+  typeof schemas.createManualSupplierDocumentFieldInputSchema
+>;
+export type SupplierDocumentFieldParams = z.output<
+  typeof schemas.supplierDocumentFieldParamsSchema
+>;
+export type SupplierDocumentSubmissionParams = z.output<
+  typeof schemas.supplierDocumentSubmissionParamsSchema
+>;
+export type SupplierDocumentExtractionRun = z.output<
+  typeof schemas.supplierDocumentExtractionRunSchema
+>;
+export type SupplierDocumentSuggestion = z.output<
+  typeof schemas.supplierDocumentSuggestionSchema
+>;
+export type SupplierDocumentExtractionResponse = z.output<
+  typeof schemas.supplierDocumentExtractionResponseSchema
+>;
+export type SupplierDocumentFieldResponse = z.output<
+  typeof schemas.supplierDocumentFieldResponseSchema
+>;

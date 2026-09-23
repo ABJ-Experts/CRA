@@ -127,6 +127,10 @@ export class EvidenceTextExtractionWorker {
         p_extractor_version: job.extractorVersion,
         p_outcome: completionOutcome(result),
         p_extracted_text: result.outcome === "complete" ? result.text : null,
+        p_page_map:
+          result.outcome === "complete" && result.pages.length > 0
+            ? result.pages
+            : null,
         p_quality:
           result.outcome === "complete"
             ? "sufficient"

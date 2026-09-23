@@ -10,6 +10,7 @@ import {
 import { Button } from "@repo/ui/button";
 import { Tag, type TagProps } from "@repo/ui/tag";
 import { Eye, RefreshCw } from "lucide-react";
+import dynamic from "next/dynamic";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { ApiClientError } from "../../_lib/http/api-client";
@@ -29,6 +30,19 @@ type Delivery = Readonly<{
 }>;
 
 const PREVIEW_TYPES = new Set(["application/pdf", "image/jpeg", "image/png"]);
+const SupplierDocumentExtractionPanel = dynamic(
+  () =>
+    import("./supplier-document-extraction-panel").then(
+      (module) => module.SupplierDocumentExtractionPanel,
+    ),
+  {
+    loading: () => (
+      <p role="status" className="mt-4 text-caption-1-regular text-fg-muted">
+        Loading document fields…
+      </p>
+    ),
+  },
+);
 
 function label(value: string): string {
   return value
@@ -158,7 +172,7 @@ function SubmissionReview({
   }
 
   return (
-    <li className="rounded-xl border border-border bg-canvas p-4">
+    <li className="min-w-0 rounded-xl border border-border bg-canvas p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="break-words text-subhead-semibold text-fg">
@@ -339,6 +353,15 @@ function SubmissionReview({
             </Button>
           </div>
         </div>
+      ) : null}
+      {submission.state === "accepted" &&
+      submission.evidenceProcessingState === "clean" ? (
+        <SupplierDocumentExtractionPanel
+          requestId={requestId}
+          requestVersion={requestVersion}
+          productId={productId}
+          submission={submission}
+        />
       ) : null}
     </li>
   );
@@ -530,7 +553,7 @@ export function SupplierEvidenceReviewPanel({
   const request = detail.data?.request;
   return (
     <section
-      className="mt-6 rounded-xl border border-border bg-surface p-4 sm:p-6"
+      className="mt-6 min-w-0 rounded-xl border border-border bg-surface p-4 sm:p-6"
       aria-labelledby="supplier-evidence-review-heading"
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -553,13 +576,13 @@ export function SupplierEvidenceReviewPanel({
           </Tag>
         ) : null}
       </div>
-      <label className="mt-4 grid gap-1 text-caption-1-semibold text-fg">
+      <label className="mt-4 grid min-w-0 gap-1 text-caption-1-semibold text-fg">
         Evidence request
         <select
           value={requestId}
           disabled={detail.isLoading}
           onChange={(event) => setRequestId(event.target.value)}
-          className="h-10 rounded-xl border border-border bg-canvas px-3 text-subhead-regular text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+          className="h-10 w-full min-w-0 overflow-hidden text-ellipsis rounded-xl border border-border bg-canvas px-3 text-subhead-regular text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
         >
           {requests.map((candidate) => (
             <option key={candidate.id} value={candidate.id}>
@@ -590,11 +613,11 @@ export function SupplierEvidenceReviewPanel({
         </div>
       ) : null}
       {request ? (
-        <div className="mt-5 grid gap-5">
+        <div className="mt-5 grid min-w-0 gap-5">
           {request.reviewItems.map((item) => (
             <section
               key={item.id}
-              className="rounded-xl border border-border bg-canvas p-4"
+              className="min-w-0 rounded-xl border border-border bg-canvas p-4"
             >
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div>
@@ -617,7 +640,7 @@ export function SupplierEvidenceReviewPanel({
                 </p>
               ) : (
                 <ul
-                  className="mt-3 grid gap-3"
+                  className="mt-3 grid min-w-0 gap-3"
                   aria-label={`Submissions for ${item.title}`}
                 >
                   {item.submissions.map((submission) => (
@@ -634,6 +657,46 @@ export function SupplierEvidenceReviewPanel({
               )}
             </section>
           ))}
+          {(() => {
+            const currentIds = new Set(
+              request.reviewItems.flatMap((item) =>
+                item.submissions.map((submission) => submission.id),
+              ),
+            );
+            const priorAccepted = request.submissions.filter(
+              (submission) =>
+                submission.state === "accepted" &&
+                submission.evidenceProcessingState === "clean" &&
+                !currentIds.has(submission.id),
+            );
+            if (priorAccepted.length === 0) return null;
+            return (
+              <section className="min-w-0 rounded-xl border border-border bg-canvas p-4">
+                <h3 className="text-subhead-semibold text-fg">
+                  Accepted evidence from earlier cycles
+                </h3>
+                <p className="mt-1 text-caption-1-regular text-fg-muted">
+                  Earlier accepted submissions remain available for
+                  version-pinned field review.
+                </p>
+                <ul
+                  className="mt-3 grid min-w-0 gap-3"
+                  aria-label="Earlier accepted submissions"
+                >
+                  {priorAccepted.map((submission) => (
+                    <SubmissionReview
+                      key={submission.id}
+                      requestId={request.id}
+                      requestVersion={request.version}
+                      productId={request.productId}
+                      submission={submission}
+                      disabled={request.state !== "open" || !canReview}
+                    />
+                  ))}
+                </ul>
+              </section>
+            );
+          })()}
           <ReRequestForm
             request={request}
             disabled={request.state !== "open" || !canReview}

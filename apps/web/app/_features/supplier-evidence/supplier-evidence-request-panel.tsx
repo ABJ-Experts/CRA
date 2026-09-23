@@ -438,7 +438,7 @@ export function SupplierEvidenceRequestPanel({
         approved disclosure text.
       </p>
       <form
-        className="mt-4 grid gap-3 sm:grid-cols-2"
+        className="mt-4 grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2"
         noValidate
         onSubmit={(event) => void previewRequest(event)}
       >
@@ -449,7 +449,7 @@ export function SupplierEvidenceRequestPanel({
             disabled={disabled || activeContacts.length === 0}
             value={recipientContactId}
             onChange={(event) => setRecipientContactId(event.target.value)}
-            className="h-10 rounded-xl border border-border bg-canvas px-3 text-subhead-regular text-fg"
+            className="h-10 w-full min-w-0 rounded-xl border border-border bg-canvas px-3 text-subhead-regular text-fg"
           >
             <option value="">Select an active email contact</option>
             {activeContacts.map((contact) => (
@@ -467,7 +467,7 @@ export function SupplierEvidenceRequestPanel({
             type="datetime-local"
             value={dueAt}
             onChange={(event) => setDueAt(event.target.value)}
-            className="h-10 rounded-xl border border-border bg-canvas px-3 text-subhead-regular text-fg"
+            className="h-10 w-full min-w-0 rounded-xl border border-border bg-canvas px-3 text-subhead-regular text-fg"
           />
         </label>
         <label className="flex flex-col gap-1 text-caption-1-regular text-fg">
@@ -477,7 +477,7 @@ export function SupplierEvidenceRequestPanel({
             disabled={disabled || products.isLoading}
             value={productId}
             onChange={(event) => setProductId(event.target.value)}
-            className="h-10 rounded-xl border border-border bg-canvas px-3 text-subhead-regular text-fg"
+            className="h-10 w-full min-w-0 rounded-xl border border-border bg-canvas px-3 text-subhead-regular text-fg"
           >
             <option value="">
               {products.isLoading

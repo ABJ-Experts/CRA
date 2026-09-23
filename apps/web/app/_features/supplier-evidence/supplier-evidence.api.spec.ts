@@ -16,6 +16,7 @@ const SUBMISSION_ID = "44444444-4444-4444-8444-444444444444";
 const EVIDENCE_VERSION_ID = "55555555-5555-4555-8555-555555555555";
 const UPDATED_AT = "2026-09-22T00:00:00.000Z";
 const DELIVERY_ID = "99999999-9999-4999-8999-999999999999";
+const PRODUCT_ID = "66666666-6666-4666-8666-666666666666";
 
 describe("SupplierEvidenceApi", () => {
   beforeEach(() => request.mockReset());
@@ -161,5 +162,73 @@ describe("SupplierEvidenceApi", () => {
       }),
     ).toThrow(ApiClientError);
     expect(request).not.toHaveBeenCalled();
+  });
+
+  it("uses parsed and product-scoped extraction endpoints", () => {
+    const api = new SupplierEvidenceApi();
+    const pin = {
+      productId: PRODUCT_ID,
+      expectedRequestVersion: 2,
+      expectedSubmissionUpdatedAt: UPDATED_AT,
+      expectedEvidenceVersionId: EVIDENCE_VERSION_ID,
+      expectedSha256: FINGERPRINT,
+      idempotencyKey: KEY,
+    };
+    api.extraction(REQUEST_ID, SUBMISSION_ID, PRODUCT_ID);
+    api.startExtraction(REQUEST_ID, SUBMISSION_ID, pin);
+    api.decideField(REQUEST_ID, SUBMISSION_ID, DELIVERY_ID, {
+      ...pin,
+      expectedFieldVersion: 0,
+      decision: "confirm",
+      correctedValue: "ISO 9001",
+    });
+    api.createManualField(REQUEST_ID, SUBMISSION_ID, {
+      ...pin,
+      fieldKey: "scope",
+      value: "Manufacturing",
+    });
+    expect(request.mock.calls.map(([value]) => value.path)).toEqual([
+      `/api/v1/supplier-evidence-requests/${REQUEST_ID}/submissions/${SUBMISSION_ID}/extraction?productId=${PRODUCT_ID}&limit=25`,
+      `/api/v1/supplier-evidence-requests/${REQUEST_ID}/submissions/${SUBMISSION_ID}/extraction-runs`,
+      `/api/v1/supplier-evidence-requests/${REQUEST_ID}/submissions/${SUBMISSION_ID}/fields/${DELIVERY_ID}/decision`,
+      `/api/v1/supplier-evidence-requests/${REQUEST_ID}/submissions/${SUBMISSION_ID}/fields/manual`,
+    ]);
+    expect(request.mock.calls[1]?.[0]).toMatchObject({
+      method: "POST",
+      inputSchema: expect.anything(),
+      schema: expect.anything(),
+    });
+    expect(request.mock.calls[2]?.[0]).toMatchObject({
+      method: "POST",
+      inputSchema: expect.anything(),
+      schema: expect.anything(),
+    });
+  });
+
+  it("passes an opaque extraction cursor through a bounded read query", () => {
+    const api = new SupplierEvidenceApi();
+    api.extraction(
+      REQUEST_ID,
+      SUBMISSION_ID,
+      PRODUCT_ID,
+      undefined,
+      "opaque-keyset",
+      100,
+    );
+    expect(request).toHaveBeenCalledWith(
+      expect.objectContaining({
+        path: `/api/v1/supplier-evidence-requests/${REQUEST_ID}/submissions/${SUBMISSION_ID}/extraction?productId=${PRODUCT_ID}&limit=100&cursor=opaque-keyset`,
+      }),
+    );
+    expect(() =>
+      api.extraction(
+        REQUEST_ID,
+        SUBMISSION_ID,
+        PRODUCT_ID,
+        undefined,
+        "opaque-keyset",
+        101,
+      ),
+    ).toThrow(ApiClientError);
   });
 });

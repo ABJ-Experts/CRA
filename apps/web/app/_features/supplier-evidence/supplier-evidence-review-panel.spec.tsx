@@ -17,6 +17,11 @@ const queryHooks = vi.hoisted(() => ({
 }));
 
 vi.mock("./supplier-evidence.queries", () => queryHooks);
+vi.mock("./supplier-document-extraction-panel", () => ({
+  SupplierDocumentExtractionPanel: () => (
+    <div>Version-pinned document fields</div>
+  ),
+}));
 
 import { SupplierEvidenceReviewPanel } from "./supplier-evidence-review-panel";
 
@@ -142,6 +147,41 @@ describe("SupplierEvidenceReviewPanel", () => {
     expect(
       screen.getByRole("button", { name: "Review reject" }),
     ).toBeDisabled();
+  });
+
+  it("keeps accepted evidence from an earlier request cycle reachable", async () => {
+    const originalItem = request.reviewItems[0];
+    const originalSubmission = originalItem?.submissions[0];
+    if (!originalItem || !originalSubmission) throw new Error("Missing test fixture");
+    const priorAccepted = {
+      ...originalSubmission,
+      state: "accepted" as const,
+      reviewState: "accepted" as const,
+      fileName: "earlier-certificate.pdf",
+    };
+    const revised = {
+      ...request,
+      reviewItems: [{ ...originalItem, submissions: [] }],
+      submissions: [priorAccepted],
+    };
+    queryHooks.useSupplierEvidenceReviewRequestQuery.mockReturnValue({
+      data: { request: revised },
+      isLoading: false,
+      isError: false,
+      refetch: vi.fn(),
+    });
+    render(
+      <SupplierEvidenceReviewPanel requests={[request]} canReview enabled />,
+    );
+    expect(
+      screen.getByRole("heading", {
+        name: "Accepted evidence from earlier cycles",
+      }),
+    ).toBeVisible();
+    expect(screen.getByText("earlier-certificate.pdf")).toBeVisible();
+    expect(
+      await screen.findByText("Version-pinned document fields"),
+    ).toBeVisible();
   });
 
   it("keeps the supplier-visible reason and internal note in separate review fields", async () => {

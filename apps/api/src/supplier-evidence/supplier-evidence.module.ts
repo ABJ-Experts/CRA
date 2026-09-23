@@ -9,6 +9,9 @@ import {
   type SupplierEvidenceRepository,
 } from "./application/supplier-evidence-use-cases";
 import { SupabaseSupplierEvidenceRepository } from "./infrastructure/supabase-supplier-evidence.repository";
+import { SupplierDocumentExtractionUseCases } from "./application/supplier-document-extraction.use-cases";
+import { SupabaseSupplierDocumentExtractionRepository } from "./infrastructure/supabase-supplier-document-extraction.repository";
+import { SupplierDocumentExtractionController } from "./supplier-document-extraction.controller";
 import {
   SupplierEvidencePortalController,
   SupplierEvidenceRequestsController,
@@ -19,10 +22,18 @@ import {
   controllers: [
     SupplierEvidenceRequestsController,
     SupplierEvidencePortalController,
+    SupplierDocumentExtractionController,
   ],
   providers: [
     SupabaseEvidenceStorageAdapter,
     SupabaseSupplierEvidenceRepository,
+    SupabaseSupplierDocumentExtractionRepository,
+    {
+      provide: SupplierDocumentExtractionUseCases,
+      inject: [SupabaseSupplierDocumentExtractionRepository],
+      useFactory: (repository: SupabaseSupplierDocumentExtractionRepository) =>
+        new SupplierDocumentExtractionUseCases(repository),
+    },
     {
       provide: SUPPLIER_EVIDENCE_REPOSITORY,
       useExisting: SupabaseSupplierEvidenceRepository,

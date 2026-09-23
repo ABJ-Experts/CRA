@@ -300,6 +300,10 @@ export const exportSourceExclusions: Readonly<Record<string, string>> =
       "Contains active worker leases and retry state; exporting operational security state would make a restored job ambiguous.",
     sbom_supplier_invitations:
       "Contains invitation and scoped-upload bearer token hashes; request lifecycle evidence is exported without credential-security material.",
+    ai_inference_runs:
+      "M9-05 run rows contain idempotency keys and active worker lease state. Exporting derived provenance without its M8/M9 source evidence would be misleading; safe projection awaits that source export contract.",
+    supplier_document_fields:
+      "M9-05 field rows contain decision idempotency material and source spans tied to M8/M9 evidence versions not yet in the tenant export contract. Confirmed values are not portable until source evidence and a safe projection are exported together.",
     vulnerability_match_jobs:
       "Active lease, retry, and checkpoint state is deployment-local operational state; restoring it from a tenant archive would replay work against a different immutable mirror snapshot.",
     vulnerability_reevaluation_jobs:

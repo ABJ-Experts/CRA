@@ -44,7 +44,31 @@ describe("environment validation", () => {
       VULNERABILITY_VEX_PUBLICATION_TARGETS_JSON: "",
       VULNERABILITY_VEX_PUBLICATION_LEASE_SECONDS: 120,
       BRANDING_SCANNER_STRICT: false,
+      AI_OLLAMA_TIMEOUT_MS: 30_000,
     });
+  });
+
+  it("keeps AI unavailable by default and accepts only a versioned loopback provider", () => {
+    expect(validateEnv(required).AI_OLLAMA_URL).toBeUndefined();
+    expect(
+      validateEnv({
+        ...required,
+        AI_OLLAMA_URL: "http://127.0.0.1:11434",
+        AI_OLLAMA_MODEL: "qwen2.5:7b",
+      }),
+    ).toMatchObject({
+      AI_OLLAMA_URL: "http://127.0.0.1:11434",
+      AI_OLLAMA_MODEL: "qwen2.5:7b",
+    });
+    expect(() =>
+      validateEnv({ ...required, AI_OLLAMA_URL: "https://cloud.example" }),
+    ).toThrow("AI_OLLAMA_URL");
+    expect(() =>
+      validateEnv({ ...required, AI_OLLAMA_URL: "http://127.0.0.1:11434" }),
+    ).toThrow("must be configured together");
+    expect(() =>
+      validateEnv({ ...required, AI_OLLAMA_MODEL: "qwen:latest" }),
+    ).toThrow("AI_OLLAMA_MODEL");
   });
 
   it("parses explicit deployment values", () => {

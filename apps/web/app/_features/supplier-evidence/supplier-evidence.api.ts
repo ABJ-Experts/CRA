@@ -33,6 +33,13 @@ import {
   supplierEvidenceRequestsResponseSchema,
   supplierEvidenceReviewResponseSchema,
   supplierEvidenceSubmissionParamsSchema,
+  startSupplierDocumentExtractionInputSchema,
+  supplierDocumentExtractionQuerySchema,
+  supplierDocumentExtractionResponseSchema,
+  supplierDocumentFieldParamsSchema,
+  supplierDocumentFieldResponseSchema,
+  decideSupplierDocumentFieldInputSchema,
+  createManualSupplierDocumentFieldInputSchema,
   type CloseSupplierEvidenceRequestInput,
   type CompleteSupplierEvidencePortalUploadInput,
   type CreateSupplierEvidenceRequestInput,
@@ -50,6 +57,9 @@ import {
   type SupplierEvidenceReminderSettingsInput,
   type RetrySupplierEvidenceReminderDeliveryInput,
   type SupplierEvidenceRequestListQuery,
+  type StartSupplierDocumentExtractionInput,
+  type DecideSupplierDocumentFieldInput,
+  type CreateManualSupplierDocumentFieldInput,
 } from "@repo/contracts/supplier-evidence";
 
 import { authenticatedRequestJson } from "../../_lib/http/authenticated-request";
@@ -329,6 +339,93 @@ export class SupplierEvidenceApi {
       body: input,
       inputSchema: reviewSupplierEvidenceSubmissionInputSchema,
       schema: supplierEvidenceReviewResponseSchema,
+    });
+  }
+
+  extraction(
+    requestId: string,
+    submissionId: string,
+    productId: string,
+    signal?: AbortSignal,
+    cursor?: string,
+    limit = 25,
+  ) {
+    const query = supplierDocumentExtractionQuerySchema.safeParse({
+      productId,
+      cursor,
+      limit,
+    });
+    if (!query.success)
+      throw new ApiClientError(
+        "invalid_request",
+        "The product identifier is invalid.",
+        400,
+      );
+    return authenticatedRequestJson({
+      path: queryPath(
+        submissionPath(requestId, submissionId, "/extraction"),
+        query.data,
+      ),
+      schema: supplierDocumentExtractionResponseSchema,
+      signal,
+    });
+  }
+
+  startExtraction(
+    requestId: string,
+    submissionId: string,
+    input: StartSupplierDocumentExtractionInput,
+  ) {
+    return authenticatedRequestJson({
+      path: submissionPath(requestId, submissionId, "/extraction-runs"),
+      method: "POST",
+      body: input,
+      inputSchema: startSupplierDocumentExtractionInputSchema,
+      schema: supplierDocumentExtractionResponseSchema,
+    });
+  }
+
+  decideField(
+    requestId: string,
+    submissionId: string,
+    fieldId: string,
+    input: DecideSupplierDocumentFieldInput,
+  ) {
+    const parsed = supplierDocumentFieldParamsSchema.safeParse({
+      requestId,
+      submissionId,
+      fieldId,
+    });
+    if (!parsed.success)
+      throw new ApiClientError(
+        "invalid_request",
+        "The field identifier is invalid.",
+        400,
+      );
+    return authenticatedRequestJson({
+      path: submissionPath(
+        requestId,
+        submissionId,
+        `/fields/${parsed.data.fieldId}/decision`,
+      ),
+      method: "POST",
+      body: input,
+      inputSchema: decideSupplierDocumentFieldInputSchema,
+      schema: supplierDocumentFieldResponseSchema,
+    });
+  }
+
+  createManualField(
+    requestId: string,
+    submissionId: string,
+    input: CreateManualSupplierDocumentFieldInput,
+  ) {
+    return authenticatedRequestJson({
+      path: submissionPath(requestId, submissionId, "/fields/manual"),
+      method: "POST",
+      body: input,
+      inputSchema: createManualSupplierDocumentFieldInputSchema,
+      schema: supplierDocumentFieldResponseSchema,
     });
   }
 

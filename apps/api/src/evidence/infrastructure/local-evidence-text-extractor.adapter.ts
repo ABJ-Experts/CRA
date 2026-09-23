@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { createWriteStream } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -54,6 +54,7 @@ export type EvidenceTextExtractionResult = Readonly<
       text: string;
       quality: "native" | "ocr" | "mixed";
       truncated: boolean;
+      pages: readonly Readonly<{ page: number; text: string }>[];
     }
   | { outcome: "failed"; failureCode: EvidenceExtractionFailure }
 >;
@@ -88,11 +89,11 @@ export class LocalEvidenceTextExtractorAdapter {
         return failed("timeout");
       if (input.mediaType === "text/plain" || input.mediaType === "text/csv")
         return completeText(await readBoundedText(sourcePath), "native");
-      if (isOffice(input.mediaType)) return this.extractOoxml(sourcePath);
+      if (isOffice(input.mediaType)) return await this.extractOoxml(sourcePath);
       if (input.mediaType === "application/pdf")
-        return this.extractPdf(sourcePath, directory, startedAt);
+        return await this.extractPdf(sourcePath, directory, startedAt);
       if (isImage(input.mediaType))
-        return this.extractImage(sourcePath, directory, startedAt);
+        return await this.extractImage(sourcePath, directory, startedAt);
       return failed("unsupported");
     } catch (error) {
       return failed(classify(error));
@@ -112,7 +113,7 @@ export class LocalEvidenceTextExtractorAdapter {
     const nativePath = join(directory, "native.txt");
     const native = await command(
       this.options.pdftotextPath,
-      ["-enc", "UTF-8", "-nopgbrk", sourcePath, nativePath],
+      ["-enc", "UTF-8", sourcePath, nativePath],
       directory,
       this.remaining(startedAt),
     );
@@ -125,7 +126,9 @@ export class LocalEvidenceTextExtractorAdapter {
             ? "encrypted"
             : "malformed",
       );
-    const nativeText = await readBoundedText(nativePath);
+    const nativeRaw = await readBoundedRawText(nativePath);
+    const nativeText = normalize(nativeRaw);
+    const nativePages = pdfPages(nativeRaw);
     if (hasUsefulText(nativeText)) {
       if (
         nativeText.length < 1_000 &&
@@ -134,9 +137,13 @@ export class LocalEvidenceTextExtractorAdapter {
       ) {
         const ocr = await this.ocrPdf(sourcePath, directory, startedAt);
         if (ocr.outcome === "complete" && hasUsefulText(ocr.text))
-          return completeText(`${nativeText}\n${ocr.text}`, "mixed");
+          return completeText(
+            `${nativeText}\n${ocr.text}`,
+            "mixed",
+            mergePages(nativePages, ocr.pages),
+          );
       }
-      return completeText(nativeText, "native");
+      return completeText(nativeText, "native", nativePages);
     }
     return this.ocrPdf(sourcePath, directory, startedAt);
   }
@@ -168,17 +175,19 @@ export class LocalEvidenceTextExtractorAdapter {
     if (rendered.code === null) return failed("extractor_unavailable");
     if (rendered.code !== 0)
       return failed(rendered.timedOut ? "timeout" : "malformed");
-    const pages = (await safeReadDirectory(directory))
+    const pages = (await readdir(directory))
       .filter((name) => /^page-\d+\.jpg$/u.test(name))
-      .sort();
+      .sort((left, right) => pageNumber(left) - pageNumber(right));
     if (pages.length === 0) return failed("empty");
     if (pages.length >= maximumOcrPages) return failed("resource_limit");
-    const text = await this.ocrImages(
-      pages.map((page) => join(directory, page)),
+    return this.ocrImages(
+      pages.map((page) => ({
+        path: join(directory, page),
+        page: pageNumber(page),
+      })),
       directory,
       startedAt,
     );
-    return text.outcome === "complete" ? completeText(text.text, "ocr") : text;
   }
 
   private async extractImage(
@@ -199,36 +208,40 @@ export class LocalEvidenceTextExtractorAdapter {
     } catch {
       return failed("malformed");
     }
-    const result = await this.ocrImages([sourcePath], directory, startedAt);
-    return result.outcome === "complete"
-      ? completeText(result.text, "ocr")
-      : result;
+    return this.ocrImages(
+      [{ path: sourcePath, page: 1 }],
+      directory,
+      startedAt,
+    );
   }
 
   private async ocrImages(
-    paths: readonly string[],
+    images: readonly Readonly<{ path: string; page: number }>[],
     directory: string,
     startedAt: number,
   ): Promise<EvidenceTextExtractionResult> {
     if (!this.options.tesseractPath) return failed("extractor_unavailable");
-    const chunks: string[] = [];
-    for (const [index, imagePath] of paths.entries()) {
+    const pages: { page: number; text: string }[] = [];
+    for (const [index, image] of images.entries()) {
       if (this.remaining(startedAt) <= 0) return failed("timeout");
       const outputBase = join(directory, `ocr-${index}`);
       const result = await command(
         this.options.tesseractPath,
-        [imagePath, outputBase, "-l", this.options.ocrLanguage],
+        [image.path, outputBase, "-l", this.options.ocrLanguage],
         directory,
         this.remaining(startedAt),
       );
       if (result.code === null) return failed("extractor_unavailable");
       if (result.code !== 0)
         return failed(result.timedOut ? "timeout" : "extractor_unavailable");
-      chunks.push(await readBoundedText(`${outputBase}.txt`));
+      pages.push({
+        page: image.page,
+        text: await readBoundedText(`${outputBase}.txt`),
+      });
     }
-    const text = chunks.join("\n");
+    const text = pages.map((page) => page.text).join("\n");
     return hasUsefulText(text)
-      ? completeText(text, "ocr")
+      ? completeText(text, "ocr", pages)
       : failed("low_quality");
   }
 
@@ -254,9 +267,37 @@ async function createPrivateFile(path: string) {
 }
 
 async function readBoundedText(path: string) {
+  return normalize(await readBoundedRawText(path));
+}
+async function readBoundedRawText(path: string) {
   const bytes = await readFile(path);
   if (bytes.byteLength > maximumTextBytes) throw new ResourceLimitError();
-  return normalize(bytes.toString("utf8"));
+  return bytes.toString("utf8");
+}
+function pageNumber(name: string) {
+  return Number(/^page-(\d+)\.jpg$/u.exec(name)?.[1]);
+}
+function pdfPages(raw: string) {
+  return raw.split("\f").flatMap((part, index) => {
+    const text = normalize(part);
+    return text ? [{ page: index + 1, text }] : [];
+  });
+}
+function mergePages(
+  native: readonly Readonly<{ page: number; text: string }>[],
+  ocr: readonly Readonly<{ page: number; text: string }>[],
+) {
+  return [...new Set([...native, ...ocr].map((entry) => entry.page))]
+    .sort((left, right) => left - right)
+    .map((page) => ({
+      page,
+      text: [
+        native.find((entry) => entry.page === page)?.text,
+        ocr.find((entry) => entry.page === page)?.text,
+      ]
+        .filter(Boolean)
+        .join("\n"),
+    }));
 }
 
 async function readOoxmlText(bytes: Buffer): Promise<string> {
@@ -338,6 +379,9 @@ function isImage(type: string) {
 function completeText(
   text: string,
   quality: "native" | "ocr" | "mixed",
+  pages: readonly Readonly<{ page: number; text: string }>[] = [
+    { page: 1, text },
+  ],
 ): EvidenceTextExtractionResult {
   if (!hasUsefulText(text))
     return failed(quality === "ocr" ? "low_quality" : "empty");
@@ -346,6 +390,7 @@ function completeText(
     text: text.slice(0, maximumTextBytes),
     quality,
     truncated: text.length > maximumTextBytes,
+    pages: text.length > maximumTextBytes ? [] : pages,
   });
 }
 function failed(
@@ -362,9 +407,6 @@ function classify(error: unknown): EvidenceExtractionFailure {
 class ResourceLimitError extends Error {}
 class MalformedError extends Error {}
 class CommandTimeoutError extends Error {}
-async function safeReadDirectory(directory: string) {
-  return (await import("node:fs/promises")).readdir(directory);
-}
 async function command(
   executable: string,
   args: readonly string[],

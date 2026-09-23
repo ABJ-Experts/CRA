@@ -384,6 +384,34 @@ export const envSchema = z.object({
     100_000_000,
     "must not exceed 100000000 pixels",
   ),
+  // Supplier extraction is unavailable unless both local Ollama settings are
+  // explicitly configured. Loopback-only prevents accidental cloud routing.
+  AI_OLLAMA_URL: z
+    .string()
+    .url()
+    .refine((value) => {
+      const url = new URL(value);
+      return (
+        url.protocol === "http:" &&
+        ["127.0.0.1", "localhost", "[::1]"].includes(url.hostname) &&
+        !url.username &&
+        !url.password &&
+        !url.search &&
+        !url.hash &&
+        (url.pathname === "/" || url.pathname === "")
+      );
+    }, "must be a loopback HTTP origin")
+    .optional(),
+  AI_OLLAMA_MODEL: z
+    .string()
+    .regex(/^[A-Za-z0-9][A-Za-z0-9._/-]*:[A-Za-z0-9][A-Za-z0-9._-]*$/)
+    .refine((value) => !value.endsWith(":latest"), "must be version-tagged")
+    .optional(),
+  AI_OLLAMA_TIMEOUT_MS: boundedInt(
+    30_000,
+    60_000,
+    "must not exceed 60000 milliseconds",
+  ),
   /**
    * Tolerance when comparing a JWT's `iat` against `users.session_epoch_at`.
    *
@@ -418,6 +446,15 @@ export function validateEnv(raw: Record<string, unknown>): Env {
   ) {
     throw new Error(
       "Invalid environment configuration:\n  - VULNERABILITY_CSAF_ALLOWED_HOSTS: is required when a CSAF index is configured",
+    );
+  }
+
+  if (
+    (parsed.data.AI_OLLAMA_URL === undefined) !==
+    (parsed.data.AI_OLLAMA_MODEL === undefined)
+  ) {
+    throw new Error(
+      "Invalid environment configuration:\n  - AI_OLLAMA_URL and AI_OLLAMA_MODEL: must be configured together",
     );
   }
 

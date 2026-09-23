@@ -14,8 +14,16 @@ import type {
   SupplierEvidenceReminderSettingsInput,
   SupplierEvidenceRequestListQuery,
   RevokeSupplierEvidenceRequestInput,
+  StartSupplierDocumentExtractionInput,
+  DecideSupplierDocumentFieldInput,
+  CreateManualSupplierDocumentFieldInput,
 } from "@repo/contracts/supplier-evidence";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 
 import { supplierEvidenceApi } from "./supplier-evidence.api";
 import { supplierEvidenceKeys } from "./supplier-evidence.keys";
@@ -142,6 +150,104 @@ export function useReviewSupplierEvidenceSubmissionMutation(requestId: string) {
       input: ReviewSupplierEvidenceSubmissionInput;
     }>) => supplierEvidenceApi.reviewSubmission(requestId, submissionId, input),
     onSuccess: () => invalidate(requestId),
+  });
+}
+
+export function useSupplierDocumentExtractionQuery(
+  requestId: string,
+  submissionId: string,
+  productId: string,
+  enabled: boolean,
+) {
+  return useInfiniteQuery({
+    queryKey: supplierEvidenceKeys.extraction(
+      requestId,
+      submissionId,
+      productId,
+    ),
+    enabled,
+    retry: false,
+    initialPageParam: null as string | null,
+    queryFn: ({ signal, pageParam }) =>
+      supplierEvidenceApi.extraction(
+        requestId,
+        submissionId,
+        productId,
+        signal,
+        pageParam ?? undefined,
+      ),
+    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+    refetchInterval: (query) =>
+      query.state.data?.pages[0]?.run?.status === "pending" ||
+      query.state.data?.pages[0]?.run?.status === "processing"
+        ? 2_000
+        : false,
+  });
+}
+
+export function useStartSupplierDocumentExtractionMutation(
+  requestId: string,
+  submissionId: string,
+  productId: string,
+) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (input: StartSupplierDocumentExtractionInput) =>
+      supplierEvidenceApi.startExtraction(requestId, submissionId, input),
+    onSuccess: () =>
+      void client.invalidateQueries({
+        queryKey: supplierEvidenceKeys.extraction(
+          requestId,
+          submissionId,
+          productId,
+        ),
+      }),
+  });
+}
+
+export function useDecideSupplierDocumentFieldMutation(
+  requestId: string,
+  submissionId: string,
+  productId: string,
+) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      fieldId,
+      input,
+    }: Readonly<{
+      fieldId: string;
+      input: DecideSupplierDocumentFieldInput;
+    }>) =>
+      supplierEvidenceApi.decideField(requestId, submissionId, fieldId, input),
+    onSuccess: () =>
+      void client.invalidateQueries({
+        queryKey: supplierEvidenceKeys.extraction(
+          requestId,
+          submissionId,
+          productId,
+        ),
+      }),
+  });
+}
+
+export function useCreateManualSupplierDocumentFieldMutation(
+  requestId: string,
+  submissionId: string,
+  productId: string,
+) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (input: CreateManualSupplierDocumentFieldInput) =>
+      supplierEvidenceApi.createManualField(requestId, submissionId, input),
+    onSuccess: () =>
+      void client.invalidateQueries({
+        queryKey: supplierEvidenceKeys.extraction(
+          requestId,
+          submissionId,
+          productId,
+        ),
+      }),
   });
 }
 

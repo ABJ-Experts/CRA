@@ -11,6 +11,98 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      ai_inference_runs: {
+        Row: {
+          attempt_count: number
+          completed_at: string | null
+          created_at: string
+          error_code: string | null
+          evidence_sha256: string
+          evidence_version_id: string
+          id: string
+          idempotency_key: string
+          lease_expires_at: string | null
+          lease_owner: string | null
+          model: string
+          organization_id: string
+          prompt_version: string
+          provider: string
+          requested_by_user_id: string
+          status: string
+          submission_id: string
+          updated_at: string
+        }
+        Insert: {
+          attempt_count?: number
+          completed_at?: string | null
+          created_at?: string
+          error_code?: string | null
+          evidence_sha256: string
+          evidence_version_id: string
+          id?: string
+          idempotency_key: string
+          lease_expires_at?: string | null
+          lease_owner?: string | null
+          model?: string
+          organization_id: string
+          prompt_version?: string
+          provider?: string
+          requested_by_user_id: string
+          status?: string
+          submission_id: string
+          updated_at?: string
+        }
+        Update: {
+          attempt_count?: number
+          completed_at?: string | null
+          created_at?: string
+          error_code?: string | null
+          evidence_sha256?: string
+          evidence_version_id?: string
+          id?: string
+          idempotency_key?: string
+          lease_expires_at?: string | null
+          lease_owner?: string | null
+          model?: string
+          organization_id?: string
+          prompt_version?: string
+          provider?: string
+          requested_by_user_id?: string
+          status?: string
+          submission_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_inference_runs_organization_id_evidence_version_id_fkey"
+            columns: ["organization_id", "evidence_version_id"]
+            isOneToOne: false
+            referencedRelation: "evidence_document_versions"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "ai_inference_runs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_inference_runs_organization_id_submission_id_fkey"
+            columns: ["organization_id", "submission_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_evidence_submissions"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "ai_inference_runs_requested_by_user_id_fkey"
+            columns: ["requested_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_logs: {
         Row: {
           action: string
@@ -1465,6 +1557,7 @@ export type Database = {
           failure_code: string | null
           is_truncated: boolean
           organization_id: string
+          page_map: Json | null
           quality: string
           search_document: unknown
           source_sha256: string
@@ -1480,6 +1573,7 @@ export type Database = {
           failure_code?: string | null
           is_truncated?: boolean
           organization_id: string
+          page_map?: Json | null
           quality?: string
           search_document?: unknown
           source_sha256: string
@@ -1495,6 +1589,7 @@ export type Database = {
           failure_code?: string | null
           is_truncated?: boolean
           organization_id?: string
+          page_map?: Json | null
           quality?: string
           search_document?: unknown
           source_sha256?: string
@@ -4619,6 +4714,9 @@ export type Database = {
           notification_channel_ids: string[] | null
           organization_id: string
           product_relationship_graph_version: number
+          supplier_document_ai_daily_run_limit: number
+          supplier_document_ai_provider: string
+          supplier_document_ai_residency: string
           supplier_evidence_reminder_offsets_hours: number[]
           supplier_evidence_reminders_updated_at: string
           supplier_evidence_reminders_updated_by: string | null
@@ -4648,6 +4746,9 @@ export type Database = {
           notification_channel_ids?: string[] | null
           organization_id: string
           product_relationship_graph_version?: number
+          supplier_document_ai_daily_run_limit?: number
+          supplier_document_ai_provider?: string
+          supplier_document_ai_residency?: string
           supplier_evidence_reminder_offsets_hours?: number[]
           supplier_evidence_reminders_updated_at?: string
           supplier_evidence_reminders_updated_by?: string | null
@@ -4677,6 +4778,9 @@ export type Database = {
           notification_channel_ids?: string[] | null
           organization_id?: string
           product_relationship_graph_version?: number
+          supplier_document_ai_daily_run_limit?: number
+          supplier_document_ai_provider?: string
+          supplier_document_ai_residency?: string
           supplier_evidence_reminder_offsets_hours?: number[]
           supplier_evidence_reminders_updated_at?: string
           supplier_evidence_reminders_updated_by?: string | null
@@ -10911,6 +11015,108 @@ export type Database = {
           {
             foreignKeyName: "supplier_contacts_updated_by_fkey"
             columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      supplier_document_fields: {
+        Row: {
+          candidate_group: string | null
+          confidence: number | null
+          corrected_value: string | null
+          created_at: string
+          evidence_sha256: string
+          evidence_version_id: string
+          field_key: string
+          id: string
+          idempotency_key: string | null
+          organization_id: string
+          original_value: string | null
+          request_digest: string | null
+          reviewed_at: string | null
+          reviewed_by_user_id: string | null
+          run_id: string | null
+          source_span: Json | null
+          status: string
+          submission_id: string
+          version: number
+        }
+        Insert: {
+          candidate_group?: string | null
+          confidence?: number | null
+          corrected_value?: string | null
+          created_at?: string
+          evidence_sha256: string
+          evidence_version_id: string
+          field_key: string
+          id?: string
+          idempotency_key?: string | null
+          organization_id: string
+          original_value?: string | null
+          request_digest?: string | null
+          reviewed_at?: string | null
+          reviewed_by_user_id?: string | null
+          run_id?: string | null
+          source_span?: Json | null
+          status?: string
+          submission_id: string
+          version?: number
+        }
+        Update: {
+          candidate_group?: string | null
+          confidence?: number | null
+          corrected_value?: string | null
+          created_at?: string
+          evidence_sha256?: string
+          evidence_version_id?: string
+          field_key?: string
+          id?: string
+          idempotency_key?: string | null
+          organization_id?: string
+          original_value?: string | null
+          request_digest?: string | null
+          reviewed_at?: string | null
+          reviewed_by_user_id?: string | null
+          run_id?: string | null
+          source_span?: Json | null
+          status?: string
+          submission_id?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_document_fields_organization_id_evidence_version__fkey"
+            columns: ["organization_id", "evidence_version_id"]
+            isOneToOne: false
+            referencedRelation: "evidence_document_versions"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "supplier_document_fields_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_document_fields_organization_id_run_id_fkey"
+            columns: ["organization_id", "run_id"]
+            isOneToOne: false
+            referencedRelation: "ai_inference_runs"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "supplier_document_fields_organization_id_submission_id_fkey"
+            columns: ["organization_id", "submission_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_evidence_submissions"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "supplier_document_fields_reviewed_by_user_id_fkey"
+            columns: ["reviewed_by_user_id"]
             isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
@@ -17990,6 +18196,26 @@ export type Database = {
           release: Json
         }[]
       }
+      add_supplier_document_field_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_expected_evidence_version_id: string
+          p_expected_request_version: number
+          p_expected_sha256: string
+          p_expected_submission_updated_at: string
+          p_field_key: string
+          p_idempotency_key: string
+          p_organization_id: string
+          p_product_id: string
+          p_request_id: string
+          p_submission_id: string
+          p_value: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
       add_technical_file_section_source_atomic: {
         Args: {
           p_actor_user_id: string
@@ -18270,6 +18496,15 @@ export type Database = {
         Returns: {
           outcome: string
         }[]
+      }
+      attach_supplier_document_page_map_atomic: {
+        Args: {
+          p_organization_id: string
+          p_page_map: Json
+          p_run_id: string
+          p_worker_id: string
+        }
+        Returns: string
       }
       authorize_evidence_document_access_atomic: {
         Args: {
@@ -18762,6 +18997,10 @@ export type Database = {
           work: Json
         }[]
       }
+      claim_supplier_document_extraction_atomic: {
+        Args: { p_limit: number; p_worker_id: string }
+        Returns: Json
+      }
       claim_supplier_evidence_reminder_delivery_atomic: {
         Args: {
           p_lease_seconds: number
@@ -18994,22 +19233,40 @@ export type Database = {
         }
         Returns: string
       }
-      complete_evidence_text_extraction_job_atomic: {
-        Args: {
-          p_extracted_text?: string
-          p_extractor_version: string
-          p_failure_code?: string
-          p_is_truncated?: boolean
-          p_organization_id: string
-          p_outcome: string
-          p_quality?: string
-          p_retry_after_seconds?: number
-          p_source_sha256: string
-          p_version_id: string
-          p_worker_id: string
-        }
-        Returns: string
-      }
+      complete_evidence_text_extraction_job_atomic:
+        | {
+            Args: {
+              p_extracted_text?: string
+              p_extractor_version: string
+              p_failure_code?: string
+              p_is_truncated?: boolean
+              p_organization_id: string
+              p_outcome: string
+              p_quality?: string
+              p_retry_after_seconds?: number
+              p_source_sha256: string
+              p_version_id: string
+              p_worker_id: string
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              p_extracted_text: string
+              p_extractor_version: string
+              p_failure_code: string
+              p_is_truncated: boolean
+              p_organization_id: string
+              p_outcome: string
+              p_page_map: Json
+              p_quality: string
+              p_retry_after_seconds: number
+              p_source_sha256: string
+              p_version_id: string
+              p_worker_id: string
+            }
+            Returns: string
+          }
       complete_evidence_validity_notification_atomic: {
         Args: {
           p_error: string
@@ -19205,6 +19462,21 @@ export type Database = {
         Returns: {
           artifact: Json
           outcome: string
+        }[]
+      }
+      complete_supplier_document_extraction_atomic: {
+        Args: {
+          p_failure_code?: string
+          p_model: string
+          p_organization_id: string
+          p_prompt_version: string
+          p_run_id: string
+          p_suggestions: Json
+          p_worker_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
         }[]
       }
       complete_supplier_evidence_reminder_delivery_atomic: {
@@ -20144,6 +20416,28 @@ export type Database = {
         Returns: {
           lifecycle: Json
           outcome: string
+        }[]
+      }
+      decide_supplier_document_field_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_corrected_value: string
+          p_decision: string
+          p_expected_evidence_version_id: string
+          p_expected_request_version: number
+          p_expected_sha256: string
+          p_expected_submission_updated_at: string
+          p_expected_version: number
+          p_field_id: string
+          p_idempotency_key: string
+          p_organization_id: string
+          p_product_id: string
+          p_request_id: string
+          p_submission_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
         }[]
       }
       delete_finding_saved_view_atomic: {
@@ -21786,6 +22080,28 @@ export type Database = {
           baselines: Json
           outcome: string
         }[]
+      }
+      get_supplier_document_extraction_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_cursor?: string
+          p_limit?: number
+          p_organization_id: string
+          p_product_id: string
+          p_submission_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      get_supplier_document_extraction_worker_atomic: {
+        Args: {
+          p_organization_id: string
+          p_run_id: string
+          p_worker_id: string
+        }
+        Returns: Json
       }
       get_supplier_evidence_portal_request_atomic: {
         Args: { p_session_token_hash: string }
@@ -24376,6 +24692,46 @@ export type Database = {
         Args: { p_organization_id: string }
         Returns: Json
       }
+      m9_05_context: {
+        Args: {
+          p_actor_user_id: string
+          p_organization_id: string
+          p_product_id: string
+          p_submission_id: string
+        }
+        Returns: Json
+      }
+      m9_05_decide_supplier_document_field_core: {
+        Args: {
+          p_actor_user_id: string
+          p_corrected_value: string
+          p_decision: string
+          p_expected_evidence_version_id: string
+          p_expected_request_version: number
+          p_expected_sha256: string
+          p_expected_submission_updated_at: string
+          p_expected_version: number
+          p_field_id: string
+          p_idempotency_key: string
+          p_organization_id: string
+          p_product_id: string
+          p_request_id: string
+          p_submission_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      m9_05_field_json: {
+        Args: { p_field_id: string; p_organization_id: string }
+        Returns: Json
+      }
+      m9_05_page_map_valid: { Args: { p_page_map: Json }; Returns: boolean }
+      m9_05_run_json: {
+        Args: { p_organization_id: string; p_run_id: string }
+        Returns: Json
+      }
       m9_supplier_actor_can: {
         Args: {
           p_actor_user_id: string
@@ -26806,6 +27162,24 @@ export type Database = {
           p_worker_id: string
         }
         Returns: string
+      }
+      start_supplier_document_extraction_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_expected_evidence_version_id: string
+          p_expected_request_version: number
+          p_expected_sha256: string
+          p_expected_submission_updated_at: string
+          p_idempotency_key: string
+          p_organization_id: string
+          p_product_id: string
+          p_request_id: string
+          p_submission_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
       }
       submit_reporting_stage_draft_atomic: {
         Args: {
