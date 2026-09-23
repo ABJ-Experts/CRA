@@ -211,6 +211,7 @@ import { SbomCompositeWorker } from "./worker/sbom-composite-worker";
     },
   ],
   exports: [
+    SupplierSbomService,
     SbomIngestWorker,
     SbomQualityWorker,
     SbomDiffWorker,

@@ -7,11 +7,26 @@ import {
 } from "@repo/contracts/supplier-evidence";
 import { Button } from "@repo/ui/button";
 import { Clock3, Link2Off, ShieldCheck } from "lucide-react";
+import dynamic from "next/dynamic";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { z } from "zod";
 
 import { ApiClientError } from "../../_lib/http/api-client";
 import { supplierEvidenceApi } from "./supplier-evidence.api";
+
+const SupplierEvidenceSbomItem = dynamic(
+  () =>
+    import("./supplier-evidence-sbom-item").then(
+      (module) => module.SupplierEvidenceSbomItem,
+    ),
+  {
+    loading: () => (
+      <p role="status" className="mt-3 text-caption-1-regular text-fg-muted">
+        Loading SBOM submission…
+      </p>
+    ),
+  },
+);
 
 const SESSION_KEY = "cra.supplier-evidence.portal-session";
 const pendingFinalizeKey = (requestReference: string) =>
@@ -51,9 +66,9 @@ function pendingFinalization(
 function messageFor(error: unknown): string {
   if (
     error instanceof ApiClientError &&
-    (error.status === 401 || error.status === 403 || error.status === 410)
+    [401, 403, 404, 410].includes(error.status ?? 0)
   )
-    return "This portal link is expired, revoked, or no longer available.";
+    return "This portal link is expired, revoked, or no longer available. Ask the request owner to issue a new invitation.";
   if (error instanceof ApiClientError && error.kind === "network")
     return "We could not reach the evidence service. Your selected file is still available to retry.";
   return error instanceof ApiClientError
@@ -121,9 +136,13 @@ function PortalRequest({
   const [pending, setPending] = useState<PendingFinalization | null>(() =>
     pendingFinalization(request.requestReference),
   );
+  const evidenceItems = useMemo(
+    () => request.items.filter((item) => item.kind !== "sbom"),
+    [request.items],
+  );
   const active = useMemo(
     () =>
-      request.items.filter(
+      evidenceItems.filter(
         (item) =>
           !request.submissions.some(
             (submission) =>
@@ -132,7 +151,7 @@ function PortalRequest({
               submission.state !== "re_requested",
           ),
       ),
-    [request.items, request.submissions],
+    [evidenceItems, request.submissions],
   );
   async function finalizePending(
     candidate: PendingFinalization,
@@ -256,6 +275,36 @@ function PortalRequest({
         </h2>
         <ul className="mt-3 grid gap-3">
           {request.items.map((item) => {
+            if (item.kind === "sbom")
+              return (
+                <li
+                  key={item.id}
+                  className="rounded-xl border border-border bg-canvas p-4"
+                >
+                  <h3 className="text-subhead-semibold text-fg">
+                    {item.position + 1}. {item.title}
+                  </h3>
+                  {item.instructions ? (
+                    <p className="mt-1 whitespace-pre-wrap text-caption-1-regular text-fg-muted">
+                      {item.instructions}
+                    </p>
+                  ) : null}
+                  {item.reRequestReason ? (
+                    <p
+                      role="status"
+                      className="mt-2 whitespace-pre-wrap text-caption-1-regular text-fg-muted"
+                    >
+                      Re-request reason: {item.reRequestReason}
+                    </p>
+                  ) : null}
+                  <SupplierEvidenceSbomItem
+                    item={item}
+                    sessionToken={sessionToken}
+                    requestReference={request.requestReference}
+                    refresh={refresh}
+                  />
+                </li>
+              );
             const submissions = request.submissions.filter(
               (submission) => submission.checklistItemId === item.id,
             );
@@ -310,91 +359,103 @@ function PortalRequest({
           })}
         </ul>
       </section>
-      <section
-        className="mt-8 rounded-2xl border border-border bg-surface p-5"
-        aria-labelledby="portal-upload"
-      >
-        <h2 id="portal-upload" className="text-subhead-semibold text-fg">
-          Submit evidence
-        </h2>
-        <p className="mt-1 text-caption-1-regular text-fg-muted">
-          Uploads are private, immutable, and checked before review. A
-          successful upload is not an acceptance decision.
-        </p>
-        {active.length === 0 ? (
-          <div className="mt-3 grid gap-3">
-            <p role="status" className="text-caption-1-regular text-fg-muted">
-              All assigned items have a submitted or accepted version.
-            </p>
-            {pending ? (
-              <Button
-                type="button"
-                variant="outline"
-                disabled={uploading}
-                onClick={() => void retryFinalization()}
-              >
-                {uploading ? "Finalizing…" : "Retry finalization"}
+      {evidenceItems.length > 0 || pending ? (
+        <section
+          className="mt-8 rounded-2xl border border-border bg-surface p-5"
+          aria-labelledby="portal-upload"
+        >
+          <h2 id="portal-upload" className="text-subhead-semibold text-fg">
+            Submit evidence
+          </h2>
+          <p className="mt-1 text-caption-1-regular text-fg-muted">
+            Uploads are private, immutable, and checked before review. A
+            successful upload is not an acceptance decision.
+          </p>
+          {active.length === 0 ? (
+            <div className="mt-3 grid gap-3">
+              <p role="status" className="text-caption-1-regular text-fg-muted">
+                All evidence-document items have a submitted or accepted
+                version.
+              </p>
+              {pending ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={uploading}
+                  onClick={() => void retryFinalization()}
+                >
+                  {uploading ? "Finalizing…" : "Retry finalization"}
+                </Button>
+              ) : null}
+              {message ? (
+                <p
+                  role="status"
+                  className="text-caption-1-regular text-fg-muted"
+                >
+                  {message}
+                </p>
+              ) : null}
+            </div>
+          ) : (
+            <form
+              className="mt-4 grid gap-3"
+              noValidate
+              onSubmit={(event) => void submit(event)}
+            >
+              <label className="grid gap-1 text-caption-1-regular text-fg">
+                Request item
+                <select
+                  required
+                  disabled={uploading}
+                  value={itemId}
+                  onChange={(event) => setItemId(event.target.value)}
+                  className="h-10 rounded-xl border border-border bg-canvas px-3 text-subhead-regular text-fg"
+                >
+                  <option value="">Select an item</option>
+                  {active.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.title}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="grid gap-1 text-caption-1-regular text-fg">
+                Evidence file{" "}
+                <span className="text-fg-muted">
+                  (PDF, Office, CSV, or text; 50 MiB maximum)
+                </span>
+                <input
+                  required
+                  type="file"
+                  accept=".pdf,.docx,.xlsx,.pptx,.csv,.txt,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.openxmlformats-officedocument.presentationml.presentation,text/csv,text/plain"
+                  disabled={uploading}
+                  onChange={(event) => setFile(event.target.files?.[0] ?? null)}
+                  className="block w-full text-caption-1-regular text-fg"
+                />
+              </label>
+              {progress !== null ? (
+                <p
+                  role="status"
+                  className="text-caption-1-regular text-fg-muted"
+                >
+                  Uploading {Math.round(progress * 100)}%
+                </p>
+              ) : null}
+              {message ? (
+                <p
+                  role="status"
+                  className="text-caption-1-regular text-fg-muted"
+                >
+                  {message}
+                </p>
+              ) : null}
+              <Button type="submit" disabled={uploading}>
+                {uploading ? "Uploading…" : "Upload private evidence"}
               </Button>
-            ) : null}
-            {message ? (
-              <p role="status" className="text-caption-1-regular text-fg-muted">
-                {message}
-              </p>
-            ) : null}
-          </div>
-        ) : (
-          <form
-            className="mt-4 grid gap-3"
-            noValidate
-            onSubmit={(event) => void submit(event)}
-          >
-            <label className="grid gap-1 text-caption-1-regular text-fg">
-              Request item
-              <select
-                required
-                disabled={uploading}
-                value={itemId}
-                onChange={(event) => setItemId(event.target.value)}
-                className="h-10 rounded-xl border border-border bg-canvas px-3 text-subhead-regular text-fg"
-              >
-                <option value="">Select an item</option>
-                {active.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.title}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="grid gap-1 text-caption-1-regular text-fg">
-              Evidence file{" "}
-              <span className="text-fg-muted">
-                (PDF, Office, CSV, or text; 50 MiB maximum)
-              </span>
-              <input
-                required
-                type="file"
-                accept=".pdf,.docx,.xlsx,.pptx,.csv,.txt,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.openxmlformats-officedocument.presentationml.presentation,text/csv,text/plain"
-                disabled={uploading}
-                onChange={(event) => setFile(event.target.files?.[0] ?? null)}
-                className="block w-full text-caption-1-regular text-fg"
-              />
-            </label>
-            {progress !== null ? (
-              <p role="status" className="text-caption-1-regular text-fg-muted">
-                Uploading {Math.round(progress * 100)}%
-              </p>
-            ) : null}
-            {message ? (
-              <p role="status" className="text-caption-1-regular text-fg-muted">
-                {message}
-              </p>
-            ) : null}
-            <Button type="submit" disabled={uploading}>
-              {uploading ? "Uploading…" : "Upload private evidence"}
-            </Button>
-          </form>
-        )}
-      </section>
+            </form>
+          )}
+        </section>
+      ) : null}
     </main>
   );
 }
@@ -446,7 +507,7 @@ export function SupplierEvidencePortal() {
         setMessage(messageFor(error));
         setState(
           error instanceof ApiClientError &&
-            [401, 403, 410].includes(error.status ?? 0)
+            [401, 403, 404, 410].includes(error.status ?? 0)
             ? "expired"
             : "error",
         );
@@ -459,7 +520,21 @@ export function SupplierEvidencePortal() {
         request={request}
         sessionToken={sessionToken}
         refresh={async () => {
-          await reloadSession(sessionToken);
+          try {
+            await reloadSession(sessionToken);
+          } catch (error) {
+            if (
+              error instanceof ApiClientError &&
+              [401, 403, 404, 410].includes(error.status ?? 0)
+            ) {
+              sessionStorage.removeItem(SESSION_KEY);
+              setRequest(null);
+              setSessionToken(null);
+              setMessage(messageFor(error));
+              setState("expired");
+            }
+            throw error;
+          }
         }}
       />
     );

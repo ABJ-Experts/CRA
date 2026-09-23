@@ -4,6 +4,12 @@ import {
   evidenceDocumentClassSchema,
   safeEvidenceFileNameSchema,
 } from "../../evidence/schemas/evidence.schema.js";
+import {
+  completeSupplierSbomUploadInputSchema,
+  initializeSupplierSbomUploadInputSchema,
+  supplierSbomPortalSubmissionSchema,
+  supplierSbomUploadInstructionSchema,
+} from "../../sboms/schemas/sbom-supplier.schema.js";
 import { z } from "zod";
 
 const text = (maximum: number) =>
@@ -29,6 +35,10 @@ const token = z
 const fingerprint = z
   .string()
   .regex(/^[a-f0-9]{64}$/, "Use a SHA-256 fingerprint");
+const supplierEvidenceDocumentClassSchema = z.union([
+  evidenceDocumentClassSchema,
+  z.literal("sbom"),
+]);
 /** M9-02 delegates finalization to the current M8 scanner contract. */
 export const supplierEvidenceUploadMediaTypeSchema = z.enum([
   "application/pdf",
@@ -156,6 +166,12 @@ export const supplierEvidenceRevisionParamsSchema = z
 export const supplierEvidencePortalSubmissionParamsSchema = z
   .object({ versionId: z.uuid() })
   .strict();
+export const supplierEvidenceSbomItemParamsSchema = z
+  .object({ checklistItemId: z.uuid() })
+  .strict();
+export const supplierEvidenceSbomCompletionParamsSchema = z
+  .object({ checklistItemId: z.uuid(), sourceId: z.uuid() })
+  .strict();
 export const supplierEvidenceSubmissionParamsSchema = z
   .object({ requestId: z.uuid(), submissionId: z.uuid() })
   .strict();
@@ -181,13 +197,30 @@ export const retrySupplierEvidenceReminderDeliveryInputSchema = z
   })
   .strict();
 
-export const supplierEvidenceChecklistItemInputSchema = z
+const supplierEvidenceEvidenceChecklistItemInputSchema = z
   .object({
     title: safeText(160),
     instructions: safeText(2_000).optional(),
     documentClass: evidenceDocumentClassSchema,
+    kind: z.literal("evidence").default("evidence"),
+    supplierSbomRequestId: z.null().default(null),
   })
   .strict();
+
+const supplierEvidenceSbomChecklistItemInputSchema = z
+  .object({
+    title: safeText(160),
+    instructions: safeText(2_000).optional(),
+    documentClass: z.literal("sbom"),
+    kind: z.literal("sbom"),
+    supplierSbomRequestId: z.uuid(),
+  })
+  .strict();
+
+export const supplierEvidenceChecklistItemInputSchema = z.union([
+  supplierEvidenceEvidenceChecklistItemInputSchema,
+  supplierEvidenceSbomChecklistItemInputSchema,
+]);
 
 const requestContentSchema = z
   .object({
@@ -293,9 +326,14 @@ export const reviewSupplierEvidenceSubmissionInputSchema = z
     }
   });
 
-const reRequestChecklistItemSchema = supplierEvidenceChecklistItemInputSchema
-  .extend({ sourceRequestItemId: z.uuid() })
-  .strict();
+const reRequestChecklistItemSchema = z.union([
+  supplierEvidenceEvidenceChecklistItemInputSchema
+    .extend({ sourceRequestItemId: z.uuid() })
+    .strict(),
+  supplierEvidenceSbomChecklistItemInputSchema
+    .extend({ sourceRequestItemId: z.uuid() })
+    .strict(),
+]);
 
 export const reRequestSupplierEvidenceRequestInputSchema = z
   .object({
@@ -347,6 +385,33 @@ export const supplierEvidenceRequestListQuerySchema = z
   })
   .strict();
 
+/** Internal selector; the API still scopes every lookup to the verified organization. */
+export const supplierEvidenceEligibleSbomRequestsQuerySchema = z
+  .object({
+    productId: z.uuid(),
+    supplierId: z.uuid(),
+    limit: z.coerce.number().int().min(1).max(100).default(25),
+    cursor: z.string().trim().min(1).max(512).optional(),
+  })
+  .strict();
+
+export const supplierEvidenceEligibleSbomRequestSchema = z
+  .object({
+    id: z.uuid(),
+    releaseId: z.uuid(),
+    supplierDisplayName: safeText(256),
+    allowedComponentRef: safeText(512),
+    expiresAt: timestamp,
+  })
+  .strict();
+
+export const supplierEvidenceEligibleSbomRequestsResponseSchema = z
+  .object({
+    requests: z.array(supplierEvidenceEligibleSbomRequestSchema).max(100),
+    nextCursor: z.string().trim().min(1).max(512).nullable(),
+  })
+  .strict();
+
 export const supplierEvidenceMetricsQuerySchema = z
   .object({
     from: timestamp,
@@ -374,15 +439,58 @@ export const supplierEvidenceOverdueListQuerySchema = z
   })
   .strict();
 
-export const supplierEvidenceChecklistItemSchema = z
+const supplierEvidenceChecklistItemBaseSchema = z
   .object({
     id: z.uuid(),
     title: safeText(160),
     instructions: safeText(2_000).nullable(),
-    documentClass: evidenceDocumentClassSchema,
+    documentClass: supplierEvidenceDocumentClassSchema,
+    kind: z.enum(["evidence", "sbom"]).default("evidence"),
+    supplierSbomRequestId: z.uuid().nullable().default(null),
     position: z.number().int().nonnegative(),
   })
   .strict();
+
+const assertChecklistItemKind = (
+  value: {
+    kind: "evidence" | "sbom";
+    supplierSbomRequestId: string | null;
+    documentClass: string;
+  },
+  context: z.RefinementCtx,
+) => {
+  if (value.kind === "sbom" && !value.supplierSbomRequestId) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["supplierSbomRequestId"],
+      message: "An SBOM item must link to a supplier SBOM request",
+    });
+  }
+  if (value.kind === "evidence" && value.supplierSbomRequestId) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["supplierSbomRequestId"],
+      message: "An evidence item cannot link to an SBOM request",
+    });
+  }
+  if (value.kind === "sbom" && value.documentClass !== "sbom") {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["documentClass"],
+      message: "An SBOM item uses the sbom document class",
+    });
+  }
+  if (value.kind === "evidence" && value.documentClass === "sbom") {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["documentClass"],
+      message: "An evidence item cannot use the sbom document class",
+    });
+  }
+};
+
+export const supplierEvidenceChecklistItemSchema =
+  supplierEvidenceChecklistItemBaseSchema.superRefine(assertChecklistItemKind);
 
 export const supplierEvidenceRevisionSchema = z
   .object({
@@ -568,7 +676,7 @@ export const supplierEvidenceInternalSubmissionSchema = z
 
 export const supplierEvidenceReviewItemSchema =
   supplierEvidenceChecklistItemSchema
-    .extend({
+    .safeExtend({
       sourceRequestItemId: z.uuid().nullable(),
       reRequestReason: safeText(500).nullable(),
       state: supplierEvidenceChecklistReviewStateSchema,
@@ -636,6 +744,36 @@ export const supplierEvidenceRequestsResponseSchema = z
     nextCursor: z.string().nullable(),
   })
   .strict();
+
+/** The disclosure preview mirrors supplier-visible fields, never the internal M3 request ID. */
+export const supplierEvidencePreviewChecklistItemSchema = z
+  .object({
+    id: z.uuid(),
+    title: safeText(160),
+    instructions: safeText(2_000).nullable(),
+    documentClass: supplierEvidenceDocumentClassSchema,
+    kind: z.enum(["evidence", "sbom"]).default("evidence"),
+    position: z.number().int().nonnegative(),
+    allowedComponentRef: safeText(512).nullable().default(null),
+  })
+  .strict()
+  .superRefine((value, context) => {
+    if ((value.kind === "sbom") !== (value.allowedComponentRef !== null)) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["allowedComponentRef"],
+        message: "Only an SBOM item displays a component reference",
+      });
+    }
+    if ((value.kind === "sbom") !== (value.documentClass === "sbom")) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["documentClass"],
+        message: "SBOM item kind and document class must match",
+      });
+    }
+  });
+
 export const supplierEvidencePreviewSchema = z
   .object({
     fingerprint,
@@ -645,7 +783,7 @@ export const supplierEvidencePreviewSchema = z
         instructions: safeText(10_000).nullable(),
         disclosureContent: safeText(10_000).nullable(),
         dueAt: timestamp,
-        items: z.array(supplierEvidenceChecklistItemSchema),
+        items: z.array(supplierEvidencePreviewChecklistItemSchema),
       })
       .strict(),
   })
@@ -687,10 +825,51 @@ export const supplierEvidencePortalSubmissionSchema = z
   .strict();
 
 /** Supplier portal projection intentionally exposes only the safe re-request rationale. */
-export const supplierEvidencePortalChecklistItemSchema =
-  supplierEvidenceChecklistItemSchema
-    .extend({ reRequestReason: safeText(500).nullable() })
-    .strict();
+export const supplierEvidencePortalSbomSubmissionSchema =
+  supplierSbomPortalSubmissionSchema.pick({
+    id: true,
+    state: true,
+    fileName: true,
+    validationMessage: true,
+    createdAt: true,
+    updatedAt: true,
+  });
+
+export const supplierEvidencePortalChecklistItemSchema = z
+  .object({
+    id: z.uuid(),
+    title: safeText(160),
+    instructions: safeText(2_000).nullable(),
+    documentClass: supplierEvidenceDocumentClassSchema,
+    kind: z.enum(["evidence", "sbom"]).default("evidence"),
+    position: z.number().int().nonnegative(),
+    reRequestReason: safeText(500).nullable(),
+    sbom: z
+      .object({
+        allowedComponentRef: safeText(512),
+        submission: supplierEvidencePortalSbomSubmissionSchema.nullable(),
+      })
+      .strict()
+      .nullable()
+      .default(null),
+  })
+  .strict()
+  .superRefine((value, context) => {
+    if ((value.kind === "sbom") !== (value.sbom !== null)) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["sbom"],
+        message: "SBOM details are available only for an SBOM item",
+      });
+    }
+    if ((value.kind === "sbom") !== (value.documentClass === "sbom")) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["documentClass"],
+        message: "SBOM item kind and document class must match",
+      });
+    }
+  });
 
 export const supplierEvidencePortalRequestSchema = z
   .object({
@@ -742,4 +921,22 @@ export const completeSupplierEvidencePortalUploadInputSchema = z
   .strict();
 export const supplierEvidencePortalUploadCompletionResponseSchema = z
   .object({ submission: supplierEvidencePortalSubmissionSchema })
+  .strict();
+
+/** M9 routes retain M3's exact upload rules and do not accept tenant/product scope. */
+export const initializeSupplierEvidenceSbomUploadInputSchema =
+  initializeSupplierSbomUploadInputSchema;
+export const completeSupplierEvidenceSbomUploadInputSchema =
+  completeSupplierSbomUploadInputSchema;
+
+export const supplierEvidenceSbomUploadInitializationResponseSchema = z
+  .object({
+    sourceId: z.uuid(),
+    submission: supplierEvidencePortalSbomSubmissionSchema,
+    upload: supplierSbomUploadInstructionSchema,
+  })
+  .strict();
+
+export const supplierEvidenceSbomUploadCompletionResponseSchema = z
+  .object({ submission: supplierEvidencePortalSbomSubmissionSchema })
   .strict();

@@ -111,6 +111,8 @@ describe("SupplierEvidenceUseCases", () => {
         dueAt: "2026-10-01T10:00:00.000Z",
         items: [
           {
+            kind: "evidence",
+            supplierSbomRequestId: null,
             sourceRequestItemId: requestId,
             title: "Current declaration",
             documentClass: "supplier_attestation",

@@ -17,10 +17,12 @@ import dynamic from "next/dynamic";
 import { useMemo, useState } from "react";
 
 import { ApiClientError } from "../../_lib/http/api-client";
+import { useHasPermission } from "../../_providers/session-provider";
 import { SectionCard } from "../../dashboard/_components/dashboard-chrome";
 import { useProductsQuery } from "../products/products.queries";
 import {
   useCreateSupplierEvidenceRequestMutation,
+  useSupplierEvidenceEligibleSbomRequestsQuery,
   useSupplierEvidenceRequestsQuery,
 } from "./supplier-evidence.queries";
 import { supplierEvidenceApi } from "./supplier-evidence.api";
@@ -58,12 +60,16 @@ type ItemDraft = Readonly<{
   title: string;
   instructions: string;
   documentClass: string;
+  kind: "evidence" | "sbom";
+  supplierSbomRequestId: string | null;
 }>;
 const initialItem = (): ItemDraft => ({
   key: crypto.randomUUID(),
   title: "",
   instructions: "",
   documentClass: "other",
+  kind: "evidence",
+  supplierSbomRequestId: null,
 });
 
 function messageFor(error: unknown): string {
@@ -114,6 +120,8 @@ function RequestActions({
             title: item.title,
             instructions: item.instructions ?? undefined,
             documentClass: item.documentClass,
+            kind: item.kind,
+            supplierSbomRequestId: item.supplierSbomRequestId,
           })),
         }),
       );
@@ -316,6 +324,7 @@ export function SupplierEvidenceRequestPanel({
     { page: 1, pageSize: 100, archived: false },
     !disabled,
   );
+  const canReviewSboms = useHasPermission("can_review_sboms");
   const [portalPreview, setPortalPreview] =
     useState<SupplierEvidencePreview | null>(null);
   const [previewInput, setPreviewInput] =
@@ -328,6 +337,13 @@ export function SupplierEvidenceRequestPanel({
   const [disclosureContent, setDisclosureContent] = useState("");
   const [dueAt, setDueAt] = useState("");
   const [items, setItems] = useState<readonly ItemDraft[]>([initialItem()]);
+  const eligibleSbomRequests = useSupplierEvidenceEligibleSbomRequestsQuery(
+    supplierId,
+    productId,
+    readEnabled && canReviewSboms && items.some((item) => item.kind === "sbom"),
+  );
+  const eligibleSbomOptions =
+    eligibleSbomRequests.data?.pages.flatMap((page) => page.requests) ?? [];
   const [message, setMessage] = useState<string | null>(null);
   const activeContacts = useMemo(
     () =>
@@ -359,16 +375,28 @@ export function SupplierEvidenceRequestPanel({
         title: itemTitle,
         instructions: itemInstructions,
         documentClass,
+        kind,
+        supplierSbomRequestId,
       }) => ({
         title: itemTitle,
         instructions: itemInstructions.trim() || undefined,
         documentClass,
+        kind,
+        supplierSbomRequestId,
       }),
     ),
   });
   async function previewRequest(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setMessage(null);
+    if (
+      items.some((item) => item.kind === "sbom" && !item.supplierSbomRequestId)
+    ) {
+      setMessage(
+        "Select an existing supplier SBOM request for each SBOM item.",
+      );
+      return;
+    }
     const previewedInput = previewSupplierEvidenceRequestInputSchema.safeParse({
       ...content(),
       supplierId,
@@ -476,7 +504,16 @@ export function SupplierEvidenceRequestPanel({
             required
             disabled={disabled || products.isLoading}
             value={productId}
-            onChange={(event) => setProductId(event.target.value)}
+            onChange={(event) => {
+              setProductId(event.target.value);
+              setItems((current) =>
+                current.map((item) =>
+                  item.kind === "sbom"
+                    ? { ...item, supplierSbomRequestId: "" }
+                    : item,
+                ),
+              );
+            }}
             className="h-10 w-full min-w-0 rounded-xl border border-border bg-canvas px-3 text-subhead-regular text-fg"
           >
             <option value="">
@@ -565,7 +602,19 @@ export function SupplierEvidenceRequestPanel({
                     setItems((current) =>
                       current.map((value) =>
                         value.key === item.key
-                          ? { ...value, documentClass: event.target.value }
+                          ? event.target.value === "sbom"
+                            ? {
+                                ...value,
+                                kind: "sbom",
+                                documentClass: "sbom",
+                                supplierSbomRequestId: "",
+                              }
+                            : {
+                                ...value,
+                                kind: "evidence",
+                                documentClass: event.target.value,
+                                supplierSbomRequestId: null,
+                              }
                           : value,
                       ),
                     )
@@ -579,6 +628,9 @@ export function SupplierEvidenceRequestPanel({
                   </option>
                   <option value="test_report">Test report</option>
                   <option value="certificate">Certificate</option>
+                  {canReviewSboms ? (
+                    <option value="sbom">Supplier SBOM</option>
+                  ) : null}
                 </select>
               </label>
               <Button
@@ -594,6 +646,91 @@ export function SupplierEvidenceRequestPanel({
               >
                 Remove
               </Button>
+              {item.kind === "sbom" ? (
+                <div className="grid gap-2 md:col-span-3">
+                  <label className="grid gap-1 text-caption-1-regular text-fg">
+                    Existing supplier SBOM request
+                    <select
+                      required
+                      disabled={
+                        disabled || !productId || eligibleSbomRequests.isLoading
+                      }
+                      value={item.supplierSbomRequestId ?? ""}
+                      onChange={(event) =>
+                        setItems((current) =>
+                          current.map((value) =>
+                            value.key === item.key
+                              ? {
+                                  ...value,
+                                  supplierSbomRequestId: event.target.value,
+                                }
+                              : value,
+                          ),
+                        )
+                      }
+                      className="h-10 rounded-xl border border-border bg-canvas px-3 text-subhead-regular text-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                    >
+                      <option value="">
+                        {!productId
+                          ? "Select a product first"
+                          : eligibleSbomRequests.isLoading
+                            ? "Loading eligible requests…"
+                            : "Select an existing request"}
+                      </option>
+                      {eligibleSbomOptions.map((request) => (
+                        <option key={request.id} value={request.id}>
+                          {request.allowedComponentRef} · expires{" "}
+                          {formatDate(request.expiresAt)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  {eligibleSbomRequests.isError ? (
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p
+                        role="alert"
+                        className="text-caption-1-regular text-fg"
+                      >
+                        Eligible requests could not load. Your draft is
+                        preserved.
+                      </p>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => void eligibleSbomRequests.refetch()}
+                      >
+                        Retry lookup
+                      </Button>
+                    </div>
+                  ) : null}
+                  {!eligibleSbomRequests.isLoading &&
+                  !eligibleSbomRequests.isError &&
+                  productId &&
+                  eligibleSbomOptions.length === 0 ? (
+                    <p
+                      role="status"
+                      className="text-caption-1-regular text-fg-muted"
+                    >
+                      No open, associated supplier SBOM request is available for
+                      this product.
+                    </p>
+                  ) : null}
+                  {eligibleSbomRequests.hasNextPage ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={eligibleSbomRequests.isFetchingNextPage}
+                      onClick={() => void eligibleSbomRequests.fetchNextPage()}
+                    >
+                      {eligibleSbomRequests.isFetchingNextPage
+                        ? "Loading…"
+                        : "Load more requests"}
+                    </Button>
+                  ) : null}
+                </div>
+              ) : null}
             </div>
           ))}
           <Button
@@ -678,6 +815,9 @@ export function SupplierEvidenceRequestPanel({
                 className="rounded-lg border border-border p-2 text-caption-1-regular text-fg"
               >
                 {item.position + 1}. {item.title}
+                {item.kind === "sbom" && item.allowedComponentRef
+                  ? ` · allowed component ${item.allowedComponentRef}`
+                  : ""}
               </li>
             ))}
           </ul>

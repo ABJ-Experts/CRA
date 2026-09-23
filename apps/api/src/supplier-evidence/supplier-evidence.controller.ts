@@ -116,7 +116,10 @@ export class SupplierEvidenceRequestsController {
     @CurrentUser() user: RequestUser,
   ) {
     try {
-      return this.evidence.list(org(user), { actorId: user.id, ...query });
+      return await this.evidence.list(org(user), {
+        actorId: user.id,
+        ...query,
+      });
     } catch (error) {
       throw internalFailure(error);
     }
@@ -642,7 +645,7 @@ export class SupplierEvidencePortalController {
   ) {
     if (!sessionToken) throw portalDenied();
     try {
-      return this.evidence.portalRequest(sessionToken);
+      return await this.evidence.portalRequest(sessionToken);
     } catch {
       throw portalDenied();
     }

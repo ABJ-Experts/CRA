@@ -10305,6 +10305,8 @@ export type Database = {
           expires_at: string
           id: string
           idempotency_key: string
+          m9_invitation_id: string | null
+          m9_request_item_id: string | null
           organization_id: string
           request_digest: string
           request_id: string
@@ -10322,6 +10324,8 @@ export type Database = {
           expires_at: string
           id: string
           idempotency_key: string
+          m9_invitation_id?: string | null
+          m9_request_item_id?: string | null
           organization_id: string
           request_digest: string
           request_id: string
@@ -10339,6 +10343,8 @@ export type Database = {
           expires_at?: string
           id?: string
           idempotency_key?: string
+          m9_invitation_id?: string | null
+          m9_request_item_id?: string | null
           organization_id?: string
           request_digest?: string
           request_id?: string
@@ -10350,6 +10356,20 @@ export type Database = {
           token_prefix?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "sbom_supplier_invitation_m9_invitation_fk"
+            columns: ["organization_id", "m9_invitation_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_evidence_invitations"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "sbom_supplier_invitation_m9_item_fk"
+            columns: ["organization_id", "m9_request_item_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_evidence_request_items"
+            referencedColumns: ["organization_id", "id"]
+          },
           {
             foreignKeyName: "sbom_supplier_invitations_created_by_fkey"
             columns: ["created_by"]
@@ -10482,6 +10502,7 @@ export type Database = {
           status: string
           superseded_by_id: string | null
           updated_at: string
+          validation_message: string | null
         }
         Insert: {
           created_at?: string
@@ -10498,6 +10519,7 @@ export type Database = {
           status?: string
           superseded_by_id?: string | null
           updated_at?: string
+          validation_message?: string | null
         }
         Update: {
           created_at?: string
@@ -10514,6 +10536,7 @@ export type Database = {
           status?: string
           superseded_by_id?: string | null
           updated_at?: string
+          validation_message?: string | null
         }
         Relationships: [
           {
@@ -11399,6 +11422,7 @@ export type Database = {
           re_request_reason: string | null
           required: boolean
           revision_id: string
+          sbom_supplier_request_id: string | null
           source_request_item_id: string | null
           title: string
         }
@@ -11412,6 +11436,7 @@ export type Database = {
           re_request_reason?: string | null
           required?: boolean
           revision_id: string
+          sbom_supplier_request_id?: string | null
           source_request_item_id?: string | null
           title: string
         }
@@ -11425,10 +11450,18 @@ export type Database = {
           re_request_reason?: string | null
           required?: boolean
           revision_id?: string
+          sbom_supplier_request_id?: string | null
           source_request_item_id?: string | null
           title?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "supplier_evidence_item_sbom_request_fk"
+            columns: ["organization_id", "sbom_supplier_request_id"]
+            isOneToOne: false
+            referencedRelation: "sbom_supplier_requests"
+            referencedColumns: ["organization_id", "id"]
+          },
           {
             foreignKeyName: "supplier_evidence_request_item_organization_id_revision_id_fkey"
             columns: ["organization_id", "revision_id"]
@@ -18180,6 +18213,17 @@ export type Database = {
           result: Json
         }[]
       }
+      activate_supplier_evidence_sbom_session_atomic: {
+        Args: {
+          p_request_item_id: string
+          p_sbom_session_token_hash: string
+          p_session_token_hash: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
       add_product_release_market_availability_atomic: {
         Args: {
           p_actor_user_id: string
@@ -21259,6 +21303,23 @@ export type Database = {
           submission: Json
         }[]
       }
+      finalize_supplier_sbom_submission_before_m906: {
+        Args: {
+          p_actual_byte_size: number
+          p_actual_media_type: string
+          p_actual_sha256: string
+          p_correlation_id: string
+          p_idempotency_key: string
+          p_session_token_hash: string
+          p_source_id: string
+        }
+        Returns: {
+          job: Json
+          outcome: string
+          source: Json
+          submission: Json
+        }[]
+      }
       finalize_technical_file_declaration_atomic: {
         Args: {
           p_declaration_id: string
@@ -22189,6 +22250,24 @@ export type Database = {
           reservation: Json
         }[]
       }
+      get_supplier_sbom_submission_upload_before_m906: {
+        Args: { p_session_token_hash: string; p_source_id: string }
+        Returns: {
+          outcome: string
+          reservation: Json
+        }[]
+      }
+      get_supplier_sbom_submission_upload_with_key_before_m906: {
+        Args: {
+          p_idempotency_key: string
+          p_session_token_hash: string
+          p_source_id: string
+        }
+        Returns: {
+          outcome: string
+          source: Json
+        }[]
+      }
       get_technical_file: {
         Args: {
           p_actor_user_id: string
@@ -22643,6 +22722,20 @@ export type Database = {
         Args: { p_limit?: number }
         Returns: {
           organization_id: string
+        }[]
+      }
+      list_eligible_supplier_evidence_sbom_requests: {
+        Args: {
+          p_actor_user_id: string
+          p_cursor: string
+          p_limit: number
+          p_organization_id: string
+          p_product_id: string
+          p_supplier_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
         }[]
       }
       list_evidence_document_deletion_cleanup_organizations_atomic: {
@@ -24566,6 +24659,15 @@ export type Database = {
         }
         Returns: string
       }
+      m9_02_insert_revision_before_m906: {
+        Args: {
+          p_actor_user_id: string
+          p_draft: Json
+          p_organization_id: string
+          p_request_id: string
+        }
+        Returns: string
+      }
       m9_02_internal_can: {
         Args: {
           p_actor_user_id: string
@@ -24579,6 +24681,23 @@ export type Database = {
         Returns: Json
       }
       m9_02_issue_invitation: {
+        Args: {
+          p_actor_user_id: string
+          p_expected_version: number
+          p_expires_at: string
+          p_idempotency_key: string
+          p_operation: string
+          p_organization_id: string
+          p_preview_fingerprint: string
+          p_request_id: string
+          p_token_hash: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      m9_02_issue_invitation_before_m906: {
         Args: {
           p_actor_user_id: string
           p_expected_version: number
@@ -24623,6 +24742,14 @@ export type Database = {
         }
         Returns: Json
       }
+      m9_02_validate_draft_before_m906: {
+        Args: {
+          p_actor_user_id: string
+          p_organization_id: string
+          p_payload: Json
+        }
+        Returns: Json
+      }
       m9_03_internal_can_review: {
         Args: { p_actor_user_id: string; p_organization_id: string }
         Returns: boolean
@@ -24640,6 +24767,10 @@ export type Database = {
         Returns: Json
       }
       m9_03_review_item_json: {
+        Args: { p_organization_id: string; p_request_item_id: string }
+        Returns: Json
+      }
+      m9_03_review_item_json_before_m906: {
         Args: { p_organization_id: string; p_request_item_id: string }
         Returns: Json
       }
@@ -24731,6 +24862,20 @@ export type Database = {
       m9_05_run_json: {
         Args: { p_organization_id: string; p_run_id: string }
         Returns: Json
+      }
+      m9_06_link_active: {
+        Args: { p_session_token_hash: string }
+        Returns: boolean
+      }
+      m9_06_validate_link: {
+        Args: {
+          p_actor_user_id: string
+          p_organization_id: string
+          p_product_id: string
+          p_sbom_request_id: string
+          p_supplier_id: string
+        }
+        Returns: boolean
       }
       m9_supplier_actor_can: {
         Args: {
@@ -25190,6 +25335,17 @@ export type Database = {
         }[]
       }
       preview_supplier_evidence_request_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_organization_id: string
+          p_payload: Json
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      preview_supplier_evidence_request_before_m906: {
         Args: {
           p_actor_user_id: string
           p_organization_id: string
@@ -26449,7 +26605,46 @@ export type Database = {
           result: Json
         }[]
       }
+      reserve_supplier_evidence_submission_before_m906: {
+        Args: {
+          p_declared_media_type: string
+          p_declared_sha256: string
+          p_declared_size_bytes: number
+          p_idempotency_key: string
+          p_object_key: string
+          p_original_filename: string
+          p_request_digest: string
+          p_request_item_id: string
+          p_session_token_hash: string
+          p_upload_expires_at: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
       reserve_supplier_sbom_submission_atomic: {
+        Args: {
+          p_correlation_id: string
+          p_declared_byte_size: number
+          p_declared_format?: string
+          p_declared_media_type: string
+          p_declared_sha256: string
+          p_declared_spec_version?: string
+          p_idempotency_key: string
+          p_original_filename: string
+          p_request_digest: string
+          p_session_token_hash: string
+          p_source_id: string
+          p_submission_id: string
+        }
+        Returns: {
+          outcome: string
+          source: Json
+          submission: Json
+        }[]
+      }
+      reserve_supplier_sbom_submission_before_m906: {
         Args: {
           p_correlation_id: string
           p_declared_byte_size: number

@@ -55,6 +55,30 @@ export function useSupplierEvidenceRequestsQuery(
   });
 }
 
+export function useSupplierEvidenceEligibleSbomRequestsQuery(
+  supplierId: string,
+  productId: string,
+  enabled: boolean,
+) {
+  return useInfiniteQuery({
+    queryKey: supplierEvidenceKeys.eligibleSbomRequests(supplierId, productId),
+    enabled: enabled && supplierId !== "" && productId !== "",
+    retry: false,
+    initialPageParam: undefined as string | undefined,
+    queryFn: ({ signal, pageParam }) =>
+      supplierEvidenceApi.eligibleSbomRequests(
+        {
+          supplierId,
+          productId,
+          cursor: pageParam,
+          limit: 100,
+        },
+        signal,
+      ),
+    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+  });
+}
+
 export function useSupplierEvidenceRequestQuery(
   requestId: string | null,
   enabled: boolean,

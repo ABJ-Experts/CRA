@@ -420,6 +420,8 @@ function ReRequestForm({
             title: item.title,
             instructions: item.instructions ?? undefined,
             documentClass: item.documentClass,
+            kind: item.kind,
+            supplierSbomRequestId: item.supplierSbomRequestId,
           })),
           idempotencyKey: (idempotencyKey.current ??= crypto.randomUUID()),
         }),
@@ -634,7 +636,16 @@ export function SupplierEvidenceReviewPanel({
                   {label(item.state)}
                 </Tag>
               </div>
-              {item.submissions.length === 0 ? (
+              {item.kind === "sbom" ? (
+                <p
+                  role="status"
+                  className="mt-3 text-caption-1-regular text-fg"
+                >
+                  SBOM processing and acceptance are handled in Product SBOM
+                  review. This evidence review cannot accept an SBOM as a
+                  product baseline.
+                </p>
+              ) : item.submissions.length === 0 ? (
                 <p className="mt-3 text-caption-1-regular text-fg-muted">
                   No supplier submission is available for this item.
                 </p>

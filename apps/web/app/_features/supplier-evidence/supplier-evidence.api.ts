@@ -1,8 +1,10 @@
 import {
   closeSupplierEvidenceRequestInputSchema,
   completeSupplierEvidencePortalUploadInputSchema,
+  completeSupplierEvidenceSbomUploadInputSchema,
   createSupplierEvidenceRequestInputSchema,
   initializeSupplierEvidencePortalUploadInputSchema,
+  initializeSupplierEvidenceSbomUploadInputSchema,
   issueSupplierEvidenceRequestInputSchema,
   previewSupplierEvidenceRequestInputSchema,
   reRequestSupplierEvidenceRequestInputSchema,
@@ -16,6 +18,12 @@ import {
   supplierEvidencePortalSessionResponseSchema,
   supplierEvidencePortalRequestSchema,
   supplierEvidencePortalSubmissionParamsSchema,
+  supplierEvidenceSbomItemParamsSchema,
+  supplierEvidenceSbomCompletionParamsSchema,
+  supplierEvidenceSbomUploadInitializationResponseSchema,
+  supplierEvidenceSbomUploadCompletionResponseSchema,
+  supplierEvidenceEligibleSbomRequestsQuerySchema,
+  supplierEvidenceEligibleSbomRequestsResponseSchema,
   supplierEvidencePortalUploadCompletionResponseSchema,
   supplierEvidencePortalUploadInitializationResponseSchema,
   supplierEvidencePreviewResponseSchema,
@@ -61,6 +69,7 @@ import {
   type DecideSupplierDocumentFieldInput,
   type CreateManualSupplierDocumentFieldInput,
 } from "@repo/contracts/supplier-evidence";
+import type { z } from "zod";
 
 import { authenticatedRequestJson } from "../../_lib/http/authenticated-request";
 import { ApiClientError, requestJson } from "../../_lib/http/api-client";
@@ -140,6 +149,32 @@ function portalSubmissionPath(versionId: string, suffix = ""): `/${string}` {
   return `/api/v1/supplier-evidence-portal/submissions/${parsed.data.versionId}${suffix}`;
 }
 
+function portalSbomItemPath(itemId: string, sourceId?: string): `/${string}` {
+  const item = supplierEvidenceSbomItemParamsSchema.safeParse({
+    checklistItemId: itemId,
+  });
+  if (!item.success)
+    throw new ApiClientError(
+      "invalid_request",
+      "The SBOM request item identifier is invalid.",
+      400,
+    );
+  const base =
+    `/api/v1/supplier-evidence-portal/sbom-items/${item.data.checklistItemId}/submissions` as const;
+  if (sourceId === undefined) return base;
+  const completion = supplierEvidenceSbomCompletionParamsSchema.safeParse({
+    checklistItemId: itemId,
+    sourceId,
+  });
+  if (!completion.success)
+    throw new ApiClientError(
+      "invalid_request",
+      "The SBOM submission identifier is invalid.",
+      400,
+    );
+  return `${base}/${completion.data.sourceId}/complete`;
+}
+
 function submissionPath(
   requestId: string,
   submissionId: string,
@@ -160,6 +195,28 @@ function submissionPath(
 
 /** Typed feature-local boundary for internal request management and public portal calls. */
 export class SupplierEvidenceApi {
+  eligibleSbomRequests(
+    query: z.input<typeof supplierEvidenceEligibleSbomRequestsQuerySchema>,
+    signal?: AbortSignal,
+  ) {
+    const parsed =
+      supplierEvidenceEligibleSbomRequestsQuerySchema.safeParse(query);
+    if (!parsed.success)
+      throw new ApiClientError(
+        "invalid_request",
+        "The supplier SBOM request filters are invalid.",
+        400,
+      );
+    return authenticatedRequestJson({
+      path: queryPath(
+        "/api/v1/supplier-evidence-requests/eligible-sbom-requests",
+        parsed.data,
+      ),
+      schema: supplierEvidenceEligibleSbomRequestsResponseSchema,
+      signal,
+    });
+  }
+
   list(
     query: Partial<SupplierEvidenceRequestListQuery> = {},
     signal?: AbortSignal,
@@ -487,6 +544,37 @@ export class SupplierEvidenceApi {
       body: input,
       inputSchema: completeSupplierEvidencePortalUploadInputSchema,
       schema: supplierEvidencePortalUploadCompletionResponseSchema,
+      signal,
+    });
+  }
+
+  initializeSbomPortalUpload(
+    itemId: string,
+    input: z.input<typeof initializeSupplierEvidenceSbomUploadInputSchema>,
+    signal?: AbortSignal,
+  ) {
+    return requestJson({
+      path: portalSbomItemPath(itemId),
+      method: "POST",
+      body: input,
+      inputSchema: initializeSupplierEvidenceSbomUploadInputSchema,
+      schema: supplierEvidenceSbomUploadInitializationResponseSchema,
+      signal,
+    });
+  }
+
+  completeSbomPortalUpload(
+    itemId: string,
+    sourceId: string,
+    input: z.input<typeof completeSupplierEvidenceSbomUploadInputSchema>,
+    signal?: AbortSignal,
+  ) {
+    return requestJson({
+      path: portalSbomItemPath(itemId, sourceId),
+      method: "POST",
+      body: input,
+      inputSchema: completeSupplierEvidenceSbomUploadInputSchema,
+      schema: supplierEvidenceSbomUploadCompletionResponseSchema,
       signal,
     });
   }

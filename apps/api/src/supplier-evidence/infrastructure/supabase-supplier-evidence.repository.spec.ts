@@ -181,4 +181,51 @@ describe("SupabaseSupplierEvidenceRepository reminder boundaries", () => {
       version: 5,
     });
   });
+
+  it("treats a successful invitation revocation as success, not a conflict", async () => {
+    const revision = {
+      id: REVISION_ID,
+      revisionNumber: 1,
+      title: "Supplier evidence",
+      instructions: null,
+      dueAt: TIME,
+      disclosureContent: null,
+      disclosureFingerprint: "a".repeat(64),
+      items: [],
+      createdAt: TIME,
+      createdBy: ACTOR_ID,
+    };
+    const request = {
+      id: REQUEST_ID,
+      supplierId: SUPPLIER_ID,
+      productId: PRODUCT_ID,
+      recipientContactId: "00000000-0000-4000-8000-000000000009",
+      ownerUserId: ACTOR_ID,
+      state: "open",
+      version: 2,
+      currentRevision: revision,
+      activeInvitation: null,
+      reviewState: "pending_response",
+      aggregateReviewState: "pending_response",
+      createdAt: TIME,
+      updatedAt: TIME,
+      revisions: [revision],
+      invitations: [],
+    };
+    rpc.mockResolvedValue({
+      data: [{ outcome: "revoked", result: request }],
+      error: null,
+    });
+
+    await expect(
+      repository.revoke(ORGANIZATION_ID, {
+        actorId: ACTOR_ID,
+        requestId: REQUEST_ID,
+        invitationId: INVITATION_ID,
+        reason: "Access no longer needed",
+        expectedVersion: 1,
+        idempotencyKey: IDEMPOTENCY_KEY,
+      }),
+    ).resolves.toEqual(request);
+  });
 });

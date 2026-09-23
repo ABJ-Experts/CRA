@@ -1,5 +1,8 @@
 import type { RequestUser } from "../auth/auth.types";
-import { SupplierEvidenceRequestsController } from "./supplier-evidence.controller";
+import {
+  SupplierEvidencePortalController,
+  SupplierEvidenceRequestsController,
+} from "./supplier-evidence.controller";
 
 const organizationId = "00000000-0000-4000-8000-0000000000ca";
 const user: RequestUser = {
@@ -15,6 +18,7 @@ const user: RequestUser = {
 
 describe("SupplierEvidenceRequestsController reminder routes", () => {
   const evidence = {
+    list: jest.fn(),
     getReminderSettings: jest.fn(),
     updateReminderSettings: jest.fn(),
     metrics: jest.fn(),
@@ -50,6 +54,18 @@ describe("SupplierEvidenceRequestsController reminder routes", () => {
     expect(overdue).toEqual({ overdue: [], nextCursor: null });
   });
 
+  it("maps an asynchronously failed scoped list to a safe service error", async () => {
+    evidence.list.mockRejectedValue(new Error("database detail"));
+
+    await expect(controller.list({ limit: 25 }, user)).rejects.toMatchObject({
+      status: 503,
+      response: {
+        code: "unavailable",
+        message: "Supplier evidence is temporarily unavailable.",
+      },
+    });
+  });
+
   it("requires request-bound optimistic data when retrying a reminder", async () => {
     evidence.retryReminderDelivery.mockResolvedValue({ id: "delivery" });
 
@@ -75,5 +91,22 @@ describe("SupplierEvidenceRequestsController reminder routes", () => {
       }),
     );
     expect(response).toEqual({ delivery: { id: "delivery" } });
+  });
+});
+
+describe("SupplierEvidencePortalController request", () => {
+  it("maps an asynchronously rejected revoked session to an unavailable link", async () => {
+    const evidence = {
+      portalRequest: jest.fn().mockRejectedValue(new Error("revoked grant")),
+    };
+    const controller = new SupplierEvidencePortalController(evidence as never);
+
+    await expect(controller.request("revoked-session")).rejects.toMatchObject({
+      status: 404,
+      response: {
+        code: "not_found",
+        message: "This supplier portal link is unavailable.",
+      },
+    });
   });
 });

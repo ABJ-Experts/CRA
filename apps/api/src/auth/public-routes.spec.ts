@@ -65,6 +65,10 @@ const ALLOWED_PUBLIC: Record<string, string> = {
     "A short-lived opaque supplier-evidence session scopes an upload reservation to one approved checklist item.",
   "POST supplier-evidence-portal/submissions/:versionId/complete":
     "Continuation of supplier evidence upload; private bytes are inspected before scan submission.",
+  "POST supplier-evidence-portal/sbom-items/:checklistItemId/submissions":
+    "The M9 session and assigned checklist item activate one linked M3 supplier SBOM grant before private upload.",
+  "POST supplier-evidence-portal/sbom-items/:checklistItemId/submissions/:sourceId/complete":
+    "The linked M9 and M3 grants are rechecked before existing supplier SBOM finalization.",
   "POST auditor/redeem":
     "An auditor has no CRA session; the one-time opaque grant token is the only credential accepted here.",
   "GET auditor/snapshot":

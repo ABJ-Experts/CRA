@@ -1,8 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const request = vi.hoisted(() => vi.fn());
+const publicRequest = vi.hoisted(() => vi.fn());
 vi.mock("../../_lib/http/authenticated-request", () => ({
   authenticatedRequestJson: request,
+}));
+vi.mock("../../_lib/http/api-client", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../_lib/http/api-client")>()),
+  requestJson: publicRequest,
 }));
 
 import { ApiClientError } from "../../_lib/http/api-client";
@@ -19,7 +24,79 @@ const DELIVERY_ID = "99999999-9999-4999-8999-999999999999";
 const PRODUCT_ID = "66666666-6666-4666-8666-666666666666";
 
 describe("SupplierEvidenceApi", () => {
-  beforeEach(() => request.mockReset());
+  beforeEach(() => {
+    request.mockReset();
+    publicRequest.mockReset();
+  });
+
+  it("lists only eligible scoped supplier SBOM requests through a parsed internal boundary", () => {
+    const api = new SupplierEvidenceApi();
+    api.eligibleSbomRequests({
+      supplierId: "77777777-7777-4777-8777-777777777777",
+      productId: PRODUCT_ID,
+      limit: 25,
+    });
+    expect(request).toHaveBeenCalledWith(
+      expect.objectContaining({
+        path: `/api/v1/supplier-evidence-requests/eligible-sbom-requests?productId=${PRODUCT_ID}&supplierId=77777777-7777-4777-8777-777777777777&limit=25`,
+        schema: expect.anything(),
+      }),
+    );
+    expect(() =>
+      api.eligibleSbomRequests({
+        supplierId: "not-a-uuid",
+        productId: PRODUCT_ID,
+      }),
+    ).toThrow(ApiClientError);
+  });
+
+  it("uses only scoped M9 portal SBOM item routes with parsed request and response schemas", () => {
+    const api = new SupplierEvidenceApi();
+    const itemId = "88888888-8888-4888-8888-888888888888";
+    const sourceId = "99999999-9999-4999-8999-999999999999";
+    const sessionToken = "a".repeat(32);
+    api.initializeSbomPortalUpload(itemId, {
+      sessionToken,
+      fileName: "component.cdx.json",
+      mediaType: "application/json",
+      byteSize: 12,
+      sha256: "b".repeat(64),
+      declaredFormat: "cyclonedx",
+      idempotencyKey: KEY,
+    });
+    api.completeSbomPortalUpload(itemId, sourceId, {
+      sessionToken,
+      idempotencyKey: KEY,
+    });
+    expect(publicRequest).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        path: `/api/v1/supplier-evidence-portal/sbom-items/${itemId}/submissions`,
+        method: "POST",
+        inputSchema: expect.anything(),
+        schema: expect.anything(),
+      }),
+    );
+    expect(publicRequest).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        path: `/api/v1/supplier-evidence-portal/sbom-items/${itemId}/submissions/${sourceId}/complete`,
+        method: "POST",
+        inputSchema: expect.anything(),
+        schema: expect.anything(),
+      }),
+    );
+    expect(() =>
+      api.initializeSbomPortalUpload("not-a-uuid", {
+        sessionToken,
+        fileName: "component.cdx.json",
+        mediaType: "application/json",
+        byteSize: 12,
+        sha256: "b".repeat(64),
+        idempotencyKey: KEY,
+      }),
+    ).toThrow(ApiClientError);
+  });
 
   it("keeps issue mutations in the internal request namespace with a parsed boundary", () => {
     const api = new SupplierEvidenceApi();

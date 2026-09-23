@@ -40,11 +40,26 @@ export type RetrySupplierEvidenceReminderDeliveryInput = z.output<
 export type SupplierEvidenceRequestParams = z.output<
   typeof schemas.supplierEvidenceRequestParamsSchema
 >;
+export type SupplierEvidenceSbomItemParams = z.output<
+  typeof schemas.supplierEvidenceSbomItemParamsSchema
+>;
+export type SupplierEvidenceSbomCompletionParams = z.output<
+  typeof schemas.supplierEvidenceSbomCompletionParamsSchema
+>;
 export type SupplierEvidenceRevisionParams = z.output<
   typeof schemas.supplierEvidenceRevisionParamsSchema
 >;
 export type SupplierEvidenceRequestListQuery = z.output<
   typeof schemas.supplierEvidenceRequestListQuerySchema
+>;
+export type SupplierEvidenceEligibleSbomRequestsQuery = z.output<
+  typeof schemas.supplierEvidenceEligibleSbomRequestsQuerySchema
+>;
+export type SupplierEvidenceEligibleSbomRequest = z.output<
+  typeof schemas.supplierEvidenceEligibleSbomRequestSchema
+>;
+export type SupplierEvidenceEligibleSbomRequestsResponse = z.output<
+  typeof schemas.supplierEvidenceEligibleSbomRequestsResponseSchema
 >;
 export type SupplierEvidenceSubmissionParams = z.output<
   typeof schemas.supplierEvidenceSubmissionParamsSchema
@@ -94,6 +109,9 @@ export type SupplierEvidenceSubmissionReview = z.output<
 export type SupplierEvidencePreview = z.output<
   typeof schemas.supplierEvidencePreviewSchema
 >;
+export type SupplierEvidencePreviewChecklistItem = z.output<
+  typeof schemas.supplierEvidencePreviewChecklistItemSchema
+>;
 export type SupplierEvidencePortalSessionInput = z.output<
   typeof schemas.supplierEvidencePortalSessionInputSchema
 >;
@@ -105,6 +123,21 @@ export type InitializeSupplierEvidencePortalUploadInput = z.output<
 >;
 export type CompleteSupplierEvidencePortalUploadInput = z.output<
   typeof schemas.completeSupplierEvidencePortalUploadInputSchema
+>;
+export type InitializeSupplierEvidenceSbomUploadInput = z.output<
+  typeof schemas.initializeSupplierEvidenceSbomUploadInputSchema
+>;
+export type CompleteSupplierEvidenceSbomUploadInput = z.output<
+  typeof schemas.completeSupplierEvidenceSbomUploadInputSchema
+>;
+export type SupplierEvidencePortalSbomSubmission = z.output<
+  typeof schemas.supplierEvidencePortalSbomSubmissionSchema
+>;
+export type SupplierEvidenceSbomUploadInitializationResponse = z.output<
+  typeof schemas.supplierEvidenceSbomUploadInitializationResponseSchema
+>;
+export type SupplierEvidenceSbomUploadCompletionResponse = z.output<
+  typeof schemas.supplierEvidenceSbomUploadCompletionResponseSchema
 >;
 export type SupplierEvidencePortalSubmissionParams = z.output<
   typeof schemas.supplierEvidencePortalSubmissionParamsSchema

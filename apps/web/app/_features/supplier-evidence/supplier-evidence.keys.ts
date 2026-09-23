@@ -40,6 +40,15 @@ const overdue = Object.freeze(
     }>,
   ) => Object.freeze(["supplier-evidence", "overdue", query] as const),
 );
+const eligibleSbomRequests = Object.freeze(
+  (supplierId: string, productId: string) =>
+    Object.freeze([
+      "supplier-evidence",
+      "eligible-sbom-requests",
+      supplierId,
+      productId,
+    ] as const),
+);
 
 export const supplierEvidenceKeys = Object.freeze({
   requests,
@@ -51,4 +60,5 @@ export const supplierEvidenceKeys = Object.freeze({
   metrics,
   overdueRoot,
   overdue,
+  eligibleSbomRequests,
 });

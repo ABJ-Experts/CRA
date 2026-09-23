@@ -71,6 +71,8 @@ const request: SupplierEvidenceReviewRequestDetail = {
       title: "Penetration test report",
       instructions: "Provide the signed report.",
       documentClass: "test_report",
+      kind: "evidence",
+      supplierSbomRequestId: null,
       position: 0,
       state: "awaiting_review",
       sourceRequestItemId: null,
@@ -152,7 +154,8 @@ describe("SupplierEvidenceReviewPanel", () => {
   it("keeps accepted evidence from an earlier request cycle reachable", async () => {
     const originalItem = request.reviewItems[0];
     const originalSubmission = originalItem?.submissions[0];
-    if (!originalItem || !originalSubmission) throw new Error("Missing test fixture");
+    if (!originalItem || !originalSubmission)
+      throw new Error("Missing test fixture");
     const priorAccepted = {
       ...originalSubmission,
       state: "accepted" as const,
@@ -182,6 +185,30 @@ describe("SupplierEvidenceReviewPanel", () => {
     expect(
       await screen.findByText("Version-pinned document fields"),
     ).toBeVisible();
+  });
+
+  it("keeps SBOM acceptance in M3 review rather than offering an M9 evidence decision", () => {
+    const sbomItem = {
+      ...request.reviewItems[0]!,
+      title: "Component SBOM",
+      kind: "sbom" as const,
+      documentClass: "sbom" as const,
+      supplierSbomRequestId: DOCUMENT_ID,
+      submissions: [],
+    };
+    queryHooks.useSupplierEvidenceReviewRequestQuery.mockReturnValue({
+      data: { request: { ...request, reviewItems: [sbomItem] } },
+      isLoading: false,
+      isError: false,
+      refetch: vi.fn(),
+    });
+    render(
+      <SupplierEvidenceReviewPanel requests={[request]} canReview enabled />,
+    );
+    expect(screen.getByText(/Product SBOM review/i)).toBeVisible();
+    expect(
+      screen.queryByRole("button", { name: /Review accept/i }),
+    ).not.toBeInTheDocument();
   });
 
   it("keeps the supplier-visible reason and internal note in separate review fields", async () => {

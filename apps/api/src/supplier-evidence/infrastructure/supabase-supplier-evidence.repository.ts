@@ -473,9 +473,10 @@ export class SupabaseSupplierEvidenceRepository implements SupplierEvidenceRepos
     success: readonly string[],
   ) {
     const row = await this.row(name, args);
+    if (row && success.includes(string(row.outcome)))
+      return supplierEvidenceRequestDetailSchema.parse(row.result);
     this.raise(row);
-    if (!row || !success.includes(string(row.outcome))) throw unavailable();
-    return supplierEvidenceRequestDetailSchema.parse(row.result);
+    throw unavailable();
   }
   private async reviewRequest(
     name: string,
