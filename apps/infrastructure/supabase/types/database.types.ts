@@ -2642,6 +2642,393 @@ export type Database = {
           },
         ]
       }
+      framework_control_commands: {
+        Row: {
+          actor_user_id: string
+          created_at: string
+          idempotency_key: string
+          organization_id: string
+          outcome: string
+          request_digest: string
+          result: Json | null
+        }
+        Insert: {
+          actor_user_id: string
+          created_at?: string
+          idempotency_key: string
+          organization_id: string
+          outcome: string
+          request_digest: string
+          result?: Json | null
+        }
+        Update: {
+          actor_user_id?: string
+          created_at?: string
+          idempotency_key?: string
+          organization_id?: string
+          outcome?: string
+          request_digest?: string
+          result?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "framework_control_commands_actor_user_id_fkey"
+            columns: ["actor_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "framework_control_commands_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      framework_control_evidence_links: {
+        Row: {
+          control_id: string
+          created_at: string
+          created_by: string
+          ended_at: string | null
+          ended_by: string | null
+          evidence_version_id: string
+          id: string
+          organization_id: string
+          product_id: string
+          source_control_revision: number
+        }
+        Insert: {
+          control_id: string
+          created_at?: string
+          created_by: string
+          ended_at?: string | null
+          ended_by?: string | null
+          evidence_version_id: string
+          id?: string
+          organization_id: string
+          product_id: string
+          source_control_revision: number
+        }
+        Update: {
+          control_id?: string
+          created_at?: string
+          created_by?: string
+          ended_at?: string | null
+          ended_by?: string | null
+          evidence_version_id?: string
+          id?: string
+          organization_id?: string
+          product_id?: string
+          source_control_revision?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "framework_control_evidence_li_organization_id_evidence_ver_fkey"
+            columns: ["organization_id", "evidence_version_id", "product_id"]
+            isOneToOne: false
+            referencedRelation: "evidence_document_version_products"
+            referencedColumns: ["organization_id", "version_id", "product_id"]
+          },
+          {
+            foreignKeyName: "framework_control_evidence_links_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "framework_control_evidence_links_ended_by_fkey"
+            columns: ["ended_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "m10_control_evidence_control_fkey"
+            columns: ["organization_id", "control_id"]
+            isOneToOne: false
+            referencedRelation: "framework_controls"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "m10_control_evidence_revision_fkey"
+            columns: [
+              "organization_id",
+              "control_id",
+              "source_control_revision",
+            ]
+            isOneToOne: false
+            referencedRelation: "framework_control_revisions"
+            referencedColumns: ["organization_id", "control_id", "revision"]
+          },
+        ]
+      }
+      framework_control_mapping_products: {
+        Row: {
+          mapping_id: string
+          organization_id: string
+          product_id: string
+        }
+        Insert: {
+          mapping_id: string
+          organization_id: string
+          product_id: string
+        }
+        Update: {
+          mapping_id?: string
+          organization_id?: string
+          product_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "framework_control_mapping_produ_organization_id_product_id_fkey"
+            columns: ["organization_id", "product_id"]
+            isOneToOne: false
+            referencedRelation: "product_retention_alert_operations"
+            referencedColumns: ["organization_id", "product_id"]
+          },
+          {
+            foreignKeyName: "framework_control_mapping_produ_organization_id_product_id_fkey"
+            columns: ["organization_id", "product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "m10_control_mapping_product_mapping_fkey"
+            columns: ["organization_id", "mapping_id"]
+            isOneToOne: false
+            referencedRelation: "framework_control_requirement_mappings"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      framework_control_requirement_mappings: {
+        Row: {
+          control_id: string
+          created_at: string
+          created_by: string
+          ended_at: string | null
+          ended_by: string | null
+          id: string
+          organization_id: string
+          pack_key: string
+          rationale: string
+          requirement_key: string
+          source_control_revision: number
+          version_key: string
+        }
+        Insert: {
+          control_id: string
+          created_at?: string
+          created_by: string
+          ended_at?: string | null
+          ended_by?: string | null
+          id?: string
+          organization_id: string
+          pack_key: string
+          rationale: string
+          requirement_key: string
+          source_control_revision: number
+          version_key: string
+        }
+        Update: {
+          control_id?: string
+          created_at?: string
+          created_by?: string
+          ended_at?: string | null
+          ended_by?: string | null
+          id?: string
+          organization_id?: string
+          pack_key?: string
+          rationale?: string
+          requirement_key?: string
+          source_control_revision?: number
+          version_key?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "framework_control_requirement_mappings_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "framework_control_requirement_mappings_ended_by_fkey"
+            columns: ["ended_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "framework_control_requirement_pack_key_version_key_require_fkey"
+            columns: ["pack_key", "version_key", "requirement_key"]
+            isOneToOne: false
+            referencedRelation: "framework_requirements"
+            referencedColumns: ["pack_key", "version_key", "requirement_key"]
+          },
+          {
+            foreignKeyName: "m10_control_mapping_control_fkey"
+            columns: ["organization_id", "control_id"]
+            isOneToOne: false
+            referencedRelation: "framework_controls"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "m10_control_mapping_revision_fkey"
+            columns: [
+              "organization_id",
+              "control_id",
+              "source_control_revision",
+            ]
+            isOneToOne: false
+            referencedRelation: "framework_control_revisions"
+            referencedColumns: ["organization_id", "control_id", "revision"]
+          },
+        ]
+      }
+      framework_control_revisions: {
+        Row: {
+          actor_user_id: string
+          archived_at: string | null
+          control_id: string
+          created_at: string
+          description: string | null
+          implementation_status: string
+          organization_id: string
+          owner_user_id: string
+          revision: number
+          title: string
+          transition_reason: string | null
+        }
+        Insert: {
+          actor_user_id: string
+          archived_at?: string | null
+          control_id: string
+          created_at?: string
+          description?: string | null
+          implementation_status: string
+          organization_id: string
+          owner_user_id: string
+          revision: number
+          title: string
+          transition_reason?: string | null
+        }
+        Update: {
+          actor_user_id?: string
+          archived_at?: string | null
+          control_id?: string
+          created_at?: string
+          description?: string | null
+          implementation_status?: string
+          organization_id?: string
+          owner_user_id?: string
+          revision?: number
+          title?: string
+          transition_reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "framework_control_revisions_actor_user_id_fkey"
+            columns: ["actor_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "framework_control_revisions_owner_user_id_fkey"
+            columns: ["owner_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "m10_control_revisions_control_fkey"
+            columns: ["organization_id", "control_id"]
+            isOneToOne: false
+            referencedRelation: "framework_controls"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      framework_controls: {
+        Row: {
+          archived_at: string | null
+          created_at: string
+          created_by: string
+          description: string
+          id: string
+          implementation_status: string
+          organization_id: string
+          owner_user_id: string
+          revision: number
+          title: string
+          updated_at: string
+          updated_by: string
+        }
+        Insert: {
+          archived_at?: string | null
+          created_at?: string
+          created_by: string
+          description: string
+          id?: string
+          implementation_status?: string
+          organization_id: string
+          owner_user_id: string
+          revision?: number
+          title: string
+          updated_at?: string
+          updated_by: string
+        }
+        Update: {
+          archived_at?: string | null
+          created_at?: string
+          created_by?: string
+          description?: string
+          id?: string
+          implementation_status?: string
+          organization_id?: string
+          owner_user_id?: string
+          revision?: number
+          title?: string
+          updated_at?: string
+          updated_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "framework_controls_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "framework_controls_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "framework_controls_owner_user_id_fkey"
+            columns: ["owner_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "framework_controls_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       framework_pack_versions: {
         Row: {
           attribution: string
@@ -23836,6 +24223,35 @@ export type Database = {
         }
         Returns: boolean
       }
+      m10_control_command: {
+        Args: {
+          p_actor_user_id: string
+          p_expected_revision: number
+          p_idempotency_key: string
+          p_operation: string
+          p_organization_id: string
+          p_payload: Json
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      m10_control_command_impl: {
+        Args: {
+          p_actor_user_id: string
+          p_expected_revision: number
+          p_idempotency_key: string
+          p_operation: string
+          p_organization_id: string
+          p_payload: Json
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      m10_control_uuid: { Args: { p_value: string }; Returns: string }
       m10_import_framework_pack: { Args: { p_payload: Json }; Returns: string }
       m10_select_framework_version: {
         Args: {

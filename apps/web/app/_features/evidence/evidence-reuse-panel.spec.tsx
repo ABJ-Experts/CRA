@@ -77,4 +77,51 @@ describe("EvidenceReusePanel", () => {
     expect(screen.getByText("Unavailable")).toBeInTheDocument();
     expect(screen.queryByText("Current")).not.toBeInTheDocument();
   });
+
+  it("shows only the authorized product's exact evidence version and mapped requirements", () => {
+    render(
+      <EvidenceReusePanel
+        reuse={{
+          technicalFileLinks: [],
+          frameworkControls: [
+            {
+              evidenceLinkId: "44444444-4444-4444-8444-444444444444",
+              controlId: "55555555-5555-4555-8555-555555555555",
+              controlTitle: "Secure update process",
+              controlStatus: "in_progress",
+              evidenceVersionId: "33333333-3333-4333-8333-333333333333",
+              requirements: [
+                {
+                  packKey: "cra-annex-i",
+                  versionKey: "oj-2024-11-20-en",
+                  requirementKey: "i-1-1",
+                  identifier: "Annex I, Part I, 1(1)",
+                  heading: "Security properties",
+                },
+              ],
+              requirementsHasMore: true,
+              navigationPath:
+                "/frameworks?controlId=55555555-5555-4555-8555-555555555555",
+            },
+          ],
+          frameworkControlsHasMore: true,
+        }}
+      />,
+    );
+
+    expect(screen.getByText("Secure update process")).toBeInTheDocument();
+    expect(screen.getByText("In progress")).toBeInTheDocument();
+    expect(screen.getByText("Annex I, Part I, 1(1)")).toBeInTheDocument();
+    expect(screen.getByText("Security properties")).toBeInTheDocument();
+    expect(
+      screen.getByText("More mappings are available in the control library."),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Showing the first 100 authorized control links."),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Open control" })).toHaveAttribute(
+      "href",
+      "/frameworks?controlId=55555555-5555-4555-8555-555555555555",
+    );
+  });
 });

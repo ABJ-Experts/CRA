@@ -1,4 +1,5 @@
 import { idempotencyKeySchema } from "../../organizations/schemas/organization-input.schema.js";
+import { frameworkRequirementReferenceSchema } from "../../frameworks/schemas/framework.schema.js";
 import { technicalFileSectionKeySchema } from "../../technical-files/schemas/technical-file.schema.js";
 import { z } from "zod";
 
@@ -297,7 +298,8 @@ export const evidenceDocumentAccessParamsSchema = z
   .object({ productId: z.uuid(), documentId: z.uuid(), versionId: z.uuid() })
   .strict();
 /** Product, document, and immutable version are all required for reverse links. */
-export const evidenceVersionReuseParamsSchema = evidenceDocumentAccessParamsSchema;
+export const evidenceVersionReuseParamsSchema =
+  evidenceDocumentAccessParamsSchema;
 export const evidenceDeliveryParamsSchema = z
   .object({ token: z.string().regex(/^[A-Za-z0-9_-]{43}$/) })
   .strict();
@@ -535,7 +537,11 @@ export const evidenceDocumentListItemSchema = z
   })
   .strict();
 
-const evidenceExpiryAlertThresholdDaysSchema = z.number().int().min(1).max(3650);
+const evidenceExpiryAlertThresholdDaysSchema = z
+  .number()
+  .int()
+  .min(1)
+  .max(3650);
 const evidenceExpiryAlertThresholdsSchema = z
   .array(evidenceExpiryAlertThresholdDaysSchema)
   .min(1)
@@ -598,7 +604,9 @@ export const evidenceTechnicalFileReuseLinkSchema = z
   })
   .strict()
   .superRefine((value, context) => {
-    if (value.navigationPath !== `/products/${value.productId}/technical-file`) {
+    if (
+      value.navigationPath !== `/products/${value.productId}/technical-file`
+    ) {
       context.addIssue({
         code: "custom",
         path: ["navigationPath"],
@@ -607,13 +615,43 @@ export const evidenceTechnicalFileReuseLinkSchema = z
     }
   });
 
-/** M10 has no producer in V1, so no control mappings can be returned. */
-export const evidenceFrameworkControlReuseLinkSchema = z.never();
+/** Permission-filtered M10 reverse link for this exact evidence version and product. */
+export const evidenceFrameworkControlReuseLinkSchema = z
+  .object({
+    evidenceLinkId: z.uuid(),
+    controlId: z.uuid(),
+    controlTitle: requiredText(500),
+    controlStatus: z.enum(["not_started", "in_progress", "implemented"]),
+    evidenceVersionId: z.uuid(),
+    requirements: z
+      .array(
+        frameworkRequirementReferenceSchema.extend({
+          identifier: requiredText(120),
+          heading: nullableText(500),
+        }),
+      )
+      .max(100),
+    requirementsHasMore: z.boolean(),
+    navigationPath: z.string().max(120),
+  })
+  .strict()
+  .superRefine((value, context) => {
+    if (value.navigationPath !== `/frameworks?controlId=${value.controlId}`) {
+      context.addIssue({
+        code: "custom",
+        path: ["navigationPath"],
+        message: "Framework navigation must match the linked control",
+      });
+    }
+  });
 
 export const evidenceVersionReuseSchema = z
   .object({
     technicalFileLinks: z.array(evidenceTechnicalFileReuseLinkSchema).max(100),
-    frameworkControls: z.array(evidenceFrameworkControlReuseLinkSchema).max(0),
+    frameworkControls: z
+      .array(evidenceFrameworkControlReuseLinkSchema)
+      .max(100),
+    frameworkControlsHasMore: z.boolean().optional(),
   })
   .strict();
 

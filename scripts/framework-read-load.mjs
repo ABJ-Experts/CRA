@@ -1,7 +1,9 @@
 // Bounded, read-only M10 probe against a local CRA API at its allowed request rate.
 import {
+  controlListResponseSchema,
   frameworkCatalogResponseSchema,
   frameworkTreeResponseSchema,
+  requirementCoverageResponseSchema,
 } from "../packages/contracts/dist/frameworks/index.js";
 
 const origin = new URL(process.env.E2E_API_ORIGIN ?? "http://127.0.0.1:3333");
@@ -62,6 +64,16 @@ const paths = [
   "/api/v1/frameworks",
   `/api/v1/frameworks/cra-annex-i/versions/${encodeURIComponent(versionKey)}/tree?limit=100`,
 ];
+const productId = process.env.M10_PRODUCT_ID;
+if (productId) {
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(productId)) {
+    throw new Error("M10_PRODUCT_ID must be a UUID");
+  }
+  paths.push(
+    "/api/v1/frameworks/controls?limit=50",
+    `/api/v1/frameworks/cra-annex-i/versions/${encodeURIComponent(versionKey)}/coverage?productId=${encodeURIComponent(productId)}&limit=100`,
+  );
+}
 const results = [];
 const started = performance.now();
 async function request(index) {
@@ -80,7 +92,7 @@ async function request(index) {
         if (!parsed.packs.some((entry) => entry.packKey === "cra-annex-i")) {
           throw new Error("Catalog omitted the CRA pack");
         }
-      } else {
+      } else if (kind === 1) {
         const parsed = frameworkTreeResponseSchema.parse(body);
         if (
           parsed.packKey !== "cra-annex-i" ||
@@ -88,6 +100,17 @@ async function request(index) {
           parsed.requirements.length !== 25
         ) {
           throw new Error("Tree omitted reviewed CRA requirements");
+        }
+      } else if (kind === 2) {
+        controlListResponseSchema.parse(body);
+      } else {
+        const parsed = requirementCoverageResponseSchema.parse(body);
+        if (
+          parsed.packKey !== "cra-annex-i" ||
+          parsed.versionKey !== versionKey ||
+          parsed.productId !== productId
+        ) {
+          throw new Error("Coverage returned the wrong framework or product");
         }
       }
     }

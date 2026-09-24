@@ -472,6 +472,16 @@ export class RunScopedAccounts {
         }
         continue;
       }
+      const controlLookup = await supabase(
+        `/rest/v1/framework_controls?select=id&organization_id=eq.${encodeURIComponent(id)}&limit=1`,
+      );
+      const controlRows = await responseBody(controlLookup);
+      if (!controlLookup.ok || !Array.isArray(controlRows)) {
+        throw new Error(
+          `Could not resolve scoped control fixtures for ${id}: ${JSON.stringify(controlRows)}`,
+        );
+      }
+      const hasFrameworkControls = controlRows.length > 0;
       for (const importId of importIds) {
         for (const [table, scope] of [
           [
@@ -519,7 +529,9 @@ export class RunScopedAccounts {
         "product_create_idempotencies",
         "product_legal_entity_assignments",
         "product_releases",
-        "products",
+        // M10 mapping-product rows are immutable while this organization
+        // exists. Its exact organization cascade removes both records.
+        ...(hasFrameworkControls ? [] : ["products"]),
       ]) {
         const dependentResponse = await supabase(
           `/rest/v1/${table}?organization_id=eq.${encodeURIComponent(id)}`,
@@ -552,6 +564,11 @@ export class RunScopedAccounts {
         "software_baselines",
         "product_relationships",
         "products",
+        "framework_controls",
+        "framework_control_revisions",
+        "framework_control_evidence_links",
+        "framework_control_requirement_mappings",
+        "framework_control_mapping_products",
         "organization_legal_profiles",
         "organizations",
       ]) {
@@ -559,8 +576,14 @@ export class RunScopedAccounts {
           table === "organizations"
             ? `id=eq.${encodeURIComponent(id)}`
             : `organization_id=eq.${encodeURIComponent(id)}`;
+        const selectColumn =
+          table === "framework_control_revisions"
+            ? "control_id"
+            : table === "framework_control_mapping_products"
+              ? "mapping_id"
+              : "id";
         const assertion = await supabase(
-          `/rest/v1/${table}?select=id&${scope}`,
+          `/rest/v1/${table}?select=${selectColumn}&${scope}`,
         );
         const rows = await responseBody(assertion);
         if (!assertion.ok || !Array.isArray(rows) || rows.length !== 0) {

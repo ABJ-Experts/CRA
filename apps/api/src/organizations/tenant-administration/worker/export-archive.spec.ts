@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 
 import {
   buildStoredZip,
+  exportSourceExclusions,
   exportSourceRegistry,
   simulateExportCapacity,
   validateExportRegistryCoverage,
@@ -94,6 +95,22 @@ describe("tenant export archive", () => {
     );
     expect(exportSourceRegistry.flatMap((entry) => entry.tables)).toContain(
       "audit_logs",
+    );
+  });
+
+  it("registers durable control history but excludes command security material", () => {
+    const source = exportSourceRegistry.find(
+      (entry) => entry.sourceId === "framework_controls",
+    );
+    expect(source?.tables).toEqual([
+      "framework_controls",
+      "framework_control_revisions",
+      "framework_control_evidence_links",
+      "framework_control_requirement_mappings",
+      "framework_control_mapping_products",
+    ]);
+    expect(exportSourceExclusions.framework_control_commands).toMatch(
+      /idempotency|security/i,
     );
   });
 

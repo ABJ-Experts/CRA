@@ -24,6 +24,19 @@ export const exportSourceRegistry: readonly ExportSourceRegistration[] =
       sourceId: "framework_selections",
       tables: ["organization_framework_selections"],
     },
+    {
+      // Control revisions and exact link identities are durable tenant facts.
+      // Referenced pack content is a global deployment asset; evidence bytes
+      // remain under the M8 evidence export and retention boundary.
+      sourceId: "framework_controls",
+      tables: [
+        "framework_controls",
+        "framework_control_revisions",
+        "framework_control_evidence_links",
+        "framework_control_requirement_mappings",
+        "framework_control_mapping_products",
+      ],
+    },
     { sourceId: "invitations", tables: ["invitations"] },
     { sourceId: "custom_roles", tables: ["custom_roles"] },
     {
@@ -289,6 +302,8 @@ export const exportSourceExclusions: Readonly<Record<string, string>> =
       "Legal entity create idempotency keys and request digests are request-security material.",
     organization_branding_publish_idempotencies:
       "Branding publish idempotency keys and request digests are request-security material.",
+    framework_control_commands:
+      "Control command idempotency keys and request digests are request-security material, not portable tenant records.",
     product_create_idempotencies:
       "Product idempotency keys and request digests are request-security material.",
     product_release_create_idempotencies:

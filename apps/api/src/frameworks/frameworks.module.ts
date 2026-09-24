@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common";
 
 import { SupabaseModule } from "../supabase/supabase.module";
+import { PermissionsModule } from "../permissions/permissions.module";
 import {
   FRAMEWORK_REPOSITORY,
   FrameworkUseCases,
@@ -8,11 +9,26 @@ import {
 } from "./application/framework-use-cases";
 import { FrameworksController } from "./frameworks.controller";
 import { SupabaseFrameworkRepository } from "./infrastructure/supabase-framework.repository";
+import { ControlsController } from "./controls.controller";
+import {
+  CONTROL_REPOSITORY,
+  ControlUseCases,
+  type ControlRepository,
+} from "./application/control-use-cases";
+import { SupabaseControlRepository } from "./infrastructure/supabase-control.repository";
 
 @Module({
-  imports: [SupabaseModule],
-  controllers: [FrameworksController],
+  imports: [SupabaseModule, PermissionsModule],
+  controllers: [FrameworksController, ControlsController],
   providers: [
+    SupabaseControlRepository,
+    { provide: CONTROL_REPOSITORY, useExisting: SupabaseControlRepository },
+    {
+      provide: ControlUseCases,
+      inject: [CONTROL_REPOSITORY],
+      useFactory: (repository: ControlRepository) =>
+        new ControlUseCases(repository),
+    },
     SupabaseFrameworkRepository,
     { provide: FRAMEWORK_REPOSITORY, useExisting: SupabaseFrameworkRepository },
     {

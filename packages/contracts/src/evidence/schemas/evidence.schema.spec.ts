@@ -326,7 +326,7 @@ describe("evidence schema boundaries", () => {
     });
   });
 
-  it("exposes only safe exact reverse links and an honest empty M10 projection", () => {
+  it("accepts exact, product-scoped framework control reverse links", () => {
     expect(
       evidenceVersionReuseResponseSchema.parse({
         reuse: {
@@ -346,11 +346,38 @@ describe("evidence schema boundaries", () => {
                 "/products/00000000-0000-4000-8000-000000000002/technical-file",
             },
           ],
-          frameworkControls: [],
+          frameworkControls: [
+            {
+              evidenceLinkId: "00000000-0000-4000-8000-000000000009",
+              controlId: "00000000-0000-4000-8000-000000000010",
+              controlTitle: "Secure update process",
+              controlStatus: "implemented",
+              evidenceVersionId: "00000000-0000-4000-8000-000000000004",
+              requirements: [
+                {
+                  packKey: "cra-annex-i",
+                  versionKey: "oj-2024-11-20-en",
+                  requirementKey: "i-1-1",
+                  identifier: "Annex I, Part I, 1(1)",
+                  heading: null,
+                },
+              ],
+              requirementsHasMore: false,
+              navigationPath:
+                "/frameworks?controlId=00000000-0000-4000-8000-000000000010",
+            },
+          ],
+          frameworkControlsHasMore: true,
         },
       }),
     ).toMatchObject({
-      reuse: { technicalFileLinks: [{ status: "stale" }], frameworkControls: [] },
+      reuse: {
+        technicalFileLinks: [{ status: "stale" }],
+        frameworkControls: [
+          { controlStatus: "implemented", requirementsHasMore: false },
+        ],
+        frameworkControlsHasMore: true,
+      },
     });
     expect(() =>
       evidenceVersionReuseResponseSchema.parse({

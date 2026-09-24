@@ -114,7 +114,9 @@ describe("tenant export source registry architecture", () => {
 
     for (const source of exportSourceRegistry) {
       for (const table of source.tables) {
-        expect(sql).toContain(`('${source.sourceId}', '${table}'`);
+        expect(sql).toMatch(
+          new RegExp(`\\('${source.sourceId}'\\s*,\\s*'${table}'`),
+        );
       }
     }
     expect(sql).toContain("materialize_organization_export_snapshot_atomic");

@@ -6,7 +6,14 @@ import {
 } from "@repo/contracts/frameworks";
 import { Button } from "@repo/ui/button";
 import { cn } from "@repo/ui/cn";
-import { useMemo, useRef, useState, type KeyboardEvent } from "react";
+import dynamic from "next/dynamic";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent,
+} from "react";
 import type { z } from "zod";
 
 import { ApiClientError } from "../../_lib/http/api-client";
@@ -21,6 +28,20 @@ import {
   useFrameworkTree,
   useSelectFramework,
 } from "./frameworks.queries";
+
+const ControlLibraryPanel = dynamic(
+  () =>
+    import("./control-library-panel").then(
+      (module) => module.ControlLibraryPanel,
+    ),
+  {
+    loading: () => (
+      <p role="status" className={cn("text-subhead-regular text-fg-muted")}>
+        Loading control library…
+      </p>
+    ),
+  },
+);
 
 type Pack = z.output<typeof frameworkCatalogResponseSchema>["packs"][number];
 type Draft = Readonly<{
@@ -199,13 +220,17 @@ function RequirementTree({
                   })
                 }
                 className={cn(
-                  "flex w-full items-start gap-3 rounded-lg px-3 py-2 text-left text-subhead-regular text-fg hover:bg-surface-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-active-500",
+                  "flex w-full min-w-0 flex-col items-start gap-2 rounded-lg px-3 py-2 text-left text-subhead-regular text-fg hover:bg-surface-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-active-500 sm:flex-row sm:gap-3",
                 )}
               >
-                <span className={cn("min-w-16 shrink-0 font-semibold")}>
+                <span
+                  className={cn(
+                    "min-w-0 break-words font-semibold sm:min-w-16 sm:shrink-0",
+                  )}
+                >
                   {requirement.identifier}
                 </span>
-                <span>{summary}</span>
+                <span className={cn("min-w-0 break-words")}>{summary}</span>
                 <span
                   className={cn(
                     "ml-auto shrink-0 text-caption-1-regular text-fg-muted",
@@ -271,6 +296,32 @@ export function FrameworksWorkspace() {
   >(null);
   const [saveSucceeded, setSaveSucceeded] = useState(false);
   const retryKey = useRef<{ signature: string; key: string } | null>(null);
+  const [openControls, setOpenControls] = useState(false);
+  const [initialControlId, setInitialControlId] = useState<string | null>(null);
+  const previousOrganizationId = useRef<string | null>(organizationId);
+
+  useEffect(() => {
+    if (previousOrganizationId.current !== organizationId) {
+      const hadOrganization = previousOrganizationId.current !== null;
+      previousOrganizationId.current = organizationId;
+      if (hadOrganization) {
+        setInitialControlId(null);
+        if (typeof window !== "undefined") {
+          const url = new URL(window.location.href);
+          url.searchParams.delete("controlId");
+          window.history.replaceState(null, "", url);
+        }
+        return;
+      }
+    }
+    const controlId = new URLSearchParams(window.location.search).get(
+      "controlId",
+    );
+    if (controlId) {
+      setInitialControlId(controlId);
+      setOpenControls(true);
+    }
+  }, [organizationId]);
 
   const pack =
     catalog.data?.packs.find(
@@ -550,6 +601,37 @@ export function FrameworksWorkspace() {
                     versionKey={version.versionKey}
                   />
                 </SectionCard>
+              ) : null}
+              <SectionCard title="Controls and product coverage">
+                <p className={cn("mb-4 text-subhead-regular text-fg-muted")}>
+                  Record owned controls, pin evidence versions, and review
+                  mappings for an explicit product. Mapping does not establish
+                  legal compliance.
+                </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setOpenControls((current) => !current)}
+                >
+                  {openControls
+                    ? "Close control library"
+                    : "Open control library"}
+                </Button>
+              </SectionCard>
+              {openControls ? (
+                <ControlLibraryPanel
+                  key={organizationId}
+                  organizationId={organizationId}
+                  actorUserId={session?.user.id ?? ""}
+                  canManage={canManage}
+                  canViewProducts={permissions.can_view_products === true}
+                  canViewEvidence={permissions.can_view_evidence === true}
+                  activePackKey={pack.selection?.enabled ? pack.packKey : null}
+                  activeVersionKey={
+                    pack.selection?.enabled ? pack.selection.versionKey : null
+                  }
+                  initialControlId={initialControlId}
+                />
               ) : null}
             </>
           ) : null}
