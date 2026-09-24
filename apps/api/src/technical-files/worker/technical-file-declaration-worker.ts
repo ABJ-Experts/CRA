@@ -148,7 +148,10 @@ async function renderDeclarationPdf(
   write("Product type", product.product_type);
   write("Product traceability", product.internal_code);
   write("Manufacturer", manufacturer.legalName ?? manufacturer.legal_name);
-  write("Manufacturer address", manufacturer.registeredAddress ?? manufacturer.registered_address);
+  write(
+    "Manufacturer address",
+    manufacturer.registeredAddress ?? manufacturer.registered_address,
+  );
   write("Technical-file snapshot", snapshot.id);
   write("Snapshot SHA-256", snapshot.payloadSha256 ?? snapshot.payload_sha256);
   doc.moveDown();
@@ -156,7 +159,10 @@ async function renderDeclarationPdf(
   write("Signatory capacity", signatory.capacity);
   write("Place of issue", payload.issuePlace);
   write("Assessment route", payload.assessmentRoute ?? "Not recorded");
-  write("Notified-body identifier", payload.notifiedBodyIdentifier ?? "Not applicable");
+  write(
+    "Notified-body identifier",
+    payload.notifiedBodyIdentifier ?? "Not applicable",
+  );
   write(
     "Certificate references",
     Array.isArray(payload.certificateReferences)
@@ -181,10 +187,13 @@ function record(value: unknown): Record<string, unknown> {
 }
 
 function display(value: unknown): string {
-  if (typeof value !== "string" && typeof value !== "number") return "Not recorded";
-  return String(value)
-    .replace(/[\u0000-\u001f\u007f]/g, " ")
-    .trim() || "Not recorded";
+  if (typeof value !== "string" && typeof value !== "number")
+    return "Not recorded";
+  return (
+    String(value)
+      .replace(/[\p{Cc}]/gu, " ")
+      .trim() || "Not recorded"
+  );
 }
 function digest(value: Buffer) {
   return createHash("sha256").update(value).digest("hex");

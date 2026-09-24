@@ -50,7 +50,7 @@ describe("SupabaseTechnicalFileSnapshotRepository download audit", () => {
     ).resolves.toMatchObject({
       download: { downloadUrl: "https://storage.test/signed" },
     });
-    expect(rpc.mock.calls.map(([name]) => name)).toEqual([
+    expect(rpc.mock.calls.map(([name]) => name as unknown)).toEqual([
       "get_technical_file_snapshot_export_download_atomic",
       "record_technical_file_snapshot_export_download_atomic",
       "get_technical_file_snapshot_export",

@@ -141,9 +141,7 @@ export class ReportingEvidenceWorkflowService implements ReportingEvidenceWorkfl
     const signer = this.signer();
     const snapshot = stableJson({
       version: 1,
-      ...(obligation.isRehearsal
-        ? { syntheticNotice: rehearsalNotice }
-        : {}),
+      ...(obligation.isRehearsal ? { syntheticNotice: rehearsalNotice } : {}),
       approvalId: input.approvalId,
       organizationId,
       obligationId: input.obligationId,
@@ -153,9 +151,7 @@ export class ReportingEvidenceWorkflowService implements ReportingEvidenceWorkfl
     const snapshotBytes = Buffer.from(snapshot, "utf8");
     const manifest = stableJson({
       version: 1,
-      ...(obligation.isRehearsal
-        ? { syntheticNotice: rehearsalNotice }
-        : {}),
+      ...(obligation.isRehearsal ? { syntheticNotice: rehearsalNotice } : {}),
       algorithm: "Ed25519",
       keyId: signer.keyId,
       approvalId: input.approvalId,
@@ -515,16 +511,25 @@ export class ReportingEvidenceWorkflowService implements ReportingEvidenceWorkfl
       } & GenerateReportingObligationEvidencePackInput
     >,
   ): Promise<ReportingObligationEvidencePackResponse | null> {
-    const reserved = await this.rpc("reserve_reporting_obligation_evidence_pack_atomic", {
-      p_organization_id: organizationId, p_actor_user_id: input.actorId,
-      p_obligation_id: input.obligationId, p_idempotency_key: input.idempotencyKey,
-      p_correlation_id: null,
-    });
+    const reserved = await this.rpc(
+      "reserve_reporting_obligation_evidence_pack_atomic",
+      {
+        p_organization_id: organizationId,
+        p_actor_user_id: input.actorId,
+        p_obligation_id: input.obligationId,
+        p_idempotency_key: input.idempotencyKey,
+        p_correlation_id: null,
+      },
+    );
     if (reserved.outcome === "not_found") return null;
-    if (!['created', 'idempotent'].includes(reserved.outcome)) throw new ReportingEvidenceWorkflowError("conflict");
-    const reservation = reservedEvidencePackSchema.parse(reserved.result).evidencePack;
+    if (!["created", "idempotent"].includes(reserved.outcome))
+      throw new ReportingEvidenceWorkflowError("conflict");
+    const reservation = reservedEvidencePackSchema.parse(
+      reserved.result,
+    ).evidencePack;
     const obligation = await this.rpc("get_reporting_obligation", {
-      p_organization_id: organizationId, p_actor_user_id: input.actorId,
+      p_organization_id: organizationId,
+      p_actor_user_id: input.actorId,
       p_obligation_id: input.obligationId,
     });
     if (obligation.outcome !== "found") return null;
@@ -561,24 +566,52 @@ export class ReportingEvidenceWorkflowService implements ReportingEvidenceWorkfl
       { path: "reporting-evidence.json", bytes: records },
       { path: "manifest.json", bytes: manifestBytes },
     ]);
-    if (archive.bytes.byteLength > maximumBytes) throw new ReportingEvidenceWorkflowError("invalid_request");
-    const upload = await this.client().storage.from(bucket).upload(reservation.objectPath, archive.bytes, { contentType: "application/zip", upsert: false });
+    if (archive.bytes.byteLength > maximumBytes)
+      throw new ReportingEvidenceWorkflowError("invalid_request");
+    const upload = await this.client()
+      .storage.from(bucket)
+      .upload(reservation.objectPath, archive.bytes, {
+        contentType: "application/zip",
+        upsert: false,
+      });
     if (upload.error && !alreadyExists(upload.error.message)) {
       throw new ReportingEvidenceWorkflowError("unavailable");
     }
-    const finalized = await this.rpc("finalize_reporting_obligation_evidence_pack_atomic", {
-      p_organization_id: organizationId, p_actor_user_id: input.actorId, p_pack_id: reservation.id,
-      p_sha256: archive.sha256, p_byte_size: archive.bytes.byteLength, p_manifest_sha256: digest(manifestBytes),
-      p_object_path: reservation.objectPath,
-      p_idempotency_key: internalCommandKey("finalize-evidence-pack", reservation.id),
-      p_correlation_id: null,
-    });
-    if (!['updated', 'idempotent'].includes(finalized.outcome)) throw new ReportingEvidenceWorkflowError("conflict");
-    return { evidencePack: { id: reservation.id, organizationId, obligationId: input.obligationId,
-      isRehearsal: obligationData.isRehearsal,
-      fileName: evidencePackFileName(input.obligationId, obligationData.isRehearsal), sha256: archive.sha256,
-      manifestSha256: digest(manifestBytes), byteLength: archive.bytes.byteLength,
-      createdAt: utcSecond(new Date()) } };
+    const finalized = await this.rpc(
+      "finalize_reporting_obligation_evidence_pack_atomic",
+      {
+        p_organization_id: organizationId,
+        p_actor_user_id: input.actorId,
+        p_pack_id: reservation.id,
+        p_sha256: archive.sha256,
+        p_byte_size: archive.bytes.byteLength,
+        p_manifest_sha256: digest(manifestBytes),
+        p_object_path: reservation.objectPath,
+        p_idempotency_key: internalCommandKey(
+          "finalize-evidence-pack",
+          reservation.id,
+        ),
+        p_correlation_id: null,
+      },
+    );
+    if (!["updated", "idempotent"].includes(finalized.outcome))
+      throw new ReportingEvidenceWorkflowError("conflict");
+    return {
+      evidencePack: {
+        id: reservation.id,
+        organizationId,
+        obligationId: input.obligationId,
+        isRehearsal: obligationData.isRehearsal,
+        fileName: evidencePackFileName(
+          input.obligationId,
+          obligationData.isRehearsal,
+        ),
+        sha256: archive.sha256,
+        manifestSha256: digest(manifestBytes),
+        byteLength: archive.bytes.byteLength,
+        createdAt: utcSecond(new Date()),
+      },
+    };
   }
 
   async getObligationEvidencePackDownload(
@@ -589,20 +622,37 @@ export class ReportingEvidenceWorkflowService implements ReportingEvidenceWorkfl
       evidencePackId: string;
     }>,
   ): Promise<ReportingObligationEvidencePackDownloadResponse | null> {
-    const result = await this.rpc("get_reporting_obligation_evidence_pack_api", {
-      p_organization_id: organizationId, p_actor_user_id: input.actorId,
-      p_obligation_id: input.obligationId, p_evidence_pack_id: input.evidencePackId,
-    });
+    const result = await this.rpc(
+      "get_reporting_obligation_evidence_pack_api",
+      {
+        p_organization_id: organizationId,
+        p_actor_user_id: input.actorId,
+        p_obligation_id: input.obligationId,
+        p_evidence_pack_id: input.evidencePackId,
+      },
+    );
     if (result.outcome === "not_found") return null;
-    if (result.outcome !== "found") throw new ReportingEvidenceWorkflowError("unavailable");
+    if (result.outcome !== "found")
+      throw new ReportingEvidenceWorkflowError("unavailable");
     const pack = evidencePackReadSchema.parse(result.result).evidencePack;
     if (pack.state !== "available") return null;
     const fileName = evidencePackFileName(input.obligationId, pack.isRehearsal);
-    const signed = await this.client().storage.from(bucket).createSignedUrl(pack.objectPath, downloadTtlSeconds, { download: fileName });
-    if (signed.error || !signed.data) throw new ReportingEvidenceWorkflowError("unavailable");
-    return { download: { fileName, downloadUrl: signed.data.signedUrl,
-      expiresAt: utcSecond(new Date(Date.now() + downloadTtlSeconds * 1000)),
-      sha256: pack.sha256, byteLength: pack.byteLength } };
+    const signed = await this.client()
+      .storage.from(bucket)
+      .createSignedUrl(pack.objectPath, downloadTtlSeconds, {
+        download: fileName,
+      });
+    if (signed.error || !signed.data)
+      throw new ReportingEvidenceWorkflowError("unavailable");
+    return {
+      download: {
+        fileName,
+        downloadUrl: signed.data.signedUrl,
+        expiresAt: utcSecond(new Date(Date.now() + downloadTtlSeconds * 1000)),
+        sha256: pack.sha256,
+        byteLength: pack.byteLength,
+      },
+    };
   }
 
   private signer(): ReportingEvidenceSigner {
@@ -658,7 +708,9 @@ export class ReportingEvidenceWorkflowService implements ReportingEvidenceWorkfl
   private async rpc(name: string, args: Readonly<Record<string, unknown>>) {
     const response = await this.client().rpc(name, args);
     if (response.error) throw new ReportingEvidenceWorkflowError("unavailable");
-    const row = Array.isArray(response.data) ? response.data[0] : null;
+    const row: unknown = Array.isArray(response.data)
+      ? (response.data as unknown[])[0]
+      : null;
     const parsed = rpcResultSchema.safeParse(row);
     if (!parsed.success)
       throw new ReportingEvidenceWorkflowError("unavailable");
@@ -690,16 +742,31 @@ const reservedPackageSchema = z
       .strict(),
   })
   .strict();
-const reservedEvidencePackSchema = z.object({
-  evidencePack: z.object({ id: z.uuid(), state: z.literal("reserved"), objectPath: z.string() }).strict(),
-}).strict();
-const evidencePackReadSchema = z.object({
-  evidencePack: z.object({
-    id: z.uuid(), state: z.string(), objectPath: z.string(),
-    isRehearsal: z.boolean().default(false),
-    sha256: z.string().regex(/^[a-f0-9]{64}$/), byteLength: z.number().int().positive(),
-  }).passthrough(),
-}).strict();
+const reservedEvidencePackSchema = z
+  .object({
+    evidencePack: z
+      .object({
+        id: z.uuid(),
+        state: z.literal("reserved"),
+        objectPath: z.string(),
+      })
+      .strict(),
+  })
+  .strict();
+const evidencePackReadSchema = z
+  .object({
+    evidencePack: z
+      .object({
+        id: z.uuid(),
+        state: z.string(),
+        objectPath: z.string(),
+        isRehearsal: z.boolean().default(false),
+        sha256: z.string().regex(/^[a-f0-9]{64}$/),
+        byteLength: z.number().int().positive(),
+      })
+      .passthrough(),
+  })
+  .strict();
 const filingProofSchema = z
   .object({ reauthenticationProofId: z.uuid(), expiresAt: z.string() })
   .strict();
@@ -774,7 +841,10 @@ const rehearsalNotice = "SYNTHETIC / REHEARSAL — NOT A LEGAL FILING";
 function packageFileName(stageId: string, isRehearsal = false): string {
   return `${isRehearsal ? "synthetic-rehearsal-" : ""}manual-submission-${stageId}.zip`;
 }
-function evidencePackFileName(obligationId: string, isRehearsal = false): string {
+function evidencePackFileName(
+  obligationId: string,
+  isRehearsal = false,
+): string {
   return `${isRehearsal ? "synthetic-rehearsal-" : ""}reporting-evidence-${obligationId}.zip`;
 }
 function extensionFor(
@@ -800,9 +870,10 @@ function internalCommandKey(purpose: string, resourceId: string): string {
   const hex = createHash("sha256")
     .update(`reporting-evidence:${purpose}:${resourceId}`)
     .digest("hex");
-  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-5${hex.slice(13, 16)}-${
-    (Number.parseInt(hex.slice(16, 18), 16) & 0x3f | 0x80)
-      .toString(16)
-      .padStart(2, "0")
-  }${hex.slice(18, 20)}-${hex.slice(20, 32)}`;
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-5${hex.slice(13, 16)}-${(
+    (Number.parseInt(hex.slice(16, 18), 16) & 0x3f) |
+    0x80
+  )
+    .toString(16)
+    .padStart(2, "0")}${hex.slice(18, 20)}-${hex.slice(20, 32)}`;
 }

@@ -185,6 +185,9 @@ export class SupabaseReportingObligationRepository implements ReportingObligatio
       p_correlation_id: null,
     });
     this.throwStageDraftFailure(rpc);
+    if (rpc.outcome === "approval_required") {
+      throw new ReportingObligationInvalidStateError();
+    }
     if (rpc.outcome === "not_found") return null;
     if (rpc.outcome !== "updated") {
       throw new Error("reporting stage draft unavailable");

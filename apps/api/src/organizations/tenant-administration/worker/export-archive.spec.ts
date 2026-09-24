@@ -81,6 +81,22 @@ describe("tenant export archive", () => {
     );
   });
 
+  it("includes explicit framework selections while keeping global pack content outside tenant export", () => {
+    const source = exportSourceRegistry.find(
+      (entry) => entry.sourceId === "framework_selections",
+    );
+    expect(source?.tables).toEqual(["organization_framework_selections"]);
+    expect(exportSourceRegistry.flatMap((entry) => entry.tables)).not.toEqual(
+      expect.arrayContaining([
+        "framework_pack_versions",
+        "framework_requirements",
+      ]),
+    );
+    expect(exportSourceRegistry.flatMap((entry) => entry.tables)).toContain(
+      "audit_logs",
+    );
+  });
+
   it("models a resumable capacity profile against the 24-hour target", () => {
     expect(
       simulateExportCapacity({

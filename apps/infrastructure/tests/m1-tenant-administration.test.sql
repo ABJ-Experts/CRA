@@ -1025,7 +1025,7 @@ select pg_temp.check(
       'vulnerability_triage_operational',
       'reporting_obligations',
       'vulnerability_triage_notes',
-      'vulnerability_vex_exports'
+      'vulnerability_vex_exports', 'framework_selections'
     ]::text[]
 );
 

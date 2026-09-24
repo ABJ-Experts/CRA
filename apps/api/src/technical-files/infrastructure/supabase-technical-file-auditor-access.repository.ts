@@ -44,8 +44,9 @@ export class SupabaseTechnicalFileAuditorAccessRepository implements TechnicalFi
     );
     this.tenantFailure(rpc);
     if (rpc.outcome === "not_found") return null;
-    return technicalFileAuditorGrantPreviewResponseSchema.parse({ preview: rpc.result })
-      .preview;
+    return technicalFileAuditorGrantPreviewResponseSchema.parse({
+      preview: rpc.result,
+    }).preview;
   }
 
   async list(
@@ -220,7 +221,9 @@ export class SupabaseTechnicalFileAuditorAccessRepository implements TechnicalFi
     };
     const response = await client.rpc(name, args);
     if (response.error) throw new Error(response.error.message);
-    const row = Array.isArray(response.data) ? response.data[0] : response.data;
+    const row: unknown = Array.isArray(response.data)
+      ? (response.data as unknown[])[0]
+      : response.data;
     if (!row || typeof row !== "object")
       throw new TechnicalFileAuditorAccessUnavailableError();
     const rpc = row as { outcome?: unknown; result?: unknown };

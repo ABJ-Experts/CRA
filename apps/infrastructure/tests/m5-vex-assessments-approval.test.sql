@@ -101,8 +101,8 @@ declare
 begin
   select id into v_owner from public.users where email = 'owner@cra.test';
   select id into v_admin from public.users where email = 'admin@cra.test';
-  select id into v_product from public.products where organization_id = v_org order by id limit 1;
-  select id into v_release from public.product_releases where organization_id = v_org and product_id = v_product order by id limit 1;
+  select product_id, id into v_product, v_release
+  from public.product_releases where organization_id = v_org order by id limit 1;
   select id into v_vulnerability from public.vulnerabilities order by id limit 1;
   select id into v_source_record from public.vulnerability_source_records order by id limit 1;
   select id into v_source_version from public.vulnerability_source_record_versions order by id limit 1;

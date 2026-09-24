@@ -1,5 +1,6 @@
 import { SupabaseReportingObligationRepository } from "./supabase-reporting-obligation.repository";
 import {
+  ReportingObligationInvalidStateError,
   ReportingStageDraftConflictError,
   ReportingStageDraftLockedError,
 } from "../application/reporting-obligation.port";
@@ -136,6 +137,39 @@ describe("SupabaseReportingObligationRepository", () => {
     ).rejects.toBeInstanceOf(ReportingStageDraftLockedError);
   });
 
+  it("maps the closed legacy submit RPC to an invalid state", async () => {
+    const rpc = jest
+      .fn()
+      .mockResolvedValueOnce({
+        data: [{ outcome: "found", result: { draft: draftFixture() } }],
+        error: null,
+      })
+      .mockResolvedValueOnce({
+        data: [{ outcome: "approval_required", result: null }],
+        error: null,
+      });
+
+    await expect(
+      subject(rpc).submitStageDraft(organizationId, {
+        actorId,
+        obligationId,
+        stageId,
+        expectedRevision: 1,
+        lockToken: key,
+        submissionReference: "CRA-PORTAL-1",
+        idempotencyKey: key,
+      }),
+    ).rejects.toBeInstanceOf(ReportingObligationInvalidStateError);
+    expect(rpc).toHaveBeenCalledWith(
+      "submit_reporting_stage_draft_atomic",
+      expect.objectContaining({
+        p_organization_id: organizationId,
+        p_actor_user_id: actorId,
+        p_draft_id: draftId,
+      }),
+    );
+  });
+
   it("sends typed family-template filters and description to the RPC layer", async () => {
     const rpc = jest
       .fn()
@@ -234,6 +268,7 @@ function draftFixture() {
     releaseId: "99999999-9999-4999-8999-999999999999",
     stage: "notification",
     revision: 1,
+    contentHash: "a".repeat(64),
     status: "editable",
     completeness: "incomplete",
     fieldDefinitions: [

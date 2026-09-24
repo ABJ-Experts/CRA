@@ -134,6 +134,8 @@ export const PERMISSION_MATRIX = {
   // Internal supplier registry. These permissions never authorize the public
   // supplier-SBOM portal, whose opaque invitation/session remains separate.
   suppliers: ["view", "manage"],
+  // Version selection is organizational; immutable pack loading is deployment-only.
+  frameworks: ["view", "manage"],
 } as const satisfies Record<string, readonly PermissionAction[]>;
 
 export type PermissionModule = keyof typeof PERMISSION_MATRIX;
@@ -365,6 +367,7 @@ const VIEWER_MODULES: readonly PermissionModule[] = [
   "connectors",
   "sboms",
   "evidence",
+  "frameworks",
 ];
 
 /** Modules a member may also create/edit in — day-to-day operational work. */

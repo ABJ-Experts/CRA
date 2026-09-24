@@ -62,8 +62,8 @@ select ok(position('evidence_document_version_products' in pg_get_functiondef(
 select ok(position('evidence.byte_delivery_started' in pg_get_functiondef(
   'public.redeem_evidence_document_access_atomic(uuid,uuid,text,uuid,bigint,bigint)'::regprocedure)) > 0,
   'redemption records byte delivery separately from authorization');
-select ok(position('p_range_end >= v.actual_size_bytes' in pg_get_functiondef(
-  'public.redeem_evidence_document_access_atomic(uuid,uuid,text,uuid,bigint,bigint)'::regprocedure)) > 0,
+select ok(position('p_range_end>=v_version.actual_size_bytes' in replace(pg_get_functiondef(
+  'public.redeem_evidence_document_access_atomic(uuid,uuid,text,uuid,bigint,bigint)'::regprocedure), ' ', '')) > 0,
   'redemption rejects out-of-bounds byte ranges');
 select ok(position('evidence_integrity_failure' in pg_get_functiondef(
   'public.record_evidence_document_integrity_failure_atomic(uuid,uuid,uuid,bigint,text,text,uuid)'::regprocedure)) > 0,

@@ -62,10 +62,7 @@ describe("canViewMenu", () => {
   const can = canFor("viewer");
 
   it("always shows unmapped entries so a failed session cannot empty the rail", () => {
-    for (const key of [
-      "dashboard",
-      "profile.account",
-    ] as MenuKey[]) {
+    for (const key of ["dashboard", "profile.account"] as MenuKey[]) {
       expect(canViewMenu(key, { can: () => false })).toBe(true);
     }
   });
@@ -75,6 +72,8 @@ describe("canViewMenu", () => {
     expect(canViewMenu("authorization.roles", { can })).toBe(false);
     expect(canViewMenu("organization", { can })).toBe(true);
     expect(canViewMenu("organization", { can: () => false })).toBe(false);
+    expect(canViewMenu("frameworks", { can })).toBe(true);
+    expect(canViewMenu("frameworks", { can: () => false })).toBe(false);
   });
 
   it("hides a group when every child is hidden", () => {

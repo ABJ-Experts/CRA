@@ -31,6 +31,7 @@ describe("menu key parity", () => {
       "organization",
       "products",
       "suppliers",
+      "frameworks",
       "findings",
       "reporting",
       "connectors",

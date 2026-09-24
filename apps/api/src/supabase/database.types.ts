@@ -2644,6 +2644,114 @@ export type Database = {
           },
         ]
       }
+      framework_pack_versions: {
+        Row: {
+          attribution: string
+          content_hash: string
+          edition_date: string
+          imported_at: string
+          language: string
+          pack_key: string
+          requirement_count: number
+          review_evidence: string
+          source_celex: string
+          source_eli: string
+          source_publication_date: string
+          source_url: string
+          title: string
+          version_key: string
+        }
+        Insert: {
+          attribution: string
+          content_hash: string
+          edition_date: string
+          imported_at?: string
+          language: string
+          pack_key: string
+          requirement_count: number
+          review_evidence: string
+          source_celex: string
+          source_eli: string
+          source_publication_date: string
+          source_url: string
+          title: string
+          version_key: string
+        }
+        Update: {
+          attribution?: string
+          content_hash?: string
+          edition_date?: string
+          imported_at?: string
+          language?: string
+          pack_key?: string
+          requirement_count?: number
+          review_evidence?: string
+          source_celex?: string
+          source_eli?: string
+          source_publication_date?: string
+          source_url?: string
+          title?: string
+          version_key?: string
+        }
+        Relationships: []
+      }
+      framework_requirements: {
+        Row: {
+          depth: number
+          heading: string | null
+          identifier: string
+          pack_key: string
+          parent_requirement_key: string | null
+          position: number
+          requirement_key: string
+          source_reference: string
+          text: string
+          tree_order: number
+          version_key: string
+        }
+        Insert: {
+          depth: number
+          heading?: string | null
+          identifier: string
+          pack_key: string
+          parent_requirement_key?: string | null
+          position: number
+          requirement_key: string
+          source_reference: string
+          text: string
+          tree_order: number
+          version_key: string
+        }
+        Update: {
+          depth?: number
+          heading?: string | null
+          identifier?: string
+          pack_key?: string
+          parent_requirement_key?: string | null
+          position?: number
+          requirement_key?: string
+          source_reference?: string
+          text?: string
+          tree_order?: number
+          version_key?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "framework_requirements_pack_key_version_key_fkey"
+            columns: ["pack_key", "version_key"]
+            isOneToOne: false
+            referencedRelation: "framework_pack_versions"
+            referencedColumns: ["pack_key", "version_key"]
+          },
+          {
+            foreignKeyName: "framework_requirements_pack_key_version_key_parent_require_fkey"
+            columns: ["pack_key", "version_key", "parent_requirement_key"]
+            isOneToOne: false
+            referencedRelation: "framework_requirements"
+            referencedColumns: ["pack_key", "version_key", "requirement_key"]
+          },
+        ]
+      }
       invitations: {
         Row: {
           accepted_at: string | null
@@ -3752,6 +3860,58 @@ export type Database = {
           source_id?: string
         }
         Relationships: []
+      }
+      organization_framework_selections: {
+        Row: {
+          enabled: boolean
+          organization_id: string
+          pack_key: string
+          revision: number
+          updated_at: string
+          updated_by: string | null
+          version_key: string
+        }
+        Insert: {
+          enabled: boolean
+          organization_id: string
+          pack_key: string
+          revision: number
+          updated_at?: string
+          updated_by?: string | null
+          version_key: string
+        }
+        Update: {
+          enabled?: boolean
+          organization_id?: string
+          pack_key?: string
+          revision?: number
+          updated_at?: string
+          updated_by?: string | null
+          version_key?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_framework_selections_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_framework_selections_pack_key_version_key_fkey"
+            columns: ["pack_key", "version_key"]
+            isOneToOne: false
+            referencedRelation: "framework_pack_versions"
+            referencedColumns: ["pack_key", "version_key"]
+          },
+          {
+            foreignKeyName: "organization_framework_selections_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       organization_legal_entities: {
         Row: {
@@ -23666,6 +23826,34 @@ export type Database = {
         Returns: string
       }
       m1_v2_sentinel_branding_json: { Args: never; Returns: Json }
+      m10_actor_can_manage_frameworks: {
+        Args: { p_actor_user_id: string; p_organization_id: string }
+        Returns: boolean
+      }
+      m10_actor_has_framework_permission: {
+        Args: {
+          p_actor_user_id: string
+          p_organization_id: string
+          p_permission_key: string
+        }
+        Returns: boolean
+      }
+      m10_import_framework_pack: { Args: { p_payload: Json }; Returns: string }
+      m10_select_framework_version: {
+        Args: {
+          p_actor_user_id: string
+          p_enabled: boolean
+          p_expected_revision: number
+          p_idempotency_key: string
+          p_organization_id: string
+          p_pack_key: string
+          p_version_key: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
       m2_active_member: {
         Args: { p_actor_user_id: string; p_organization_id: string }
         Returns: boolean

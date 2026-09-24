@@ -39,8 +39,8 @@ describe("TechnicalFileAuditorAccessUseCases", () => {
         actorId,
         productId,
         snapshotId,
-        tokenHash: expect.stringMatching(/^[a-f0-9]{64}$/),
-        requestDigest: expect.stringMatching(/^[a-f0-9]{64}$/),
+        tokenHash: expect.stringMatching(/^[a-f0-9]{64}$/) as unknown,
+        requestDigest: expect.stringMatching(/^[a-f0-9]{64}$/) as unknown,
       }),
     );
     expect(JSON.stringify(repository.create.mock.calls)).not.toContain(
@@ -91,9 +91,9 @@ describe("TechnicalFileAuditorAccessUseCases", () => {
     expect(redeemed?.sessionToken).toMatch(/^[A-Za-z0-9_-]{43}$/);
     expect(repository.redeem).toHaveBeenCalledWith(
       expect.objectContaining({
-        tokenHash: expect.stringMatching(/^[a-f0-9]{64}$/),
-        sessionTokenHash: expect.stringMatching(/^[a-f0-9]{64}$/),
-        clientSourceHash: expect.stringMatching(/^[a-f0-9]{64}$/),
+        tokenHash: expect.stringMatching(/^[a-f0-9]{64}$/) as unknown,
+        sessionTokenHash: expect.stringMatching(/^[a-f0-9]{64}$/) as unknown,
+        clientSourceHash: expect.stringMatching(/^[a-f0-9]{64}$/) as unknown,
       }),
     );
     expect(JSON.stringify(repository.redeem.mock.calls)).not.toContain(

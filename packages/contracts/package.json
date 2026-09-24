@@ -103,6 +103,18 @@
       "types": "./dist/supplier-evidence/types/index.d.ts",
       "default": "./dist/supplier-evidence/types/index.js"
     },
+    "./frameworks": {
+      "types": "./dist/frameworks/index.d.ts",
+      "default": "./dist/frameworks/index.js"
+    },
+    "./frameworks/schemas": {
+      "types": "./dist/frameworks/schemas/index.d.ts",
+      "default": "./dist/frameworks/schemas/index.js"
+    },
+    "./frameworks/types": {
+      "types": "./dist/frameworks/types/index.d.ts",
+      "default": "./dist/frameworks/types/index.js"
+    },
     "./risk-registers": {
       "types": "./dist/risk-registers/index.d.ts",
       "default": "./dist/risk-registers/index.js"

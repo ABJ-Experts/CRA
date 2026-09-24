@@ -62,6 +62,38 @@ describe("key generation", () => {
   });
 });
 
+describe("framework permissions", () => {
+  it("allows all base roles to read, but only owner/admin to select editions", () => {
+    for (const baseRole of BASE_ROLES) {
+      expect(
+        hasPermission(
+          DEFAULT_PERMISSIONS_BY_ROLE[baseRole],
+          "can_view_frameworks",
+        ),
+      ).toBe(true);
+      expect(
+        hasPermission(
+          DEFAULT_PERMISSIONS_BY_ROLE[baseRole],
+          "can_manage_frameworks",
+        ),
+      ).toBe(baseRole === "owner" || baseRole === "admin");
+    }
+  });
+
+  it("permits an additive custom management grant but honors a final organization override", () => {
+    const granted = resolveEffectivePermissions({
+      baseRole: "viewer",
+      customRoles: [role({ permissions: { can_manage_frameworks: true } })],
+    });
+    expect(hasPermission(granted, "can_manage_frameworks")).toBe(true);
+    const revoked = resolveEffectivePermissions({
+      baseRole: "admin",
+      baseRoleOverrides: { can_manage_frameworks: false },
+    });
+    expect(hasPermission(revoked, "can_manage_frameworks")).toBe(false);
+  });
+});
+
 describe("supplier registry permissions", () => {
   it("reserves registry management for owner/admin while allowing a narrow custom grant", () => {
     expect(

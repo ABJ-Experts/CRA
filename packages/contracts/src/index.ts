@@ -17,3 +17,4 @@ export * from "./risk-registers.js";
 export * from "./evidence.js";
 export * from "./suppliers.js";
 export * from "./supplier-evidence.js";
+export * from "./frameworks.js";

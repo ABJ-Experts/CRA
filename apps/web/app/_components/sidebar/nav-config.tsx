@@ -3,6 +3,7 @@ import {
   Cable,
   Clock3,
   Factory,
+  BookOpen,
   LayoutGrid,
   Package,
   Settings2,
@@ -66,6 +67,12 @@ export const NAV: NavSection[] = [
         href: "/suppliers",
         icon: Factory,
         menuKey: "suppliers",
+      },
+      {
+        label: "Frameworks",
+        href: "/frameworks",
+        icon: BookOpen,
+        menuKey: "frameworks",
       },
       {
         label: "Findings",

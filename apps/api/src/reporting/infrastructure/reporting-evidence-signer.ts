@@ -71,7 +71,9 @@ export class ReportingEvidenceSigner {
     const ids = new Set<string>();
     for (const key of keys) {
       if (!key.keyId.trim() || ids.has(key.keyId)) {
-        throw new ReportingEvidenceSigningError("invalid verification key ring");
+        throw new ReportingEvidenceSigningError(
+          "invalid verification key ring",
+        );
       }
       ids.add(key.keyId);
       if (publicKeyObject(key.publicKey).asymmetricKeyType !== "ed25519") {
@@ -94,7 +96,9 @@ function publicKeyObject(value: string): KeyObject {
   try {
     return createPublicKey(normalizePem(value));
   } catch {
-    throw new ReportingEvidenceSigningError("invalid reporting verification key");
+    throw new ReportingEvidenceSigningError(
+      "invalid reporting verification key",
+    );
   }
 }
 

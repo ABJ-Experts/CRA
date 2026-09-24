@@ -274,7 +274,7 @@ select pg_temp.check(
 begin;
 do $$
 declare
-  v_org uuid := '00000000-0000-4000-8000-0000000000ca';
+  v_org uuid := gen_random_uuid();
   v_actor uuid;
   v_admin uuid;
   v_other_actor uuid;
@@ -328,6 +328,26 @@ declare
   v_failed boolean;
 begin
   select id into v_actor from public.users where email = 'owner@cra.test';
+  -- The tenant-cascade assertion must target only this transaction's fixture.
+  -- Deleting the seeded CRA tenant can touch unrelated M7 auditor history.
+  insert into public.organizations(id, name, slug)
+  values (v_org, 'M2 V2 cascade fixture', 'm2-v2-cascade-' || replace(v_org::text, '-', ''));
+  insert into public.organization_members(organization_id, user_id, role)
+  values (v_org, v_actor, 'owner');
+  insert into public.organization_legal_entities(
+    organization_id, identifier, display_name, legal_name,
+    registered_address_line_1, registered_address_locality,
+    registered_address_postal_code, registered_address_country,
+    main_establishment_country, manufacturer_contact_name,
+    manufacturer_contact_email, is_default, created_by, updated_by
+  )
+  select v_org, 'default', 'M2 V2 cascade fixture', legal_name,
+    registered_address_line_1, registered_address_locality,
+    registered_address_postal_code, registered_address_country,
+    main_establishment_country, manufacturer_contact_name,
+    manufacturer_contact_email, true, v_actor, v_actor
+  from public.organization_legal_entities
+  where organization_id = '00000000-0000-4000-8000-0000000000ca' and is_default;
   insert into public.users(email) values ('m2-v2-worker-admin@integration.test')
     returning id into v_admin;
   insert into public.organization_members(organization_id, user_id, role)

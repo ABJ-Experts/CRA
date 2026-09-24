@@ -17,6 +17,13 @@ export const exportSourceRegistry: readonly ExportSourceRegistration[] =
     },
     { sourceId: "memberships", tables: ["organization_members"] },
     { sourceId: "audit_logs", tables: ["audit_logs"] },
+    {
+      // The active organization choice is portable tenant state. Versioned
+      // legal text remains a global deployment asset; its stable keys travel
+      // in this row, while selection history travels in audit_logs.
+      sourceId: "framework_selections",
+      tables: ["organization_framework_selections"],
+    },
     { sourceId: "invitations", tables: ["invitations"] },
     { sourceId: "custom_roles", tables: ["custom_roles"] },
     {

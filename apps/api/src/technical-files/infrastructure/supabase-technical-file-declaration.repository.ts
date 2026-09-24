@@ -27,15 +27,18 @@ export class SupabaseTechnicalFileDeclarationRepository implements TechnicalFile
     // A snapshot-only preview deliberately supplies no signatory facts. The
     // database therefore reports signatory as a blocker instead of inventing
     // a capacity or place before the authorized human provides them in draft.
-    const rpc = await this.call("get_technical_file_declaration_preview_contract", {
-      ...scope(org, input),
-      p_snapshot_id: input.snapshotId,
-      p_signatory_capacity: "",
-      p_issue_place: "",
-      p_assessment_route: null,
-      p_notified_body_identifier: null,
-      p_certificate_references: [],
-    });
+    const rpc = await this.call(
+      "get_technical_file_declaration_preview_contract",
+      {
+        ...scope(org, input),
+        p_snapshot_id: input.snapshotId,
+        p_signatory_capacity: "",
+        p_issue_place: "",
+        p_assessment_route: null,
+        p_notified_body_identifier: null,
+        p_certificate_references: [],
+      },
+    );
     this.fail(rpc);
     return rpc.outcome === "not_found"
       ? null
@@ -114,19 +117,22 @@ export class SupabaseTechnicalFileDeclarationRepository implements TechnicalFile
       } & ReissueTechnicalFileDeclarationRequest
     >,
   ) {
-    const rpc = await this.call("reissue_technical_file_declaration_contract_atomic", {
-      ...scope(org, input),
-      p_current_declaration_id: input.declarationId,
-      p_snapshot_id: input.snapshotId,
-      p_expected_declaration_version: input.expectedCurrentVersion,
-      p_signatory_capacity: input.signatoryCapacity,
+    const rpc = await this.call(
+      "reissue_technical_file_declaration_contract_atomic",
+      {
+        ...scope(org, input),
+        p_current_declaration_id: input.declarationId,
+        p_snapshot_id: input.snapshotId,
+        p_expected_declaration_version: input.expectedCurrentVersion,
+        p_signatory_capacity: input.signatoryCapacity,
         p_issue_place: input.signatoryPlace,
-      p_assessment_route: input.assessmentRoute,
-      p_notified_body_identifier: input.notifiedBody?.identifier ?? null,
-      p_certificate_references: input.certificateReferences ?? [],
-      p_reason: input.reason,
-      p_idempotency_key: input.idempotencyKey,
-    });
+        p_assessment_route: input.assessmentRoute,
+        p_notified_body_identifier: input.notifiedBody?.identifier ?? null,
+        p_certificate_references: input.certificateReferences ?? [],
+        p_reason: input.reason,
+        p_idempotency_key: input.idempotencyKey,
+      },
+    );
     return this.declaration(rpc);
   }
   async download(
@@ -209,6 +215,9 @@ function scope(org: string, input: { actorId: string; productId: string }) {
 
 function publicPreview(value: unknown) {
   if (!value || typeof value !== "object") return value;
-  const { payload: _payload, ...preview } = value as Record<string, unknown>;
-  return preview;
+  return Object.fromEntries(
+    Object.entries(value as Record<string, unknown>).filter(
+      ([key]) => key !== "payload",
+    ),
+  );
 }

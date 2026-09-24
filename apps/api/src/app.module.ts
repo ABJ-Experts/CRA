@@ -23,6 +23,7 @@ import { TechnicalFilesModule } from "./technical-files/technical-files.module";
 import { EvidenceModule } from "./evidence/evidence.module";
 import { SuppliersModule } from "./suppliers/suppliers.module";
 import { SupplierEvidenceModule } from "./supplier-evidence/supplier-evidence.module";
+import { FrameworksModule } from "./frameworks/frameworks.module";
 
 @Module({
   imports: [
@@ -66,6 +67,7 @@ import { SupplierEvidenceModule } from "./supplier-evidence/supplier-evidence.mo
     EvidenceModule,
     SuppliersModule,
     SupplierEvidenceModule,
+    FrameworksModule,
   ],
   controllers: [HealthController],
 })

@@ -114,23 +114,23 @@ begin
     v_actor,
     v_obligation,
     'Exploitability was not confirmed.',
-    3,
+    2,
     gen_random_uuid(),
     gen_random_uuid()
   );
 
   perform pg_temp.check(
-    'M6 create/replay/correct/submit/cancel transition atomically',
+    'M6 create/replay/correct/cancel remain atomic and legacy direct submission requires approval',
     v_create.outcome = 'created'
     and v_replay.outcome = 'idempotent'
     and v_conflict.outcome = 'idempotency_conflict'
     and v_correct.outcome = 'updated'
-    and v_submission.outcome = 'updated'
+    and v_submission.outcome = 'approval_required'
     and v_cancel.outcome = 'cancelled'
-    and (select status = 'cancelled' and version = 4 from public.reporting_obligations where id = v_obligation)
+    and (select status = 'cancelled' and version = 3 from public.reporting_obligations where id = v_obligation)
     and (select count(*) = 3 from public.reporting_obligation_stages where obligation_id = v_obligation)
-    and (select count(*) >= 4 from public.reporting_obligation_events where obligation_id = v_obligation)
-    and (select count(*) >= 4 from public.audit_logs where entity_type = 'reporting_obligation' and entity_id = v_obligation::text)
+    and (select count(*) >= 3 from public.reporting_obligation_events where obligation_id = v_obligation)
+    and (select count(*) >= 3 from public.audit_logs where entity_type = 'reporting_obligation' and entity_id = v_obligation::text)
   );
 
   perform pg_temp.check(

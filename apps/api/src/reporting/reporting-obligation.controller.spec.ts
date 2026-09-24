@@ -2,7 +2,10 @@ import { randomUUID } from "node:crypto";
 import { ConflictException, NotFoundException } from "@nestjs/common";
 
 import type { RequestUser } from "../auth/auth.types";
-import { ReportingObligationConflictError } from "./application/reporting-obligation.port";
+import {
+  ReportingObligationConflictError,
+  ReportingObligationInvalidStateError,
+} from "./application/reporting-obligation.port";
 import { ReportingStageDraftConflictError } from "./application/reporting-obligation.port";
 import type { ReportingObligationUseCases } from "./application/reporting-obligation-use-cases";
 import { ReportingObligationController } from "./reporting-obligation.controller";
@@ -25,7 +28,9 @@ describe("ReportingObligationController", () => {
     useCases.create.mockResolvedValue(mutationFixture());
     const controller = subject(useCases);
 
-    await expect(controller.list({ limit: 50, scope: "real" }, user)).resolves.toEqual({
+    await expect(
+      controller.list({ limit: 50, scope: "real" }, user),
+    ).resolves.toEqual({
       obligations: [],
       nextCursor: null,
     });
@@ -186,6 +191,36 @@ describe("ReportingObligationController", () => {
     });
   });
 
+  it("returns a typed conflict when the legacy direct-submit path requires approval", async () => {
+    const useCases = useCasesFor();
+    useCases.submitStageDraft.mockRejectedValue(
+      new ReportingObligationInvalidStateError(),
+    );
+
+    await expect(
+      subject(useCases).submitStageDraft(
+        { obligationId, stageId: "77777777-7777-4777-8777-777777777777" },
+        {
+          expectedRevision: 1,
+          lockToken: key,
+          submissionReference: "CRA-PORTAL-1",
+          idempotencyKey: key,
+        },
+        user,
+      ),
+    ).rejects.toMatchObject({
+      status: 409,
+      response: {
+        code: "invalid_state",
+        message: "That reporting transition is not available.",
+      },
+    });
+    expect(useCases.submitStageDraft).toHaveBeenCalledWith(
+      organizationId,
+      expect.objectContaining({ actorId, obligationId }),
+    );
+  });
+
   it("keeps receipt bytes behind the controller boundary and scopes the filing", async () => {
     const useCases = useCasesFor();
     useCases.recordStageExternalFiling.mockResolvedValue({ filing: {} });
@@ -222,7 +257,7 @@ describe("ReportingObligationController", () => {
           fileName: "portal-receipt.txt",
           mimeType: "text/plain",
           bytes: Buffer.from("receipt"),
-        }),
+        }) as unknown,
       }),
     );
   });
