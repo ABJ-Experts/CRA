@@ -1,5 +1,6 @@
 import {
   frameworkCatalogResponseSchema,
+  frameworkCatalogQuerySchema,
   frameworkSelectionParamsSchema,
   frameworkSelectionResponseSchema,
   frameworkTreeParamsSchema,
@@ -40,9 +41,16 @@ function packPath(packKey: string): `/${string}` {
 }
 
 export class FrameworksApi {
-  catalog(signal?: AbortSignal) {
+  catalog(signal?: AbortSignal, cursor?: string, limit = 100) {
+    const query = apiClient.parseInput(frameworkCatalogQuerySchema, {
+      limit,
+      cursor,
+    });
+    const search = new URLSearchParams();
+    if (query.cursor) search.set("cursor", query.cursor);
+    if (query.limit !== 100) search.set("limit", String(query.limit));
     return authenticatedRequestJson({
-      path: "/api/v1/frameworks",
+      path: `/api/v1/frameworks${search.size ? `?${search}` : ""}`,
       schema: frameworkCatalogResponseSchema,
       signal,
     });

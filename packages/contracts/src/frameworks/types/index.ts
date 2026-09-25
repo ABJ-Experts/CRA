@@ -1,5 +1,32 @@
 import type { z } from "zod";
 import type {
+  customFrameworkContentSchema,
+  customFrameworkImportSchema,
+  customFrameworkCommandInputSchema,
+  customFrameworkCommandResponseSchema,
+  customFrameworkDetailResponseSchema,
+  customFrameworkListResponseSchema,
+} from "../schemas/custom-framework.schema.js";
+
+export type CustomFrameworkContent = z.output<
+  typeof customFrameworkContentSchema
+>;
+export type CustomFrameworkImport = z.output<
+  typeof customFrameworkImportSchema
+>;
+export type CustomFrameworkCommandInput = z.output<
+  typeof customFrameworkCommandInputSchema
+>;
+export type CustomFrameworkCommandResponse = z.output<
+  typeof customFrameworkCommandResponseSchema
+>;
+export type CustomFrameworkDetailResponse = z.output<
+  typeof customFrameworkDetailResponseSchema
+>;
+export type CustomFrameworkListResponse = z.output<
+  typeof customFrameworkListResponseSchema
+>;
+import type {
   curatedFrameworkRelationSchema,
   frameworkCrosswalkResponseSchema,
   frameworkUpgradePreviewResponseSchema,

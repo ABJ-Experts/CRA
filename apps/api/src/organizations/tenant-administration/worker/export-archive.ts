@@ -27,8 +27,10 @@ export const exportSourceRegistry: readonly ExportSourceRegistration[] =
     {
       // Control revisions, exact links, and product applicability decisions
       // are durable tenant facts. Derived coverage projections are excluded.
-      // Referenced pack content is a global deployment asset; evidence bytes
-      // remain under the M8 evidence export and retention boundary.
+      // Owned custom drafts and published content are tenant facts; SQL
+      // selects only rows with the exporting organization's ownership key.
+      // Global pack content remains a deployment asset. Evidence bytes remain
+      // under the M8 evidence export and retention boundary.
       sourceId: "framework_controls",
       tables: [
         "framework_controls",
@@ -39,6 +41,9 @@ export const exportSourceRegistry: readonly ExportSourceRegistration[] =
         "framework_requirement_applicability",
         "framework_upgrade_reviews",
         "framework_upgrade_decisions",
+        "framework_custom_pack_drafts",
+        "framework_pack_versions",
+        "framework_requirements",
       ],
     },
     { sourceId: "invitations", tables: ["invitations"] },

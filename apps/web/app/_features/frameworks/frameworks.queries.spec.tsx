@@ -96,6 +96,45 @@ describe("framework query boundary", () => {
     expect(api.catalog).toHaveBeenCalledTimes(2);
   });
 
+  it("loads bounded catalog pages and merges versions of a pack split across pages", async () => {
+    api.catalog
+      .mockResolvedValueOnce({
+        ...catalog("Organization A view"),
+        nextCursor: "MQ",
+      })
+      .mockResolvedValueOnce({
+        packs: [
+          {
+            ...catalog("Organization A view").packs[0],
+            versions: [{ ...version, versionKey: "v2" }],
+          },
+        ],
+      });
+    const { wrapper } = setup();
+    const view = renderHook(() => useFrameworkCatalog("org-a", true), {
+      wrapper,
+    });
+    await waitFor(() => expect(view.result.current.hasNextPage).toBe(true));
+    await act(async () => {
+      await view.result.current.fetchNextPage();
+    });
+    await waitFor(() =>
+      expect(view.result.current.data?.packs[0]?.versions).toHaveLength(2),
+    );
+    expect(view.result.current.data?.packs).toHaveLength(1);
+    expect(
+      view.result.current.data?.packs[0]?.versions.map(
+        (item) => item.versionKey,
+      ),
+    ).toEqual([version.versionKey, "v2"]);
+    expect(view.result.current.hasNextPage).toBe(false);
+    expect(api.catalog).toHaveBeenNthCalledWith(
+      2,
+      expect.any(AbortSignal),
+      "MQ",
+    );
+  });
+
   it("uses the server cursor for bounded tree pages", async () => {
     api.tree
       .mockResolvedValueOnce({
@@ -144,8 +183,14 @@ describe("framework query boundary", () => {
       revision: 1,
     });
     const { client, wrapper } = setup();
-    client.setQueryData(["frameworks", "org-a", "catalog"], catalog("A"));
-    client.setQueryData(["frameworks", "org-b", "catalog"], catalog("B"));
+    client.setQueryData(["frameworks", "org-a", "catalog"], {
+      pages: [catalog("A")],
+      pageParams: [undefined],
+    });
+    client.setQueryData(["frameworks", "org-b", "catalog"], {
+      pages: [catalog("B")],
+      pageParams: [undefined],
+    });
     const view = renderHook(() => useSelectFramework("org-a"), { wrapper });
     const input = {
       versionKey: version.versionKey,
@@ -158,18 +203,14 @@ describe("framework query boundary", () => {
     });
     expect(api.select).toHaveBeenCalledWith("cra-annex-i", input);
     expect(
-      client.getQueryData<{ packs: Array<{ selection: unknown }> }>([
-        "frameworks",
-        "org-a",
-        "catalog",
-      ])?.packs[0]?.selection,
+      client.getQueryData<{
+        pages: Array<{ packs: Array<{ selection: unknown }> }>;
+      }>(["frameworks", "org-a", "catalog"])?.pages[0]?.packs[0]?.selection,
     ).toEqual({ versionKey: version.versionKey, enabled: true, revision: 1 });
     expect(
-      client.getQueryData<{ packs: Array<{ selection: unknown }> }>([
-        "frameworks",
-        "org-b",
-        "catalog",
-      ])?.packs[0]?.selection,
+      client.getQueryData<{
+        pages: Array<{ packs: Array<{ selection: unknown }> }>;
+      }>(["frameworks", "org-b", "catalog"])?.pages[0]?.packs[0]?.selection,
     ).toBeNull();
   });
 });

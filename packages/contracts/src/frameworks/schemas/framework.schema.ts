@@ -31,7 +31,7 @@ export const frameworkRequirementReferenceSchema = z
   })
   .strict();
 
-const packRequirementSchema = z
+export const frameworkPackRequirementSchema = z
   .object({
     requirementKey: frameworkRequirementKeySchema,
     identifier: plainText(120),
@@ -42,6 +42,75 @@ const packRequirementSchema = z
     sourceReference: plainText(500),
   })
   .strict();
+
+export function validateFrameworkRequirements(
+  requirements: readonly z.output<typeof frameworkPackRequirementSchema>[],
+  context: z.RefinementCtx,
+): void {
+  const byKey = new Map(
+    requirements.map((item) => [item.requirementKey, item]),
+  );
+  const keys = new Set<string>();
+  const identifiers = new Set<string>();
+  const siblings = new Set<string>();
+  for (const [index, item] of requirements.entries()) {
+    if (keys.has(item.requirementKey)) {
+      context.addIssue({
+        code: "custom",
+        path: ["requirements", index, "requirementKey"],
+        message: "Duplicate requirement key",
+      });
+    }
+    keys.add(item.requirementKey);
+    if (identifiers.has(item.identifier)) {
+      context.addIssue({
+        code: "custom",
+        path: ["requirements", index, "identifier"],
+        message: "Duplicate human-readable identifier",
+      });
+    }
+    identifiers.add(item.identifier);
+    if (item.parentKey !== null && !byKey.has(item.parentKey)) {
+      context.addIssue({
+        code: "custom",
+        path: ["requirements", index, "parentKey"],
+        message: `Missing parent for ${item.requirementKey}`,
+      });
+    }
+    const siblingPosition = `${item.parentKey ?? "root"}:${item.position}`;
+    if (siblings.has(siblingPosition)) {
+      context.addIssue({
+        code: "custom",
+        path: ["requirements", index, "position"],
+        message: `Duplicate sibling position ${siblingPosition}`,
+      });
+    }
+    siblings.add(siblingPosition);
+    const seen = new Set<string>();
+    let current: typeof item | undefined = item;
+    while (current) {
+      if (seen.has(current.requirementKey)) {
+        context.addIssue({
+          code: "custom",
+          path: ["requirements", index, "parentKey"],
+          message: `Cycle at ${item.requirementKey}`,
+        });
+        break;
+      }
+      seen.add(current.requirementKey);
+      if (seen.size > 10) {
+        context.addIssue({
+          code: "custom",
+          path: ["requirements", index, "parentKey"],
+          message: `Tree exceeds depth nine at ${item.requirementKey}`,
+        });
+        break;
+      }
+      current =
+        current.parentKey === null ? undefined : byKey.get(current.parentKey);
+    }
+  }
+}
 
 /** Deployment-only input. The database independently enforces identity and atomicity. */
 export const frameworkPackImportSchema = z
@@ -75,7 +144,7 @@ export const frameworkPackImportSchema = z
     rightsEvidence: plainText(2_000).optional(),
     reviewOwner: plainText(200).optional(),
     approvedAt: z.iso.datetime({ offset: true }).optional(),
-    requirements: z.array(packRequirementSchema).min(1).max(1_000),
+    requirements: z.array(frameworkPackRequirementSchema).min(1).max(1_000),
   })
   .strict()
   .superRefine((pack, context) => {
@@ -105,63 +174,15 @@ export const frameworkPackImportSchema = z
     if (JSON.stringify(pack).length > 2_097_152) {
       context.addIssue({ code: "custom", message: "Pack exceeds 2 MB" });
     }
-    const byKey = new Map(
-      pack.requirements.map((item) => [item.requirementKey, item]),
-    );
-    if (byKey.size !== pack.requirements.length) {
-      context.addIssue({
-        code: "custom",
-        message: "Duplicate requirement key",
-      });
-    }
-    if (
-      new Set(pack.requirements.map((item) => item.identifier)).size !==
-      pack.requirements.length
-    ) {
-      context.addIssue({
-        code: "custom",
-        message: "Duplicate human-readable identifier",
-      });
-    }
-    const siblings = new Set<string>();
-    for (const item of pack.requirements) {
-      if (item.parentKey !== null && !byKey.has(item.parentKey)) {
-        context.addIssue({
-          code: "custom",
-          message: `Missing parent for ${item.requirementKey}`,
-        });
-      }
-      const siblingPosition = `${item.parentKey ?? "root"}:${item.position}`;
-      if (siblings.has(siblingPosition)) {
-        context.addIssue({
-          code: "custom",
-          message: `Duplicate sibling position ${siblingPosition}`,
-        });
-      }
-      siblings.add(siblingPosition);
-      const seen = new Set<string>();
-      let current: typeof item | undefined = item;
-      while (current) {
-        if (seen.has(current.requirementKey)) {
-          context.addIssue({
-            code: "custom",
-            message: `Cycle at ${item.requirementKey}`,
-          });
-          break;
-        }
-        seen.add(current.requirementKey);
-        if (seen.size > 10) {
-          context.addIssue({
-            code: "custom",
-            message: `Tree exceeds depth nine at ${item.requirementKey}`,
-          });
-          break;
-        }
-        current =
-          current.parentKey === null ? undefined : byKey.get(current.parentKey);
-      }
-    }
+    validateFrameworkRequirements(pack.requirements, context);
   });
+
+export const frameworkCatalogQuerySchema = z
+  .object({
+    limit: z.coerce.number().int().min(1).max(100).default(100),
+    cursor: z.string().min(1).max(128).optional(),
+  })
+  .strict();
 
 export const frameworkCatalogResponseSchema = z
   .object({
@@ -178,7 +199,11 @@ export const frameworkCatalogResponseSchema = z
                     versionKey: frameworkVersionKeySchema,
                     editionDate: date,
                     language: plainText(12),
-                    sourceUrl: z.url().startsWith("https://").max(2_048),
+                    sourceUrl: z
+                      .url()
+                      .startsWith("https://")
+                      .max(2_048)
+                      .nullable(),
                     sourceReference: plainText(500),
                     attribution: plainText(1_000),
                     contentHash: hash,
@@ -187,6 +212,7 @@ export const frameworkCatalogResponseSchema = z
                         "public_law",
                         "licensed_standard",
                         "approved_fixture",
+                        "customer_defined",
                       ])
                       .nullable()
                       .optional(),
@@ -209,6 +235,7 @@ export const frameworkCatalogResponseSchema = z
           .strict(),
       )
       .max(100),
+    nextCursor: z.string().min(1).max(128).optional(),
   })
   .strict();
 
@@ -234,7 +261,7 @@ export const frameworkTreeResponseSchema = z
     language: plainText(12),
     requirements: z
       .array(
-        packRequirementSchema.extend({
+        frameworkPackRequirementSchema.extend({
           depth: z.number().int().min(0).max(9),
         }),
       )

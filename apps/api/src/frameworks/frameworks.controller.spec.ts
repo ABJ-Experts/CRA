@@ -58,7 +58,7 @@ describe("FrameworksController", () => {
   it("forwards only verified tenant identity to the application", async () => {
     catalog.mockResolvedValue({ packs: [] });
     await controller.catalog(user);
-    expect(catalog).toHaveBeenCalledWith("org-a", "actor-a");
+    expect(catalog).toHaveBeenCalledWith("org-a", "actor-a", { limit: 100 });
     tree.mockResolvedValue(null);
     await expect(
       controller.tree(
@@ -87,6 +87,13 @@ describe("FrameworksController", () => {
     await expect(controller.catalog(user)).rejects.toBeInstanceOf(
       ForbiddenException,
     );
+  });
+
+  it("rejects malformed catalog cursors without exposing database errors", async () => {
+    catalog.mockRejectedValue(new FrameworkInvalidRequestError());
+    await expect(
+      controller.catalog(user, { limit: 100, cursor: "bad" }),
+    ).rejects.toBeInstanceOf(BadRequestException);
   });
 
   it("maps stale selection to a conflict", async () => {

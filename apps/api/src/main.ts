@@ -27,6 +27,10 @@ async function bootstrap(): Promise<void> {
    */
   app.setGlobalPrefix(API_PREFIX);
 
+  // Customer framework imports are capped at 2 MiB by the shared schema;
+  // allow JSON envelope overhead before the Zod boundary rejects larger input.
+  app.useBodyParser("json", { limit: "2200kb" });
+
   /*
    * Trust exactly one proxy hop (the Next rewrite in front of us), so
    * req.ip is the real client address for rate limiting rather than the proxy's.

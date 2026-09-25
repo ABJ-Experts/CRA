@@ -3248,6 +3248,79 @@ export type Database = {
           },
         ]
       }
+      framework_custom_pack_drafts: {
+        Row: {
+          archived_at: string | null
+          created_at: string
+          created_by: string
+          document: Json
+          draft_digest: string
+          id: string
+          organization_id: string
+          pack_key: string
+          published_digest: string | null
+          published_version: number
+          revision: number
+          status: string
+          updated_at: string
+          updated_by: string
+        }
+        Insert: {
+          archived_at?: string | null
+          created_at?: string
+          created_by: string
+          document: Json
+          draft_digest: string
+          id?: string
+          organization_id: string
+          pack_key: string
+          published_digest?: string | null
+          published_version?: number
+          revision?: number
+          status?: string
+          updated_at?: string
+          updated_by: string
+        }
+        Update: {
+          archived_at?: string | null
+          created_at?: string
+          created_by?: string
+          document?: Json
+          draft_digest?: string
+          id?: string
+          organization_id?: string
+          pack_key?: string
+          published_digest?: string | null
+          published_version?: number
+          revision?: number
+          status?: string
+          updated_at?: string
+          updated_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "framework_custom_pack_drafts_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "framework_custom_pack_drafts_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "framework_custom_pack_drafts_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       framework_pack_versions: {
         Row: {
           approved_at: string | null
@@ -3258,16 +3331,17 @@ export type Database = {
           edition_label: string | null
           imported_at: string
           language: string
+          owner_org_id: string | null
           pack_key: string
           requirement_count: number
-          review_evidence: string
+          review_evidence: string | null
           review_owner: string | null
           rights_evidence: string | null
           source_celex: string | null
           source_eli: string | null
           source_kind: string
-          source_publication_date: string
-          source_url: string
+          source_publication_date: string | null
+          source_url: string | null
           title: string
           version_key: string
         }
@@ -3280,16 +3354,17 @@ export type Database = {
           edition_label?: string | null
           imported_at?: string
           language: string
+          owner_org_id?: string | null
           pack_key: string
           requirement_count: number
-          review_evidence: string
+          review_evidence?: string | null
           review_owner?: string | null
           rights_evidence?: string | null
           source_celex?: string | null
           source_eli?: string | null
           source_kind?: string
-          source_publication_date: string
-          source_url: string
+          source_publication_date?: string | null
+          source_url?: string | null
           title: string
           version_key: string
         }
@@ -3302,20 +3377,29 @@ export type Database = {
           edition_label?: string | null
           imported_at?: string
           language?: string
+          owner_org_id?: string | null
           pack_key?: string
           requirement_count?: number
-          review_evidence?: string
+          review_evidence?: string | null
           review_owner?: string | null
           rights_evidence?: string | null
           source_celex?: string | null
           source_eli?: string | null
           source_kind?: string
-          source_publication_date?: string
-          source_url?: string
+          source_publication_date?: string | null
+          source_url?: string | null
           title?: string
           version_key?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "framework_pack_versions_owner_org_id_fkey"
+            columns: ["owner_org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       framework_requirement_applicability: {
         Row: {
@@ -3390,6 +3474,7 @@ export type Database = {
           depth: number
           heading: string | null
           identifier: string
+          owner_org_id: string | null
           pack_key: string
           parent_requirement_key: string | null
           position: number
@@ -3403,6 +3488,7 @@ export type Database = {
           depth: number
           heading?: string | null
           identifier: string
+          owner_org_id?: string | null
           pack_key: string
           parent_requirement_key?: string | null
           position: number
@@ -3416,6 +3502,7 @@ export type Database = {
           depth?: number
           heading?: string | null
           identifier?: string
+          owner_org_id?: string | null
           pack_key?: string
           parent_requirement_key?: string | null
           position?: number
@@ -3426,6 +3513,20 @@ export type Database = {
           version_key?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "framework_requirements_owner_fkey"
+            columns: ["pack_key", "version_key", "owner_org_id"]
+            isOneToOne: false
+            referencedRelation: "framework_pack_versions"
+            referencedColumns: ["pack_key", "version_key", "owner_org_id"]
+          },
+          {
+            foreignKeyName: "framework_requirements_owner_org_id_fkey"
+            columns: ["owner_org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "framework_requirements_pack_key_version_key_fkey"
             columns: ["pack_key", "version_key"]
@@ -24794,6 +24895,69 @@ export type Database = {
         }
         Returns: Json
       }
+      m10_custom_pack_command: {
+        Args: {
+          p_actor_user_id: string
+          p_expected_revision: number
+          p_idempotency_key: string
+          p_operation: string
+          p_organization_id: string
+          p_payload: Json
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      m10_custom_pack_detail: {
+        Args: {
+          p_actor_user_id: string
+          p_draft_id: string
+          p_organization_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      m10_custom_pack_page: {
+        Args: {
+          p_actor_user_id: string
+          p_limit: number
+          p_offset: number
+          p_organization_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      m10_custom_pack_summary: {
+        Args: {
+          p_draft: Database["public"]["Tables"]["framework_custom_pack_drafts"]["Row"]
+        }
+        Returns: Json
+      }
+      m10_custom_pack_validate: {
+        Args: {
+          p_actor_user_id: string
+          p_document: Json
+          p_organization_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      m10_custom_pack_visible: {
+        Args: {
+          p_organization_id: string
+          p_pack_key: string
+          p_version_key: string
+        }
+        Returns: boolean
+      }
+      m10_custom_validation_error: { Args: { p_document: Json }; Returns: Json }
       m10_fail_coverage_scope: {
         Args: {
           p_error: string
@@ -24920,6 +25084,14 @@ export type Database = {
           outcome: string
           result: Json
         }[]
+      }
+      m10_validate_custom_document: {
+        Args: {
+          p_document: Json
+          p_draft_id: string
+          p_organization_id: string
+        }
+        Returns: boolean
       }
       m2_active_member: {
         Args: { p_actor_user_id: string; p_organization_id: string }

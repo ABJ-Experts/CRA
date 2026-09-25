@@ -64,6 +64,15 @@ vi.mock("../../_providers/session-provider", () => ({
     isLoading: state.sessionLoading,
   }),
 }));
+
+vi.mock("./custom-frameworks-panel", () => ({
+  CustomFrameworksPanel: () => (
+    <section>
+      <h2>Custom frameworks</h2>
+    </section>
+  ),
+}));
+
 vi.mock("./frameworks.queries", () => ({
   useFrameworkCatalog: () => ({
     data: state.catalog,
@@ -140,6 +149,18 @@ afterEach(() => {
 });
 
 describe("FrameworksWorkspace", () => {
+  it("uses neutral framework wording for mixed official and custom packs", () => {
+    render(<FrameworksWorkspace />);
+
+    expect(
+      screen.getByText(
+        "Review published framework requirements and choose the edition used in this workspace.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(/Review published CRA requirements/i),
+    ).not.toBeInTheDocument();
+  });
   it("shows a keyboard readable tree and renders legal text inertly", () => {
     process.env.NEXT_PUBLIC_ENABLE_MOCKS = "false";
     render(<FrameworksWorkspace />);
@@ -433,4 +454,17 @@ describe("FrameworksWorkspace", () => {
     fireEvent.keyDown(first, { key: "ArrowLeft" });
     expect(first).toHaveAttribute("aria-expanded", "false");
   });
+});
+
+it("lazy loads the custom framework manager from the frameworks workspace", async () => {
+  process.env.NEXT_PUBLIC_ENABLE_MOCKS = "false";
+  render(<FrameworksWorkspace />);
+
+  fireEvent.click(
+    screen.getByRole("button", { name: "Manage custom frameworks" }),
+  );
+
+  expect(
+    await screen.findByRole("heading", { name: "Custom frameworks" }),
+  ).toBeInTheDocument();
 });

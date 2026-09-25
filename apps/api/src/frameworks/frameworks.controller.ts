@@ -12,6 +12,7 @@ import {
 } from "@nestjs/common";
 import {
   frameworkCatalogResponseSchema,
+  frameworkCatalogQuerySchema,
   frameworkTreeParamsSchema,
   frameworkTreeQuerySchema,
   frameworkTreeResponseSchema,
@@ -42,6 +43,7 @@ import {
 } from "./application/framework-use-cases";
 
 type TreeParams = z.output<typeof frameworkTreeParamsSchema>;
+type CatalogQuery = z.output<typeof frameworkCatalogQuerySchema>;
 type TreeQuery = z.output<typeof frameworkTreeQuerySchema>;
 type SelectionParams = z.output<typeof frameworkSelectionParamsSchema>;
 type SelectInput = z.output<typeof selectFrameworkInputSchema>;
@@ -61,10 +63,24 @@ export class FrameworksController {
   @Get()
   @RequirePermissions("can_view_frameworks")
   @ZodResponse(frameworkCatalogResponseSchema)
-  async catalog(@CurrentUser() user: RequestUser) {
+  async catalog(
+    @CurrentUser() user: RequestUser,
+    @Query(zodQuery(frameworkCatalogQuerySchema))
+    query: CatalogQuery = { limit: 100 },
+  ) {
     try {
-      return await this.frameworks.catalog(organizationId(user), user.id);
+      return await this.frameworks.catalog(
+        organizationId(user),
+        user.id,
+        query,
+      );
     } catch (error) {
+      if (error instanceof FrameworkInvalidRequestError) {
+        throw new BadRequestException({
+          message: "Invalid framework cursor.",
+          code: "invalid_cursor",
+        });
+      }
       if (error instanceof FrameworkForbiddenError) {
         throw new ForbiddenException({
           message: "You cannot view this organization’s frameworks.",

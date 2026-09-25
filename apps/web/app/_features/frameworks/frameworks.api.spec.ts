@@ -135,6 +135,27 @@ describe("FrameworksApi", () => {
     );
   });
 
+  it("validates a catalog continuation before requesting the next page", async () => {
+    const fetcher = vi
+      .fn()
+      .mockResolvedValue(
+        new Response(JSON.stringify({ packs: [], nextCursor: "Mg" }), {
+          status: 200,
+        }),
+      );
+    vi.stubGlobal("fetch", fetcher);
+    await expect(frameworksApi.catalog(undefined, "Mg", 2)).resolves.toEqual({
+      packs: [],
+      nextCursor: "Mg",
+    });
+    expect(fetcher).toHaveBeenCalledWith(
+      "/api/v1/frameworks?cursor=Mg&limit=2",
+      expect.objectContaining({ method: "GET" }),
+    );
+    expect(() => frameworksApi.catalog(undefined, undefined, 101)).toThrow();
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  });
+
   it("validates selection before PUT and never replays a failed write", async () => {
     const fetcher = vi
       .fn()

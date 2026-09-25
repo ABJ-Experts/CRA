@@ -1,6 +1,7 @@
 import { Injectable, ServiceUnavailableException } from "@nestjs/common";
 import {
   frameworkCatalogResponseSchema,
+  frameworkCatalogQuerySchema,
   frameworkTreeResponseSchema,
   frameworkSelectionResponseSchema,
 } from "@repo/contracts/frameworks";
@@ -35,34 +36,55 @@ function decodeCursor(cursor: string | undefined): number {
   return offset;
 }
 
+function decodeCatalogCursor(cursor: string | undefined): number {
+  if (!cursor) return 0;
+  const decoded = Buffer.from(cursor, "base64url").toString("utf8");
+  if (!/^(0|[1-9]\d{0,9})$/.test(decoded))
+    throw new FrameworkInvalidRequestError();
+  const offset = Number(decoded);
+  if (
+    offset > 2_147_483_647 ||
+    Buffer.from(String(offset)).toString("base64url") !== cursor
+  )
+    throw new FrameworkInvalidRequestError();
+  return offset;
+}
+
 @Injectable()
 export class SupabaseFrameworkRepository implements FrameworkRepository {
   constructor(private readonly supabase: SupabaseService) {}
 
-  async catalog(orgId: string, actorId: string) {
+  async catalog(
+    orgId: string,
+    actorId: string,
+    query: z.output<typeof frameworkCatalogQuerySchema> = { limit: 100 },
+  ) {
     const client = this.supabase.admin();
     await this.verifyMembership(orgId, actorId);
-    const [
-      { data: packs, error: packError },
-      { data: selections, error: selectionError },
-    ] = await Promise.all([
-      client
-        .from("framework_pack_versions")
-        .select(
-          "pack_key,version_key,title,edition_date,language,source_celex,source_url,attribution,content_hash,source_kind,edition_label,distribution_rights,review_owner",
-        )
-        .order("pack_key")
-        .order("edition_date", { ascending: false })
-        .limit(101),
-      client
-        .from("organization_framework_selections")
-        .select("pack_key,version_key,enabled,revision")
-        .eq("organization_id", orgId)
-        .limit(101),
-    ]);
-    if (packError || selectionError || !packs || !selections)
-      throw unavailable();
-    if (packs.length > 100 || selections.length > 100) throw unavailable();
+    const offset = decodeCatalogCursor(query.cursor);
+    if (offset > 2_147_483_647 - query.limit)
+      throw new FrameworkInvalidRequestError();
+    const { data: allRows, error: packError } = await client
+      .from("framework_pack_versions")
+      .select(
+        "pack_key,version_key,title,edition_date,language,source_celex,source_url,attribution,content_hash,source_kind,edition_label,distribution_rights,review_owner,owner_org_id",
+      )
+      .or(`owner_org_id.is.null,owner_org_id.eq.${orgId}`)
+      .order("pack_key")
+      .order("edition_date", { ascending: false })
+      .order("version_key")
+      .range(offset, offset + query.limit);
+    if (packError || !allRows) throw unavailable();
+    const packs = allRows.slice(0, query.limit);
+    const packKeys = [...new Set(packs.map((row) => row.pack_key))];
+    const { data: selections, error: selectionError } = packKeys.length
+      ? await client
+          .from("organization_framework_selections")
+          .select("pack_key,version_key,enabled,revision")
+          .eq("organization_id", orgId)
+          .in("pack_key", packKeys)
+      : { data: [], error: null };
+    if (selectionError || !selections) throw unavailable();
 
     const selected = new Map(selections.map((row) => [row.pack_key, row]));
     type CatalogPack = z.output<
@@ -72,7 +94,12 @@ export class SupabaseFrameworkRepository implements FrameworkRepository {
     for (const row of packs) {
       const sourceKind = row.source_kind
         ? z
-            .enum(["public_law", "licensed_standard", "approved_fixture"])
+            .enum([
+              "public_law",
+              "licensed_standard",
+              "approved_fixture",
+              "customer_defined",
+            ])
             .safeParse(row.source_kind)
         : null;
       if (sourceKind && !sourceKind.success) throw unavailable();
@@ -95,9 +122,12 @@ export class SupabaseFrameworkRepository implements FrameworkRepository {
         editionDate: row.edition_date,
         language: row.language,
         sourceUrl: row.source_url,
-        sourceReference: row.source_celex
-          ? `CELEX:${row.source_celex}`
-          : (row.edition_label ?? row.source_url),
+        sourceReference:
+          row.source_kind === "customer_defined"
+            ? "Customer-defined requirements"
+            : row.source_celex
+              ? `CELEX:${row.source_celex}`
+              : (row.edition_label ?? row.source_url ?? "Reviewed framework"),
         attribution: row.attribution,
         contentHash: row.content_hash,
         ...(sourceKind
@@ -113,6 +143,13 @@ export class SupabaseFrameworkRepository implements FrameworkRepository {
     }
     return frameworkCatalogResponseSchema.parse({
       packs: [...grouped.values()],
+      ...(allRows.length > query.limit
+        ? {
+            nextCursor: Buffer.from(String(offset + query.limit)).toString(
+              "base64url",
+            ),
+          }
+        : {}),
     });
   }
 
@@ -123,12 +160,13 @@ export class SupabaseFrameworkRepository implements FrameworkRepository {
     // precede the global read because the service-role client bypasses RLS.
     const { data: pack, error: packError } = await client
       .from("framework_pack_versions")
-      .select("pack_key,edition_date,language")
+      .select("pack_key,edition_date,language,owner_org_id")
       .eq("pack_key", input.packKey)
       .eq("version_key", input.versionKey)
       .maybeSingle();
     if (packError) throw unavailable();
-    if (!pack) return null;
+    if (!pack || (pack.owner_org_id != null && pack.owner_org_id !== orgId))
+      return null;
 
     const offset = decodeCursor(input.cursor);
     const { data: rows, error } = await client

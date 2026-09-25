@@ -407,12 +407,13 @@ export class SupabaseControlRepository implements ControlRepository {
     if (!product) throw new ControlForbiddenError();
     const { data: pack, error: packError } = await client
       .from("framework_pack_versions")
-      .select("pack_key")
+      .select("pack_key,owner_org_id")
       .eq("pack_key", input.packKey)
       .eq("version_key", input.versionKey)
       .maybeSingle();
     if (packError) throw unavailable();
-    if (!pack) return null;
+    if (!pack || (pack.owner_org_id != null && pack.owner_org_id !== orgId))
+      return null;
     const offset = decodeCursor(input.cursor);
     const { data: requested, error: requestError } = await client.rpc(
       "m10_request_coverage",

@@ -31,7 +31,7 @@ describe("FrameworkUseCases", () => {
       versionKey: "2024",
       limit: 100,
     });
-    expect(catalog).toHaveBeenCalledWith("org-a", "user-a");
+    expect(catalog).toHaveBeenCalledWith("org-a", "user-a", { limit: 100 });
     expect(tree).toHaveBeenCalledWith("org-a", {
       actorId: "user-a",
       packKey: "cra",

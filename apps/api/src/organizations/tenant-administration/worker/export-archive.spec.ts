@@ -82,13 +82,14 @@ describe("tenant export archive", () => {
     );
   });
 
-  it("includes explicit framework selections while keeping global pack content outside tenant export", () => {
+  it("includes selections and tenant-owned pack content while SQL excludes global packs", () => {
     const source = exportSourceRegistry.find(
       (entry) => entry.sourceId === "framework_selections",
     );
     expect(source?.tables).toEqual(["organization_framework_selections"]);
-    expect(exportSourceRegistry.flatMap((entry) => entry.tables)).not.toEqual(
+    expect(exportSourceRegistry.flatMap((entry) => entry.tables)).toEqual(
       expect.arrayContaining([
+        "framework_custom_pack_drafts",
         "framework_pack_versions",
         "framework_requirements",
       ]),
@@ -111,6 +112,9 @@ describe("tenant export archive", () => {
       "framework_requirement_applicability",
       "framework_upgrade_reviews",
       "framework_upgrade_decisions",
+      "framework_custom_pack_drafts",
+      "framework_pack_versions",
+      "framework_requirements",
     ]);
     expect(exportSourceExclusions.framework_control_commands).toMatch(
       /idempotency|security/i,

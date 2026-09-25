@@ -85,6 +85,20 @@ const FrameworkCrosswalkPanel = dynamic(
   },
 );
 
+const CustomFrameworksPanel = dynamic(
+  () =>
+    import("./custom-frameworks-panel").then(
+      (module) => module.CustomFrameworksPanel,
+    ),
+  {
+    loading: () => (
+      <p role="status" className={cn("text-subhead-regular text-fg-muted")}>
+        Loading custom frameworks…
+      </p>
+    ),
+  },
+);
+
 type Pack = z.output<typeof frameworkCatalogResponseSchema>["packs"][number];
 type Draft = Readonly<{
   organizationId: string;
@@ -339,6 +353,7 @@ export function FrameworksWorkspace() {
   const [saveSucceeded, setSaveSucceeded] = useState(false);
   const retryKey = useRef<{ signature: string; key: string } | null>(null);
   const [openControls, setOpenControls] = useState(false);
+  const [openCustomFrameworks, setOpenCustomFrameworks] = useState(false);
   const [openCoverage, setOpenCoverage] = useState(false);
   const [openUpgrade, setOpenUpgrade] = useState(false);
   const [openCrosswalks, setOpenCrosswalks] = useState(false);
@@ -453,7 +468,7 @@ export function FrameworksWorkspace() {
     <main className={cn("flex flex-col gap-6 px-6 py-6 lg:px-[30px]")}>
       <PageHeading
         title="Frameworks"
-        subtitle="Review published CRA requirements and choose the edition used in this workspace."
+        subtitle="Review published framework requirements and choose the edition used in this workspace."
       />
       {!live ? (
         <SectionCard title="Local data connection required">
@@ -521,10 +536,10 @@ export function FrameworksWorkspace() {
           {pack ? (
             <>
               <SectionCard title="Workspace selection">
-                <div className={cn("grid gap-4 md:grid-cols-2")}>
+                <div className={cn("grid min-w-0 gap-4 md:grid-cols-2")}>
                   <label
                     className={cn(
-                      "flex flex-col gap-2 text-caption-1-regular text-fg",
+                      "flex min-w-0 max-w-full [min-inline-size:0] flex-col gap-2 text-caption-1-regular text-fg",
                     )}
                   >
                     Framework
@@ -540,7 +555,7 @@ export function FrameworksWorkspace() {
                         retryKey.current = null;
                       }}
                       className={cn(
-                        "h-10 rounded-xl border border-border bg-canvas px-3 text-subhead-regular text-fg focus-visible:outline-2 focus-visible:outline-active-500",
+                        "h-10 w-full min-w-0 max-w-full [min-inline-size:0] [max-inline-size:100%] truncate rounded-xl border border-border bg-canvas px-3 text-subhead-regular text-fg focus-visible:outline-2 focus-visible:outline-active-500",
                       )}
                     >
                       {catalog.data?.packs.map((item) => (
@@ -552,7 +567,7 @@ export function FrameworksWorkspace() {
                   </label>
                   <label
                     className={cn(
-                      "flex flex-col gap-2 text-caption-1-regular text-fg",
+                      "flex min-w-0 max-w-full [min-inline-size:0] flex-col gap-2 text-caption-1-regular text-fg",
                     )}
                   >
                     Edition
@@ -571,7 +586,7 @@ export function FrameworksWorkspace() {
                         })
                       }
                       className={cn(
-                        "h-10 rounded-xl border border-border bg-canvas px-3 text-subhead-regular text-fg focus-visible:outline-2 focus-visible:outline-active-500",
+                        "h-10 w-full min-w-0 max-w-full [min-inline-size:0] [max-inline-size:100%] truncate rounded-xl border border-border bg-canvas px-3 text-subhead-regular text-fg focus-visible:outline-2 focus-visible:outline-active-500",
                       )}
                     >
                       {pack.versions.map((item) => (
@@ -653,6 +668,17 @@ export function FrameworksWorkspace() {
                   </p>
                 )}
               </SectionCard>
+              {catalog.hasNextPage ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  loading={catalog.isFetchingNextPage}
+                  disabled={catalog.isFetchingNextPage}
+                  onClick={() => void catalog.fetchNextPage()}
+                >
+                  Load more framework editions
+                </Button>
+              ) : null}
               {openUpgrade && versionChange && choice && pack.selection ? (
                 <FrameworkUpgradePanel
                   key={`${organizationId}:${pack.packKey}:${choice.versionKey}`}
@@ -687,16 +713,20 @@ export function FrameworksWorkspace() {
                     className={cn("mb-4 text-caption-1-regular text-fg-muted")}
                   >
                     {version.sourceReference} · {version.attribution} ·{" "}
-                    <a
-                      className={cn(
-                        "text-link underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-active-500",
-                      )}
-                      href={version.sourceUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      Read the authoritative source
-                    </a>
+                    {version.sourceKind === "customer_defined" ? (
+                      <span>Customer-defined requirements</span>
+                    ) : version.sourceUrl ? (
+                      <a
+                        className={cn(
+                          "text-link underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-active-500",
+                        )}
+                        href={version.sourceUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        Read the authoritative source
+                      </a>
+                    ) : null}
                   </p>
                   <RequirementTree
                     key={`${organizationId}:${pack.packKey}:${version.versionKey}`}
@@ -732,6 +762,29 @@ export function FrameworksWorkspace() {
                     </div>
                   ) : null}
                 </SectionCard>
+              ) : null}
+              <SectionCard title="Organization-defined frameworks">
+                <p className={cn("mb-4 text-subhead-regular text-fg-muted")}>
+                  Import, edit, publish, and archive custom requirement packs
+                  owned by this organization. Published versions can be selected
+                  after the backend catalog includes them.
+                </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setOpenCustomFrameworks((current) => !current)}
+                >
+                  {openCustomFrameworks
+                    ? "Close custom frameworks"
+                    : "Manage custom frameworks"}
+                </Button>
+              </SectionCard>
+              {openCustomFrameworks ? (
+                <CustomFrameworksPanel
+                  key={organizationId}
+                  organizationId={organizationId}
+                  canManage={canManage}
+                />
               ) : null}
               <SectionCard title="Evidence-aware coverage">
                 {pack.selection?.enabled ? (

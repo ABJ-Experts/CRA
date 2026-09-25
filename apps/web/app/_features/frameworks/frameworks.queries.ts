@@ -7,9 +7,10 @@ import {
 import {
   useInfiniteQuery,
   useMutation,
-  useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
+import type { InfiniteData } from "@tanstack/react-query";
+import { useMemo } from "react";
 import type { z } from "zod";
 
 import { frameworksApi } from "./frameworks.api";
@@ -23,12 +24,47 @@ export function useFrameworkCatalog(
   organizationId: string | null,
   enabled: boolean,
 ) {
-  return useQuery({
+  const query = useInfiniteQuery({
     queryKey: catalogKey(organizationId ?? "none"),
     enabled: enabled && organizationId !== null,
     retry: false,
-    queryFn: ({ signal }) => frameworksApi.catalog(signal),
+    initialPageParam: undefined as string | undefined,
+    queryFn: ({ pageParam, signal }) =>
+      frameworksApi.catalog(signal, pageParam),
+    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
   });
+  const data = useMemo(() => {
+    if (!query.data) return undefined;
+    type Pack = z.output<
+      typeof frameworkCatalogResponseSchema
+    >["packs"][number];
+    const packs = new Map<string, Pack>();
+    for (const page of query.data.pages) {
+      for (const pack of page.packs) {
+        const previous = packs.get(pack.packKey);
+        packs.set(
+          pack.packKey,
+          previous
+            ? {
+                ...previous,
+                versions: [
+                  ...previous.versions,
+                  ...pack.versions.filter(
+                    (version) =>
+                      !previous.versions.some(
+                        (item) => item.versionKey === version.versionKey,
+                      ),
+                  ),
+                ],
+                selection: pack.selection ?? previous.selection,
+              }
+            : pack,
+        );
+      }
+    }
+    return { packs: [...packs.values()] };
+  }, [query.data]);
+  return { ...query, data };
 }
 
 export function useFrameworkTree(
@@ -71,23 +107,31 @@ export function useSelectFramework(organizationId: string | null) {
     }) => frameworksApi.select(packKey, input),
     onSuccess: (selection) => {
       if (organizationId !== null) {
-        client.setQueryData<z.output<typeof frameworkCatalogResponseSchema>>(
+        client.setQueryData<
+          InfiniteData<
+            z.output<typeof frameworkCatalogResponseSchema>,
+            string | undefined
+          >
+        >(
           catalogKey(organizationId),
           (current) =>
             current && {
               ...current,
-              packs: current.packs.map((pack) =>
-                pack.packKey === selection.packKey
-                  ? {
-                      ...pack,
-                      selection: {
-                        versionKey: selection.versionKey,
-                        enabled: selection.enabled,
-                        revision: selection.revision,
-                      },
-                    }
-                  : pack,
-              ),
+              pages: current.pages.map((page) => ({
+                ...page,
+                packs: page.packs.map((pack) =>
+                  pack.packKey === selection.packKey
+                    ? {
+                        ...pack,
+                        selection: {
+                          versionKey: selection.versionKey,
+                          enabled: selection.enabled,
+                          revision: selection.revision,
+                        },
+                      }
+                    : pack,
+                ),
+              })),
             },
         );
         void client.invalidateQueries({ queryKey: catalogKey(organizationId) });

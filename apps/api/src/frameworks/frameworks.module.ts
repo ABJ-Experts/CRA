@@ -24,11 +24,34 @@ import {
   type UpgradeRepository,
 } from "./application/upgrade-use-cases";
 import { SupabaseUpgradeRepository } from "./infrastructure/supabase-upgrade.repository";
+import { CustomFrameworksController } from "./custom-frameworks.controller";
+import {
+  CUSTOM_FRAMEWORK_REPOSITORY,
+  CustomFrameworkUseCases,
+  type CustomFrameworkRepository,
+} from "./application/custom-framework-use-cases";
+import { SupabaseCustomFrameworkRepository } from "./infrastructure/supabase-custom-framework.repository";
 
 @Module({
   imports: [SupabaseModule, PermissionsModule],
-  controllers: [FrameworksController, ControlsController, UpgradesController],
+  controllers: [
+    FrameworksController,
+    ControlsController,
+    UpgradesController,
+    CustomFrameworksController,
+  ],
   providers: [
+    SupabaseCustomFrameworkRepository,
+    {
+      provide: CUSTOM_FRAMEWORK_REPOSITORY,
+      useExisting: SupabaseCustomFrameworkRepository,
+    },
+    {
+      provide: CustomFrameworkUseCases,
+      inject: [CUSTOM_FRAMEWORK_REPOSITORY],
+      useFactory: (repository: CustomFrameworkRepository) =>
+        new CustomFrameworkUseCases(repository),
+    },
     SupabaseUpgradeRepository,
     { provide: UPGRADE_REPOSITORY, useExisting: SupabaseUpgradeRepository },
     {

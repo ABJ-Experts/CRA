@@ -1,6 +1,7 @@
 import type { z } from "zod";
 import type {
   frameworkCatalogResponseSchema,
+  frameworkCatalogQuerySchema,
   frameworkTreeResponseSchema,
   frameworkSelectionResponseSchema,
   frameworkTreeQuerySchema,
@@ -16,13 +17,18 @@ export class FrameworkForbiddenError extends Error {}
 export class FrameworkInvalidRequestError extends Error {}
 
 type Catalog = z.output<typeof frameworkCatalogResponseSchema>;
+type CatalogQuery = z.output<typeof frameworkCatalogQuerySchema>;
 type Tree = z.output<typeof frameworkTreeResponseSchema>;
 type Selection = z.output<typeof frameworkSelectionResponseSchema>;
 type TreeQuery = z.output<typeof frameworkTreeQuerySchema>;
 type SelectInput = z.output<typeof selectFrameworkInputSchema>;
 
 export interface FrameworkRepository {
-  catalog(orgId: string, actorId: string): Promise<Catalog>;
+  catalog(
+    orgId: string,
+    actorId: string,
+    query?: CatalogQuery,
+  ): Promise<Catalog>;
   tree(
     orgId: string,
     input: Readonly<
@@ -38,8 +44,12 @@ export interface FrameworkRepository {
 export class FrameworkUseCases {
   constructor(private readonly repository: FrameworkRepository) {}
 
-  catalog(orgId: string, actorId: string): Promise<Catalog> {
-    return this.repository.catalog(orgId, actorId);
+  catalog(
+    orgId: string,
+    actorId: string,
+    query: CatalogQuery = { limit: 100 },
+  ): Promise<Catalog> {
+    return this.repository.catalog(orgId, actorId, query);
   }
 
   tree(

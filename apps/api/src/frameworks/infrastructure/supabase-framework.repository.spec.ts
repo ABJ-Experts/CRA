@@ -169,13 +169,15 @@ describe("SupabaseFrameworkRepository", () => {
       },
     ];
     const packQuery = {
+      or: jest.fn(),
       order: jest.fn(),
-      limit: jest.fn().mockResolvedValue({ data: packRows, error: null }),
+      range: jest.fn().mockResolvedValue({ data: packRows, error: null }),
     };
+    packQuery.or.mockReturnValue(packQuery);
     packQuery.order.mockReturnValue(packQuery);
     const selectionQuery = {
       eq: jest.fn(),
-      limit: jest.fn().mockResolvedValue({ data: [], error: null }),
+      in: jest.fn().mockResolvedValue({ data: [], error: null }),
     };
     selectionQuery.eq.mockReturnValue(selectionQuery);
     from
@@ -222,7 +224,102 @@ describe("SupabaseFrameworkRepository", () => {
         },
       ],
     });
+    expect(packQuery.or).toHaveBeenCalledWith(
+      "owner_org_id.is.null,owner_org_id.eq.org-a",
+    );
     expect(selectionQuery.eq).toHaveBeenCalledWith("organization_id", "org-a");
+    expect(selectionQuery.in).toHaveBeenCalledWith("pack_key", [
+      "cra",
+      "iec-62443-4-1",
+    ]);
+  });
+
+  it("returns bounded version pages and scopes selection to page keys", async () => {
+    const first = Array.from({ length: 3 }, (_, index) => ({
+      pack_key: `custom.${index}`,
+      version_key: "v1",
+      title: `Custom ${index}`,
+      edition_date: "2026-09-25",
+      language: "en",
+      source_celex: null,
+      source_url: null,
+      attribution: "Customer-defined",
+      content_hash: "a".repeat(64),
+      source_kind: "customer_defined",
+      owner_org_id: "org-a",
+    }));
+    const pack = {
+      or: jest.fn(),
+      order: jest.fn(),
+      range: jest.fn().mockResolvedValue({ data: first, error: null }),
+    };
+    pack.or.mockReturnValue(pack);
+    pack.order.mockReturnValue(pack);
+    const selections = {
+      eq: jest.fn(),
+      in: jest.fn().mockResolvedValue({ data: [], error: null }),
+    };
+    selections.eq.mockReturnValue(selections);
+    from
+      .mockReturnValueOnce({ select: () => memberQuery() })
+      .mockReturnValueOnce({ select: () => pack })
+      .mockReturnValueOnce({ select: () => selections });
+    await expect(
+      repository.catalog("org-a", "user-a", { limit: 2 }),
+    ).resolves.toMatchObject({
+      packs: [{ packKey: "custom.0" }, { packKey: "custom.1" }],
+      nextCursor: "Mg",
+    });
+    expect(pack.range).toHaveBeenCalledWith(0, 2);
+    expect(selections.in).toHaveBeenCalledWith("pack_key", [
+      "custom.0",
+      "custom.1",
+    ]);
+  });
+
+  it("rejects noncanonical catalog cursors before reading version rows", async () => {
+    from.mockReturnValueOnce({ select: () => memberQuery() });
+    await expect(
+      repository.catalog("org-a", "user-a", { limit: 100, cursor: "bad" }),
+    ).rejects.toBeInstanceOf(FrameworkInvalidRequestError);
+    expect(from).toHaveBeenCalledTimes(1);
+  });
+
+  it("continues a pack with more than 100 immutable versions", async () => {
+    const rows = Array.from({ length: 101 }, (_, index) => ({
+      pack_key: "custom.many",
+      version_key: `v${index + 1}`,
+      title: "Many versions",
+      edition_date: "2026-09-25",
+      language: "en",
+      source_celex: null,
+      source_url: null,
+      attribution: "Customer-defined",
+      content_hash: "a".repeat(64),
+      source_kind: "customer_defined",
+      owner_org_id: "org-a",
+    }));
+    const pack = {
+      or: jest.fn(),
+      order: jest.fn(),
+      range: jest.fn().mockResolvedValue({ data: rows, error: null }),
+    };
+    pack.or.mockReturnValue(pack);
+    pack.order.mockReturnValue(pack);
+    const selections = {
+      eq: jest.fn(),
+      in: jest.fn().mockResolvedValue({ data: [], error: null }),
+    };
+    selections.eq.mockReturnValue(selections);
+    from
+      .mockReturnValueOnce({ select: () => memberQuery() })
+      .mockReturnValueOnce({ select: () => pack })
+      .mockReturnValueOnce({ select: () => selections });
+    const result = await repository.catalog("org-a", "user-a");
+    expect(result.packs).toHaveLength(1);
+    expect(result.packs[0]?.versions).toHaveLength(100);
+    expect(result.nextCursor).toBe("MTAw");
+    expect(pack.range).toHaveBeenCalledWith(0, 100);
   });
 
   it("checks scoped membership before reading an immutable version", async () => {
@@ -243,6 +340,29 @@ describe("SupabaseFrameworkRepository", () => {
     expect(member.eq).toHaveBeenCalledWith("organization_id", "org-a");
     expect(member.eq).toHaveBeenCalledWith("user_id", "user-a");
     expect(from).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not reveal a peer-owned custom requirement tree", async () => {
+    from
+      .mockReturnValueOnce({ select: () => memberQuery() })
+      .mockReturnValueOnce({
+        select: () =>
+          packQuery({
+            pack_key: "custom.peer",
+            edition_date: "2026-09-25",
+            language: "en",
+            owner_org_id: "org-b",
+          }),
+      });
+    await expect(
+      repository.tree("org-a", {
+        actorId: "user-a",
+        packKey: "custom.peer",
+        versionKey: "v1",
+        limit: 10,
+      }),
+    ).resolves.toBeNull();
+    expect(from).toHaveBeenCalledTimes(2);
   });
 
   it("returns a bounded tree page and opaque next cursor", async () => {

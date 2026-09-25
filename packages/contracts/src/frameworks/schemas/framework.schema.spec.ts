@@ -1,11 +1,30 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  frameworkCatalogQuerySchema,
+  frameworkCatalogResponseSchema,
   frameworkPackImportSchema,
   frameworkRequirementReferenceSchema,
   frameworkTreeResponseSchema,
   selectFrameworkInputSchema,
 } from "../index.js";
+
+describe("framework catalog pagination", () => {
+  it("bounds each page and accepts an opaque continuation", () => {
+    expect(frameworkCatalogQuerySchema.parse({})).toEqual({ limit: 100 });
+    expect(frameworkCatalogQuerySchema.safeParse({ limit: 101 }).success).toBe(
+      false,
+    );
+    expect(
+      frameworkCatalogQuerySchema.safeParse({ limit: 25, cursor: "MTAw" })
+        .success,
+    ).toBe(true);
+    expect(
+      frameworkCatalogResponseSchema.parse({ packs: [], nextCursor: "MTAw" })
+        .nextCursor,
+    ).toBe("MTAw");
+  });
+});
 
 const basePack = {
   schemaVersion: 1,
