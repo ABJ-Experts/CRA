@@ -15,6 +15,8 @@ import type {
   createControlInputSchema,
   createControlMappingInputSchema,
   requirementCoverageResponseSchema,
+  requirementApplicabilityInputSchema,
+  requirementApplicabilityResponseSchema,
 } from "../schemas/control.schema.js";
 
 export type FrameworkPackImport = z.output<typeof frameworkPackImportSchema>;
@@ -45,4 +47,10 @@ export type CreateControlMappingInput = z.output<
 >;
 export type RequirementCoverageResponse = z.output<
   typeof requirementCoverageResponseSchema
+>;
+export type RequirementApplicabilityInput = z.output<
+  typeof requirementApplicabilityInputSchema
+>;
+export type RequirementApplicabilityResponse = z.output<
+  typeof requirementApplicabilityResponseSchema
 >;

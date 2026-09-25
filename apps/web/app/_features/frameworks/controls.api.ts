@@ -17,6 +17,9 @@ import {
   requirementCoverageParamsSchema,
   requirementCoverageQuerySchema,
   requirementCoverageResponseSchema,
+  requirementApplicabilityParamsSchema,
+  requirementApplicabilityInputSchema,
+  requirementApplicabilityResponseSchema,
   updateControlInputSchema,
   updateControlMappingInputSchema,
   type CreateControlInput,
@@ -200,6 +203,7 @@ export class ControlsApi {
     productId: string,
     cursor?: string,
     signal?: AbortSignal,
+    filter: "all" | "gaps" | "evidence_backed" | "excluded" = "all",
   ) {
     const params = apiClient.parseInput(requirementCoverageParamsSchema, {
       packKey,
@@ -209,16 +213,38 @@ export class ControlsApi {
       productId,
       limit: 100,
       cursor,
+      filter,
     });
     const search = new URLSearchParams({
       productId: query.productId,
       limit: String(query.limit),
     });
     if (query.cursor) search.set("cursor", query.cursor);
+    if (query.filter !== "all") search.set("filter", query.filter);
     return authenticatedRequestJson({
       path: `/api/v1/frameworks/${encodeURIComponent(params.packKey)}/versions/${encodeURIComponent(params.versionKey)}/coverage?${search}`,
       schema: requirementCoverageResponseSchema,
       signal,
+    });
+  }
+
+  updateApplicability(
+    packKey: string,
+    versionKey: string,
+    requirementKey: string,
+    input: z.output<typeof requirementApplicabilityInputSchema>,
+  ) {
+    const params = apiClient.parseInput(requirementApplicabilityParamsSchema, {
+      packKey,
+      versionKey,
+      requirementKey,
+    });
+    return authenticatedRequestJson({
+      path: `/api/v1/frameworks/${encodeURIComponent(params.packKey)}/versions/${encodeURIComponent(params.versionKey)}/requirements/${encodeURIComponent(params.requirementKey)}/applicability`,
+      method: "PUT",
+      body: input,
+      inputSchema: requirementApplicabilityInputSchema,
+      schema: requirementApplicabilityResponseSchema,
     });
   }
 }

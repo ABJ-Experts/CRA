@@ -23,6 +23,7 @@ export interface ControlLibraryPanelProps {
   readonly activePackKey: string | null;
   readonly activeVersionKey: string | null;
   readonly initialControlId: string | null;
+  readonly initialRequirementKey?: string | null;
 }
 
 function failureMessage(error: unknown, action: string): string {
@@ -70,6 +71,7 @@ export function ControlLibraryPanel({
   activePackKey,
   activeVersionKey,
   initialControlId,
+  initialRequirementKey = null,
 }: ControlLibraryPanelProps) {
   const client = useQueryClient();
   const [selectedId, setSelectedId] = useState<string | null>(initialControlId);
@@ -160,6 +162,12 @@ export function ControlLibraryPanel({
   return (
     <section aria-label="Control library" className={cn("grid gap-6")}>
       <SectionCard title="Control library">
+        {initialRequirementKey && !selectedId ? (
+          <p role="status" className={cn("mb-3 text-subhead-regular text-fg")}>
+            Select or create a control, then review its mapping for requirement{" "}
+            {initialRequirementKey}.
+          </p>
+        ) : null}
         <div className={cn("flex flex-wrap items-start justify-between gap-3")}>
           <p className={cn("max-w-2xl text-subhead-regular text-fg-muted")}>
             Record organization controls, then link exact evidence versions and
@@ -410,6 +418,7 @@ export function ControlLibraryPanel({
           canViewEvidence={canViewEvidence}
           activePackKey={activePackKey}
           activeVersionKey={activeVersionKey}
+          initialRequirementKey={initialRequirementKey}
         />
       ) : null}
     </section>

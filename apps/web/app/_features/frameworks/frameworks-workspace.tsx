@@ -43,6 +43,20 @@ const ControlLibraryPanel = dynamic(
   },
 );
 
+const CoverageWorkspacePanel = dynamic(
+  () =>
+    import("./coverage-workspace-panel").then(
+      (module) => module.CoverageWorkspacePanel,
+    ),
+  {
+    loading: () => (
+      <p role="status" className={cn("text-subhead-regular text-fg-muted")}>
+        Loading coverage workspace…
+      </p>
+    ),
+  },
+);
+
 type Pack = z.output<typeof frameworkCatalogResponseSchema>["packs"][number];
 type Draft = Readonly<{
   organizationId: string;
@@ -297,7 +311,11 @@ export function FrameworksWorkspace() {
   const [saveSucceeded, setSaveSucceeded] = useState(false);
   const retryKey = useRef<{ signature: string; key: string } | null>(null);
   const [openControls, setOpenControls] = useState(false);
+  const [openCoverage, setOpenCoverage] = useState(false);
   const [initialControlId, setInitialControlId] = useState<string | null>(null);
+  const [initialRequirementKey, setInitialRequirementKey] = useState<
+    string | null
+  >(null);
   const previousOrganizationId = useRef<string | null>(organizationId);
 
   useEffect(() => {
@@ -306,9 +324,11 @@ export function FrameworksWorkspace() {
       previousOrganizationId.current = organizationId;
       if (hadOrganization) {
         setInitialControlId(null);
+        setInitialRequirementKey(null);
         if (typeof window !== "undefined") {
           const url = new URL(window.location.href);
           url.searchParams.delete("controlId");
+          url.searchParams.delete("requirementKey");
           window.history.replaceState(null, "", url);
         }
         return;
@@ -317,6 +337,13 @@ export function FrameworksWorkspace() {
     const controlId = new URLSearchParams(window.location.search).get(
       "controlId",
     );
+    const requirementKey = new URLSearchParams(window.location.search).get(
+      "requirementKey",
+    );
+    if (requirementKey) {
+      setInitialRequirementKey(requirementKey);
+      setOpenControls(true);
+    }
     if (controlId) {
       setInitialControlId(controlId);
       setOpenControls(true);
@@ -602,6 +629,63 @@ export function FrameworksWorkspace() {
                   />
                 </SectionCard>
               ) : null}
+              <SectionCard title="Evidence-aware coverage">
+                {pack.selection?.enabled ? (
+                  <>
+                    <p
+                      className={cn("mb-4 text-subhead-regular text-fg-muted")}
+                    >
+                      Review product-specific requirement gaps for the enabled
+                      edition. Evidence-backed coverage is not a legal
+                      conformity decision.
+                    </p>
+                    {pack.versions.some(
+                      (item) =>
+                        item.versionKey !== pack.selection?.versionKey &&
+                        item.editionDate >
+                          (pack.versions.find(
+                            (selected) =>
+                              selected.versionKey ===
+                              pack.selection?.versionKey,
+                          )?.editionDate ?? ""),
+                    ) ? (
+                      <p
+                        className={cn(
+                          "mb-3 text-caption-1-regular text-fg-muted",
+                        )}
+                      >
+                        A newer reviewed pack edition is available. Changing the
+                        selected version requires an explicit save above.
+                      </p>
+                    ) : null}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setOpenCoverage((current) => !current)}
+                    >
+                      {openCoverage
+                        ? "Close coverage"
+                        : "Review coverage and gaps"}
+                    </Button>
+                  </>
+                ) : (
+                  <p className={cn("text-subhead-regular text-fg-muted")}>
+                    No framework is enabled for this organization. Enable an
+                    edition above to review current product coverage.
+                  </p>
+                )}
+              </SectionCard>
+              {openCoverage && pack.selection?.enabled ? (
+                <CoverageWorkspacePanel
+                  key={`${organizationId}:${pack.packKey}:${pack.selection.versionKey}`}
+                  organizationId={organizationId}
+                  packKey={pack.packKey}
+                  versionKey={pack.selection.versionKey}
+                  canManage={canManage}
+                  canViewProducts={permissions.can_view_products === true}
+                  canViewEvidence={permissions.can_view_evidence === true}
+                />
+              ) : null}
               <SectionCard title="Controls and product coverage">
                 <p className={cn("mb-4 text-subhead-regular text-fg-muted")}>
                   Record owned controls, pin evidence versions, and review
@@ -631,6 +715,7 @@ export function FrameworksWorkspace() {
                     pack.selection?.enabled ? pack.selection.versionKey : null
                   }
                   initialControlId={initialControlId}
+                  initialRequirementKey={initialRequirementKey}
                 />
               ) : null}
             </>

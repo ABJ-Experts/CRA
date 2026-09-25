@@ -71,9 +71,9 @@ const lockedSnapshotTables = (functionSql: string): readonly string[] => {
 const dynamicSnapshotLockAdditions = (sql: string): readonly string[] =>
   Object.freeze(
     [
-      ...[...sql.matchAll(/v_new_lock text := '([^']+)'/g)].flatMap((match) => [
-        ...(match[1] ?? "").matchAll(/public\.([a-z_]+)/g),
-      ]),
+      ...[...sql.matchAll(/v_new(?:_lock)? text := '([^']+)'/g)].flatMap(
+        (match) => [...(match[1] ?? "").matchAll(/public\.([a-z_]+)/g)],
+      ),
     ]
       .map((match) => match[1])
       .filter((table): table is string => Boolean(table)),

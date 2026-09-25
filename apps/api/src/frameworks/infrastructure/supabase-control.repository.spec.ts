@@ -88,6 +88,47 @@ describe("SupabaseControlRepository command boundary", () => {
       status: 503,
     });
   });
+
+  it("sends applicability approval to the atomic scoped RPC", async () => {
+    const result = {
+      approvedNonApplicable: true,
+      reason: "No radio",
+      revision: 1,
+    };
+    rpc.mockResolvedValue({
+      data: [{ outcome: "updated", result }],
+      error: null,
+    });
+    await expect(
+      repository.setApplicability("org-a", {
+        actorId: "actor-a",
+        productId: "product-a",
+        packKey: "cra",
+        versionKey: "oj-2024-11-20",
+        requirementKey: "annex-i-i-1",
+        state: "not_applicable",
+        reason: "No radio",
+        expectedRevision: 0,
+        idempotencyKey: input.idempotencyKey,
+      }),
+    ).resolves.toEqual({
+      state: "not_applicable",
+      reason: "No radio",
+      revision: 1,
+    });
+    expect(rpc).toHaveBeenCalledWith("m10_set_framework_applicability", {
+      p_organization_id: "org-a",
+      p_actor_user_id: "actor-a",
+      p_product_id: "product-a",
+      p_pack_key: "cra",
+      p_version_key: "oj-2024-11-20",
+      p_requirement_key: "annex-i-i-1",
+      p_approved: true,
+      p_reason: "No radio",
+      p_expected_revision: 0,
+      p_idempotency_key: input.idempotencyKey,
+    });
+  });
 });
 
 describe("SupabaseControlRepository scoped reads", () => {
@@ -183,6 +224,30 @@ describe("SupabaseControlRepository scoped reads", () => {
     framework_pack_versions: [
       { pack_key: "cra", version_key: "oj-2024-11-20" },
     ],
+    framework_coverage_scopes: [
+      {
+        organization_id: orgId,
+        product_id: productId,
+        pack_key: "cra",
+        version_key: "oj-2024-11-20",
+        status: "current",
+        source_revision: 1,
+        computed_revision: 1,
+        updated_at: "2026-09-24T00:00:00Z",
+      },
+    ],
+    framework_coverage_rows: [
+      {
+        organization_id: orgId,
+        product_id: productId,
+        pack_key: "cra",
+        version_key: "oj-2024-11-20",
+        requirement_key: "annex-i-i-1",
+        status: "unimplemented",
+        computed_revision: 1,
+      },
+    ],
+    framework_requirement_applicability: [],
   };
 
   function table(name: string) {
@@ -215,7 +280,29 @@ describe("SupabaseControlRepository scoped reads", () => {
   }
 
   const repository = new SupabaseControlRepository({
-    admin: () => ({ from: table }),
+    admin: () => ({
+      from: table,
+      rpc: (name: string) =>
+        Promise.resolve({
+          data:
+            name === "m10_coverage_summary"
+              ? {
+                  totalRequirements: 1,
+                  applicableRequirements: 1,
+                  excludedRequirements: 0,
+                  evidenceBackedRequirements: 0,
+                  gapRequirements: 1,
+                }
+              : [
+                  {
+                    status: "current",
+                    source_revision: 1,
+                    computed_revision: 1,
+                  },
+                ],
+          error: null,
+        }),
+    }),
   } as never);
 
   beforeEach(() => {
@@ -304,8 +391,149 @@ describe("SupabaseControlRepository scoped reads", () => {
         status: "in_progress",
         ownerActive: false,
         evidencePresent: true,
+        evidenceAvailability: "available",
       },
     ]);
+    expect(result?.calculation.status).toBe("current");
+    expect(result?.summary).toEqual({
+      totalRequirements: 1,
+      applicableRequirements: 1,
+      excludedRequirements: 0,
+      evidenceBackedRequirements: 0,
+      gapRequirements: 1,
+    });
+    expect(result?.requirements[0]?.coverageState).toBe("unimplemented");
+    expect(result?.requirements[0]?.remediation).toEqual({
+      kind: "implement_control",
+      controlId,
+    });
+  });
+
+  it("suppresses positive coverage when the source projection is stale", async () => {
+    const scopes = rows.framework_coverage_scopes!;
+    const original = scopes[0]!.status;
+    scopes[0]!.status = "pending";
+    try {
+      const result = await repository.coverage(orgId, {
+        actorId,
+        packKey: "cra",
+        versionKey: "oj-2024-11-20",
+        productId,
+        limit: 100,
+      });
+      expect(result?.calculation.status).toBe("stale");
+      expect(result?.summary).toBeNull();
+      expect(result?.requirements[0]?.coverageState).toBe("stale");
+    } finally {
+      scopes[0]!.status = original;
+    }
+  });
+
+  it("points a future-evidence gap at an implemented control without treating it as present", async () => {
+    const control = rows.framework_controls?.[0];
+    const version = rows.evidence_document_versions?.[0];
+    const projection = rows.framework_coverage_rows?.[0];
+    if (!control || !version || !projection) throw new Error("Missing fixture");
+    const originalStatus = control.implementation_status;
+    const originalStart = version.validity_starts_on;
+    const originalProjection = projection.status;
+    control.implementation_status = "implemented";
+    version.validity_starts_on = "2099-01-01";
+    projection.status = "not_yet_valid_evidence";
+    try {
+      const result = await repository.coverage(orgId, {
+        actorId,
+        packKey: "cra",
+        versionKey: "oj-2024-11-20",
+        productId,
+        limit: 100,
+      });
+      expect(result?.requirements[0]?.coverageState).toBe(
+        "not_yet_valid_evidence",
+      );
+      expect(result?.requirements[0]?.remediation).toEqual({
+        kind: "replace_evidence",
+        controlId,
+      });
+      expect(result?.requirements[0]?.controls[0]?.evidencePresent).toBe(false);
+    } finally {
+      control.implementation_status = originalStatus;
+      version.validity_starts_on = originalStart;
+      projection.status = originalProjection;
+    }
+  });
+
+  it("keeps gap filter and summary consistent across a bounded page", async () => {
+    const result = await repository.coverage(orgId, {
+      actorId,
+      packKey: "cra",
+      versionKey: "oj-2024-11-20",
+      productId,
+      limit: 1,
+      filter: "gaps",
+    });
+    expect(result?.requirements).toHaveLength(1);
+    expect(result?.summary?.gapRequirements).toBe(1);
+    const complete = await repository.coverage(orgId, {
+      actorId,
+      packKey: "cra",
+      versionKey: "oj-2024-11-20",
+      productId,
+      limit: 1,
+      filter: "evidence_backed",
+    });
+    expect(complete?.requirements).toEqual([]);
+    expect(complete?.summary?.gapRequirements).toBe(1);
+  });
+
+  it("ends bounded coverage pagination after the final page of a large tree", async () => {
+    const requirements = rows.framework_requirements!;
+    const projections = rows.framework_coverage_rows!;
+    const additions = Array.from({ length: 249 }, (_, index) => {
+      const requirementKey = `annex-i-i-extra-${index + 1}`;
+      return {
+        requirement: {
+          pack_key: "cra",
+          version_key: "oj-2024-11-20",
+          requirement_key: requirementKey,
+          identifier: `Extra ${index + 1}`,
+          heading: null,
+          text: "A requirement.",
+          parent_requirement_key: null,
+          depth: 1,
+        },
+        projection: {
+          organization_id: orgId,
+          product_id: productId,
+          pack_key: "cra",
+          version_key: "oj-2024-11-20",
+          requirement_key: requirementKey,
+          status: "no_mapping",
+          computed_revision: 1,
+        },
+      };
+    });
+    requirements.push(...additions.map((row) => row.requirement));
+    projections.push(...additions.map((row) => row.projection));
+    try {
+      let cursor: string | undefined;
+      for (let page = 0; page < 3; page += 1) {
+        const result = await repository.coverage(orgId, {
+          actorId,
+          packKey: "cra",
+          versionKey: "oj-2024-11-20",
+          productId,
+          limit: 100,
+          cursor,
+        });
+        expect(result?.requirements).toHaveLength(page === 2 ? 50 : 100);
+        expect(result?.nextCursor === null).toBe(page === 2);
+        cursor = result?.nextCursor ?? undefined;
+      }
+    } finally {
+      requirements.splice(-additions.length);
+      projections.splice(-additions.length);
+    }
   });
 
   it("returns only active owner candidates without emails", async () => {

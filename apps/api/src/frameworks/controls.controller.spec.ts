@@ -16,6 +16,7 @@ describe("ControlsController", () => {
   const detail = jest.fn();
   const coverage = jest.fn();
   const command = jest.fn();
+  const setApplicability = jest.fn();
   const can = jest.fn().mockResolvedValue(true);
   const controller = new ControlsController(
     {
@@ -24,6 +25,7 @@ describe("ControlsController", () => {
       detail,
       coverage,
       command,
+      setApplicability,
     } as unknown as ControlUseCases,
     { can } as never,
   );
@@ -39,6 +41,7 @@ describe("ControlsController", () => {
     detail.mockReset();
     coverage.mockReset();
     command.mockReset();
+    setApplicability.mockReset();
     can.mockResolvedValue(true);
   });
 
@@ -87,6 +90,45 @@ describe("ControlsController", () => {
     );
   });
 
+  it("scopes applicability approval to the verified actor and product permission", async () => {
+    setApplicability.mockResolvedValue({
+      state: "not_applicable",
+      reason: "No radio",
+      revision: 1,
+    });
+    expect(
+      Reflect.getMetadata(REQUIRE_PERMISSIONS_KEY, controller.setApplicability),
+    ).toEqual([
+      "can_view_frameworks",
+      "can_manage_frameworks",
+      "can_view_products",
+    ]);
+    await controller.setApplicability(
+      {
+        packKey: "cra",
+        versionKey: "oj-2024-11-20",
+        requirementKey: "annex-i-i-1",
+      },
+      {
+        productId: "product-a",
+        state: "not_applicable",
+        reason: "No radio",
+        expectedRevision: 0,
+        idempotencyKey: "key",
+      },
+      user,
+    );
+    expect(setApplicability).toHaveBeenCalledWith(
+      "org-a",
+      expect.objectContaining({
+        actorId: "actor-a",
+        productId: "product-a",
+        requirementKey: "annex-i-i-1",
+        expectedRevision: 0,
+      }),
+    );
+  });
+
   it("reads list, candidates, detail and coverage under the verified scope", async () => {
     list.mockResolvedValue({ controls: [], nextCursor: null });
     ownerCandidates.mockResolvedValue({ owners: [], nextCursor: null });
@@ -97,7 +139,7 @@ describe("ControlsController", () => {
     await controller.detail({ controlId: "control-a" }, user);
     await controller.coverage(
       { packKey: "cra", versionKey: "2024" },
-      { productId: "product-a", limit: 100 },
+      { productId: "product-a", limit: 100, filter: "all" },
       user,
     );
     expect(list).toHaveBeenCalledWith("org-a", {
@@ -121,6 +163,7 @@ describe("ControlsController", () => {
       versionKey: "2024",
       productId: "product-a",
       limit: 100,
+      filter: "all",
     });
   });
 
@@ -267,6 +310,7 @@ describe("ControlsController", () => {
         {
           productId: "product-a",
           limit: 100,
+          filter: "all",
         },
         user,
       ),

@@ -56,7 +56,10 @@ select ok(not has_function_privilege('service_role',
   'public.m10_control_command_impl(uuid,uuid,text,jsonb,integer,uuid)','execute'),
   'private implementation cannot be called by runtime service role');
 select is((select count(*)::integer from public.organization_export_source_tables
-  where source_id='framework_controls'),5,
+  where source_id='framework_controls' and table_name in (
+    'framework_controls','framework_control_revisions',
+    'framework_control_evidence_links','framework_control_requirement_mappings',
+    'framework_control_mapping_products')),5,
   'five durable control tables are included in tenant export');
 select ok(position('public.framework_control_mapping_products' in pg_get_functiondef(
   'public.materialize_organization_export_snapshot_atomic(uuid,uuid,uuid,integer)'::regprocedure))>0,

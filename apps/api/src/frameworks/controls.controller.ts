@@ -31,6 +31,9 @@ import {
   requirementCoverageParamsSchema,
   requirementCoverageQuerySchema,
   requirementCoverageResponseSchema,
+  requirementApplicabilityParamsSchema,
+  requirementApplicabilityInputSchema,
+  requirementApplicabilityResponseSchema,
   updateControlInputSchema,
   updateControlMappingInputSchema,
 } from "@repo/contracts/frameworks";
@@ -65,6 +68,10 @@ type CoverageParams = z.output<typeof requirementCoverageParamsSchema>;
 type ListQuery = z.output<typeof controlListQuerySchema>;
 type OwnerQuery = z.output<typeof controlOwnerCandidatesQuerySchema>;
 type CoverageQuery = z.output<typeof requirementCoverageQuerySchema>;
+type ApplicabilityParams = z.output<
+  typeof requirementApplicabilityParamsSchema
+>;
+type ApplicabilityInput = z.output<typeof requirementApplicabilityInputSchema>;
 type CreateInput = z.output<typeof createControlInputSchema>;
 type UpdateInput = z.output<typeof updateControlInputSchema>;
 type ArchiveInput = z.output<typeof archiveControlInputSchema>;
@@ -196,6 +203,33 @@ export class ControlsController {
       });
       if (!coverage) throw new ControlNotFoundError();
       return coverage;
+    } catch (error) {
+      return translate(error);
+    }
+  }
+
+  @Put(
+    ":packKey/versions/:versionKey/requirements/:requirementKey/applicability",
+  )
+  @RequirePermissions(
+    "can_view_frameworks",
+    "can_manage_frameworks",
+    "can_view_products",
+  )
+  @ZodResponse(requirementApplicabilityResponseSchema)
+  async setApplicability(
+    @Param(zodParams(requirementApplicabilityParamsSchema))
+    params: ApplicabilityParams,
+    @Body(zodBody(requirementApplicabilityInputSchema))
+    body: ApplicabilityInput,
+    @CurrentUser() user: RequestUser,
+  ) {
+    try {
+      return await this.controls.setApplicability(organizationId(user), {
+        actorId: user.id,
+        ...params,
+        ...body,
+      });
     } catch (error) {
       return translate(error);
     }

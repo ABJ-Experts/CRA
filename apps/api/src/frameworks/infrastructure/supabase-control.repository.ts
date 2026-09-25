@@ -5,6 +5,8 @@ import {
   controlListResponseSchema,
   controlOwnerCandidatesResponseSchema,
   requirementCoverageResponseSchema,
+  requirementCoverageSummarySchema,
+  requirementApplicabilityResponseSchema,
 } from "@repo/contracts/frameworks";
 import type { z } from "zod";
 
@@ -64,6 +66,50 @@ function memberDisplayName(user: {
     return `Member ${user.id.slice(0, 8)}`;
   return candidate;
 }
+
+type CoverageEvidenceAvailability =
+  | "available"
+  | "missing"
+  | "expired"
+  | "quarantined"
+  | "not_yet_valid"
+  | "processing"
+  | "deletion_pending"
+  | "archived"
+  | "unavailable";
+
+function evidenceAvailability(
+  input: Readonly<{
+    processingState: string;
+    validityStartsOn: string | null;
+    validityEndsOn: string | null;
+    lifecycleState: string | undefined;
+    pendingDeletion: boolean;
+    today: string;
+  }>,
+): CoverageEvidenceAvailability {
+  if (input.pendingDeletion) return "deletion_pending";
+  if (input.lifecycleState !== "active") return "archived";
+  if (input.processingState === "quarantined") return "quarantined";
+  if (input.processingState !== "clean") return "processing";
+  if (input.validityStartsOn && input.validityStartsOn > input.today)
+    return "not_yet_valid";
+  if (input.validityEndsOn && input.validityEndsOn < input.today)
+    return "expired";
+  return "available";
+}
+
+const availabilityPriority: Record<CoverageEvidenceAvailability, number> = {
+  missing: 0,
+  unavailable: 1,
+  archived: 2,
+  deletion_pending: 3,
+  processing: 4,
+  not_yet_valid: 5,
+  expired: 6,
+  quarantined: 7,
+  available: 8,
+};
 
 function decodeControlCursor(
   cursor: string | undefined,
@@ -368,15 +414,88 @@ export class SupabaseControlRepository implements ControlRepository {
     if (packError) throw unavailable();
     if (!pack) return null;
     const offset = decodeCursor(input.cursor);
+    const { data: requested, error: requestError } = await client.rpc(
+      "m10_request_coverage",
+      {
+        p_organization_id: orgId,
+        p_product_id: input.productId,
+        p_pack_key: input.packKey,
+        p_version_key: input.versionKey,
+      },
+    );
+    if (requestError || !requested) throw unavailable();
+    const requestedScope = Array.isArray(requested) ? requested[0] : requested;
+    if (
+      !requestedScope ||
+      typeof requestedScope !== "object" ||
+      !("status" in requestedScope)
+    )
+      throw unavailable();
     const { data: requirements, error: requirementError } = await client
       .from("framework_requirements")
-      .select("requirement_key,identifier,heading,text,parent_requirement_key")
+      .select(
+        "requirement_key,identifier,heading,text,parent_requirement_key,depth",
+      )
       .eq("pack_key", input.packKey)
       .eq("version_key", input.versionKey)
       .order("tree_order")
-      .range(offset, offset + input.limit);
-    if (requirementError || !requirements) throw unavailable();
-    const page = requirements.slice(0, input.limit);
+      .limit(1001);
+    if (requirementError || !requirements || requirements.length > 1000)
+      throw unavailable();
+    const [projectionResult, scopeResult] = await Promise.all([
+      client
+        .from("framework_coverage_rows")
+        .select("requirement_key,status,computed_revision")
+        .eq("organization_id", orgId)
+        .eq("product_id", input.productId)
+        .eq("pack_key", input.packKey)
+        .eq("version_key", input.versionKey)
+        .limit(1001),
+      client
+        .from("framework_coverage_scopes")
+        .select("status,source_revision,computed_revision,updated_at")
+        .eq("organization_id", orgId)
+        .eq("product_id", input.productId)
+        .eq("pack_key", input.packKey)
+        .eq("version_key", input.versionKey)
+        .maybeSingle(),
+    ]);
+    if (
+      projectionResult.error ||
+      !projectionResult.data ||
+      projectionResult.data.length > 1000 ||
+      scopeResult.error ||
+      !scopeResult.data
+    )
+      throw unavailable();
+    const scope = scopeResult.data;
+    const projection = new Map(
+      projectionResult.data.map((row) => [row.requirement_key, row]),
+    );
+    let current =
+      requestedScope.status === "current" &&
+      scope.status === "current" &&
+      scope.source_revision === scope.computed_revision &&
+      projection.size === requirements.length &&
+      [...projection.values()].every(
+        (row) => row.computed_revision === scope.computed_revision,
+      );
+    const requestedFilter = input.filter ?? "all";
+    const filtered =
+      current && requestedFilter !== "all"
+        ? requirements.filter((row) => {
+            const state = projection.get(row.requirement_key)?.status;
+            if (requestedFilter === "excluded") return state === "excluded";
+            if (requestedFilter === "evidence_backed")
+              return state === "evidence_backed";
+            return (
+              state !== "structural" &&
+              state !== "excluded" &&
+              state !== "evidence_backed"
+            );
+          })
+        : requirements;
+    const page = filtered.slice(offset, offset + input.limit);
     const keys = page.map((row) => row.requirement_key);
     const { data: mappings, error: mappingError } = keys.length
       ? await client
@@ -462,51 +581,198 @@ export class SupabaseControlRepository implements ControlRepository {
       evidenceDocumentIds,
     );
     const today = new Date().toISOString().slice(0, 10);
-    const availableVersions = new Set(
-      evidenceVersions
-        .filter(
-          (row) =>
-            row.processing_state === "clean" &&
-            !pendingDeletionDocuments.has(row.document_id) &&
-            evidenceDocumentState.get(row.document_id) === "active" &&
-            (!row.validity_starts_on || row.validity_starts_on <= today) &&
-            (!row.validity_ends_on || row.validity_ends_on >= today),
-        )
-        .map((row) => row.id),
+    const availabilityByVersion = new Map(
+      evidenceVersions.map((row) => [
+        row.id,
+        evidenceAvailability({
+          processingState: row.processing_state,
+          validityStartsOn: row.validity_starts_on,
+          validityEndsOn: row.validity_ends_on,
+          lifecycleState: evidenceDocumentState.get(row.document_id),
+          pendingDeletion: pendingDeletionDocuments.has(row.document_id),
+          today,
+        }),
+      ]),
     );
-    const evidenceControlIds = new Set(
-      evidenceLinks
-        .filter((row) => availableVersions.has(row.evidence_version_id))
-        .map((row) => row.control_id),
-    );
+    const availabilityByControl = new Map<
+      string,
+      CoverageEvidenceAvailability
+    >();
+    for (const link of evidenceLinks) {
+      const candidate =
+        availabilityByVersion.get(link.evidence_version_id) ?? "unavailable";
+      const previous = availabilityByControl.get(link.control_id) ?? "missing";
+      if (availabilityPriority[candidate] > availabilityPriority[previous])
+        availabilityByControl.set(link.control_id, candidate);
+    }
     const owners = await this.activeOwnerIds(
       orgId,
       controls.map((row) => row.owner_user_id),
     );
     const controlById = new Map(controls.map((row) => [row.id, row]));
+    const { data: applicability, error: applicabilityError } = keys.length
+      ? await client
+          .from("framework_requirement_applicability")
+          .select("requirement_key,approved_non_applicable,reason,revision")
+          .eq("organization_id", orgId)
+          .eq("product_id", input.productId)
+          .eq("pack_key", input.packKey)
+          .eq("version_key", input.versionKey)
+          .in("requirement_key", keys)
+          .limit(1001)
+      : { data: [], error: null };
+    if (applicabilityError || !applicability) throw unavailable();
+    const applicabilityByKey = new Map(
+      applicability.map((row) => [row.requirement_key, row]),
+    );
+    const { data: finalRequest, error: finalRequestError } = await client.rpc(
+      "m10_request_coverage",
+      {
+        p_organization_id: orgId,
+        p_product_id: input.productId,
+        p_pack_key: input.packKey,
+        p_version_key: input.versionKey,
+      },
+    );
+    if (finalRequestError || !finalRequest?.[0]) throw unavailable();
+    current =
+      current &&
+      finalRequest[0].status === "current" &&
+      finalRequest[0].source_revision === scope.source_revision &&
+      finalRequest[0].computed_revision === scope.computed_revision;
+    if (current) {
+      current = page.every((requirement) => {
+        if (
+          projection.get(requirement.requirement_key)?.status !==
+          "evidence_backed"
+        )
+          return true;
+        return activeMappings.some((mapping) => {
+          if (mapping.requirement_key !== requirement.requirement_key)
+            return false;
+          const control = controlById.get(mapping.control_id);
+          return (
+            control?.implementation_status === "implemented" &&
+            availabilityByControl.get(mapping.control_id) === "available"
+          );
+        });
+      });
+    }
+    let summary: ReturnType<
+      typeof requirementCoverageSummarySchema.parse
+    > | null = null;
+    if (current) {
+      const { data: summaryData, error: summaryError } = await client.rpc(
+        "m10_coverage_summary",
+        {
+          p_organization_id: orgId,
+          p_product_id: input.productId,
+          p_pack_key: input.packKey,
+          p_version_key: input.versionKey,
+        },
+      );
+      if (summaryError) throw unavailable();
+      if (
+        !summaryData ||
+        typeof summaryData !== "object" ||
+        Array.isArray(summaryData)
+      ) {
+        current = false;
+      } else {
+        summary = requirementCoverageSummarySchema.parse({
+          totalRequirements: summaryData.totalRequirements,
+          applicableRequirements: summaryData.applicableRequirements,
+          excludedRequirements: summaryData.excludedRequirements,
+          evidenceBackedRequirements: summaryData.evidenceBackedRequirements,
+          gapRequirements: summaryData.gapRequirements,
+        });
+      }
+    }
     return requirementCoverageResponseSchema.parse({
       packKey: input.packKey,
       versionKey: input.versionKey,
       productId: input.productId,
-      requirements: page.map((requirement) => ({
-        requirementKey: requirement.requirement_key,
-        identifier: requirement.identifier,
-        heading: requirement.heading,
-        text: requirement.text,
-        parentKey: requirement.parent_requirement_key,
-        controls: activeMappings
+      calculation: {
+        status: current
+          ? "current"
+          : finalRequest[0].status === "error"
+            ? "unavailable"
+            : "stale",
+        calculatedAt: current ? scope.updated_at : null,
+      },
+      summary,
+      requirements: page.map((requirement) => {
+        const rowStatus = current
+          ? projection.get(requirement.requirement_key)?.status
+          : "stale";
+        const state = rowStatus ?? "stale";
+        const applicabilityRow = applicabilityByKey.get(
+          requirement.requirement_key,
+        );
+        const mappedControls = activeMappings
           .filter((row) => row.requirement_key === requirement.requirement_key)
           .map((row) => controlById.get(row.control_id))
           .filter((row): row is NonNullable<typeof row> => !!row)
-          .map((row) => ({
+          .sort((left, right) => left.id.localeCompare(right.id));
+        const action =
+          state === "no_mapping"
+            ? "map_control"
+            : state === "unimplemented"
+              ? "implement_control"
+              : state === "missing_evidence"
+                ? "link_evidence"
+                : [
+                      "expired_evidence",
+                      "not_yet_valid_evidence",
+                      "quarantined_evidence",
+                      "unavailable_evidence",
+                    ].includes(state)
+                  ? "replace_evidence"
+                  : null;
+        const actionControl =
+          action === "implement_control"
+            ? mappedControls.find(
+                (control) => control.implementation_status !== "implemented",
+              )
+            : action === "link_evidence" || action === "replace_evidence"
+              ? mappedControls.find(
+                  (control) =>
+                    control.implementation_status === "implemented" &&
+                    availabilityByControl.get(control.id) !== "available",
+                )
+              : undefined;
+        return {
+          requirementKey: requirement.requirement_key,
+          identifier: requirement.identifier,
+          heading: requirement.heading,
+          text: requirement.text,
+          parentKey: requirement.parent_requirement_key,
+          assessable: requirement.depth !== 0,
+          applicability: {
+            state: applicabilityRow?.approved_non_applicable
+              ? "not_applicable"
+              : "applicable",
+            reason: applicabilityRow?.reason ?? null,
+            revision: applicabilityRow?.revision ?? 0,
+          },
+          coverageState: state,
+          remediation: { kind: action, controlId: actionControl?.id ?? null },
+          controls: mappedControls.map((row) => ({
             id: row.id,
             title: row.title,
             status: row.implementation_status,
             ownerActive: owners.has(row.owner_user_id),
-            evidencePresent: evidenceControlIds.has(row.id),
+            evidencePresent: availabilityByControl.get(row.id) === "available",
+            evidenceAvailability:
+              availabilityByControl.get(row.id) ?? "missing",
           })),
-      })),
-      nextCursor: nextCursor(offset, input.limit, requirements.length),
+        };
+      }),
+      nextCursor: nextCursor(
+        offset,
+        input.limit,
+        Math.max(0, filtered.length - offset),
+      ),
     });
   }
 
@@ -548,6 +814,52 @@ export class SupabaseControlRepository implements ControlRepository {
     )
       throw unavailable();
     return controlCommandResponseSchema.parse(row.result);
+  }
+
+  async setApplicability(
+    orgId: string,
+    input: Parameters<ControlRepository["setApplicability"]>[1],
+  ) {
+    // Generated RPC types mark p_reason non-nullable; SQL deliberately requires
+    // NULL when restoring applicability, so this one argument object is cast.
+    const { data, error } = await this.supabase
+      .admin()
+      .rpc("m10_set_framework_applicability", {
+        p_organization_id: orgId,
+        p_actor_user_id: input.actorId,
+        p_product_id: input.productId,
+        p_pack_key: input.packKey,
+        p_version_key: input.versionKey,
+        p_requirement_key: input.requirementKey,
+        p_approved: input.state === "not_applicable",
+        p_reason: input.reason ?? null,
+        p_expected_revision: input.expectedRevision,
+        p_idempotency_key: input.idempotencyKey,
+      } as never);
+    if (error || !data) throw unavailable();
+    const row = Array.isArray(data) ? data[0] : data;
+    if (!row || typeof row !== "object" || !("outcome" in row))
+      throw unavailable();
+    if (row.outcome === "conflict") throw new ControlConflictError();
+    if (row.outcome === "forbidden") throw new ControlForbiddenError();
+    if (row.outcome === "invalid_request")
+      throw new ControlInvalidRequestError();
+    if (row.outcome === "blocked") throw new ControlBlockedError();
+    if (row.outcome === "not_found") throw new ControlNotFoundError();
+    if (!["updated", "unchanged"].includes(String(row.outcome)))
+      throw unavailable();
+    const result = row.result;
+    if (
+      !result ||
+      typeof result !== "object" ||
+      !("approvedNonApplicable" in result)
+    )
+      throw unavailable();
+    return requirementApplicabilityResponseSchema.parse({
+      state: result.approvedNonApplicable ? "not_applicable" : "applicable",
+      reason: result.reason,
+      revision: result.revision,
+    });
   }
 
   private summary(

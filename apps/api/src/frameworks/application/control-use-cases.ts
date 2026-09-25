@@ -8,6 +8,7 @@ import type {
   controlOwnerCandidatesResponseSchema,
   requirementCoverageQuerySchema,
   requirementCoverageResponseSchema,
+  requirementApplicabilityResponseSchema,
 } from "@repo/contracts/frameworks";
 
 export const CONTROL_REPOSITORY = Symbol("CONTROL_REPOSITORY");
@@ -26,6 +27,10 @@ type ListQuery = z.output<typeof controlListQuerySchema>;
 type OwnerQuery = z.output<typeof controlOwnerCandidatesQuerySchema>;
 type Owners = z.output<typeof controlOwnerCandidatesResponseSchema>;
 type CoverageQuery = z.output<typeof requirementCoverageQuerySchema>;
+type CoverageQueryInput = Omit<CoverageQuery, "filter"> & {
+  filter?: CoverageQuery["filter"];
+};
+type Applicability = z.output<typeof requirementApplicabilityResponseSchema>;
 export type ControlOperation =
   | "create_control"
   | "update_control"
@@ -60,9 +65,23 @@ export interface ControlRepository {
         actorId: string;
         packKey: string;
         versionKey: string;
-      } & CoverageQuery
+      } & CoverageQueryInput
     >,
   ): Promise<Coverage | null>;
+  setApplicability(
+    orgId: string,
+    input: Readonly<{
+      actorId: string;
+      productId: string;
+      packKey: string;
+      versionKey: string;
+      requirementKey: string;
+      state: "applicable" | "not_applicable";
+      reason?: string;
+      expectedRevision: number;
+      idempotencyKey: string;
+    }>,
+  ): Promise<Applicability>;
   command(
     orgId: string,
     input: Readonly<{
@@ -104,6 +123,13 @@ export class ControlUseCases {
     input: Parameters<ControlRepository["coverage"]>[1],
   ): Promise<Coverage | null> {
     return this.repository.coverage(orgId, input);
+  }
+
+  setApplicability(
+    orgId: string,
+    input: Parameters<ControlRepository["setApplicability"]>[1],
+  ): Promise<Applicability> {
+    return this.repository.setApplicability(orgId, input);
   }
 
   command(

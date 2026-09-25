@@ -25,6 +25,7 @@ interface Props {
   readonly canViewEvidence: boolean;
   readonly activePackKey: string | null;
   readonly activeVersionKey: string | null;
+  readonly initialRequirementKey?: string | null;
 }
 
 type Status = "not_started" | "in_progress" | "implemented";
@@ -86,11 +87,21 @@ export function ControlDetailPanel({
   canViewEvidence,
   activePackKey,
   activeVersionKey,
+  initialRequirementKey = null,
 }: Props) {
   const client = useQueryClient();
   const [editing, setEditing] = useState(false);
   const [editDraft, setEditDraft] = useState<EditDraft | null>(null);
-  const [mappingDraft, setMappingDraft] = useState<MappingDraft | null>(null);
+  const [mappingDraft, setMappingDraft] = useState<MappingDraft | null>(
+    initialRequirementKey
+      ? {
+          mappingId: null,
+          requirementKey: initialRequirementKey,
+          rationale: "",
+          productIds: [],
+        }
+      : null,
+  );
   const [linking, setLinking] = useState(false);
   const [linkProductId, setLinkProductId] = useState("");
   const [linkDocumentId, setLinkDocumentId] = useState("");
@@ -207,7 +218,9 @@ export function ControlDetailPanel({
     retry: false,
   });
   const requirementRows =
-    requirements.data?.pages.flatMap((page) => page.requirements) ?? [];
+    requirements.data?.pages
+      .flatMap((page) => page.requirements)
+      .filter((requirement) => requirement.depth > 0) ?? [];
   const selectedRequirement = requirementRows.find(
     (item) => item.requirementKey === mappingDraft?.requirementKey,
   );
@@ -240,6 +253,10 @@ export function ControlDetailPanel({
       activeVersionKey &&
       selectedCoverageProduct,
     ),
+    refetchInterval: (query) =>
+      query.state.data?.pages[0]?.calculation.status === "current"
+        ? false
+        : 5_000,
     retry: false,
   });
 
@@ -352,6 +369,7 @@ export function ControlDetailPanel({
   const control = detail.data;
   const coverageRows =
     coverage.data?.pages.flatMap((page) => page.requirements) ?? [];
+  const coverageCalculation = coverage.data?.pages[0]?.calculation.status;
   if (detail.isLoading)
     return (
       <SectionCard title="Control detail">
@@ -1085,7 +1103,31 @@ export function ControlDetailPanel({
                 </Button>
               </div>
             ) : null}
-            {coverage.data ? (
+            {coverage.data && coverageCalculation !== "current" ? (
+              <div className={cn("mt-4")}>
+                <p
+                  role="alert"
+                  className={cn("text-subhead-regular text-fg-muted")}
+                >
+                  Coverage is{" "}
+                  {coverageCalculation === "stale"
+                    ? "stale after a source change"
+                    : "unavailable"}
+                  . Mapping and evidence indicators are hidden until it is
+                  recalculated.
+                </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className={cn("mt-3")}
+                  onClick={() => void coverage.refetch()}
+                >
+                  Retry coverage
+                </Button>
+              </div>
+            ) : null}
+            {coverage.data && coverageCalculation === "current" ? (
               <>
                 <ul
                   aria-label="Requirement coverage for selected product"
@@ -1194,7 +1236,7 @@ export function ControlDetailPanel({
                 </div>
               </>
             ) : null}
-            {coverage.hasNextPage ? (
+            {coverageCalculation === "current" && coverage.hasNextPage ? (
               <Button
                 type="button"
                 variant="outline"

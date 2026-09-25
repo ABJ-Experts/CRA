@@ -25,7 +25,8 @@ export const exportSourceRegistry: readonly ExportSourceRegistration[] =
       tables: ["organization_framework_selections"],
     },
     {
-      // Control revisions and exact link identities are durable tenant facts.
+      // Control revisions, exact links, and product applicability decisions
+      // are durable tenant facts. Derived coverage projections are excluded.
       // Referenced pack content is a global deployment asset; evidence bytes
       // remain under the M8 evidence export and retention boundary.
       sourceId: "framework_controls",
@@ -35,6 +36,7 @@ export const exportSourceRegistry: readonly ExportSourceRegistration[] =
         "framework_control_evidence_links",
         "framework_control_requirement_mappings",
         "framework_control_mapping_products",
+        "framework_requirement_applicability",
       ],
     },
     { sourceId: "invitations", tables: ["invitations"] },
@@ -304,6 +306,10 @@ export const exportSourceExclusions: Readonly<Record<string, string>> =
       "Branding publish idempotency keys and request digests are request-security material.",
     framework_control_commands:
       "Control command idempotency keys and request digests are request-security material, not portable tenant records.",
+    framework_coverage_scopes:
+      "Derived coverage status, generation, and worker lease state are recalculated from framework, control, applicability, and evidence sources.",
+    framework_coverage_rows:
+      "Derived per-requirement coverage rows are recalculated from framework, control, applicability, and evidence sources.",
     product_create_idempotencies:
       "Product idempotency keys and request digests are request-security material.",
     product_release_create_idempotencies:

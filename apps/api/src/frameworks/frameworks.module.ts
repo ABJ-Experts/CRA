@@ -16,11 +16,13 @@ import {
   type ControlRepository,
 } from "./application/control-use-cases";
 import { SupabaseControlRepository } from "./infrastructure/supabase-control.repository";
+import { SupabaseCoverageWorkQueue } from "./infrastructure/supabase-coverage-work.queue";
 
 @Module({
   imports: [SupabaseModule, PermissionsModule],
   controllers: [FrameworksController, ControlsController],
   providers: [
+    SupabaseCoverageWorkQueue,
     SupabaseControlRepository,
     { provide: CONTROL_REPOSITORY, useExisting: SupabaseControlRepository },
     {

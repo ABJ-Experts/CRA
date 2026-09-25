@@ -108,10 +108,15 @@ describe("tenant export archive", () => {
       "framework_control_evidence_links",
       "framework_control_requirement_mappings",
       "framework_control_mapping_products",
+      "framework_requirement_applicability",
     ]);
     expect(exportSourceExclusions.framework_control_commands).toMatch(
       /idempotency|security/i,
     );
+    expect(exportSourceExclusions.framework_coverage_scopes).toMatch(
+      /derived|worker lease/i,
+    );
+    expect(exportSourceExclusions.framework_coverage_rows).toMatch(/derived/i);
   });
 
   it("models a resumable capacity profile against the 24-hour target", () => {

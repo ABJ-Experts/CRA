@@ -152,6 +152,17 @@ describe("ControlsApi", () => {
             packKey: "cra-annex-i",
             versionKey: "oj-2024-11-20",
             productId,
+            calculation: {
+              status: "current",
+              calculatedAt: "2026-09-24T10:00:00Z",
+            },
+            summary: {
+              totalRequirements: 0,
+              applicableRequirements: 0,
+              excludedRequirements: 0,
+              evidenceBackedRequirements: 0,
+              gapRequirements: 0,
+            },
             requirements: [],
             nextCursor: null,
           }),
@@ -177,6 +188,92 @@ describe("ControlsApi", () => {
       3,
       `/api/v1/frameworks/cra-annex-i/versions/oj-2024-11-20/coverage?productId=${productId}&limit=100&cursor=next-page`,
       expect.objectContaining({ method: "GET" }),
+    );
+  });
+
+  it("validates applicability commands and sends a filtered coverage query", async () => {
+    const fetcher = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            packKey: "cra-annex-i",
+            versionKey: "oj-2024-11-20",
+            productId,
+            calculation: {
+              status: "current",
+              calculatedAt: "2026-09-24T10:00:00Z",
+            },
+            summary: {
+              totalRequirements: 0,
+              applicableRequirements: 0,
+              excludedRequirements: 0,
+              evidenceBackedRequirements: 0,
+              gapRequirements: 0,
+            },
+            requirements: [],
+            nextCursor: null,
+          }),
+          { status: 200 },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            state: "not_applicable",
+            reason: "Not used",
+            revision: 1,
+          }),
+          { status: 200 },
+        ),
+      );
+    vi.stubGlobal("fetch", fetcher);
+    await controlsApi.coverage(
+      "cra-annex-i",
+      "oj-2024-11-20",
+      productId,
+      undefined,
+      undefined,
+      "gaps",
+    );
+    expect(fetcher).toHaveBeenNthCalledWith(
+      1,
+      `/api/v1/frameworks/cra-annex-i/versions/oj-2024-11-20/coverage?productId=${productId}&limit=100&filter=gaps`,
+      expect.objectContaining({ method: "GET" }),
+    );
+    expect(() =>
+      controlsApi.updateApplicability(
+        "cra-annex-i",
+        "oj-2024-11-20",
+        "../escape",
+        {
+          productId,
+          state: "not_applicable",
+          reason: "Not used",
+          expectedRevision: 0,
+          idempotencyKey: key,
+        },
+      ),
+    ).toThrow();
+    await controlsApi.updateApplicability(
+      "cra-annex-i",
+      "oj-2024-11-20",
+      "part-i-1",
+      {
+        productId,
+        state: "not_applicable",
+        reason: "Not used",
+        expectedRevision: 0,
+        idempotencyKey: key,
+      },
+    );
+    expect(fetcher).toHaveBeenNthCalledWith(
+      2,
+      "/api/v1/frameworks/cra-annex-i/versions/oj-2024-11-20/requirements/part-i-1/applicability",
+      expect.objectContaining({
+        method: "PUT",
+        body: expect.stringContaining(productId),
+      }),
     );
   });
 

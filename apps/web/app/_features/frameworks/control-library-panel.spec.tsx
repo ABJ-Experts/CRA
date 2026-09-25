@@ -60,6 +60,17 @@ vi.mock("./controls.api", () => ({
             packKey: "cra-annex-i",
             versionKey: "oj-2024-11-20",
             productId,
+            calculation: {
+              status: "current",
+              calculatedAt: "2026-09-24T10:00:00Z",
+            },
+            summary: {
+              totalRequirements: 0,
+              applicableRequirements: 0,
+              excludedRequirements: 0,
+              evidenceBackedRequirements: 0,
+              gapRequirements: 0,
+            },
             requirements: [],
             nextCursor: null,
           }
@@ -329,13 +340,23 @@ describe("ControlLibraryPanel", () => {
     state.products = [{ id: productId, name: "Run-scoped product" }];
     state.requirements = [
       {
+        requirementKey: "part-i",
+        identifier: "Annex I, Part I",
+        heading: "Products with digital elements",
+        text: "Structural heading",
+        parentKey: null,
+        position: 0,
+        depth: 0,
+        sourceReference: "Annex I, Part I",
+      },
+      {
         requirementKey: "part-i-1",
         identifier: "Annex I, Part I, 1",
         heading: "Secure updates",
         text: "<script>inert</script> exact source text",
         parentKey: null,
         position: 1,
-        depth: 0,
+        depth: 1,
         sourceReference: "Annex I, Part I, 1",
       },
     ];
@@ -349,6 +370,9 @@ describe("ControlLibraryPanel", () => {
       await screen.findByRole("button", { name: "Map requirement" }),
     );
     await screen.findByRole("option", { name: /Annex I, Part I, 1/ });
+    expect(
+      screen.queryByRole("option", { name: /Products with digital elements/ }),
+    ).not.toBeInTheDocument();
     fireEvent.change(screen.getByRole("combobox", { name: "Requirement" }), {
       target: { value: "part-i-1" },
     });
@@ -510,7 +534,7 @@ describe("ControlLibraryPanel", () => {
         text: "Exact source text",
         parentKey: null,
         position: 1,
-        depth: 0,
+        depth: 1,
         sourceReference: "Annex I, Part I, 1",
       },
     ];
@@ -706,6 +730,14 @@ describe("ControlLibraryPanel", () => {
       packKey: "cra-annex-i",
       versionKey: "oj-2024-11-20",
       productId,
+      calculation: { status: "current", calculatedAt: "2026-09-24T10:00:00Z" },
+      summary: {
+        totalRequirements: 1,
+        applicableRequirements: 1,
+        excludedRequirements: 0,
+        evidenceBackedRequirements: 0,
+        gapRequirements: 1,
+      },
       requirements: [
         {
           requirementKey: "part-i-1",
@@ -769,5 +801,45 @@ describe("ControlLibraryPanel", () => {
         name: "Requirement coverage for selected product",
       }),
     ).toBeInTheDocument();
+  });
+
+  it("does not present stale control coverage as current", async () => {
+    state.list = { controls: [detailFixture()], nextCursor: null };
+    state.detail = detailFixture();
+    state.products = [{ id: productId, name: "Run-scoped product" }];
+    state.coverage = {
+      packKey: "cra-annex-i",
+      versionKey: "oj-2024-11-20",
+      productId,
+      calculation: { status: "stale", calculatedAt: "2026-09-23T10:00:00Z" },
+      summary: null,
+      requirements: [
+        {
+          requirementKey: "part-i-1",
+          identifier: "I.1",
+          heading: null,
+          text: "Exact source text",
+          parentKey: null,
+          controls: [
+            {
+              id: controlId,
+              title: "Secure updates",
+              status: "implemented",
+              ownerActive: true,
+              evidencePresent: true,
+            },
+          ],
+        },
+      ],
+      nextCursor: null,
+    };
+    mount({ initialControlId: controlId });
+    expect(await screen.findByRole("alert")).toHaveTextContent(/stale/i);
+    expect(
+      screen.queryByRole("table", {
+        name: "Requirement coverage for selected product",
+      }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/Evidence present/i)).not.toBeInTheDocument();
   });
 });

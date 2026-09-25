@@ -183,6 +183,77 @@ export const requirementCoverageQuerySchema = z
     productId: uuid,
     limit: z.coerce.number().int().min(1).max(100).default(100),
     cursor: z.string().min(1).max(128).optional(),
+    filter: z
+      .enum(["all", "gaps", "evidence_backed", "excluded"])
+      .default("all"),
+  })
+  .strict();
+export const frameworkApplicabilityParamsSchema =
+  requirementCoverageParamsSchema.extend({
+    requirementKey: frameworkRequirementKeySchema,
+  });
+export const frameworkApplicabilityStateSchema = z.enum([
+  "applicable",
+  "not_applicable",
+]);
+export const setFrameworkApplicabilityInputSchema = z
+  .object({
+    productId: uuid,
+    state: frameworkApplicabilityStateSchema,
+    reason: plainText(2000).optional(),
+    expectedRevision: z.number().int().min(0),
+    idempotencyKey: idempotencyKeySchema,
+  })
+  .strict()
+  .superRefine((value, context) => {
+    if (value.state === "not_applicable" && !value.reason) {
+      context.addIssue({
+        code: "custom",
+        path: ["reason"],
+        message: "Approval requires a reason",
+      });
+    }
+    if (value.state === "applicable" && value.reason !== undefined) {
+      context.addIssue({
+        code: "custom",
+        path: ["reason"],
+        message: "Restoring applicability must not include a reason",
+      });
+    }
+  });
+export const frameworkApplicabilityResponseSchema = z
+  .object({
+    state: frameworkApplicabilityStateSchema,
+    reason: plainText(2000).nullable(),
+    revision: z.number().int().min(0),
+  })
+  .strict();
+export const requirementApplicabilityParamsSchema =
+  frameworkApplicabilityParamsSchema;
+export const requirementApplicabilityInputSchema =
+  setFrameworkApplicabilityInputSchema;
+export const requirementApplicabilityResponseSchema =
+  frameworkApplicabilityResponseSchema;
+export const requirementCoverageStateSchema = z.enum([
+  "structural",
+  "excluded",
+  "evidence_backed",
+  "no_mapping",
+  "unimplemented",
+  "missing_evidence",
+  "expired_evidence",
+  "not_yet_valid_evidence",
+  "quarantined_evidence",
+  "unavailable_evidence",
+  "stale",
+]);
+export const requirementCoverageSummarySchema = z
+  .object({
+    totalRequirements: z.number().int().min(0),
+    applicableRequirements: z.number().int().min(0),
+    excludedRequirements: z.number().int().min(0),
+    evidenceBackedRequirements: z.number().int().min(0),
+    gapRequirements: z.number().int().min(0),
   })
   .strict();
 export const requirementCoverageResponseSchema = z
@@ -190,6 +261,13 @@ export const requirementCoverageResponseSchema = z
     packKey: frameworkPackKeySchema,
     versionKey: frameworkVersionKeySchema,
     productId: uuid,
+    calculation: z
+      .object({
+        status: z.enum(["current", "stale", "unavailable"]),
+        calculatedAt: timestamp.nullable(),
+      })
+      .strict(),
+    summary: requirementCoverageSummarySchema.nullable(),
     requirements: z
       .array(
         z
@@ -199,6 +277,22 @@ export const requirementCoverageResponseSchema = z
             heading: plainText(500).nullable(),
             text: plainText(20_000),
             parentKey: frameworkRequirementKeySchema.nullable(),
+            assessable: z.boolean(),
+            applicability: frameworkApplicabilityResponseSchema,
+            coverageState: requirementCoverageStateSchema,
+            remediation: z
+              .object({
+                kind: z
+                  .enum([
+                    "map_control",
+                    "implement_control",
+                    "link_evidence",
+                    "replace_evidence",
+                  ])
+                  .nullable(),
+                controlId: uuid.nullable(),
+              })
+              .strict(),
             controls: z
               .array(
                 z
@@ -208,6 +302,17 @@ export const requirementCoverageResponseSchema = z
                     status: controlStatusSchema,
                     ownerActive: z.boolean(),
                     evidencePresent: z.boolean(),
+                    evidenceAvailability: z.enum([
+                      "available",
+                      "missing",
+                      "expired",
+                      "quarantined",
+                      "not_yet_valid",
+                      "processing",
+                      "deletion_pending",
+                      "archived",
+                      "unavailable",
+                    ]),
                   })
                   .strict(),
               )

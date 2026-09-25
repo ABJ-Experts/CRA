@@ -2728,13 +2728,6 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "framework_control_evidence_li_organization_id_evidence_ver_fkey"
-            columns: ["organization_id", "evidence_version_id", "product_id"]
-            isOneToOne: false
-            referencedRelation: "evidence_document_version_products"
-            referencedColumns: ["organization_id", "version_id", "product_id"]
-          },
-          {
             foreignKeyName: "framework_control_evidence_links_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
@@ -2766,6 +2759,13 @@ export type Database = {
             referencedRelation: "framework_control_revisions"
             referencedColumns: ["organization_id", "control_id", "revision"]
           },
+          {
+            foreignKeyName: "m10_control_evidence_version_product_fkey"
+            columns: ["organization_id", "evidence_version_id", "product_id"]
+            isOneToOne: false
+            referencedRelation: "evidence_document_version_products"
+            referencedColumns: ["organization_id", "version_id", "product_id"]
+          },
         ]
       }
       framework_control_mapping_products: {
@@ -2786,24 +2786,24 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "framework_control_mapping_produ_organization_id_product_id_fkey"
+            foreignKeyName: "m10_control_mapping_product_mapping_fkey"
+            columns: ["organization_id", "mapping_id"]
+            isOneToOne: false
+            referencedRelation: "framework_control_requirement_mappings"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "m10_control_mapping_product_product_fkey"
             columns: ["organization_id", "product_id"]
             isOneToOne: false
             referencedRelation: "product_retention_alert_operations"
             referencedColumns: ["organization_id", "product_id"]
           },
           {
-            foreignKeyName: "framework_control_mapping_produ_organization_id_product_id_fkey"
+            foreignKeyName: "m10_control_mapping_product_product_fkey"
             columns: ["organization_id", "product_id"]
             isOneToOne: false
             referencedRelation: "products"
-            referencedColumns: ["organization_id", "id"]
-          },
-          {
-            foreignKeyName: "m10_control_mapping_product_mapping_fkey"
-            columns: ["organization_id", "mapping_id"]
-            isOneToOne: false
-            referencedRelation: "framework_control_requirement_mappings"
             referencedColumns: ["organization_id", "id"]
           },
         ]
@@ -3031,6 +3031,143 @@ export type Database = {
           },
         ]
       }
+      framework_coverage_rows: {
+        Row: {
+          computed_revision: number
+          control_count: number
+          implemented_count: number
+          organization_id: string
+          pack_key: string
+          product_id: string
+          requirement_key: string
+          status: string
+          valid_evidence_count: number
+          version_key: string
+        }
+        Insert: {
+          computed_revision: number
+          control_count: number
+          implemented_count: number
+          organization_id: string
+          pack_key: string
+          product_id: string
+          requirement_key: string
+          status: string
+          valid_evidence_count: number
+          version_key: string
+        }
+        Update: {
+          computed_revision?: number
+          control_count?: number
+          implemented_count?: number
+          organization_id?: string
+          pack_key?: string
+          product_id?: string
+          requirement_key?: string
+          status?: string
+          valid_evidence_count?: number
+          version_key?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "framework_coverage_rows_organization_id_product_id_pack_ke_fkey"
+            columns: [
+              "organization_id",
+              "product_id",
+              "pack_key",
+              "version_key",
+            ]
+            isOneToOne: false
+            referencedRelation: "framework_coverage_scopes"
+            referencedColumns: [
+              "organization_id",
+              "product_id",
+              "pack_key",
+              "version_key",
+            ]
+          },
+          {
+            foreignKeyName: "framework_coverage_rows_pack_key_version_key_requirement_k_fkey"
+            columns: ["pack_key", "version_key", "requirement_key"]
+            isOneToOne: false
+            referencedRelation: "framework_requirements"
+            referencedColumns: ["pack_key", "version_key", "requirement_key"]
+          },
+        ]
+      }
+      framework_coverage_scopes: {
+        Row: {
+          attempt_count: number
+          computed_revision: number
+          last_error: string | null
+          lease_expires_at: string | null
+          lease_owner: string | null
+          next_attempt_at: string
+          next_boundary_on: string | null
+          organization_id: string
+          pack_key: string
+          product_id: string
+          source_revision: number
+          status: string
+          updated_at: string
+          version_key: string
+        }
+        Insert: {
+          attempt_count?: number
+          computed_revision?: number
+          last_error?: string | null
+          lease_expires_at?: string | null
+          lease_owner?: string | null
+          next_attempt_at?: string
+          next_boundary_on?: string | null
+          organization_id: string
+          pack_key: string
+          product_id: string
+          source_revision?: number
+          status?: string
+          updated_at?: string
+          version_key: string
+        }
+        Update: {
+          attempt_count?: number
+          computed_revision?: number
+          last_error?: string | null
+          lease_expires_at?: string | null
+          lease_owner?: string | null
+          next_attempt_at?: string
+          next_boundary_on?: string | null
+          organization_id?: string
+          pack_key?: string
+          product_id?: string
+          source_revision?: number
+          status?: string
+          updated_at?: string
+          version_key?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "framework_coverage_scopes_organization_id_product_id_fkey"
+            columns: ["organization_id", "product_id"]
+            isOneToOne: false
+            referencedRelation: "product_retention_alert_operations"
+            referencedColumns: ["organization_id", "product_id"]
+          },
+          {
+            foreignKeyName: "framework_coverage_scopes_organization_id_product_id_fkey"
+            columns: ["organization_id", "product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "framework_coverage_scopes_pack_key_version_key_fkey"
+            columns: ["pack_key", "version_key"]
+            isOneToOne: false
+            referencedRelation: "framework_pack_versions"
+            referencedColumns: ["pack_key", "version_key"]
+          },
+        ]
+      }
       framework_pack_versions: {
         Row: {
           attribution: string
@@ -3081,6 +3218,74 @@ export type Database = {
           version_key?: string
         }
         Relationships: []
+      }
+      framework_requirement_applicability: {
+        Row: {
+          approved_non_applicable: boolean
+          organization_id: string
+          pack_key: string
+          product_id: string
+          reason: string | null
+          requirement_key: string
+          revision: number
+          updated_at: string
+          updated_by: string
+          version_key: string
+        }
+        Insert: {
+          approved_non_applicable: boolean
+          organization_id: string
+          pack_key: string
+          product_id: string
+          reason?: string | null
+          requirement_key: string
+          revision: number
+          updated_at?: string
+          updated_by: string
+          version_key: string
+        }
+        Update: {
+          approved_non_applicable?: boolean
+          organization_id?: string
+          pack_key?: string
+          product_id?: string
+          reason?: string | null
+          requirement_key?: string
+          revision?: number
+          updated_at?: string
+          updated_by?: string
+          version_key?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "framework_requirement_applica_pack_key_version_key_require_fkey"
+            columns: ["pack_key", "version_key", "requirement_key"]
+            isOneToOne: false
+            referencedRelation: "framework_requirements"
+            referencedColumns: ["pack_key", "version_key", "requirement_key"]
+          },
+          {
+            foreignKeyName: "framework_requirement_applicabi_organization_id_product_id_fkey"
+            columns: ["organization_id", "product_id"]
+            isOneToOne: false
+            referencedRelation: "product_retention_alert_operations"
+            referencedColumns: ["organization_id", "product_id"]
+          },
+          {
+            foreignKeyName: "framework_requirement_applicabi_organization_id_product_id_fkey"
+            columns: ["organization_id", "product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "framework_requirement_applicability_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       framework_requirements: {
         Row: {
@@ -24225,6 +24430,16 @@ export type Database = {
         }
         Returns: boolean
       }
+      m10_claim_coverage_scope: {
+        Args: { p_worker_id: string }
+        Returns: {
+          organization_id: string
+          pack_key: string
+          product_id: string
+          source_revision: number
+          version_key: string
+        }[]
+      }
       m10_control_command: {
         Args: {
           p_actor_user_id: string
@@ -24254,7 +24469,51 @@ export type Database = {
         }[]
       }
       m10_control_uuid: { Args: { p_value: string }; Returns: string }
+      m10_coverage_summary: {
+        Args: {
+          p_organization_id: string
+          p_pack_key: string
+          p_product_id: string
+          p_version_key: string
+        }
+        Returns: Json
+      }
+      m10_fail_coverage_scope: {
+        Args: {
+          p_error: string
+          p_organization_id: string
+          p_pack_key: string
+          p_product_id: string
+          p_version_key: string
+          p_worker_id: string
+        }
+        Returns: string
+      }
       m10_import_framework_pack: { Args: { p_payload: Json }; Returns: string }
+      m10_recalculate_coverage_scope: {
+        Args: {
+          p_organization_id: string
+          p_pack_key: string
+          p_product_id: string
+          p_version_key: string
+          p_worker_id: string
+        }
+        Returns: string
+      }
+      m10_request_coverage: {
+        Args: {
+          p_organization_id: string
+          p_pack_key: string
+          p_product_id: string
+          p_version_key: string
+        }
+        Returns: {
+          computed_revision: number
+          next_boundary_on: string
+          source_revision: number
+          status: string
+        }[]
+      }
       m10_select_framework_version: {
         Args: {
           p_actor_user_id: string
@@ -24263,6 +24522,24 @@ export type Database = {
           p_idempotency_key: string
           p_organization_id: string
           p_pack_key: string
+          p_version_key: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      m10_set_framework_applicability: {
+        Args: {
+          p_actor_user_id: string
+          p_approved: boolean
+          p_expected_revision: number
+          p_idempotency_key: string
+          p_organization_id: string
+          p_pack_key: string
+          p_product_id: string
+          p_reason: string
+          p_requirement_key: string
           p_version_key: string
         }
         Returns: {
