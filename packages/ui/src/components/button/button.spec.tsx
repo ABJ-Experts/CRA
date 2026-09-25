@@ -5,6 +5,22 @@ import { describe, expect, it, vi } from "vitest";
 import { Button } from "../../index";
 
 describe("Button", () => {
+  it("uses the accent foreground for a filled primary button", () => {
+    render(<Button>Save</Button>);
+
+    expect(screen.getByRole("button", { name: "Save" })).toHaveClass(
+      "text-on-accent",
+    );
+  });
+
+  it("uses the accent foreground for a balloon button", () => {
+    render(<Button variant="balloon">Reply</Button>);
+
+    expect(screen.getByRole("button", { name: "Reply" })).toHaveClass(
+      "text-on-accent",
+    );
+  });
+
   it("is a non-submitting button by default and forwards activation", async () => {
     const onClick = vi.fn();
     render(<Button onClick={onClick}>Save</Button>);

@@ -1,0 +1,34 @@
+begin;
+create extension if not exists pgtap;
+select plan(27);
+
+select ok(to_regclass('public.evidence_documents') is not null, 'logical evidence document table exists');
+select ok(to_regclass('public.evidence_document_versions') is not null, 'immutable evidence version table exists');
+select ok(to_regclass('public.evidence_document_scan_jobs') is not null, 'durable scan job table exists');
+select ok(to_regclass('public.evidence_document_notification_outbox') is not null, 'durable notification outbox exists');
+select ok((select public from storage.buckets where id='evidence-documents') = false, 'evidence bucket is private');
+select is((select file_size_limit from storage.buckets where id='evidence-documents'), 52428800::bigint, 'evidence bucket limit is 50 MiB');
+select is(public.m8_evidence_retention_class('test_report'), 'evidence_document', 'taxonomy maps explicitly to evidence retention class');
+select is(public.m8_evidence_retention_class('unknown'), null, 'unknown taxonomy has no retention mapping');
+select ok((select relrowsecurity and not relforcerowsecurity from pg_class where oid='public.evidence_document_versions'::regclass), 'versions have enabled non-forced RLS');
+select ok(has_table_privilege('service_role','public.evidence_document_versions','select,insert,update,delete'), 'service role has evidence version access');
+select ok(not has_table_privilege('authenticated','public.evidence_document_versions','select'), 'authenticated has no direct evidence version access');
+select ok((select prosecdef and proconfig @> array['search_path=public, pg_temp'] from pg_proc where oid='public.reserve_evidence_document_upload_atomic(uuid,uuid,text,text,uuid,uuid[],date,date,text,bigint,text,timestamptz,uuid,text)'::regprocedure), 'reservation RPC has pinned security-definer path');
+select ok(has_function_privilege('service_role','public.finalize_evidence_document_upload_atomic(uuid,uuid,uuid,bigint,text,text,uuid,text)','execute'), 'service role can finalize evidence');
+select ok(not has_function_privilege('authenticated','public.finalize_evidence_document_upload_atomic(uuid,uuid,uuid,bigint,text,text,uuid,text)','execute'), 'authenticated cannot finalize evidence');
+select ok(position('''scan_pending''' in pg_get_functiondef('public.finalize_evidence_document_upload_atomic(uuid,uuid,uuid,bigint,text,text,uuid,text)'::regprocedure))>0, 'finalization queues scan pending rather than clean');
+select ok(position('''quarantined''' in pg_get_functiondef('public.record_evidence_document_scan_atomic(uuid,uuid,text,text,text,text,text)'::regprocedure))>0, 'scan recording supports quarantine');
+select is((select outcome from public.get_evidence_document_download_atomic(gen_random_uuid(),gen_random_uuid(),gen_random_uuid(),gen_random_uuid())), 'forbidden', 'unverified actor cannot request download');
+select ok((select convalidated from pg_constraint where conname='technical_file_section_sources_source_kind_check'), 'M7 source kind constraint remains validated');
+select ok(position('''evidence_document''' in pg_get_functiondef('public.m7_evidence_source_snapshot(uuid,uuid,text,uuid)'::regprocedure)) > 0, 'M7 snapshot resolves evidence documents');
+select ok(position('''source_quarantined''' in pg_get_functiondef('public.m7_evidence_source_snapshot(uuid,uuid,text,uuid)'::regprocedure)) > 0, 'M7 snapshot reports quarantined evidence');
+select ok(position('validity_ends_on<current_date' in pg_get_functiondef('public.get_evidence_document_download_atomic(uuid,uuid,uuid,uuid)'::regprocedure)) > 0, 'expired evidence cannot be downloaded');
+select ok((select array_position(allowed_source_kinds,'evidence_document') is not null from public.technical_file_templates where template_key='annex_vii' and section_key='test_reports'), 'test report section permits clean evidence documents');
+select ok(to_regprocedure('public.claim_evidence_document_notification_atomic(uuid,uuid,integer)') is not null, 'notification claim RPC exists');
+select ok((select prosecdef and proconfig @> array['search_path=public, pg_temp'] from pg_proc where oid='public.claim_evidence_document_notification_atomic(uuid,uuid,integer)'::regprocedure), 'notification claim RPC has pinned security-definer path');
+select ok(has_function_privilege('service_role','public.complete_evidence_document_notification_atomic(uuid,uuid,uuid,text,text)','execute') and not has_function_privilege('authenticated','public.complete_evidence_document_notification_atomic(uuid,uuid,uuid,text,text)','execute'), 'notification completion is service-role only');
+select ok(position('p_actual_size_bytes is null' in pg_get_functiondef('public.finalize_evidence_document_upload_atomic(uuid,uuid,uuid,bigint,text,text,uuid,text)'::regprocedure)) > 0 and position('p_detected_media_type is null' in pg_get_functiondef('public.finalize_evidence_document_upload_atomic(uuid,uuid,uuid,bigint,text,text,uuid,text)'::regprocedure)) > 0 and position('p_original_sha256 is null' in pg_get_functiondef('public.finalize_evidence_document_upload_atomic(uuid,uuid,uuid,bigint,text,text,uuid,text)'::regprocedure)) > 0, 'finalization rejects null measured content claims');
+select ok(position('''nextCursor'',null' in pg_get_functiondef('public.list_evidence_documents(uuid,uuid,uuid)'::regprocedure)) > 0 and position('''linkageCount''' in pg_get_functiondef('public.list_evidence_documents(uuid,uuid,uuid)'::regprocedure)) > 0, 'list RPC returns shared list envelope and linkage count');
+
+select * from finish();
+rollback;

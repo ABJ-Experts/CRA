@@ -1,6 +1,27 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
+import { createHash } from "node:crypto";
 import { createTransport, type Transporter } from "nodemailer";
+
+export class RequiredMailDeliveryError extends Error {
+  readonly name = "RequiredMailDeliveryError";
+
+  constructor(readonly code: "provider_unavailable" | "delivery_failed") {
+    super(code);
+  }
+}
+
+const escapeHtml = (value: string): string =>
+  value.replace(/[&<>"']/g, (character) => {
+    const entities: Readonly<Record<string, string>> = Object.freeze({
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#39;",
+    });
+    return entities[character] ?? character;
+  });
 
 /**
  * Outbound email.
@@ -56,14 +77,37 @@ export class MailService {
     }
   }
 
-  private async send(to: string, subject: string, html: string): Promise<void> {
+  private async send(
+    to: string,
+    subject: string,
+    html: string,
+    required = false,
+    idempotencyKey?: string,
+  ): Promise<void> {
     if (!this.transporter) {
       this.logger.warn(`Email suppressed (no transport): "${subject}"`);
+      if (required) throw new RequiredMailDeliveryError("provider_unavailable");
       return;
     }
 
     try {
-      await this.transporter.sendMail({ from: this.from, to, subject, html });
+      const idempotencyDigest = idempotencyKey
+        ? createHash("sha256").update(idempotencyKey).digest("hex")
+        : undefined;
+      await this.transporter.sendMail({
+        from: this.from,
+        to,
+        subject,
+        html,
+        ...(idempotencyDigest
+          ? {
+              messageId: `<support-period-${idempotencyDigest}@cra.local>`,
+              headers: {
+                "X-CRA-Idempotency-Key": idempotencyDigest,
+              },
+            }
+          : {}),
+      });
       this.logger.log(`Sent "${subject}"`);
     } catch (error) {
       /*
@@ -75,6 +119,7 @@ export class MailService {
       this.logger.error(
         `Failed to send "${subject}": ${error instanceof Error ? error.message : String(error)}`,
       );
+      if (required) throw new RequiredMailDeliveryError("delivery_failed");
     }
   }
 
@@ -134,6 +179,344 @@ export class MailService {
          <p style="margin:24px 0"><a href="${url}" style="background:#4a50d6;color:#fff;padding:12px 20px;border-radius:8px;text-decoration:none;font-size:14px">Accept invitation</a></p>
          <p style="color:#8a8f98;font-size:12px;word-break:break-all">${url}</p>`,
       ),
+    );
+  }
+
+  /**
+   * Supplier evidence access is an opaque, one-time portal credential, never
+   * an organization membership invitation. The bearer sits in a URL fragment
+   * so reverse proxies and route logs never receive it.
+   */
+  async sendSupplierEvidenceInvitation(
+    to: string,
+    token: string,
+    idempotencyKey: string,
+  ): Promise<void> {
+    const url = `${this.appUrl}/supplier-evidence#${encodeURIComponent(token)}`;
+    await this.send(
+      to,
+      "Supplier evidence request",
+      this.layout(
+        "Evidence requested",
+        `<p style="color:#4b5058;font-size:14px">You have been asked to provide evidence through the CRA supplier portal.</p>
+         <p style="margin:24px 0"><a href="${url}" style="background:#4a50d6;color:#fff;padding:12px 20px;border-radius:8px;text-decoration:none;font-size:14px">Open evidence request</a></p>
+         <p style="color:#8a8f98;font-size:12px;word-break:break-all">${url}</p>`,
+      ),
+      true,
+      idempotencyKey,
+    );
+  }
+
+  /**
+   * Reminder content deliberately stays within the supplier portal disclosure
+   * boundary. The worker creates the opaque bearer in memory and this method
+   * places it only in the URL fragment, never in a query string or logs.
+   */
+  async sendSupplierEvidenceReminder(
+    to: string,
+    input: Readonly<{
+      portalTitle: string;
+      instructions: string | null;
+      dueAt: string;
+    }>,
+    token: string,
+    idempotencyKey: string,
+  ): Promise<void> {
+    const url = `${this.appUrl}/supplier-evidence#${encodeURIComponent(token)}`;
+    const title = escapeHtml(input.portalTitle);
+    const instructions = input.instructions
+      ? `<p style="color:#4b5058;font-size:14px">${escapeHtml(input.instructions)}</p>`
+      : "";
+    await this.send(
+      to,
+      "Reminder: supplier evidence request",
+      this.layout(
+        "Evidence request reminder",
+        `<p style="color:#4b5058;font-size:14px"><strong>${title}</strong> is awaiting your response.</p>
+         ${instructions}
+         <p style="color:#4b5058;font-size:14px">Due date: <strong>${escapeHtml(input.dueAt)}</strong>.</p>
+         <p style="margin:24px 0"><a href="${url}" style="background:#4a50d6;color:#fff;padding:12px 20px;border-radius:8px;text-decoration:none;font-size:14px">Open evidence request</a></p>
+         <p style="color:#8a8f98;font-size:12px;word-break:break-all">${url}</p>`,
+      ),
+      true,
+      idempotencyKey,
+    );
+  }
+
+  /** Owner escalation never exposes a supplier portal bearer. */
+  async sendSupplierEvidenceReminderEscalation(
+    to: string,
+    input: Readonly<{ portalTitle: string; dueAt: string }>,
+    idempotencyKey: string,
+  ): Promise<void> {
+    await this.send(
+      to,
+      "Overdue supplier evidence escalation",
+      this.layout(
+        "Supplier evidence overdue",
+        `<p style="color:#4b5058;font-size:14px"><strong>${escapeHtml(input.portalTitle)}</strong> is overdue as of <strong>${escapeHtml(input.dueAt)}</strong>.</p>
+         <p style="color:#4b5058;font-size:14px">Review the request in CRA and take the appropriate follow-up action.</p>`,
+      ),
+      true,
+      idempotencyKey,
+    );
+  }
+
+  /**
+   * Compliance alerts are an outbox-owned effect. Unlike account mail, a
+   * delivery failure must reach the worker so it can persist retry state.
+   */
+  async sendSupportPeriodAlert(
+    to: string,
+    input: Readonly<{
+      productName: string;
+      supportEndsAt: string;
+      thresholdDays: number;
+      missed: boolean;
+    }>,
+    idempotencyKey: string,
+  ): Promise<void> {
+    const productName = escapeHtml(input.productName);
+    const timing = input.missed
+      ? "This support-period threshold was missed and requires prompt review."
+      : "Review the support commitment and any required follow-up action.";
+    await this.send(
+      to,
+      `Support period alert: ${input.productName}`,
+      this.layout(
+        "Support period alert",
+        `<p style="color:#4b5058;font-size:14px"><strong>${productName}</strong> reaches its ${input.thresholdDays}-day support-period threshold on <strong>${escapeHtml(input.supportEndsAt)}</strong>.</p>
+         <p style="color:#4b5058;font-size:14px">${timing}</p>`,
+      ),
+      true,
+      idempotencyKey,
+    );
+  }
+
+  async sendKevAlert(
+    to: string,
+    input: Readonly<{
+      productName: string;
+      releaseName: string;
+      advisoryId: string;
+      lifecycleState: string;
+      kevListingDate: string | null;
+    }>,
+    idempotencyKey: string,
+  ): Promise<void> {
+    const productName = escapeHtml(input.productName);
+    const releaseName = escapeHtml(input.releaseName);
+    const advisoryId = escapeHtml(input.advisoryId);
+    const lifecycleState = escapeHtml(input.lifecycleState.replace(/_/g, " "));
+    const listing = input.kevListingDate
+      ? `CISA KEV listing date: <strong>${escapeHtml(input.kevListingDate)}</strong>.`
+      : "CISA KEV listing date is not available.";
+    await this.send(
+      to,
+      `KEV alert: ${input.advisoryId}`,
+      this.layout(
+        "Known Exploited Vulnerability alert",
+        `<p style="color:#4b5058;font-size:14px"><strong>${productName}</strong> release <strong>${releaseName}</strong> is affected by <strong>${advisoryId}</strong>.</p>
+         <p style="color:#4b5058;font-size:14px">Lifecycle state: <strong>${lifecycleState}</strong>. ${listing}</p>
+         <p style="color:#4b5058;font-size:14px">Review the durable alert in CRA before beginning any reporting workflow. No regulatory report has been created or submitted by this notification.</p>`,
+      ),
+      true,
+      idempotencyKey,
+    );
+  }
+
+  /**
+   * The review worker supplies only the material source transition. Evidence
+   * paths, source payloads, and artefact hashes remain in the tenant-scoped
+   * application surface and are never copied into email.
+   */
+  async sendVulnerabilityFindingReviewAlert(
+    to: string,
+    input: Readonly<{
+      advisoryId: string;
+      transition: string;
+      reviewState: string;
+    }>,
+    idempotencyKey: string,
+  ): Promise<void> {
+    const advisorySubject = input.advisoryId.replace(/[\r\n]+/g, " ").trim();
+    const advisoryId = escapeHtml(advisorySubject);
+    const transition = escapeHtml(input.transition.replace(/_/g, " "));
+    const reviewState = escapeHtml(input.reviewState.replace(/_/g, " "));
+    await this.send(
+      to,
+      `Finding review required: ${advisorySubject}`,
+      this.layout(
+        "Vulnerability finding review required",
+        `<p style="color:#4b5058;font-size:14px">Source status for <strong>${advisoryId}</strong> changed to <strong>${transition}</strong>.</p>
+         <p style="color:#4b5058;font-size:14px">Current review state: <strong>${reviewState}</strong>. Review the finding in CRA; this notification does not change the recorded assessment or close the finding.</p>`,
+      ),
+      true,
+      idempotencyKey,
+    );
+  }
+
+  /**
+   * Internal triage notifications deliberately state that they are neither a
+   * regulatory clock nor a report update. The database-owned notifier passes
+   * only the advisory, severity, and event kind; evidence remains in CRA.
+   */
+  async sendVulnerabilityTriageAlert(
+    to: string,
+    input: Readonly<{
+      advisoryId: string;
+      severity: string;
+      kind: "suppression_expired" | "internal_sla_breached";
+    }>,
+    idempotencyKey: string,
+  ): Promise<void> {
+    const advisorySubject = input.advisoryId.replace(/[\r\n]+/g, " ").trim();
+    const advisoryId = escapeHtml(advisorySubject);
+    const severity = escapeHtml(input.severity.replace(/_/g, " "));
+    const isSuppressionExpiry = input.kind === "suppression_expired";
+    const title = isSuppressionExpiry
+      ? "Suppression expired"
+      : "Internal triage SLA breached";
+    const detail = isSuppressionExpiry
+      ? `The finite suppression for <strong>${advisoryId}</strong> expired. The finding is actionable again.`
+      : `The internal triage SLA for <strong>${advisoryId}</strong> (${severity}) was breached.`;
+    await this.send(
+      to,
+      `${title}: ${advisorySubject}`,
+      this.layout(
+        title,
+        `<p style="color:#4b5058;font-size:14px">${detail}</p>
+         <p style="color:#4b5058;font-size:14px">This is an internal triage alert. No regulatory deadline, obligation, or report was changed by this notification.</p>`,
+      ),
+      true,
+      idempotencyKey,
+    );
+  }
+
+  /** Deliberately content-minimal: no note, author, evidence, or assessment data. */
+  async sendVulnerabilityTriageNoteMention(
+    to: string,
+    findingId: string,
+    idempotencyKey: string,
+  ): Promise<void> {
+    const safeFindingId = findingId.replace(/[^a-f0-9-]/gi, "");
+    const href = `${this.appUrl}/findings?findingId=${encodeURIComponent(safeFindingId)}`;
+    await this.send(
+      to,
+      "You were mentioned in a triage note",
+      this.layout(
+        "Triage note mention",
+        `<p style="color:#4b5058;font-size:14px">You were mentioned in an internal finding triage note.</p>
+         <p style="color:#4b5058;font-size:14px"><a href="${escapeHtml(href)}">Open the finding in CRA</a></p>`,
+      ),
+      true,
+      idempotencyKey,
+    );
+  }
+
+  /**
+   * Quarantine notifications deliberately contain no file name, URL, hash, or
+   * malware signature. The authenticated evidence surface rechecks access
+   * before showing any further metadata.
+   */
+  async sendEvidenceQuarantinedAlert(
+    to: string,
+    idempotencyKey: string,
+  ): Promise<void> {
+    await this.send(
+      to,
+      "Evidence upload requires review",
+      this.layout(
+        "Evidence upload requires review",
+        `<p style="color:#4b5058;font-size:14px">An evidence upload you own could not be cleared by the security scan and has been quarantined.</p>
+         <p style="color:#4b5058;font-size:14px">Open CRA to review the safe status details. Do not attempt to retrieve or redistribute the uploaded file.</p>`,
+      ),
+      true,
+      idempotencyKey,
+    );
+  }
+
+  /** Integrity failures are distinct from malware quarantine: no bytes were
+   * delivered and the historical version was taken out of the clean state. */
+  async sendEvidenceIntegrityFailureAlert(
+    to: string,
+    idempotencyKey: string,
+  ): Promise<void> {
+    await this.send(
+      to,
+      "Evidence integrity verification failed",
+      this.layout(
+        "Evidence integrity verification failed",
+        `<p style="color:#4b5058;font-size:14px">A previously clean evidence version could not be verified before delivery and has been blocked.</p>
+         <p style="color:#4b5058;font-size:14px">Open CRA to review the safe status details. Do not try to retrieve or redistribute the file.</p>`,
+      ),
+      true,
+      idempotencyKey,
+    );
+  }
+
+  /** Validity alerts are an outbox-owned effect and do not change retention. */
+  async sendEvidenceValidityExpiryAlert(
+    to: string,
+    input: Readonly<{
+      title: string;
+      validUntil: string;
+      thresholdDays: number;
+      productId: string | null;
+    }>,
+    idempotencyKey: string,
+  ): Promise<void> {
+    const subjectTitle = input.title.replace(/[\r\n]+/g, " ").trim();
+    const title = escapeHtml(subjectTitle);
+    const date = escapeHtml(input.validUntil);
+    const href = input.productId
+      ? `${this.appUrl}/products/${encodeURIComponent(input.productId)}/evidence`
+      : null;
+    await this.send(
+      to,
+      `Evidence validity alert: ${subjectTitle}`,
+      this.layout(
+        "Evidence validity alert",
+        `<p style="color:#4b5058;font-size:14px"><strong>${title}</strong> reaches its ${input.thresholdDays}-day validity threshold on <strong>${date}</strong>.</p>
+         <p style="color:#4b5058;font-size:14px">Validity expiry does not delete evidence or change its retention requirements.</p>
+         ${href ? `<p style="color:#4b5058;font-size:14px"><a href="${escapeHtml(href)}">Open Evidence Library in CRA</a></p>` : ""}`,
+      ),
+      true,
+      idempotencyKey,
+    );
+  }
+
+  /**
+   * Reporting monitors own the outbox and pass no assessment, evidence, or
+   * finding text into this mail boundary. The recipient still receives an
+   * authenticated link; the reporting API rechecks access when it is opened.
+   */
+  async sendReportingDeadlineAlert(
+    to: string,
+    input: Readonly<{
+      obligationId: string;
+      stage: "early_warning" | "notification" | "final_report";
+      thresholdPercent: 50 | 75 | 90 | 100;
+      dueAt: string;
+    }>,
+    idempotencyKey: string,
+  ): Promise<void> {
+    const safeObligationId = input.obligationId.replace(/[^a-f0-9-]/gi, "");
+    const href = `${this.appUrl}/reporting?obligationId=${encodeURIComponent(safeObligationId)}`;
+    const stage = escapeHtml(input.stage.replace(/_/g, " "));
+    const threshold =
+      input.thresholdPercent === 100 ? "breach" : `${input.thresholdPercent}%`;
+    await this.send(
+      to,
+      `Reporting deadline ${threshold}`,
+      this.layout(
+        "Reporting deadline alert",
+        `<p style="color:#4b5058;font-size:14px">A reporting <strong>${stage}</strong> deadline has reached its <strong>${escapeHtml(threshold)}</strong> threshold.</p>
+         <p style="color:#4b5058;font-size:14px">Due at: <strong>${escapeHtml(input.dueAt)}</strong>.</p>
+         <p style="color:#4b5058;font-size:14px"><a href="${escapeHtml(href)}">Open reporting obligations in CRA</a></p>`,
+      ),
+      true,
+      idempotencyKey,
     );
   }
 }

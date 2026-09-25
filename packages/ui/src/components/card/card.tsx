@@ -105,9 +105,10 @@ export function CardDescription({ className, ...props }: ComponentProps<"p">) {
       className={cn(
         "text-caption-1-regular text-fg-muted",
         // On a `primary` card the surface is `active-500`, where `fg-muted`
-        // is nearly invisible. White at reduced opacity keeps the hierarchy
+        // is nearly invisible. The accent foreground at reduced opacity keeps
+        // the hierarchy
         // without inventing a token that only works on one surface.
-        "[[data-card-variant=primary]_&]:text-white/70",
+        "[[data-card-variant=primary]_&]:text-on-accent/70",
         className
       )}
       {...props}

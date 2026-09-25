@@ -72,6 +72,10 @@ class TransitionRepositoryFake implements InvitationRepository {
     return Promise.reject(new Error("not used"));
   }
 
+  resendAtomic(): Promise<never> {
+    return Promise.reject(new Error("not used"));
+  }
+
   organization(): Promise<OrganizationSummary | null> {
     return Promise.reject(new Error("not used"));
   }

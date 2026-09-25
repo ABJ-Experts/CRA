@@ -22,8 +22,11 @@ test("refreshes an expired access cookie, locks out, and clears the session", as
     await page.getByTestId("si-submit").click();
     const signedIn = await signInResponse;
     expect(signedIn.status()).toBe(200);
-    expect(await signedIn.json()).toMatchObject({ next: "dashboard" });
+    // The successful form submission immediately navigates to the dashboard.
+    // Chromium can discard a navigation response body before Playwright reads
+    // it, so assert the durable browser outcome rather than a transient body.
     await expect(page).toHaveURL(/\/dashboard$/);
+    await expect(page.getByRole("link", { name: "Products" })).toBeVisible();
 
     await page.context().clearCookies({ name: "cra_at" });
     const refreshResponse = page.waitForResponse((response) => {
@@ -79,7 +82,7 @@ test("refreshes an expired access cookie, locks out, and clears the session", as
     expect(signedOut.status()).toBe(200);
     expect(await signedOut.json()).toEqual({ ok: true });
     expect(
-      (await page.context().cookies()).filter((cookie) =>
+      (await page.context().cookies([page.url()])).filter((cookie) =>
         cookie.name.startsWith("cra_"),
       ),
     ).toEqual([]);

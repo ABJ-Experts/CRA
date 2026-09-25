@@ -2,7 +2,7 @@ import { Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { createTransport } from "nodemailer";
 
-import { MailService } from "./mail.service";
+import { MailService, RequiredMailDeliveryError } from "./mail.service";
 
 interface SentMessage {
   from: string;
@@ -142,6 +142,74 @@ describe("MailService", () => {
     expect(message?.html).not.toContain("https://cra.test///reset-password");
   });
 
+  it("delivers the supplier portal bearer only in a URL fragment", async () => {
+    const service = new MailService(enabledConfig());
+
+    await service.sendSupplierEvidenceInvitation(
+      "supplier@example.test",
+      "token/with spaces",
+      "11111111-1111-4111-8111-111111111111",
+    );
+
+    const message = mockSendMail.mock.calls[0]?.[0];
+    expect(message).toMatchObject({
+      to: "supplier@example.test",
+      subject: "Supplier evidence request",
+    });
+    expect(message?.html).toContain(
+      "https://cra.test/supplier-evidence#token%2Fwith%20spaces",
+    );
+    expect(message?.html).not.toContain("?token=");
+  });
+
+  it("sends a supplier-safe reminder with a replacement portal bearer", async () => {
+    const service = new MailService(enabledConfig());
+
+    await service.sendSupplierEvidenceReminder(
+      "supplier@example.test",
+      {
+        portalTitle: "Security evidence update",
+        instructions: "Please provide the requested documents.",
+        dueAt: "2026-10-01T09:00:00.000Z",
+      },
+      "replacement/token",
+      "11111111-1111-4111-8111-111111111111",
+    );
+
+    const message = mockSendMail.mock.calls[0]?.[0];
+    expect(message).toMatchObject({
+      to: "supplier@example.test",
+      subject: "Reminder: supplier evidence request",
+    });
+    expect(message?.html).toContain("Security evidence update");
+    expect(message?.html).toContain("Please provide the requested documents.");
+    expect(message?.html).toContain(
+      "https://cra.test/supplier-evidence#replacement%2Ftoken",
+    );
+    expect(message?.html).not.toContain("?token=");
+  });
+
+  it("sends owner escalation without supplier portal credentials", async () => {
+    const service = new MailService(enabledConfig());
+
+    await service.sendSupplierEvidenceReminderEscalation(
+      "owner@cra.test",
+      {
+        portalTitle: "Security evidence update",
+        dueAt: "2026-10-01T09:00:00.000Z",
+      },
+      "22222222-2222-4222-8222-222222222222",
+    );
+
+    const message = mockSendMail.mock.calls[0]?.[0];
+    expect(message).toMatchObject({
+      to: "owner@cra.test",
+      subject: "Overdue supplier evidence escalation",
+    });
+    expect(message?.html).toContain("Security evidence update");
+    expect(message?.html).not.toContain("supplier-evidence#");
+  });
+
   it.each([
     ["Grace", "Grace has invited"],
     [null, "You have been invited"],
@@ -185,4 +253,194 @@ describe("MailService", () => {
       );
     },
   );
+
+  it("reports a required support alert delivery failure to its outbox owner", async () => {
+    mockSendMail.mockRejectedValueOnce(new Error("connection refused"));
+    const service = new MailService(enabledConfig());
+
+    await expect(
+      service.sendSupportPeriodAlert(
+        "owner@cra.test",
+        {
+          productName: "Product <one>",
+          supportEndsAt: "2036-02-28T00:00:00.000Z",
+          thresholdDays: 30,
+          missed: false,
+        },
+        "support-period:revision-1:30",
+      ),
+    ).rejects.toEqual(new RequiredMailDeliveryError("delivery_failed"));
+    expect(mockSendMail.mock.calls[0]?.[0]?.html).toContain(
+      "Product &lt;one&gt;",
+    );
+  });
+
+  it("reports a disabled required support alert delivery to its outbox owner", async () => {
+    const service = new MailService(
+      config({
+        SMTP_FROM: "CRA <no-reply@cra.test>",
+        APP_URL: "https://cra.test",
+      }),
+    );
+
+    await expect(
+      service.sendSupportPeriodAlert(
+        "owner@cra.test",
+        {
+          productName: "Product one",
+          supportEndsAt: "2036-02-28T00:00:00.000Z",
+          thresholdDays: 30,
+          missed: false,
+        },
+        "support-period:revision-1:30",
+      ),
+    ).rejects.toEqual(new RequiredMailDeliveryError("provider_unavailable"));
+  });
+
+  it("uses a stable provider idempotency message identifier for support alerts", async () => {
+    const service = new MailService(enabledConfig());
+
+    await service.sendSupportPeriodAlert(
+      "owner@cra.test",
+      {
+        productName: "Product one",
+        supportEndsAt: "2036-02-28T00:00:00.000Z",
+        thresholdDays: 30,
+        missed: false,
+      },
+      "support-period:revision-1:30",
+    );
+
+    const mail = mockSendMail.mock.calls[0]?.[0] as
+      | Readonly<{
+          messageId?: unknown;
+          headers?: Readonly<Record<string, unknown>>;
+        }>
+      | undefined;
+    expect(mail?.messageId).toMatch(
+      /^<support-period-[a-f0-9]{64}@cra\.local>$/,
+    );
+    expect(mail?.headers?.["X-CRA-Idempotency-Key"]).toMatch(/^[a-f0-9]{64}$/);
+  });
+
+  it("sends content-minimal required reporting deadline alerts", async () => {
+    const service = new MailService(enabledConfig());
+
+    await service.sendReportingDeadlineAlert(
+      "owner@cra.test",
+      {
+        obligationId: "11111111-1111-4111-8111-111111111111",
+        stage: "early_warning",
+        thresholdPercent: 50,
+        dueAt: "2026-09-10T10:00:00Z",
+      },
+      "reporting:stage:revision-1:50:recipient",
+    );
+
+    const message = mockSendMail.mock.calls[0]?.[0];
+    expect(message?.subject).toBe("Reporting deadline 50%");
+    expect(message?.html).toContain("early warning");
+    expect(message?.html).toContain("2026-09-10T10:00:00Z");
+    expect(message?.html).toContain(
+      "https://cra.test/reporting?obligationId=11111111-1111-4111-8111-111111111111",
+    );
+    expect(message?.html).not.toContain("assessment");
+    expect(message?.html).not.toContain("evidence");
+  });
+
+  it("sends required KEV alerts without raw SBOM content", async () => {
+    const service = new MailService(enabledConfig());
+
+    await service.sendKevAlert(
+      "owner@cra.test",
+      {
+        productName: "Pump <controller>",
+        releaseName: "2026.08",
+        advisoryId: "CVE-2026-0001",
+        lifecycleState: "in_support",
+        kevListingDate: "2026-08-26",
+      },
+      "33333333-3333-4333-8333-333333333333",
+    );
+
+    const message = mockSendMail.mock.calls[0]?.[0] as Readonly<{
+      html?: unknown;
+    }>;
+    expect(message?.html).toContain("Pump &lt;controller&gt;");
+    expect(message?.html).toContain("CVE-2026-0001");
+    expect(message?.html).toContain("No regulatory report has been created");
+    expect(message?.html).not.toContain("bomFormat");
+    expect(message?.html).not.toContain("components");
+  });
+
+  it("sends a required finding-review notification without evidence payloads", async () => {
+    const service = new MailService(enabledConfig());
+
+    await service.sendVulnerabilityFindingReviewAlert(
+      "owner@cra.test",
+      {
+        advisoryId: "CVE-2026-0001",
+        transition: "withdrawn",
+        reviewState: "review_required",
+      },
+      "33333333-3333-4333-8333-333333333333",
+    );
+
+    const message = mockSendMail.mock.calls[0]?.[0] as Readonly<{
+      subject?: unknown;
+      html?: unknown;
+    }>;
+    expect(message?.subject).toBe("Finding review required: CVE-2026-0001");
+    expect(message?.html).toContain("withdrawn");
+    expect(message?.html).toContain("CVE-2026-0001");
+    expect(message?.html).not.toContain("evidencePath");
+    expect(message?.html).not.toContain("sha256");
+  });
+
+  it("normalizes advisory line breaks before composing a review-mail subject", async () => {
+    const service = new MailService(enabledConfig());
+
+    await service.sendVulnerabilityFindingReviewAlert(
+      "owner@cra.test",
+      {
+        advisoryId: "CVE-2026-0001\r\nBcc: no-one@cra.test",
+        transition: "withdrawn",
+        reviewState: "review_required",
+      },
+      "33333333-3333-4333-8333-333333333333",
+    );
+
+    const message = mockSendMail.mock.calls[0]?.[0] as Readonly<{
+      subject?: unknown;
+    }>;
+    expect(message?.subject).toBe(
+      "Finding review required: CVE-2026-0001 Bcc: no-one@cra.test",
+    );
+  });
+
+  it("sends an internal SLA alert without implying a regulatory change", async () => {
+    const service = new MailService(enabledConfig());
+
+    await service.sendVulnerabilityTriageAlert(
+      "owner@cra.test",
+      {
+        advisoryId: "CVE-2026-0001",
+        severity: "high",
+        kind: "internal_sla_breached",
+      },
+      "33333333-3333-4333-8333-333333333333",
+    );
+
+    const message = mockSendMail.mock.calls[0]?.[0] as Readonly<{
+      subject?: unknown;
+      html?: unknown;
+    }>;
+    expect(message?.subject).toBe(
+      "Internal triage SLA breached: CVE-2026-0001",
+    );
+    expect(message?.html).toContain("Internal triage SLA");
+    expect(message?.html).toContain(
+      "No regulatory deadline, obligation, or report was changed",
+    );
+  });
 });
