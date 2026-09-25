@@ -3,6 +3,8 @@ import {
   FrameworkConflictError,
   FrameworkForbiddenError,
   FrameworkInvalidRequestError,
+  FrameworkUpgradeRequiredError,
+  FrameworkPackBlockedError,
 } from "../application/framework-use-cases";
 import type { SupabaseService } from "../../supabase/supabase.service";
 import { ServiceUnavailableException } from "@nestjs/common";
@@ -110,6 +112,8 @@ describe("SupabaseFrameworkRepository", () => {
 
   it.each([
     ["conflict", FrameworkConflictError],
+    ["upgrade_required", FrameworkUpgradeRequiredError],
+    ["blocked", FrameworkPackBlockedError],
     ["forbidden", FrameworkForbiddenError],
   ])(
     "maps %s without leaking database details",
@@ -148,6 +152,21 @@ describe("SupabaseFrameworkRepository", () => {
         attribution: "Official Journal",
         content_hash: "a".repeat(64),
       },
+      {
+        pack_key: "iec-62443-4-1",
+        version_key: "ed2",
+        title: "IEC 62443-4-1",
+        edition_date: "2025-01-01",
+        language: "en",
+        source_celex: null,
+        source_url: "https://example.org/authorized-edition",
+        attribution: "Licensed standard",
+        content_hash: "b".repeat(64),
+        source_kind: "licensed_standard",
+        edition_label: "Edition 2",
+        distribution_rights: "Internal authorized distribution only",
+        review_owner: "Standards reviewer",
+      },
     ];
     const packQuery = {
       order: jest.fn(),
@@ -177,6 +196,26 @@ describe("SupabaseFrameworkRepository", () => {
               sourceReference: "CELEX:32024R2847",
               attribution: "Official Journal",
               contentHash: "a".repeat(64),
+            },
+          ],
+          selection: null,
+        },
+        {
+          packKey: "iec-62443-4-1",
+          title: "IEC 62443-4-1",
+          versions: [
+            {
+              versionKey: "ed2",
+              editionDate: "2025-01-01",
+              language: "en",
+              sourceUrl: "https://example.org/authorized-edition",
+              sourceReference: "Edition 2",
+              attribution: "Licensed standard",
+              contentHash: "b".repeat(64),
+              sourceKind: "licensed_standard",
+              editionLabel: "Edition 2",
+              distributionRights: "Internal authorized distribution only",
+              reviewOwner: "Standards reviewer",
             },
           ],
           selection: null,

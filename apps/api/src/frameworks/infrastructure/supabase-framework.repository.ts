@@ -4,13 +4,15 @@ import {
   frameworkTreeResponseSchema,
   frameworkSelectionResponseSchema,
 } from "@repo/contracts/frameworks";
-import type { z } from "zod";
+import { z } from "zod";
 
 import { SupabaseService } from "../../supabase/supabase.service";
 import {
   FrameworkConflictError,
   FrameworkForbiddenError,
   FrameworkInvalidRequestError,
+  FrameworkUpgradeRequiredError,
+  FrameworkPackBlockedError,
   type FrameworkRepository,
 } from "../application/framework-use-cases";
 
@@ -47,7 +49,7 @@ export class SupabaseFrameworkRepository implements FrameworkRepository {
       client
         .from("framework_pack_versions")
         .select(
-          "pack_key,version_key,title,edition_date,language,source_celex,source_url,attribution,content_hash",
+          "pack_key,version_key,title,edition_date,language,source_celex,source_url,attribution,content_hash,source_kind,edition_label,distribution_rights,review_owner",
         )
         .order("pack_key")
         .order("edition_date", { ascending: false })
@@ -68,6 +70,12 @@ export class SupabaseFrameworkRepository implements FrameworkRepository {
     >["packs"][number];
     const grouped = new Map<string, CatalogPack>();
     for (const row of packs) {
+      const sourceKind = row.source_kind
+        ? z
+            .enum(["public_law", "licensed_standard", "approved_fixture"])
+            .safeParse(row.source_kind)
+        : null;
+      if (sourceKind && !sourceKind.success) throw unavailable();
       const existing = grouped.get(row.pack_key);
       const selection = selected.get(row.pack_key);
       const pack: CatalogPack = existing ?? {
@@ -87,9 +95,19 @@ export class SupabaseFrameworkRepository implements FrameworkRepository {
         editionDate: row.edition_date,
         language: row.language,
         sourceUrl: row.source_url,
-        sourceReference: `CELEX:${row.source_celex}`,
+        sourceReference: row.source_celex
+          ? `CELEX:${row.source_celex}`
+          : (row.edition_label ?? row.source_url),
         attribution: row.attribution,
         contentHash: row.content_hash,
+        ...(sourceKind
+          ? {
+              sourceKind: sourceKind.data,
+              editionLabel: row.edition_label,
+              distributionRights: row.distribution_rights,
+              reviewOwner: row.review_owner,
+            }
+          : {}),
       });
       grouped.set(row.pack_key, pack);
     }
@@ -169,6 +187,9 @@ export class SupabaseFrameworkRepository implements FrameworkRepository {
     if (!row || typeof row !== "object" || !("outcome" in row))
       throw unavailable();
     if (row.outcome === "conflict") throw new FrameworkConflictError();
+    if (row.outcome === "upgrade_required")
+      throw new FrameworkUpgradeRequiredError();
+    if (row.outcome === "blocked") throw new FrameworkPackBlockedError();
     if (row.outcome === "forbidden") throw new FrameworkForbiddenError();
     if (row.outcome === "invalid_request")
       throw new FrameworkInvalidRequestError();

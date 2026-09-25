@@ -849,7 +849,11 @@ export function EvidenceLibrary({
                   </Button>
                 </div>
               ) : reuse.data ? (
-                <EvidenceReusePanel reuse={reuse.data.reuse} />
+                <EvidenceReusePanel
+                  reuse={reuse.data.reuse}
+                  productId={productId}
+                  evidenceVersionId={selectedVersion?.id ?? null}
+                />
               ) : null}
             </SectionCard>
           ) : null}

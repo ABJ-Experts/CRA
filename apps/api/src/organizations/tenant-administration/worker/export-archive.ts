@@ -37,6 +37,8 @@ export const exportSourceRegistry: readonly ExportSourceRegistration[] =
         "framework_control_requirement_mappings",
         "framework_control_mapping_products",
         "framework_requirement_applicability",
+        "framework_upgrade_reviews",
+        "framework_upgrade_decisions",
       ],
     },
     { sourceId: "invitations", tables: ["invitations"] },
@@ -362,6 +364,123 @@ export const exportSourceExclusions: Readonly<Record<string, string>> =
       "Idempotency keys and request digests are request-security material.",
     vulnerability_vex_publication_jobs:
       "Contains active worker leases, retry scheduling, and target delivery state; immutable export snapshots and completed delivery attempts are exported separately.",
+    // M6–M9 artifacts are not yet portable. The production artifact-snapshot
+    // port fails closed; registering their metadata alone would advertise an
+    // archive that cannot contain the immutable bytes and referenced records.
+    reporting_family_templates:
+      "Reporting template state has no reviewed tenant archive projection or matching artifact snapshot; exporting a partial reporting family is unsafe.",
+    reporting_family_template_versions:
+      "Versioned reporting templates need their family and filing artifacts in one reviewed archive; partial source export is unsafe.",
+    reporting_obligation_evidence_packs:
+      "Evidence-pack references require immutable evidence bytes and a reviewed reporting artifact snapshot before export.",
+    reporting_stage_approval_proofs:
+      "Contains reauthentication proof and session-bound authorization material that must never be copied into a tenant archive.",
+    reporting_stage_approvals:
+      "Approval facts refer to protected proof and versioned filing artifacts; no complete portable reporting snapshot exists.",
+    reporting_stage_draft_commands:
+      "Draft command idempotency keys and request digests are request-security material.",
+    reporting_stage_draft_revisions:
+      "Draft revisions depend on versioned reporting templates and filing artifacts; a partial reporting archive is unsafe.",
+    reporting_stage_drafts:
+      "Draft state depends on versioned reporting templates and filing artifacts; a partial reporting archive is unsafe.",
+    reporting_stage_filing_proofs:
+      "Filing proofs reference immutable submission artifacts whose bytes are not in the tenant artifact snapshot contract.",
+    reporting_stage_packages:
+      "Stage packages reference immutable submission artifacts whose bytes are not in the tenant artifact snapshot contract.",
+    reporting_stage_submission_acknowledgements:
+      "Acknowledgements depend on a complete submission and filing-proof archive; exporting them alone would misrepresent filing history.",
+    reporting_stage_submissions:
+      "Submissions depend on versioned drafts, approvals, and filing artifacts; no complete portable reporting snapshot exists.",
+    evidence_bulk_intake_attempts:
+      "Bulk intake attempts contain retry and upload state that is deployment-local worker security material.",
+    evidence_bulk_intake_batches:
+      "Bulk intake batches depend on private uploaded evidence bytes and reservation state absent from the artifact snapshot contract.",
+    evidence_bulk_intake_items:
+      "Bulk intake items reference private uploaded evidence and staging state absent from the artifact snapshot contract.",
+    evidence_document_access_grants:
+      "Contains scoped access grants and token verifiers; bearer authorization material must never be archived.",
+    evidence_document_deletion_cleanup_items:
+      "Deletion cleanup items carry active worker and storage cleanup state that cannot be restored safely.",
+    evidence_document_deletion_intents:
+      "Deletion intents are active destructive workflow state; replaying them from an archive could bypass current retention checks.",
+    evidence_document_extraction_jobs:
+      "Extraction jobs contain active worker lease and retry state; only completed text and immutable source bytes could be portable.",
+    evidence_document_legal_holds:
+      "Legal holds are authoritative protection state and require a complete, reviewed retention and evidence restore contract before export.",
+    evidence_document_notification_outbox:
+      "Notification outbox rows contain delivery and retry state that cannot be replayed safely after restore.",
+    evidence_document_scan_jobs:
+      "Scan jobs contain active worker lease and quarantine state tied to private storage objects.",
+    evidence_document_version_products:
+      "Product scopes cannot be exported independently of their immutable evidence versions and private bytes.",
+    evidence_document_version_retention_protections:
+      "Retention protections require their exact evidence versions and legal-hold authority in one reviewed restore contract.",
+    evidence_document_version_texts:
+      "Extracted text derives from private immutable evidence bytes and has no reviewed redacted archive projection.",
+    evidence_document_versions:
+      "Version metadata references private immutable bytes not yet copied by the production artifact snapshot port.",
+    evidence_document_watermark_export_access_grants:
+      "Contains scoped watermark download grants and token verifiers; bearer authorization material must never be archived.",
+    evidence_document_watermark_exports:
+      "Watermark export metadata refers to private derived bytes absent from the artifact snapshot contract.",
+    evidence_documents:
+      "Evidence document metadata is not portable without its immutable version bytes, product scope, and retention authority.",
+    supplier_component_responsibilities:
+      "Supplier responsibilities refer to supplier identities and product/SBOM evidence; no complete portable supplier snapshot exists.",
+    supplier_contacts:
+      "Supplier contact data requires a reviewed supplier privacy and restore projection before tenant archive inclusion.",
+    supplier_evidence_invitations:
+      "Contains external invitation and session token verifiers; bearer authorization material must never be archived.",
+    supplier_evidence_reminder_deliveries:
+      "Reminder delivery rows contain external notification and retry state that cannot be replayed safely after restore.",
+    supplier_evidence_request_commands:
+      "Supplier request command idempotency keys and request digests are request-security material.",
+    supplier_evidence_request_items:
+      "Request items require their request revisions, external grants, and referenced evidence in one reviewed snapshot.",
+    supplier_evidence_request_revisions:
+      "Request revisions require their parent request and external evidence in one reviewed supplier snapshot.",
+    supplier_evidence_requests:
+      "Supplier requests depend on external grants and immutable submitted evidence absent from the artifact snapshot contract.",
+    supplier_evidence_submission_reviews:
+      "Submission reviews refer to exact private evidence versions and external submissions; partial export would misstate review history.",
+    supplier_evidence_submissions:
+      "External submissions reference private immutable evidence bytes absent from the artifact snapshot contract.",
+    supplier_organizations:
+      "Supplier identities require contacts, responsibilities, requests, and privacy review in a complete supplier archive.",
+    supplier_registry_commands:
+      "Supplier registry command idempotency keys and request digests are request-security material.",
+    technical_file_auditor_access_events:
+      "Auditor access events refer to scoped grants and immutable snapshots; no reviewed portable access ledger exists.",
+    technical_file_auditor_snapshot_grants:
+      "Contains scoped auditor bearer grants and token verifiers that must never be copied into a tenant archive.",
+    technical_file_declarations:
+      "Declarations refer to exact technical-file snapshots and signed artifacts absent from the artifact snapshot contract.",
+    technical_file_risk_commands:
+      "Risk command idempotency keys and request digests are request-security material.",
+    technical_file_risk_registers:
+      "Risk registers require all revisions, assets, evidence, and exact snapshots in one reviewed portable archive.",
+    technical_file_risk_revision_assets:
+      "Risk revision assets cannot be exported without their parent immutable revision and product asset graph.",
+    technical_file_risk_revision_evidence:
+      "Risk revision evidence refers to private immutable evidence versions not covered by the artifact snapshot contract.",
+    technical_file_risk_revision_requirements:
+      "Risk revision requirements require their parent revision and exact framework pack versions in one reviewed archive.",
+    technical_file_risk_revisions:
+      "Risk revisions require their parent register, evidence, and exact framework references in one reviewed archive.",
+    technical_file_risks:
+      "Risk records require their complete immutable revision chain and evidence in one reviewed archive.",
+    technical_file_section_source_reviews:
+      "Section source reviews refer to version-pinned private evidence and technical-file sections; partial export is unsafe.",
+    technical_file_section_sources:
+      "Section sources refer to version-pinned private evidence and technical-file sections; partial export is unsafe.",
+    technical_file_sections:
+      "Technical-file sections require their source reviews, evidence, and immutable snapshots in one reviewed archive.",
+    technical_file_snapshot_exports:
+      "Snapshot export metadata refers to private generated bytes not covered by the artifact snapshot contract.",
+    technical_file_snapshots:
+      "Immutable snapshots require their exact source evidence and generated bytes in a reviewed artifact snapshot contract.",
+    technical_files:
+      "Technical files require their complete sections, risk, evidence, and snapshot graph before portable export.",
   });
 
 const crcTable = (() => {

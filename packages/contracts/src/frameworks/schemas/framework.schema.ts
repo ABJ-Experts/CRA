@@ -53,7 +53,7 @@ export const frameworkPackImportSchema = z
     editionDate: date,
     language: z.string().regex(/^[a-z]{2,3}(?:-[A-Z]{2})?$/),
     sourceUrl: z.url().startsWith("https://").max(2_048),
-    sourceCelex: plainText(80),
+    sourceCelex: plainText(80).optional(),
     sourceEli: z
       .url()
       .max(2_048)
@@ -62,14 +62,46 @@ export const frameworkPackImportSchema = z
           value.startsWith("https://") ||
           value.startsWith("http://data.europa.eu/"),
         "Use HTTPS or the canonical EU ELI URL",
-      ),
+      )
+      .optional(),
     sourcePublicationDate: date,
     attribution: plainText(1_000),
     reviewEvidence: plainText(1_000),
+    sourceKind: z
+      .enum(["public_law", "licensed_standard", "approved_fixture"])
+      .optional(),
+    editionLabel: plainText(200).optional(),
+    distributionRights: plainText(2_000).optional(),
+    rightsEvidence: plainText(2_000).optional(),
+    reviewOwner: plainText(200).optional(),
+    approvedAt: z.iso.datetime({ offset: true }).optional(),
     requirements: z.array(packRequirementSchema).min(1).max(1_000),
   })
   .strict()
   .superRefine((pack, context) => {
+    const kind = pack.sourceKind ?? "public_law";
+    if (kind === "public_law" && (!pack.sourceCelex || !pack.sourceEli)) {
+      context.addIssue({
+        code: "custom",
+        message: "Public law requires CELEX and ELI references",
+      });
+    }
+    if (
+      kind === "licensed_standard" &&
+      (!pack.editionLabel ||
+        !pack.distributionRights ||
+        pack.distributionRights.length < 20 ||
+        !pack.rightsEvidence ||
+        pack.rightsEvidence.length < 20 ||
+        !pack.reviewOwner ||
+        !pack.approvedAt)
+    ) {
+      context.addIssue({
+        code: "custom",
+        message:
+          "Licensed standards require edition, rights, and review approval",
+      });
+    }
     if (JSON.stringify(pack).length > 2_097_152) {
       context.addIssue({ code: "custom", message: "Pack exceeds 2 MB" });
     }
@@ -150,6 +182,17 @@ export const frameworkCatalogResponseSchema = z
                     sourceReference: plainText(500),
                     attribution: plainText(1_000),
                     contentHash: hash,
+                    sourceKind: z
+                      .enum([
+                        "public_law",
+                        "licensed_standard",
+                        "approved_fixture",
+                      ])
+                      .nullable()
+                      .optional(),
+                    editionLabel: plainText(200).nullable().optional(),
+                    distributionRights: plainText(2_000).nullable().optional(),
+                    reviewOwner: plainText(200).nullable().optional(),
                   })
                   .strict(),
               )

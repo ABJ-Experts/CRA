@@ -109,6 +109,8 @@ describe("tenant export archive", () => {
       "framework_control_requirement_mappings",
       "framework_control_mapping_products",
       "framework_requirement_applicability",
+      "framework_upgrade_reviews",
+      "framework_upgrade_decisions",
     ]);
     expect(exportSourceExclusions.framework_control_commands).toMatch(
       /idempotency|security/i,

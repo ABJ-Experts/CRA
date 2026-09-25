@@ -9,6 +9,8 @@ import {
   FrameworkConflictError,
   FrameworkForbiddenError,
   FrameworkInvalidRequestError,
+  FrameworkUpgradeRequiredError,
+  FrameworkPackBlockedError,
   FrameworkUseCases,
 } from "./application/framework-use-cases";
 import { FrameworksController } from "./frameworks.controller";
@@ -100,6 +102,24 @@ describe("FrameworksController", () => {
         expectedRevision: 1,
       }),
     );
+  });
+
+  it("returns a stable conflict when version changes require review", async () => {
+    select.mockRejectedValue(new FrameworkUpgradeRequiredError());
+    await expect(
+      controller.select({ packKey: "cra" }, body, user),
+    ).rejects.toMatchObject({
+      response: { code: "framework_upgrade_required" },
+    });
+  });
+
+  it("returns a stable conflict for an unauthorized edition", async () => {
+    select.mockRejectedValue(new FrameworkPackBlockedError());
+    await expect(
+      controller.select({ packKey: "iec-62443-4-1" }, body, user),
+    ).rejects.toMatchObject({
+      response: { code: "framework_pack_blocked" },
+    });
   });
 
   it("returns a known tree without changing its contract", async () => {

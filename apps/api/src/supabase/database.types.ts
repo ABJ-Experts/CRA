@@ -3168,50 +3168,148 @@ export type Database = {
           },
         ]
       }
+      framework_curated_crosswalks: {
+        Row: {
+          created_at: string
+          direction: string
+          id: string
+          provenance: string
+          rationale: string
+          retired_at: string | null
+          retirement_reason: string | null
+          reviewed_at: string
+          reviewer: string
+          source_pack_key: string
+          source_requirement_key: string
+          source_version_key: string
+          strength: string
+          target_pack_key: string
+          target_requirement_key: string
+          target_version_key: string
+        }
+        Insert: {
+          created_at?: string
+          direction: string
+          id?: string
+          provenance: string
+          rationale: string
+          retired_at?: string | null
+          retirement_reason?: string | null
+          reviewed_at: string
+          reviewer: string
+          source_pack_key: string
+          source_requirement_key: string
+          source_version_key: string
+          strength: string
+          target_pack_key: string
+          target_requirement_key: string
+          target_version_key: string
+        }
+        Update: {
+          created_at?: string
+          direction?: string
+          id?: string
+          provenance?: string
+          rationale?: string
+          retired_at?: string | null
+          retirement_reason?: string | null
+          reviewed_at?: string
+          reviewer?: string
+          source_pack_key?: string
+          source_requirement_key?: string
+          source_version_key?: string
+          strength?: string
+          target_pack_key?: string
+          target_requirement_key?: string
+          target_version_key?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "framework_curated_crosswalks_source_pack_key_source_versio_fkey"
+            columns: [
+              "source_pack_key",
+              "source_version_key",
+              "source_requirement_key",
+            ]
+            isOneToOne: false
+            referencedRelation: "framework_requirements"
+            referencedColumns: ["pack_key", "version_key", "requirement_key"]
+          },
+          {
+            foreignKeyName: "framework_curated_crosswalks_target_pack_key_target_versio_fkey"
+            columns: [
+              "target_pack_key",
+              "target_version_key",
+              "target_requirement_key",
+            ]
+            isOneToOne: false
+            referencedRelation: "framework_requirements"
+            referencedColumns: ["pack_key", "version_key", "requirement_key"]
+          },
+        ]
+      }
       framework_pack_versions: {
         Row: {
+          approved_at: string | null
           attribution: string
           content_hash: string
+          distribution_rights: string | null
           edition_date: string
+          edition_label: string | null
           imported_at: string
           language: string
           pack_key: string
           requirement_count: number
           review_evidence: string
-          source_celex: string
-          source_eli: string
+          review_owner: string | null
+          rights_evidence: string | null
+          source_celex: string | null
+          source_eli: string | null
+          source_kind: string
           source_publication_date: string
           source_url: string
           title: string
           version_key: string
         }
         Insert: {
+          approved_at?: string | null
           attribution: string
           content_hash: string
+          distribution_rights?: string | null
           edition_date: string
+          edition_label?: string | null
           imported_at?: string
           language: string
           pack_key: string
           requirement_count: number
           review_evidence: string
-          source_celex: string
-          source_eli: string
+          review_owner?: string | null
+          rights_evidence?: string | null
+          source_celex?: string | null
+          source_eli?: string | null
+          source_kind?: string
           source_publication_date: string
           source_url: string
           title: string
           version_key: string
         }
         Update: {
+          approved_at?: string | null
           attribution?: string
           content_hash?: string
+          distribution_rights?: string | null
           edition_date?: string
+          edition_label?: string | null
           imported_at?: string
           language?: string
           pack_key?: string
           requirement_count?: number
           review_evidence?: string
-          source_celex?: string
-          source_eli?: string
+          review_owner?: string | null
+          rights_evidence?: string | null
+          source_celex?: string | null
+          source_eli?: string | null
+          source_kind?: string
           source_publication_date?: string
           source_url?: string
           title?: string
@@ -3341,6 +3439,163 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "framework_requirements"
             referencedColumns: ["pack_key", "version_key", "requirement_key"]
+          },
+        ]
+      }
+      framework_upgrade_decisions: {
+        Row: {
+          decided_at: string
+          decided_by: string
+          mapping_id: string
+          organization_id: string
+          review_id: string
+          target_requirement_keys: string[]
+        }
+        Insert: {
+          decided_at?: string
+          decided_by: string
+          mapping_id: string
+          organization_id: string
+          review_id: string
+          target_requirement_keys: string[]
+        }
+        Update: {
+          decided_at?: string
+          decided_by?: string
+          mapping_id?: string
+          organization_id?: string
+          review_id?: string
+          target_requirement_keys?: string[]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "framework_upgrade_decisions_decided_by_fkey"
+            columns: ["decided_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "framework_upgrade_decisions_mapping_fkey"
+            columns: ["organization_id", "mapping_id"]
+            isOneToOne: false
+            referencedRelation: "framework_control_requirement_mappings"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "framework_upgrade_decisions_review_fkey"
+            columns: ["organization_id", "review_id"]
+            isOneToOne: false
+            referencedRelation: "framework_upgrade_reviews"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      framework_upgrade_reviews: {
+        Row: {
+          commit_digest: string | null
+          commit_idempotency_key: string | null
+          committed_at: string | null
+          committed_by: string | null
+          created_at: string
+          created_by: string
+          fingerprint: string
+          id: string
+          idempotency_key: string
+          organization_id: string
+          pack_key: string
+          request_digest: string
+          result: Json | null
+          revision: number
+          selection_revision: number
+          source_hash: string
+          source_version_key: string
+          status: string
+          target_hash: string
+          target_version_key: string
+          updated_at: string
+        }
+        Insert: {
+          commit_digest?: string | null
+          commit_idempotency_key?: string | null
+          committed_at?: string | null
+          committed_by?: string | null
+          created_at?: string
+          created_by: string
+          fingerprint: string
+          id?: string
+          idempotency_key: string
+          organization_id: string
+          pack_key: string
+          request_digest: string
+          result?: Json | null
+          revision?: number
+          selection_revision: number
+          source_hash: string
+          source_version_key: string
+          status?: string
+          target_hash: string
+          target_version_key: string
+          updated_at?: string
+        }
+        Update: {
+          commit_digest?: string | null
+          commit_idempotency_key?: string | null
+          committed_at?: string | null
+          committed_by?: string | null
+          created_at?: string
+          created_by?: string
+          fingerprint?: string
+          id?: string
+          idempotency_key?: string
+          organization_id?: string
+          pack_key?: string
+          request_digest?: string
+          result?: Json | null
+          revision?: number
+          selection_revision?: number
+          source_hash?: string
+          source_version_key?: string
+          status?: string
+          target_hash?: string
+          target_version_key?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "framework_upgrade_reviews_committed_by_fkey"
+            columns: ["committed_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "framework_upgrade_reviews_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "framework_upgrade_reviews_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "framework_upgrade_reviews_pack_key_source_version_key_fkey"
+            columns: ["pack_key", "source_version_key"]
+            isOneToOne: false
+            referencedRelation: "framework_pack_versions"
+            referencedColumns: ["pack_key", "version_key"]
+          },
+          {
+            foreignKeyName: "framework_upgrade_reviews_pack_key_target_version_key_fkey"
+            columns: ["pack_key", "target_version_key"]
+            isOneToOne: false
+            referencedRelation: "framework_pack_versions"
+            referencedColumns: ["pack_key", "version_key"]
           },
         ]
       }
@@ -24440,6 +24695,19 @@ export type Database = {
           version_key: string
         }[]
       }
+      m10_commit_upgrade: {
+        Args: {
+          p_actor_user_id: string
+          p_expected_review_revision: number
+          p_idempotency_key: string
+          p_organization_id: string
+          p_review_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
       m10_control_command: {
         Args: {
           p_actor_user_id: string
@@ -24475,6 +24743,54 @@ export type Database = {
           p_pack_key: string
           p_product_id: string
           p_version_key: string
+        }
+        Returns: Json
+      }
+      m10_create_upgrade_review: {
+        Args: {
+          p_actor_user_id: string
+          p_expected_selection_revision: number
+          p_idempotency_key: string
+          p_organization_id: string
+          p_pack_key: string
+          p_target_version_key: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      m10_crosswalk_evidence_reuse: {
+        Args: {
+          p_actor_user_id: string
+          p_evidence_version_id: string
+          p_limit: number
+          p_offset: number
+          p_organization_id: string
+          p_product_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      m10_crosswalk_page: {
+        Args: {
+          p_actor_user_id: string
+          p_limit: number
+          p_offset: number
+          p_organization_id: string
+          p_pack_key: string
+          p_version_key: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      m10_curated_relation_json: {
+        Args: {
+          p_relation: Database["public"]["Tables"]["framework_curated_crosswalks"]["Row"]
         }
         Returns: Json
       }
@@ -24541,6 +24857,64 @@ export type Database = {
           p_reason: string
           p_requirement_key: string
           p_version_key: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      m10_set_upgrade_decision: {
+        Args: {
+          p_actor_user_id: string
+          p_expected_review_revision: number
+          p_idempotency_key: string
+          p_mapping_id: string
+          p_organization_id: string
+          p_review_id: string
+          p_target_keys: string[]
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      m10_upgrade_diff: {
+        Args: {
+          p_pack_key: string
+          p_source_version_key: string
+          p_target_version_key: string
+        }
+        Returns: Json
+      }
+      m10_upgrade_fingerprint: {
+        Args: {
+          p_organization_id: string
+          p_pack_key: string
+          p_source_version_key: string
+        }
+        Returns: string
+      }
+      m10_upgrade_preview: {
+        Args: {
+          p_actor_user_id: string
+          p_cursor: string
+          p_limit: number
+          p_organization_id: string
+          p_pack_key: string
+          p_target_version_key: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      m10_upgrade_review_page: {
+        Args: {
+          p_actor_user_id: string
+          p_limit: number
+          p_offset: number
+          p_organization_id: string
+          p_review_id: string
         }
         Returns: {
           outcome: string

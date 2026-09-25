@@ -4,6 +4,8 @@ import { SupabaseService } from "../supabase/supabase.service";
 import { FrameworkUseCases } from "./application/framework-use-cases";
 import { FrameworksController } from "./frameworks.controller";
 import { FrameworksModule } from "./frameworks.module";
+import { UpgradeUseCases } from "./application/upgrade-use-cases";
+import { UpgradesController } from "./upgrades.controller";
 
 describe("FrameworksModule", () => {
   it("wires the controller to the scoped repository through its use case", async () => {
@@ -17,6 +19,10 @@ describe("FrameworksModule", () => {
       FrameworksController,
     );
     expect(moduleRef.get(FrameworkUseCases)).toBeInstanceOf(FrameworkUseCases);
+    expect(moduleRef.get(UpgradesController)).toBeInstanceOf(
+      UpgradesController,
+    );
+    expect(moduleRef.get(UpgradeUseCases)).toBeInstanceOf(UpgradeUseCases);
     await moduleRef.close();
   });
 });

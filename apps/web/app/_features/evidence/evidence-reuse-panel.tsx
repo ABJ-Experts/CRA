@@ -1,7 +1,13 @@
+"use client";
+
 import { ExternalLink, Link2, ShieldAlert } from "lucide-react";
 import Link from "next/link";
 import type { EvidenceVersionReuse } from "@repo/contracts/evidence";
+import { Button } from "@repo/ui/button";
 import { cn } from "@repo/ui/cn";
+import { useInfiniteQuery } from "@tanstack/react-query";
+
+import { frameworksApi } from "../frameworks/frameworks.api";
 
 export type EvidenceReuseDetail = EvidenceVersionReuse;
 
@@ -27,9 +33,54 @@ function controlStatus(status: string): string {
   }
 }
 
+function requirementIdentity(
+  reference: Readonly<{
+    packKey: string;
+    versionKey: string;
+    requirementKey: string;
+  }>,
+): string {
+  return JSON.stringify([
+    reference.packKey,
+    reference.versionKey,
+    reference.requirementKey,
+  ]);
+}
+
 export function EvidenceReusePanel({
   reuse,
-}: Readonly<{ reuse: EvidenceReuseDetail }>) {
+  productId,
+  evidenceVersionId,
+}: Readonly<{
+  reuse: EvidenceReuseDetail;
+  productId?: string;
+  evidenceVersionId?: string | null;
+}>) {
+  const crosswalks = useInfiniteQuery({
+    queryKey: [
+      "evidence-crosswalk-reuse",
+      productId ?? "none",
+      evidenceVersionId ?? "none",
+    ],
+    enabled: Boolean(productId && evidenceVersionId),
+    initialPageParam: undefined as string | undefined,
+    queryFn: ({ pageParam, signal }) =>
+      frameworksApi.crosswalkEvidenceReuse(
+        evidenceVersionId!,
+        productId!,
+        pageParam,
+        signal,
+      ),
+    getNextPageParam: (page) => page.nextCursor ?? undefined,
+    retry: false,
+  });
+  const relations =
+    crosswalks.data?.pages.flatMap((page) => page.relations) ?? [];
+  const directlyMapped = new Set(
+    reuse.frameworkControls.flatMap((control) =>
+      control.requirements.map(requirementIdentity),
+    ),
+  );
   return (
     <div className="grid gap-5" aria-label="Evidence reuse details">
       <section aria-labelledby="technical-file-links-heading">
@@ -229,6 +280,157 @@ export function EvidenceReusePanel({
           </div>
         )}
       </section>
+      {productId && evidenceVersionId ? (
+        <section aria-labelledby="cross-framework-reuse-heading">
+          <h3
+            id="cross-framework-reuse-heading"
+            className={cn("text-h5 text-fg")}
+          >
+            Cross-framework relevance
+          </h3>
+          <p className={cn("mt-2 text-subhead-regular text-fg-muted")}>
+            Curated relationships show where this exact evidence version may be
+            relevant. They do not add a control mapping or certify a standard.
+          </p>
+          <p className={cn("mt-2 text-caption-1-regular text-fg-muted")}>
+            A direct control mapping can be on either side of a bidirectional
+            relationship. Directly mapped labels reflect only the control links
+            shown above.
+          </p>
+          {crosswalks.isLoading ? (
+            <p
+              role="status"
+              className={cn("mt-3 text-subhead-regular text-fg-muted")}
+            >
+              Checking applicable requirements…
+            </p>
+          ) : null}
+          {crosswalks.isError ? (
+            <div className={cn("mt-3 grid gap-3")}>
+              <p
+                role="alert"
+                className={cn("text-subhead-regular text-danger")}
+              >
+                Cross-framework relevance is unavailable for this product.
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => void crosswalks.refetch()}
+              >
+                Retry relevance
+              </Button>
+            </div>
+          ) : null}
+          {crosswalks.data ? (
+            <p className={cn("mt-3 text-caption-1-regular text-fg-muted")}>
+              {crosswalks.data.pages.every((page) => page.evidenceValid)
+                ? "Evidence version is currently valid."
+                : "Evidence version needs validity review before reuse."}
+            </p>
+          ) : null}
+          {crosswalks.data && relations.length === 0 ? (
+            <p className={cn("mt-3 text-subhead-regular text-fg-muted")}>
+              No applicable curated relationships are available for this
+              evidence version and product.
+            </p>
+          ) : null}
+          {crosswalks.data && relations.length > 0 ? (
+            <>
+              <div className={cn("mt-3 overflow-x-auto")}>
+                <table className={cn("w-full min-w-[700px] text-left")}>
+                  <caption className={cn("sr-only")}>
+                    Applicable curated requirement relationships
+                  </caption>
+                  <thead
+                    className={cn(
+                      "border-b border-border text-caption-1-semibold text-fg-muted",
+                    )}
+                  >
+                    <tr>
+                      <th scope="col" className={cn("px-3 py-2")}>
+                        Crosswalk source
+                      </th>
+                      <th scope="col" className={cn("px-3 py-2")}>
+                        Crosswalk target
+                      </th>
+                      <th scope="col" className={cn("px-3 py-2")}>
+                        Relationship
+                      </th>
+                      <th scope="col" className={cn("px-3 py-2")}>
+                        Review
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {relations.map((relation) => (
+                      <tr
+                        key={relation.id}
+                        className={cn(
+                          "border-b border-border align-top text-caption-1-regular text-fg",
+                        )}
+                      >
+                        <td className={cn("px-3 py-3")}>
+                          {relation.source.packKey} ·{" "}
+                          {relation.source.versionKey} ·{" "}
+                          {relation.source.requirementKey}
+                          {directlyMapped.has(
+                            requirementIdentity(relation.source),
+                          ) ? (
+                            <span
+                              className={cn(
+                                "ml-2 text-caption-1-semibold text-fg",
+                              )}
+                            >
+                              Directly mapped
+                            </span>
+                          ) : null}
+                        </td>
+                        <td className={cn("px-3 py-3")}>
+                          {relation.target.packKey} ·{" "}
+                          {relation.target.versionKey} ·{" "}
+                          {relation.target.requirementKey}
+                          {directlyMapped.has(
+                            requirementIdentity(relation.target),
+                          ) ? (
+                            <span
+                              className={cn(
+                                "ml-2 text-caption-1-semibold text-fg",
+                              )}
+                            >
+                              Directly mapped
+                            </span>
+                          ) : null}
+                        </td>
+                        <td className={cn("px-3 py-3 capitalize")}>
+                          {relation.relationship.replaceAll("_", " ")} ·{" "}
+                          {relation.direction.replaceAll("_", " ")}
+                        </td>
+                        <td className={cn("px-3 py-3")}>
+                          {relation.reviewer}
+                          <br />
+                          {relation.provenance}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {crosswalks.hasNextPage ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className={cn("mt-4")}
+                  disabled={crosswalks.isFetchingNextPage}
+                  onClick={() => void crosswalks.fetchNextPage()}
+                >
+                  Load more applicable requirements
+                </Button>
+              ) : null}
+            </>
+          ) : null}
+        </section>
+      ) : null}
     </div>
   );
 }

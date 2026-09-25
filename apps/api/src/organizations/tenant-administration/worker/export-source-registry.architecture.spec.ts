@@ -80,6 +80,34 @@ const dynamicSnapshotLockAdditions = (sql: string): readonly string[] =>
   );
 
 describe("tenant export source registry architecture", () => {
+  it("keeps incomplete M6–M9 evidence graphs and bearer grants out of portable sources", () => {
+    const exported = new Set(
+      exportSourceRegistry.flatMap((source) => source.tables),
+    );
+    for (const table of [
+      "reporting_stage_packages",
+      "evidence_documents",
+      "evidence_document_legal_holds",
+      "supplier_evidence_submissions",
+      "technical_file_snapshots",
+    ]) {
+      expect(exported.has(table)).toBe(false);
+      expect(exportSourceExclusions[table]).toMatch(
+        /artifact|evidence|archive|restore/i,
+      );
+    }
+    for (const table of [
+      "reporting_stage_approval_proofs",
+      "evidence_document_access_grants",
+      "supplier_evidence_invitations",
+      "technical_file_auditor_snapshot_grants",
+    ]) {
+      expect(exported.has(table)).toBe(false);
+      expect(exportSourceExclusions[table]).toMatch(
+        /token|session|bearer|authorization/i,
+      );
+    }
+  });
   it("does not export partial M9-05 source evidence or worker security state", () => {
     const exported = exportSourceRegistry.flatMap((source) => source.tables);
     expect(exported).not.toContain("ai_inference_runs");

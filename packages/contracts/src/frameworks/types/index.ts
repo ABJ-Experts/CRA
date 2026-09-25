@@ -1,5 +1,13 @@
 import type { z } from "zod";
 import type {
+  curatedFrameworkRelationSchema,
+  frameworkCrosswalkResponseSchema,
+  frameworkUpgradePreviewResponseSchema,
+  frameworkUpgradeReviewResponseSchema,
+  upsertFrameworkUpgradeDecisionInputSchema,
+  commitFrameworkUpgradeResponseSchema,
+} from "../schemas/upgrade.schema.js";
+import type {
   frameworkCatalogResponseSchema,
   frameworkPackImportSchema,
   frameworkRequirementReferenceSchema,
@@ -53,4 +61,22 @@ export type RequirementApplicabilityInput = z.output<
 >;
 export type RequirementApplicabilityResponse = z.output<
   typeof requirementApplicabilityResponseSchema
+>;
+export type CuratedFrameworkRelation = z.output<
+  typeof curatedFrameworkRelationSchema
+>;
+export type FrameworkCrosswalkResponse = z.output<
+  typeof frameworkCrosswalkResponseSchema
+>;
+export type FrameworkUpgradePreviewResponse = z.output<
+  typeof frameworkUpgradePreviewResponseSchema
+>;
+export type FrameworkUpgradeReviewResponse = z.output<
+  typeof frameworkUpgradeReviewResponseSchema
+>;
+export type UpsertFrameworkUpgradeDecisionInput = z.output<
+  typeof upsertFrameworkUpgradeDecisionInputSchema
+>;
+export type CommitFrameworkUpgradeResponse = z.output<
+  typeof commitFrameworkUpgradeResponseSchema
 >;

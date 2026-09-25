@@ -128,6 +128,7 @@ afterEach(() => {
   state.refetchTree.mockReset();
   state.fetchNextPage.mockReset();
   state.catalog.packs[0]!.selection = null;
+  state.catalog.packs[0]!.versions.splice(1);
   state.permissions.can_view_frameworks = true;
   state.permissions.can_manage_frameworks = true;
   state.mutation.mockReset().mockResolvedValue({
@@ -190,6 +191,39 @@ describe("FrameworksWorkspace", () => {
       "oj-2024-11-20",
     );
     expect(await screen.findByRole("alert")).toHaveTextContent(/retry/i);
+  });
+
+  it("requires a review before changing a selected edition", () => {
+    process.env.NEXT_PUBLIC_ENABLE_MOCKS = "false";
+    state.catalog.packs[0]!.versions.push({
+      versionKey: "oj-2025-01-01",
+      editionDate: "2025-01-01",
+      language: "en",
+      sourceUrl: "https://eur-lex.europa.eu",
+      sourceReference: "OJ L 2025/1",
+      attribution: "EUR-Lex",
+      contentHash: "b".repeat(64),
+    });
+    state.catalog.packs[0]!.selection = {
+      versionKey: "oj-2024-11-20",
+      enabled: true,
+      revision: 1,
+    };
+    render(<FrameworksWorkspace />);
+    fireEvent.change(screen.getByRole("combobox", { name: "Edition" }), {
+      target: { value: "oj-2025-01-01" },
+    });
+
+    expect(
+      screen.getByRole("button", { name: "Review upgrade" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("checkbox", { name: /show this edition/i }),
+    ).toBeDisabled();
+    expect(
+      screen.queryByRole("button", { name: "Save selection" }),
+    ).not.toBeInTheDocument();
+    expect(state.mutation).not.toHaveBeenCalled();
   });
 
   it("denies rendering the catalog without read permission", () => {
@@ -346,13 +380,8 @@ describe("FrameworksWorkspace", () => {
     );
   });
 
-  it("refreshes after a stale revision and keeps the pending edition", async () => {
+  it("refreshes after a stale same-edition toggle and keeps the pending choice", async () => {
     process.env.NEXT_PUBLIC_ENABLE_MOCKS = "false";
-    state.catalog.packs[0]!.versions.push({
-      ...state.catalog.packs[0]!.versions[0]!,
-      versionKey: "later-edition",
-      editionDate: "2025-01-01",
-    });
     state.catalog.packs[0]!.selection = {
       versionKey: "oj-2024-11-20",
       enabled: true,
@@ -361,29 +390,26 @@ describe("FrameworksWorkspace", () => {
     state.mutation.mockRejectedValueOnce(
       new ApiClientError("api", "Conflict", 409),
     );
-    try {
-      render(<FrameworksWorkspace />);
-      fireEvent.change(screen.getByRole("combobox", { name: "Edition" }), {
-        target: { value: "later-edition" },
-      });
-      fireEvent.click(screen.getByRole("button", { name: "Save selection" }));
-      expect(await screen.findByRole("alert")).toHaveTextContent(
-        /changed in another session/i,
-      );
-      expect(state.refetchCatalog).toHaveBeenCalledOnce();
-      expect(screen.getByRole("combobox", { name: "Edition" })).toHaveValue(
-        "later-edition",
-      );
-      expect(state.mutation).toHaveBeenCalledWith({
-        packKey: "cra",
-        input: expect.objectContaining({
-          expectedRevision: 1,
-          versionKey: "later-edition",
-        }),
-      });
-    } finally {
-      state.catalog.packs[0]!.versions.pop();
-    }
+    render(<FrameworksWorkspace />);
+    fireEvent.click(
+      screen.getByRole("checkbox", { name: /show this edition/i }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Save selection" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      /changed in another session/i,
+    );
+    expect(state.refetchCatalog).toHaveBeenCalledOnce();
+    expect(
+      screen.getByRole("checkbox", { name: /show this edition/i }),
+    ).not.toBeChecked();
+    expect(state.mutation).toHaveBeenCalledWith({
+      packKey: "cra",
+      input: expect.objectContaining({
+        expectedRevision: 1,
+        versionKey: "oj-2024-11-20",
+        enabled: false,
+      }),
+    });
   });
 
   it("supports arrows, Home and End across the requirement tree", () => {

@@ -17,11 +17,26 @@ import {
 } from "./application/control-use-cases";
 import { SupabaseControlRepository } from "./infrastructure/supabase-control.repository";
 import { SupabaseCoverageWorkQueue } from "./infrastructure/supabase-coverage-work.queue";
+import { UpgradesController } from "./upgrades.controller";
+import {
+  UPGRADE_REPOSITORY,
+  UpgradeUseCases,
+  type UpgradeRepository,
+} from "./application/upgrade-use-cases";
+import { SupabaseUpgradeRepository } from "./infrastructure/supabase-upgrade.repository";
 
 @Module({
   imports: [SupabaseModule, PermissionsModule],
-  controllers: [FrameworksController, ControlsController],
+  controllers: [FrameworksController, ControlsController, UpgradesController],
   providers: [
+    SupabaseUpgradeRepository,
+    { provide: UPGRADE_REPOSITORY, useExisting: SupabaseUpgradeRepository },
+    {
+      provide: UpgradeUseCases,
+      inject: [UPGRADE_REPOSITORY],
+      useFactory: (repository: UpgradeRepository) =>
+        new UpgradeUseCases(repository),
+    },
     SupabaseCoverageWorkQueue,
     SupabaseControlRepository,
     { provide: CONTROL_REPOSITORY, useExisting: SupabaseControlRepository },

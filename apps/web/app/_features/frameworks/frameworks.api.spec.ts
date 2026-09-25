@@ -16,6 +16,66 @@ const version = {
 afterEach(() => vi.unstubAllGlobals());
 
 describe("FrameworksApi", () => {
+  it("parses a bounded upgrade preview and keeps a failed commit single-shot", async () => {
+    const fetcher = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            packKey: "cra",
+            sourceVersionKey: "v1",
+            targetVersionKey: "v2",
+            selectionRevision: 1,
+            sourceHash: "a".repeat(64),
+            targetHash: "b".repeat(64),
+            fingerprint: "c".repeat(64),
+            diff: {
+              added: [],
+              removed: [],
+              changed: [],
+              split: [],
+              merged: [],
+            },
+            impacts: [],
+            nextCursor: null,
+            totalImpacts: 0,
+          }),
+          { status: 200 },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ message: "Conflict" }), { status: 409 }),
+      );
+    vi.stubGlobal("fetch", fetcher);
+    await expect(
+      frameworksApi.upgradePreview("cra", "v2"),
+    ).resolves.toMatchObject({ totalImpacts: 0 });
+    expect(fetcher).toHaveBeenNthCalledWith(
+      1,
+      "/api/v1/frameworks/cra/upgrades/v2/preview?limit=50",
+      expect.objectContaining({ method: "GET" }),
+    );
+    await expect(
+      frameworksApi.commitUpgrade(
+        "cra",
+        "11111111-1111-4111-8111-111111111111",
+        {
+          expectedReviewRevision: 1,
+          idempotencyKey: crypto.randomUUID(),
+        },
+      ),
+    ).rejects.toMatchObject({ status: 409 });
+    expect(fetcher).toHaveBeenCalledTimes(2);
+  });
+
+  it("rejects tenant-unsafe evidence reuse inputs before sending a request", () => {
+    const fetcher = vi.fn();
+    vi.stubGlobal("fetch", fetcher);
+    expect(() =>
+      frameworksApi.crosswalkEvidenceReuse("bad", "also-bad"),
+    ).toThrow();
+    expect(fetcher).not.toHaveBeenCalled();
+  });
   it("parses catalog and bounded tree pages", async () => {
     const fetcher = vi
       .fn()

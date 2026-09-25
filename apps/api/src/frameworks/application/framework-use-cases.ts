@@ -10,6 +10,8 @@ import type {
 export const FRAMEWORK_REPOSITORY = Symbol("FRAMEWORK_REPOSITORY");
 
 export class FrameworkConflictError extends Error {}
+export class FrameworkUpgradeRequiredError extends Error {}
+export class FrameworkPackBlockedError extends Error {}
 export class FrameworkForbiddenError extends Error {}
 export class FrameworkInvalidRequestError extends Error {}
 

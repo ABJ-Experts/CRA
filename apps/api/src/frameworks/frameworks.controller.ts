@@ -36,6 +36,8 @@ import {
   FrameworkConflictError,
   FrameworkForbiddenError,
   FrameworkInvalidRequestError,
+  FrameworkUpgradeRequiredError,
+  FrameworkPackBlockedError,
   FrameworkUseCases,
 } from "./application/framework-use-cases";
 
@@ -128,6 +130,18 @@ export class FrameworksController {
         throw new ConflictException({
           message: "The selected framework changed. Reload and try again.",
           code: "framework_selection_conflict",
+        });
+      }
+      if (error instanceof FrameworkUpgradeRequiredError) {
+        throw new ConflictException({
+          message: "Changing framework versions requires a reviewed upgrade.",
+          code: "framework_upgrade_required",
+        });
+      }
+      if (error instanceof FrameworkPackBlockedError) {
+        throw new ConflictException({
+          message: "This framework edition is not authorized for use.",
+          code: "framework_pack_blocked",
         });
       }
       if (error instanceof FrameworkForbiddenError) {

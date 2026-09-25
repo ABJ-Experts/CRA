@@ -57,6 +57,34 @@ const CoverageWorkspacePanel = dynamic(
   },
 );
 
+const FrameworkUpgradePanel = dynamic(
+  () =>
+    import("./framework-upgrade-panel").then(
+      (module) => module.FrameworkUpgradePanel,
+    ),
+  {
+    loading: () => (
+      <p role="status" className={cn("text-subhead-regular text-fg-muted")}>
+        Loading upgrade review…
+      </p>
+    ),
+  },
+);
+
+const FrameworkCrosswalkPanel = dynamic(
+  () =>
+    import("./framework-crosswalk-panel").then(
+      (module) => module.FrameworkCrosswalkPanel,
+    ),
+  {
+    loading: () => (
+      <p role="status" className={cn("text-subhead-regular text-fg-muted")}>
+        Loading curated crosswalks…
+      </p>
+    ),
+  },
+);
+
 type Pack = z.output<typeof frameworkCatalogResponseSchema>["packs"][number];
 type Draft = Readonly<{
   organizationId: string;
@@ -312,6 +340,8 @@ export function FrameworksWorkspace() {
   const retryKey = useRef<{ signature: string; key: string } | null>(null);
   const [openControls, setOpenControls] = useState(false);
   const [openCoverage, setOpenCoverage] = useState(false);
+  const [openUpgrade, setOpenUpgrade] = useState(false);
+  const [openCrosswalks, setOpenCrosswalks] = useState(false);
   const [initialControlId, setInitialControlId] = useState<string | null>(null);
   const [initialRequirementKey, setInitialRequirementKey] = useState<
     string | null
@@ -372,6 +402,11 @@ export function FrameworksWorkspace() {
       pack.selection.versionKey !== choice.versionKey ||
       pack.selection.enabled !== choice.enabled),
   );
+  const versionChange = Boolean(
+    pack?.selection &&
+    choice &&
+    pack.selection.versionKey !== choice.versionKey,
+  );
 
   function changeChoice(next: Draft) {
     setDraft(next);
@@ -379,10 +414,12 @@ export function FrameworksWorkspace() {
     setMessageOrganizationId(null);
     setSaveSucceeded(false);
     retryKey.current = null;
+    setOpenUpgrade(false);
   }
 
   async function save() {
-    if (!pack || !choice || !version || !canManage || !changed) return;
+    if (!pack || !choice || !version || !canManage || !changed || versionChange)
+      return;
     const signature = `${organizationId}:${pack.packKey}:${choice.versionKey}:${choice.enabled}:${pack.selection?.revision ?? "none"}`;
     const idempotencyKey =
       retryKey.current?.signature === signature
@@ -495,6 +532,8 @@ export function FrameworksWorkspace() {
                       value={pack.packKey}
                       onChange={(event) => {
                         setActivePackKey(event.target.value);
+                        setOpenCrosswalks(false);
+                        setOpenUpgrade(false);
                         setMessage(null);
                         setMessageOrganizationId(null);
                         setSaveSucceeded(false);
@@ -524,6 +563,11 @@ export function FrameworksWorkspace() {
                         changeChoice({
                           ...choice,
                           versionKey: event.target.value,
+                          enabled:
+                            pack.selection &&
+                            event.target.value !== pack.selection.versionKey
+                              ? pack.selection.enabled
+                              : choice.enabled,
                         })
                       }
                       className={cn(
@@ -550,13 +594,21 @@ export function FrameworksWorkspace() {
                       choice &&
                       changeChoice({ ...choice, enabled: event.target.checked })
                     }
-                    disabled={!canManage}
+                    disabled={!canManage || versionChange}
                     className={cn(
                       "size-4 accent-active-500 focus-visible:outline-2 focus-visible:outline-active-500",
                     )}
                   />
                   Show this edition in the current workspace
                 </label>
+                {versionChange ? (
+                  <p
+                    className={cn("mt-2 text-caption-1-regular text-fg-muted")}
+                  >
+                    The upgrade keeps the current visibility. Change it after
+                    the upgrade if needed.
+                  </p>
+                ) : null}
                 <p className={cn("mt-3 text-caption-1-regular text-fg-muted")}>
                   {pack.selection
                     ? `Current selection: ${pack.selection.versionKey} (${pack.selection.enabled ? "Enabled" : "Disabled"}).`
@@ -574,7 +626,15 @@ export function FrameworksWorkspace() {
                     {message}
                   </p>
                 ) : null}
-                {canManage ? (
+                {canManage && versionChange ? (
+                  <Button
+                    type="button"
+                    className={cn("mt-4")}
+                    onClick={() => setOpenUpgrade(true)}
+                  >
+                    Review upgrade
+                  </Button>
+                ) : canManage ? (
                   <Button
                     type="button"
                     className={cn("mt-4")}
@@ -593,6 +653,23 @@ export function FrameworksWorkspace() {
                   </p>
                 )}
               </SectionCard>
+              {openUpgrade && versionChange && choice && pack.selection ? (
+                <FrameworkUpgradePanel
+                  key={`${organizationId}:${pack.packKey}:${choice.versionKey}`}
+                  organizationId={organizationId}
+                  packKey={pack.packKey}
+                  sourceVersionKey={pack.selection.versionKey}
+                  targetVersionKey={choice.versionKey}
+                  canManage={canManage}
+                  canViewProducts={permissions.can_view_products === true}
+                  canViewEvidence={permissions.can_view_evidence === true}
+                  onCommitted={() => {
+                    setOpenUpgrade(false);
+                    setDraft(null);
+                    void catalog.refetch();
+                  }}
+                />
+              ) : null}
               {version ? (
                 <SectionCard title="Requirements preview">
                   <p className={cn("mb-2 text-subhead-regular text-fg")}>
@@ -627,6 +704,33 @@ export function FrameworksWorkspace() {
                     packKey={pack.packKey}
                     versionKey={version.versionKey}
                   />
+                </SectionCard>
+              ) : null}
+              {version ? (
+                <SectionCard title="Curated standards crosswalks">
+                  <p className={cn("mb-4 text-subhead-regular text-fg-muted")}>
+                    Review version-specific relationships and their human
+                    provenance. Similarity alone does not add coverage.
+                  </p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setOpenCrosswalks((current) => !current)}
+                  >
+                    {openCrosswalks
+                      ? "Close crosswalks"
+                      : "View curated crosswalks"}
+                  </Button>
+                  {openCrosswalks ? (
+                    <div className={cn("mt-4")}>
+                      <FrameworkCrosswalkPanel
+                        key={`${organizationId}:${pack.packKey}:${version.versionKey}`}
+                        organizationId={organizationId}
+                        packKey={pack.packKey}
+                        versionKey={version.versionKey}
+                      />
+                    </div>
+                  ) : null}
                 </SectionCard>
               ) : null}
               <SectionCard title="Evidence-aware coverage">

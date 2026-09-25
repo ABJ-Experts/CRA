@@ -156,6 +156,21 @@ test("owner selects, reads, disables, and checks conflicts in a run-scoped organ
       fullPage: true,
     });
 
+    await page.getByRole("button", { name: "View curated crosswalks" }).click();
+    await expect(
+      page.getByText("No curated crosswalk is published for this edition."),
+    ).toBeVisible();
+    await page.screenshot({
+      path: screenshotPath("m10-04-crosswalk-empty-desktop.png"),
+      fullPage: true,
+    });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.screenshot({
+      path: screenshotPath("m10-04-crosswalk-empty-mobile.png"),
+      fullPage: true,
+    });
+    await page.setViewportSize({ width: 1440, height: 900 });
+
     const treeItem = page.getByRole("treeitem").first();
     await treeItem.focus();
     await page.keyboard.press("ArrowRight");

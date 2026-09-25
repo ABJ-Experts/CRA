@@ -10,6 +10,43 @@ const exportId = "22222222-2222-4222-8222-222222222222";
 const leaseOwner = "33333333-3333-4333-8333-333333333333";
 
 describe("TenantLifecycleWorker", () => {
+  it("never completes an archive when the artifact snapshot authority is unavailable", async () => {
+    const complete = jest.fn();
+    const fail = jest.fn();
+    const read = jest.fn();
+    const worker = new TenantLifecycleWorker(
+      dependencies({
+        artifactSnapshot: {
+          snapshot: jest.fn().mockResolvedValue({ outcome: "unavailable" }),
+        },
+        sources: { read },
+        export: {
+          dueOrganizationIds: jest.fn().mockResolvedValue([organizationId]),
+          claim: jest.fn().mockResolvedValue({
+            outcome: "claimed",
+            jobId: exportId,
+            leaseOwner,
+            checkpointVersion: 0,
+            sourceIds: ["organization_profile"],
+          }),
+          complete,
+          fail,
+        },
+      }),
+    );
+
+    await worker.runOnce();
+
+    expect(read).not.toHaveBeenCalled();
+    expect(complete).not.toHaveBeenCalled();
+    expect(fail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        code: "artifact_snapshot_unavailable",
+        retryable: true,
+      }),
+    );
+  });
+
   it("materializes the immutable record snapshot before reading sources", async () => {
     const materialize = jest
       .fn()
