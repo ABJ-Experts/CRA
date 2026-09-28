@@ -256,13 +256,21 @@ describe("tenant administration provider adapters", () => {
     const rpc = jest
       .fn()
       .mockResolvedValue({ data: [{ outcome: "found" }], error: null });
-    const adapter = new SupabaseTenantExportDownloadAdapter({
-      admin: () => ({
-        from: () => builder,
-        storage: { from: () => ({ createSignedUrl }) },
-        rpc,
-      }),
-    } as never);
+    const adapter = new SupabaseTenantExportDownloadAdapter(
+      {
+        admin: () => ({
+          from: () => builder,
+          storage: { from: () => ({ createSignedUrl }) },
+          rpc,
+        }),
+      } as never,
+      {
+        getOrThrow: (name: string) =>
+          name === "SUPABASE_URL"
+            ? "https://storage.example.test"
+            : "production",
+      } as never,
+    );
 
     await expect(
       adapter.createDownload(organizationId, actorId, actorId),
@@ -307,26 +315,84 @@ describe("tenant administration provider adapters", () => {
     };
     builder.select.mockReturnValue(builder);
     builder.eq.mockReturnValue(builder);
-    const adapter = new SupabaseTenantExportDownloadAdapter({
-      admin: () => ({
-        from: () => builder,
-        storage: {
-          from: () => ({
-            createSignedUrl: jest.fn().mockResolvedValue({
-              data: { signedUrl: "http://storage.example.test/private.zip" },
-              error: null,
+    const adapter = new SupabaseTenantExportDownloadAdapter(
+      {
+        admin: () => ({
+          from: () => builder,
+          storage: {
+            from: () => ({
+              createSignedUrl: jest.fn().mockResolvedValue({
+                data: { signedUrl: "http://storage.example.test/private.zip" },
+                error: null,
+              }),
             }),
-          }),
-        },
-        rpc: jest.fn(),
-      }),
-    } as never);
+          },
+          rpc: jest.fn(),
+        }),
+      } as never,
+      {
+        getOrThrow: (name: string) =>
+          name === "SUPABASE_URL"
+            ? "https://storage.example.test"
+            : "production",
+      } as never,
+    );
 
     await expect(
       adapter.createDownload(organizationId, actorId, actorId),
     ).rejects.toMatchObject({
       code: "unavailable",
     });
+  });
+
+  it("accepts only the configured loopback storage origin in local development", async () => {
+    const builder = {
+      select: jest.fn(),
+      eq: jest.fn(),
+      maybeSingle: jest.fn().mockResolvedValue({
+        data: {
+          status: "completed",
+          verified_at: "2026-08-10T00:00:00.000Z",
+          artifact_object_path: `${organizationId}/export.zip`,
+          artifact_sha256: "a".repeat(64),
+        },
+        error: null,
+      }),
+    };
+    builder.select.mockReturnValue(builder);
+    builder.eq.mockReturnValue(builder);
+    const rpc = jest.fn().mockResolvedValue({
+      data: [{ outcome: "found" }],
+      error: null,
+    });
+    const adapter = new SupabaseTenantExportDownloadAdapter(
+      {
+        admin: () => ({
+          from: () => builder,
+          storage: {
+            from: () => ({
+              createSignedUrl: jest.fn().mockResolvedValue({
+                data: {
+                  signedUrl:
+                    "http://127.0.0.1:54321/storage/v1/object/sign/tenant-exports/export.zip?token=opaque",
+                },
+                error: null,
+              }),
+            }),
+          },
+          rpc,
+        }),
+      } as never,
+      {
+        getOrThrow: (name: string) =>
+          name === "SUPABASE_URL" ? "http://127.0.0.1:54321" : "development",
+      } as never,
+    );
+
+    await expect(
+      adapter.createDownload(organizationId, actorId, actorId),
+    ).resolves.toMatchObject({ outcome: "available" });
+    expect(rpc).toHaveBeenCalledTimes(1);
   });
 
   it("generates a server-only digest/correlation identity and exposes a clock seam", () => {

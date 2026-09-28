@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 
 import { Injectable } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
 import {
   exportAttachmentDownloadResponseSchema,
   mfaRolloutReadinessSchema,
@@ -142,7 +143,28 @@ const verifiedExportRowSchema = z
 export class SupabaseTenantExportDownloadAdapter implements TenantExportDownloadPort {
   private static readonly expiresInSeconds = 900;
 
-  constructor(private readonly supabase: SupabaseService) {}
+  constructor(
+    private readonly supabase: SupabaseService,
+    private readonly config: ConfigService,
+  ) {}
+
+  private isAllowedSignedUrl(url: URL): boolean {
+    if (url.protocol === "https:") return true;
+    if (this.config.getOrThrow<string>("NODE_ENV") === "production") {
+      return false;
+    }
+    const configured = new URL(this.config.getOrThrow<string>("SUPABASE_URL"));
+    return (
+      url.protocol === "http:" &&
+      configured.protocol === "http:" &&
+      (configured.hostname === "127.0.0.1" ||
+        configured.hostname === "localhost" ||
+        configured.hostname === "[::1]") &&
+      url.origin === configured.origin &&
+      url.username === "" &&
+      url.password === ""
+    );
+  }
 
   async createDownload(orgId: string, exportId: string, actorId: string) {
     try {
@@ -171,7 +193,7 @@ export class SupabaseTenantExportDownloadAdapter implements TenantExportDownload
         throw new TenantAdministrationProviderError("unavailable");
       }
       const parsedUrl = new URL(signed.data.signedUrl);
-      if (parsedUrl.protocol !== "https:") {
+      if (!this.isAllowedSignedUrl(parsedUrl)) {
         throw new TenantAdministrationProviderError("unavailable");
       }
       const audit = await client.rpc(

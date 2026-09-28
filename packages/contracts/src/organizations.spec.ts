@@ -53,12 +53,16 @@ describe("organization administration error contracts", () => {
 
 describe("organization export resume contracts", () => {
   it("makes the absence of a server-owned latest export explicit", () => {
-    expect(latestOrganizationExportResponseSchema.parse({ export: null })).toEqual({
+    expect(
+      latestOrganizationExportResponseSchema.parse({ export: null }),
+    ).toEqual({
       export: null,
     });
     expect(
-      latestOrganizationExportResponseSchema.safeParse({ export: null, extra: true })
-        .success,
+      latestOrganizationExportResponseSchema.safeParse({
+        export: null,
+        extra: true,
+      }).success,
     ).toBe(false);
   });
 });
@@ -751,10 +755,19 @@ describe("organization export contracts", () => {
         expiresInSeconds: 901,
       }).success,
     ).toBe(false);
+    expect(
+      exportAttachmentDownloadResponseSchema.safeParse({
+        url: "http://127.0.0.1:54321/storage/v1/object/sign/tenant-exports/export.zip?token=opaque",
+        filename: "organization-export.zip",
+        expiresInSeconds: 900,
+      }).success,
+    ).toBe(true);
     for (const url of [
       "javascript:alert(1)",
       "data:text/html,unsafe",
       "ftp://downloads.example.com/exports/9",
+      "http://storage.example.com/exports/9",
+      "http://localhost.evil.example/exports/9",
     ]) {
       expect(
         exportAttachmentDownloadResponseSchema.safeParse({

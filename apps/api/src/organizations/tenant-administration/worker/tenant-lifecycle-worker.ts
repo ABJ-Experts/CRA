@@ -32,6 +32,15 @@ export type ExportPart = Readonly<{
   byteSize: number;
 }>;
 
+export type ExportArtifact = Readonly<{
+  artifactKey: string;
+  snapshotObjectPath: string;
+  sha256: string;
+  byteSize: number;
+  contentType: string | null;
+  metadata: Readonly<Record<string, unknown>>;
+}>;
+
 type ExportClaim =
   | Readonly<{
       outcome: "claimed";
@@ -285,6 +294,10 @@ export interface TenantLifecycleWorkerDependencies {
           "snapshotted" | "replayed" | "conflict" | "not_found" | "unavailable";
       }>
     >;
+    list(
+      organizationId: string,
+      exportId: string,
+    ): Promise<readonly ExportArtifact[]>;
   }>;
   artifacts: Readonly<{
     inventory(organizationId: string): Promise<readonly string[]>;
@@ -438,20 +451,25 @@ export class TenantLifecycleWorker {
 
       if (parts.length !== sourceIds.length)
         throw new WorkerFailure("export_ledger_mismatch", false);
-      this.assertArchivePartBytes(parts);
+      const artifactFiles = await this.dependencies.artifactSnapshot.list(
+        organizationId,
+        claim.jobId,
+      );
+      this.assertArchivePartBytes(parts, artifactFiles);
       const archive = await this.archive(
         organizationId,
         claim.jobId,
         context,
         sourceIds,
         parts,
+        artifactFiles,
       );
       const completion = await this.dependencies.export.complete({
         organizationId,
         exportId: claim.jobId,
         leaseOwner: claim.leaseOwner,
         checkpointVersion,
-        manifestFileCount: parts.length,
+        manifestFileCount: parts.length + artifactFiles.length,
         manifestSha256: archive.manifestSha256,
         artifactSha256: archive.artifactSha256,
         artifactObjectPath: archive.objectPath,
@@ -487,6 +505,7 @@ export class TenantLifecycleWorker {
     context: Readonly<{ actorId: string; requestedAt: string }>,
     sourceIds: readonly string[],
     parts: readonly ExportPart[],
+    artifactFiles: readonly ExportArtifact[],
   ): Promise<
     Readonly<{
       manifestSha256: string;
@@ -514,6 +533,44 @@ export class TenantLifecycleWorker {
         recordCount: this.ndjsonRecordCount(bytes),
         byteSize: bytes.length,
         sha256: part.sha256,
+      });
+    }
+    const seenArtifactKeys = new Set<string>();
+    for (const artifact of artifactFiles) {
+      if (
+        !/^[a-zA-Z0-9][a-zA-Z0-9._/-]*$/.test(artifact.artifactKey) ||
+        artifact.artifactKey.includes("..") ||
+        artifact.artifactKey.includes("//") ||
+        artifact.artifactKey.endsWith("/") ||
+        seenArtifactKeys.has(artifact.artifactKey) ||
+        artifact.snapshotObjectPath !==
+          `${organizationId}/${exportId}/artifacts/${artifact.artifactKey}` ||
+        !/^[0-9a-f]{64}$/.test(artifact.sha256) ||
+        !Number.isSafeInteger(artifact.byteSize) ||
+        artifact.byteSize < 0
+      ) {
+        throw new WorkerFailure("artifact_snapshot_invalid", false);
+      }
+      seenArtifactKeys.add(artifact.artifactKey);
+      const bytes = await this.dependencies.storage.read(
+        artifact.snapshotObjectPath,
+      );
+      if (
+        !bytes ||
+        bytes.length !== artifact.byteSize ||
+        createHash("sha256").update(bytes).digest("hex") !== artifact.sha256
+      ) {
+        throw new WorkerFailure("artifact_corrupt", true);
+      }
+      const path = `artifacts/${artifact.artifactKey}`;
+      files.push({ path, bytes });
+      manifestFiles.push({
+        path,
+        artifactKey: artifact.artifactKey,
+        source: artifact.metadata,
+        contentType: artifact.contentType,
+        byteSize: bytes.length,
+        sha256: artifact.sha256,
       });
     }
     const manifest = Buffer.from(
@@ -572,8 +629,14 @@ export class TenantLifecycleWorker {
     );
   }
 
-  private assertArchivePartBytes(parts: readonly ExportPart[]): void {
-    const partBytes = parts.reduce((total, part) => total + part.byteSize, 0);
+  private assertArchivePartBytes(
+    parts: readonly ExportPart[],
+    artifacts: readonly ExportArtifact[],
+  ): void {
+    const partBytes = [...parts, ...artifacts].reduce(
+      (total, part) => total + part.byteSize,
+      0,
+    );
     if (
       !Number.isSafeInteger(partBytes) ||
       partBytes > this.dependencies.maximumArchiveBytes

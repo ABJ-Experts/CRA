@@ -73,8 +73,8 @@ import {
   SupabaseTenantLifecycleStorageAdapter,
   SupabaseTenantLifecycleWorkerRepository,
   UnavailableEvidenceCleanupAdapter,
-  UnavailableTenantExportArtifactSnapshotAdapter,
 } from "./tenant-administration/worker/supabase-tenant-lifecycle-worker.adapter";
+import { SupabaseTenantExportArtifactSnapshotAdapter } from "./tenant-administration/worker/supabase-tenant-export-artifact-snapshot.adapter";
 import { TenantLifecycleWorker } from "./tenant-administration/worker/tenant-lifecycle-worker";
 import { TenantAdministrationController } from "./tenant-administration/tenant-administration.controller";
 import { TenantAdministrationService } from "./tenant-administration/tenant-administration.service";
@@ -160,7 +160,7 @@ import { TenantAdministrationService } from "./tenant-administration/tenant-admi
     SupabaseTenantLifecycleStorageAdapter,
     SupabaseTenantExportSourceAdapter,
     UnavailableEvidenceCleanupAdapter,
-    UnavailableTenantExportArtifactSnapshotAdapter,
+    SupabaseTenantExportArtifactSnapshotAdapter,
     SupabaseMfaFactorReadinessAdapter,
     ExistingAuthDestructiveReauthenticationAdapter,
     SupabaseTenantExportDownloadAdapter,
@@ -222,7 +222,7 @@ import { TenantAdministrationService } from "./tenant-administration/tenant-admi
         SupabaseTenantLifecycleStorageAdapter,
         SupabaseTenantExportSourceAdapter,
         UnavailableEvidenceCleanupAdapter,
-        UnavailableTenantExportArtifactSnapshotAdapter,
+        SupabaseTenantExportArtifactSnapshotAdapter,
         ConfigService,
       ],
       useFactory: (
@@ -230,7 +230,7 @@ import { TenantAdministrationService } from "./tenant-administration/tenant-admi
         storage: SupabaseTenantLifecycleStorageAdapter,
         sources: SupabaseTenantExportSourceAdapter,
         evidenceCleanup: UnavailableEvidenceCleanupAdapter,
-        artifactSnapshot: UnavailableTenantExportArtifactSnapshotAdapter,
+        artifactSnapshot: SupabaseTenantExportArtifactSnapshotAdapter,
         config: ConfigService,
       ) =>
         new TenantLifecycleWorker({

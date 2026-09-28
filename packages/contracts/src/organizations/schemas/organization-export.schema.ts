@@ -129,7 +129,12 @@ export const latestOrganizationExportResponseSchema = z
 
 export const exportAttachmentDownloadResponseSchema = z
   .object({
-    url: z.url().regex(/^https:\/\//i, "Export attachment URLs must use HTTPS"),
+    url: z
+      .url()
+      .regex(
+        /^https:\/\/|^http:\/\/(?:127\.0\.0\.1|localhost|\[::1\])(?::\d+)?\//i,
+        "Export attachment URLs must use HTTPS or local loopback HTTP",
+      ),
     filename: z
       .string()
       .min(1)

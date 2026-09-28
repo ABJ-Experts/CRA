@@ -4700,6 +4700,7 @@ export type Database = {
       }
       organization_export_snapshots: {
         Row: {
+          artifact_inventory: Json
           created_at: string
           export_job_id: string
           id: string
@@ -4712,6 +4713,7 @@ export type Database = {
           source_ids: string[]
         }
         Insert: {
+          artifact_inventory?: Json
           created_at?: string
           export_job_id: string
           id?: string
@@ -4724,6 +4726,7 @@ export type Database = {
           source_ids: string[]
         }
         Update: {
+          artifact_inventory?: Json
           created_at?: string
           export_job_id?: string
           id?: string
@@ -24648,7 +24651,15 @@ export type Database = {
         }[]
       }
       m1_canonical_text: { Args: { p_value: string }; Returns: string }
+      m1_export_business_record_jsonb: {
+        Args: { p_record: Json; p_table_name: string }
+        Returns: Json
+      }
       m1_export_redact_jsonb: { Args: { p_value: Json }; Returns: Json }
+      m1_export_usable_security_redact_jsonb: {
+        Args: { p_value: Json }
+        Returns: Json
+      }
       m1_legal_identity_digest: {
         Args: {
           p_address_line_1: string

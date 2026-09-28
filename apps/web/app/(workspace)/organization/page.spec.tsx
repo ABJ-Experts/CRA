@@ -474,6 +474,9 @@ describe("OrganizationAdministrationPage", () => {
       "data-state",
       "active",
     );
+    expect(screen.getByRole("tabpanel", { name: "Settings" })).toHaveClass(
+      "data-[state=inactive]:hidden",
+    );
 
     fireEvent.keyDown(document, { key: "Escape" });
     await waitFor(() =>

@@ -24,7 +24,10 @@ const exportPartSchema = z
   })
   .strict();
 const claimSnapshotSchema = z
-  .object({ sourceIds: z.array(z.string().min(1)).min(1) })
+  .object({
+    snapshotVersion: z.number().int().positive(),
+    sourceIds: z.array(z.string().min(1)).min(1),
+  })
   .strict();
 
 const exportPageSize = 1000;
@@ -816,18 +819,5 @@ export class SupabaseTenantExportSourceAdapter {
 export class UnavailableEvidenceCleanupAdapter {
   remove(): Promise<never> {
     return Promise.reject(new WorkerFailure("dependency_unavailable", true));
-  }
-}
-
-/**
- * Product/SBOM/evidence artifacts have no owning production adapter in M1.
- * Export therefore fails closed rather than declaring an incomplete ZIP final.
- * A future owner must copy immutable bytes and record their hash/metadata
- * before returning `snapshotted` through this port.
- */
-@Injectable()
-export class UnavailableTenantExportArtifactSnapshotAdapter {
-  snapshot(): Promise<Readonly<{ outcome: "unavailable" }>> {
-    return Promise.resolve(Object.freeze({ outcome: "unavailable" as const }));
   }
 }

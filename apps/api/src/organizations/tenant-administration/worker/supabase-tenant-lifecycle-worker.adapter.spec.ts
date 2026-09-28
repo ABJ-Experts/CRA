@@ -265,7 +265,10 @@ describe("SupabaseTenantLifecycleWorkerRepository", () => {
                 export_job_id: jobId,
                 lease_owner: workerId,
                 checkpoint_version: 2,
-                snapshot: { sourceIds: ["organization_profile"] },
+                snapshot: {
+                  snapshotVersion: 1,
+                  sourceIds: ["organization_profile"],
+                },
               },
             ],
             error: null,

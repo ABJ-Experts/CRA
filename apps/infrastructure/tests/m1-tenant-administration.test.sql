@@ -124,6 +124,52 @@ select pg_temp.check(
       and pg_get_function_identity_arguments(p.oid) = 'p_value jsonb')
 );
 
+select pg_temp.check(
+  'final materializer uses the business projection and removes replayable fields',
+  position(
+    'm1_export_business_record_jsonb($4, to_jsonb(source))'
+    in pg_get_functiondef(
+      'public.materialize_organization_export_snapshot_atomic(uuid,uuid,uuid,integer)'::regprocedure
+    )
+  ) > 0
+  and public.m1_export_business_record_jsonb(
+    'supplier_evidence_requests',
+    '{"title":"reviewed request","idempotency_key":"unsafe","lease_owner":"unsafe","request_digest":"unsafe"}'::jsonb
+  ) = '{"title":"reviewed request"}'::jsonb
+);
+
+select pg_temp.check(
+  'artifact inventory freezes storage object identity before byte copying',
+  position(
+    '''objectId'', source.id'
+    in pg_get_functiondef(
+      'public.materialize_organization_export_snapshot_atomic(uuid,uuid,uuid,integer)'::regprocedure
+    )
+  ) > 0
+  and position(
+    '''version'', source.version'
+    in pg_get_functiondef(
+      'public.materialize_organization_export_snapshot_atomic(uuid,uuid,uuid,integer)'::regprocedure
+    )
+  ) > 0
+  and position(
+    '''updatedAt'', source.updated_at'
+    in pg_get_functiondef(
+      'public.materialize_organization_export_snapshot_atomic(uuid,uuid,uuid,integer)'::regprocedure
+    )
+  ) > 0
+);
+
+select pg_temp.check(
+  'export completion compares frozen storage identity with copied artifact ledger',
+  position(
+    'artifacts.metadata->>''objectId'' = inventory.item->>''objectId'''
+    in pg_get_functiondef(
+      'public.complete_organization_export_atomic(uuid,uuid,uuid,integer,integer,text,text,text)'::regprocedure
+    )
+  ) > 0
+);
+
 begin;
 do $$
 declare
@@ -143,10 +189,14 @@ declare
   v_export record;
   v_replay record;
   v_mismatch record;
+  v_orphan_export record;
+  v_orphan_complete record;
   v_claim record;
   v_checkpoint record;
   v_complete record;
   v_download record;
+  v_materialized record;
+  v_artifact record;
   v_grant record;
   v_deactivate record;
   v_recover record;
@@ -577,8 +627,12 @@ begin
     v_org, v_owner, '23000000-0000-4000-8000-000000000005', repeat('e', 64), 'corr-3a'
   );
   select * into v_claim from public.claim_organization_export_atomic(v_org, gen_random_uuid(), 60);
+  select * into v_materialized from public.materialize_organization_export_snapshot_atomic(
+    v_org, v_claim.export_job_id, v_claim.lease_owner, v_claim.checkpoint_version
+  );
   select * into v_checkpoint from public.checkpoint_organization_export_atomic(
-    v_org, v_claim.export_job_id, v_claim.lease_owner, 0, 1, 1,
+    v_org, v_claim.export_job_id, v_claim.lease_owner,
+    coalesce(v_materialized.checkpoint_version, 0), 1, 1,
     jsonb_build_array(jsonb_build_object(
       'sourceId', 'audit_logs', 'partNumber', 1,
       'objectPath', v_org::text || '/part-canonical.ndjson',
@@ -586,7 +640,7 @@ begin
     ))
   );
   select * into v_complete from public.complete_organization_export_atomic(
-    v_org, v_claim.export_job_id, v_claim.lease_owner, 1,
+    v_org, v_claim.export_job_id, v_claim.lease_owner, v_checkpoint.checkpoint_version,
     1, repeat('b', 64), repeat('c', 64),
     v_org::text || '/' || v_claim.export_job_id::text || '/organization-export-v1.zip'
   );
@@ -595,11 +649,82 @@ begin
   );
   perform pg_temp.check(
     'only the canonical export archive path completes and authorizes download',
-    v_complete.outcome = 'completed'
+    v_materialized.outcome = 'materialized'
+    and v_complete.outcome = 'completed'
     and v_download.outcome = 'found'
     and (select manifest_sha256 <> artifact_sha256 and verified_at is not null
          and artifact_object_path = v_org::text || '/' || v_claim.export_job_id::text
              || '/organization-export-v1.zip'
+           from public.organization_export_jobs where id = v_claim.export_job_id)
+  );
+
+  select * into v_export from public.request_organization_export_atomic(
+    v_org, v_owner, '23000000-0000-4000-8000-000000000007', repeat('6', 64), 'corr-artifact-count'
+  );
+  insert into storage.objects(bucket_id, name, metadata, version) values
+    ('organization-branding', v_org::text || '/snapshot/frozen.webp',
+      jsonb_build_object('mimetype', 'image/webp'), gen_random_uuid()::text),
+    ('tenant-exports', v_org::text || '/previous/export.zip',
+      jsonb_build_object('mimetype', 'application/zip'), gen_random_uuid()::text),
+    ('organization-branding', v_other_org::text || '/snapshot/other.webp',
+      jsonb_build_object('mimetype', 'image/webp'), gen_random_uuid()::text);
+  select * into v_claim from public.claim_organization_export_atomic(v_org, gen_random_uuid(), 60);
+  select * into v_materialized from public.materialize_organization_export_snapshot_atomic(
+    v_org, v_claim.export_job_id, v_claim.lease_owner, v_claim.checkpoint_version
+  );
+  select * into v_checkpoint from public.checkpoint_organization_export_atomic(
+    v_org, v_claim.export_job_id, v_claim.lease_owner, coalesce(v_materialized.checkpoint_version, 0), 1, 1,
+    jsonb_build_array(jsonb_build_object(
+      'sourceId', 'audit_logs', 'partNumber', 1,
+      'objectPath', v_org::text || '/part-with-artifact.ndjson',
+      'sha256', repeat('a', 64), 'byteSize', 14
+    ))
+  );
+  select * into v_artifact from public.record_organization_export_artifact_snapshot_atomic(
+    v_org, v_claim.export_job_id, v_claim.lease_owner, v_checkpoint.checkpoint_version,
+    'evidence/report.pdf',
+    v_org::text || '/' || v_claim.export_job_id::text || '/artifacts/evidence/report.pdf',
+    repeat('5', 64), 128, 'application/pdf',
+    jsonb_build_object(
+      'label', 'report',
+      'bucket', 'organization-branding',
+      'sourcePath', v_org::text || '/snapshot/frozen.webp',
+      'objectId', (select artifact_inventory->0->>'objectId'
+                   from public.organization_export_snapshots
+                  where export_job_id = v_claim.export_job_id),
+      'version', (select artifact_inventory->0->>'version'
+                  from public.organization_export_snapshots
+                 where export_job_id = v_claim.export_job_id),
+      'updatedAt', (select artifact_inventory->0->>'updatedAt'
+                    from public.organization_export_snapshots
+                   where export_job_id = v_claim.export_job_id)
+    )
+  );
+  select * into v_complete from public.complete_organization_export_atomic(
+    v_org, v_claim.export_job_id, v_claim.lease_owner, v_checkpoint.checkpoint_version,
+    2, repeat('6', 64), repeat('7', 64),
+    v_org::text || '/' || v_claim.export_job_id::text || '/organization-export-v1.zip'
+  );
+  perform pg_temp.check(
+    'export manifest file count includes immutable artifact snapshots',
+    v_materialized.outcome = 'materialized'
+    and v_checkpoint.outcome = 'checkpointed'
+    and v_artifact.outcome = 'recorded'
+    and v_complete.outcome = 'completed'
+    and exists (
+      select 1 from public.organization_export_snapshots snapshots
+       where snapshots.organization_id = v_org
+         and snapshots.export_job_id = v_claim.export_job_id
+         and jsonb_array_length(snapshots.artifact_inventory) = 1
+         and snapshots.artifact_inventory->0->>'bucketId' = 'organization-branding'
+         and snapshots.artifact_inventory->0->>'sourcePath' =
+           v_org::text || '/snapshot/frozen.webp'
+         and snapshots.artifact_inventory->0->>'contentType' = 'image/webp'
+         and snapshots.artifact_inventory->0->>'objectId' is not null
+         and snapshots.artifact_inventory->0->>'version' is not null
+         and snapshots.artifact_inventory->0->>'updatedAt' is not null
+    )
+    and (select manifest_file_count = 2 and verified_at is not null
            from public.organization_export_jobs where id = v_claim.export_job_id)
   );
 
@@ -638,6 +763,37 @@ begin
     v_complete.outcome = 'verification_failed'
     and (select status = 'failed' from public.organization_export_jobs
           where id = v_claim.export_job_id)
+  );
+  select * into v_orphan_export from public.request_organization_export_atomic(
+    v_org, v_owner, '23000000-0000-4000-8000-000000000008', repeat('8', 64), 'corr-missing-snapshot'
+  );
+  delete from public.organization_export_snapshots
+    where organization_id = v_org and export_job_id = v_orphan_export.export_job_id;
+  select * into v_claim from public.claim_organization_export_atomic(v_org, gen_random_uuid(), 60);
+  select * into v_checkpoint from public.checkpoint_organization_export_atomic(
+    v_org, v_claim.export_job_id, v_claim.lease_owner, 0, 1, 1,
+    jsonb_build_array(jsonb_build_object(
+      'sourceId', 'audit_logs', 'partNumber', 1,
+      'objectPath', v_org::text || '/part-missing-snapshot.ndjson',
+      'sha256', repeat('8', 64), 'byteSize', 14
+    ))
+  );
+  select * into v_orphan_complete from public.complete_organization_export_atomic(
+    v_org, v_claim.export_job_id, v_claim.lease_owner, v_checkpoint.checkpoint_version,
+    1, repeat('9', 64), repeat('a', 64),
+    v_org::text || '/' || v_claim.export_job_id::text || '/organization-export-v1.zip'
+  );
+  perform pg_temp.check(
+    'export completion without a materialized snapshot fails durably and audits',
+    v_orphan_complete.outcome = 'verification_failed'
+    and (select status = 'failed' and safe_error_code = 'verification_failed'
+           from public.organization_export_jobs where id = v_claim.export_job_id)
+    and exists (
+      select 1 from public.audit_logs
+       where organization_id = v_org
+         and entity_id = v_claim.export_job_id::text
+         and action = 'organization.export_verification_failed'
+    )
   );
   -- Cross-tenant job identifiers are generic misses.
   select * into v_checkpoint from public.checkpoint_organization_export_atomic(
@@ -913,6 +1069,11 @@ declare
   v_replayed record;
   v_conflict record;
   v_artifact record;
+  v_artifact_replay record;
+  v_artifact_conflict record;
+  v_unsafe_export record;
+  v_unsafe_claim record;
+  v_unsafe_materialized record;
   v_unmapped_export record;
   v_unmapped_claim record;
   v_unmapped_materialized record;
@@ -954,12 +1115,26 @@ begin
     repeat('b', 64), 42, 'application/pdf',
     jsonb_build_object('provider_key', 'never-export', 'label', 'initial')
   );
+  select * into v_artifact_replay from public.record_organization_export_artifact_snapshot_atomic(
+    v_org, v_claim.export_job_id, v_claim.lease_owner, v_claim.checkpoint_version,
+    'reports/initial.pdf', v_org::text || '/' || v_claim.export_job_id::text || '/artifacts/reports/initial.pdf',
+    repeat('b', 64), 42, 'application/pdf',
+    jsonb_build_object('provider_key', 'never-export', 'label', 'initial')
+  );
+  select * into v_artifact_conflict from public.record_organization_export_artifact_snapshot_atomic(
+    v_org, v_claim.export_job_id, gen_random_uuid(), v_claim.checkpoint_version,
+    'reports/conflict.pdf', v_org::text || '/' || v_claim.export_job_id::text || '/artifacts/reports/conflict.pdf',
+    repeat('c', 64), 42, 'application/pdf',
+    jsonb_build_object('label', 'conflict')
+  );
   perform pg_temp.check(
     'export materialization freezes redacted records, is replay-safe, and binds immutable artifact metadata',
     v_materialized.outcome = 'materialized'
     and v_replayed.outcome = 'replayed'
     and v_conflict.outcome = 'conflict'
     and v_artifact.outcome = 'recorded'
+    and v_artifact_replay.outcome = 'replayed'
+    and v_artifact_conflict.outcome = 'conflict'
     and (select materialized_at is not null and materialized_checkpoint_version = v_claim.checkpoint_version
            from public.organization_export_snapshots
           where organization_id = v_org and export_job_id = v_claim.export_job_id)
@@ -974,6 +1149,36 @@ begin
            from public.organization_export_artifact_snapshots
           where organization_id = v_org and export_job_id = v_claim.export_job_id
             and artifact_key = 'reports/initial.pdf')
+  );
+
+  select * into v_unsafe_export from public.request_organization_export_atomic(
+    v_org, v_owner, '26000000-0000-4000-8000-000000000005',
+    repeat('5', 64), 'unsafe-storage-correlation'
+  );
+  insert into storage.objects(bucket_id, name, metadata) values (
+    'organization-branding',
+    v_org::text || '/unsafe/../logo.webp',
+    jsonb_build_object('mimetype', 'image/webp')
+  );
+  select * into v_unsafe_claim from public.claim_organization_export_atomic(
+    v_org, '26000000-0000-4000-8000-000000000006', 60
+  );
+  select * into v_unsafe_materialized from public.materialize_organization_export_snapshot_atomic(
+    v_org, v_unsafe_claim.export_job_id, v_unsafe_claim.lease_owner,
+    v_unsafe_claim.checkpoint_version
+  );
+  perform pg_temp.check(
+    'export materialization rejects unsafe org-prefixed storage paths without partial records',
+    v_unsafe_materialized.outcome = 'invalid_request'
+    and not exists (
+      select 1 from public.organization_export_snapshot_records records
+       where records.organization_id = v_org
+         and records.export_job_id = v_unsafe_claim.export_job_id
+    )
+    and (select artifact_inventory = '[]'::jsonb and materialized_at is null
+           from public.organization_export_snapshots snapshots
+          where snapshots.organization_id = v_org
+            and snapshots.export_job_id = v_unsafe_claim.export_job_id)
   );
 
   insert into public.organization_export_sources (source_id, enabled, sort_order)
@@ -1026,7 +1231,9 @@ select pg_temp.check(
       'reporting_obligations',
       'vulnerability_triage_notes',
       'vulnerability_vex_exports', 'framework_selections',
-      'framework_controls'
+      'framework_controls', 'evidence_business_records',
+      'technical_file_business_records', 'supplier_business_records',
+      'vulnerability_detection_records', 'vulnerability_triage_views'
     ]::text[]
 );
 

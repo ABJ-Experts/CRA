@@ -447,7 +447,11 @@ export function OrganizationAdministrationContent() {
             >
               {activePanel === "settings" ? (
                 <>
-                  <TabsContent value="settings" forceMount className="min-w-0">
+                  <TabsContent
+                    value="settings"
+                    forceMount
+                    className="min-w-0 data-[state=inactive]:hidden"
+                  >
                     {catalog.data ? (
                       <OrganizationSettingsSection
                         key={`settings-${current.data.organization.id}`}
@@ -474,7 +478,11 @@ export function OrganizationAdministrationContent() {
                       />
                     )}
                   </TabsContent>
-                  <TabsContent value="retention" forceMount className="min-w-0">
+                  <TabsContent
+                    value="retention"
+                    forceMount
+                    className="min-w-0 data-[state=inactive]:hidden"
+                  >
                     {retention.data ? (
                       <OrganizationRetentionSection
                         key={`retention-${current.data.organization.id}`}
@@ -489,7 +497,11 @@ export function OrganizationAdministrationContent() {
                       />
                     )}
                   </TabsContent>
-                  <TabsContent value="export" forceMount className="min-w-0">
+                  <TabsContent
+                    value="export"
+                    forceMount
+                    className="min-w-0 data-[state=inactive]:hidden"
+                  >
                     <OrganizationExportSection
                       key={`exports-${current.data.organization.id}`}
                       canExport={canExport}
@@ -503,7 +515,7 @@ export function OrganizationAdministrationContent() {
                   <TabsContent
                     value="legal-entities"
                     forceMount
-                    className="min-w-0"
+                    className="min-w-0 data-[state=inactive]:hidden"
                   >
                     {legalEntities.data ? (
                       <OrganizationLegalEntitiesSection
@@ -519,7 +531,11 @@ export function OrganizationAdministrationContent() {
                       />
                     )}
                   </TabsContent>
-                  <TabsContent value="branding" forceMount className="min-w-0">
+                  <TabsContent
+                    value="branding"
+                    forceMount
+                    className="min-w-0 data-[state=inactive]:hidden"
+                  >
                     {branding.data && brandingPreview.data ? (
                       <OrganizationBrandingSection
                         key={`branding-${current.data.organization.id}`}
@@ -549,7 +565,11 @@ export function OrganizationAdministrationContent() {
                 </>
               ) : null}
               {activePanel === "lifecycle" ? (
-                <TabsContent value="lifecycle" forceMount className="min-w-0">
+                <TabsContent
+                  value="lifecycle"
+                  forceMount
+                  className="min-w-0 data-[state=inactive]:hidden"
+                >
                   <OrganizationLifecycleSection
                     key={`lifecycle-${current.data.organization.id}`}
                     lifecycle={lifecycle.data.lifecycle}

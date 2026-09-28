@@ -148,6 +148,72 @@ describe("TenantLifecycleWorker", () => {
     );
   });
 
+  it("includes verified artifact bytes and their source identity in the archive", async () => {
+    const bytes = Buffer.from("private artifact bytes");
+    const key = "evidence-documents/fixture";
+    const path = `${organizationId}/${exportId}/artifacts/${key}`;
+    const objects = new Map<string, Buffer>([[path, bytes]]);
+    const complete = jest.fn().mockResolvedValue({ outcome: "completed" });
+    const fail = jest.fn();
+    const worker = new TenantLifecycleWorker(
+      dependencies({
+        storage: memoryStorage(objects),
+        artifactSnapshot: {
+          list: jest.fn().mockResolvedValue([
+            {
+              artifactKey: key,
+              snapshotObjectPath: path,
+              sha256: createHash("sha256").update(bytes).digest("hex"),
+              byteSize: bytes.length,
+              contentType: "application/pdf",
+              metadata: {
+                bucket: "evidence-documents",
+                sourcePath: `${organizationId}/fixture`,
+              },
+            },
+          ]),
+        },
+        export: {
+          dueOrganizationIds: jest.fn().mockResolvedValue([organizationId]),
+          claim: jest.fn().mockResolvedValue({
+            outcome: "claimed",
+            jobId: exportId,
+            leaseOwner,
+            checkpointVersion: 0,
+            sourceIds: ["organization_profile"],
+          }),
+          parts: jest.fn().mockResolvedValue([]),
+          context: jest.fn().mockResolvedValue({
+            actorId: leaseOwner,
+            requestedAt: "2026-08-10T00:00:00.000Z",
+          }),
+          checkpoint: jest.fn().mockResolvedValue({
+            outcome: "checkpointed",
+            checkpointVersion: 1,
+          }),
+          complete,
+          fail,
+        },
+      }),
+    );
+
+    await worker.runOnce();
+
+    expect(fail).not.toHaveBeenCalled();
+    expect(complete).toHaveBeenCalledWith(
+      expect.objectContaining({ manifestFileCount: 2 }),
+    );
+    const zip = objects.get(
+      `${organizationId}/${exportId}/organization-export-v1.zip`,
+    );
+    expect(zip).toBeDefined();
+    expect(zip?.includes(Buffer.from(`artifacts/${key}`))).toBe(true);
+    expect(zip?.includes(bytes)).toBe(true);
+    expect(zip?.includes(Buffer.from('"bucket":"evidence-documents"'))).toBe(
+      true,
+    );
+  });
+
   it("fails before database completion when the uploaded ZIP read-back hash is corrupt", async () => {
     const objects = new Map<string, Buffer>();
     const complete = jest.fn();
@@ -735,6 +801,7 @@ function dependencies(
   const artifactSnapshot: TenantLifecycleWorkerDependencies["artifactSnapshot"] =
     {
       snapshot: jest.fn().mockResolvedValue({ outcome: "snapshotted" }),
+      list: jest.fn().mockResolvedValue([]),
     };
   const {
     artifactSnapshot: artifactSnapshotOverride,

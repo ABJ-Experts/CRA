@@ -80,50 +80,108 @@ const dynamicSnapshotLockAdditions = (sql: string): readonly string[] =>
   );
 
 describe("tenant export source registry architecture", () => {
-  it("keeps incomplete M6–M9 evidence graphs and bearer grants out of portable sources", () => {
+  it("exports reviewed M6-M9 durable tenant business records", () => {
     const exported = new Set(
       exportSourceRegistry.flatMap((source) => source.tables),
     );
-    for (const table of [
-      "reporting_stage_packages",
-      "evidence_documents",
-      "evidence_document_legal_holds",
-      "supplier_evidence_submissions",
-      "technical_file_snapshots",
-    ]) {
-      expect(exported.has(table)).toBe(false);
-      expect(exportSourceExclusions[table]).toMatch(
-        /artifact|evidence|archive|restore/i,
-      );
-    }
+
+    expect([...exported]).toEqual(
+      expect.arrayContaining([
+        "reporting_family_templates",
+        "reporting_family_template_versions",
+        "reporting_stage_drafts",
+        "reporting_stage_draft_revisions",
+        "reporting_stage_approvals",
+        "reporting_stage_packages",
+        "reporting_stage_submissions",
+        "reporting_stage_submission_acknowledgements",
+        "evidence_documents",
+        "evidence_document_versions",
+        "evidence_document_version_products",
+        "evidence_document_version_retention_protections",
+        "evidence_document_legal_holds",
+        "technical_files",
+        "technical_file_sections",
+        "technical_file_section_sources",
+        "technical_file_section_source_reviews",
+        "technical_file_risk_registers",
+        "technical_file_risks",
+        "technical_file_risk_revisions",
+        "technical_file_risk_revision_assets",
+        "technical_file_risk_revision_evidence",
+        "technical_file_risk_revision_requirements",
+        "technical_file_snapshots",
+        "technical_file_snapshot_exports",
+        "technical_file_declarations",
+        "supplier_organizations",
+        "supplier_contacts",
+        "supplier_component_responsibilities",
+        "supplier_evidence_requests",
+        "supplier_evidence_request_revisions",
+        "supplier_evidence_request_items",
+        "supplier_evidence_submissions",
+        "supplier_evidence_submission_reviews",
+        "supplier_document_fields",
+        "vulnerability_component_occurrences",
+        "vulnerability_findings",
+        "vulnerability_finding_component_occurrences",
+        "vulnerability_match_evaluations",
+        "vulnerability_kev_alerts",
+        "vulnerability_manual_findings",
+        "vulnerability_triage_saved_views",
+        "vulnerability_triage_saved_view_defaults",
+      ]),
+    );
+  });
+
+  it("keeps credentials, bearer verifiers, idempotency ledgers, and active leases out of portable sources", () => {
+    const exported = new Set(
+      exportSourceRegistry.flatMap((source) => source.tables),
+    );
+
     for (const table of [
       "reporting_stage_approval_proofs",
+      "reporting_stage_draft_commands",
+      "evidence_bulk_intake_attempts",
       "evidence_document_access_grants",
+      "evidence_document_deletion_cleanup_items",
+      "evidence_document_deletion_intents",
+      "evidence_document_extraction_jobs",
+      "evidence_document_notification_outbox",
+      "evidence_document_scan_jobs",
+      "evidence_document_watermark_export_access_grants",
       "supplier_evidence_invitations",
+      "supplier_evidence_reminder_deliveries",
+      "supplier_evidence_request_commands",
+      "supplier_registry_commands",
+      "ai_inference_runs",
       "technical_file_auditor_snapshot_grants",
+      "technical_file_risk_commands",
     ]) {
       expect(exported.has(table)).toBe(false);
       expect(exportSourceExclusions[table]).toMatch(
-        /token|session|bearer|authorization/i,
+        /token|session|bearer|security|idempotency|lease|worker|private|artifact/i,
       );
     }
-  });
-  it("does not export partial M9-05 source evidence or worker security state", () => {
-    const exported = exportSourceRegistry.flatMap((source) => source.tables);
-    expect(exported).not.toContain("ai_inference_runs");
-    expect(exported).not.toContain("supplier_document_fields");
-    expect(exportSourceExclusions.ai_inference_runs).toMatch(
-      /security|lease|idempotency/i,
-    );
-    expect(exportSourceExclusions.supplier_document_fields).toMatch(
-      /source evidence|idempotency/i,
-    );
+
     expect(() =>
       validateExportRegistryCoverage([
         "ai_inference_runs",
-        "supplier_document_fields",
+        "supplier_evidence_invitations",
+        "technical_file_auditor_snapshot_grants",
       ]),
     ).not.toThrow();
+  });
+
+  it("routes snapshot rows through table-aware export redaction", () => {
+    const sql = migrationSql();
+
+    expect(sql).toContain("m1_export_business_record_jsonb");
+    expect(sql).toContain("public.m1_export_business_record_jsonb");
+    expect(sql).toMatch(/when 'supplier_document_fields'/);
+    expect(sql).toMatch(/when 'evidence_document_versions'/);
+    expect(sql).toContain("intake_idempotency_key");
+    expect(sql).toContain("delivery_attempts");
   });
   it("covers every current migration-defined tenant table or explains its exclusion", () => {
     const tenantTables = tenantTablesFromMigrations();
@@ -135,6 +193,34 @@ describe("tenant export source registry architecture", () => {
     expect(exportSourceRegistry.flatMap((source) => source.tables)).toEqual(
       expect.arrayContaining(["organizations", "organization_members"]),
     );
+  });
+
+  it("keeps TypeScript registry in parity with SQL physical source mappings", () => {
+    const tenantTables = new Set(tenantTablesFromMigrations());
+    const exported = new Set(
+      exportSourceRegistry.flatMap((source) => source.tables),
+    );
+    const sqlMappedTenantTables = new Set(
+      [...migrationSql().matchAll(/\('[^']+'\s*,\s*'([a-z_]+)'/g)]
+        .map((match) => match[1])
+        .filter((table): table is string =>
+          Boolean(table && tenantTables.has(table)),
+        ),
+    );
+
+    expect([...sqlMappedTenantTables].sort()).toEqual(
+      expect.arrayContaining([
+        "reporting_stage_drafts",
+        "reporting_stage_draft_revisions",
+        "reporting_stage_submissions",
+        "reporting_family_templates",
+        "reporting_family_template_versions",
+      ]),
+    );
+    for (const table of sqlMappedTenantTables) {
+      expect(exported.has(table)).toBe(true);
+      expect(exportSourceExclusions[table]).toBeUndefined();
+    }
   });
 
   it("keeps every physical registry mapping in the atomic SQL snapshot catalogue", () => {
@@ -161,6 +247,16 @@ describe("tenant export source registry architecture", () => {
 
     expect([...lockedTables, ...dynamicAdditions]).toEqual(
       expect.arrayContaining(registeredTables),
+    );
+  });
+
+  it("uses the reviewed business projection in the final materializer", () => {
+    const functionSql = latestMaterializeSnapshotFunctionSql();
+    expect(functionSql).toContain(
+      "public.m1_export_business_record_jsonb($4, to_jsonb(source))",
+    );
+    expect(functionSql).not.toContain(
+      "public.m1_export_redact_jsonb(to_jsonb(source))",
     );
   });
 });
