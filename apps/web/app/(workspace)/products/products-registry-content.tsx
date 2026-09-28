@@ -1,9 +1,20 @@
 "use client";
 
 import {
+  resolveProductCreateAttempt,
+  type ProductCreateAttempt,
+} from "../../_features/products/product-create-retry";
+
+import { ProductClassificationBadge } from "../../_features/products/product-classification-badge";
+import { useProductClassifications } from "../../_features/products/product-classification.queries";
+
+import { ProductOwnerSelector } from "../../_features/products/product-owner-selector";
+
+import {
   createProductInputSchema,
   type CreateProductInput,
   type Product,
+  type ProductClassificationSummary,
   type ProductType,
 } from "@repo/contracts/products";
 import { Button } from "@repo/ui/button";
@@ -12,7 +23,7 @@ import { SearchInput } from "@repo/ui/input";
 import { Tag } from "@repo/ui/tag";
 import { ArrowUpRight } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import {
   useCreateProductMutation,
@@ -22,7 +33,10 @@ import { useLegalEntitiesQuery } from "../../_features/organizations/organizatio
 import { useMocksReady } from "../../_providers/providers";
 import { useSession } from "../../_providers/session-provider";
 import { ApiClientError } from "../../_lib/http/api-client";
-import { PageHeading, SectionCard } from "../../dashboard/_components/dashboard-chrome";
+import {
+  PageHeading,
+  SectionCard,
+} from "../../dashboard/_components/dashboard-chrome";
 import { ProductImportSection } from "./product-import-section";
 
 const PRODUCT_TYPES: readonly {
@@ -71,7 +85,7 @@ function FieldError({ error }: { error?: string }) {
   ) : null;
 }
 
-function ProductCreateForm({
+export function ProductCreateForm({
   ownerId,
   legalEntities,
   onCreated,
@@ -103,15 +117,18 @@ function ProductCreateForm({
     }
   }, [defaultEntityId, draft.legalEntityId]);
 
+  const attempt = useRef<ProductCreateAttempt | null>(null);
+
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setMessage(null);
     const input = {
       ...draft,
       description: draft.description?.trim() || undefined,
-      idempotencyKey: crypto.randomUUID(),
     };
-    const parsed = createProductInputSchema.safeParse(input);
+    const parsed = createProductInputSchema
+      .omit({ idempotencyKey: true })
+      .safeParse(input);
     if (!parsed.success) {
       const next = parsed.error.flatten().fieldErrors;
       setErrors({
@@ -127,7 +144,16 @@ function ProductCreateForm({
 
     setErrors({});
     try {
-      const response = await create.mutateAsync(parsed.data);
+      attempt.current = resolveProductCreateAttempt(
+        attempt.current,
+        "product",
+        parsed.data,
+      );
+      const response = await create.mutateAsync({
+        ...parsed.data,
+        idempotencyKey: attempt.current.key,
+      });
+      attempt.current = null;
       onCreated(response.product);
     } catch (error) {
       const serverErrors =
@@ -233,34 +259,19 @@ function ProductCreateForm({
           </select>
           <FieldError error={errors.legalEntityId} />
         </label>
-        <label
-          className="flex flex-col gap-2 text-caption-1-regular text-fg"
-          htmlFor="product-responsible-owner"
-        >
-          Responsible owner ID
-          <input
-            id="product-responsible-owner"
-            aria-label="Responsible owner ID"
-            required
+        <div>
+          <ProductOwnerSelector
             value={draft.responsibleOwnerId}
-            onChange={(event) =>
-              setDraft((current) => ({
-                ...current,
-                responsibleOwnerId: event.target.value,
-              }))
+            onChange={(value) =>
+              setDraft((current) => ({ ...current, responsibleOwnerId: value }))
             }
-            className="h-10 rounded-xl border border-border bg-canvas px-3 text-subhead-regular text-fg"
-            aria-describedby="product-owner-help"
           />
           <FieldError error={errors.responsibleOwnerId} />
-        </label>
-        <span
-          id="product-owner-help"
-          className="text-caption-1-regular text-fg-muted"
-        >
-          The owner must be an active organization member. Your ID is selected
-          by default.
-        </span>
+          <p className="text-caption-1-regular text-fg-muted">
+            The owner must be an active organization member. You are selected by
+            default.
+          </p>
+        </div>
         <label className="flex flex-col gap-2 text-caption-1-regular text-fg sm:col-span-2">
           Description <span className="text-fg-muted">(optional)</span>
           <textarea
@@ -300,9 +311,15 @@ function ProductCreateForm({
 function ProductRow({
   product,
   onOpen,
+  classification,
+  loadingClassification,
+  classificationUnavailable,
 }: {
   product: Product;
   onOpen: (id: string) => void;
+  classification?: ProductClassificationSummary | null;
+  loadingClassification?: boolean;
+  classificationUnavailable?: boolean;
 }) {
   return (
     <li className="flex flex-col gap-4 border-b border-border py-5 first:pt-1 last:border-b-0 last:pb-1 sm:flex-row sm:items-center sm:justify-between">
@@ -314,6 +331,12 @@ function ProductRow({
           <Tag variant="fill" tone="indigo" size="sm">
             {productTypeLabel(product.productType)}
           </Tag>
+          <ProductClassificationBadge
+            latest={classification}
+            productVersion={product.version}
+            loading={loadingClassification}
+            unavailable={classificationUnavailable}
+          />
           {product.archivedAt ? (
             <Tag variant="fill" tone="red" size="sm">
               Archived
@@ -361,6 +384,10 @@ export function ProductsRegistryContent() {
   const [showCreate, setShowCreate] = useState(false);
   const products = useProductsQuery(
     { page: 1, pageSize: 25, q: search.trim() || undefined, archived },
+    liveApiEnabled && hasMembership && canView,
+  );
+  const classifications = useProductClassifications(
+    products.data?.products.rows.map((row) => row.id) ?? [],
     liveApiEnabled && hasMembership && canView,
   );
   const entities = useLegalEntitiesQuery(
@@ -429,9 +456,7 @@ export function ProductsRegistryContent() {
             <ProductCreateForm
               ownerId={session?.user.id ?? ""}
               legalEntities={activeEntities}
-              onCreated={(product) =>
-                router.push(`/products/${product.id}`)
-              }
+              onCreated={(product) => router.push(`/products/${product.id}`)}
             />
           ) : null}
           <ProductImportSection
@@ -485,15 +510,32 @@ export function ProductsRegistryContent() {
                   : "No products have been created yet."}
               </p>
             ) : (
-              <ul aria-label="Products">
-                {products.data?.products.rows.map((product) => (
-                  <ProductRow
-                    key={product.id}
-                    product={product}
-                    onOpen={(id) => router.push(`/products/${id}`)}
-                  />
-                ))}
-              </ul>
+              <div>
+                {classifications.isError ? (
+                  <Button
+                    variant="outline"
+                    onClick={() => void classifications.refetch()}
+                  >
+                    Retry classification summaries
+                  </Button>
+                ) : null}
+                <ul aria-label="Products">
+                  {products.data?.products.rows.map((product) => (
+                    <ProductRow
+                      key={product.id}
+                      product={product}
+                      classification={
+                        classifications.data?.classifications.find(
+                          (row) => row.productId === product.id,
+                        )?.latest
+                      }
+                      loadingClassification={classifications.isPending}
+                      classificationUnavailable={classifications.isError}
+                      onOpen={(id) => router.push(`/products/${id}`)}
+                    />
+                  ))}
+                </ul>
+              </div>
             )}
           </SectionCard>
         </>

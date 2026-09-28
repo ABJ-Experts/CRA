@@ -55,6 +55,7 @@ import {
   supportAlertIntervalsResponseSchema,
   supportPeriodChangePreviewResponseSchema,
   supportPeriodHistoryResponseSchema,
+  supportPeriodHistoryQuerySchema,
   supportPeriodIdParamsSchema,
   supportPeriodResponseSchema,
   softwareBaselineResponseSchema,
@@ -117,6 +118,7 @@ import {
   type ReleaseParams,
   type RemoveReleaseMarketAvailabilityInput,
   type SupersedeSupportPeriodRequest,
+  type SupportPeriodHistoryQuery,
   type TransitionReleaseLifecycleInput,
   type UpdateSupportAlertIntervalsRequest,
   type UpdateProductInput,
@@ -838,12 +840,15 @@ export class ProductsController {
   @ZodResponse(supportPeriodHistoryResponseSchema)
   getSupportPeriods(
     @Param(zodParams(productParamsSchema)) params: ProductParams,
+    @Query(zodQuery(supportPeriodHistoryQuerySchema))
+    query: SupportPeriodHistoryQuery,
     @CurrentUser() user: RequestUser,
   ) {
     return this.products.getSupportPeriods({
       organizationId: this.organizationId(user),
       actorId: user.id,
       productId: params.productId,
+      releaseId: query.releaseId,
     });
   }
 

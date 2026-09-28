@@ -1,6 +1,14 @@
 import { randomUUID } from "node:crypto";
+import { writeFile } from "node:fs/promises";
 
-import { expect, test, type BrowserContext, type Page } from "@playwright/test";
+import {
+  expect,
+  test,
+  type BrowserContext,
+  type Page,
+  type Request,
+} from "@playwright/test";
+import { productComponentLinkResponseSchema } from "@repo/contracts/products";
 
 import { LIVE_API_ORIGIN, RunScopedAccounts } from "./helpers/accounts";
 
@@ -14,6 +22,26 @@ type LegalEntitiesResponse = Readonly<{
 }>;
 type CreatedProduct = Readonly<{ product: Readonly<{ id: string }> }>;
 type CreatedRelease = Readonly<{ release: Readonly<{ id: string }> }>;
+
+async function captureRelationshipState(
+  page: Page,
+  testInfo: import("@playwright/test").TestInfo,
+  name: string,
+  target: import("@playwright/test").Locator,
+): Promise<void> {
+  await target.scrollIntoViewIfNeeded();
+  await page.screenshot({
+    path: testInfo.outputPath(`${name}-desktop.png`),
+    fullPage: false,
+  });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await target.scrollIntoViewIfNeeded();
+  await page.screenshot({
+    path: testInfo.outputPath(`${name}-mobile.png`),
+    fullPage: false,
+  });
+  await page.setViewportSize({ width: 1280, height: 720 });
+}
 
 async function openRelationshipManager(page: Page): Promise<void> {
   await page
@@ -141,22 +169,99 @@ test("a run-scoped owner records baseline, variant, component preview, and a rej
   const fixtures = new RunScopedAccounts(testInfo);
   const context = await browser.newContext({ baseURL: WEB_ORIGIN });
 
+  const requestStarts = new Map<Request, number>();
+  const requests: {
+    method: string;
+    path: string;
+    elapsedMs: number;
+    status?: number;
+    failure?: string;
+    errorCode?: string;
+  }[] = [];
+  const isRelevant = (request: Request) => {
+    const path = new URL(request.url()).pathname;
+    return (
+      path.startsWith("/api/v1/products") ||
+      path === "/api/v1/auth/session" ||
+      path.endsWith("/legal-entities")
+    );
+  };
+  const safePath = (request: Request) =>
+    new URL(request.url()).pathname.replace(
+      /[0-9a-f]{8}-[0-9a-f-]{27}/gi,
+      "<fixture-id>",
+    );
+  context.on("request", (request) => {
+    if (isRelevant(request)) requestStarts.set(request, Date.now());
+  });
+  context.on("response", (response) => {
+    const request = response.request();
+    const startedAt = requestStarts.get(request);
+    if (startedAt === undefined) return;
+    requests.push({
+      method: request.method(),
+      path: safePath(request),
+      status: response.status(),
+      elapsedMs: Date.now() - startedAt,
+    });
+    requestStarts.delete(request);
+  });
+  context.on("requestfailed", (request) => {
+    const startedAt = requestStarts.get(request);
+    if (startedAt === undefined) return;
+    requests.push({
+      method: request.method(),
+      path: safePath(request),
+      failure: request.failure()?.errorText,
+      elapsedMs: Date.now() - startedAt,
+    });
+    requestStarts.delete(request);
+  });
+  let fixtureOrganizationId: string | undefined;
+  let journeyError: unknown;
+  let cleanupFailure: unknown;
   try {
     const account = await fixtures.createVerified(
       context,
       "relationship-owner",
     );
     const page = await context.newPage();
+    page.setDefaultTimeout(30_000);
     const organizationId = await onboardRunOrganization(
       page,
       account.email,
       `E2E Relationships ${testInfo.parallelIndex}-${Date.now()}`,
     );
     fixtures.trackOrganization(organizationId);
+    fixtureOrganizationId = organizationId;
 
+    const legalReadStarted = Date.now();
     const legalEntitiesResponse = await context.request.get(
       `${LIVE_API_ORIGIN}/api/v1/organizations/current/legal-entities`,
     );
+    const legalReadEntry: {
+      method: string;
+      path: string;
+      status: number;
+      elapsedMs: number;
+      errorCode?: string;
+    } = {
+      method: "GET",
+      path: "/api/v1/organizations/current/legal-entities",
+      status: legalEntitiesResponse.status(),
+      elapsedMs: Date.now() - legalReadStarted,
+    };
+    if (!legalEntitiesResponse.ok()) {
+      const errorBody: unknown = await legalEntitiesResponse.json();
+      if (
+        errorBody &&
+        typeof errorBody === "object" &&
+        "code" in errorBody &&
+        typeof errorBody.code === "string"
+      )
+        legalReadEntry.errorCode = errorBody.code;
+    }
+    requests.push(legalReadEntry);
     expect(legalEntitiesResponse.status()).toBe(200);
     const legalEntity = (
       (await legalEntitiesResponse.json()) as LegalEntitiesResponse
@@ -235,7 +340,13 @@ test("a run-scoped owner records baseline, variant, component preview, and a rej
       .click();
     await expect(
       page.getByText("Software baseline membership recorded."),
-    ).toBeVisible();
+    ).toBeVisible({ timeout: 30_000 });
+    await captureRelationshipState(
+      page,
+      testInfo,
+      "relationship-membership-recorded",
+      page.getByText("Software baseline membership recorded."),
+    );
 
     await page
       .getByLabel("Search variant product", { exact: true })
@@ -249,9 +360,15 @@ test("a run-scoped owner records baseline, variant, component preview, and a rej
     await page
       .getByRole("button", { name: "Record variant relationship", exact: true })
       .click();
-    await expect(
+    await expect(page.getByText("Variant relationship recorded.")).toBeVisible({
+      timeout: 30_000,
+    });
+    await captureRelationshipState(
+      page,
+      testInfo,
+      "relationship-variant-recorded",
       page.getByText("Variant relationship recorded."),
-    ).toBeVisible();
+    );
 
     await page
       .getByLabel("Search component product", { exact: true })
@@ -263,10 +380,37 @@ test("a run-scoped owner records baseline, variant, component preview, and a rej
       .getByRole("button", { name: "Preview component link", exact: true })
       .click();
     await expect(page.getByText(/Preview: allowed/)).toBeVisible();
+    const componentCreated = page.waitForResponse(
+      (response) =>
+        new URL(response.url()).pathname ===
+          `/api/v1/products/${baseProductId}/component-links` &&
+        response.request().method() === "POST",
+      { timeout: 15_000 },
+    );
+    process.stderr.write(
+      `Component POST begins for fixture organization ${organizationId}, product ${baseProductId}\n`,
+    );
     await page
       .getByRole("button", { name: "Record component link", exact: true })
       .click();
-    await expect(page.getByText("Component link recorded.")).toBeVisible();
+    const componentResponse = await componentCreated;
+    expect(componentResponse.status()).toBe(201);
+    const componentBody = productComponentLinkResponseSchema.parse(
+      await componentResponse.json(),
+    );
+    expect(componentBody.relationship).toMatchObject({
+      parentProductId: baseProductId,
+      componentProductId,
+    });
+    await expect(page.getByText("Component link recorded.")).toBeVisible({
+      timeout: 30_000,
+    });
+    await captureRelationshipState(
+      page,
+      testInfo,
+      "relationship-component-recorded",
+      page.getByText("Component link recorded."),
+    );
     await page.reload();
     await openRelationshipOverview(page);
     await expect(
@@ -278,6 +422,19 @@ test("a run-scoped owner records baseline, variant, component preview, and a rej
         .getByText(/^(scheduled|processing|completed)$/)
         .first(),
     ).toBeVisible();
+
+    const graphLinks = page.getByRole("list", {
+      name: "Relationship graph links",
+      exact: true,
+    });
+    await expect(graphLinks).toContainText(baseProductId, { timeout: 30_000 });
+    await expect(graphLinks).toContainText(componentProductId);
+    await captureRelationshipState(
+      page,
+      testInfo,
+      "relationship-fresh-graph",
+      graphLinks,
+    );
 
     await page.goto(`/products/${componentProductId}`);
     await openRelationshipManager(page);
@@ -305,8 +462,71 @@ test("a run-scoped owner records baseline, variant, component preview, and a rej
     await expect(
       page.getByText("This link would create a cycle and was not recorded."),
     ).toBeVisible();
+    await captureRelationshipState(
+      page,
+      testInfo,
+      "relationship-cycle-rejected",
+      page.getByText("This link would create a cycle and was not recorded."),
+    );
+  } catch (error) {
+    journeyError = error;
+    process.stderr.write(
+      `Relationship journey failed: ${error instanceof Error ? error.stack : String(error)}\n`,
+    );
+    const page = context.pages()[0];
+    if (page && !page.isClosed()) {
+      await page
+        .screenshot({
+          path: testInfo.outputPath("relationship-failure-desktop.png"),
+          fullPage: false,
+        })
+        .catch(() => undefined);
+    }
   } finally {
-    await context.close();
-    await fixtures.cleanup();
+    const pendingAtJourneyEnd = [...requestStarts.entries()].map(
+      ([request, startedAt]) => ({
+        method: request.method(),
+        path: safePath(request),
+        elapsedMs: Date.now() - startedAt,
+      }),
+    );
+    const [closed] = await Promise.allSettled([context.close()]);
+    const timingsPath = testInfo.outputPath("sanitized-request-timings.json");
+    await writeFile(
+      timingsPath,
+      JSON.stringify(
+        {
+          requests,
+          pending: pendingAtJourneyEnd,
+          fixtureOrganizationId,
+        },
+        null,
+        2,
+      ),
+    );
+    await testInfo.attach("sanitized-request-timings", {
+      path: timingsPath,
+      contentType: "application/json",
+    });
+    try {
+      if (journeyError && process.env.E2E_RETAIN_FAILED_FIXTURES === "true") {
+        process.stderr.write(
+          `Retained exact failed fixture organization ${fixtureOrganizationId ?? "not-created"} for diagnosis.\n`,
+        );
+      } else {
+        await fixtures.cleanup();
+      }
+    } catch (error) {
+      cleanupFailure = error;
+      await testInfo.attach("scoped-cleanup-failure", {
+        body: String(error),
+        contentType: "text/plain",
+      });
+    }
+    if (!cleanupFailure && closed?.status === "rejected") {
+      cleanupFailure = closed.reason;
+    }
   }
+  if (journeyError) throw journeyError;
+  if (cleanupFailure) throw cleanupFailure;
 });

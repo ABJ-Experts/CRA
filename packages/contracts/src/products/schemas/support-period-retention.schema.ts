@@ -93,6 +93,14 @@ export const supersedeSupportPeriodRequestSchema = supportPeriodDatesSchema
   })
   .strict();
 
+/** A release view includes its own history and product-wide fallback decisions. */
+export const supportPeriodHistoryQuerySchema = z
+  .object({ releaseId: z.uuid().optional() })
+  .strict();
+export type SupportPeriodHistoryQuery = z.output<
+  typeof supportPeriodHistoryQuerySchema
+>;
+
 export const supportPeriodHistoryResponseSchema = z
   .object({ supportPeriods: z.array(productSupportPeriodSchema) })
   .strict();

@@ -97,13 +97,13 @@ async function savePolicy(
   policy: Readonly<{ entityType: "product" | "release"; fieldName: string }>,
 ): Promise<void> {
   await page
-    .getByLabel("Entity type", { exact: true })
+    .getByRole("combobox", { name: "Entity type", exact: true })
     .selectOption(policy.entityType);
   await page
-    .getByLabel("Field name", { exact: true })
+    .getByRole("combobox", { name: "Field name", exact: true })
     .selectOption(policy.fieldName);
   await page
-    .getByLabel("Authority policy", { exact: true })
+    .getByRole("combobox", { name: "Authority policy", exact: true })
     .selectOption("external_authoritative");
 
   const preview = page.waitForResponse(
@@ -147,15 +147,20 @@ test("a run-scoped owner completes connector sync, observes retry safety, and ca
   let otherContext: BrowserContext | null = null;
   let mobileContext: BrowserContext | null = null;
 
+  let journeyError: unknown;
+  let cleanupFailure: unknown;
+  let stage = "sign up";
   try {
     const account = await fixtures.createVerified(context, "connector-owner");
     const page = await context.newPage();
+    page.setDefaultTimeout(15_000);
+    stage = "create organization";
     const organizationId = await createOrganization(
       context,
       account,
       `E2E Connector Sync ${testInfo.parallelIndex}-${Date.now()}`,
     );
-    fixtures.trackOrganization(organizationId);
+    fixtures.trackM2V2Organization(organizationId);
     const proxiedSession = await context.request.get(
       `${WEB_ORIGIN}/api/v1/auth/session`,
       { timeout: 10_000 },
@@ -194,11 +199,13 @@ test("a run-scoped owner completes connector sync, observes retry safety, and ca
     ).connector.id;
     await page.goto(`/connectors/${connectorId}`, { timeout: 10_000 });
 
+    stage = "set secret";
     await page.getByLabel("Set secret", { exact: true }).fill(CONNECTOR_SECRET);
     const secretSaved = page.waitForResponse(
       (response) =>
         new URL(response.url()).pathname.endsWith("/secret") &&
         response.request().method() === "POST",
+      { timeout: 15_000 },
     );
     await page.getByRole("button", { name: "Set secret", exact: true }).click();
     expect((await secretSaved).status()).toBe(200);
@@ -206,10 +213,12 @@ test("a run-scoped owner completes connector sync, observes retry safety, and ca
       page.getByText("Secret saved.", { exact: true }),
     ).toBeVisible();
 
+    stage = "test connection";
     const tested = page.waitForResponse(
       (response) =>
         new URL(response.url()).pathname.endsWith("/test") &&
         response.request().method() === "POST",
+      { timeout: 15_000 },
     );
     await page
       .getByRole("button", { name: "Test connection", exact: true })
@@ -220,6 +229,7 @@ test("a run-scoped owner completes connector sync, observes retry safety, and ca
     ).toBeVisible();
 
     for (const policy of REQUIRED_POLICIES) {
+      stage = `authority policy ${policy.entityType}.${policy.fieldName}`;
       await savePolicy(page, policy);
     }
     await expect(
@@ -228,11 +238,13 @@ test("a run-scoped owner completes connector sync, observes retry safety, and ca
       ),
     ).toHaveCount(0);
 
+    stage = "start dry run";
     const dryRunStarted = page.waitForResponse(
       (response) =>
         /\/api\/v1\/connectors\/[^/]+\/sync-runs$/.test(
           new URL(response.url()).pathname,
         ) && response.request().method() === "POST",
+      { timeout: 15_000 },
     );
     await page
       .getByRole("button", { name: "Start dry run (incremental)", exact: true })
@@ -246,10 +258,12 @@ test("a run-scoped owner completes connector sync, observes retry safety, and ca
     await expect(page.getByText("1", { exact: true })).toBeVisible();
     await expect(page.getByText("create", { exact: true })).toBeVisible();
 
+    stage = "commit sync";
     const commitRequested = page.waitForResponse(
       (response) =>
         new URL(response.url()).pathname.endsWith("/request-commit") &&
         response.request().method() === "POST",
+      { timeout: 15_000 },
     );
     await page
       .getByRole("button", { name: "Request commit", exact: true })
@@ -275,15 +289,21 @@ test("a run-scoped owner completes connector sync, observes retry safety, and ca
       page.getByText("Sentinel Gateway", { exact: true }),
     ).toBeVisible();
 
+    stage = "retry scenario connection config";
     await page.goto(`/connectors/${connectorId}`);
     await page
-      .getByLabel("Connection config (JSON, no secrets)", { exact: true })
+      .getByRole("textbox", {
+        name: "Connection config (JSON, no secrets)",
+        exact: true,
+      })
       .fill(configFor(account, legalEntityId, "rate_limit"));
+    stage = "retry scenario connection config";
     const connectionSaved = page.waitForResponse(
       (response) =>
         /\/api\/v1\/connectors\/[^/]+$/.test(
           new URL(response.url()).pathname,
         ) && response.request().method() === "PATCH",
+      { timeout: 15_000 },
     );
     await page
       .getByRole("button", { name: "Save connection", exact: true })
@@ -330,16 +350,37 @@ test("a run-scoped owner completes connector sync, observes retry safety, and ca
       otherAccount,
       `E2E Connector Isolation ${testInfo.parallelIndex}-${Date.now()}`,
     );
-    fixtures.trackOrganization(otherOrganizationId);
+    fixtures.trackM2V2Organization(otherOrganizationId);
     const hidden = await otherContext.request.get(
       `${LIVE_API_ORIGIN}/api/v1/connectors/${connectorId}`,
     );
     expect(hidden.status()).toBe(404);
     expect(await hidden.text()).not.toContain(displayName);
+  } catch (error) {
+    journeyError = error;
+    process.stderr.write(
+      `Connector journey failed at ${stage}: ${error instanceof Error ? error.stack : String(error)}\n`,
+    );
   } finally {
-    await mobileContext?.close();
-    await otherContext?.close();
-    await context.close();
-    await fixtures.cleanup();
+    const cleanup = await Promise.allSettled([
+      mobileContext?.close(),
+      otherContext?.close(),
+      context.close(),
+    ]);
+    try {
+      await fixtures.cleanup();
+    } catch (cleanupError) {
+      cleanupFailure = cleanupError;
+      await testInfo.attach("scoped-cleanup-failure", {
+        body: String(cleanupError),
+        contentType: "text/plain",
+      });
+    }
+    const closeFailure = cleanup.find((result) => result.status === "rejected");
+    if (!cleanupFailure && closeFailure?.status === "rejected") {
+      cleanupFailure = closeFailure.reason;
+    }
   }
+  if (journeyError) throw journeyError;
+  if (cleanupFailure) throw cleanupFailure;
 });

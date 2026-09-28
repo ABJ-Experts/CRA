@@ -9,6 +9,29 @@ import {
 import { ProductsController } from "./products.controller";
 
 describe("ProductsController", () => {
+  it("passes parsed release history scope with the verified tenant and actor", async () => {
+    const products = {
+      getSupportPeriods: jest.fn().mockResolvedValue({ supportPeriods: [] }),
+    };
+    const controller = new ProductsController(
+      products as never,
+      {} as never,
+      {} as never,
+    );
+    const user = { id: "actor", organizationId: "tenant" } as RequestUser;
+    await controller.getSupportPeriods(
+      { productId: "product" },
+      { releaseId: "release" },
+      user,
+    );
+    expect(products.getSupportPeriods).toHaveBeenCalledWith({
+      organizationId: "tenant",
+      actorId: "actor",
+      productId: "product",
+      releaseId: "release",
+    });
+  });
+
   it("uses the dedicated product route prefix", () => {
     expect(Reflect.getMetadata(PATH_METADATA, ProductsController)).toBe(
       "products",

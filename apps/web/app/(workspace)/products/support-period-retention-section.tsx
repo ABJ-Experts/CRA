@@ -23,6 +23,10 @@ import {
 } from "../../_features/products/products.queries";
 import { useOrganizationSettingsQuery } from "../../_features/organizations/organizations.queries";
 import { ApiClientError } from "../../_lib/http/api-client";
+import {
+  utcDateTimeInputValue,
+  utcInstantFromDateTimeInput,
+} from "../../_features/products/utc-date-time";
 
 function messageFor(error: unknown, fallback: string): string {
   if (error instanceof ApiClientError && error.status === 403) {
@@ -68,19 +72,6 @@ function formatComplianceInstant(
   } catch {
     return instant;
   }
-}
-
-function dateTimeInputValue(instant: string): string {
-  if (!instant) return "";
-  const date = new Date(instant);
-  if (Number.isNaN(date.getTime())) return "";
-  return date.toISOString().slice(0, 16);
-}
-
-function utcInstantFromDateTimeInput(value: string): string {
-  if (!value) return "";
-  const date = new Date(`${value}:00.000Z`);
-  return Number.isNaN(date.getTime()) ? value : date.toISOString();
 }
 
 export function SupportPeriodRetentionSection({
@@ -527,7 +518,8 @@ export function SupportPeriodRetentionSection({
             <Input
               label="Support starts (UTC)"
               type="datetime-local"
-              value={dateTimeInputValue(supportStartsAt)}
+              step="0.001"
+              value={utcDateTimeInputValue(supportStartsAt)}
               onChange={updateSupportStartsAt}
               onInput={updateSupportStartsAt}
               required
@@ -535,7 +527,8 @@ export function SupportPeriodRetentionSection({
             <Input
               label="Support ends (UTC)"
               type="datetime-local"
-              value={dateTimeInputValue(supportEndsAt)}
+              step="0.001"
+              value={utcDateTimeInputValue(supportEndsAt)}
               onChange={updateSupportEndsAt}
               onInput={updateSupportEndsAt}
               required

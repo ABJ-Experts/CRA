@@ -1,4 +1,9 @@
 import {
+  productOwnerOptionsQuerySchema,
+  productOwnerOptionsResponseSchema,
+  type ProductOwnerOptionsQuery,
+} from "@repo/contracts/products";
+import {
   addReleaseMarketAvailabilityInputSchema,
   appendSoftwareBaselineRevisionInputSchema,
   archiveProductInputSchema,
@@ -69,6 +74,7 @@ import {
   supportAlertIntervalsResponseSchema,
   supportAlertHistoryResponseSchema,
   supportPeriodHistoryResponseSchema,
+  supportPeriodHistoryQuerySchema,
   supportPeriodIdParamsSchema,
   previewSupportPeriodChangeRequestSchema,
   supportPeriodChangePreviewResponseSchema,
@@ -345,6 +351,18 @@ function queryPath(
 
 /** Typed browser boundary for the authoritative M2 API, never dashboard mocks. */
 export class ProductsApi {
+  async ownerOptions(
+    input: Partial<ProductOwnerOptionsQuery> = {},
+    signal?: AbortSignal,
+  ) {
+    const query = apiClient.parseInput(productOwnerOptionsQuerySchema, input);
+    return authenticatedRequestJson({
+      path: queryPath("/api/v1/products/owner-options", query),
+      schema: productOwnerOptionsResponseSchema,
+      signal,
+    });
+  }
+
   uploadReservedSecurityUpdateArtifact(
     uploadUrl: string,
     file: File,
@@ -776,10 +794,11 @@ export class ProductsApi {
         400,
       );
     }
+    const query = supportPeriodHistoryQuerySchema.parse({
+      releaseId: parsed.data.releaseId,
+    });
     return authenticatedRequestJson({
-      path: queryPath(productPath(productId, "/support-periods"), {
-        releaseId: parsed.data.releaseId,
-      }),
+      path: queryPath(productPath(productId, "/support-periods"), query),
       schema: supportPeriodHistoryResponseSchema,
       signal,
     });

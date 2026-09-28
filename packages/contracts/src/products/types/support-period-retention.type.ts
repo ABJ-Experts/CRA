@@ -7,6 +7,7 @@ export type {
   SupportAlertHistoryItem,
   SupportAlertIntervals,
   SupportPeriodChangePreview,
+  SupportPeriodHistoryQuery,
   SupersedeSupportPeriodRequest,
   UpdateSupportAlertIntervalsRequest,
 } from "../schemas/support-period-retention.schema.js";

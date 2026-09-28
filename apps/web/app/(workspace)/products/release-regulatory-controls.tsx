@@ -23,6 +23,10 @@ import {
   useTransitionReleaseLifecycleMutation,
 } from "../../_features/products/products.queries";
 import { ApiClientError } from "../../_lib/http/api-client";
+import {
+  utcDateTimeInputValue,
+  utcInstantFromDateTimeInput,
+} from "../../_features/products/utc-date-time";
 import { SupportPeriodRetentionSection } from "./support-period-retention-section";
 
 function errorMessage(error: unknown, fallback: string): string {
@@ -570,10 +574,14 @@ export function ReleaseRegulatoryControls({
                       Placed on market at (UTC)
                       <input
                         aria-label="Placed on market at (UTC)"
-                        placeholder="2026-08-12T10:00:00.000Z"
-                        value={placedOnMarketAt}
+                        type="datetime-local"
+                        step="0.001"
+                        required
+                        value={utcDateTimeInputValue(placedOnMarketAt)}
                         onChange={(event) =>
-                          setPlacedOnMarketAt(event.target.value)
+                          setPlacedOnMarketAt(
+                            utcInstantFromDateTimeInput(event.target.value),
+                          )
                         }
                         className="mt-1 h-10 w-full rounded-xl border border-border bg-canvas px-3 text-caption-1-regular text-fg"
                       />
@@ -621,9 +629,14 @@ export function ReleaseRegulatoryControls({
                       Corrected UTC timestamp
                       <input
                         aria-label="Corrected UTC timestamp"
-                        value={correctedPlacedOnMarketAt}
+                        type="datetime-local"
+                        step="0.001"
+                        required
+                        value={utcDateTimeInputValue(correctedPlacedOnMarketAt)}
                         onChange={(event) =>
-                          setCorrectedPlacedOnMarketAt(event.target.value)
+                          setCorrectedPlacedOnMarketAt(
+                            utcInstantFromDateTimeInput(event.target.value),
+                          )
                         }
                         className="mt-1 h-10 w-full rounded-xl border border-border bg-canvas px-3 text-caption-1-regular text-fg"
                       />

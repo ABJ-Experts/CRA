@@ -1091,11 +1091,21 @@ export class ProductUseCases
       organizationId: string;
       actorId: string;
       productId: string;
+      releaseId?: string;
     }>,
   ): Promise<
     ProductResult<Readonly<{ supportPeriods: readonly ProductSupportPeriod[] }>>
   > {
     try {
+      if (command.releaseId !== undefined) {
+        const release = await this.repository.getRelease(
+          command.organizationId,
+          command.actorId,
+          command.productId,
+          command.releaseId,
+        );
+        if (release.outcome !== "found") return this.notFound();
+      }
       const outcome = await this.repository.getSupportPeriods(
         command.organizationId,
         command.actorId,
@@ -1104,7 +1114,14 @@ export class ProductUseCases
       return outcome.outcome === "found"
         ? success(
             Object.freeze({
-              supportPeriods: Object.freeze([...outcome.supportPeriods]),
+              supportPeriods: Object.freeze(
+                outcome.supportPeriods.filter(
+                  (period) =>
+                    command.releaseId === undefined ||
+                    period.releaseId === null ||
+                    period.releaseId === command.releaseId,
+                ),
+              ),
             }),
           )
         : this.notFound();

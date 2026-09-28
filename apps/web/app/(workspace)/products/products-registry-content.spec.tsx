@@ -149,6 +149,7 @@ describe("ProductsRegistryContent", () => {
       screen.getByRole("heading", { name: "Products" }),
     ).toBeInTheDocument();
     expect(screen.getByText("Sentinel")).toBeInTheDocument();
+    expect(screen.getByText("Not classified")).toBeInTheDocument();
     expect(screen.getByText(/CRA-001/)).toBeInTheDocument();
     expect(screen.queryByText("SKU")).not.toBeInTheDocument();
   });
@@ -223,3 +224,13 @@ describe("ProductsRegistryContent", () => {
     ).toBeInTheDocument();
   });
 });
+
+vi.mock("../../_features/products/product-classification.queries", () => ({
+  useProductClassifications: () => ({
+    data: { classifications: [] },
+    isPending: false,
+    isError: false,
+    refetch: vi.fn(),
+  }),
+  useProductClassificationHistory: () => ({ isPending: true }),
+}));

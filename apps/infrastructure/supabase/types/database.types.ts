@@ -5975,6 +5975,96 @@ export type Database = {
         }
         Relationships: []
       }
+      product_classification_runs: {
+        Row: {
+          answers: Json
+          classification: string
+          created_at: string
+          created_by: string
+          id: string
+          idempotency_key: string
+          organization_id: string
+          policy_hash: string
+          policy_snapshot: Json
+          product_id: string
+          product_version: number
+          rationale: string
+          request_digest: string
+          revision: number
+          supersedes_id: string | null
+        }
+        Insert: {
+          answers: Json
+          classification: string
+          created_at?: string
+          created_by: string
+          id?: string
+          idempotency_key: string
+          organization_id: string
+          policy_hash: string
+          policy_snapshot: Json
+          product_id: string
+          product_version: number
+          rationale: string
+          request_digest: string
+          revision: number
+          supersedes_id?: string | null
+        }
+        Update: {
+          answers?: Json
+          classification?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          idempotency_key?: string
+          organization_id?: string
+          policy_hash?: string
+          policy_snapshot?: Json
+          product_id?: string
+          product_version?: number
+          rationale?: string
+          request_digest?: string
+          revision?: number
+          supersedes_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_classification_runs_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_classification_runs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_classification_runs_organization_id_product_id_fkey"
+            columns: ["organization_id", "product_id"]
+            isOneToOne: false
+            referencedRelation: "product_retention_alert_operations"
+            referencedColumns: ["organization_id", "product_id"]
+          },
+          {
+            foreignKeyName: "product_classification_runs_organization_id_product_id_fkey"
+            columns: ["organization_id", "product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "product_classification_runs_organization_id_product_id_sup_fkey"
+            columns: ["organization_id", "product_id", "supersedes_id"]
+            isOneToOne: false
+            referencedRelation: "product_classification_runs"
+            referencedColumns: ["organization_id", "product_id", "id"]
+          },
+        ]
+      }
       product_create_idempotencies: {
         Row: {
           actor_user_id: string
@@ -22773,6 +22863,30 @@ export type Database = {
           product: Json
         }[]
       }
+      get_product_classification_history: {
+        Args: {
+          p_actor_user_id: string
+          p_organization_id: string
+          p_page: number
+          p_page_size: number
+          p_product_id: string
+        }
+        Returns: {
+          history: Json
+          outcome: string
+        }[]
+      }
+      get_product_classifications_latest: {
+        Args: {
+          p_actor_user_id: string
+          p_organization_id: string
+          p_product_ids: string[]
+        }
+        Returns: {
+          classifications: Json
+          outcome: string
+        }[]
+      }
       get_product_component_links: {
         Args: {
           p_actor_user_id: string
@@ -25163,6 +25277,22 @@ export type Database = {
       m2_bump_relationship_graph: {
         Args: { p_actor_user_id: string; p_organization_id: string }
         Returns: number
+      }
+      m2_classification_actor_can: {
+        Args: {
+          p_actor_user_id: string
+          p_organization_id: string
+          p_permission: string
+        }
+        Returns: boolean
+      }
+      m2_classification_policy: { Args: never; Returns: Json }
+      m2_classification_result: { Args: { p_answers: Json }; Returns: string }
+      m2_classification_run_json: {
+        Args: {
+          p_run: Database["public"]["Tables"]["product_classification_runs"]["Row"]
+        }
+        Returns: Json
       }
       m2_component_link_preview: {
         Args: {
@@ -28497,6 +28627,24 @@ export type Database = {
           branding: Json
           draft: Json
           outcome: string
+        }[]
+      }
+      save_product_classification_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_answers: Json
+          p_expected_product_version: number
+          p_expected_revision: number
+          p_idempotency_key: string
+          p_organization_id: string
+          p_policy_hash: string
+          p_policy_snapshot: Json
+          p_product_id: string
+          p_rationale: string
+        }
+        Returns: {
+          outcome: string
+          run: Json
         }[]
       }
       save_product_import_rows_page: {

@@ -1,3 +1,17 @@
+import { ProductClassificationsController } from "./product-classifications.controller";
+import {
+  ProductClassificationUseCases,
+  PRODUCT_CLASSIFICATION_REPOSITORY,
+  type ProductClassificationRepository,
+} from "./application/product-classification";
+import { SupabaseProductClassificationRepository } from "./infrastructure/supabase-product-classification";
+import { ProductOwnersController } from "./product-owners.controller";
+import {
+  ProductOwnerOptions,
+  PRODUCT_OWNER_DIRECTORY,
+  type ProductOwnerDirectory,
+} from "./application/product-owner-options";
+import { SupabaseProductOwnerDirectory } from "./infrastructure/supabase-product-owner-directory";
 import { randomUUID } from "node:crypto";
 import { Logger, Module } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
@@ -61,8 +75,35 @@ const complianceMetricsLogger = new Logger(ProductComplianceWorker.name);
 
 @Module({
   imports: [SupabaseModule, OrganizationsModule, PermissionsModule, MailModule],
-  controllers: [ProductImportsController, ProductsController],
+  controllers: [
+    ProductImportsController,
+    ProductOwnersController,
+    ProductClassificationsController,
+    ProductsController,
+  ],
   providers: [
+    SupabaseProductClassificationRepository,
+    {
+      provide: PRODUCT_CLASSIFICATION_REPOSITORY,
+      useExisting: SupabaseProductClassificationRepository,
+    },
+    {
+      provide: ProductClassificationUseCases,
+      inject: [PRODUCT_CLASSIFICATION_REPOSITORY],
+      useFactory: (repository: ProductClassificationRepository) =>
+        new ProductClassificationUseCases(repository),
+    },
+    SupabaseProductOwnerDirectory,
+    {
+      provide: PRODUCT_OWNER_DIRECTORY,
+      useExisting: SupabaseProductOwnerDirectory,
+    },
+    {
+      provide: ProductOwnerOptions,
+      inject: [PRODUCT_OWNER_DIRECTORY],
+      useFactory: (directory: ProductOwnerDirectory) =>
+        new ProductOwnerOptions(directory),
+    },
     SupabaseProductRepository,
     SupabaseProductComplianceRepository,
     SupabaseProductComplianceStorageAdapter,

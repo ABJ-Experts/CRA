@@ -159,6 +159,7 @@ export const exportSourceRegistry: readonly ExportSourceRegistration[] =
         "product_substantial_modification_assessments",
         "product_substantial_modification_releases",
         "product_security_update_artifacts",
+        "product_classification_runs",
       ],
     },
     {

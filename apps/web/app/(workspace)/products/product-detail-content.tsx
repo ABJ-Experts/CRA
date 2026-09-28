@@ -1,6 +1,18 @@
 "use client";
 
 import {
+  resolveProductCreateAttempt,
+  type ProductCreateAttempt,
+} from "../../_features/products/product-create-retry";
+
+import {
+  ProductOwnerSelector,
+  ProductOwnerLabel,
+} from "../../_features/products/product-owner-selector";
+import { ProductClassificationBadge } from "../../_features/products/product-classification-badge";
+import { useProductClassifications } from "../../_features/products/product-classification.queries";
+
+import {
   createReleaseInputSchema,
   updateProductInputSchema,
   type Product,
@@ -24,12 +36,20 @@ import {
   FileText,
   FilePenLine,
   GitBranch,
+  ListChecks,
   ShieldCheck,
   Wrench,
   type LucideIcon,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, type ReactNode } from "react";
+import {
+  lazy,
+  Suspense,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 
 import {
   useArchiveProductMutation,
@@ -56,6 +76,12 @@ import { SbomIntakeSection } from "./sbom-intake-section";
 import { SbomCompositeReviewSection } from "./sbom-composite-review-section";
 import { SbomSupplierReviewSection } from "./sbom-supplier-review-section";
 
+const ProductClassificationPanel = lazy(() =>
+  import("../../_features/products/product-classification-panel").then(
+    (module) => ({ default: module.ProductClassificationPanel }),
+  ),
+);
+
 const PRODUCT_TYPE_LABELS = Object.freeze({
   hardware_with_software: "Hardware with software",
   standalone_software: "Standalone software",
@@ -65,6 +91,7 @@ const PRODUCT_TYPE_LABELS = Object.freeze({
 
 type WorkbenchPanel =
   | "edit-product"
+  | "classification"
   | "releases"
   | "relationships"
   | "modifications"
@@ -73,6 +100,7 @@ type WorkbenchPanel =
 type WorkbenchTab =
   | "identity"
   | "ownership"
+  | "classification"
   | "releases"
   | "lifecycle"
   | "support"
@@ -96,6 +124,12 @@ const WORKBENCH_ITEMS = Object.freeze([
     title: "Edit product",
     description: "Update product identity and ownership.",
     icon: FilePenLine,
+  },
+  {
+    id: "classification",
+    title: "CRA classification",
+    description: "Record provisional scope and category declarations.",
+    icon: ListChecks,
   },
   {
     id: "releases",
@@ -128,6 +162,7 @@ const WORKBENCH_TABS = Object.freeze({
     { value: "identity", label: "Identity" },
     { value: "ownership", label: "Ownership" },
   ],
+  classification: [{ value: "classification", label: "Classification" }],
   releases: [
     { value: "releases", label: "Releases" },
     { value: "lifecycle", label: "Lifecycle" },
@@ -152,6 +187,7 @@ const WORKBENCH_TABS = Object.freeze({
 
 const WORKBENCH_MODAL_SIZES = Object.freeze({
   "edit-product": "md",
+  classification: "lg",
   releases: "xl",
   relationships: "xl",
   modifications: "xl",
@@ -289,15 +325,12 @@ function ProductEditor({
         </>
       ) : (
         <>
-          <label className="flex flex-col gap-2 text-caption-1-regular text-fg sm:col-span-2">
-            Responsible owner ID
-            <input
-              required
+          <div className="sm:col-span-2">
+            <ProductOwnerSelector
               value={responsibleOwnerId}
-              onChange={(event) => setResponsibleOwnerId(event.target.value)}
-              className="h-10 rounded-xl border border-border bg-canvas px-3 text-subhead-regular text-fg"
+              onChange={setResponsibleOwnerId}
             />
-          </label>
+          </div>
           <label className="flex flex-col gap-2 text-caption-1-regular text-fg sm:col-span-2">
             Description
             <textarea
@@ -447,7 +480,7 @@ function ProductWorkbenchDialog({
   );
 }
 
-function ReleaseCreateForm({ productId }: { productId: string }) {
+export function ReleaseCreateForm({ productId }: { productId: string }) {
   const create = useCreateReleaseMutation(productId);
   const [draft, setDraft] = useState({
     label: "",
@@ -456,13 +489,16 @@ function ReleaseCreateForm({ productId }: { productId: string }) {
   });
   const [message, setMessage] = useState<string | null>(null);
 
+  const attempt = useRef<ProductCreateAttempt | null>(null);
+
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const parsed = createReleaseInputSchema.safeParse({
-      ...draft,
-      description: draft.description?.trim() || undefined,
-      idempotencyKey: crypto.randomUUID(),
-    });
+    const parsed = createReleaseInputSchema
+      .omit({ idempotencyKey: true })
+      .safeParse({
+        ...draft,
+        description: draft.description?.trim() || undefined,
+      });
     if (!parsed.success) {
       setMessage(
         parsed.error.issues[0]?.message ?? "Check the release details.",
@@ -470,7 +506,16 @@ function ReleaseCreateForm({ productId }: { productId: string }) {
       return;
     }
     try {
-      await create.mutateAsync(parsed.data);
+      attempt.current = resolveProductCreateAttempt(
+        attempt.current,
+        `release:${productId}`,
+        parsed.data,
+      );
+      await create.mutateAsync({
+        ...parsed.data,
+        idempotencyKey: attempt.current.key,
+      });
+      attempt.current = null;
       setDraft({
         label: "",
         version: "",
@@ -772,6 +817,8 @@ export function ProductDetailContent({ productId }: { productId: string }) {
   const canViewEvidence = permissions.can_view_evidence === true;
   const canUploadSboms = permissions.can_upload_sboms === true;
   const canReviewSboms = permissions.can_review_sboms === true;
+  const classifications = useProductClassifications([productId], enabled);
+  const [classificationDirty, setClassificationDirty] = useState(false);
   const [activePanel, setActivePanel] = useState<WorkbenchPanel | null>(null);
   const [activeTab, setActiveTab] = useState<WorkbenchTab>("identity");
   const canEditCurrentProduct = canEdit && !product.data?.product.archivedAt;
@@ -796,6 +843,15 @@ export function ProductDetailContent({ productId }: { productId: string }) {
   const reloadProductData = () => {
     void product.refetch();
     void releases.refetch();
+  };
+  const closeWorkbench = () => {
+    if (
+      classificationDirty &&
+      !window.confirm("Discard unsaved classification answers and rationale?")
+    )
+      return;
+    setClassificationDirty(false);
+    setActivePanel(null);
   };
   const openWorkbench = (panel: WorkbenchPanel) => {
     setActiveTab(WORKBENCH_TABS[panel][0].value);
@@ -912,6 +968,24 @@ export function ProductDetailContent({ productId }: { productId: string }) {
                   <span className="inline-flex rounded-full bg-canvas px-2.5 py-1 text-caption-1-semibold text-fg-muted">
                     {product.data.product.archivedAt ? "Archived" : "Active"}
                   </span>
+                  <ProductClassificationBadge
+                    productVersion={product.data.product.version}
+                    latest={
+                      classifications.data?.classifications.find(
+                        (row) => row.productId === productId,
+                      )?.latest
+                    }
+                    loading={classifications.isPending}
+                    unavailable={classifications.isError}
+                  />
+                  {classifications.isError ? (
+                    <Button
+                      variant="outline"
+                      onClick={() => void classifications.refetch()}
+                    >
+                      Retry classification summary
+                    </Button>
+                  ) : null}
                 </div>
                 <p className="mt-4 max-w-4xl text-subhead-regular text-fg">
                   {product.data.product.description ??
@@ -943,7 +1017,10 @@ export function ProductDetailContent({ productId }: { productId: string }) {
                     Responsible owner
                   </dt>
                   <dd className="mt-1 break-all text-caption-1-regular text-fg">
-                    {product.data.product.responsibleOwnerId}
+                    <ProductOwnerLabel
+                      productId={product.data.product.id}
+                      ownerId={product.data.product.responsibleOwnerId}
+                    />
                   </dd>
                 </div>
                 <div className="min-w-0 rounded-xl border border-border bg-surface-subtle p-4">
@@ -1028,13 +1105,29 @@ export function ProductDetailContent({ productId }: { productId: string }) {
               tab={activeTab}
               canEdit={canEditCurrentProduct}
               onTabChange={setActiveTab}
-              onClose={() => setActivePanel(null)}
+              onClose={closeWorkbench}
             >
               {visiblePanel === "edit-product" ? (
                 <ProductEditor
                   product={product.data.product}
                   tab={activeTab === "ownership" ? "ownership" : "identity"}
                 />
+              ) : null}
+              {visiblePanel === "classification" ? (
+                <Suspense
+                  fallback={
+                    <p className="text-subhead-regular text-fg-muted">
+                      Loading classification…
+                    </p>
+                  }
+                >
+                  <ProductClassificationPanel
+                    key={productId}
+                    productId={productId}
+                    canEdit={canEdit && !product.data.product.archivedAt}
+                    onDirtyChange={setClassificationDirty}
+                  />
+                </Suspense>
               ) : null}
               {visiblePanel === "releases" ? (
                 <>

@@ -206,6 +206,17 @@ select pg_temp.check(
 );
 
 select pg_temp.check(
+  'connector hardening constraints protect historical rows as well as new writes',
+  (select count(*) = 3 and bool_and(convalidated)
+    from pg_constraint
+    where (conrelid, conname) in (
+      ('public.connectors'::regclass, 'connectors_create_idempotency_pair_check'),
+      ('public.sync_conflicts'::regclass, 'sync_conflicts_exactly_one_target_check'),
+      ('public.sync_run_plan_items'::regclass, 'sync_run_plan_items_field_diffs_schema_check')
+    ))
+);
+
+select pg_temp.check(
   'a protected field can never be persisted as external_authoritative',
   not exists (
     select 1 from pg_constraint
@@ -271,6 +282,32 @@ begin
   );
   perform pg_temp.check('connector creation succeeds', v_result.outcome = 'created');
   v_connector_id := (v_result.connector ->> 'id')::uuid;
+  begin
+    update public.connectors set create_request_digest = null
+    where organization_id = v_org and id = v_connector_id;
+    perform pg_temp.check('a keyed connector without its request digest was wrongly allowed', false);
+  exception when check_violation then
+    perform pg_temp.check('the database rejects a keyed connector without its request digest', true);
+  end;
+
+  begin
+    update public.connectors set create_idempotency_key = null
+    where organization_id = v_org and id = v_connector_id;
+    perform pg_temp.check('a request digest without its connector key was wrongly allowed', false);
+  exception when check_violation then
+    perform pg_temp.check('the database rejects a request digest without its connector key', true);
+  end;
+
+  -- Historical connectors legitimately predate creation idempotency metadata.
+  begin
+    update public.connectors
+    set create_idempotency_key = null, create_request_digest = null
+    where organization_id = v_org and id = v_connector_id;
+    perform pg_temp.check('historical connectors may retain an entirely absent idempotency pair', true);
+    raise exception using errcode = 'P0002', message = 'roll back historical-pair fixture';
+  exception when no_data_found then null;
+  end;
+
   select * into v_result from public.create_connector_atomic(
     v_org, v_actor, v_connector_create_key, 'reference_conformance', 'Reference connector', '1.0.0', 'm2-v2-reference-v1',
     '{"baseUrl":"https://reference.example.test"}'::jsonb, 'manual'

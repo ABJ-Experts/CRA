@@ -22,6 +22,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiClientError } from "../../_lib/http/api-client";
 import { ProductDetailContent } from "./product-detail-content";
 
+vi.mock("../../_features/products/product-owner-options.queries", () => ({
+  useProductOwnerOptionsQuery: () => ({
+    data: { owners: { rows: [], pageCount: 1 }, selectedOwner: null },
+    isPending: false,
+  }),
+}));
+
 class ResizeObserverMock {
   observe() {}
   unobserve() {}
@@ -174,6 +181,10 @@ const SUPPORT_PERIOD = {
 } satisfies ProductSupportPeriod;
 
 const transitionMutation = {
+  isPending: false,
+  mutateAsync: vi.fn(async () => ({ release: RELEASE })),
+};
+const correctPlacedDateMutation = {
   isPending: false,
   mutateAsync: vi.fn(async () => ({ release: RELEASE })),
 };
@@ -420,10 +431,7 @@ vi.mock("../../_features/products/products.queries", () => ({
     mutateAsync: vi.fn(),
   }),
   useTransitionReleaseLifecycleMutation: () => transitionMutation,
-  useCorrectPlacedOnMarketDateMutation: () => ({
-    isPending: false,
-    mutateAsync: vi.fn(),
-  }),
+  useCorrectPlacedOnMarketDateMutation: () => correctPlacedDateMutation,
   useSupportPeriodHistoryQuery: () => state.supportPeriods,
   useSupportPeriodRetentionQuery: () => state.supportRetention,
   useSupportAlertsQuery: () => state.supportAlerts,
@@ -964,7 +972,7 @@ describe("ProductDetailContent", () => {
     fireEvent.click(screen.getByRole("tab", { name: "Lifecycle" }));
 
     fireEvent.change(screen.getByLabelText("Placed on market at (UTC)"), {
-      target: { value: "2026-08-12T10:00:00.000Z" },
+      target: { value: "2026-08-12T10:00:00.000" },
     });
     fireEvent.click(
       screen.getByRole("button", { name: "Transition lifecycle" }),
@@ -978,6 +986,71 @@ describe("ProductDetailContent", () => {
     expect(
       screen.queryByRole("button", { name: "Reload current data" }),
     ).not.toBeInTheDocument();
+  });
+
+  it("uses native UTC placement input and preserves milliseconds in the request", async () => {
+    state.releases.data = {
+      releases: {
+        rows: [RELEASE],
+        total: 1,
+        page: 1,
+        pageSize: 50,
+        pageCount: 1,
+      },
+    };
+    render(<ProductDetailContent productId={PRODUCT.id} />);
+    openReleaseWorkspace();
+    fireEvent.click(screen.getByRole("tab", { name: "Lifecycle" }));
+    const input = screen.getByLabelText("Placed on market at (UTC)");
+    expect(input).toHaveAttribute("type", "datetime-local");
+    expect(input).toHaveAttribute("step", "0.001");
+    fireEvent.change(input, { target: { value: "2026-03-29T02:30:15.123" } });
+    fireEvent.click(
+      screen.getByRole("button", { name: "Transition lifecycle" }),
+    );
+    await waitFor(() =>
+      expect(transitionMutation.mutateAsync).toHaveBeenCalledWith(
+        expect.objectContaining({
+          placedOnMarketAt: "2026-03-29T02:30:15.123Z",
+        }),
+      ),
+    );
+  });
+
+  it("preserves the existing placement precision until an explicit date correction", async () => {
+    state.releases.data = {
+      releases: {
+        rows: [
+          {
+            ...RELEASE,
+            lifecycle: "placed_on_market",
+            placedOnMarketAt: "2026-08-12T10:00:45.123Z",
+          },
+        ],
+        total: 1,
+        page: 1,
+        pageSize: 50,
+        pageCount: 1,
+      },
+    };
+    render(<ProductDetailContent productId={PRODUCT.id} />);
+    openReleaseWorkspace();
+    fireEvent.click(screen.getByRole("tab", { name: "Lifecycle" }));
+    const input = screen.getByLabelText("Corrected UTC timestamp");
+    expect(input).toHaveAttribute("type", "datetime-local");
+    expect(input).toHaveValue("2026-08-12T10:00:45.123");
+    fireEvent.change(screen.getByLabelText("Correction reason"), {
+      target: { value: "Confirmed original placement time" },
+    });
+    fireEvent.submit(input.closest("form")!);
+    await waitFor(() =>
+      expect(correctPlacedDateMutation.mutateAsync).toHaveBeenCalledWith(
+        expect.objectContaining({
+          correctedPlacedOnMarketAt: "2026-08-12T10:00:45.123Z",
+          expectedVersion: RELEASE.versionNumber,
+        }),
+      ),
+    );
   });
 
   it("submits the next permitted transition after a release changes state", async () => {
@@ -1185,4 +1258,57 @@ describe("ProductDetailContent", () => {
       }),
     );
   });
+  it("lazy-loads classification and requires discard before closing dirty answers", async () => {
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+    render(<ProductDetailContent productId={PRODUCT.id} />);
+    fireEvent.click(screen.getByRole("button", { name: "CRA classification" }));
+    await screen.findByText("Classification editor loaded");
+    fireEvent.click(
+      screen.getByRole("button", { name: "Change classification draft" }),
+    );
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(confirm).toHaveBeenCalledWith(
+      "Discard unsaved classification answers and rationale?",
+    );
+    expect(
+      screen.getByRole("dialog", { name: "CRA classification" }),
+    ).toBeInTheDocument();
+    confirm.mockReturnValue(true);
+    fireEvent.keyDown(document, { key: "Escape" });
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("dialog", { name: "CRA classification" }),
+      ).not.toBeInTheDocument(),
+    );
+    confirm.mockRestore();
+  });
 });
+
+vi.mock("../../_features/products/product-classification.queries", () => ({
+  useProductClassifications: () => ({
+    data: { classifications: [] },
+    isPending: false,
+    isError: false,
+    refetch: vi.fn(),
+  }),
+  useProductClassificationHistory: () => ({ isPending: true }),
+}));
+
+vi.mock("../../_features/products/product-classification-panel", () => ({
+  ProductClassificationPanel: ({
+    onDirtyChange,
+    canEdit,
+  }: {
+    onDirtyChange?: (dirty: boolean) => void;
+    canEdit: boolean;
+  }) => (
+    <div>
+      <p>Classification editor loaded</p>
+      {canEdit ? (
+        <button onClick={() => onDirtyChange?.(true)}>
+          Change classification draft
+        </button>
+      ) : null}
+    </div>
+  ),
+}));

@@ -352,11 +352,11 @@ export function useSupportPeriodHistoryQuery(
 
 export function useSupportPeriodRetentionQuery(
   productId: string,
-  releaseId: string,
+  _releaseId: string,
   enabled: boolean,
 ) {
   return useQuery({
-    queryKey: productKeys.supportRetention(productId, releaseId),
+    queryKey: productKeys.supportRetention(productId),
     enabled,
     retry: false,
     queryFn: ({ signal }) => productsApi.getSupportRetention(productId, signal),
@@ -365,11 +365,11 @@ export function useSupportPeriodRetentionQuery(
 
 export function useSupportAlertsQuery(
   productId: string,
-  releaseId: string,
+  _releaseId: string,
   enabled: boolean,
 ) {
   return useQuery({
-    queryKey: productKeys.supportAlerts(productId, releaseId),
+    queryKey: productKeys.supportAlerts(productId),
     enabled,
     retry: false,
     queryFn: ({ signal }) => productsApi.getSupportAlerts(productId, signal),
@@ -486,8 +486,34 @@ function useInvalidateProducts() {
   return async (
     productId?: string,
     releaseId?: string,
-    options: Readonly<{ support?: boolean; relationships?: boolean }> = {},
+    options: Readonly<{
+      support?: boolean;
+      relationships?: boolean;
+      refreshShared?: boolean;
+    }> = {},
   ) => {
+    if (productId && options.relationships) {
+      // The write is already committed. Refresh disjoint cache prefixes in the
+      // background so a slow read cannot leave the form claiming it is saving.
+      // Query observers retain refresh/error state; server versions still guard
+      // subsequent edits made before refreshed data arrives.
+      const keys = [
+        ...(options.refreshShared === false
+          ? []
+          : [productKeys.lists, productKeys.baselineLists]),
+        productKeys.detail(productId),
+        productKeys.releases(productId),
+        productKeys.baselineMemberships(productId),
+        productKeys.variantRelationships(productId),
+        productKeys.componentLinks(productId),
+        productKeys.relationshipGraph(productId),
+        productKeys.relationshipPropagationEvents(productId),
+      ];
+      keys.forEach((queryKey) => {
+        void client.invalidateQueries({ queryKey });
+      });
+      return;
+    }
     await Promise.all([
       client.invalidateQueries({ queryKey: productKeys.all }),
       ...(productId
@@ -508,26 +534,6 @@ function useInvalidateProducts() {
                   }),
                   client.invalidateQueries({
                     queryKey: productKeys.supportAlerts(productId),
-                  }),
-                ]
-              : []),
-            ...(options.relationships
-              ? [
-                  client.invalidateQueries({
-                    queryKey: productKeys.baselineMemberships(productId),
-                  }),
-                  client.invalidateQueries({
-                    queryKey: productKeys.variantRelationships(productId),
-                  }),
-                  client.invalidateQueries({
-                    queryKey: productKeys.componentLinks(productId),
-                  }),
-                  client.invalidateQueries({
-                    queryKey: productKeys.relationshipGraph(productId),
-                  }),
-                  client.invalidateQueries({
-                    queryKey:
-                      productKeys.relationshipPropagationEvents(productId),
                   }),
                 ]
               : []),
@@ -912,11 +918,13 @@ export function useUpdateSupportAlertIntervalsMutation() {
 }
 
 export function useCreateSoftwareBaselineMutation() {
-  const invalidate = useInvalidateProducts();
+  const client = useQueryClient();
   return useMutation({
     mutationFn: (input: CreateSoftwareBaselineInput) =>
       productsApi.createSoftwareBaseline(input),
-    onSuccess: () => invalidate(),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: productKeys.baselineLists });
+    },
   });
 }
 
@@ -992,6 +1000,7 @@ export function useCreateProductVariantRelationshipMutation(productId: string) {
           : [
               invalidate(input.variantProductId, undefined, {
                 relationships: true,
+                refreshShared: false,
               }),
             ]),
       ]);
