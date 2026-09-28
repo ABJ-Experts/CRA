@@ -184,22 +184,99 @@ describe("sbomsApi", () => {
     expect(fetcher).not.toHaveBeenCalled();
   });
 
+  it("accepts an explicit verified terminal reservation without a storage ticket", async () => {
+    const response = {
+      source: { ...SOURCE, status: "verified", completedAt: NOW },
+      upload: null,
+      replayed: true,
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => json(response)),
+    );
+    await expect(
+      sbomsApi.initializeUpload({
+        productId: PRODUCT_ID,
+        releaseId: RELEASE_ID,
+        fileName: SOURCE.fileName,
+        mediaType: SOURCE.mediaType,
+        byteSize: SOURCE.byteSize,
+        sha256: SOURCE.sha256,
+        idempotencyKey: IDEMPOTENCY_KEY,
+      }),
+    ).resolves.toEqual(response);
+  });
+
   it("completes and reads durable jobs through opaque parsed identifiers", async () => {
+    const completion = {
+      ...JOB_RESPONSE,
+      completion: {
+        outcome: "queued",
+        sourceId: UPLOAD_ID,
+        canonicalSourceId: SOURCE_ID,
+      },
+    };
     const fetcher = vi.fn(async (path: string) => {
-      if (path.endsWith("/complete")) return json(JOB_RESPONSE, 202);
+      if (path.endsWith("/complete")) return json(completion, 202);
       return json(JOB_RESPONSE);
     });
     vi.stubGlobal("fetch", fetcher);
 
     await expect(
       sbomsApi.completeUpload(UPLOAD_ID, { idempotencyKey: IDEMPOTENCY_KEY }),
-    ).resolves.toEqual(JOB_RESPONSE);
+    ).resolves.toEqual(completion);
     await expect(sbomsApi.getJob(JOB_ID)).resolves.toEqual(JOB_RESPONSE);
 
     expect(fetcher.mock.calls.map(([path]) => path)).toEqual([
       `/api/v1/sbom-uploads/${UPLOAD_ID}/complete`,
       `/api/v1/sbom-jobs/${JOB_ID}`,
     ]);
+  });
+
+  it.each(["replayed", "deduplicated"] as const)(
+    "parses explicit %s completion metadata without changing the job",
+    async (outcome) => {
+      const response = {
+        ...JOB_RESPONSE,
+        completion: {
+          outcome,
+          sourceId: UPLOAD_ID,
+          canonicalSourceId: SOURCE_ID,
+        },
+      };
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async () => json(response, 202)),
+      );
+      await expect(
+        sbomsApi.completeUpload(UPLOAD_ID, { idempotencyKey: IDEMPOTENCY_KEY }),
+      ).resolves.toEqual(response);
+    },
+  );
+
+  it("manually retries lost completion responses with the exact original command", async () => {
+    const response = {
+      ...JOB_RESPONSE,
+      completion: {
+        outcome: "replayed",
+        sourceId: UPLOAD_ID,
+        canonicalSourceId: SOURCE_ID,
+      },
+    };
+    const fetcher = vi
+      .fn()
+      .mockRejectedValueOnce(new TypeError("response lost"))
+      .mockResolvedValueOnce(json(response, 202));
+    vi.stubGlobal("fetch", fetcher);
+    const input = { idempotencyKey: IDEMPOTENCY_KEY };
+    await expect(
+      sbomsApi.completeUpload(UPLOAD_ID, input),
+    ).rejects.toBeInstanceOf(ApiClientError);
+    expect(fetcher).toHaveBeenCalledOnce();
+    await expect(sbomsApi.completeUpload(UPLOAD_ID, input)).resolves.toEqual(
+      response,
+    );
+    expect(fetcher.mock.calls[1]).toEqual(fetcher.mock.calls[0]);
   });
 
   it("lists release source history and reads validation reports through parsed GET routes", async () => {
@@ -471,5 +548,93 @@ describe("sbomsApi", () => {
         idempotencyKey: IDEMPOTENCY_KEY,
       }),
     ).resolves.toMatchObject({ credential: { revokedAt: NOW } });
+  });
+  it("parses bounded portable export inputs and successful content metadata", async () => {
+    const payload = {
+      export: {
+        documentId: DOCUMENT_ID,
+        sourceId: SOURCE_ID,
+        format: "cyclonedx",
+        specificationVersion: "1.6",
+        fileName: `sbom-${DOCUMENT_ID}.cdx.json`,
+        mediaType: "application/vnd.cyclonedx+json",
+        sha256: "a".repeat(64),
+        content: "{}",
+        vex: { status: "not_requested", assessmentCount: 0 },
+      },
+    };
+    const fetcher = vi.fn(async (path: string) => {
+      void path;
+      return json(payload);
+    });
+    vi.stubGlobal("fetch", fetcher);
+    await expect(
+      sbomsApi.exportDocument(DOCUMENT_ID, {
+        sourceId: SOURCE_ID,
+        format: "cyclonedx",
+        includeVex: false,
+      }),
+    ).resolves.toEqual(payload);
+    expect(fetcher.mock.calls[0]?.[0]).toBe(
+      `/api/v1/sbom-documents/${DOCUMENT_ID}/export?sourceId=${SOURCE_ID}&format=cyclonedx&includeVex=false`,
+    );
+    expect(() =>
+      sbomsApi.exportDocument(DOCUMENT_ID, {
+        sourceId: SOURCE_ID,
+        format: "spdx",
+        includeVex: true,
+      }),
+    ).toThrow();
+    expect(() =>
+      sbomsApi.exportDocument("foreign-invalid", {
+        sourceId: SOURCE_ID,
+        format: "spdx",
+        includeVex: false,
+      }),
+    ).toThrow();
+    fetcher.mockResolvedValue(
+      json({ export: { ...payload.export, mediaType: "text/html" } }),
+    );
+    await expect(
+      sbomsApi.exportDocument(DOCUMENT_ID, {
+        sourceId: SOURCE_ID,
+        format: "cyclonedx",
+        includeVex: false,
+      }),
+    ).rejects.toBeInstanceOf(ApiClientError);
+  });
+  it("rejects parsed exports for another source or different requested options", async () => {
+    const payload = {
+      export: {
+        documentId: DOCUMENT_ID,
+        sourceId: UPLOAD_ID,
+        format: "cyclonedx",
+        specificationVersion: "1.6",
+        fileName: `sbom-${DOCUMENT_ID}.cdx.json`,
+        mediaType: "application/vnd.cyclonedx+json",
+        sha256: "a".repeat(64),
+        content: "{}",
+        vex: { status: "not_requested", assessmentCount: 0 },
+      },
+    };
+    const fetcher = vi.fn(async () => json(payload));
+    vi.stubGlobal("fetch", fetcher);
+    await expect(
+      sbomsApi.exportDocument(DOCUMENT_ID, {
+        sourceId: SOURCE_ID,
+        format: "cyclonedx",
+        includeVex: false,
+      }),
+    ).rejects.toMatchObject({ kind: "invalid_response" });
+    fetcher.mockResolvedValue(
+      json({ export: { ...payload.export, sourceId: SOURCE_ID } }),
+    );
+    await expect(
+      sbomsApi.exportDocument(DOCUMENT_ID, {
+        sourceId: SOURCE_ID,
+        format: "cyclonedx",
+        includeVex: true,
+      }),
+    ).rejects.toMatchObject({ kind: "invalid_response" });
   });
 });

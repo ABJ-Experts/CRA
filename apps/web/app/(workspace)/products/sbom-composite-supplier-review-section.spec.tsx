@@ -208,4 +208,60 @@ describe("SBOM composite and supplier review sections", () => {
       screen.getByLabelText("One-time supplier invitation token"),
     ).toHaveValue("x".repeat(32));
   });
+  it("loads older composite evidence using its bounded cursor", async () => {
+    const user = userEvent.setup();
+    queryHooks.useSbomSourceHistoryQuery.mockReturnValue({
+      data: { sources: [], nextCursor: "older" },
+      isPending: false,
+      isError: false,
+      refetch: vi.fn(),
+    });
+    render(
+      <SbomCompositeReviewSection
+        productId={PRODUCT_ID}
+        releases={RELEASES}
+        canReview
+        enabled
+      />,
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Load older composite sources" }),
+    );
+    expect(queryHooks.useSbomSourceHistoryQuery).toHaveBeenLastCalledWith(
+      PRODUCT_ID,
+      RELEASE_ID,
+      { limit: 100, cursor: "older" },
+      true,
+    );
+  });
+
+  it("loads older supplier request pages without aliasing the first page", async () => {
+    const user = userEvent.setup();
+    queryHooks.useSupplierSbomRequestsQuery.mockReturnValue({
+      data: { requests: [], nextCursor: "older" },
+      isPending: false,
+      isError: false,
+      refetch: vi.fn(),
+    });
+    render(
+      <SbomSupplierReviewSection
+        productId={PRODUCT_ID}
+        releases={RELEASES}
+        canReview
+        enabled
+      />,
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Load older supplier requests" }),
+    );
+    expect(queryHooks.useSupplierSbomRequestsQuery).toHaveBeenLastCalledWith(
+      {
+        productId: PRODUCT_ID,
+        releaseId: RELEASE_ID,
+        limit: 100,
+        cursor: "older",
+      },
+      true,
+    );
+  });
 });

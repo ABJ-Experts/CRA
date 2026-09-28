@@ -1,0 +1,14 @@
+BEGIN
+              set_config              
+--------------------------------------
+ d8d43de1-419f-4c5c-89df-4cf268293019
+(1 row)
+
+INSERT 0 1
+DO
+psql:<stdin>:163: NOTICE:  PASS terminal failure/expired lease progress, retryable/queued/live predecessor ordering, completed-only baseline, tenant isolation
+DO
+SET
+DO
+RESET
+ROLLBACK

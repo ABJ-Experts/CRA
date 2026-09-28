@@ -1,0 +1,51 @@
+{
+  "projectUrl": "http://127.0.0.1:54321",
+  "migration": "20260928093431_m3_source_supplier_pagination_boundaries.sql",
+  "test": "apps/infrastructure/tests/m3-sbom-source-supplier-pagination.test.sql",
+  "red": {
+    "sourceRows13Limit10": 12,
+    "sourceRows113Limit1": 57,
+    "sourceRows113Limit10": 103,
+    "sourceRows113Limit100": 112,
+    "supplierRequests13Limit1": 1,
+    "supplierRequests13Limit10": 10,
+    "supplierSubmissions13Limit1": 1,
+    "supplierSubmissions13Limit10": 10,
+    "malformedCursorAccepted": true
+  },
+  "green": {
+    "exactSetAndOrder": true,
+    "noOmissionsOrDuplicates": true,
+    "limits": [
+      1,
+      10,
+      100
+    ],
+    "sourceRowCounts": [
+      13,
+      113
+    ],
+    "supplierRequestAndSubmissionRowCount": 13,
+    "stateFilters": true,
+    "malformedCursorRejected": true,
+    "foreignScopeIsolation": true,
+    "embeddedInvitationsAndSubmissionsRemainComplete": 13,
+    "transactionRollbackCleanup": true
+  },
+  "sourceSort": "created_at DESC, id DESC",
+  "supplierSort": "created_at DESC, id ASC",
+  "newTables": 0,
+  "newColumns": 0,
+  "fullSqlRegression": {
+    "files": 76,
+    "exitCode": 0,
+    "errorMarkers": 0
+  },
+  "generatedTypeCopiesAligned": true,
+  "logs": {
+    "red": "/tmp/cra-m3-pagination-red.log",
+    "green": "/tmp/cra-m3-pagination-green.log",
+    "fullSql": "/tmp/cra-m3-final-sql76.log",
+    "types": "/tmp/cra-m3-final-types.log"
+  }
+}

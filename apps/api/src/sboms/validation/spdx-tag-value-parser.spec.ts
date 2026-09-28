@@ -1,6 +1,35 @@
 import { parseSpdxTagValue } from "./spdx-tag-value-parser";
 
 describe("parseSpdxTagValue", () => {
+  it("preserves repeated references, checksum fields, relationships and multiline text", () => {
+    const parsed = parseSpdxTagValue(
+      "SPDXVersion: SPDX-2.3\nPackageName: example\nSPDXID: SPDXRef-a\nExternalRef: PACKAGE-MANAGER purl pkg:npm/example@1\nExternalRef: SECURITY cpe23Type cpe:2.3:a:x\nPackageChecksum: SHA256: abc\nPackageSummary: <text>first\nsecond</text>\nRelationship: SPDXRef-a DEPENDS_ON SPDXRef-b\n",
+    );
+    expect(parsed.packages[0]).toMatchObject({
+      externalRefs: [
+        {
+          referenceCategory: "PACKAGE-MANAGER",
+          referenceType: "purl",
+          referenceLocator: "pkg:npm/example@1",
+        },
+        {
+          referenceCategory: "SECURITY",
+          referenceType: "cpe23Type",
+          referenceLocator: "cpe:2.3:a:x",
+        },
+      ],
+      checksums: [{ algorithm: "SHA256", checksumValue: "abc" }],
+      summary: "first\nsecond",
+    });
+    expect(parsed.document.relationships).toEqual([
+      {
+        spdxElementId: "SPDXRef-a",
+        relationshipType: "DEPENDS_ON",
+        relatedSpdxElement: "SPDXRef-b",
+      },
+    ]);
+    expect(parsed.diagnostics).toEqual([]);
+  });
   it("parses repeated package blocks without mutating previous fields", () => {
     const parsed = parseSpdxTagValue(
       [

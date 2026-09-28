@@ -1,0 +1,36 @@
+{
+  "projectUrl": "http://127.0.0.1:54321",
+  "migration": "20260928095456_m3_verified_alias_validation_projection.sql",
+  "test": "apps/infrastructure/tests/m3-deduplicated-validation-projection.test.sql",
+  "redFailures": 8,
+  "status": "applied locally; GREEN",
+  "scope": "Verified aliases with exact organization/product/release/raw-object/SHA256/byte-count lineage; own job takes precedence",
+  "projection": "Persisted canonical report is unchanged; alias declaration diagnostics are read-only, bounded100 with actual counts and omitted count",
+  "newTables": 0,
+  "newColumns": 0,
+  "browserFixtureUntouched": true,
+  "helperDirectServiceRoleExecute": false,
+  "redEvidence": "Eight failing assertions captured before application; last RED log overwritten by passing race with parent CLI application.",
+  "greenLog": "/tmp/cra-m3-alias-green.log",
+  "greenCases": [
+    "Exact canonical report reused",
+    "Summary consistent",
+    "Valid/warnings/invalid/pending reuse",
+    "Own pending job precedence",
+    "Foreign tenant denied via scoped RPC",
+    "Raw/hash substitution denied",
+    "Foreign release blocked by existing FK",
+    "Alias declaration warnings projected",
+    "Invalid content remains invalid",
+    "Visible canonical declaration warnings replaced",
+    "100 diagnostic cap with102 warning total and2 omitted",
+    "Stored canonical report unchanged",
+    "Actual service-role scoped RPC"
+  ],
+  "fullSqlRegression": {
+    "files": 77,
+    "exitCode": 0,
+    "errorMarkers": 0
+  },
+  "generatedTypeCopiesAligned": true
+}

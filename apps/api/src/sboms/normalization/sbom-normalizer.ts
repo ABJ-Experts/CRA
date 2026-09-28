@@ -1,10 +1,15 @@
 import { Readable } from "node:stream";
+import { sbomComponentSchema } from "@repo/contracts/sboms";
+import {
+  SbomNormalizationError,
+  SbomStreamSourceError,
+} from "./sbom-normalization-error";
 
 import { PackageURL } from "packageurl-js";
 import { SaxesParser } from "saxes";
-import { parser } from "stream-json";
+import { boundedJsonTokens } from "../validation/bounded-json-tokens";
 
-export const NORMALIZER_VERSION = "m3-03.1";
+export const NORMALIZER_VERSION = "m3-03.3";
 
 type JsonToken = Readonly<{ name: string; value?: unknown }>;
 
@@ -53,16 +58,26 @@ export type NormalizationDiagnostic = Readonly<{
   source: SbomSourceLocation;
 }>;
 
+export type Spdx3HashCatalogEntry = Readonly<{
+  id: string;
+  hash: Readonly<{ algorithm: string; value: string }> | null;
+}>;
+
 export type SbomNormalizationResult = Readonly<{
+  spdx3HashCatalog?: readonly Spdx3HashCatalogEntry[];
   format: SbomNormalizationFormat;
   specVersion: string | null;
   components: readonly NormalizedComponent[];
   edges: readonly NormalizedDependency[];
   diagnostics: readonly NormalizationDiagnostic[];
   byteSize: number;
+  errorCount?: number;
+  warningCount?: number;
+  omittedDiagnosticCount?: number;
 }>;
 
 export type SbomNormalizationOptions = Readonly<{
+  spdx3HashCatalog?: readonly Spdx3HashCatalogEntry[];
   maximumBytes: number;
   maximumComponents: number;
   /** Awaited before more source tokens are consumed; use this for durable writes. */
@@ -72,6 +87,7 @@ export type SbomNormalizationOptions = Readonly<{
   /** Defaults to true for unit callers; workers set false after durable batching. */
   retainResult?: boolean;
   maximumDiagnostics?: number;
+  onProgress?: () => Promise<void>;
 }>;
 
 export type SbomNormalizationBatch = Readonly<{
@@ -79,20 +95,7 @@ export type SbomNormalizationBatch = Readonly<{
   edges: readonly NormalizedDependency[];
 }>;
 
-export class SbomNormalizationError extends Error {
-  constructor(
-    readonly code:
-      | "normalization_byte_limit_exceeded"
-      | "normalization_component_limit_exceeded"
-      | "normalization_malformed_input"
-      | "normalization_unsupported_format"
-      | "duplicate_local_reference"
-      | "conflicting_local_reference_identity",
-    message: string,
-  ) {
-    super(message);
-  }
-}
+export { SbomNormalizationError } from "./sbom-normalization-error";
 
 type JsonValue = string | number | boolean | null | JsonObject | JsonArray;
 interface JsonObject {
@@ -176,19 +179,32 @@ export async function normalizeSbomStream(
   options: SbomNormalizationOptions,
 ): Promise<SbomNormalizationResult> {
   validateOptions(options);
-  const counted = countBytes(input, options.maximumBytes);
-  const prefix = await readPrefix(counted, 4096);
+  const counted = countBytes(input, options.maximumBytes, options.onProgress);
+  let prefix: Awaited<ReturnType<typeof readPrefix>>;
+  try {
+    prefix = await readPrefix(counted, 4096);
+  } catch (error) {
+    if (error instanceof TypeError)
+      throw malformed("The SBOM is not valid UTF-8.");
+    throw error;
+  }
   const stream = Readable.from(prefix.replay);
   const detected = detectSerialization(prefix.text);
-  if (detected === "json")
-    return normalizeJson(stream, options, prefix.counter);
-  if (detected === "xml") return normalizeXml(stream, options, prefix.counter);
-  if (detected === "tag-value")
-    return normalizeTagValue(stream, options, prefix.counter);
-  throw new SbomNormalizationError(
-    "normalization_unsupported_format",
-    "Unsupported SBOM serialization.",
-  );
+  try {
+    if (detected === "json")
+      return await normalizeJson(stream, options, prefix.counter);
+    if (detected === "xml")
+      return await normalizeXml(stream, options, prefix.counter);
+    if (detected === "tag-value")
+      return await normalizeTagValue(stream, options, prefix.counter);
+    throw new SbomNormalizationError(
+      "normalization_unsupported_format",
+      "Unsupported SBOM serialization.",
+    );
+  } catch (error) {
+    if (error instanceof SbomStreamSourceError) throw error.sourceError;
+    throw error;
+  }
 }
 
 function validateOptions(options: SbomNormalizationOptions): void {
@@ -227,6 +243,89 @@ function validateOptions(options: SbomNormalizationOptions): void {
   }
 }
 
+const persistenceComponentSchema = sbomComponentSchema.pick({
+  documentLocalRef: true,
+  originalName: true,
+  normalizedName: true,
+  originalVersion: true,
+  normalizedVersion: true,
+  originalPurl: true,
+  canonicalPurl: true,
+  cpe: true,
+  ecosystem: true,
+  scope: true,
+  supplier: true,
+  licenseExpression: true,
+  hashes: true,
+  sourceLocation: true,
+});
+function projectionLimit(): SbomNormalizationError {
+  return new SbomNormalizationError(
+    "normalization_projection_limit_exceeded",
+    "The SBOM exceeds the normalized persistence contract limits.",
+  );
+}
+function assertPersistenceComponent(component: NormalizedComponent): void {
+  const fallback = component.localRef ?? `component-${component.source.offset}`;
+  const value = {
+    documentLocalRef: fallback,
+    originalName: component.rawName?.trim() ? component.rawName : fallback,
+    normalizedName:
+      component.normalizedName ||
+      component.rawName?.trim().toLowerCase() ||
+      fallback,
+    originalVersion: component.rawVersion,
+    normalizedVersion: component.normalizedVersion,
+    originalPurl: component.rawPurl,
+    canonicalPurl: component.canonicalPurl,
+    cpe: component.rawCpe,
+    ecosystem: component.ecosystem,
+    scope: component.scope,
+    supplier: component.supplier,
+    licenseExpression: component.licenseExpression,
+    hashes: component.hashes,
+    sourceLocation: {
+      path: component.source.path,
+      byteStart: component.source.offset,
+      byteEnd: component.source.offset,
+      line: component.source.line,
+    },
+  };
+  if (
+    !persistenceComponentSchema.safeParse(value).success ||
+    fallback !== fallback.trim() ||
+    component.source.path !== component.source.path.trim()
+  )
+    throw projectionLimit();
+  // Nullable raw strings are persisted unchanged: contract trim transforms must
+  // not conceal an overlong value that PostgreSQL will reject.
+  for (const key of [
+    "originalVersion",
+    "normalizedVersion",
+    "originalPurl",
+    "canonicalPurl",
+    "cpe",
+    "licenseExpression",
+  ] as const) {
+    const raw = value[key];
+    const maximum = persistenceComponentSchema.shape[key].unwrap().maxLength!;
+    if (raw !== null && raw.length > maximum) throw projectionLimit();
+  }
+  for (const values of [component.supplierValues, component.licenseValues]) {
+    if (
+      values.length > 20 ||
+      Buffer.byteLength(JSON.stringify(values)) + values.length > 32768
+    )
+      throw projectionLimit();
+  }
+  if (
+    Buffer.byteLength(JSON.stringify(component.hashes)) +
+      component.hashes.length * 10 >
+    131072
+  )
+    throw projectionLimit();
+}
+
 class BatchEmitter {
   private components: NormalizedComponent[] = [];
   private edges: NormalizedDependency[] = [];
@@ -240,6 +339,7 @@ class BatchEmitter {
   }
 
   async component(component: NormalizedComponent): Promise<void> {
+    assertPersistenceComponent(component);
     if (!this.options.onBatch) return;
     this.components.push(component);
     this.bytes += estimateRowBytes(component);
@@ -247,6 +347,19 @@ class BatchEmitter {
   }
 
   async edge(edge: NormalizedDependency): Promise<void> {
+    if (
+      !sbomComponentSchema.shape.documentLocalRef.safeParse(edge.fromRef)
+        .success ||
+      !sbomComponentSchema.shape.documentLocalRef.safeParse(edge.toRef)
+        .success ||
+      !sbomComponentSchema.shape.sourceLocation.safeParse({
+        path: edge.source.path,
+        byteStart: edge.source.offset,
+        byteEnd: edge.source.offset,
+        line: edge.source.line,
+      }).success
+    )
+      throw projectionLimit();
     if (!this.options.onBatch) return;
     this.edges.push(edge);
     this.bytes += estimateRowBytes(edge);
@@ -278,7 +391,11 @@ class BatchEmitter {
     this.components = [];
     this.edges = [];
     this.bytes = 0;
-    await this.options.onBatch(batch);
+    try {
+      await this.options.onBatch(batch);
+    } catch (error) {
+      throw new SbomStreamSourceError(error);
+    }
   }
 }
 
@@ -294,12 +411,14 @@ type CountedSource = Readonly<{
 function countBytes(
   input: Readable | AsyncIterable<Uint8Array>,
   maximumBytes: number,
+  onProgress?: () => Promise<void>,
 ): CountedSource {
   const counter = { bytes: 0 };
   const source = input as AsyncIterable<Uint8Array>;
   return Object.freeze({
     counter,
     iterable: (async function* () {
+      const decoder = new TextDecoder("utf-8", { fatal: true });
       for await (const part of source) {
         const bytes = Buffer.isBuffer(part) ? part : Buffer.from(part);
         counter.bytes += bytes.byteLength;
@@ -309,7 +428,27 @@ function countBytes(
             "SBOM byte size exceeds the normalization limit.",
           );
         }
-        yield bytes;
+        for (let offset = 0; offset < bytes.length; offset += 16 * 1024) {
+          const part = bytes.subarray(offset, offset + 16 * 1024);
+          try {
+            decoder.decode(part, { stream: true });
+          } catch {
+            throw malformed("The SBOM is not valid UTF-8.");
+          }
+          if (onProgress) {
+            try {
+              await onProgress();
+            } catch (error) {
+              throw new SbomStreamSourceError(error);
+            }
+          }
+          yield part;
+        }
+      }
+      try {
+        decoder.decode();
+      } catch {
+        throw malformed("The SBOM is not valid UTF-8.");
       }
     })(),
   });
@@ -327,7 +466,7 @@ async function readPrefix(
   const prefix: Uint8Array[] = [];
   let length = 0;
   let text = "";
-  const decoder = new TextDecoder("utf-8", { fatal: false });
+  const decoder = new TextDecoder("utf-8", { fatal: true });
   while (length < maximumPrefixBytes) {
     const next = await iterator.next();
     if (next.done) break;
@@ -336,9 +475,10 @@ async function readPrefix(
     const inspected = next.value.subarray(0, available);
     text += decoder.decode(inspected, { stream: true });
     length += inspected.byteLength;
+    if (detectSerialization(text) !== null) break;
   }
   return {
-    text: text + decoder.decode(),
+    text,
     counter: source.counter,
     replay: (async function* () {
       yield* prefix;
@@ -370,15 +510,20 @@ async function normalizeJson(
   const edges: NormalizedDependency[] = [];
   const diagnostics: NormalizationDiagnostic[] = [];
   const batches = new BatchEmitter(options);
-  const localReferences = new Map<string, NormalizedComponent>();
+  const localReferences = new Map<string, LocalReferenceIdentity>();
   let componentCount = 0;
+  const hashCatalog = new Map<string, Spdx3HashCatalogEntry["hash"]>(
+    options.spdx3HashCatalog?.map((item) => [item.id, item.hash]),
+  );
+  const packageHashes: Array<
+    Readonly<{
+      index: number;
+      refs: readonly string[];
+      source: SbomSourceLocation;
+    }>
+  > = [];
   const metadata: Record<string, string> = {};
   let sequence = 0;
-  const tokenParser = parser({
-    packKeys: true,
-    packStrings: true,
-    packNumbers: true,
-  });
   const frames: JsonFrame[] = [];
   const consume = async (token: JsonToken): Promise<void> => {
     sequence += 1;
@@ -450,17 +595,19 @@ async function normalizeJson(
       frames.length === 1 &&
       parent.kind === "object" &&
       parent.key !== null &&
-      typeof scalar === "string"
+      typeof scalar === "string" &&
+      ["bomFormat", "specVersion", "spdxVersion", "@context"].includes(
+        parent.key,
+      )
     ) {
       metadata[parent.key] = scalar;
     }
   };
   try {
-    input.pipe(tokenParser);
-    for await (const token of tokenParser as AsyncIterable<JsonToken>)
-      await consume(token);
+    for await (const token of boundedJsonTokens(input)) await consume(token);
   } catch (error) {
     if (error instanceof SbomNormalizationError) throw error;
+    if (error instanceof SbomStreamSourceError) throw error.sourceError;
     throw malformed("Malformed JSON SBOM.");
   }
   if (frames.length !== 0) throw malformed("Unclosed JSON structure.");
@@ -477,14 +624,41 @@ async function normalizeJson(
       : metadata["@context"] !== undefined
         ? "spdx-json-ld"
         : "spdx-json";
-  return freezeResult(
-    format,
-    metadata.specVersion ?? metadata.spdxVersion ?? null,
-    components,
-    edges,
-    diagnostics,
-    counter.bytes,
-  );
+  for (const item of packageHashes) {
+    const hashes = item.refs.flatMap((ref) => {
+      const hash = hashCatalog.get(ref);
+      if (!hash)
+        addDiagnostic(
+          diagnostics,
+          options,
+          warning(
+            "unresolved_spdx3_hash",
+            "A declared verification reference could not be resolved to an unambiguous supported hash.",
+            item.source,
+          ),
+        );
+      return hash ? [hash] : [];
+    });
+    const component = components[item.index];
+    if (component)
+      components[item.index] = Object.freeze({
+        ...component,
+        hashes: Object.freeze(hashes),
+      });
+  }
+  return Object.freeze({
+    ...freezeResult(
+      format,
+      metadata.specVersion ?? metadata.spdxVersion ?? null,
+      components,
+      edges,
+      diagnostics,
+      counter.bytes,
+    ),
+    spdx3HashCatalog: Object.freeze(
+      [...hashCatalog].map(([id, hash]) => Object.freeze({ id, hash })),
+    ),
+  });
 
   async function consumeCapturedJson(
     kind: CaptureKind,
@@ -496,8 +670,82 @@ async function normalizeJson(
     else if (kind === "package")
       await addComponent(componentFromSpdx2(value, location), "spdx2");
     else if (kind === "graph") {
+      if (
+        stringAt(value, "type") === "CreationInfo" &&
+        /^3\.0(?:\.[01])?$/u.test(stringAt(value, "specVersion") ?? "")
+      )
+        metadata.specVersion = "3.0";
+      if (stringAt(value, "type") === "Hash") {
+        const id = stringAt(value, "spdxId") ?? stringAt(value, "@id");
+        const hash = spdx3Hash(value);
+        if (!id || id.length > 2048 || !hash)
+          addDiagnostic(
+            diagnostics,
+            options,
+            warning(
+              "invalid_spdx3_hash",
+              "A hash has an invalid identifier, algorithm or digest.",
+              location,
+            ),
+          );
+        else {
+          const previous = hashCatalog.get(id);
+          if (
+            hashCatalog.has(id) &&
+            (!previous ||
+              previous.algorithm !== hash.algorithm ||
+              previous.value !== hash.value)
+          ) {
+            hashCatalog.set(id, null);
+            addDiagnostic(
+              diagnostics,
+              options,
+              warning(
+                "ambiguous_spdx3_hash",
+                "Conflicting hash records use the same identifier.",
+                location,
+              ),
+            );
+          } else hashCatalog.set(id, hash);
+          if (hashCatalog.size > options.maximumComponents)
+            throw new SbomNormalizationError(
+              "normalization_component_limit_exceeded",
+              "SBOM verification record count exceeds the normalization limit.",
+            );
+        }
+      }
       const component = componentFromSpdx3(value, location);
-      if (component !== null) await addComponent(component, "spdx3");
+      if (component !== null) {
+        const raw = value.verifiedUsing;
+        const refs =
+          typeof raw === "string"
+            ? [raw]
+            : Array.isArray(raw)
+              ? raw.filter((ref): ref is string => typeof ref === "string")
+              : [];
+        if (refs.length > 100 || refs.some((ref) => ref.length > 2048))
+          throw new SbomNormalizationError(
+            "normalization_projection_limit_exceeded",
+            "SPDX verification references exceed the 100-hash normalized persistence limit.",
+          );
+        packageHashes.push({
+          index: components.length,
+          refs,
+          source: location,
+        });
+        await addComponent(
+          Object.freeze({
+            ...component,
+            hashes: Object.freeze(
+              refs.flatMap((ref) => {
+                const hash = hashCatalog.get(ref);
+                return hash ? [hash] : [];
+              }),
+            ),
+          }),
+          "spdx3",
+        );
+      }
       await addEdges(edgesFromSpdx3(value, location));
     } else if (kind === "dependency")
       await addEdges(edgesFromCycloneDx(value, location));
@@ -592,11 +840,11 @@ async function normalizeXml(
   const edges: NormalizedDependency[] = [];
   const diagnostics: NormalizationDiagnostic[] = [];
   const batches = new BatchEmitter(options);
-  const localReferences = new Map<string, NormalizedComponent>();
+  const localReferences = new Map<string, LocalReferenceIdentity>();
   let publication = Promise.resolve();
   let componentCount = 0;
-  const sax = new SaxesParser({ xmlns: false });
-  const decoder = new TextDecoder("utf-8", { fatal: false });
+  const sax = new SaxesParser({ xmlns: true });
+  const decoder = new TextDecoder("utf-8", { fatal: true });
   const elements: Array<{
     name: string;
     attributes: Readonly<Record<string, string>>;
@@ -613,25 +861,64 @@ async function normalizeXml(
   let activeDependency: { ref: string; source: SbomSourceLocation } | null =
     null;
   let specVersion: string | null = null;
+  let lexicalBytes = 0;
+  let inTag = false;
+  let quote: string | null = null;
+  const checkedXml = (text: string) => {
+    for (const character of text) {
+      if (!inTag && character === "<") {
+        inTag = true;
+        lexicalBytes = 0;
+      } else if (
+        inTag &&
+        quote === null &&
+        (character === '"' || character === "'")
+      )
+        quote = character;
+      else if (inTag && character === quote) quote = null;
+      lexicalBytes +=
+        character.charCodeAt(0) < 128 ? 1 : Buffer.byteLength(character);
+      if (lexicalBytes > 1024 * 1024)
+        throw malformed("XML lexical token ceiling exceeded.");
+      if (inTag && quote === null && character === ">") {
+        inTag = false;
+        lexicalBytes = 0;
+      }
+    }
+    sax.write(text);
+  };
+  sax.on("doctype", () => {
+    throw malformed("XML DTD declarations are forbidden.");
+  });
   sax.on("opentag", (tag) => {
+    if (elements.length > 256) throw malformed("XML depth ceiling exceeded.");
     const attributes = Object.fromEntries(
       Object.entries(tag.attributes).map(([key, value]) => [
         key,
-        String(value),
+        typeof value === "string" ? value : value.value,
       ]),
     );
+    if (
+      Object.keys(attributes).length > 128 ||
+      Object.entries(attributes).reduce(
+        (total, [key, value]) =>
+          total + Buffer.byteLength(key) + Buffer.byteLength(value),
+        0,
+      ) >
+        64 * 1024
+    )
+      throw malformed("XML attribute ceiling exceeded.");
     const element = {
-      name: tag.name,
+      name: tag.local,
       attributes,
       text: "",
       offset: sax.position,
     };
     elements.push(element);
-    if (tag.name === "bom") {
-      specVersion =
-        attributes.xmlns?.match(/\/bom\/([0-9]+\.[0-9]+)/u)?.[1] ?? null;
+    if (tag.local === "bom") {
+      specVersion = tag.uri.match(/\/bom\/([0-9]+\.[0-9]+)/u)?.[1] ?? null;
     }
-    if (tag.name === "component") {
+    if (tag.local === "component") {
       activeComponents.push({
         attributes,
         startDepth: elements.length,
@@ -641,7 +928,7 @@ async function normalizeXml(
       });
     }
     if (
-      tag.name === "dependency" &&
+      tag.local === "dependency" &&
       activeDependency === null &&
       attributes.ref
     ) {
@@ -650,7 +937,7 @@ async function normalizeXml(
         source: source(sax.position, xmlPath(elements), null),
       };
     } else if (
-      tag.name === "dependency" &&
+      tag.local === "dependency" &&
       activeDependency !== null &&
       attributes.ref
     ) {
@@ -665,7 +952,14 @@ async function normalizeXml(
   });
   sax.on("text", (text) => {
     const current = elements.at(-1);
-    if (current) current.text += text;
+    if (current) {
+      if (
+        Buffer.byteLength(current.text) + Buffer.byteLength(text) >
+        1024 * 1024
+      )
+        throw malformed("XML scalar ceiling exceeded.");
+      current.text += text;
+    }
   });
   sax.on("closetag", () => {
     const element = elements.pop();
@@ -722,12 +1016,21 @@ async function normalizeXml(
       activeDependency = null;
   });
   try {
-    for await (const chunk of input as AsyncIterable<Uint8Array>)
-      sax.write(decoder.decode(chunk, { stream: true }));
-    sax.write(decoder.decode());
+    for await (const chunk of input as AsyncIterable<Uint8Array>) {
+      for (let offset = 0; offset < chunk.length; offset += 4096) {
+        checkedXml(
+          decoder.decode(chunk.subarray(offset, offset + 4096), {
+            stream: true,
+          }),
+        );
+        await publication;
+      }
+    }
+    checkedXml(decoder.decode());
     sax.close();
   } catch (error) {
     if (error instanceof SbomNormalizationError) throw error;
+    if (error instanceof SbomStreamSourceError) throw error.sourceError;
     throw malformed("Malformed CycloneDX XML SBOM.");
   }
   await publication;
@@ -748,15 +1051,17 @@ async function normalizeTagValue(
   counter: { bytes: number },
 ): Promise<SbomNormalizationResult> {
   const components: NormalizedComponent[] = [];
+  const edges: NormalizedDependency[] = [];
   const diagnostics: NormalizationDiagnostic[] = [];
   const batches = new BatchEmitter(options);
-  const localReferences = new Map<string, NormalizedComponent>();
+  const localReferences = new Map<string, LocalReferenceIdentity>();
   let componentCount = 0;
   let residual = "";
-  const decoder = new TextDecoder("utf-8", { fatal: false });
+  const decoder = new TextDecoder("utf-8", { fatal: true });
   let line = 0;
   let specVersion: string | null = null;
   let current: Record<string, string> | null = null;
+  let pendingText = "";
   const complete = async (): Promise<void> => {
     if (current === null || Object.keys(current).length === 0) return;
     const component = componentFromSpdxTagValue(
@@ -789,6 +1094,20 @@ async function normalizeTagValue(
   };
   const consumeLine = async (rawLine: string): Promise<void> => {
     line += 1;
+    if (pendingText) {
+      pendingText += `\n${rawLine}`;
+      if (Buffer.byteLength(pendingText) > 1024 * 1024)
+        throw malformed("SPDX text ceiling exceeded.");
+      if (!rawLine.includes("</text>")) return;
+      rawLine = pendingText.replace("<text>", "").replace("</text>", "");
+      pendingText = "";
+    } else if (rawLine.includes("<text>")) {
+      if (!rawLine.includes("</text>")) {
+        pendingText = rawLine;
+        return;
+      }
+      rawLine = rawLine.replace("<text>", "").replace("</text>", "");
+    }
     const separator = rawLine.indexOf(":");
     if (separator < 1) return;
     const tag = rawLine.slice(0, separator).trim();
@@ -797,23 +1116,43 @@ async function normalizeTagValue(
     if (tag === "PackageName") {
       await complete();
       current = { PackageName: value };
-    } else if (current !== null) current[tag] = value;
+    } else if (tag === "Relationship") {
+      const match = value.match(
+        /^(\S+)\s+(DEPENDS_ON|DEPENDENCY_OF)\s+(\S+)(?:\s+#.*)?$/u,
+      );
+      if (match) {
+        const edge = Object.freeze({
+          fromRef: match[2] === "DEPENDS_ON" ? match[1]! : match[3]!,
+          toRef: match[2] === "DEPENDS_ON" ? match[3]! : match[1]!,
+          source: source(line, `line:${line}`, line),
+        });
+        if (options.retainResult !== false) edges.push(edge);
+        await batches.edge(edge);
+      }
+    } else if (current !== null) {
+      if (tag === "ExternalRef" || tag === "PackageChecksum")
+        current[tag] = current[tag] ? `${current[tag]}\n${value}` : value;
+      else current[tag] = value;
+    }
   };
   for await (const chunk of input as AsyncIterable<Uint8Array>) {
     residual += decoder.decode(chunk, { stream: true });
+    if (Buffer.byteLength(residual) > 1024 * 1024)
+      throw malformed("SPDX line ceiling exceeded.");
     const lines = residual.split(/\r?\n/u);
     residual = lines.pop() ?? "";
     for (const value of lines) await consumeLine(value);
   }
   residual += decoder.decode();
   if (residual.length > 0) await consumeLine(residual);
+  if (pendingText) throw malformed("Unterminated SPDX text block.");
   await complete();
   await batches.finish();
   return freezeResult(
     "spdx-tag-value",
     specVersion,
     components,
-    [],
+    edges,
     diagnostics,
     counter.bytes,
   );
@@ -863,6 +1202,53 @@ function componentFromSpdx2(
   });
 }
 
+function spdx3Hash(
+  value: JsonObject,
+): Readonly<{ algorithm: string; value: string }> | null {
+  // SPDX 3.0.1 Core HashAlgorithm: fixed digests are checked; variable/other
+  // declarations stay raw and the existing quality policy decides recognition.
+  // https://spdx.github.io/spdx-spec/v3.0.1/model/Core/Vocabularies/HashAlgorithm/
+  const lengths: Readonly<Record<string, number | null>> = {
+    sha1: 40,
+    sha224: 56,
+    sha256: 64,
+    sha384: 96,
+    sha512: 128,
+    sha3_224: 56,
+    md2: 32,
+    md4: 32,
+    md6: null,
+    adler32: 8,
+    md5: 32,
+    sha3_256: 64,
+    sha3_384: 96,
+    sha3_512: 128,
+    blake2b256: 64,
+    blake2b384: 96,
+    blake2b512: 128,
+    blake3: null,
+    crystalsDilithium: null,
+    crystalsKyber: null,
+    falcon: null,
+    other: null,
+  };
+  const algorithm = stringAt(value, "algorithm");
+  const digest = stringAt(value, "hashValue");
+  if (
+    !algorithm ||
+    !digest ||
+    !Object.hasOwn(lengths, algorithm) ||
+    digest.length > 1024 ||
+    (lengths[algorithm] !== null &&
+      (digest.length !== lengths[algorithm] || !/^[0-9a-f]+$/iu.test(digest)))
+  )
+    return null;
+  return Object.freeze({
+    algorithm: algorithm.toUpperCase().replace("_", "-"),
+    value: digest,
+  });
+}
+
 function componentFromSpdx3(
   value: JsonObject,
   location: SbomSourceLocation,
@@ -902,12 +1288,8 @@ function componentFromCycloneDxXml(active: {
     scope: first("scope"),
     supplier: first("supplier.name"),
     supplierValues: textValues(values["supplier.name"] ?? []),
-    licenseExpression:
-      first("licenses.license.expression") ?? first("licenses.license.name"),
-    licenseValues: textValues([
-      ...(values["licenses.license.expression"] ?? []),
-      ...(values["licenses.license.name"] ?? []),
-    ]),
+    licenseExpression: licenseValuesFromCycloneDxXml(values)[0] ?? null,
+    licenseValues: licenseValuesFromCycloneDxXml(values),
     hashes: active.hashes,
     source: active.source,
   });
@@ -917,7 +1299,8 @@ function componentFromSpdxTagValue(
   value: Record<string, string>,
   location: SbomSourceLocation,
 ): NormalizedComponent {
-  const externalRef = value.ExternalRef?.match(/\bpurl\s+(.+)$/iu)?.[1] ?? null;
+  const externalRef =
+    value.ExternalRef?.match(/\bpurl\s+([^\n]+)(?:\n|$)/iu)?.[1] ?? null;
   return normalizedComponent({
     localRef: value.SPDXID ?? null,
     rawName: value.PackageName ?? null,
@@ -933,7 +1316,10 @@ function componentFromSpdxTagValue(
       value.PackageLicenseConcluded ?? null,
       value.PackageLicenseDeclared ?? null,
     ]),
-    hashes: [],
+    hashes: (value.PackageChecksum ?? "").split("\n").flatMap((checksum) => {
+      const match = checksum.match(/^([^:]+):\s*(\S+)$/u);
+      return match ? [{ algorithm: match[1]!, value: match[2]! }] : [];
+    }),
     source: location,
   });
 }
@@ -963,15 +1349,24 @@ function normalizedComponent(
   });
 }
 
+type LocalReferenceIdentity = Pick<
+  NormalizedComponent,
+  "canonicalPurl" | "normalizedName" | "normalizedVersion"
+>;
+
 /** A reference is an unambiguous graph key, not a deduplication hint. */
 function assertUniqueLocalReference(
-  references: Map<string, NormalizedComponent>,
+  references: Map<string, LocalReferenceIdentity>,
   component: NormalizedComponent,
 ): void {
   if (component.localRef === null) return;
   const existing = references.get(component.localRef);
   if (existing === undefined) {
-    references.set(component.localRef, component);
+    references.set(component.localRef, {
+      canonicalPurl: component.canonicalPurl,
+      normalizedName: component.normalizedName,
+      normalizedVersion: component.normalizedVersion,
+    });
     return;
   }
   const code =
@@ -1023,23 +1418,46 @@ function edgesFromSpdxRelationship(
   const relation = stringAt(value, "relationshipType")?.toUpperCase();
   const fromRef = stringAt(value, "spdxElementId");
   const toRef = stringAt(value, "relatedSpdxElement");
-  return relation === "DEPENDS_ON" && fromRef !== null && toRef !== null
-    ? [Object.freeze({ fromRef, toRef, source: location })]
-    : [];
+  if (fromRef === null || toRef === null) return [];
+  if (relation === "DEPENDS_ON")
+    return [Object.freeze({ fromRef, toRef, source: location })];
+  if (relation === "DEPENDENCY_OF")
+    return [
+      Object.freeze({ fromRef: toRef, toRef: fromRef, source: location }),
+    ];
+  return [];
 }
 
 function edgesFromSpdx3(
   value: JsonObject,
   location: SbomSourceLocation,
 ): readonly NormalizedDependency[] {
-  const relation =
-    stringAt(value, "relationshipType")?.toUpperCase() ??
-    stringAt(value, "software_relationshipType")?.toUpperCase();
+  const relation = (
+    stringAt(value, "relationshipType") ??
+    stringAt(value, "software_relationshipType")
+  )
+    ?.replaceAll("_", "")
+    .toLowerCase();
   const fromRef = stringAt(value, "from") ?? stringAt(value, "spdxElementId");
-  const toRef = stringAt(value, "to") ?? stringAt(value, "relatedSpdxElement");
-  return relation === "DEPENDS_ON" && fromRef !== null && toRef !== null
-    ? [Object.freeze({ fromRef, toRef, source: location })]
-    : [];
+  const target = stringAt(value, "to") ?? stringAt(value, "relatedSpdxElement");
+  const targets =
+    target !== null
+      ? [target]
+      : arrayAt(value, "to").filter(
+          (item): item is string => typeof item === "string",
+        );
+  if (
+    fromRef === null ||
+    !["dependson", "dependencyof"].includes(relation ?? "")
+  )
+    return [];
+  return targets.map((toRef) =>
+    Object.freeze({
+      fromRef: relation === "dependencyof" ? toRef : fromRef,
+      toRef: relation === "dependencyof" ? fromRef : toRef,
+      source: location,
+    }),
+  );
 }
 
 function stringAt(value: JsonObject, key: string): string | null {
@@ -1107,15 +1525,28 @@ function licenseValuesFromCycloneDx(value: JsonObject): readonly string[] {
   const values: Array<string | null> = [];
   for (const entry of licenses) {
     if (!entry || typeof entry !== "object" || Array.isArray(entry)) continue;
-    const license = (entry as JsonObject).license;
+    const object = entry as JsonObject;
+    values.push(stringAt(object, "expression"));
+    const license = object.license;
     if (!license || typeof license !== "object" || Array.isArray(license))
       continue;
     values.push(
-      stringAt(license as JsonObject, "expression") ??
+      stringAt(license as JsonObject, "id") ??
+        stringAt(license as JsonObject, "expression") ??
         stringAt(license as JsonObject, "name"),
     );
   }
   return textValues(values);
+}
+function licenseValuesFromCycloneDxXml(
+  values: Readonly<Record<string, readonly string[]>>,
+): readonly string[] {
+  return textValues([
+    ...(values["licenses.expression"] ?? []),
+    ...(values["licenses.license.id"] ?? []),
+    ...(values["licenses.license.expression"] ?? []),
+    ...(values["licenses.license.name"] ?? []),
+  ]);
 }
 function textValues(values: readonly (string | null | undefined)[]): string[] {
   return [
@@ -1179,14 +1610,26 @@ function componentDiagnostics(
   }
   return Object.freeze(diagnostics);
 }
+const diagnosticCounts = new WeakMap<
+  NormalizationDiagnostic[],
+  { error: number; warning: number; omitted: number }
+>();
+
 function addDiagnostic(
   diagnostics: NormalizationDiagnostic[],
   options: SbomNormalizationOptions,
   value: NormalizationDiagnostic,
 ): void {
+  const counts = diagnosticCounts.get(diagnostics) ?? {
+    error: 0,
+    warning: 0,
+    omitted: 0,
+  };
+  counts[value.severity === "error" ? "error" : "warning"] += 1;
+  diagnosticCounts.set(diagnostics, counts);
   if (diagnostics.length < (options.maximumDiagnostics ?? 100)) {
     diagnostics.push(value);
-  }
+  } else counts.omitted += 1;
 }
 function malformed(message: string): SbomNormalizationError {
   return new SbomNormalizationError("normalization_malformed_input", message);
@@ -1206,6 +1649,15 @@ function freezeResult(
     edges: Object.freeze([...edges]),
     diagnostics: Object.freeze([...diagnostics]),
     byteSize,
+    errorCount:
+      diagnosticCounts.get(diagnostics as NormalizationDiagnostic[])?.error ??
+      diagnostics.filter((item) => item.severity === "error").length,
+    warningCount:
+      diagnosticCounts.get(diagnostics as NormalizationDiagnostic[])?.warning ??
+      diagnostics.filter((item) => item.severity === "warning").length,
+    omittedDiagnosticCount:
+      diagnosticCounts.get(diagnostics as NormalizationDiagnostic[])?.omitted ??
+      0,
   });
 }
 

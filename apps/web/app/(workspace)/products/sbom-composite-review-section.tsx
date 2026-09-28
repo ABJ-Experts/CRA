@@ -440,10 +440,14 @@ export function SbomCompositeReviewSection({
   const [relationshipDrafts, setRelationshipDrafts] = useState<
     Readonly<Record<string, RelationshipDraft>>
   >({});
+  const [historyCursor, setHistoryCursor] = useState<string | undefined>();
+  const [olderSources, setOlderSources] = useState<
+    readonly SbomSourceHistoryItem[]
+  >([]);
   const sourceHistory = useSbomSourceHistoryQuery(
     productId,
     releaseId,
-    { limit: 100 },
+    { limit: 100, cursor: historyCursor },
     enabled && canReview && releaseId !== "",
   );
   const reviewQuery = useSbomCompositeReviewQuery(
@@ -455,9 +459,17 @@ export function SbomCompositeReviewSection({
   const resolveRelationship = useResolveSbomCompositeRelationshipMutation();
   const generate = useGenerateSbomCompositeMutation();
   const review = reviewQuery.data?.review ?? create.data?.review ?? null;
+  const allSources = useMemo(
+    () =>
+      [...olderSources, ...(sourceHistory.data?.sources ?? [])].filter(
+        (item, index, rows) =>
+          rows.findIndex((next) => next.source.id === item.source.id) === index,
+      ),
+    [olderSources, sourceHistory.data],
+  );
   const eligibleSources = useMemo(
-    () => (sourceHistory.data?.sources ?? []).filter(isEligibleSource),
-    [sourceHistory.data?.sources],
+    () => allSources.filter(isEligibleSource),
+    [allSources],
   );
   const unresolvedConflictCount = review?.conflicts.filter(
     (conflict) => conflict.state === "unresolved",
@@ -477,6 +489,8 @@ export function SbomCompositeReviewSection({
   }, [releaseId, releases]);
 
   useEffect(() => {
+    setHistoryCursor(undefined);
+    setOlderSources([]);
     setSelectedSourceIds([]);
     setReviewId(null);
     setMessage(null);
@@ -663,6 +677,22 @@ export function SbomCompositeReviewSection({
                 <h3 className="text-subhead-semibold text-fg">
                   Eligible evidence
                 </h3>
+                {sourceHistory.data?.nextCursor ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    tone="grey"
+                    disabled={sourceHistory.isPending}
+                    onClick={() => {
+                      setOlderSources(allSources);
+                      setHistoryCursor(
+                        sourceHistory.data?.nextCursor ?? undefined,
+                      );
+                    }}
+                  >
+                    Load older composite sources
+                  </Button>
+                ) : null}
                 <p className="mt-1 text-caption-1-regular text-fg-muted">
                   Select normalized, valid source documents for this release.
                   The server validates product structure, tenant scope, source

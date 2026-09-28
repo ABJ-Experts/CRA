@@ -111,8 +111,34 @@ describe("SBOM quality policy", () => {
     expect(evaluateBsiTr03183_2(quality)).toContainEqual(
       expect.objectContaining({
         code: "CRA-BSI-03183-2-PURL",
-        severity: "error",
+        severity: "warning",
+        expected: expect.stringContaining("Engineering subset") as unknown,
       }),
     );
+  });
+
+  it("never treats complete aggregate quality as full pinned BSI evaluation", () => {
+    const quality = calculateSbomQuality({
+      components: [
+        {
+          canonicalPurl: "pkg:npm/example@1.0.0",
+          hashes: [{ algorithm: "SHA-256", value: "a".repeat(64) }],
+          supplierValues: ["Supplier"],
+          licenseValues: ["MIT"],
+          depth: 3,
+        },
+      ],
+      primaryComponent: { id: "root", directDependencyCount: 1 },
+      maximumDepth: 3,
+    });
+    expect(quality.totalScore).toBe(100);
+    expect(evaluateBsiTr03183_2(quality)).toEqual([
+      expect.objectContaining({
+        code: "CRA-BSI-03183-2-PROFILE-NOT-EVALUATED",
+        severity: "warning",
+        actual: "Full pinned BSI profile not evaluated",
+        remediation: expect.stringContaining("authoritative") as unknown,
+      }),
+    ]);
   });
 });

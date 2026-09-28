@@ -4,6 +4,17 @@ import { z } from "zod";
 const uuidSchema = z.uuid();
 const maximumClaimsPerCycle = 1_000;
 
+export interface SbomDiffVersionComparator {
+  readonly version: string;
+  compare(
+    ecosystem: string,
+    left: string,
+    right: string,
+  ):
+    | Readonly<{ kind: "comparable"; ordering: -1 | 0 | 1 }>
+    | Readonly<{ kind: "unsupported" }>;
+}
+
 export type SbomDiffCheckpoint = Readonly<{
   currentCursor?: string;
   baselineCursor?: string;
@@ -18,6 +29,7 @@ export type SbomDiffClaim =
       baselineSourceId: string;
       documentId: string;
       baselineDocumentId: string;
+      comparatorVersion?: string;
       checkpoint: SbomDiffCheckpoint;
     }>
   | Readonly<{ outcome: "none_available" | "conflict" }>;
@@ -38,7 +50,13 @@ export type SbomDiffFactPage = Readonly<{
 
 export type SbomDiffChangeDraft = Readonly<{
   changeKey: string;
-  changeType: "added" | "removed" | "unchanged" | "unresolved";
+  changeType:
+    | "added"
+    | "removed"
+    | "unchanged"
+    | "upgraded"
+    | "downgraded"
+    | "unresolved";
   identity: string | null;
   ecosystem: string | null;
   currentComponentId: string | null;
@@ -70,6 +88,7 @@ export interface SbomDiffQueue {
       reportId: string;
       workerId: string;
       changes: readonly SbomDiffChangeDraft[];
+      comparatorVersion?: string;
       checkpoint: SbomDiffCheckpoint;
       complete: boolean;
     }>,
@@ -91,8 +110,8 @@ export interface SbomDiffQueue {
 
 /**
  * Streams two source-normalized projections in canonical identity order. It only
- * treats exact normalized versions as unchanged; version ordering stays behind
- * the M4 comparator boundary and is never approximated lexically.
+ * preserves legacy comparison policies and uses the injected M4 comparator
+ * for new reports. Unsupported ordering is never approximated lexically.
  */
 export class SbomDiffWorker {
   private readonly logger = new Logger(SbomDiffWorker.name);
@@ -105,6 +124,7 @@ export class SbomDiffWorker {
       pageSize?: number;
       batchSize?: number;
       maximumIdentityGroup?: number;
+      versionComparator?: SbomDiffVersionComparator;
     }>,
   ) {
     if (!uuidSchema.safeParse(dependencies.workerId).success) {
@@ -181,6 +201,15 @@ export class SbomDiffWorker {
     organizationId: string,
     claim: Extract<SbomDiffClaim, { outcome: "claimed" }>,
   ): Promise<void> {
+    const policyVersion = claim.comparatorVersion ?? "m4-unavailable.v1";
+    if (
+      policyVersion !== "m4-unavailable.v1" &&
+      policyVersion !== this.dependencies.versionComparator?.version
+    )
+      throw new DiffWorkerError(
+        "diff_calculation_failed",
+        "The report comparator policy is not installed.",
+      );
     const current = new FactReader({
       organizationId,
       reportId: claim.reportId,
@@ -264,7 +293,12 @@ export class SbomDiffWorker {
         await append(await this.singleSide(baseline, "removed"));
       } else {
         await append(
-          await this.matchIdentity(current, baseline, currentFact.identity),
+          await this.matchIdentity(
+            current,
+            baseline,
+            currentFact.identity,
+            policyVersion,
+          ),
         );
       }
     }
@@ -303,6 +337,7 @@ export class SbomDiffWorker {
     current: FactReader,
     baseline: FactReader,
     identity: string,
+    policyVersion: string,
   ): Promise<readonly SbomDiffChangeDraft[]> {
     const maximum = this.dependencies.maximumIdentityGroup ?? 100;
     const currentGroup = await current.takeIdentity(identity, maximum);
@@ -331,7 +366,11 @@ export class SbomDiffWorker {
         "A matched identity did not retain both component facts.",
       );
     }
-    if (currentFact.normalizedVersion === baselineFact.normalizedVersion) {
+    if (
+      currentFact.normalizedVersion === baselineFact.normalizedVersion &&
+      (policyVersion === "m4-unavailable.v1" ||
+        Boolean(currentFact.normalizedVersion))
+    ) {
       return [
         draft({
           changeType: "unchanged",
@@ -342,13 +381,47 @@ export class SbomDiffWorker {
         }),
       ];
     }
+    const comparator = this.dependencies.versionComparator;
+    if (
+      policyVersion !== "m4-unavailable.v1" &&
+      comparator &&
+      currentFact.ecosystem &&
+      currentFact.ecosystem === baselineFact.ecosystem &&
+      currentFact.normalizedVersion &&
+      baselineFact.normalizedVersion
+    ) {
+      const comparison = comparator.compare(
+        currentFact.ecosystem,
+        currentFact.normalizedVersion,
+        baselineFact.normalizedVersion,
+      );
+      if (comparison.kind === "comparable")
+        return [
+          draft({
+            changeType:
+              comparison.ordering > 0
+                ? "upgraded"
+                : comparison.ordering < 0
+                  ? "downgraded"
+                  : "unchanged",
+            current: currentFact,
+            baseline: baselineFact,
+            explanation:
+              comparison.ordering === 0
+                ? "The ecosystem comparator considers these version representations equivalent."
+                : `The installed ecosystem comparator identifies a component ${comparison.ordering > 0 ? "upgrade" : "downgrade"}.`,
+          }),
+        ];
+    }
     return [
       draft({
         changeType: "unresolved",
         current: currentFact,
         baseline: baselineFact,
         explanation:
-          "The version changed, but ecosystem ordering is unavailable until the M4 comparator is installed.",
+          policyVersion === "m4-unavailable.v1"
+            ? "This historical policy predates the M4 comparator; its version transition remains unresolved."
+            : "The ecosystem or version values cannot be ordered safely; review is required.",
       }),
     ];
   }

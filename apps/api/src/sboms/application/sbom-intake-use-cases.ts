@@ -263,7 +263,7 @@ export class SbomIntakeUseCases {
     Result<
       Readonly<{
         reservation: SbomReservation;
-        upload: Readonly<{ uploadUrl: string; expiresAt: string }>;
+        upload: Readonly<{ uploadUrl: string; expiresAt: string }> | null;
         replayed: boolean;
       }>,
       SbomIntakeError
@@ -276,6 +276,20 @@ export class SbomIntakeUseCases {
       );
       if (!("reservation" in reserved))
         return failure({ code: reserved.outcome });
+      if (reserved.reservation.status === "verified") {
+        if (
+          reserved.outcome !== "replayed" ||
+          reserved.reservation.completedAt === null
+        )
+          return failure({ code: "conflict" });
+        return success(
+          Object.freeze({
+            reservation: reserved.reservation,
+            upload: null,
+            replayed: true,
+          }),
+        );
+      }
       const upload = await this.storage.createSignedUpload({
         objectKey: reserved.reservation.objectKey,
         contentType: reserved.reservation.mediaType,

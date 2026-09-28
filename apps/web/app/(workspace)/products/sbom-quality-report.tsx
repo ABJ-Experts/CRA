@@ -68,7 +68,7 @@ function DimensionSummary({
   dimension,
 }: Readonly<{ dimension: SbomQualityDimension }>) {
   return (
-    <li className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-1 border-b border-border py-3 last:border-b-0">
+    <li className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-1 border-b border-border py-3 last:border-b-0">
       <div className="min-w-0">
         <p className="text-caption-1-semibold text-fg">
           {titleCase(dimension.id)}
@@ -98,7 +98,7 @@ function QualityState({ report }: Readonly<{ report: SbomQualityReport }>) {
     return (
       <div
         role="alert"
-        className="rounded-xl border border-border bg-surface-subtle p-4"
+        className="min-w-0 rounded-xl border border-border bg-surface-subtle p-4"
       >
         <p className="text-subhead-semibold text-fg">Quality report failed.</p>
         <p className="mt-1 text-caption-1-regular text-danger">
@@ -112,7 +112,7 @@ function QualityState({ report }: Readonly<{ report: SbomQualityReport }>) {
   return (
     <div
       role="status"
-      className="rounded-xl border border-border bg-surface-subtle p-4"
+      className="min-w-0 rounded-xl border border-border bg-surface-subtle p-4"
     >
       <p className="text-subhead-semibold text-fg">
         Quality report is {report.state}.
@@ -185,7 +185,12 @@ function RemediationTable({
           No remediation items were retained for this report.
         </p>
       ) : (
-        <div className="mt-3 overflow-x-auto rounded-xl border border-border">
+        <div
+          role="region"
+          aria-label="SBOM quality remediation table"
+          tabIndex={0}
+          className="max-w-full min-w-0 mt-3 overflow-x-auto rounded-xl border border-border outline-none focus-visible:ring-2 focus-visible:ring-active-500 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas"
+        >
           <table className="w-full min-w-[46rem] border-collapse text-left">
             <caption className="sr-only">
               SBOM quality remediation guidance
@@ -283,8 +288,11 @@ function QualityReportCompleted({
       new Map(report.dimensions.map((dimension) => [dimension.id, dimension])),
     [report.dimensions],
   );
-  const legalFloor = dimensionsById.get("top_level_dependency");
+  const topLevelEvidence = dimensionsById.get("top_level_dependency");
   const transitiveDepth = dimensionsById.get("transitive_depth");
+  const profile = report.bsiProfile;
+  const pinnedTechnical = profile?.assessmentKind === "pinned_technical_checks";
+  const technicalUnavailable = profile?.assessmentKind === "unavailable";
   const baselineMessage =
     report.baseline?.status === "available"
       ? `Previous report scored ${percentage(report.baseline.totalScore)}.`
@@ -293,7 +301,10 @@ function QualityReportCompleted({
         : "No eligible completed baseline is available.";
 
   return (
-    <section aria-labelledby="sbom-quality-heading" className="grid gap-4">
+    <section
+      aria-labelledby="sbom-quality-heading"
+      className="grid grid-cols-1 min-w-0 gap-4"
+    >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2
@@ -312,9 +323,9 @@ function QualityReportCompleted({
         </Tag>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 min-w-0 gap-4 md:grid-cols-2 xl:grid-cols-4">
         <section
-          className="rounded-xl border border-border bg-surface-subtle p-4"
+          className="min-w-0 rounded-xl border border-border bg-surface-subtle p-4"
           aria-labelledby="sbom-quality-score-heading"
         >
           <h3
@@ -331,24 +342,26 @@ function QualityReportCompleted({
           </p>
         </section>
         <section
-          className="rounded-xl border border-border bg-surface-subtle p-4"
+          className="min-w-0 rounded-xl border border-border bg-surface-subtle p-4"
           aria-labelledby="sbom-quality-floor-heading"
         >
           <h3
             id="sbom-quality-floor-heading"
             className="text-subhead-semibold text-fg"
           >
-            CRA legal floor
+            Declared top-level dependency evidence
           </h3>
           <p className="mt-3 text-title-1-semibold text-fg">
-            {percentage(legalFloor?.coveragePercent ?? 0)}%
+            {percentage(topLevelEvidence?.coveragePercent ?? 0)}%
           </p>
           <p className="mt-1 text-caption-1-regular text-fg-muted">
-            Top-level dependency coverage remains separate from depth.
+            This measures declared graph evidence, not completeness of the
+            product inventory or CRA compliance. Transitive depth is a separate
+            quality measure.
           </p>
         </section>
         <section
-          className="rounded-xl border border-border bg-surface-subtle p-4"
+          className="min-w-0 rounded-xl border border-border bg-surface-subtle p-4"
           aria-labelledby="sbom-quality-depth-heading"
         >
           <h3
@@ -365,14 +378,16 @@ function QualityReportCompleted({
           </p>
         </section>
         <section
-          className="rounded-xl border border-border bg-surface-subtle p-4"
+          className="min-w-0 rounded-xl border border-border bg-surface-subtle p-4"
           aria-labelledby="sbom-quality-bsi-heading"
         >
           <h3
             id="sbom-quality-bsi-heading"
             className="text-subhead-semibold text-fg"
           >
-            BSI profile
+            {pinnedTechnical || technicalUnavailable
+              ? "BSI pinned 2.0 technical checks"
+              : "BSI technical subset"}
           </h3>
           <div className="mt-3">
             <Tag
@@ -380,20 +395,54 @@ function QualityReportCompleted({
               tone={profileTone(report.bsiProfile?.status ?? "unavailable")}
               size="sm"
             >
-              {titleCase(report.bsiProfile?.status ?? "unavailable")}
+              {!report.bsiProfile?.enabled
+                ? "Disabled"
+                : pinnedTechnical
+                  ? profile.status === "invalid"
+                    ? "Technical checks failed"
+                    : "Manual review required"
+                  : technicalUnavailable
+                    ? "Technical assessment unavailable"
+                    : report.bsiProfile.status === "unavailable"
+                      ? "Full profile not verified"
+                      : `Legacy/subset checks: ${titleCase(report.bsiProfile.status)}`}
             </Tag>
           </div>
           <p className="mt-2 text-caption-1-regular text-fg-muted">
             {report.bsiProfile?.enabled
-              ? `${report.bsiProfile.findingCount} profile findings · ${report.bsiProfile.rulesetVersion}`
+              ? `${report.bsiProfile.findingCount} ${pinnedTechnical ? "technical/manual" : "subset"} findings · ${report.bsiProfile.rulesetVersion}`
               : "Optional tenant profile is disabled."}
           </p>
+          <p className="mt-2 text-caption-1-regular text-fg-muted">
+            {pinnedTechnical || technicalUnavailable
+              ? "Pinned BSI TR-03183-2 edition 2.0 technical checks only. The current edition and full conformity are not verified."
+              : "Only technical subset checks are implemented. The full pinned BSI profile has not been verified."}
+          </p>
+          {pinnedTechnical ? (
+            <div className="mt-2 grid grid-cols-1 min-w-0 gap-1 text-caption-2-regular text-fg-muted">
+              <p>Passed technical rules: {profile.passedRuleCount}</p>
+              <p>Failed technical rules: {profile.failedRuleCount}</p>
+              <p>
+                Manual review rules: {profile.manualReviewRuleCount} (unknown
+                until reviewed)
+              </p>
+              <p>Evaluator: {profile.evaluatorVersion}</p>
+              <p className="break-all">
+                SBOM source SHA-256: {profile.sourceSha256}
+              </p>
+            </div>
+          ) : technicalUnavailable ? (
+            <p className="mt-2 text-caption-1-regular text-fg-muted">
+              Pinned technical evaluation could not complete. No BSI conformity
+              result is available.
+            </p>
+          ) : null}
         </section>
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-2">
+      <div className="grid grid-cols-1 min-w-0 gap-4 xl:grid-cols-2">
         <section
-          className="rounded-xl border border-border bg-surface-subtle p-4"
+          className="min-w-0 rounded-xl border border-border bg-surface-subtle p-4"
           aria-labelledby="sbom-quality-coverage-heading"
         >
           <h3
@@ -409,7 +458,7 @@ function QualityReportCompleted({
           </ul>
         </section>
         <section
-          className="rounded-xl border border-border bg-surface-subtle p-4"
+          className="min-w-0 rounded-xl border border-border bg-surface-subtle p-4"
           aria-labelledby="sbom-quality-regression-heading"
         >
           <div className="flex items-center gap-2">
@@ -440,7 +489,7 @@ function QualityReportCompleted({
           )}
         </section>
       </div>
-      <div className="rounded-xl border border-border bg-surface-subtle p-4">
+      <div className="min-w-0 rounded-xl border border-border bg-surface-subtle p-4">
         <RemediationTable sourceId={report.sourceId} enabled={enabled} />
       </div>
     </section>
@@ -464,7 +513,7 @@ export function SbomQualityReport({
     return (
       <div
         role="alert"
-        className="rounded-xl border border-border bg-surface-subtle p-4"
+        className="min-w-0 rounded-xl border border-border bg-surface-subtle p-4"
       >
         <p className="text-caption-1-regular text-danger">
           {qualityErrorMessage(quality.error)}

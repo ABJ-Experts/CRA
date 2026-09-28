@@ -74,6 +74,48 @@ describe("SBOM intake contracts", () => {
     });
   });
 
+  it("allows an explicit verified replay without another upload ticket", () => {
+    const response = {
+      source: {
+        id: sourceId,
+        organizationId: "66666666-6666-4666-8666-666666666666",
+        productId,
+        releaseId,
+        source: "manual_upload",
+        fileName: "firmware-bom.cdx.json",
+        mediaType: "application/vnd.cyclonedx+json",
+        byteSize: 1024,
+        sha256: "a".repeat(64),
+        status: "verified",
+        createdAt: now,
+        completedAt: now,
+      },
+      upload: null,
+      replayed: true,
+    };
+    expect(
+      sbomUploadInitializationResponseSchema.parse(response).upload,
+    ).toBeNull();
+    expect(
+      sbomUploadInitializationResponseSchema.safeParse({
+        ...response,
+        replayed: false,
+      }).success,
+    ).toBe(false);
+    expect(
+      sbomUploadInitializationResponseSchema.safeParse({
+        ...response,
+        source: { ...response.source, status: "upload_pending" },
+      }).success,
+    ).toBe(false);
+    expect(
+      sbomUploadInitializationResponseSchema.safeParse({
+        ...response,
+        source: { ...response.source, completedAt: null },
+      }).success,
+    ).toBe(false);
+  });
+
   it("exposes only transient signed upload and download URLs", () => {
     expect(
       sbomUploadInitializationResponseSchema.parse({
@@ -96,7 +138,7 @@ describe("SBOM intake contracts", () => {
             "http://127.0.0.1:54321/storage/v1/object/upload/sign/sbom-originals/key",
           expiresAt: now,
         },
-      }).upload.uploadUrl,
+      }).upload?.uploadUrl,
     ).toContain("/storage/");
 
     expect(
@@ -110,6 +152,22 @@ describe("SBOM intake contracts", () => {
       }).download.fileName,
     ).toBe("firmware-bom.cdx.json");
   });
+
+  it.each(["javascript:alert(1)", "http://remote.test/object"])(
+    "rejects unsafe signed storage URL %s",
+    (downloadUrl) => {
+      expect(
+        sbomOriginalDownloadResponseSchema.safeParse({
+          download: {
+            downloadUrl,
+            expiresAt: now,
+            fileName: "bom.json",
+            mediaType: "application/json",
+          },
+        }).success,
+      ).toBe(false);
+    },
+  );
 
   it("defines durable queued and terminal job resources", () => {
     const job = {
@@ -131,6 +189,40 @@ describe("SBOM intake contracts", () => {
     };
 
     expect(sbomJobSchema.parse(job).status).toBe("queued");
+    const result = {
+      outcome: "original_evidence_captured",
+      sourceId,
+      sha256: "a".repeat(64),
+    };
+    expect(
+      sbomJobSchema.safeParse({ ...job, status: "completed", result: null })
+        .success,
+    ).toBe(false);
+    expect(
+      sbomJobSchema.safeParse({ ...job, status: "queued", result }).success,
+    ).toBe(false);
+    expect(
+      sbomJobSchema.safeParse({ ...job, status: "completed", result }).success,
+    ).toBe(true);
+    expect(
+      sbomJobSchema.safeParse({ ...job, status: "dead_letter" }).success,
+    ).toBe(false);
+    const error = {
+      code: "storage_unavailable",
+      message: "Unavailable",
+      retryable: true,
+    };
+    expect(
+      sbomJobSchema.safeParse({ ...job, status: "dead_letter", error }).success,
+    ).toBe(false);
+    expect(
+      sbomJobSchema.safeParse({
+        ...job,
+        status: "dead_letter",
+        error: { ...error, retryable: false },
+      }).success,
+    ).toBe(true);
+
     expect(
       sbomJobResponseSchema.parse({
         job,

@@ -23,7 +23,6 @@ import {
   sbomQualityDimensionSchema,
   sbomQualityFindingsResponseSchema,
   sbomQualityInputsSchema,
-  sbomQualityReportResponseSchema,
   sbomQualitySettingsResponseSchema,
   sbomSourceHistoryResponseSchema,
   sbomSourceSchema,
@@ -31,6 +30,12 @@ import {
 } from "@repo/contracts/sboms";
 import { z } from "zod";
 
+import {
+  publicQualityResponse,
+  publicQualityRegression,
+} from "./sbom-quality-wire";
+
+import { NORMALIZER_VERSION } from "../normalization/sbom-normalizer";
 import { SupabaseService } from "../../supabase/supabase.service";
 import type {
   SbomCiCredential,
@@ -195,6 +200,7 @@ const qualityResultSchema = z
 const diffClaimSchema = z
   .object({
     id: z.uuid(),
+    comparatorVersion: z.string().min(1).max(120).default("m4-unavailable.v1"),
     sourceId: z.uuid(),
     baselineSourceId: z.uuid(),
     documentId: z.uuid(),
@@ -967,7 +973,7 @@ export class SupabaseSbomRepository
     });
     if (this.outcome(row, new Set(["found", "not_found"])) !== "found")
       return null;
-    return sbomQualityReportResponseSchema.parse(row.result);
+    return publicQualityResponse(row.result);
   }
 
   async listQualityFindings(
@@ -1248,12 +1254,19 @@ export class SupabaseSbomRepository
     });
     if (this.outcome(row, new Set(["found", "not_found"])) !== "found")
       return null;
-    const result = this.record(row.result);
+    const result = z
+      .object({
+        state: z.enum(["ready", "partial_integration_unavailable"]),
+        items: z.array(z.unknown()).max(100),
+        nextCursor: z.string().nullable(),
+      })
+      .strict()
+      .parse(row.result);
     return sbomDiffFindingsResponseSchema.parse({
-      status: result.state,
+      status: result.state === "ready" ? "available" : result.state,
       reason:
         result.state === "partial_integration_unavailable"
-          ? "Finding delta requires the M4 advisory integration."
+          ? "Finding delta is unavailable until matching completes for both scoped documents."
           : null,
       findings: result.items,
       nextCursor:
@@ -1640,6 +1653,7 @@ export class SupabaseSbomRepository
       outcome: "claimed",
       organizationId,
       reportId: work.id,
+      comparatorVersion: work.comparatorVersion,
       sourceId: work.sourceId,
       baselineSourceId: work.baselineSourceId,
       documentId: work.documentId,
@@ -1794,7 +1808,7 @@ export class SupabaseSbomRepository
       p_parser_name: "CRA streaming SBOM parser",
       p_parser_version: input.report.validator?.version ?? "unknown",
       p_normalizer_name: "CRA SBOM normalizer",
-      p_normalizer_version: "m3-03.1",
+      p_normalizer_version: NORMALIZER_VERSION,
       p_format: input.format,
       p_serialization: input.serialization,
       p_specification_version: input.specificationVersion,
@@ -2195,7 +2209,7 @@ function qualityBaseline(
     status: "available",
     reportId: string(row.reportId),
     sourceId: string(row.sourceId),
-    totalScore: number(row.totalScore, 0),
+    totalScore: z.number().min(0).max(100).parse(row.totalScore),
     completedAt: string(row.completedAt),
     quality,
   };
@@ -2221,11 +2235,7 @@ function persistableQualityReport(
     totalScore: report.quality.totalScore,
     bsiProfile: report.bsiProfile,
     baseline: report.baseline,
-    regression: {
-      status: report.regression.status,
-      totalScoreDelta: report.regression.totalScoreDelta,
-      changedDimensions: report.regression.changedDimensions,
-    },
+    regression: publicQualityRegression(report.regression),
   };
 }
 
@@ -2239,6 +2249,19 @@ function persistableQualityFinding(
       finding.code,
       finding.dimension ?? "document",
       finding.componentId ?? "document",
+      ...(finding.kind === "bsi_rule" && finding.sourcePath
+        ? [
+            createHash("sha256")
+              .update(
+                JSON.stringify([
+                  finding.sourcePath,
+                  finding.expected,
+                  finding.actual,
+                ]),
+              )
+              .digest("hex"),
+          ]
+        : []),
     ].join(":"),
     category:
       finding.kind === "coverage_gap"
@@ -2312,15 +2335,10 @@ function diffReport(value: unknown) {
   return sbomDiffReportSchema.parse({
     ...raw,
     findingDelta: {
-      status: raw.findingDelta.state,
+      status: "partial_integration_unavailable",
       reason:
-        raw.findingDelta.state === "partial_integration_unavailable"
-          ? "Finding delta requires the M4 advisory integration."
-          : null,
-      summary:
-        raw.findingDelta.state === "ready"
-          ? { new: 0, removed: 0, resolved: 0, unchanged: 0 }
-          : null,
+        "Live advisory comparison is computed separately; use the findings tab.",
+      summary: null,
     },
     progress: {
       ...raw.progress,

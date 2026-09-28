@@ -108,7 +108,9 @@ function Metric({
     <section className="min-w-0 rounded-xl border border-border bg-surface-subtle p-4">
       <p className="text-caption-1-semibold text-fg-muted">{label}</p>
       <p className="mt-2 text-title-2-semibold text-fg">{value}</p>
-      <p className="mt-1 text-caption-2-regular text-fg-muted">{description}</p>
+      <p className="mt-1 break-words text-caption-2-regular text-fg-muted">
+        {description}
+      </p>
     </section>
   );
 }
@@ -149,7 +151,12 @@ function ChangeTable({
   }
   return (
     <>
-      <div className="mt-4 overflow-x-auto rounded-xl border border-border">
+      <div
+        role="region"
+        aria-label="SBOM component changes table"
+        tabIndex={0}
+        className="max-w-full min-w-0 mt-4 overflow-x-auto rounded-xl border border-border outline-none focus-visible:ring-2 focus-visible:ring-active-500 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas"
+      >
         <table className="w-full min-w-[58rem] border-collapse text-left">
           <caption className="sr-only">SBOM component changes</caption>
           <thead className="bg-surface">
@@ -244,7 +251,10 @@ function FindingDelta({
     );
   }
   return (
-    <ul aria-label="Finding delta" className="mt-3 grid gap-2">
+    <ul
+      aria-label="Finding delta"
+      className="mt-3 grid grid-cols-1 min-w-0 gap-2"
+    >
       {findings.data.findings.map((finding) => (
         <li
           key={`${finding.findingId}-${finding.change}`}
@@ -313,7 +323,7 @@ function CompletedDiff({
   const summary = report.counts;
   return (
     <>
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 min-w-0 gap-4 md:grid-cols-2 xl:grid-cols-4">
         <Metric
           label="Compared versions"
           value={comparisonLabel(report)}
@@ -333,15 +343,17 @@ function CompletedDiff({
           }
         />
         <Metric
-          label="Finding delta"
+          label="Finding comparison"
           value={
             report.findingDelta.status === "available"
               ? "Available"
-              : "Partial integration"
+              : "Computed separately"
           }
           description={
-            report.findingDelta.reason ??
-            "Finding changes remain separate from component evidence."
+            report.findingDelta.status === "available"
+              ? (report.findingDelta.reason ??
+                "Finding changes remain separate from component evidence.")
+              : "The live advisory comparison is shown below after matching finishes."
           }
         />
         <Metric
@@ -352,7 +364,7 @@ function CompletedDiff({
       </div>
       {summary ? (
         <section
-          className="rounded-xl border border-border bg-surface-subtle p-4"
+          className="min-w-0 rounded-xl border border-border bg-surface-subtle p-4"
           aria-labelledby="sbom-diff-components-heading"
         >
           <div className="flex flex-wrap items-start justify-between gap-3">
@@ -374,12 +386,15 @@ function CompletedDiff({
             </Tag>
           </div>
           {report.comparisonStatus === "identical" ? (
-            <p role="status" className="mt-4 text-caption-1-regular text-fg-muted">
+            <p
+              role="status"
+              className="mt-4 text-caption-1-regular text-fg-muted"
+            >
               The compared normalized graphs are identical.
             </p>
           ) : (
             <>
-              <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="mt-4 grid grid-cols-1 min-w-0 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 <SearchInput
                   aria-label="Search component changes"
                   value={query}
@@ -425,14 +440,16 @@ function CompletedDiff({
                 pending={changes.isPending}
                 error={changes.isError ? changes.error : null}
                 nextCursor={changes.data?.nextCursor ?? null}
-                onNextPage={(nextCursor) => replaceQuery({ cursor: nextCursor })}
+                onNextPage={(nextCursor) =>
+                  replaceQuery({ cursor: nextCursor })
+                }
               />
             </>
           )}
         </section>
       ) : null}
       <section
-        className="rounded-xl border border-border bg-surface-subtle p-4"
+        className="min-w-0 rounded-xl border border-border bg-surface-subtle p-4"
         aria-labelledby="sbom-diff-findings-heading"
       >
         <h2
@@ -556,7 +573,11 @@ export function SbomDiffReport({
         The requested baseline source identifier is invalid.
       </p>
     );
-  if (sourceDiff.isPending || start.isPending || (reportId !== null && detail.isPending))
+  if (
+    sourceDiff.isPending ||
+    start.isPending ||
+    (reportId !== null && detail.isPending)
+  )
     return (
       <p role="status" className="text-subhead-regular text-fg-muted">
         Preparing SBOM comparison...
@@ -566,7 +587,7 @@ export function SbomDiffReport({
     return (
       <div
         role="alert"
-        className="rounded-xl border border-border bg-surface-subtle p-4"
+        className="min-w-0 rounded-xl border border-border bg-surface-subtle p-4"
       >
         <p className="text-caption-1-regular text-danger">
           {diffErrorMessage(sourceDiff.error ?? start.error ?? detail.error)}
@@ -595,8 +616,11 @@ export function SbomDiffReport({
         : undefined;
   if (noComparable) {
     return (
-      <section aria-label="SBOM lineage comparison" className="grid gap-4">
-        <header className="rounded-xl border border-border bg-surface-subtle p-4">
+      <section
+        aria-label="SBOM lineage comparison"
+        className="grid grid-cols-1 min-w-0 gap-4"
+      >
+        <header className="min-w-0 rounded-xl border border-border bg-surface-subtle p-4">
           <Link
             href={`/products/${productId}/sboms/${documentId}?sourceId=${encodeURIComponent(sourceId)}`}
             className="text-caption-1-semibold text-active-600 underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-active-500"
@@ -609,7 +633,7 @@ export function SbomDiffReport({
         </header>
         <div
           role="status"
-          className="rounded-xl border border-border bg-surface-subtle p-4"
+          className="min-w-0 rounded-xl border border-border bg-surface-subtle p-4"
         >
           <p className="text-subhead-semibold text-fg">
             No comparable version.
@@ -623,8 +647,11 @@ export function SbomDiffReport({
   }
   if (sourceDiff.data?.status === "not_started" && !canStart) {
     return (
-      <section aria-label="SBOM lineage comparison" className="grid gap-4">
-        <header className="rounded-xl border border-border bg-surface-subtle p-4">
+      <section
+        aria-label="SBOM lineage comparison"
+        className="grid grid-cols-1 min-w-0 gap-4"
+      >
+        <header className="min-w-0 rounded-xl border border-border bg-surface-subtle p-4">
           <Link
             href={`/products/${productId}/sboms/${documentId}?sourceId=${encodeURIComponent(sourceId)}`}
             className="text-caption-1-semibold text-active-600 underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-active-500"
@@ -637,7 +664,7 @@ export function SbomDiffReport({
         </header>
         <div
           role="status"
-          className="rounded-xl border border-border bg-surface-subtle p-4"
+          className="min-w-0 rounded-xl border border-border bg-surface-subtle p-4"
         >
           <p className="text-subhead-semibold text-fg">
             A comparison has not been generated.
@@ -665,8 +692,11 @@ export function SbomDiffReport({
   const readyForRows = report.state === "completed";
 
   return (
-    <section aria-label="SBOM lineage comparison" className="grid gap-4">
-      <header className="rounded-xl border border-border bg-surface-subtle p-4">
+    <section
+      aria-label="SBOM lineage comparison"
+      className="grid grid-cols-1 min-w-0 gap-4"
+    >
+      <header className="min-w-0 rounded-xl border border-border bg-surface-subtle p-4">
         <Link
           href={`/products/${productId}/sboms/${documentId}?sourceId=${encodeURIComponent(sourceId)}`}
           className="text-caption-1-semibold text-active-600 underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-active-500"
@@ -692,7 +722,7 @@ export function SbomDiffReport({
         </div>
         <div className="mt-4 flex flex-wrap items-center gap-2 text-caption-2-regular text-fg-muted">
           <ArrowLeftRight aria-hidden="true" className="size-4" />
-          <span>
+          <span className="min-w-0 break-all">
             Baseline source {report.baselineSourceId} → source {report.sourceId}
           </span>
         </div>
@@ -700,7 +730,7 @@ export function SbomDiffReport({
       {report.state === "failed" ? (
         <div
           role="alert"
-          className="rounded-xl border border-border bg-surface-subtle p-4"
+          className="min-w-0 rounded-xl border border-border bg-surface-subtle p-4"
         >
           <p className="text-subhead-semibold text-fg">Comparison failed.</p>
           <p className="mt-1 text-caption-1-regular text-danger">
@@ -735,7 +765,7 @@ export function SbomDiffReport({
       ) : report.state !== "completed" ? (
         <div
           role="status"
-          className="rounded-xl border border-border bg-surface-subtle p-4"
+          className="min-w-0 rounded-xl border border-border bg-surface-subtle p-4"
         >
           <p className="text-subhead-semibold text-fg">
             Comparison is {report.state}.

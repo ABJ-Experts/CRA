@@ -1,3 +1,5 @@
+import { sbomQualityRegressionSchema } from "@repo/contracts/sboms";
+import { calculateSbomQuality } from "../quality/sbom-quality-policy";
 import { SupabaseService } from "../../supabase/supabase.service";
 import {
   sbomRequestDigest,
@@ -288,6 +290,37 @@ describe("SupabaseSbomRepository source diff lookup", () => {
       report: {
         id: reportId,
         comparisonStatus: "partial_integration_unavailable",
+      },
+    });
+  });
+
+  it("does not fabricate a zero finding summary from a stored ready marker", async () => {
+    rpc.mockResolvedValue({
+      data: [
+        {
+          outcome: "found",
+          report: {
+            ...diffReport(),
+            findingDelta: { state: "ready" },
+          },
+        },
+      ],
+      error: null,
+    });
+    await expect(
+      repository().getSourceDiff(organizationId, {
+        actorId,
+        sourceId,
+        baseSourceId: baselineSourceId,
+      }),
+    ).resolves.toMatchObject({
+      report: {
+        findingDelta: {
+          status: "partial_integration_unavailable",
+          summary: null,
+          reason:
+            "Live advisory comparison is computed separately; use the findings tab.",
+        },
       },
     });
   });
@@ -655,6 +688,205 @@ describe("SupabaseSbomRepository quality reads", () => {
       p_organization_id: organizationId,
       p_actor_user_id: actorId,
       p_source_id: sourceId,
+    });
+  });
+
+  it("projects only public baseline fields without rewriting stored comparison facts", async () => {
+    const report = qualityReport();
+    const baseline = {
+      status: "available",
+      reportId: report.id,
+      sourceId,
+      totalScore: 27.5,
+      completedAt: report.completedAt,
+      quality: {
+        formulaVersion: report.formulaVersion,
+        inputs: report.inputs,
+        dimensions: report.dimensions,
+        totalScore: 27.5,
+      },
+    };
+    rpc.mockResolvedValue({
+      data: [{ outcome: "found", result: { report: { ...report, baseline } } }],
+      error: null,
+    });
+    const response = await subject().getQualityReport(organizationId, {
+      actorId,
+      sourceId,
+    });
+    expect(response?.report.baseline).toEqual({
+      status: baseline.status,
+      reportId: baseline.reportId,
+      sourceId,
+      totalScore: 27.5,
+      completedAt: baseline.completedAt,
+    });
+    expect(baseline.quality.totalScore).toBe(27.5);
+  });
+
+  it.each(["first_document", "available"])(
+    "projects legacy improvement dimensions with a %s baseline without mutating evidence",
+    async (status) => {
+      const report = qualityReport();
+      const baseline =
+        status === "available"
+          ? {
+              status,
+              reportId: report.id,
+              sourceId,
+              totalScore: 0,
+              completedAt: report.completedAt,
+              quality: { totalScore: 0 },
+            }
+          : { status };
+      const stored = {
+        ...report,
+        baseline,
+        regression: {
+          status: "none",
+          totalScoreDelta: 93.33,
+          changedDimensions: ["license"],
+        },
+      };
+      rpc.mockResolvedValue({
+        data: [{ outcome: "found", result: { report: stored } }],
+        error: null,
+      });
+      const response = await subject().getQualityReport(organizationId, {
+        actorId,
+        sourceId,
+      });
+      expect(response?.report.regression).toEqual({
+        status: "none",
+        totalScoreDelta: 93.33,
+        changedDimensions: [],
+      });
+      expect(stored.regression.changedDimensions).toEqual(["license"]);
+    },
+  );
+
+  it("retains regressive dimension evidence", async () => {
+    const report = {
+      ...qualityReport(),
+      regression: {
+        status: "regression",
+        totalScoreDelta: -20,
+        changedDimensions: ["license"],
+      },
+    };
+    rpc.mockResolvedValue({
+      data: [{ outcome: "found", result: { report } }],
+      error: null,
+    });
+    await expect(
+      subject().getQualityReport(organizationId, { actorId, sourceId }),
+    ).resolves.toEqual({ report });
+  });
+
+  it("does not relax strict validation for unknown persisted fields", async () => {
+    const report = {
+      ...qualityReport(),
+      regression: {
+        status: "none",
+        totalScoreDelta: 20,
+        changedDimensions: ["license"],
+        unknown: true,
+      },
+    };
+    rpc.mockResolvedValue({
+      data: [{ outcome: "found", result: { report } }],
+      error: null,
+    });
+    await expect(
+      subject().getQualityReport(organizationId, { actorId, sourceId }),
+    ).rejects.toThrow();
+  });
+
+  it.each(["none", "regression"] as const)(
+    "persists contract-valid public dimensions for %s while retaining internal comparison data",
+    async (status) => {
+      const quality = calculateSbomQuality({
+        components: [],
+        primaryComponent: null,
+      });
+      const report = {
+        assessmentStatus: "valid" as const,
+        quality,
+        bsiProfile: {
+          enabled: false,
+          status: "disabled" as const,
+          rulesetVersion: "bsi-tr-03183-2.v2.0.0",
+          findingCount: 0,
+        },
+        baseline: { status: "first_document" as const },
+        regression: {
+          status,
+          totalScoreDelta: status === "none" ? 20 : -20,
+          changedDimensions: ["license" as const],
+        },
+      };
+      rpc.mockResolvedValue({ data: [{ outcome: "completed" }], error: null });
+      await subject().persistQualityReport(organizationId, {
+        reportId: sourceId,
+        workerId: actorId,
+        report,
+        findings: [],
+      });
+      const calls = rpc.mock.calls as readonly (readonly [
+        string,
+        { p_report: { regression: unknown } },
+      ])[];
+      const saved = calls[0]?.[1].p_report.regression;
+      expect(sbomQualityRegressionSchema.parse(saved)).toEqual({
+        status,
+        totalScoreDelta: report.regression.totalScoreDelta,
+        changedDimensions: status === "none" ? [] : ["license"],
+      });
+      expect(report.regression.changedDimensions).toEqual(["license"]);
+    },
+  );
+
+  it("preserves fractional baseline quality scores in new leased comparisons", async () => {
+    const report = qualityReport();
+    const baseline = {
+      status: "available",
+      reportId: report.id,
+      sourceId,
+      totalScore: 27.5,
+      completedAt: report.completedAt,
+      quality: {
+        formulaVersion: report.formulaVersion,
+        inputs: report.inputs,
+        dimensions: report.dimensions,
+        totalScore: 27.5,
+      },
+    };
+    rpc.mockResolvedValue({
+      data: [
+        {
+          outcome: "claimed",
+          work: {
+            id: report.id,
+            sourceId,
+            releaseId: report.releaseId,
+            documentId: report.documentId,
+            bsiProfile: {
+              enabled: true,
+              rulesetVersion: report.rulesetVersion,
+            },
+            baseline,
+          },
+        },
+      ],
+      error: null,
+    });
+    const result = await subject().claimQualityReport(organizationId, {
+      workerId: actorId,
+      leaseSeconds: 60,
+    });
+    expect(result).toMatchObject({
+      outcome: "claimed",
+      baseline: { totalScore: 27.5, quality: { totalScore: 27.5 } },
     });
   });
 

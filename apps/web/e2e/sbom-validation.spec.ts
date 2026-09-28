@@ -12,9 +12,11 @@ import {
   type TestInfo,
   test,
 } from "@playwright/test";
+import { sbomUploadCompletionResponseSchema } from "@repo/contracts/sboms";
 
 import { sbomValidationFixtures } from "./fixtures/sbom-validation";
-import { LIVE_API_ORIGIN, signIn } from "./helpers/accounts";
+import { LIVE_API_ORIGIN, RunScopedAccounts } from "./helpers/accounts";
+import { onboardSbomOrganization } from "./helpers/sbom-fixture";
 
 /* eslint-disable turbo/no-undeclared-env-vars -- Playwright runs outside Turbo's cached task graph. */
 
@@ -22,7 +24,6 @@ const execFileAsync = promisify(execFile);
 const WEB_ORIGIN = process.env.E2E_WEB_ORIGIN ?? "http://127.0.0.1:3000";
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
 const API_PREFIX = "/api/v1";
-const OWNER_EMAIL = "owner@cra.test";
 const DESKTOP_VIEWPORT = Object.freeze({ width: 1440, height: 1100 });
 const MOBILE_VIEWPORT = Object.freeze({ width: 390, height: 844 });
 
@@ -45,9 +46,6 @@ type ReleaseResponse = Readonly<{
 }>;
 type SbomUploadResponse = Readonly<{
   source: Readonly<{ id: string; fileName: string }>;
-}>;
-type SbomJobResponse = Readonly<{
-  job: Readonly<{ id: string; sourceId: string }>;
 }>;
 type SbomValidationReportResponse = Readonly<{
   source: Readonly<{
@@ -76,13 +74,22 @@ test("owner records a release-scoped manual vulnerability finding", async ({
   browser,
 }, testInfo) => {
   const runId = `manual-${Date.now()}-${testInfo.parallelIndex}`;
+  const fixtures = new RunScopedAccounts(testInfo);
   const context = await browser.newContext({
     baseURL: WEB_ORIGIN,
     viewport: DESKTOP_VIEWPORT,
   });
 
   try {
-    expect((await signIn(context.request, OWNER_EMAIL)).status()).toBe(200);
+    const account = await fixtures.createVerified(context, "sbom-owner");
+    const onboarding = await context.newPage();
+    const organizationId = await onboardSbomOrganization(
+      onboarding,
+      account.email,
+      `E2E SBOM ${runId}`,
+    );
+    fixtures.trackM3Organization(organizationId);
+    await onboarding.close();
     const session = await currentSession(context.request);
     const legalEntityId = await defaultLegalEntityId(context.request);
     const product = await createProduct(context.request, {
@@ -133,6 +140,7 @@ test("owner records a release-scoped manual vulnerability finding", async ({
     ).toContainText(release.release.label);
   } finally {
     await context.close();
+    await fixtures.cleanup();
   }
 });
 
@@ -141,13 +149,22 @@ test("owner uploads valid and invalid SBOMs, filters diagnostics, and corrects i
 }, testInfo) => {
   test.setTimeout(180_000);
   const runId = `${Date.now()}-${testInfo.parallelIndex}-${testInfo.retry}`;
+  const fixtures = new RunScopedAccounts(testInfo);
   const context = await browser.newContext({
     baseURL: WEB_ORIGIN,
     viewport: DESKTOP_VIEWPORT,
   });
 
   try {
-    expect((await signIn(context.request, OWNER_EMAIL)).status()).toBe(200);
+    const account = await fixtures.createVerified(context, "sbom-owner");
+    const onboarding = await context.newPage();
+    const organizationId = await onboardSbomOrganization(
+      onboarding,
+      account.email,
+      `E2E SBOM ${runId}`,
+    );
+    fixtures.trackM3Organization(organizationId);
+    await onboarding.close();
     const session = await currentSession(context.request);
     const legalEntityId = await defaultLegalEntityId(context.request);
     const product = await createProduct(context.request, {
@@ -228,7 +245,7 @@ test("owner uploads valid and invalid SBOMs, filters diagnostics, and corrects i
       page.getByRole("table", { name: "SBOM diagnostics" }),
     ).toBeVisible();
     await expect(
-      page.getByText("schema_violation", { exact: true }),
+      page.getByText("schema_violation", { exact: true }).first(),
     ).toBeVisible();
     await captureValidationScreenshot(page, testInfo, {
       attachmentName: "desktop invalid SBOM diagnostics",
@@ -278,9 +295,11 @@ test("owner uploads valid and invalid SBOMs, filters diagnostics, and corrects i
       browser,
       productId: product.product.id,
       correctedFileName: corrected.fileName,
+      storageState: await context.storageState(),
     });
   } finally {
     await context.close();
+    await fixtures.cleanup();
   }
 });
 
@@ -396,8 +415,11 @@ async function uploadFixture(
   const upload = (await initializedResponse.json()) as SbomUploadResponse;
   const completedResponse = await completed;
   expect(completedResponse.status()).toBe(202);
-  const completion = (await completedResponse.json()) as SbomJobResponse;
-  expect(completion.job.sourceId).toBe(upload.source.id);
+  const completion = sbomUploadCompletionResponseSchema.parse(
+    await completedResponse.json(),
+  );
+  expect(completion.completion.sourceId).toBe(upload.source.id);
+  expect(completion.job.sourceId).toBe(completion.completion.canonicalSourceId);
   await expect(
     page.getByText("Original evidence is verified and queued for processing.", {
       exact: true,
@@ -407,25 +429,18 @@ async function uploadFixture(
 }
 
 async function runSbomWorkerOnce(): Promise<void> {
-  const { stderr } = await execFileAsync(
+  const { stdout, stderr } = await execFileAsync(
     "pnpm",
-    [
-      "--filter",
-      "api",
-      "exec",
-      "ts-node",
-      "-r",
-      "tsconfig-paths/register",
-      "src/sbom-ingest-worker.ts",
-      "--once",
-    ],
+    ["--filter", "api", "exec", "node", "dist/sbom-ingest-worker.js", "--once"],
     {
       cwd: REPO_ROOT,
       env: process.env,
       timeout: 60_000,
     },
   );
-  expect(stderr).not.toContain("SBOM ingest worker cycle failed safely");
+  expect(`${stdout}\n${stderr}`).not.toContain(
+    "SBOM ingest worker cycle failed safely",
+  );
 }
 
 async function expectReportStatus(
@@ -494,6 +509,9 @@ async function captureMobileValidationScreenshot(
     browser: Browser;
     productId: string;
     correctedFileName: string;
+    storageState: Awaited<
+      ReturnType<import("@playwright/test").BrowserContext["storageState"]>
+    >;
   }>,
 ): Promise<void> {
   const mobileContext = await input.browser.newContext({
@@ -502,11 +520,9 @@ async function captureMobileValidationScreenshot(
     isMobile: true,
     hasTouch: true,
     deviceScaleFactor: 3,
+    storageState: input.storageState,
   });
   try {
-    expect((await signIn(mobileContext.request, OWNER_EMAIL)).status()).toBe(
-      200,
-    );
     const mobilePage = await mobileContext.newPage();
     await mobilePage.goto(`/products/${input.productId}`);
     await expectReport(mobilePage, "Valid", input.correctedFileName);

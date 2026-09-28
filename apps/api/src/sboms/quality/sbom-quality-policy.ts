@@ -322,15 +322,24 @@ export function compareSbomQuality(
   });
 }
 
-/**
- * This is a transparent, version-pinned technical profile mapping. Each
- * finding names the profile rule, source field family, observed input, and a
- * remediation path; consumers must not present it as legal advice.
+/** Aggregate engineering checks are not an evaluation of the full pinned BSI profile.
+ * Historical rule codes remain stable; new reports explicitly expose this limitation.
  */
+export const BSI_PROFILE_NOT_EVALUATED_FINDING: BsiTr03183_2Finding =
+  Object.freeze({
+    code: "CRA-BSI-03183-2-PROFILE-NOT-EVALUATED",
+    severity: "warning",
+    sourcePath: "$",
+    expected: "Evaluation of the full pinned BSI technical profile.",
+    actual: "Full pinned BSI profile not evaluated",
+    remediation:
+      "Obtain the complete authoritative pinned edition and review document, component, and source-specific requirements before claiming profile conformity. Aggregate engineering checks do not establish it.",
+  });
+
 export function evaluateBsiTr03183_2(
   quality: SbomQualityResult,
 ): readonly BsiTr03183_2Finding[] {
-  const findings: BsiTr03183_2Finding[] = [];
+  const findings: BsiTr03183_2Finding[] = [BSI_PROFILE_NOT_EVALUATED_FINDING];
   for (const dimension of quality.dimensions) {
     if (
       dimension.id === "transitive_depth" ||
@@ -341,12 +350,9 @@ export function evaluateBsiTr03183_2(
     findings.push(
       freezeBsiFinding({
         code: bsiRuleCode(dimension.id),
-        severity:
-          dimension.status === "missing" || dimension.coveragePercent === 0
-            ? "error"
-            : "warning",
+        severity: "warning",
         sourcePath: bsiSourcePath(dimension.id),
-        expected: bsiExpected(dimension.id),
+        expected: `Engineering subset check, not an official normative rule: ${bsiExpected(dimension.id)}`,
         actual: `${dimension.satisfiedCount} of ${dimension.eligibleCount} eligible values`,
         remediation: bsiRemediation(dimension.id),
       }),

@@ -228,6 +228,7 @@ export class RunScopedAccounts {
   private readonly invitationIds = new Set<string>();
   private readonly organizationIds = new Set<string>();
   private readonly m2V2OrganizationIds = new Set<string>();
+  private readonly m3OrganizationIds = new Set<string>();
   private sequence = 0;
 
   constructor(private readonly testInfo: TestInfo) {}
@@ -340,6 +341,12 @@ export class RunScopedAccounts {
     this.m2V2OrganizationIds.add(id);
   }
 
+  /** SBOM evidence is removed only with this generated tenant and its private bucket prefix. */
+  trackM3Organization(id: string): void {
+    this.trackM2V2Organization(id);
+    this.m3OrganizationIds.add(id);
+  }
+
   async invitationToken(email: string): Promise<string> {
     const response = await supabase(
       `/rest/v1/invitations?select=token_hash&email=eq.${encodeURIComponent(email)}&status=eq.pending`,
@@ -380,6 +387,9 @@ export class RunScopedAccounts {
 
   async cleanup(): Promise<void> {
     for (const id of this.organizationIds) {
+      if (this.m3OrganizationIds.has(id)) {
+        await removeStoragePrefix("sbom-originals", `${id}/`);
+      }
       const importIds = await runScopedImportIds(id);
       // Keep this explicit rather than relying on the organization cascade:
       // relationship/finding rows deliberately use restrictive composite FKs
@@ -451,6 +461,16 @@ export class RunScopedAccounts {
           "product_security_update_artifacts",
           "products",
           "organizations",
+          ...(this.m3OrganizationIds.has(id)
+            ? [
+                "sbom_sources",
+                "sbom_raw_objects",
+                "sbom_documents",
+                "sbom_components",
+                "sbom_component_dependencies",
+                "sbom_quality_reports",
+              ]
+            : []),
         ]) {
           const scope =
             table === "organizations"

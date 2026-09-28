@@ -1,4 +1,16 @@
 begin;
+-- FR-SBOM-008: new reports pin the installed comparator; prior report rows are not rewritten.
+do $$ begin
+  if (select pg_get_expr(d.adbin,d.adrelid) from pg_attrdef d join pg_attribute a
+    on a.attrelid=d.adrelid and a.attnum=d.adnum where d.adrelid='public.sbom_diff_reports'::regclass
+    and a.attname='comparator_version') not like '%m3-m4-version-comparators.v1%' then
+    raise exception 'New lineage reports do not pin the installed M4 comparator policy';
+  end if;
+  if position('m3-m4-version-comparators.v1' in pg_get_functiondef('public.enqueue_sbom_diff_report_atomic(uuid,uuid,uuid)'::regprocedure)) = 0 then
+    raise exception 'Exact enqueue retries still look up the obsolete comparator policy';
+  end if;
+end $$;
+
 
 create or replace function pg_temp.check(p_name text, p_ok boolean)
 returns void language plpgsql as $$
@@ -90,6 +102,18 @@ declare
   v_current_component_id uuid;
   v_diff_id uuid := gen_random_uuid();
   v_facts record;
+  v_other_release uuid := gen_random_uuid();
+  v_vulnerability uuid;
+  v_feed_run uuid;
+  v_source_record uuid;
+  v_source_version uuid;
+  v_range uuid;
+  v_occurrence uuid;
+  v_other_occurrence uuid;
+  v_finding uuid := gen_random_uuid();
+  v_other_finding uuid := gen_random_uuid();
+  v_marker text := 'M3-SCOPE-' || gen_random_uuid()::text;
+
   v_report jsonb := jsonb_build_object(
     'status', 'valid',
     'detected', jsonb_build_object(
@@ -355,15 +379,128 @@ begin
   select * into v_findings
   from public.get_sbom_diff_findings(v_org, v_actor, v_diff_id, 10, null);
   if v_findings.outcome <> 'found'
-    or (v_findings.result ->> 'state') <> 'ready'
+    or (v_findings.result ->> 'state') <> 'partial_integration_unavailable'
     or v_findings.result -> 'items' <> '[]'::jsonb
     or v_findings.result -> 'nextCursor' <> 'null'::jsonb then
-    raise exception 'finding delta did not preserve the ready cursor boundary';
+    raise exception 'unfinished matching falsely reported a ready finding delta';
   end if;
   update public.sbom_diff_reports
   set state = 'completed', progress_stage = 'completed', progress_percent = 100,
       lease_owner = null, lease_expires_at = null, completed_at = now()
   where organization_id = v_org and id = v_diff_id;
+  -- Old failed epochs never block successful newer matching. Current queued
+  -- epochs stay visibly unavailable instead of being mistaken for zero deltas.
+  insert into public.vulnerability_match_jobs(organization_id,document_id,release_id,
+    osv_promotion_sequence,nvd_promotion_sequence,vendor_csaf_promotion_sequence,
+    correlation_id,trigger_key,status,completed_at)
+  select v_org,doc,v_release,900001,900001,900001,gen_random_uuid(),'m3-delta-old:'||doc::text,'dead_letter',null
+  from (values((v_next_begin.document->>'id')::uuid),((v_begin.document->>'id')::uuid)) ids(doc);
+  insert into public.vulnerability_match_jobs(organization_id,document_id,release_id,
+    osv_promotion_sequence,nvd_promotion_sequence,vendor_csaf_promotion_sequence,
+    correlation_id,trigger_key,status,completed_at)
+  select v_org,doc,v_release,900002,900002,900002,gen_random_uuid(),'m3-delta-new:'||doc::text,'completed',now()
+  from (values((v_next_begin.document->>'id')::uuid),((v_begin.document->>'id')::uuid)) ids(doc);
+  insert into public.vulnerability_match_jobs(organization_id,document_id,release_id,
+    osv_promotion_sequence,nvd_promotion_sequence,vendor_csaf_promotion_sequence,
+    correlation_id,trigger_key,status)
+  values(v_org,(v_next_begin.document->>'id')::uuid,v_release,900001,900001,900001,
+    gen_random_uuid(),'m3-delta-stale-active','queued');
+  select * into v_findings from public.get_sbom_diff_findings(v_org,v_actor,v_diff_id,10,null);
+  if v_findings.outcome<>'found' or v_findings.result->>'state'<>'ready' then
+    raise exception 'Historical matching failures blocked a successful newer scoped epoch'; end if;
+  -- Independent feed reads can capture crossed vectors. Lexicographic ordering
+  -- hides a pending NVD epoch behind a completed higher OSV epoch.
+  insert into public.vulnerability_match_jobs(organization_id,document_id,release_id,
+    osv_promotion_sequence,nvd_promotion_sequence,vendor_csaf_promotion_sequence,
+    correlation_id,trigger_key,status,completed_at)
+  values(v_org,(v_next_begin.document->>'id')::uuid,v_release,900004,900003,900003,
+    gen_random_uuid(),'m3-crossed-completed','completed',now()),
+    (v_org,(v_next_begin.document->>'id')::uuid,v_release,900003,900004,900003,
+    gen_random_uuid(),'m3-crossed-queued','queued',null);
+  select * into v_findings from public.get_sbom_diff_findings(v_org,v_actor,v_diff_id,10,null);
+  if v_findings.result->>'state'<>'partial_integration_unavailable' then
+    raise exception 'Crossed queued feed vector was hidden by lexicographic ordering'; end if;
+  update public.vulnerability_match_jobs set status='dead_letter'
+    where organization_id=v_org and trigger_key='m3-crossed-queued';
+  select * into v_findings from public.get_sbom_diff_findings(v_org,v_actor,v_diff_id,10,null);
+  if v_findings.result->>'state'<>'partial_integration_unavailable' then
+    raise exception 'Nondominated failed feed vector was hidden'; end if;
+  insert into public.vulnerability_match_jobs(organization_id,document_id,release_id,
+    osv_promotion_sequence,nvd_promotion_sequence,vendor_csaf_promotion_sequence,
+    correlation_id,trigger_key,status,completed_at)
+  values(v_org,(v_next_begin.document->>'id')::uuid,v_release,900004,900004,900004,
+    gen_random_uuid(),'m3-crossed-recovered','completed',now());
+  select * into v_findings from public.get_sbom_diff_findings(v_org,v_actor,v_diff_id,10,null);
+  if v_findings.result->>'state'<>'ready' then
+    raise exception 'Dominating completed vector did not supersede historical failures'; end if;
+  -- Self-contained advisory and alias-release facts: all are rolled back,
+  -- and no assertion depends on customer findings or a network feed.
+  insert into public.product_releases(id,organization_id,product_id,legal_entity_id,
+    legal_entity_version,legal_entity_snapshot,label,release_version,created_by,updated_by)
+  select v_other_release,v_org,product_id,legal_entity_id,legal_entity_version,
+    legal_entity_snapshot,v_marker,v_marker,v_actor,v_actor
+  from public.product_releases where organization_id=v_org and id=v_release;
+  insert into public.vulnerabilities(canonical_id,title,summary)
+    values(v_marker,'Rollback-only scope fixture','Synthetic finding scope evidence.') returning id into v_vulnerability;
+  insert into public.vulnerability_feed_sync_runs(feed_key,run_kind,status,correlation_id,
+    staging_complete,expected_record_count,records_received,records_promoted,started_at,completed_at)
+    values('osv','manual','completed',gen_random_uuid(),true,1,1,1,clock_timestamp(),clock_timestamp()) returning id into v_feed_run;
+  insert into public.vulnerability_source_records(feed_key,source_record_key,vulnerability_id)
+    values('osv',v_marker,v_vulnerability) returning id into v_source_record;
+  insert into public.vulnerability_source_record_versions(source_record_id,run_id,record_sha256,
+    record_state,raw_payload,normalized_payload)
+    values(v_source_record,v_feed_run,repeat('f',64),'active','{}','{}') returning id into v_source_version;
+  update public.vulnerability_source_records set current_version_id=v_source_version where id=v_source_record;
+  insert into public.vulnerability_affected_ranges(vulnerability_id,source_record_version_id,
+    ecosystem,package_name,range_type,range_value)
+    values(v_vulnerability,v_source_version,'npm','m3-diff-scope-fixture','semver','{"versions":["1.0.0"]}') returning id into v_range;
+  insert into public.vulnerability_component_occurrences(organization_id,document_id,release_id,
+    component_id,canonical_purl,component_identity,component_version)
+    values(v_org,(v_next_begin.document->>'id')::uuid,v_release,v_current_component_id,
+      'pkg:npm/next-purl@2.0.0','pkg:npm/next-purl@2.0.0','2.0.0') returning id into v_occurrence;
+  insert into public.vulnerability_component_occurrences(organization_id,document_id,release_id,
+    component_id,canonical_purl,component_identity,component_version)
+    values(v_org,(v_next_begin.document->>'id')::uuid,v_other_release,v_current_component_id,
+      'pkg:npm/next-purl@2.0.0','pkg:npm/next-purl@2.0.0','2.0.0') returning id into v_other_occurrence;
+  insert into public.vulnerability_findings(id,organization_id,release_id,component_identity,canonical_advisory_id,
+    vulnerability_id,source_feed_key,source_record_id,source_record_version_id,affected_range_id,
+    match_method,comparator_name,comparator_version,evaluated_component_value,affected_range,event_sequence,
+    confidence,confidence_table_version,confidence_explanation,reevaluation_state)
+  select finding_id,v_org,release_id,'pkg:npm/next-purl@2.0.0',v_marker,v_vulnerability,'osv',v_source_record,
+    v_source_version,v_range,'purl_osv','semver','m4-02.1','2.0.0','{"versions":["1.0.0"]}','[]',
+    0.91,'m3-test','Rollback-only scope fixture.','unchanged'
+  from (values(v_finding,v_release),(v_other_finding,v_other_release)) facts(finding_id,release_id);
+  insert into public.vulnerability_finding_component_occurrences(finding_id,occurrence_id,organization_id)
+    values(v_finding,v_occurrence,v_org),(v_other_finding,v_other_occurrence,v_org);
+  select * into v_findings from public.get_sbom_diff_findings(v_org,v_actor,v_diff_id,10,null);
+  if v_findings.result->>'state'<>'ready' or jsonb_array_length(v_findings.result->'items')<>1
+    or v_findings.result#>>'{items,0,findingId}'<>v_finding::text
+    or v_findings.result#>>'{items,0,change}'<>'new' then
+    raise exception 'Document alias from another release contaminated the finding delta'; end if;
+  select * into v_findings from public.get_sbom_diff_findings(gen_random_uuid(),v_actor,v_diff_id,10,null);
+  if v_findings.outcome<>'not_found' then raise exception 'Cross-tenant finding delta leaked'; end if;
+  insert into public.vulnerability_match_jobs(organization_id,document_id,release_id,
+    osv_promotion_sequence,nvd_promotion_sequence,vendor_csaf_promotion_sequence,
+    correlation_id,trigger_key,status)
+  values(v_org,(v_next_begin.document->>'id')::uuid,v_release,900003,900003,900003,
+    gen_random_uuid(),'m3-delta-pending','queued');
+  select * into v_findings from public.get_sbom_diff_findings(v_org,v_actor,v_diff_id,10,null);
+  if v_findings.result->>'state'<>'ready' then
+    raise exception 'Strictly dominated stale active work blocked newer completed matching'; end if;
+  insert into public.vulnerability_match_jobs(organization_id,document_id,release_id,
+    osv_promotion_sequence,nvd_promotion_sequence,vendor_csaf_promotion_sequence,
+    correlation_id,trigger_key,status)
+  values(v_org,(v_next_begin.document->>'id')::uuid,v_release,900004,900004,900004,
+    gen_random_uuid(),'m3-delta-equal-active','queued');
+  select * into v_findings from public.get_sbom_diff_findings(v_org,v_actor,v_diff_id,10,null);
+  if v_findings.result->>'state'<>'partial_integration_unavailable' then
+    raise exception 'Equal-vector active work was incorrectly ignored'; end if;
+  insert into public.base_role_permission_overrides(organization_id,base_role,permissions)
+    values(v_org,'owner','{"can_view_findings":false}'::jsonb)
+    on conflict(organization_id,base_role) do update set permissions=excluded.permissions;
+  select * into v_findings from public.get_sbom_diff_findings(v_org,v_actor,v_diff_id,10,null);
+  if v_findings.outcome<>'not_found' then raise exception 'Revoked finding permission leaked a live projection'; end if;
+  delete from public.base_role_permission_overrides where organization_id=v_org and base_role='owner';
   if (public.sbom_diff_report_json(v_org, v_diff_id) ->> 'comparisonStatus')
       <> 'partial_integration_unavailable' then
     raise exception 'unresolved version transitions must retain comparator-unavailable status';

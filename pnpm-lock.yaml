@@ -29,7 +29,7 @@ importers:
     dependencies:
       '@cyclonedx/cyclonedx-library':
         specifier: 10.2.0
-        version: 10.2.0(ajv-formats@3.0.1(ajv@8.20.0))(ajv@8.20.0)(libxmljs2@0.35.0)(packageurl-js@2.0.1)
+        version: 10.2.0(ajv-formats@3.0.1(ajv@8.20.0))(ajv@8.20.0)(libxmljs2@0.35.0)(packageurl-js@2.0.1)(spdx-expression-parse@5.0.0)
       '@fontsource/noto-sans':
         specifier: 5.2.8
         version: 5.2.8
@@ -108,6 +108,9 @@ importers:
       sharp:
         specifier: ^0.35.3
         version: 0.35.3(@types/node@24.13.3)
+      spdx-expression-parse:
+        specifier: 5.0.0
+        version: 5.0.0
       stream-json:
         specifier: ^1.9.1
         version: 1.9.1
@@ -293,6 +296,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@noble/hashes':
+        specifier: 1.8.0
+        version: 1.8.0
       '@repo/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
@@ -9994,6 +10000,15 @@ packages:
   space-separated-tokens@2.0.2:
     resolution: {integrity: sha512-PEGlAwrG8yXGXRjW32fGbg66JAlOAwbObuqVoJpv/mRgoWDQfgH1wDPvtzWyUSNAXBGSk8h755YDbbcEy3SH2Q==}
 
+  spdx-exceptions@2.5.0:
+    resolution: {integrity: sha512-PiU42r+xO4UbUS1buo3LPJkjlO7430Xn5SVAhdpzzsPHsjbYVflnnFdATgabnLude+Cqu25p6N+g2lw/PFsa4w==}
+
+  spdx-expression-parse@5.0.0:
+    resolution: {integrity: sha512-vngmw3Rgn+o2arXNbnZaj5UtOEBuWBfvaI+Wc8GFfykIhA5/vdK9/Sp/XkLv63dykz2rxKDvKEHupF5P0FORcQ==}
+
+  spdx-license-ids@3.0.24:
+    resolution: {integrity: sha512-cLS9TtWkIQFyLkJ3/5aFQAOHOSKTlOs/7WDut/XPSdjom1fJhUdkepeJAKXa9Y05+FabHd0sti+Et559vDtkpQ==}
+
   spdy-transport@3.0.0:
     resolution: {integrity: sha512-hsLVFE5SjA6TCisWeJXFKniGGOpBgMLmerfO2aCyCU5s7nJ/rpAepqmFifv/GCbSbueEeAJJnmSQ2rKC/g8Fcw==}
 
@@ -12462,12 +12477,13 @@ snapshots:
     dependencies:
       postcss: 8.5.25
 
-  '@cyclonedx/cyclonedx-library@10.2.0(ajv-formats@3.0.1(ajv@8.20.0))(ajv@8.20.0)(libxmljs2@0.35.0)(packageurl-js@2.0.1)':
+  '@cyclonedx/cyclonedx-library@10.2.0(ajv-formats@3.0.1(ajv@8.20.0))(ajv@8.20.0)(libxmljs2@0.35.0)(packageurl-js@2.0.1)(spdx-expression-parse@5.0.0)':
     optionalDependencies:
       ajv: 8.20.0
       ajv-formats: 3.0.1(ajv@8.20.0)
       libxmljs2: 0.35.0
       packageurl-js: 2.0.1
+      spdx-expression-parse: 5.0.0
 
   '@date-fns/tz@1.5.0': {}
 
@@ -22839,6 +22855,15 @@ snapshots:
   source-map@0.7.6: {}
 
   space-separated-tokens@2.0.2: {}
+
+  spdx-exceptions@2.5.0: {}
+
+  spdx-expression-parse@5.0.0:
+    dependencies:
+      spdx-exceptions: 2.5.0
+      spdx-license-ids: 3.0.24
+
+  spdx-license-ids@3.0.24: {}
 
   spdy-transport@3.0.0:
     dependencies:

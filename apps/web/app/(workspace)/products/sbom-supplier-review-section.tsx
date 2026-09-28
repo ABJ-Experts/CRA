@@ -1,11 +1,14 @@
 "use client";
 
-import { type SupplierSbomSubmission } from "@repo/contracts/sboms";
+import {
+  type SupplierSbomRequestsResponse,
+  type SupplierSbomSubmission,
+} from "@repo/contracts/sboms";
 import { Button } from "@repo/ui/button";
 import { Select, SelectItem } from "@repo/ui/select";
 import { Tag, type TagProps } from "@repo/ui/tag";
 import { ClipboardCopy, RefreshCw } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { ApiClientError } from "../../_lib/http/api-client";
 import {
@@ -124,7 +127,7 @@ function SubmissionReview({
       ) : null}
       {isReviewable ? (
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          <label className="flex flex-col gap-2 text-caption-1-semibold text-fg">
+          <label className="flex min-w-0 flex-col gap-2 text-caption-1-semibold text-fg">
             Decision
             <Select
               aria-label={`Decision for supplier submission ${submission.id}`}
@@ -180,9 +183,22 @@ export function SbomSupplierReviewSection({
   const [expiresAt, setExpiresAt] = useState(defaultExpiry);
   const [message, setMessage] = useState<string | null>(null);
   const [latestInvitation, setLatestInvitation] = useState<string | null>(null);
+  const [requestCursor, setRequestCursor] = useState<string | undefined>();
+  const [olderRequests, setOlderRequests] = useState<
+    SupplierSbomRequestsResponse["requests"]
+  >([]);
   const requests = useSupplierSbomRequestsQuery(
-    { productId, releaseId, limit: 100 },
+    { productId, releaseId, limit: 100, cursor: requestCursor },
     enabled && canReview && releaseId !== "",
+  );
+  const requestRows = useMemo(
+    () =>
+      [...olderRequests, ...(requests.data?.requests ?? [])].filter(
+        (item, index, rows) =>
+          rows.findIndex((next) => next.request.id === item.request.id) ===
+          index,
+      ),
+    [olderRequests, requests.data],
   );
   const createRequest = useCreateSupplierSbomRequestMutation();
   const createInvitation = useCreateSupplierSbomInvitationMutation();
@@ -199,6 +215,8 @@ export function SbomSupplierReviewSection({
 
   useEffect(() => {
     setLatestInvitation(null);
+    setRequestCursor(undefined);
+    setOlderRequests([]);
   }, [releaseId]);
 
   async function createRequestAndInvitation() {
@@ -317,10 +335,11 @@ export function SbomSupplierReviewSection({
           Create a product release before requesting a supplier SBOM.
         </p>
       ) : (
-        <div className="mt-5 grid gap-5">
-          <div className="grid gap-3 rounded-xl border border-border bg-surface-subtle p-4 sm:grid-cols-2">
+        <div className="mt-5 grid min-w-0 grid-cols-1 gap-5">
+          <div className="grid min-w-0 grid-cols-1 gap-3 rounded-xl border border-border bg-surface-subtle p-4 sm:grid-cols-2">
             <Select
               label="Target release"
+              wrapperClassName="min-w-0 max-w-full"
               value={releaseId}
               disabled={busy}
               onValueChange={setReleaseId}
@@ -331,32 +350,32 @@ export function SbomSupplierReviewSection({
                 </SelectItem>
               ))}
             </Select>
-            <label className="flex flex-col gap-2 text-caption-1-semibold text-fg">
+            <label className="flex min-w-0 flex-col gap-2 text-caption-1-semibold text-fg">
               Supplier display name
               <input
                 value={supplierDisplayName}
                 disabled={busy}
                 onChange={(event) => setSupplierDisplayName(event.target.value)}
-                className="h-10 rounded-xl border border-border bg-canvas px-3 text-subhead-regular text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-active-500 focus-visible:ring-offset-2 focus-visible:ring-offset-surface-subtle"
+                className="h-10 min-w-0 rounded-xl border border-border bg-canvas px-3 text-subhead-regular text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-active-500 focus-visible:ring-offset-2 focus-visible:ring-offset-surface-subtle"
               />
             </label>
-            <label className="flex flex-col gap-2 text-caption-1-semibold text-fg">
+            <label className="flex min-w-0 flex-col gap-2 text-caption-1-semibold text-fg">
               Allowed component reference
               <input
                 value={allowedComponentRef}
                 disabled={busy}
                 onChange={(event) => setAllowedComponentRef(event.target.value)}
-                className="h-10 rounded-xl border border-border bg-canvas px-3 text-subhead-regular text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-active-500 focus-visible:ring-offset-2 focus-visible:ring-offset-surface-subtle"
+                className="h-10 min-w-0 rounded-xl border border-border bg-canvas px-3 text-subhead-regular text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-active-500 focus-visible:ring-offset-2 focus-visible:ring-offset-surface-subtle"
               />
             </label>
-            <label className="flex flex-col gap-2 text-caption-1-semibold text-fg">
+            <label className="flex min-w-0 flex-col gap-2 text-caption-1-semibold text-fg">
               Invitation expiry
               <input
                 type="datetime-local"
                 value={expiresAt}
                 disabled={busy}
                 onChange={(event) => setExpiresAt(event.target.value)}
-                className="h-10 rounded-xl border border-border bg-canvas px-3 text-subhead-regular text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-active-500 focus-visible:ring-offset-2 focus-visible:ring-offset-surface-subtle"
+                className="h-10 min-w-0 rounded-xl border border-border bg-canvas px-3 text-subhead-regular text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-active-500 focus-visible:ring-offset-2 focus-visible:ring-offset-surface-subtle"
               />
             </label>
             <div className="sm:col-span-2">
@@ -440,6 +459,20 @@ export function SbomSupplierReviewSection({
                 Refresh
               </Button>
             </div>
+            {requests.data?.nextCursor ? (
+              <Button
+                type="button"
+                variant="outline"
+                tone="grey"
+                disabled={requests.isPending}
+                onClick={() => {
+                  setOlderRequests(requestRows);
+                  setRequestCursor(requests.data?.nextCursor ?? undefined);
+                }}
+              >
+                Load older supplier requests
+              </Button>
+            ) : null}
             {requests.isPending ? (
               <p
                 role="status"
@@ -454,7 +487,7 @@ export function SbomSupplierReviewSection({
               >
                 {supplierErrorMessage(requests.error)}
               </p>
-            ) : (requests.data?.requests.length ?? 0) === 0 ? (
+            ) : requestRows.length === 0 ? (
               <p className="mt-4 rounded-xl border border-border bg-surface-subtle p-4 text-caption-1-regular text-fg-muted">
                 No supplier SBOM requests exist for this release.
               </p>
@@ -463,7 +496,7 @@ export function SbomSupplierReviewSection({
                 className="mt-4 grid gap-4"
                 aria-label="Supplier SBOM requests"
               >
-                {requests.data?.requests.map((summary) => (
+                {requestRows.map((summary) => (
                   <li
                     key={summary.request.id}
                     className="rounded-xl border border-border bg-surface-subtle p-4"

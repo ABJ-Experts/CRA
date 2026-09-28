@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import {
   BSI_TR_03183_2_RULESET_VERSION,
+  BSI_PROFILE_NOT_EVALUATED_FINDING,
   calculateSbomQualityFromInputs,
   compareSbomQuality,
   evaluateBsiTr03183_2,
@@ -12,6 +13,12 @@ import {
   type SbomQualityResult,
   isRecognizedCryptographicHash,
 } from "../quality/sbom-quality-policy";
+
+import type { BsiEvidenceReader } from "../quality/bsi-profile-facts";
+import {
+  evaluateBsiProfile,
+  BSI_PROFILE_EVALUATOR_VERSION,
+} from "../quality/bsi-profile-evaluator";
 
 const uuidSchema = z.uuid();
 const maximumClaimsPerCycle = 1_000;
@@ -77,6 +84,12 @@ export type SbomQualityReportDraft = Readonly<{
     status: "disabled" | "valid" | "warning" | "invalid" | "unavailable";
     rulesetVersion: string;
     findingCount: number;
+    assessmentKind?: "pinned_technical_checks" | "unavailable";
+    sourceSha256?: string;
+    evaluatorVersion?: "bsi-technical.v1";
+    passedRuleCount?: number;
+    failedRuleCount?: number;
+    manualReviewRuleCount?: number;
   }>;
   baseline: Extract<SbomQualityClaim, { outcome: "claimed" }>["baseline"];
   regression: Readonly<{
@@ -135,6 +148,7 @@ export class SbomQualityWorker {
       queue: SbomQualityQueue;
       pageSize?: number;
       maximumComponents?: number;
+      bsiEvidenceReader?: BsiEvidenceReader;
     }>,
   ) {
     if (!uuidSchema.safeParse(dependencies.workerId).success)
@@ -185,11 +199,8 @@ export class SbomQualityWorker {
     try {
       const inputs = await this.readInputs(organizationId, claim);
       const quality = calculateSbomQualityFromInputs(inputs);
-      const bsiFindings =
-        claim.profileEnabled &&
-        claim.rulesetVersion === BSI_TR_03183_2_RULESET_VERSION
-          ? evaluateBsiTr03183_2(quality)
-          : [];
+      const bsi = await this.evaluateProfile(organizationId, claim);
+      const bsiFindings = bsi.findings;
       const regression =
         claim.baseline.status === "available"
           ? compareSbomQuality(quality, claim.baseline.quality)
@@ -211,18 +222,7 @@ export class SbomQualityWorker {
             regression.status,
           ),
           quality,
-          bsiProfile: {
-            enabled: claim.profileEnabled,
-            status: claim.profileEnabled
-              ? bsiFindings.some((finding) => finding.severity === "error")
-                ? "invalid"
-                : bsiFindings.length > 0
-                  ? "warning"
-                  : "valid"
-              : "disabled",
-            rulesetVersion: claim.rulesetVersion,
-            findingCount: bsiFindings.length,
-          },
+          bsiProfile: bsi.profile,
           baseline: claim.baseline,
           regression,
         },
@@ -247,6 +247,75 @@ export class SbomQualityWorker {
       });
     }
     return true;
+  }
+
+  private async evaluateProfile(
+    orgId: string,
+    claim: Extract<SbomQualityClaim, { outcome: "claimed" }>,
+  ): Promise<
+    Readonly<{
+      profile: SbomQualityReportDraft["bsiProfile"];
+      findings: ReturnType<typeof evaluateBsiTr03183_2>;
+    }>
+  > {
+    if (!claim.profileEnabled)
+      return {
+        profile: {
+          enabled: false,
+          status: "disabled",
+          rulesetVersion: claim.rulesetVersion,
+          findingCount: 0,
+        },
+        findings: [],
+      };
+    if (
+      this.dependencies.bsiEvidenceReader &&
+      claim.rulesetVersion === BSI_TR_03183_2_RULESET_VERSION
+    ) {
+      try {
+        const original = await this.dependencies.bsiEvidenceReader.read(orgId, {
+          reportId: claim.reportId,
+          documentId: claim.documentId,
+          sourceId: claim.sourceId,
+          workerId: this.dependencies.workerId,
+        });
+        if (!/^[a-f0-9]{64}$/.test(original.sourceSha256))
+          throw new Error("unverified BSI source hash");
+        const evaluation = evaluateBsiProfile(original.facts);
+        return {
+          profile: {
+            enabled: true,
+            status: evaluation.status,
+            rulesetVersion: claim.rulesetVersion,
+            findingCount:
+              evaluation.failedRuleCount + evaluation.manualReviewRuleCount,
+            assessmentKind: "pinned_technical_checks",
+            sourceSha256: original.sourceSha256,
+            evaluatorVersion: BSI_PROFILE_EVALUATOR_VERSION,
+            passedRuleCount: evaluation.passedRuleCount,
+            failedRuleCount: evaluation.failedRuleCount,
+            manualReviewRuleCount: evaluation.manualReviewRuleCount,
+          },
+          findings: evaluation.findings,
+        };
+      } catch {
+        // Profile availability is independent of aggregate quality; never log raw source/provider errors.
+        this.logger.warn({
+          message: "Pinned BSI technical checks unavailable",
+          code: "bsi_profile_unavailable",
+        });
+      }
+    }
+    return {
+      profile: {
+        enabled: true,
+        status: "unavailable",
+        rulesetVersion: claim.rulesetVersion,
+        findingCount: 1,
+        assessmentKind: "unavailable",
+      },
+      findings: [BSI_PROFILE_NOT_EVALUATED_FINDING],
+    };
   }
 
   private async readInputs(

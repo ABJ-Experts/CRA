@@ -269,9 +269,22 @@ export const sbomUploadInstructionSchema = z
   .object({ uploadUrl: signedStorageUrlSchema, expiresAt: utcDateTimeSchema })
   .strict();
 
-export const sbomUploadInitializationResponseSchema = z
-  .object({ source: sbomSourceSchema, upload: sbomUploadInstructionSchema })
-  .strict();
+/** A verified replay has no writable ticket: callers complete the same source/key. */
+export const sbomUploadInitializationResponseSchema = z.union([
+  z
+    .object({ source: sbomSourceSchema, upload: sbomUploadInstructionSchema })
+    .strict(),
+  z
+    .object({
+      source: sbomSourceSchema.extend({
+        status: z.literal("verified"),
+        completedAt: utcDateTimeSchema,
+      }),
+      upload: z.null(),
+      replayed: z.literal(true),
+    })
+    .strict(),
+]);
 export const sbomJobResponseSchema = z
   .object({ job: sbomJobSchema, progressUrl: sbomJobProgressUrlSchema })
   .strict();

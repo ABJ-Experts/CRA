@@ -72,6 +72,7 @@
     "rxjs": "^7.8.1",
     "saxes": "6.0.0",
     "sharp": "^0.35.3",
+    "spdx-expression-parse": "5.0.0",
     "stream-json": "^1.9.1",
     "yauzl": "2.10.0",
     "zod": "^4.4.3"

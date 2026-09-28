@@ -123,6 +123,16 @@ export const SCHEMA_ASSET_MANIFEST = Object.freeze([
     sha256: "591cd9bc4006da96c0ec996241f753cc1569790fc5747368552d94addc5211bd",
     validatorVersion: VALIDATOR_VERSION,
   },
+  {
+    id: "cyclonedx-spdx-license-xml",
+    path: "cyclonedx/spdx-license.xsd",
+    upstreamUrl:
+      "https://raw.githubusercontent.com/CycloneDX/cyclonedx-javascript-library/v10.2.0/res/schema/spdx.SNAPSHOT.xsd",
+    upstreamRef:
+      "Locked @cyclonedx/cyclonedx-library 10.2.0 dependency, SPDX license list 3.28.0",
+    sha256: "468d556a2aecd13b4e2ca23925874200391462074c32cd0aa58ce770331fc30d",
+    validatorVersion: VALIDATOR_VERSION,
+  },
 ] satisfies readonly SchemaAssetManifestEntry[]);
 
 export const SCHEMA_MANIFEST_SHA256 = createHash("sha256")

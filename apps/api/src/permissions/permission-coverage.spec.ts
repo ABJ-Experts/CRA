@@ -225,7 +225,7 @@ describe("permission coverage", () => {
     ).toEqual(["can_view_sboms"]);
     expect(
       sbomRoutes.get("GET sbom-diffs/:diffId/findings")?.permissions,
-    ).toEqual(["can_view_sboms"]);
+    ).toEqual(["can_view_sboms", "can_view_findings"]);
     expect(sbomRoutes.get("POST sbom-diffs/:diffId/retry")?.role).toBe("owner");
   });
 });

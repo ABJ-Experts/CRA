@@ -5,3 +5,4 @@ export * from "./sbom-quality.schema.js";
 export * from "./sbom-diff.schema.js";
 export * from "./sbom-composite.schema.js";
 export * from "./sbom-supplier.schema.js";
+export * from "./sbom-export.schema.js";

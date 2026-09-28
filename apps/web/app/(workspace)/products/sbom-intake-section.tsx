@@ -17,9 +17,11 @@ import { cn } from "@repo/ui/cn";
 import { Select, SelectItem } from "@repo/ui/select";
 import { Tag, type TagProps } from "@repo/ui/tag";
 import { Download, RotateCcw, UploadCloud } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
+import { useSession } from "../../_providers/session-provider";
 import { ApiClientError } from "../../_lib/http/api-client";
+import { hashSbomFile } from "../../_features/sboms/sbom-file-hash";
 import { sbomsApi } from "../../_features/sboms/sboms.api";
 import {
   useSbomJobQuery,
@@ -52,35 +54,6 @@ const ZERO_COUNTS = Object.freeze({ error: 0, warning: 0 });
 
 function requestId(): string {
   return crypto.randomUUID();
-}
-
-async function sha256(file: File): Promise<string> {
-  if (!globalThis.crypto?.subtle) {
-    throw new Error("This browser cannot securely calculate a file checksum.");
-  }
-  const digest = await globalThis.crypto.subtle.digest(
-    "SHA-256",
-    await fileBytes(file),
-  );
-  return Array.from(new Uint8Array(digest), (value) =>
-    value.toString(16).padStart(2, "0"),
-  ).join("");
-}
-
-function fileBytes(file: File): Promise<ArrayBuffer> {
-  if (typeof file.arrayBuffer === "function") return file.arrayBuffer();
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onerror = () => reject(reader.error ?? new Error("Read failed"));
-    reader.onload = () => {
-      if (reader.result instanceof ArrayBuffer) {
-        resolve(reader.result);
-        return;
-      }
-      reject(new Error("Read failed"));
-    };
-    reader.readAsArrayBuffer(file);
-  });
 }
 
 function titleCase(value: string): string {
@@ -158,7 +131,7 @@ function errorMessage(error: unknown): string {
       error.kind === "invalid_response" ||
       (error.status !== undefined && error.status >= 500))
   ) {
-    return "The SBOM service is temporarily unavailable. Your file was not marked complete; try completing the same upload again.";
+    return "The SBOM service is temporarily unavailable. Keep your selected file and retry the same upload or completion; previous evidence remains unchanged.";
   }
   return error instanceof ApiClientError
     ? error.message
@@ -232,7 +205,23 @@ export function SbomIntakeSection({
   canCreateManualFindings?: boolean;
   enabled: boolean;
 }>) {
+  const { session } = useSession();
+  const organizationId = session?.organization?.id ?? "none";
+  const previousScope = useRef(
+    `${organizationId}:${productId}:${releases[0]?.id ?? ""}`,
+  );
+  const uploadAttempt = useRef<Readonly<{
+    fingerprint: string;
+    key: string;
+  }> | null>(null);
+  const fileInput = useRef<HTMLInputElement>(null);
+  const [historyCursor, setHistoryCursor] = useState<string | undefined>();
+  const [historyRows, setHistoryRows] = useState<
+    readonly SbomSourceHistoryItem[]
+  >([]);
   const [releaseId, setReleaseId] = useState(releases[0]?.id ?? "");
+  const activeScope = useRef(`${organizationId}:${productId}:${releaseId}`);
+  activeScope.current = `${organizationId}:${productId}:${releaseId}`;
   const [file, setFile] = useState<File | null>(null);
   const [source, setSource] = useState<SbomSource | null>(null);
   const [selectedSourceId, setSelectedSourceId] = useState<string | null>(null);
@@ -254,17 +243,35 @@ export function SbomIntakeSection({
   const sourceHistoryQuery = useSbomSourceHistoryQuery(
     productId,
     releaseId,
-    { limit: DEFAULT_HISTORY_LIMIT },
+    { limit: DEFAULT_HISTORY_LIMIT, cursor: historyCursor },
     enabled && canView && releaseId !== "",
   );
-  const sourceItems = useMemo(
-    () => sourceHistoryQuery.data?.sources ?? [],
-    [sourceHistoryQuery.data?.sources],
-  );
-  const selectedHistoryItem =
-    sourceItems.find((item) => item.source.id === selectedSourceId) ??
-    sourceItems[0] ??
-    null;
+  const sourceItems = historyRows;
+  useEffect(() => {
+    if (!sourceHistoryQuery.data) return;
+    const page = sourceHistoryQuery.data.sources;
+    setHistoryRows((current) => {
+      const next =
+        historyCursor === undefined
+          ? page
+          : [
+              ...current.filter(
+                (item) =>
+                  !page.some(
+                    (nextItem) => nextItem.source.id === item.source.id,
+                  ),
+              ),
+              ...page,
+            ];
+      return current.length === next.length &&
+        current.every((item, index) => item === next[index])
+        ? current
+        : next;
+    });
+  }, [historyCursor, sourceHistoryQuery.data]);
+  const selectedHistoryItem = selectedSourceId
+    ? (sourceItems.find((item) => item.source.id === selectedSourceId) ?? null)
+    : (sourceItems[0] ?? null);
   const effectiveSourceId =
     selectedSourceId ?? selectedHistoryItem?.source.id ?? null;
   const reportQuery = useSbomValidationReportQuery(
@@ -279,11 +286,27 @@ export function SbomIntakeSection({
   }, [releaseId, releases]);
 
   useEffect(() => {
+    const scope = `${organizationId}:${productId}:${releaseId}`;
+    if (previousScope.current === scope) return;
+    previousScope.current = scope;
     setCorrectionSourceId(null);
     setDiagnosticFilter("all");
-  }, [releaseId]);
+    setHistoryCursor(undefined);
+    setHistoryRows([]);
+    setPhase("idle");
+    setProgress(null);
+    setMessage(null);
+    setSelectedSourceId(null);
+    setSource(null);
+    setJob(null);
+    setPendingCompletion(null);
+    uploadAttempt.current = null;
+    setFile(null);
+    uploadAttempt.current = null;
+  }, [productId, releaseId, organizationId]);
 
   useEffect(() => {
+    if (selectedSourceId !== null && source?.id === selectedSourceId) return;
     if (sourceItems.length === 0) {
       setSelectedSourceId(null);
       return;
@@ -295,7 +318,7 @@ export function SbomIntakeSection({
       return;
     }
     setSelectedSourceId(sourceItems[0]?.source.id ?? null);
-  }, [selectedSourceId, sourceItems]);
+  }, [selectedSourceId, sourceItems, source]);
 
   const currentJob = jobQuery.data?.job ?? job;
   const busy = phase !== "idle";
@@ -335,17 +358,22 @@ export function SbomIntakeSection({
   async function completePendingUpload(
     sourceId: string,
     idempotencyKey: string,
+    expectedScope = activeScope.current,
   ) {
+    if (activeScope.current !== expectedScope) return;
     setPhase("completing");
     const completed = await sbomsApi.completeUpload(sourceId, {
       idempotencyKey,
     });
+    if (activeScope.current !== expectedScope) return;
     setJob(completed.job);
+    uploadAttempt.current = null;
+    if (fileInput.current) fileInput.current.value = "";
     setPendingCompletion(null);
     setFile(null);
     setCorrectionSourceId(null);
     setMessage("Original evidence is verified and queued for processing.");
-    await sourceHistoryQuery.refetch();
+    void sourceHistoryQuery.refetch();
   }
 
   async function upload() {
@@ -355,14 +383,34 @@ export function SbomIntakeSection({
       setMessage(invalid);
       return;
     }
+    const expectedScope = activeScope.current;
     const mediaType = sbomMediaTypeSchema.parse(declaredMediaType(file));
+    setHistoryCursor(undefined);
 
-    const idempotencyKey = requestId();
     setMessage(null);
     setProgress(null);
     try {
       setPhase("hashing");
-      const hash = await sha256(file);
+      const hash = await hashSbomFile(file);
+      if (activeScope.current !== expectedScope) return;
+      const fingerprint = JSON.stringify([
+        organizationId,
+        productId,
+        selectedRelease.id,
+        file.name,
+        mediaType,
+        file.size,
+        hash,
+        correctionSourceId,
+      ]);
+      if (uploadAttempt.current?.fingerprint !== fingerprint) {
+        uploadAttempt.current = Object.freeze({
+          fingerprint,
+          key: requestId(),
+        });
+        setPendingCompletion(null);
+      }
+      const idempotencyKey = uploadAttempt.current.key;
       setPhase("reserving");
       const initialized = await sbomsApi.initializeUpload({
         productId,
@@ -374,36 +422,51 @@ export function SbomIntakeSection({
         idempotencyKey,
         supersedesSourceId: correctionSourceId ?? undefined,
       });
+      if (activeScope.current !== expectedScope) return;
       setSource(initialized.source);
       setSelectedSourceId(initialized.source.id);
-      setPhase("uploading");
-      await sbomsApi.uploadOriginal(
-        initialized.upload.uploadUrl,
-        file,
-        setProgress,
-      );
       setPendingCompletion({ sourceId: initialized.source.id, idempotencyKey });
-      await completePendingUpload(initialized.source.id, idempotencyKey);
+      if (initialized.upload !== null) {
+        setPhase("uploading");
+        await sbomsApi.uploadOriginal(
+          initialized.upload.uploadUrl,
+          file,
+          setProgress,
+        );
+      }
+      if (activeScope.current !== expectedScope) return;
+      setPendingCompletion({ sourceId: initialized.source.id, idempotencyKey });
+      await completePendingUpload(
+        initialized.source.id,
+        idempotencyKey,
+        expectedScope,
+      );
     } catch (error) {
-      setMessage(errorMessage(error));
+      if (activeScope.current === expectedScope)
+        setMessage(errorMessage(error));
     } finally {
-      setPhase("idle");
-      setProgress(null);
+      if (activeScope.current === expectedScope) {
+        setPhase("idle");
+        setProgress(null);
+      }
     }
   }
 
   async function completeExistingUpload() {
     if (!pendingCompletion) return;
+    const expectedScope = activeScope.current;
     setMessage(null);
     try {
       await completePendingUpload(
         pendingCompletion.sourceId,
         pendingCompletion.idempotencyKey,
+        expectedScope,
       );
     } catch (error) {
-      setMessage(errorMessage(error));
+      if (activeScope.current === expectedScope)
+        setMessage(errorMessage(error));
     } finally {
-      setPhase("idle");
+      if (activeScope.current === expectedScope) setPhase("idle");
     }
   }
 
@@ -497,7 +560,7 @@ export function SbomIntakeSection({
           Create a product release before uploading SBOM evidence.
         </p>
       ) : (
-        <div className="mt-5 grid min-w-0 max-w-full gap-4">
+        <div className="mt-5 grid grid-cols-1 min-w-0 max-w-full gap-4">
           <Select
             label="Release"
             value={releaseId}
@@ -513,11 +576,13 @@ export function SbomIntakeSection({
             ))}
           </Select>
           {canUpload ? (
-            <div className="grid min-w-0 max-w-full gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+            <div className="grid grid-cols-1 min-w-0 max-w-full gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
               <label className="flex min-w-0 max-w-full flex-col gap-2 text-caption-1-semibold text-fg-muted">
                 SBOM file
                 <input
+                  key={`${organizationId}:${productId}:${releaseId}`}
                   id="sbom-file"
+                  ref={fileInput}
                   name="sbom-file"
                   aria-label="SBOM file"
                   type="file"
@@ -564,7 +629,23 @@ export function SbomIntakeSection({
               {message}
             </p>
           ) : null}
-          {pendingCompletion ? (
+          {message && file && uploadAttempt.current && canUpload && !busy ? (
+            <Button
+              type="button"
+              variant="outline"
+              tone="grey"
+              onClick={() => {
+                uploadAttempt.current = null;
+                setPendingCompletion(null);
+                setMessage(
+                  "A new upload command will be created. Previously stored evidence remains retained.",
+                );
+              }}
+            >
+              Start new upload attempt
+            </Button>
+          ) : null}
+          {pendingCompletion && canUpload ? (
             <Button
               type="button"
               variant="outline"
@@ -586,8 +667,14 @@ export function SbomIntakeSection({
               onReplay={() => void replay()}
             />
           ) : null}
-          <div className="grid min-w-0 max-w-full gap-3 lg:grid-cols-[minmax(0,20rem)_minmax(0,1fr)]">
+          <div className="grid grid-cols-1 min-w-0 max-w-full gap-3 lg:grid-cols-[minmax(0,20rem)_minmax(0,1fr)]">
             <SourceHistoryPanel
+              nextCursor={sourceHistoryQuery.data?.nextCursor ?? null}
+              onLoadOlder={() =>
+                setHistoryCursor(
+                  sourceHistoryQuery.data?.nextCursor ?? undefined,
+                )
+              }
               isLoading={sourceHistoryQuery.isPending}
               isError={sourceHistoryQuery.isError}
               error={sourceHistoryQuery.error}
@@ -684,6 +771,8 @@ function JobStatusPanel({
 }
 
 function SourceHistoryPanel({
+  nextCursor,
+  onLoadOlder,
   isLoading,
   isError,
   error,
@@ -691,6 +780,8 @@ function SourceHistoryPanel({
   selectedSourceId,
   onSelect,
 }: Readonly<{
+  nextCursor: string | null;
+  onLoadOlder: () => void;
   isLoading: boolean;
   isError: boolean;
   error: unknown;
@@ -719,7 +810,10 @@ function SourceHistoryPanel({
           No SBOM evidence has been uploaded for this release.
         </p>
       ) : (
-        <div className="mt-3 grid min-w-0 max-w-full gap-2" role="list">
+        <div
+          className="mt-3 grid grid-cols-1 min-w-0 max-w-full gap-2"
+          role="list"
+        >
           {sources.map((item) => {
             const selected = item.source.id === selectedSourceId;
             return (
@@ -760,6 +854,17 @@ function SourceHistoryPanel({
           })}
         </div>
       )}
+      {nextCursor ? (
+        <Button
+          type="button"
+          variant="outline"
+          tone="grey"
+          disabled={isLoading}
+          onClick={onLoadOlder}
+        >
+          Load older sources
+        </Button>
+      ) : null}
     </div>
   );
 }
@@ -858,7 +963,7 @@ function ReportPanel({
           Validation is processing. Results will appear when parsing completes.
         </p>
       ) : null}
-      <dl className="mt-4 grid min-w-0 max-w-full gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <dl className="mt-4 grid grid-cols-1 min-w-0 max-w-full gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <ReportFact label="Detected" value={detectedSummary(report, source)} />
         <ReportFact
           label="Serialization"
@@ -990,7 +1095,12 @@ function DiagnosticsTable({
   }
 
   return (
-    <div className="mt-4 max-w-full overflow-x-auto rounded-xl border border-border bg-canvas">
+    <div
+      role="region"
+      aria-label="SBOM validation diagnostics table"
+      tabIndex={0}
+      className="min-w-0 mt-4 max-w-full overflow-x-auto rounded-xl border border-border bg-canvas outline-none focus-visible:ring-2 focus-visible:ring-active-500 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas"
+    >
       <table
         aria-label="SBOM diagnostics"
         className="min-w-[44rem] table-fixed border-collapse"

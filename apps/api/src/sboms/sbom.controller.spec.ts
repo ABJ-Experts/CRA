@@ -5,6 +5,7 @@ import {
   sbomQualityReportResponseSchema,
   sbomQualitySettingsResponseSchema,
   sbomUploadCompletionResponseSchema,
+  sbomUploadInitializationResponseSchema,
   sbomSourceDiffResponseSchema,
   sbomSourceHistoryResponseSchema,
   sbomDocumentListResponseSchema,
@@ -16,6 +17,7 @@ import {
 import { REQUIRE_PERMISSIONS_KEY, type RequestUser } from "../auth/auth.types";
 import { ZOD_RESPONSE_SCHEMA } from "../common/http/zod-response.interceptor";
 import {
+  SbomDiffsController,
   ProductReleaseSbomController,
   SbomDocumentsController,
   SbomCiController,
@@ -217,6 +219,44 @@ describe("SBOM report controllers", () => {
         supersedesSourceId: supersededSourceId,
       }),
     );
+  });
+
+  it("serializes a verified initialization replay as an explicit non-writable ticket", async () => {
+    const service = {
+      initialize: jest.fn().mockResolvedValue({
+        reservation: {
+          ...source,
+          filename: source.fileName,
+          status: "verified",
+          completedAt: now,
+        },
+        upload: null,
+        replayed: true,
+      }),
+    };
+    const response = await new ProductReleaseSbomController(
+      service as never,
+    ).initialize(
+      { productId, releaseId },
+      {
+        productId,
+        releaseId,
+        fileName: source.fileName,
+        mediaType: source.mediaType,
+        byteSize: source.byteSize,
+        sha256: hash,
+        idempotencyKey: sourceId,
+        source: "manual_upload",
+      },
+      user,
+    );
+    expect(
+      sbomUploadInitializationResponseSchema.parse(response),
+    ).toMatchObject({
+      source: { status: "verified" },
+      upload: null,
+      replayed: true,
+    });
   });
 
   it("forwards corrected upload metadata to the release upload use case", async () => {
@@ -521,5 +561,17 @@ describe("SBOM report controllers", () => {
       bsiProfileEnabled: true,
       idempotencyKey: "00000000-0000-4000-8000-000000000010",
     });
+  });
+});
+
+describe("SBOM live finding delta permissions", () => {
+  it("requires both SBOM and finding visibility", () => {
+    const handler: unknown = Object.getOwnPropertyDescriptor(
+      SbomDiffsController.prototype,
+      "findings",
+    )?.value;
+    expect(
+      Reflect.getMetadata(REQUIRE_PERMISSIONS_KEY, handler as object),
+    ).toEqual(["can_view_sboms", "can_view_findings"]);
   });
 });

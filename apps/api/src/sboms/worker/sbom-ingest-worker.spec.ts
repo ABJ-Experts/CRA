@@ -215,7 +215,7 @@ describe("SbomIngestWorker", () => {
       normalize,
     }).runOnce();
 
-    expect(openVerified).toHaveBeenCalledTimes(2);
+    expect(openVerified).toHaveBeenCalledTimes(1);
     expect(beginNormalization).toHaveBeenCalledWith(
       orgA,
       expect.objectContaining({ format: "cyclonedx", serialization: "json" }),
@@ -373,6 +373,14 @@ describe("SbomIngestWorker", () => {
       queue: options.queue ?? queue,
       storage: options.storage ?? storage,
       validate,
+      validateFile: () =>
+        Promise.resolve({
+          diagnostics: [],
+          errorCount: 0,
+          warningCount: 0,
+          omittedDiagnosticCount: 0,
+          schemaAssetSha256: "b".repeat(64),
+        }),
       now: () => new Date("2026-08-21T00:00:00.000Z"),
       ...options,
     });

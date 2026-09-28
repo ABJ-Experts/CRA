@@ -5,8 +5,12 @@ import { renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import * as allSbomHooks from "./sboms.queries";
+
 import {
   useRetrySbomDiffMutation,
+  useSbomCiCredentialsQuery,
+  useSupplierSbomRequestsQuery,
   useSbomComponentSearchQuery,
   useSbomDependencyTreeChildrenQuery,
   useSbomDocumentDetailQuery,
@@ -20,6 +24,13 @@ import {
 
 const api = vi.hoisted(() => ({
   listDocumentsForRelease: vi.fn(),
+  listCiCredentials: vi.fn(),
+  getJob: vi.fn(),
+  getCompositeReview: vi.fn(),
+  getDiff: vi.fn(),
+  listDiffComponents: vi.fn(),
+  listDiffFindings: vi.fn(),
+  listSupplierRequests: vi.fn(),
   getDocument: vi.fn(),
   searchComponents: vi.fn(),
   listDependencyTreeChildren: vi.fn(),
@@ -33,6 +44,17 @@ const api = vi.hoisted(() => ({
 
 vi.mock("./sboms.api", () => ({
   sbomsApi: api,
+}));
+
+const activeSession = vi.hoisted(() => ({
+  organizationId: "org-test" as string | null,
+}));
+vi.mock("../../_providers/session-provider", () => ({
+  useSession: () => ({
+    session: activeSession.organizationId
+      ? { organization: { id: activeSession.organizationId } }
+      : null,
+  }),
 }));
 
 const PRODUCT_ID = "11111111-1111-4111-8111-111111111111";
@@ -104,7 +126,10 @@ function wrapper({ children }: Readonly<{ children: ReactNode }>) {
 }
 
 describe("SBOM queries", () => {
-  afterEach(() => vi.clearAllMocks());
+  afterEach(() => {
+    vi.clearAllMocks();
+    activeSession.organizationId = "org-test";
+  });
 
   it("uses a stable release source history key and forwards the parsed query", async () => {
     api.listSourcesForRelease.mockResolvedValue(history);
@@ -374,5 +399,117 @@ describe("SBOM queries", () => {
     expect(api.retryDiff).toHaveBeenCalledWith(DIFF_ID, {
       idempotencyKey: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
     });
+  });
+  it("does not reuse former-organization CI credential data after switching", async () => {
+    activeSession.organizationId = "org-a";
+    api.listCiCredentials
+      .mockResolvedValueOnce({ credentials: [{ id: "a-secret-metadata" }] })
+      .mockResolvedValueOnce({ credentials: [] });
+    const { result, rerender } = renderHook(
+      () => useSbomCiCredentialsQuery(true),
+      { wrapper },
+    );
+    await waitFor(() =>
+      expect(result.current.data).toEqual({
+        credentials: [{ id: "a-secret-metadata" }],
+      }),
+    );
+    activeSession.organizationId = "org-b";
+    rerender();
+    expect(result.current.data).toBeUndefined();
+    await waitFor(() =>
+      expect(result.current.data).toEqual({ credentials: [] }),
+    );
+    expect(api.listCiCredentials).toHaveBeenCalledTimes(2);
+  });
+
+  it("reads a distinct supplier page for each cursor instead of returning cached first-page rows", async () => {
+    api.listSupplierRequests.mockResolvedValue({ requests: [] });
+    let cursor = "first";
+    const { result, rerender } = renderHook(
+      () => useSupplierSbomRequestsQuery({ cursor, limit: 5 }, true),
+      { wrapper },
+    );
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    cursor = "second";
+    rerender();
+    await waitFor(() =>
+      expect(api.listSupplierRequests).toHaveBeenCalledTimes(2),
+    );
+    expect(api.listSupplierRequests).toHaveBeenLastCalledWith(
+      { cursor: "second", limit: 5 },
+      expect.any(AbortSignal),
+    );
+  });
+
+  it("does not read tenant metadata before the active organization is known", () => {
+    activeSession.organizationId = null;
+    renderHook(() => useSbomCiCredentialsQuery(true), { wrapper });
+    expect(api.listCiCredentials).not.toHaveBeenCalled();
+  });
+
+  it("partitions every shared read and mutation hook using the verified active organization", async () => {
+    activeSession.organizationId = "org-scoped";
+    api.getJob.mockResolvedValue({ job: { status: "completed" } });
+    api.getCompositeReview.mockResolvedValue({
+      review: { state: "reviewing" },
+    });
+    api.getDiff.mockResolvedValue({ report: { state: "completed" } });
+    api.listDiffComponents.mockResolvedValue({
+      components: [],
+      nextCursor: null,
+    });
+    api.listDiffFindings.mockResolvedValue({ findings: [], nextCursor: null });
+    api.listCiCredentials.mockResolvedValue({ credentials: [] });
+    api.listSupplierRequests.mockResolvedValue({
+      requests: [],
+      nextCursor: null,
+    });
+    api.listDependencyTreeChildren.mockResolvedValue({
+      nodes: [],
+      nextCursor: null,
+    });
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const Provider = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    );
+    renderHook(
+      () => {
+        allSbomHooks.useSbomCompositeReviewQuery("review", true);
+        allSbomHooks.useSbomJobQuery("job", true);
+        allSbomHooks.useSbomDiffReportQuery("diff", true);
+        allSbomHooks.useSbomDiffComponentsQuery("diff", {}, true);
+        allSbomHooks.useSbomDiffFindingsQuery("diff", {}, true);
+        allSbomHooks.useSbomDependencyTreeChildrenQueries(
+          "document",
+          [{}],
+          true,
+        );
+        allSbomHooks.useSbomCiCredentialsQuery(true);
+        allSbomHooks.useSupplierSbomRequestsQuery({}, true);
+        allSbomHooks.useCreateSbomCompositeReviewMutation();
+        allSbomHooks.useResolveSbomCompositeConflictMutation();
+        allSbomHooks.useResolveSbomCompositeRelationshipMutation();
+        allSbomHooks.useGenerateSbomCompositeMutation();
+        allSbomHooks.useCreateSupplierSbomRequestMutation();
+        allSbomHooks.useCreateSupplierSbomInvitationMutation();
+        allSbomHooks.useReviewSupplierSbomSubmissionMutation();
+        allSbomHooks.useStartSbomDiffMutation();
+        allSbomHooks.useCreateSbomCiCredentialMutation();
+        allSbomHooks.useRevokeSbomCiCredentialMutation();
+      },
+      { wrapper: Provider },
+    );
+    await waitFor(() => expect(client.isFetching()).toBe(0));
+    expect(client.getQueryCache().getAll()).toHaveLength(8);
+    for (const query of client.getQueryCache().getAll())
+      expect(query.queryKey.slice(0, 3)).toEqual([
+        "sboms",
+        "organization",
+        "org-scoped",
+      ]);
+    client.clear();
   });
 });

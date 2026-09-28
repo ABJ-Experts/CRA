@@ -37,9 +37,11 @@ describe("SupabaseSbomStorageAdapter", () => {
 
   it("reads verified bytes while rechecking hash and size with one storage download", async () => {
     const bytes = Buffer.from('{"spdxVersion":"SPDX-2.3"}');
-    const download = jest.fn().mockResolvedValue({
-      data: new Blob([bytes], { type: "application/json" }),
-      error: null,
+    const download = jest.fn().mockReturnValue({
+      asStream: jest.fn().mockResolvedValue({
+        data: new Blob([bytes], { type: "application/json" }).stream(),
+        error: null,
+      }),
     });
     const adapter = new SupabaseSbomStorageAdapter({
       admin: () => ({
@@ -67,9 +69,11 @@ describe("SupabaseSbomStorageAdapter", () => {
 
   it("opens a verified SBOM as a guarded stream without collecting its chunks", async () => {
     const bytes = Buffer.from('{"bomFormat":"CycloneDX"}');
-    const download = jest.fn().mockResolvedValue({
-      data: new Blob([bytes], { type: "application/json" }),
-      error: null,
+    const download = jest.fn().mockReturnValue({
+      asStream: jest.fn().mockResolvedValue({
+        data: new Blob([bytes], { type: "application/json" }).stream(),
+        error: null,
+      }),
     });
     const adapter = new SupabaseSbomStorageAdapter({
       admin: () => ({ storage: { from: () => ({ download }) } }),

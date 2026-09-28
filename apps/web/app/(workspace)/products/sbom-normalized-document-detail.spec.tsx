@@ -91,7 +91,10 @@ vi.mock(
   () => matchingQueries,
 );
 
-function primeQueries() {
+function primeQueries(
+  bsiStatus: "valid" | "warning" | "invalid" | "unavailable" = "warning",
+  bsiEnabled = true,
+) {
   queries.useSbomDocumentDetailQuery.mockReturnValue({
     ...state.detail,
     data: {
@@ -175,8 +178,8 @@ function primeQueries() {
         ],
         totalScore: 65,
         bsiProfile: {
-          enabled: true,
-          status: "warning",
+          enabled: bsiEnabled,
+          status: bsiStatus,
           rulesetVersion: "bsi-tr-03183-2.v2.0.0",
           findingCount: 1,
         },
@@ -262,7 +265,14 @@ function primeQueries() {
     isError: false,
     error: null,
     refetch: vi.fn(),
-    data: { rows: [], alerts: [], total: 0, page: 1, pageSize: 50, pageCount: 1 },
+    data: {
+      rows: [],
+      alerts: [],
+      total: 0,
+      page: 1,
+      pageSize: 50,
+      pageCount: 1,
+    },
   });
 }
 
@@ -272,6 +282,35 @@ describe("SbomNormalizedDocumentDetail", () => {
     vi.clearAllMocks();
     state.detail.isPending = false;
     state.detail.isError = false;
+  });
+
+  it.each([
+    ["valid", "Legacy/subset checks: Valid"],
+    ["warning", "Legacy/subset checks: Warning"],
+    ["invalid", "Legacy/subset checks: Invalid"],
+    ["unavailable", "Full profile not verified"],
+  ] as const)("labels BSI %s as a technical subset", (status, label) => {
+    primeQueries(status);
+    render(
+      <SbomNormalizedDocumentDetail
+        productId="44444444-4444-4444-8444-444444444444"
+        documentId={DOCUMENT_ID}
+        canView
+        enabled
+      />,
+    );
+    expect(
+      screen.getByRole("heading", { name: "BSI technical subset" }),
+    ).toBeVisible();
+    expect(screen.getByText(label)).toBeVisible();
+    expect(
+      screen.getByText(
+        "Only technical subset checks are implemented. The full pinned BSI profile has not been verified.",
+      ),
+    ).toBeVisible();
+    expect(
+      screen.queryByRole("heading", { name: "BSI profile" }),
+    ).not.toBeInTheDocument();
   });
 
   it("renders completed metadata, normalized warnings, searchable components, and an accessible tree", () => {
@@ -305,7 +344,9 @@ describe("SbomNormalizedDocumentDetail", () => {
     expect(
       screen.getByRole("heading", { name: "Vulnerability matching" }),
     ).toBeVisible();
-    expect(screen.getByText("CRA legal floor")).toBeVisible();
+    expect(
+      screen.getByText("Declared top-level dependency evidence"),
+    ).toBeVisible();
     expect(
       screen.getByRole("heading", { name: "Remediation guidance" }),
     ).toBeVisible();
@@ -315,6 +356,21 @@ describe("SbomNormalizedDocumentDetail", () => {
       "href",
       `/products/44444444-4444-4444-8444-444444444444/sboms/${DOCUMENT_ID}/diff?sourceId=${document.sourceId}`,
     );
+  });
+
+  it("keeps disabled BSI subset checks visibly disabled", () => {
+    primeQueries("unavailable", false);
+    render(
+      <SbomNormalizedDocumentDetail
+        productId="44444444-4444-4444-8444-444444444444"
+        documentId={DOCUMENT_ID}
+        canView
+        enabled
+      />,
+    );
+    expect(screen.getByText("Disabled")).toBeVisible();
+    expect(screen.getByText("Optional tenant profile is disabled.")).toBeVisible();
+    expect(screen.queryByText("Full profile not verified")).not.toBeInTheDocument();
   });
 
   it("expands a tree node with keyboard input and retains visible focus semantics", () => {

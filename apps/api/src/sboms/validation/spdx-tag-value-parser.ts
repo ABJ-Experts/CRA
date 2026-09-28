@@ -25,6 +25,13 @@ const documentTagMap = Object.freeze({
 
 const packageTagMap = Object.freeze({
   PackageName: "name",
+  PackageVersion: "versionInfo",
+  PackageSupplier: "supplier",
+  PackageOriginator: "originator",
+  PackageHomePage: "homepage",
+  PackageSummary: "summary",
+  PackageDescription: "description",
+  PackageSourceInfo: "sourceInfo",
   SPDXID: "SPDXID",
   PackageDownloadLocation: "downloadLocation",
   FilesAnalyzed: "filesAnalyzed",
@@ -95,7 +102,7 @@ export function parseSpdxTagValue(
     return { ...target, [key]: value };
   };
 
-  text.split(/\r?\n/u).forEach((line, index) => {
+  Array.from(logicalSpdxLines(text)).forEach(([line, index]) => {
     const lineNumber = index + 1;
     const trimmed = line.trim();
     if (trimmed.length === 0 || trimmed.startsWith("#")) return;
@@ -141,6 +148,81 @@ export function parseSpdxTagValue(
       return;
     }
 
+    if (tag === "Relationship") {
+      const match = value.match(/^(\S+)\s+(\S+)\s+(\S+)(?:\s+#.*)?$/u);
+      if (match)
+        document = {
+          ...document,
+          relationships: [
+            ...asArray(document.relationships),
+            {
+              spdxElementId: match[1],
+              relationshipType: match[2],
+              relatedSpdxElement: match[3],
+            },
+          ],
+        };
+      else
+        diagnostics.push(
+          diagnostic(
+            "error",
+            "malformed_tag_value_line",
+            `line:${lineNumber}`,
+            "Malformed SPDX relationship.",
+            "Use an SPDX relationship triplet.",
+          ),
+        );
+      return;
+    }
+    if (currentPackage !== null && tag === "ExternalRef") {
+      const match = value.match(/^(\S+)\s+(\S+)\s+(.+)$/u);
+      if (match)
+        currentPackage = {
+          ...currentPackage,
+          externalRefs: [
+            ...asArray(currentPackage.externalRefs),
+            {
+              referenceCategory: match[1],
+              referenceType: match[2],
+              referenceLocator: match[3],
+            },
+          ],
+        };
+      else
+        diagnostics.push(
+          diagnostic(
+            "error",
+            "malformed_tag_value_line",
+            `line:${lineNumber}`,
+            "Malformed SPDX external reference.",
+            "Use category, type and locator.",
+          ),
+        );
+      return;
+    }
+    if (currentPackage !== null && tag === "PackageChecksum") {
+      const match = value.match(/^([^:]+):\s*(\S+)$/u);
+      if (match)
+        currentPackage = {
+          ...currentPackage,
+          checksums: [
+            ...asArray(currentPackage.checksums),
+            { algorithm: match[1], checksumValue: match[2] },
+          ],
+        };
+      else
+        diagnostics.push(
+          diagnostic(
+            "error",
+            "malformed_tag_value_line",
+            `line:${lineNumber}`,
+            "Malformed SPDX checksum.",
+            "Use algorithm and checksum value.",
+          ),
+        );
+      return;
+    }
+
     const packageKey =
       packageTagMap[tag as keyof typeof packageTagMap] ?? undefined;
     if (currentPackage !== null && packageKey !== undefined) {
@@ -182,4 +264,32 @@ function asStringArray(value: unknown): readonly string[] {
 function packageValue(key: string, value: string): string | boolean {
   if (key === "filesAnalyzed") return value.toLowerCase() === "true";
   return value;
+}
+
+function asArray(value: unknown): readonly unknown[] {
+  return Array.isArray(value) ? value : [];
+}
+
+function* logicalSpdxLines(text: string): Generator<readonly [string, number]> {
+  let pending = "";
+  let firstLine = 0;
+  const lines = text.split(/\r?\n/u);
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index]!;
+    if (pending) {
+      pending += `\n${line}`;
+      if (line.includes("</text>")) {
+        yield [pending.replace("<text>", "").replace("</text>", ""), firstLine];
+        pending = "";
+      }
+    } else if (line.includes("<text>")) {
+      if (line.includes("</text>"))
+        yield [line.replace("<text>", "").replace("</text>", ""), index];
+      else {
+        pending = line;
+        firstLine = index;
+      }
+    } else yield [line, index];
+  }
+  if (pending) yield ["Unterminated SPDX text block", firstLine];
 }

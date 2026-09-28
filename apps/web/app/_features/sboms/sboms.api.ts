@@ -59,6 +59,7 @@ import {
   supplierSbomRequestsResponseSchema,
   supplierSbomSubmissionResponseSchema,
   sbomUploadInitializationResponseSchema,
+  sbomUploadCompletionResponseSchema,
   sbomUploadParamsSchema,
   type CompleteSbomUploadInput,
   type CreateSbomCompositeReviewInput,
@@ -84,7 +85,7 @@ import {
   type SbomQualityFindingsQuery,
   type SbomSourceDiffQuery,
 } from "@repo/contracts/sboms";
-
+import { requestSbomExport } from "./sbom-export-request";
 import { authenticatedRequestJson } from "../../_lib/http/authenticated-request";
 import { ApiClientError, apiClient } from "../../_lib/http/api-client";
 
@@ -304,6 +305,7 @@ function documentQueryPath(
  * Supabase directly.
  */
 export class SbomsApi {
+  readonly exportDocument = requestSbomExport;
   createCompositeReview(
     productId: string,
     releaseId: string,
@@ -474,14 +476,14 @@ export class SbomsApi {
     signal?: AbortSignal,
   ) {
     return authenticatedRequestJson<
-      typeof sbomJobResponseSchema,
+      typeof sbomUploadCompletionResponseSchema,
       typeof completeSbomUploadInputSchema
     >({
       path: completionPath(sourceId),
       method: "POST",
       body: input,
       inputSchema: completeSbomUploadInputSchema,
-      schema: sbomJobResponseSchema,
+      schema: sbomUploadCompletionResponseSchema,
       signal,
     });
   }

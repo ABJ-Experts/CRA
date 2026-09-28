@@ -1,3 +1,12 @@
+import { openSbomSpool, withSbomSpool } from "../validation/sbom-spool";
+import {
+  validateSbomFile,
+  STREAMING_VALIDATOR_VERSION,
+  canonicalSbomSpecificationVersion,
+  type StreamingValidationResult,
+} from "../validation/sbom-streaming-validator";
+import { schemaAssetSha256ForDetection } from "../validation/schema-manifest";
+
 import { Logger } from "@nestjs/common";
 import type {
   SbomDetectedFormat,
@@ -6,14 +15,16 @@ import type {
 import { z } from "zod";
 
 import {
-  NORMALIZER_VERSION,
   SbomNormalizationError,
   normalizeSbomStream,
   type SbomNormalizationBatch,
   type SbomNormalizationResult,
 } from "../normalization/sbom-normalizer";
 import { SbomStorageError } from "../infrastructure/supabase-sbom-storage.adapter";
-import type { ValidateSbomInput } from "../validation/sbom-validator";
+import {
+  SbomValidationInfrastructureError,
+  type ValidateSbomInput,
+} from "../validation/sbom-validator";
 import {
   type SbomValidationWorkerResult,
   validateSbomInWorker,
@@ -169,6 +180,7 @@ export class SbomIngestWorker {
       storage: SbomIngestStorage;
       validate?: SbomIngestValidator;
       normalize?: typeof normalizeSbomStream;
+      validateFile?: typeof validateSbomFile;
       maximumBytes?: number;
       maximumComponents?: number;
       now?: () => Date;
@@ -277,6 +289,15 @@ export class SbomIngestWorker {
         ),
       });
     } catch (error) {
+      if (error instanceof SbomValidationInfrastructureError) {
+        await this.dependencies.queue.fail(organizationId, {
+          jobId: claim.jobId,
+          workerId: this.dependencies.workerId,
+          errorCode: "unavailable",
+          retryable: true,
+        });
+        return true;
+      }
       if (error instanceof SbomStorageError && error.code === "malformed") {
         await this.dependencies.queue.fail(organizationId, {
           jobId: claim.jobId,
@@ -337,6 +358,39 @@ export class SbomIngestWorker {
       });
       return true;
     }
+    try {
+      return await withSbomSpool(
+        opened.stream,
+        this.maximumBytes(),
+        async (path) => this.processNormalizedFile(claim, path),
+        async () =>
+          this.dependencies.queue.checkpoint(organizationId, {
+            jobId: claim.jobId,
+            workerId: this.dependencies.workerId,
+            stage: "parsing",
+            percent: 30,
+            message: "Verifying immutable original evidence",
+          }),
+      );
+    } catch (error) {
+      if (!(error instanceof SbomNormalizationError)) throw error;
+      await this.dependencies.queue.completeWithValidation(organizationId, {
+        jobId: claim.jobId,
+        workerId: this.dependencies.workerId,
+        report: failedNormalizationReport(
+          error,
+          this.dependencies.now ?? (() => new Date()),
+        ),
+      });
+      return true;
+    }
+  }
+
+  private async processNormalizedFile(
+    claim: Extract<SbomIngestClaim, { outcome: "claimed" }>,
+    path: string,
+  ): Promise<boolean> {
+    const organizationId = claim.organizationId;
     await this.dependencies.queue.checkpoint(organizationId, {
       jobId: claim.jobId,
       workerId: this.dependencies.workerId,
@@ -344,17 +398,42 @@ export class SbomIngestWorker {
       percent: 30,
       message: "Streaming SBOM components",
     });
+    let lastHeartbeat = Date.now();
+    const progress = async () => {
+      if (Date.now() - lastHeartbeat < 15_000) return;
+      await this.dependencies.queue.checkpoint(organizationId, {
+        jobId: claim.jobId,
+        workerId: this.dependencies.workerId,
+        stage: "parsing",
+        percent: 35,
+        message: "Validating and normalizing immutable SBOM",
+      });
+      lastHeartbeat = Date.now();
+    };
     const normalizer = (
       this.dependencies.normalize ?? normalizeSbomStream
     ).bind(undefined);
-    const scanned = await normalizer(opened.stream, {
+    const scanned = await normalizer(openSbomSpool(path), {
       maximumBytes: Math.min(claim.byteSize, this.maximumBytes()),
       maximumComponents: this.maximumComponents(),
       retainResult: false,
+      onProgress: progress,
     });
+    await this.dependencies.queue.checkpoint(organizationId, {
+      jobId: claim.jobId,
+      workerId: this.dependencies.workerId,
+      stage: "parsing",
+      percent: 35,
+      message: "Validating pinned SBOM schemas",
+    });
+    const validation = await (
+      this.dependencies.validateFile ?? validateSbomFile
+    )(path, scanned, progress);
     const report = normalizationReport(
       scanned,
       this.dependencies.now ?? (() => new Date()),
+      validation,
+      claim,
     );
     // Invalid evidence remains an M3-02 validation result.  It has no
     // normalized graph, so persist the bounded report through the existing
@@ -400,25 +479,12 @@ export class SbomIngestWorker {
       return true;
     }
     if (began.outcome === "complete") return true;
-    const replay = await this.dependencies.storage.openVerified?.({
-      objectKey: claim.objectKey,
-      sha256: claim.sha256,
-      byteSize: claim.byteSize,
-      contentType: claim.mediaType,
-    });
-    if (!replay || replay.outcome !== "verified") {
-      await this.dependencies.queue.fail(organizationId, {
-        jobId: claim.jobId,
-        workerId: this.dependencies.workerId,
-        errorCode: toErrorCode(replay?.outcome ?? "unavailable"),
-        retryable: replay?.outcome === "unavailable" || !replay,
-      });
-      return true;
-    }
-    await normalizer(replay.stream, {
+    await normalizer(openSbomSpool(path), {
+      spdx3HashCatalog: scanned.spdx3HashCatalog,
       maximumBytes: Math.min(claim.byteSize, this.maximumBytes()),
       maximumComponents: this.maximumComponents(),
       retainResult: false,
+      onProgress: progress,
       onBatch: async (batch) =>
         this.dependencies.queue.persistNormalizationBatch?.(organizationId, {
           jobId: claim.jobId,
@@ -478,9 +544,14 @@ function batchSourceOffset(batch: SbomNormalizationBatch): number {
 function normalizationReport(
   result: SbomNormalizationResult,
   now: () => Date,
+  validation: StreamingValidationResult,
+  declared: {
+    declaredFormat: SbomDetectedFormat | null;
+    declaredSpecVersion: string | null;
+  },
 ): SbomValidationReport {
   const completedAt = now().toISOString();
-  const diagnostics = result.diagnostics.slice(0, 100).map((item) => ({
+  const normalizationDiagnostics = result.diagnostics.map((item) => ({
     severity: item.severity,
     // Keep the established M3-02 validation vocabulary at the intake
     // boundary. Detailed normalization codes remain on completed documents;
@@ -490,10 +561,40 @@ function normalizationReport(
     message: item.message,
     remediation: "Review the SBOM source evidence.",
   }));
-  const errorCount = diagnostics.filter(
-    (item) => item.severity === "error",
-  ).length;
-  const warningCount = diagnostics.length - errorCount;
+  const metadataWarnings =
+    (declared.declaredFormat !== null &&
+      declared.declaredFormat !== formatFamily(result.format)) ||
+    (declared.declaredSpecVersion !== null &&
+      declared.declaredSpecVersion.replace(/^SPDX-/u, "") !==
+        result.specVersion?.replace(/^SPDX-/u, ""))
+      ? [
+          {
+            severity: "warning" as const,
+            code: "declared_metadata_mismatch",
+            location: "$",
+            message:
+              "Declared SBOM metadata differs from the verified content.",
+            remediation: "Use the detected format and edition.",
+          },
+        ]
+      : [];
+  const allDiagnostics = [
+    ...validation.diagnostics,
+    ...normalizationDiagnostics,
+    ...metadataWarnings,
+  ];
+  const diagnostics = allDiagnostics.slice(0, 100);
+  const errorCount =
+    validation.errorCount +
+    (result.errorCount ??
+      normalizationDiagnostics.filter((item) => item.severity === "error")
+        .length);
+  const warningCount =
+    validation.warningCount +
+    (result.warningCount ??
+      normalizationDiagnostics.filter((item) => item.severity === "warning")
+        .length) +
+    metadataWarnings.length;
   return Object.freeze({
     status:
       errorCount > 0
@@ -504,20 +605,27 @@ function normalizationReport(
     detected: {
       format: formatFamily(result.format),
       serialization: validationSerialization(result.format),
-      specificationVersion: result.specVersion ?? "unknown",
+      specificationVersion:
+        canonicalSbomSpecificationVersion(result.specVersion) ?? "unknown",
     },
     validator: {
-      name: "CRA streaming SBOM normalizer",
-      version: NORMALIZER_VERSION,
-      schemaAssetSha256: "0".repeat(64),
+      name: "CRA streaming SBOM validator",
+      version: STREAMING_VALIDATOR_VERSION,
+      schemaAssetSha256:
+        validation.schemaAssetSha256 ??
+        schemaAssetSha256ForDetection({
+          format: formatFamily(result.format),
+          serialization: validationSerialization(result.format),
+          version: result.specVersion?.replace(/^SPDX-/u, "") ?? null,
+        }),
     },
     diagnostics,
     errorCount,
     warningCount,
-    omittedDiagnosticCount: Math.max(
-      0,
-      result.diagnostics.length - diagnostics.length,
-    ),
+    omittedDiagnosticCount:
+      validation.omittedDiagnosticCount +
+      (result.omittedDiagnosticCount ?? 0) +
+      Math.max(0, allDiagnostics.length - diagnostics.length),
     completedAt,
   });
 }
@@ -576,4 +684,44 @@ function errorSummary(error: unknown): Readonly<{
     return Object.freeze({ name: error.name, code, providerCode });
   }
   return Object.freeze({ name: typeof error, code: null, providerCode: null });
+}
+
+function failedNormalizationReport(
+  error: SbomNormalizationError,
+  now: () => Date,
+): SbomValidationReport {
+  return {
+    status: "invalid",
+    detected: null,
+    validator: {
+      name: "CRA streaming SBOM validator",
+      version: STREAMING_VALIDATOR_VERSION,
+      schemaAssetSha256: schemaAssetSha256ForDetection({
+        format: null,
+        serialization: null,
+        version: null,
+      }),
+    },
+    diagnostics: [
+      {
+        severity: "error",
+        code:
+          error.code === "normalization_byte_limit_exceeded"
+            ? "byte_limit_exceeded"
+            : error.code === "normalization_extreme_numeric_literal"
+              ? "extreme_numeric_literal"
+              : "schema_violation",
+        location: "$",
+        message:
+          error.code === "normalization_projection_limit_exceeded"
+            ? error.message
+            : "SBOM parsing or safety validation failed.",
+        remediation: "Correct the SBOM and upload a new immutable version.",
+      },
+    ],
+    errorCount: 1,
+    warningCount: 0,
+    omittedDiagnosticCount: 0,
+    completedAt: now().toISOString(),
+  };
 }

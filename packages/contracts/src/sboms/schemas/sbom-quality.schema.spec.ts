@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  sbomQualityProfileSchema,
+  sbomQualityInputsSchema,
+  sbomQualityDimensionSchema,
   sbomQualityFindingsQuerySchema,
   sbomQualityReportResponseSchema,
   sbomQualitySettingsResponseSchema,
@@ -12,6 +15,72 @@ const sourceId = "00000000-0000-4000-8000-000000000001";
 const reportId = "00000000-0000-4000-8000-000000000002";
 
 describe("SBOM quality contracts", () => {
+  it("parses pinned source technical check metadata without changing historical reports", () => {
+    const legacy = {
+      enabled: true,
+      status: "warning",
+      rulesetVersion: "bsi-tr-03183-2.v2.0.0",
+      findingCount: 1,
+    };
+    expect(sbomQualityProfileSchema.parse(legacy)).toEqual(legacy);
+    const pinned = {
+      ...legacy,
+      assessmentKind: "pinned_technical_checks",
+      sourceSha256: "a".repeat(64),
+      evaluatorVersion: "bsi-technical.v1",
+      passedRuleCount: 2,
+      failedRuleCount: 0,
+      manualReviewRuleCount: 1,
+    };
+    expect(sbomQualityProfileSchema.parse(pinned)).toEqual(pinned);
+    expect(
+      sbomQualityProfileSchema.safeParse({
+        ...pinned,
+        sourceSha256: "malformed",
+      }).success,
+    ).toBe(false);
+    expect(
+      sbomQualityProfileSchema.safeParse({ ...pinned, sourceSha256: undefined })
+        .success,
+    ).toBe(false);
+    expect(
+      sbomQualityProfileSchema.safeParse({ ...pinned, status: "valid" })
+        .success,
+    ).toBe(false);
+  });
+
+  it.each([
+    { enabled: false, status: "warning" },
+    { enabled: true, status: "warning", assessmentKind: "unavailable" },
+    {
+      enabled: true,
+      status: "invalid",
+      assessmentKind: "pinned_technical_checks",
+      sourceSha256: "a".repeat(64),
+      evaluatorVersion: "bsi-technical.v1",
+      passedRuleCount: 1,
+      failedRuleCount: 1,
+      manualReviewRuleCount: 1,
+      findingCount: 2,
+    },
+    {
+      enabled: true,
+      status: "warning",
+      assessmentKind: "pinned_technical_checks",
+      sourceSha256: "a".repeat(64),
+      passedRuleCount: 1,
+      failedRuleCount: 0,
+      manualReviewRuleCount: 1,
+    },
+  ])("validates profile outcome consistency: %j", (fields) => {
+    const result = sbomQualityProfileSchema.safeParse({
+      rulesetVersion: "bsi-tr-03183-2.v2.0.0",
+      findingCount: 1,
+      ...fields,
+    });
+    expect(result.success).toBe(fields.status === "invalid");
+  });
+
   it("parses an explainable completed report without conflating legal-floor coverage and depth", () => {
     const parsed = sbomQualityReportResponseSchema.parse({
       report: {
@@ -127,6 +196,70 @@ describe("SBOM quality contracts", () => {
       },
     });
 
+    expect(
+      sbomQualityInputsSchema.safeParse({
+        ...parsed.report.inputs,
+        componentCount: 0,
+      }).success,
+    ).toBe(false);
+    expect(
+      sbomQualityInputsSchema.safeParse({
+        ...parsed.report.inputs,
+        primaryComponentIdentified: false,
+      }).success,
+    ).toBe(false);
+    expect(
+      sbomQualityDimensionSchema.safeParse({
+        ...parsed.report.dimensions[0],
+        satisfiedCount: 5,
+      }).success,
+    ).toBe(false);
+    expect(
+      sbomQualityReportResponseSchema.safeParse({
+        report: {
+          ...parsed.report,
+          dimensions: [
+            parsed.report.dimensions[0],
+            parsed.report.dimensions[0],
+          ],
+        },
+      }).success,
+    ).toBe(false);
+    for (const field of [
+      "assessmentStatus",
+      "inputs",
+      "totalScore",
+      "bsiProfile",
+      "baseline",
+      "regression",
+      "completedAt",
+    ] as const) {
+      expect(
+        sbomQualityReportResponseSchema.safeParse({
+          report: { ...parsed.report, [field]: null },
+        }).success,
+      ).toBe(false);
+    }
+    expect(
+      sbomQualityReportResponseSchema.safeParse({
+        report: { ...parsed.report, state: "failed", error: null },
+      }).success,
+    ).toBe(false);
+    const error = {
+      code: "provider_unavailable",
+      message: "Retry this report",
+      retryable: true,
+    };
+    expect(
+      sbomQualityReportResponseSchema.safeParse({
+        report: { ...parsed.report, error },
+      }).success,
+    ).toBe(false);
+    expect(
+      sbomQualityReportResponseSchema.safeParse({
+        report: { ...parsed.report, state: "failed", error },
+      }).success,
+    ).toBe(true);
     expect(parsed.report.dimensions.map((dimension) => dimension.id)).toContain(
       "top_level_dependency",
     );
@@ -192,7 +325,11 @@ describe("SBOM quality contracts", () => {
             bsiProfile: null,
             baseline: null,
             regression: null,
-            progress: { stage: "failed", percent: 0, message: "Calculation failed." },
+            progress: {
+              stage: "failed",
+              percent: 0,
+              message: "Calculation failed.",
+            },
             error: { code, message: "Calculation failed.", retryable: true },
             completedAt: null,
             createdAt: now,

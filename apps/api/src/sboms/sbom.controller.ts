@@ -137,7 +137,11 @@ export class ProductReleaseSbomController {
       supersedesSourceId: input.supersedesSourceId,
       correlationId: randomUUID(),
     });
-    return { source: publicSource(result.reservation), upload: result.upload };
+    return {
+      source: publicSource(result.reservation),
+      upload: result.upload,
+      ...(result.upload === null ? { replayed: true as const } : {}),
+    };
   }
 
   @RequirePermissions("can_view_sboms")
@@ -443,7 +447,7 @@ export class SbomDiffsController {
     });
   }
 
-  @RequirePermissions("can_view_sboms")
+  @RequirePermissions("can_view_sboms", "can_view_findings")
   @Get(":diffId/findings")
   @ZodResponse(sbomDiffFindingsResponseSchema)
   async findings(
@@ -540,7 +544,11 @@ export class SbomCiController {
       declaredSpecVersion: input.declaredSpecVersion,
       supersedesSourceId: input.supersedesSourceId,
     });
-    return { source: publicSource(result.reservation), upload: result.upload };
+    return {
+      source: publicSource(result.reservation),
+      upload: result.upload,
+      ...(result.upload === null ? { replayed: true as const } : {}),
+    };
   }
   @Public()
   @UseGuards(SbomCiCredentialGuard)

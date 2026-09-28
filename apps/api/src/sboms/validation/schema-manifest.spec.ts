@@ -11,7 +11,7 @@ import {
 describe("SCHEMA_ASSET_MANIFEST", () => {
   it("records vendored official schema provenance and exact SHA-256 values", () => {
     expect(VALIDATOR_VERSION).toMatch(/^m3-02\./);
-    expect(SCHEMA_ASSET_MANIFEST).toHaveLength(12);
+    expect(SCHEMA_ASSET_MANIFEST).toHaveLength(13);
     expect(SCHEMA_ASSET_MANIFEST.map((asset) => asset.id)).toEqual([
       "cyclonedx-1.4-json",
       "cyclonedx-1.4-xml",
@@ -25,6 +25,7 @@ describe("SCHEMA_ASSET_MANIFEST", () => {
       "spdx-2.3-json",
       "spdx-3.0-jsonld-context",
       "spdx-3.0-jsonld-example",
+      "cyclonedx-spdx-license-xml",
     ]);
 
     for (const asset of SCHEMA_ASSET_MANIFEST) {

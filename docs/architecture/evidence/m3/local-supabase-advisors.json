@@ -1,0 +1,610 @@
+{
+  "projectUrl": "http://127.0.0.1:54321",
+  "projectId": "cra",
+  "capturedAt": "2026-09-28",
+  "note": "Read-only local metadata. Pre-existing notices; no new tables. Deny-all RLS is deliberate for API-mediated tables; trigger-return routines cannot be called as ordinary RPCs.",
+  "advisors": [
+    {
+      "type": "security",
+      "total": 242,
+      "levels": {
+        "INFO": 211,
+        "WARN": 31
+      },
+      "m3": [
+        {
+          "name": "rls_enabled_no_policy",
+          "level": "INFO",
+          "detail": "Table `public.sbom_ci_credentials` has RLS enabled, but no policies exist",
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy"
+        },
+        {
+          "name": "rls_enabled_no_policy",
+          "level": "INFO",
+          "detail": "Table `public.sbom_composite_component_provenance` has RLS enabled, but no policies exist",
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy"
+        },
+        {
+          "name": "rls_enabled_no_policy",
+          "level": "INFO",
+          "detail": "Table `public.sbom_composite_conflicts` has RLS enabled, but no policies exist",
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy"
+        },
+        {
+          "name": "rls_enabled_no_policy",
+          "level": "INFO",
+          "detail": "Table `public.sbom_composite_dependency_provenance` has RLS enabled, but no policies exist",
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy"
+        },
+        {
+          "name": "rls_enabled_no_policy",
+          "level": "INFO",
+          "detail": "Table `public.sbom_composite_review_inputs` has RLS enabled, but no policies exist",
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy"
+        },
+        {
+          "name": "rls_enabled_no_policy",
+          "level": "INFO",
+          "detail": "Table `public.sbom_composite_reviews` has RLS enabled, but no policies exist",
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy"
+        },
+        {
+          "name": "rls_enabled_no_policy",
+          "level": "INFO",
+          "detail": "Table `public.sbom_composite_unresolved_relationships` has RLS enabled, but no policies exist",
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy"
+        },
+        {
+          "name": "rls_enabled_no_policy",
+          "level": "INFO",
+          "detail": "Table `public.sbom_ingest_jobs` has RLS enabled, but no policies exist",
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy"
+        },
+        {
+          "name": "rls_enabled_no_policy",
+          "level": "INFO",
+          "detail": "Table `public.sbom_raw_objects` has RLS enabled, but no policies exist",
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy"
+        },
+        {
+          "name": "rls_enabled_no_policy",
+          "level": "INFO",
+          "detail": "Table `public.sbom_sources` has RLS enabled, but no policies exist",
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy"
+        },
+        {
+          "name": "rls_enabled_no_policy",
+          "level": "INFO",
+          "detail": "Table `public.sbom_supplier_invitations` has RLS enabled, but no policies exist",
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy"
+        },
+        {
+          "name": "rls_enabled_no_policy",
+          "level": "INFO",
+          "detail": "Table `public.sbom_supplier_requests` has RLS enabled, but no policies exist",
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy"
+        },
+        {
+          "name": "rls_enabled_no_policy",
+          "level": "INFO",
+          "detail": "Table `public.sbom_supplier_submissions` has RLS enabled, but no policies exist",
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy"
+        },
+        {
+          "name": "anon_security_definer_function_executable",
+          "level": "WARN",
+          "detail": "Function `public.consume_supplier_sbom_invitation_atomic(p_token_hash text, p_session_token_hash text, p_session_expires_at timestamp with time zone)` can be executed by the `anon` role as a `SECURITY DEFINER` function via `/rest/v1/rpc/consume_supplier_sbom_invitation_atomic`. Revoke `EXECUTE` or switch it to `SECURITY INVOKER` if that is not intentional.",
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0028_anon_security_definer_function_executable"
+        },
+        {
+          "name": "anon_security_definer_function_executable",
+          "level": "WARN",
+          "detail": "Function `public.sync_supplier_sbom_submission_from_document()` can be executed by the `anon` role as a `SECURITY DEFINER` function via `/rest/v1/rpc/sync_supplier_sbom_submission_from_document`. Revoke `EXECUTE` or switch it to `SECURITY INVOKER` if that is not intentional.",
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0028_anon_security_definer_function_executable"
+        },
+        {
+          "name": "anon_security_definer_function_executable",
+          "level": "WARN",
+          "detail": "Function `public.sync_supplier_sbom_submission_from_job()` can be executed by the `anon` role as a `SECURITY DEFINER` function via `/rest/v1/rpc/sync_supplier_sbom_submission_from_job`. Revoke `EXECUTE` or switch it to `SECURITY INVOKER` if that is not intentional.",
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0028_anon_security_definer_function_executable"
+        },
+        {
+          "name": "authenticated_security_definer_function_executable",
+          "level": "WARN",
+          "detail": "Function `public.consume_supplier_sbom_invitation_atomic(p_token_hash text, p_session_token_hash text, p_session_expires_at timestamp with time zone)` can be executed by the `authenticated` role as a `SECURITY DEFINER` function via `/rest/v1/rpc/consume_supplier_sbom_invitation_atomic`. Revoke `EXECUTE` or switch it to `SECURITY INVOKER` if that is not intentional.",
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable"
+        },
+        {
+          "name": "authenticated_security_definer_function_executable",
+          "level": "WARN",
+          "detail": "Function `public.sync_supplier_sbom_submission_from_document()` can be executed by the `authenticated` role as a `SECURITY DEFINER` function via `/rest/v1/rpc/sync_supplier_sbom_submission_from_document`. Revoke `EXECUTE` or switch it to `SECURITY INVOKER` if that is not intentional.",
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable"
+        },
+        {
+          "name": "authenticated_security_definer_function_executable",
+          "level": "WARN",
+          "detail": "Function `public.sync_supplier_sbom_submission_from_job()` can be executed by the `authenticated` role as a `SECURITY DEFINER` function via `/rest/v1/rpc/sync_supplier_sbom_submission_from_job`. Revoke `EXECUTE` or switch it to `SECURITY INVOKER` if that is not intentional.",
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable"
+        }
+      ]
+    },
+    {
+      "type": "performance",
+      "total": 662,
+      "levels": {
+        "INFO": 654,
+        "WARN": 8
+      },
+      "m3": [
+        {
+          "name": "unindexed_foreign_keys",
+          "level": "INFO",
+          "detail": "Table `public.organization_sbom_quality_settings` has a foreign key `organization_sbom_quality_settings_created_by_fkey` without a covering index. This can lead to suboptimal query performance.",
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys"
+        },
+        {
+          "name": "unindexed_foreign_keys",
+          "level": "INFO",
+          "detail": "Table `public.organization_sbom_quality_settings` has a foreign key `organization_sbom_quality_settings_updated_by_fkey` without a covering index. This can lead to suboptimal query performance.",
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys"
+        },
+        {
+          "name": "unindexed_foreign_keys",
+          "level": "INFO",
+          "detail": "Table `public.sbom_ci_credentials` has a foreign key `sbom_ci_credentials_created_by_fkey` without a covering index. This can lead to suboptimal query performance.",
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys"
+        },
+        {
+          "name": "unindexed_foreign_keys",
+          "level": "INFO",
+          "detail": "Table `public.sbom_ci_credentials` has a foreign key `sbom_ci_credentials_revoked_by_fkey` without a covering index. This can lead to suboptimal query performance.",
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys"
+        },
+        {
+          "name": "unindexed_foreign_keys",
+          "level": "INFO",
+          "detail": "Table `public.sbom_components` has a foreign key `sbom_components_parent_fkey` without a covering index. This can lead to suboptimal query performance.",
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys"
+        },
+        {
+          "name": "unindexed_foreign_keys",
+          "level": "INFO",
+          "detail": "Table `public.sbom_composite_component_provenance` has a foreign key `sbom_composite_component_prov_organization_id_review_confl_fkey` without a covering index. This can lead to suboptimal query performance.",
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys"
+        },
+        {
+          "name": "unindexed_foreign_keys",
+          "level": "INFO",
+          "detail": "Table `public.sbom_composite_component_provenance` has a foreign key `sbom_composite_component_prov_organization_id_source_compo_fkey` without a covering index. This can lead to suboptimal query performance.",
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys"
+        },
+        {
+          "name": "unindexed_foreign_keys",
+          "level": "INFO",
+          "detail": "Table `public.sbom_composite_component_provenance` has a foreign key `sbom_composite_component_prov_organization_id_source_docum_fkey` without a covering index. This can lead to suboptimal query performance.",
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys"
+        },
+        {
+          "name": "unindexed_foreign_keys",
+          "level": "INFO",
+          "detail": "Table `public.sbom_composite_component_provenance` has a foreign key `sbom_composite_component_prov_organization_id_supplier_sub_fkey` without a covering index. This can lead to suboptimal query performance.",
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys"
+        },
+        {
+          "name": "unindexed_foreign_keys",
+          "level": "INFO",
+          "detail": "Table `public.sbom_composite_component_provenance` has a foreign key `sbom_composite_component_provena_organization_id_source_id_fkey` without a covering index. This can lead to suboptimal query performance.",
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys"
+        },
+        {
+          "name": "unindexed_foreign_keys",
+          "level": "INFO",
+          "detail": "Table `public.sbom_composite_conflicts` has a foreign key `sbom_composite_conflicts_organization_id_selected_source_c_fkey` without a covering index. This can lead to suboptimal query performance.",
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys"
+        },
+        {
+          "name": "unindexed_foreign_keys",
+          "level": "INFO",
+          "detail": "Table `public.sbom_composite_conflicts` has a foreign key `sbom_composite_conflicts_resolved_by_fkey` without a covering index. This can lead to suboptimal query performance.",
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys"
+        },
+        {
+          "name": "unindexed_foreign_keys",
+          "level": "INFO",
+          "detail": "Table `public.sbom_composite_dependency_provenance` has a foreign key `sbom_composite_dependency_pro_organization_id_review_relat_fkey` without a covering index. This can lead to suboptimal query performance.",
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys"
+        },
+        {
+          "name": "unindexed_foreign_keys",
+          "level": "INFO",
+          "detail": "Table `public.sbom_composite_dependency_provenance` has a foreign key `sbom_composite_dependency_pro_organization_id_source_depen_fkey` without a covering index. This can lead to suboptimal query performance.",
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys"
+        },
+        {
+          "name": "unindexed_foreign_keys",
+          "level": "INFO",
+          "detail": "Table `public.sbom_composite_dependency_provenance` has a foreign key `sbom_composite_dependency_pro_organization_id_source_docum_fkey` without a covering index. This can lead to suboptimal query performance.",
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys"
+        },
+        {
+          "name": "unindexed_foreign_keys",
+          "level": "INFO",
+          "detail": "Table `public.sbom_composite_dependency_provenance` has a foreign key `sbom_composite_dependency_pro_organization_id_supplier_sub_fkey` without a covering index. This can lead to suboptimal query performance.",
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys"
+        },
+        {
+          "name": "unindexed_foreign_keys",
+          "level": "INFO",
+          "detail": "Table `public.sbom_composite_dependency_provenance` has a foreign key `sbom_composite_dependency_proven_organization_id_source_id_fkey` without a covering index. This can lead to suboptimal query performance.",
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys"
+        },
+        {
+          "name": "unindexed_foreign_keys",
+          "level": "INFO",
+          "detail": "Table `public.sbom_composite_review_inputs` has a foreign key `sbom_composite_review_inputs_organization_id_source_id_fkey` without a covering index. This can lead to suboptimal query performance.",
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys"
+        },
+        {
+          "name": "unindexed_foreign_keys",
+          "level": "INFO",
+          "detail": "Table `public.sbom_composite_review_inputs` has a foreign key `sbom_composite_review_inputs_organization_id_supplier_subm_fkey` without a covering index. This can lead to suboptimal query performance.",
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys"
+        },
+        {
+          "name": "unindexed_foreign_keys",
+          "level": "INFO",
+          "detail": "Table `public.sbom_composite_reviews` has a foreign key `sbom_composite_reviews_created_by_fkey` without a covering index. This can lead to suboptimal query performance.",
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys"
+        },
+        {
+          "name": "unindexed_foreign_keys",
+          "level": "INFO",
+          "detail": "Table `public.sbom_composite_reviews` has a foreign key `sbom_composite_reviews_lease_owner_fkey` without a covering index. This can lead to suboptimal query performance.",
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys"
+        },
+        {
+          "name": "unindexed_foreign_keys",
+          "level": "INFO",
+          "detail": "Table `public.sbom_composite_reviews` has a foreign key `sbom_composite_reviews_organization_id_generated_document__fkey` without a covering index. This can lead to suboptimal query performance.",
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys"
+        },
+        {
+          "name": "unindexed_foreign_keys",
+          "level": "INFO",
+          "detail": "Table `public.sbom_composite_reviews` has a foreign key `sbom_composite_reviews_organization_id_generated_source_id_fkey` without a covering index. This can lead to suboptimal query performance.",
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys"
+        },
+        {
+          "name": "unindexed_foreign_keys",
+          "level": "INFO",
+          "detail": "Table `public.sbom_composite_reviews` has a foreign key `sbom_composite_reviews_organization_id_product_id_release__fkey` without a covering index. This can lead to suboptimal query performance.",
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys"
+        },
+        {
+          "name": "unindexed_foreign_keys",
+          "level": "INFO",
+          "detail": "Table `public.sbom_composite_unresolved_relationships` has a foreign key `sbom_composite_unresolved_rel_organization_id_source_depen_fkey` without a covering index. This can lead to suboptimal query performance.",
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys"
+        },
+        {
+          "name": "unindexed_foreign_keys",
+          "level": "INFO",
+          "detail": "Table `public.sbom_composite_unresolved_relationships` has a foreign key `sbom_composite_unresolved_relationships_resolved_by_fkey` without a covering index. This can lead to suboptimal query performance.",
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys"
+        },
+        {
+          "name": "unindexed_foreign_keys",
+          "level": "INFO",
+          "detail": "Table `public.sbom_diff_component_changes` has a foreign key `sbom_diff_component_changes_organization_id_baseline_compo_fkey` without a covering index. This can lead to suboptimal query performance.",
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys"
+        },
+        {
+          "name": "unindexed_foreign_keys",
+          "level": "INFO",
+          "detail": "Table `public.sbom_diff_component_changes` has a foreign key `sbom_diff_component_changes_organization_id_current_compon_fkey` without a covering index. This can lead to suboptimal query performance.",
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys"
+        },
+        {
+          "name": "unindexed_foreign_keys",
+          "level": "INFO",
+          "detail": "Table `public.sbom_diff_reports` has a foreign key `sbom_diff_reports_organization_id_baseline_document_id_bas_fkey` without a covering index. This can lead to suboptimal query performance.",
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys"
+        },
+        {
+          "name": "unindexed_foreign_keys",
+          "level": "INFO",
+          "detail": "Table `public.sbom_diff_reports` has a foreign key `sbom_diff_reports_organization_id_baseline_source_id_fkey` without a covering index. This can lead to suboptimal query performance.",
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys"
+        },
+        {
+          "name": "unindexed_foreign_keys",
+          "level": "INFO",
+          "detail": "Table `public.sbom_diff_reports` has a foreign key `sbom_diff_reports_organization_id_document_id_source_id_fkey` without a covering index. This can lead to suboptimal query performance.",
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys"
+        },
+        {
+          "name": "unindexed_foreign_keys",
+          "level": "INFO",
+          "detail": "Table `public.sbom_document_sources` has a foreign key `sbom_document_sources_raw_object_fkey` without a covering index. This can lead to suboptimal query performance.",
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys"
+        },
+        {
+          "name": "unindexed_foreign_keys",
+          "level": "INFO",
+          "detail": "Table `public.sbom_document_sources` has a foreign key `sbom_document_sources_source_fkey` without a covering index. This can lead to suboptimal query performance.",
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys"
+        },
+        {
+          "name": "unindexed_foreign_keys",
+          "level": "INFO",
+          "detail": "Table `public.sbom_documents` has a foreign key `sbom_documents_job_fkey` without a covering index. This can lead to suboptimal query performance.",
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys"
+        },
+        {
+          "name": "unindexed_foreign_keys",
+          "level": "INFO",
+          "detail": "Table `public.sbom_documents` has a foreign key `sbom_documents_raw_object_fkey` without a covering index. This can lead to suboptimal query performance.",
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys"
+        },
+        {
+          "name": "unindexed_foreign_keys",
+          "level": "INFO",
+          "detail": "Table `public.sbom_ingest_jobs` has a foreign key `sbom_ingest_jobs_actor_credential_fkey` without a covering index. This can lead to suboptimal query performance.",
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys"
+        },
+        {
+          "name": "unindexed_foreign_keys",
+          "level": "INFO",
+          "detail": "Table `public.sbom_ingest_jobs` has a foreign key `sbom_ingest_jobs_actor_user_id_fkey` without a covering index. This can lead to suboptimal query performance.",
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys"
+        },
+        {
+          "name": "unindexed_foreign_keys",
+          "level": "INFO",
+          "detail": "Table `public.sbom_ingest_jobs` has a foreign key `sbom_ingest_jobs_replayed_by_fkey` without a covering index. This can lead to suboptimal query performance.",
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys"
+        },
+        {
+          "name": "unindexed_foreign_keys",
+          "level": "INFO",
+          "detail": "Table `public.sbom_quality_findings` has a foreign key `sbom_quality_findings_component_fkey` without a covering index. This can lead to suboptimal query performance.",
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys"
+        },
+        {
+          "name": "unindexed_foreign_keys",
+          "level": "INFO",
+          "detail": "Table `public.sbom_quality_reports` has a foreign key `sbom_quality_reports_baseline_fkey` without a covering index. This can lead to suboptimal query performance.",
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys"
+        },
+        {
+          "name": "unindexed_foreign_keys",
+          "level": "INFO",
+          "detail": "Table `public.sbom_quality_reports` has a foreign key `sbom_quality_reports_document_source_fkey` without a covering index. This can lead to suboptimal query performance.",
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys"
+        },
+        {
+          "name": "unindexed_foreign_keys",
+          "level": "INFO",
+          "detail": "Table `public.sbom_sources` has a foreign key `sbom_sources_actor_user_id_fkey` without a covering index. This can lead to suboptimal query performance.",
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys"
+        },
+        {
+          "name": "unindexed_foreign_keys",
+          "level": "INFO",
+          "detail": "Table `public.sbom_sources` has a foreign key `sbom_sources_deduplicated_same_release_fkey` without a covering index. This can lead to suboptimal query performance.",
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys"
+        },
+        {
+          "name": "unindexed_foreign_keys",
+          "level": "INFO",
+          "detail": "Table `public.sbom_sources` has a foreign key `sbom_sources_raw_object_fkey` without a covering index. This can lead to suboptimal query performance.",
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys"
+        },
+        {
+          "name": "unindexed_foreign_keys",
+          "level": "INFO",
+          "detail": "Table `public.sbom_sources` has a foreign key `sbom_sources_release_fkey` without a covering index. This can lead to suboptimal query performance.",
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys"
+        },
+        {
+          "name": "unindexed_foreign_keys",
+          "level": "INFO",
+          "detail": "Table `public.sbom_supplier_invitations` has a foreign key `sbom_supplier_invitation_m9_item_fk` without a covering index. This can lead to suboptimal query performance.",
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys"
+        },
+        {
+          "name": "unindexed_foreign_keys",
+          "level": "INFO",
+          "detail": "Table `public.sbom_supplier_invitations` has a foreign key `sbom_supplier_invitations_created_by_fkey` without a covering index. This can lead to suboptimal query performance.",
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys"
+        },
+        {
+          "name": "unindexed_foreign_keys",
+          "level": "INFO",
+          "detail": "Table `public.sbom_supplier_requests` has a foreign key `sbom_supplier_requests_closed_by_fkey` without a covering index. This can lead to suboptimal query performance.",
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys"
+        },
+        {
+          "name": "unindexed_foreign_keys",
+          "level": "INFO",
+          "detail": "Table `public.sbom_supplier_requests` has a foreign key `sbom_supplier_requests_created_by_fkey` without a covering index. This can lead to suboptimal query performance.",
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys"
+        },
+        {
+          "name": "unindexed_foreign_keys",
+          "level": "INFO",
+          "detail": "Table `public.sbom_supplier_requests` has a foreign key `sbom_supplier_requests_organization_id_product_id_release__fkey` without a covering index. This can lead to suboptimal query performance.",
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys"
+        },
+        {
+          "name": "unindexed_foreign_keys",
+          "level": "INFO",
+          "detail": "Table `public.sbom_supplier_submissions` has a foreign key `sbom_supplier_submissions_organization_id_invitation_id_fkey` without a covering index. This can lead to suboptimal query performance.",
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys"
+        },
+        {
+          "name": "unindexed_foreign_keys",
+          "level": "INFO",
+          "detail": "Table `public.sbom_supplier_submissions` has a foreign key `sbom_supplier_submissions_organization_id_superseded_by_id_fkey` without a covering index. This can lead to suboptimal query performance.",
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys"
+        },
+        {
+          "name": "unindexed_foreign_keys",
+          "level": "INFO",
+          "detail": "Table `public.sbom_supplier_submissions` has a foreign key `sbom_supplier_submissions_reviewed_by_fkey` without a covering index. This can lead to suboptimal query performance.",
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys"
+        },
+        {
+          "name": "unused_index",
+          "level": "INFO",
+          "detail": "Index `sbom_supplier_requests_supplier_idx` on table `public.sbom_supplier_requests` has not been used",
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0005_unused_index"
+        },
+        {
+          "name": "unused_index",
+          "level": "INFO",
+          "detail": "Index `supplier_evidence_item_sbom_request_idx` on table `public.supplier_evidence_request_items` has not been used",
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0005_unused_index"
+        },
+        {
+          "name": "unused_index",
+          "level": "INFO",
+          "detail": "Index `sbom_diff_changes_type_idx` on table `public.sbom_diff_component_changes` has not been used",
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0005_unused_index"
+        },
+        {
+          "name": "unused_index",
+          "level": "INFO",
+          "detail": "Index `sbom_sources_org_release_created_idx` on table `public.sbom_sources` has not been used",
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0005_unused_index"
+        },
+        {
+          "name": "unused_index",
+          "level": "INFO",
+          "detail": "Index `sbom_sources_expiry_idx` on table `public.sbom_sources` has not been used",
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0005_unused_index"
+        },
+        {
+          "name": "unused_index",
+          "level": "INFO",
+          "detail": "Index `sbom_documents_org_release_created_idx` on table `public.sbom_documents` has not been used",
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0005_unused_index"
+        },
+        {
+          "name": "unused_index",
+          "level": "INFO",
+          "detail": "Index `sbom_document_sources_org_release_document_idx` on table `public.sbom_document_sources` has not been used",
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0005_unused_index"
+        },
+        {
+          "name": "unused_index",
+          "level": "INFO",
+          "detail": "Index `sbom_components_org_canonical_purl_idx` on table `public.sbom_components` has not been used",
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0005_unused_index"
+        },
+        {
+          "name": "unused_index",
+          "level": "INFO",
+          "detail": "Index `sbom_components_org_name_version_idx` on table `public.sbom_components` has not been used",
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0005_unused_index"
+        },
+        {
+          "name": "unused_index",
+          "level": "INFO",
+          "detail": "Index `sbom_components_document_depth_idx` on table `public.sbom_components` has not been used",
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0005_unused_index"
+        },
+        {
+          "name": "unused_index",
+          "level": "INFO",
+          "detail": "Index `sbom_component_identities_local_lookup_idx` on table `public.sbom_component_identities` has not been used",
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0005_unused_index"
+        },
+        {
+          "name": "unused_index",
+          "level": "INFO",
+          "detail": "Index `sbom_component_dependencies_parent_child_idx` on table `public.sbom_component_dependencies` has not been used",
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0005_unused_index"
+        },
+        {
+          "name": "unused_index",
+          "level": "INFO",
+          "detail": "Index `sbom_quality_reports_org_source_created_idx` on table `public.sbom_quality_reports` has not been used",
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0005_unused_index"
+        },
+        {
+          "name": "unused_index",
+          "level": "INFO",
+          "detail": "Index `sbom_quality_reports_org_release_state_created_idx` on table `public.sbom_quality_reports` has not been used",
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0005_unused_index"
+        },
+        {
+          "name": "unused_index",
+          "level": "INFO",
+          "detail": "Index `sbom_quality_reports_claim_idx` on table `public.sbom_quality_reports` has not been used",
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0005_unused_index"
+        },
+        {
+          "name": "unused_index",
+          "level": "INFO",
+          "detail": "Index `sbom_quality_reports_recovery_idx` on table `public.sbom_quality_reports` has not been used",
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0005_unused_index"
+        },
+        {
+          "name": "unused_index",
+          "level": "INFO",
+          "detail": "Index `sbom_sources_deduplicated_from_idx` on table `public.sbom_sources` has not been used",
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0005_unused_index"
+        },
+        {
+          "name": "unused_index",
+          "level": "INFO",
+          "detail": "Index `sbom_component_identities_package_lookup_idx` on table `public.sbom_component_identities` has not been used",
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0005_unused_index"
+        },
+        {
+          "name": "unused_index",
+          "level": "INFO",
+          "detail": "Index `sbom_diff_reports_claim_idx` on table `public.sbom_diff_reports` has not been used",
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0005_unused_index"
+        },
+        {
+          "name": "unused_index",
+          "level": "INFO",
+          "detail": "Index `sbom_diff_reports_recovery_idx` on table `public.sbom_diff_reports` has not been used",
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0005_unused_index"
+        },
+        {
+          "name": "unused_index",
+          "level": "INFO",
+          "detail": "Index `sbom_composite_reviews_claim_idx` on table `public.sbom_composite_reviews` has not been used",
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0005_unused_index"
+        },
+        {
+          "name": "unused_index",
+          "level": "INFO",
+          "detail": "Index `sbom_supplier_requests_org_release_idx` on table `public.sbom_supplier_requests` has not been used",
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0005_unused_index"
+        },
+        {
+          "name": "unused_index",
+          "level": "INFO",
+          "detail": "Index `sbom_supplier_invitations_expiry_idx` on table `public.sbom_supplier_invitations` has not been used",
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0005_unused_index"
+        },
+        {
+          "name": "unused_index",
+          "level": "INFO",
+          "detail": "Index `sbom_supplier_submissions_org_request_idx` on table `public.sbom_supplier_submissions` has not been used",
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0005_unused_index"
+        },
+        {
+          "name": "unused_index",
+          "level": "INFO",
+          "detail": "Index `sbom_supplier_submissions_review_idx` on table `public.sbom_supplier_submissions` has not been used",
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0005_unused_index"
+        }
+      ]
+    }
+  ]
+}

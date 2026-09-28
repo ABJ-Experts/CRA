@@ -1,5 +1,6 @@
 "use client";
 
+import { SbomExportPanel } from "./sbom-export-panel";
 import type {
   SbomComponent,
   SbomDependencyTreeQuery,
@@ -185,7 +186,10 @@ function Diagnostics({
     );
   }
   return (
-    <ul aria-label="Normalization diagnostics" className="mt-3 grid gap-2">
+    <ul
+      aria-label="Normalization diagnostics"
+      className="mt-3 grid grid-cols-1 min-w-0 gap-2"
+    >
       {diagnostics.map((diagnostic) => (
         <li
           key={`${diagnostic.severity}-${diagnostic.code}-${diagnostic.location}`}
@@ -294,7 +298,7 @@ function ComponentSearch({
       ) : (
         <ul
           aria-label="Normalized components"
-          className="mt-3 grid max-h-72 gap-2 overflow-y-auto pr-1"
+          className="mt-3 grid grid-cols-1 min-w-0 max-h-72 gap-2 overflow-y-auto pr-1"
         >
           {components.map((component) => (
             <li
@@ -651,7 +655,7 @@ export function SbomNormalizedDocumentDetail({
     return (
       <div
         role="alert"
-        className="rounded-xl border border-border bg-surface-subtle p-4"
+        className="min-w-0 rounded-xl border border-border bg-surface-subtle p-4"
       >
         <p className="text-subhead-regular text-danger">
           {requestErrorMessage(detail.error)}
@@ -670,7 +674,7 @@ export function SbomNormalizedDocumentDetail({
   }
   if (document.state !== "completed") {
     return (
-      <div className="rounded-xl border border-border bg-surface-subtle p-4">
+      <div className="min-w-0 rounded-xl border border-border bg-surface-subtle p-4">
         <Tag variant="dot" tone={documentTone(document.state)} size="sm">
           {titleCase(document.state)}
         </Tag>
@@ -692,8 +696,11 @@ export function SbomNormalizedDocumentDetail({
   }
 
   return (
-    <section aria-label="Normalized SBOM document" className="grid gap-4">
-      <header className="rounded-xl border border-border bg-surface-subtle p-4">
+    <section
+      aria-label="Normalized SBOM document"
+      className="grid grid-cols-1 min-w-0 gap-4"
+    >
+      <header className="min-w-0 rounded-xl border border-border bg-surface-subtle p-4">
         <Link
           href={`/products/${productId}`}
           className="text-caption-1-semibold text-active-600 underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-active-500"
@@ -732,7 +739,7 @@ export function SbomNormalizedDocumentDetail({
         >
           Compare release lineage
         </Link>
-        <dl className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <dl className="mt-4 grid grid-cols-1 min-w-0 gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <DocumentFact label="Components" value={document.componentCount} />
           <DocumentFact label="Maximum depth" value={document.maximumDepth} />
           <DocumentFact label="Dependencies" value={document.dependencyCount} />
@@ -752,6 +759,10 @@ export function SbomNormalizedDocumentDetail({
           <DocumentFact label="Warnings" value={document.warningCount} />
         </dl>
       </header>
+      <SbomExportPanel
+        documentId={document.id}
+        sourceId={sourceId ?? document.sourceId}
+      />
       <SbomQualityReport
         sourceId={sourceId ?? document.sourceId}
         enabled={enabled}
@@ -761,8 +772,8 @@ export function SbomNormalizedDocumentDetail({
         enabled={enabled}
         canEditFindings={canEditFindings}
       />
-      <div className="grid gap-4 xl:grid-cols-2">
-        <div className="rounded-xl border border-border bg-surface-subtle p-4">
+      <div className="grid grid-cols-1 min-w-0 gap-4 xl:grid-cols-2">
+        <div className="min-w-0 rounded-xl border border-border bg-surface-subtle p-4">
           <div className="flex items-center gap-2">
             <CircleAlert aria-hidden="true" className="size-5 text-fg-muted" />
             <h2 className="text-title-3-semibold text-fg">
@@ -771,11 +782,11 @@ export function SbomNormalizedDocumentDetail({
           </div>
           <Diagnostics diagnostics={detail.data.diagnostics} />
         </div>
-        <div className="rounded-xl border border-border bg-surface-subtle p-4">
+        <div className="min-w-0 rounded-xl border border-border bg-surface-subtle p-4">
           <ComponentSearch documentId={document.id} enabled={enabled} />
         </div>
       </div>
-      <div className="rounded-xl border border-border bg-surface-subtle p-4">
+      <div className="min-w-0 rounded-xl border border-border bg-surface-subtle p-4">
         <DependencyTree documentId={document.id} enabled={enabled} />
       </div>
     </section>

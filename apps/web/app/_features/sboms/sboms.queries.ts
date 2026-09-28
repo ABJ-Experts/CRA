@@ -44,7 +44,13 @@ import {
 } from "@tanstack/react-query";
 
 import { sbomsApi } from "./sboms.api";
-import { sbomKeys } from "./sboms.keys";
+import { getSbomKeys } from "./sboms.keys";
+import { useSession } from "../../_providers/session-provider";
+
+function useOrganizationSbomKeys() {
+  const { session } = useSession();
+  return getSbomKeys(session?.organization?.id ?? null);
+}
 
 function shouldPoll(status: SbomJobResponse["job"]["status"] | undefined) {
   return status === "queued" || status === "processing" || status === "failed";
@@ -72,12 +78,13 @@ export function useSbomCompositeReviewQuery(
   reviewId: string | null,
   enabled: boolean,
 ) {
+  const sbomKeys = useOrganizationSbomKeys();
   return useQuery<SbomCompositeReviewResponse>({
     queryKey:
       reviewId === null
         ? sbomKeys.compositeReviews
         : sbomKeys.compositeReview(reviewId),
-    enabled: enabled && reviewId !== null,
+    enabled: sbomKeys.all[2] !== "none" && enabled && reviewId !== null,
     retry: false,
     refetchInterval: (query) =>
       shouldPollComposite(query.state.data?.review.state) ? 2_000 : false,
@@ -91,6 +98,7 @@ export function useSbomCompositeReviewQuery(
 }
 
 export function useCreateSbomCompositeReviewMutation() {
+  const sbomKeys = useOrganizationSbomKeys();
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({
@@ -111,6 +119,7 @@ export function useCreateSbomCompositeReviewMutation() {
 }
 
 export function useResolveSbomCompositeConflictMutation() {
+  const sbomKeys = useOrganizationSbomKeys();
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({
@@ -131,6 +140,7 @@ export function useResolveSbomCompositeConflictMutation() {
 }
 
 export function useResolveSbomCompositeRelationshipMutation() {
+  const sbomKeys = useOrganizationSbomKeys();
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({
@@ -152,6 +162,7 @@ export function useResolveSbomCompositeRelationshipMutation() {
 }
 
 export function useGenerateSbomCompositeMutation() {
+  const sbomKeys = useOrganizationSbomKeys();
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({
@@ -172,15 +183,17 @@ export function useSupplierSbomRequestsQuery(
   query: Readonly<Partial<SupplierSbomRequestsQuery>>,
   enabled: boolean,
 ) {
+  const sbomKeys = useOrganizationSbomKeys();
   return useQuery({
     queryKey: sbomKeys.supplierRequestList(query),
-    enabled,
+    enabled: enabled && sbomKeys.all[2] !== "none",
     retry: false,
     queryFn: ({ signal }) => sbomsApi.listSupplierRequests(query, signal),
   });
 }
 
 export function useCreateSupplierSbomRequestMutation() {
+  const sbomKeys = useOrganizationSbomKeys();
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({
@@ -198,6 +211,7 @@ export function useCreateSupplierSbomRequestMutation() {
 }
 
 export function useCreateSupplierSbomInvitationMutation() {
+  const sbomKeys = useOrganizationSbomKeys();
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({
@@ -213,6 +227,7 @@ export function useCreateSupplierSbomInvitationMutation() {
 }
 
 export function useReviewSupplierSbomSubmissionMutation() {
+  const sbomKeys = useOrganizationSbomKeys();
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({
@@ -228,9 +243,10 @@ export function useReviewSupplierSbomSubmissionMutation() {
 }
 
 export function useSbomJobQuery(jobId: string | null, enabled: boolean) {
+  const sbomKeys = useOrganizationSbomKeys();
   return useQuery<SbomJobResponse>({
     queryKey: jobId === null ? sbomKeys.jobs : sbomKeys.job(jobId),
-    enabled: enabled && jobId !== null,
+    enabled: sbomKeys.all[2] !== "none" && enabled && jobId !== null,
     retry: false,
     refetchInterval: (query) =>
       shouldPoll(query.state.data?.job.status) ? 2_000 : false,
@@ -248,9 +264,14 @@ export function useSbomSourceHistoryQuery(
   query: Readonly<Partial<SbomSourceHistoryQuery>>,
   enabled: boolean,
 ) {
+  const sbomKeys = useOrganizationSbomKeys();
   return useQuery<SbomSourceHistoryResponse>({
     queryKey: sbomKeys.sourceHistory(productId, releaseId, query),
-    enabled: enabled && productId !== "" && releaseId !== "",
+    enabled:
+      sbomKeys.all[2] !== "none" &&
+      enabled &&
+      productId !== "" &&
+      releaseId !== "",
     retry: false,
     queryFn: ({ signal }) =>
       sbomsApi.listSourcesForRelease(productId, releaseId, query, signal),
@@ -261,12 +282,13 @@ export function useSbomValidationReportQuery(
   sourceId: string | null,
   enabled: boolean,
 ) {
+  const sbomKeys = useOrganizationSbomKeys();
   return useQuery<SbomValidationReportResponse>({
     queryKey:
       sourceId === null
         ? sbomKeys.validationReports
         : sbomKeys.validationReport(sourceId),
-    enabled: enabled && sourceId !== null,
+    enabled: sbomKeys.all[2] !== "none" && enabled && sourceId !== null,
     retry: false,
     queryFn: ({ signal }) => {
       if (sourceId === null)
@@ -282,9 +304,14 @@ export function useSbomDocumentsForReleaseQuery(
   query: Readonly<Partial<SbomDocumentListQuery>>,
   enabled: boolean,
 ) {
+  const sbomKeys = useOrganizationSbomKeys();
   return useQuery<SbomDocumentListResponse>({
     queryKey: sbomKeys.documentsForRelease(productId, releaseId, query),
-    enabled: enabled && productId !== "" && releaseId !== "",
+    enabled:
+      sbomKeys.all[2] !== "none" &&
+      enabled &&
+      productId !== "" &&
+      releaseId !== "",
     retry: false,
     queryFn: ({ signal }) =>
       sbomsApi.listDocumentsForRelease(productId, releaseId, query, signal),
@@ -295,10 +322,11 @@ export function useSbomDocumentDetailQuery(
   documentId: string | null,
   enabled: boolean,
 ) {
+  const sbomKeys = useOrganizationSbomKeys();
   return useQuery<SbomDocumentDetailResponse>({
     queryKey:
       documentId === null ? sbomKeys.documents : sbomKeys.document(documentId),
-    enabled: enabled && documentId !== null,
+    enabled: sbomKeys.all[2] !== "none" && enabled && documentId !== null,
     retry: false,
     queryFn: ({ signal }) => {
       if (documentId === null)
@@ -312,12 +340,13 @@ export function useSbomQualityReportQuery(
   sourceId: string | null,
   enabled: boolean,
 ) {
+  const sbomKeys = useOrganizationSbomKeys();
   return useQuery<SbomQualityReportResponse>({
     queryKey:
       sourceId === null
         ? sbomKeys.qualityReports
         : sbomKeys.qualityReport(sourceId),
-    enabled: enabled && sourceId !== null,
+    enabled: sbomKeys.all[2] !== "none" && enabled && sourceId !== null,
     retry: false,
     refetchInterval: (query) =>
       shouldPollQuality(query.state.data?.report.state) ? 2_000 : false,
@@ -334,12 +363,13 @@ export function useSbomQualityFindingsQuery(
   query: Readonly<Partial<SbomQualityFindingsQuery>>,
   enabled: boolean,
 ) {
+  const sbomKeys = useOrganizationSbomKeys();
   return useQuery<SbomQualityFindingsResponse>({
     queryKey:
       sourceId === null
         ? sbomKeys.qualityReports
         : sbomKeys.qualityFindings(sourceId, query),
-    enabled: enabled && sourceId !== null,
+    enabled: sbomKeys.all[2] !== "none" && enabled && sourceId !== null,
     retry: false,
     queryFn: ({ signal }) => {
       if (sourceId === null)
@@ -353,10 +383,11 @@ export function useSbomDiffReportQuery(
   diffId: string | null,
   enabled: boolean,
 ) {
+  const sbomKeys = useOrganizationSbomKeys();
   return useQuery<SbomDiffReportResponse>({
     queryKey:
       diffId === null ? sbomKeys.diffReports : sbomKeys.diffReport(diffId),
-    enabled: enabled && diffId !== null,
+    enabled: sbomKeys.all[2] !== "none" && enabled && diffId !== null,
     retry: false,
     refetchInterval: (query) =>
       shouldPollDiff(query.state.data?.report.state) ? 2_000 : false,
@@ -373,12 +404,13 @@ export function useSbomSourceDiffQuery(
   query: Readonly<Partial<SbomSourceDiffQuery>>,
   enabled: boolean,
 ) {
+  const sbomKeys = useOrganizationSbomKeys();
   return useQuery<SbomSourceDiffResponse>({
     queryKey:
       sourceId === null
         ? sbomKeys.sourceDiffReports
         : sbomKeys.sourceDiffReport(sourceId, query),
-    enabled: enabled && sourceId !== null,
+    enabled: sbomKeys.all[2] !== "none" && enabled && sourceId !== null,
     retry: false,
     queryFn: ({ signal }) => {
       if (sourceId === null)
@@ -393,12 +425,13 @@ export function useSbomDiffComponentsQuery(
   query: Readonly<Partial<SbomDiffComponentsQuery>>,
   enabled: boolean,
 ) {
+  const sbomKeys = useOrganizationSbomKeys();
   return useQuery<SbomDiffComponentsResponse>({
     queryKey:
       diffId === null
         ? sbomKeys.diffReports
         : sbomKeys.diffComponents(diffId, query),
-    enabled: enabled && diffId !== null,
+    enabled: sbomKeys.all[2] !== "none" && enabled && diffId !== null,
     retry: false,
     queryFn: ({ signal }) => {
       if (diffId === null)
@@ -413,12 +446,13 @@ export function useSbomDiffFindingsQuery(
   query: Readonly<Partial<SbomDiffFindingsQuery>>,
   enabled: boolean,
 ) {
+  const sbomKeys = useOrganizationSbomKeys();
   return useQuery<SbomDiffFindingsResponse>({
     queryKey:
       diffId === null
         ? sbomKeys.diffReports
         : sbomKeys.diffFindings(diffId, query),
-    enabled: enabled && diffId !== null,
+    enabled: sbomKeys.all[2] !== "none" && enabled && diffId !== null,
     retry: false,
     queryFn: ({ signal }) => {
       if (diffId === null)
@@ -429,6 +463,7 @@ export function useSbomDiffFindingsQuery(
 }
 
 export function useStartSbomDiffMutation() {
+  const sbomKeys = useOrganizationSbomKeys();
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({
@@ -449,6 +484,7 @@ export function useStartSbomDiffMutation() {
 }
 
 export function useRetrySbomDiffMutation() {
+  const sbomKeys = useOrganizationSbomKeys();
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({
@@ -473,12 +509,13 @@ export function useSbomComponentSearchQuery(
   query: Readonly<Partial<SbomComponentSearchQuery>>,
   enabled: boolean,
 ) {
+  const sbomKeys = useOrganizationSbomKeys();
   return useQuery<SbomComponentSearchResponse>({
     queryKey:
       documentId === null
         ? sbomKeys.componentSearches
         : sbomKeys.componentSearch(documentId, query),
-    enabled: enabled && documentId !== null,
+    enabled: sbomKeys.all[2] !== "none" && enabled && documentId !== null,
     retry: false,
     queryFn: ({ signal }) => {
       if (documentId === null)
@@ -493,12 +530,13 @@ export function useSbomDependencyTreeChildrenQuery(
   query: Readonly<Partial<SbomDependencyTreeQuery>>,
   enabled: boolean,
 ) {
+  const sbomKeys = useOrganizationSbomKeys();
   return useQuery<SbomDependencyTreeResponse>({
     queryKey:
       documentId === null
         ? sbomKeys.documents
         : sbomKeys.dependencyTreeChildren(documentId, query),
-    enabled: enabled && documentId !== null,
+    enabled: sbomKeys.all[2] !== "none" && enabled && documentId !== null,
     retry: false,
     queryFn: ({ signal }) => {
       if (documentId === null)
@@ -513,13 +551,14 @@ export function useSbomDependencyTreeChildrenQueries(
   parents: readonly Readonly<Partial<SbomDependencyTreeQuery>>[],
   enabled: boolean,
 ) {
+  const sbomKeys = useOrganizationSbomKeys();
   return useQueries({
     queries:
       documentId === null
         ? []
         : parents.map((query) => ({
             queryKey: sbomKeys.dependencyTreeChildren(documentId, query),
-            enabled,
+            enabled: enabled && sbomKeys.all[2] !== "none",
             retry: false,
             queryFn: ({ signal }: { signal: AbortSignal }) =>
               sbomsApi.listDependencyTreeChildren(documentId, query, signal),
@@ -528,15 +567,17 @@ export function useSbomDependencyTreeChildrenQueries(
 }
 
 export function useSbomCiCredentialsQuery(enabled: boolean) {
+  const sbomKeys = useOrganizationSbomKeys();
   return useQuery({
     queryKey: sbomKeys.ciCredentials,
-    enabled,
+    enabled: enabled && sbomKeys.all[2] !== "none",
     retry: false,
     queryFn: ({ signal }) => sbomsApi.listCiCredentials(signal),
   });
 }
 
 export function useCreateSbomCiCredentialMutation() {
+  const sbomKeys = useOrganizationSbomKeys();
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (input: CreateSbomCiCredentialInput) =>
@@ -547,6 +588,7 @@ export function useCreateSbomCiCredentialMutation() {
 }
 
 export function useRevokeSbomCiCredentialMutation() {
+  const sbomKeys = useOrganizationSbomKeys();
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({

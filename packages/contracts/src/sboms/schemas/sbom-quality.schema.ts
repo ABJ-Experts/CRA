@@ -141,9 +141,50 @@ export const sbomQualityProfileSchema = z
     status: sbomQualityProfileStatusSchema,
     rulesetVersion: sbomQualityRulesetVersionSchema,
     findingCount: z.number().int().nonnegative(),
+    assessmentKind: z
+      .enum(["pinned_technical_checks", "unavailable"])
+      .optional(),
+    sourceSha256: z
+      .string()
+      .regex(/^[a-f0-9]{64}$/)
+      .optional(),
+    evaluatorVersion: z.literal("bsi-technical.v1").optional(),
+    passedRuleCount: z.number().int().nonnegative().optional(),
+    failedRuleCount: z.number().int().nonnegative().optional(),
+    manualReviewRuleCount: z.number().int().nonnegative().optional(),
   })
   .strict()
   .superRefine((profile, context) => {
+    if (
+      profile.assessmentKind === "pinned_technical_checks" &&
+      (!profile.enabled ||
+        !profile.sourceSha256 ||
+        !profile.evaluatorVersion ||
+        profile.passedRuleCount === undefined ||
+        profile.failedRuleCount === undefined ||
+        profile.manualReviewRuleCount === undefined ||
+        profile.status !==
+          (profile.failedRuleCount > 0 ? "invalid" : "warning") ||
+        profile.findingCount !==
+          profile.failedRuleCount + profile.manualReviewRuleCount)
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["assessmentKind"],
+        message:
+          "Pinned technical checks require verified source, evaluator and consistent rule outcome counts; they do not establish conformity",
+      });
+    }
+    if (
+      profile.assessmentKind === "unavailable" &&
+      profile.status !== "unavailable"
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["status"],
+        message: "Unavailable source checks must report unavailable",
+      });
+    }
     if (!profile.enabled && profile.status !== "disabled") {
       context.addIssue({
         code: "custom",

@@ -407,7 +407,7 @@ function validateSpdxJson(
   }
 }
 
-function validateSpdx3Json(
+export function validateSpdx3Json(
   value: unknown,
   diagnostics: BoundedDiagnosticCollector,
 ): void {
@@ -488,7 +488,7 @@ function validateSpdx3Json(
   spdx3ReferenceDiagnostics(graph, diagnostics);
 }
 
-function spdx3Profile(): Readonly<{
+export function spdx3Profile(): Readonly<{
   officialContext: string;
   terms: ReadonlySet<string>;
 }> {
@@ -515,7 +515,7 @@ function spdx3Profile(): Readonly<{
   return spdx3ProfileCache;
 }
 
-function validateSpdx3Terms(
+export function validateSpdx3Terms(
   value: unknown,
   location: string,
   terms: ReadonlySet<string>,
@@ -550,7 +550,7 @@ function spdx3TermDiagnostic(
   );
 }
 
-function missingSpdx3ProfileDiagnostics(
+export function missingSpdx3ProfileDiagnostics(
   graph: readonly Record<string, unknown>[],
 ): readonly SbomValidationDiagnostic[] {
   const diagnostics: SbomValidationDiagnostic[] = [];
@@ -738,7 +738,7 @@ function missingSpdx3ProfileDiagnostics(
   return Object.freeze(diagnostics);
 }
 
-function spdx3ReferenceDiagnostics(
+export function spdx3ReferenceDiagnostics(
   graph: readonly Record<string, unknown>[],
   diagnostics: BoundedDiagnosticCollector,
 ): void {
@@ -1402,7 +1402,7 @@ function inspectJsonValue(
   });
 }
 
-function schemaValidator(id: string): ValidateFunction {
+export function schemaValidator(id: string): ValidateFunction {
   if (schemaValidators === null) {
     const ajv = new Ajv({
       // Ajv's error collection is unbounded when allErrors is enabled. CRA
@@ -1439,6 +1439,54 @@ function schemaValidator(id: string): ValidateFunction {
   }
   void ajvCache;
   return validator;
+}
+
+export function streamingJsonSchemaValidators(id: string): Readonly<{
+  root: ValidateFunction;
+  items: Readonly<Record<string, ValidateFunction>>;
+}> {
+  const original = schemaValidator(id).schema as Record<string, unknown>;
+  const properties = original.properties as Record<
+    string,
+    Record<string, unknown>
+  >;
+  const cache = ajvCache!;
+  const rootId = `${String(original.$id)}?cra-streaming-root`;
+  const root =
+    cache.getSchema(rootId) ??
+    cache.compile({
+      ...original,
+      $id: rootId,
+      properties: Object.fromEntries(
+        Object.entries(properties).map(([key, value]) => [
+          key,
+          value.type === "array"
+            ? {
+                ...value,
+                items: true,
+                minItems: undefined,
+                maxItems: undefined,
+                uniqueItems: false,
+              }
+            : value,
+        ]),
+      ),
+    } as AnySchema);
+  const items = Object.fromEntries(
+    Object.entries(properties).flatMap(([key, value]) =>
+      value.type === "array" && value.items !== undefined
+        ? [
+            [
+              key,
+              cache.getSchema(
+                `${String(original.$id)}#/properties/${key}/items`,
+              )!,
+            ],
+          ]
+        : [],
+    ),
+  );
+  return { root, items };
 }
 
 /**

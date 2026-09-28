@@ -3,6 +3,15 @@ import { Module } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 
 import { SupabaseModule } from "../supabase/supabase.module";
+import { SupabaseService } from "../supabase/supabase.service";
+import { SupabaseBsiEvidenceAdapter } from "./infrastructure/supabase-bsi-evidence.adapter";
+import { extractBsiProfileFacts } from "./validation/bsi-profile-extractor";
+import { SbomExportController } from "./sbom-export.controller";
+import {
+  SBOM_EXPORT_REPOSITORY,
+  SbomExportUseCases,
+} from "./application/sbom-export-use-cases";
+import { SupabaseSbomExportRepository } from "./infrastructure/supabase-sbom-export.repository";
 import { SBOM_CI_CREDENTIALS } from "./application/sbom-ci-credential.port";
 import {
   SBOM_INTAKE_REPOSITORY,
@@ -58,11 +67,13 @@ import { validateSbomInWorker } from "./validation/sbom-validation-worker";
 import { SbomIngestWorker } from "./worker/sbom-ingest-worker";
 import { SbomQualityWorker } from "./worker/sbom-quality-worker";
 import { SbomDiffWorker } from "./worker/sbom-diff-worker";
+import { createM4SbomDiffVersionComparator } from "./infrastructure/m4-sbom-diff-version-comparator";
 import { SbomCompositeWorker } from "./worker/sbom-composite-worker";
 
 @Module({
   imports: [SupabaseModule],
   controllers: [
+    SbomExportController,
     ProductReleaseSbomController,
     SbomDocumentsController,
     SbomDiffsController,
@@ -80,7 +91,31 @@ import { SbomCompositeWorker } from "./worker/sbom-composite-worker";
     SbomCompositeReviewsController,
   ],
   providers: [
+    SupabaseSbomExportRepository,
+    {
+      provide: SBOM_EXPORT_REPOSITORY,
+      useExisting: SupabaseSbomExportRepository,
+    },
+    {
+      provide: SbomExportUseCases,
+      inject: [SBOM_EXPORT_REPOSITORY],
+      useFactory: (repository: SupabaseSbomExportRepository) =>
+        new SbomExportUseCases(repository),
+    },
     SupabaseSbomStorageAdapter,
+    {
+      provide: SupabaseBsiEvidenceAdapter,
+      inject: [SupabaseService, SupabaseSbomStorageAdapter],
+      useFactory: (
+        supabase: SupabaseService,
+        storage: SupabaseSbomStorageAdapter,
+      ) =>
+        new SupabaseBsiEvidenceAdapter(
+          supabase,
+          storage,
+          extractBsiProfileFacts,
+        ),
+    },
     SupabaseSbomRepository,
     { provide: SBOM_INTAKE_REPOSITORY, useExisting: SupabaseSbomRepository },
     { provide: SUPPLIER_SBOM_REPOSITORY, useExisting: SupabaseSbomRepository },
@@ -166,12 +201,21 @@ import { SbomCompositeWorker } from "./worker/sbom-composite-worker";
     },
     {
       provide: SbomQualityWorker,
-      inject: [SupabaseSbomRepository, ConfigService],
-      useFactory: (queue: SupabaseSbomRepository, config: ConfigService) =>
+      inject: [
+        SupabaseSbomRepository,
+        ConfigService,
+        SupabaseBsiEvidenceAdapter,
+      ],
+      useFactory: (
+        queue: SupabaseSbomRepository,
+        config: ConfigService,
+        bsiEvidenceReader: SupabaseBsiEvidenceAdapter,
+      ) =>
         new SbomQualityWorker({
           workerId: randomUUID(),
           leaseSeconds: 60,
           queue,
+          bsiEvidenceReader,
           pageSize: config.get<number>("SBOM_QUALITY_PAGE_SIZE") ?? 1_000,
           maximumComponents:
             config.get<number>("SBOM_NORMALIZATION_MAX_COMPONENTS") ?? 50_000,
@@ -187,6 +231,7 @@ import { SbomCompositeWorker } from "./worker/sbom-composite-worker";
           queue,
           pageSize: config.get<number>("SBOM_DIFF_PAGE_SIZE") ?? 1_000,
           batchSize: config.get<number>("SBOM_DIFF_BATCH_SIZE") ?? 250,
+          versionComparator: createM4SbomDiffVersionComparator(),
         }),
     },
     {

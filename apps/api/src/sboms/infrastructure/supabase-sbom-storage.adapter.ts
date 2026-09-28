@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { Readable, Transform } from "node:stream";
+import { Readable } from "node:stream";
 
 import { Injectable } from "@nestjs/common";
 import { fromBuffer as fileTypeFromBuffer } from "file-type";
@@ -149,7 +149,8 @@ export class SupabaseSbomStorageAdapter implements SbomStoragePort {
       const result = (await this.supabase
         .admin()
         .storage.from(bucket)
-        .download(input.objectKey)) as StorageResponse<Blob>;
+        .download(input.objectKey)
+        .asStream()) as StorageResponse<ReadableStream<Uint8Array>>;
       if (result.error || !result.data)
         return isNotFound(result.error)
           ? Object.freeze({ outcome: "missing" as const })
@@ -158,7 +159,7 @@ export class SupabaseSbomStorageAdapter implements SbomStoragePort {
       const detected = await fileTypeFromBuffer(measured.probe);
       const actualContentType = detected
         ? canonicalMediaType(detected.mime)
-        : input.contentType;
+        : canonicalMediaType(input.contentType);
       if (measured.byteSize !== input.byteSize)
         return Object.freeze({
           outcome: "corrupt" as const,
@@ -173,7 +174,7 @@ export class SupabaseSbomStorageAdapter implements SbomStoragePort {
           byteSize: measured.byteSize,
           contentType: actualContentType,
         });
-      if (actualContentType !== input.contentType)
+      if (actualContentType !== canonicalMediaType(input.contentType))
         return Object.freeze({
           outcome: "type_mismatch" as const,
           sha256: measured.sha256,
@@ -207,7 +208,8 @@ export class SupabaseSbomStorageAdapter implements SbomStoragePort {
       const result = (await this.supabase
         .admin()
         .storage.from(bucket)
-        .download(input.objectKey)) as StorageResponse<Blob>;
+        .download(input.objectKey)
+        .asStream()) as StorageResponse<ReadableStream<Uint8Array>>;
       if (result.error || !result.data)
         return isNotFound(result.error)
           ? Object.freeze({ outcome: "missing" as const })
@@ -259,18 +261,12 @@ export class SupabaseSbomStorageAdapter implements SbomStoragePort {
       const result = (await this.supabase
         .admin()
         .storage.from(bucket)
-        .download(input.objectKey)) as StorageResponse<Blob>;
+        .download(input.objectKey)
+        .asStream()) as StorageResponse<ReadableStream<Uint8Array>>;
       if (result.error || !result.data)
         return isNotFound(result.error)
           ? Object.freeze({ outcome: "missing" as const })
           : Object.freeze({ outcome: "unavailable" as const });
-      if (result.data.size !== input.byteSize)
-        return Object.freeze({
-          outcome: "corrupt" as const,
-          sha256: null,
-          byteSize: result.data.size,
-          contentType: input.contentType,
-        });
       return Object.freeze({
         outcome: "verified" as const,
         stream: guardedStream(result.data, input),
@@ -305,31 +301,32 @@ export class SupabaseSbomStorageAdapter implements SbomStoragePort {
 }
 
 function guardedStream(
-  blob: Blob,
+  stream: ReadableStream<Uint8Array>,
   input: Readonly<{ sha256: string; byteSize: number }>,
 ): Readable {
-  const hash = createHash("sha256");
-  let byteSize = 0;
-  const guard = new Transform({
-    transform(chunk: Buffer, _encoding, callback) {
-      const bytes = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
-      byteSize += bytes.byteLength;
-      if (byteSize > input.byteSize) {
-        callback(new SbomStorageError("malformed"));
-        return;
+  const source = Readable.fromWeb(stream as never);
+  async function* verifiedChunks() {
+    const hash = createHash("sha256");
+    let byteSize = 0;
+    try {
+      for await (const value of source) {
+        const chunk = Buffer.isBuffer(value) ? value : Buffer.from(value);
+        byteSize += chunk.byteLength;
+        if (byteSize > input.byteSize) throw new SbomStorageError("malformed");
+        hash.update(chunk);
+        yield chunk;
       }
-      hash.update(bytes);
-      callback(null, bytes);
-    },
-    flush(callback) {
-      if (byteSize !== input.byteSize || hash.digest("hex") !== input.sha256) {
-        callback(new SbomStorageError("malformed"));
-        return;
-      }
-      callback();
-    },
-  });
-  return Readable.fromWeb(blob.stream() as never).pipe(guard);
+      if (byteSize !== input.byteSize || hash.digest("hex") !== input.sha256)
+        throw new SbomStorageError("malformed");
+    } catch (error) {
+      throw error instanceof SbomStorageError
+        ? error
+        : new SbomStorageError("unavailable");
+    }
+  }
+  const guarded = Readable.from(verifiedChunks());
+  guarded.once("close", () => source.destroy());
+  return guarded;
 }
 
 function isAlreadyExists(
@@ -348,7 +345,7 @@ export class SbomStorageError extends Error {
 }
 
 async function digest(
-  blob: Blob,
+  stream: ReadableStream<Uint8Array>,
   options: Readonly<{ collectBytes?: boolean }> = {},
 ): Promise<
   Readonly<{
@@ -363,10 +360,11 @@ async function digest(
   const byteChunks: Buffer[] = [];
   let byteSize = 0;
   let probeRemaining = 8_192;
-  for await (const value of Readable.fromWeb(blob.stream() as never)) {
+  for await (const value of Readable.fromWeb(stream as never)) {
     const chunk = Buffer.isBuffer(value) ? value : Buffer.from(value);
     hash.update(chunk);
     byteSize += chunk.byteLength;
+    if (byteSize > 100 * 1024 * 1024) throw new SbomStorageError("malformed");
     if (options.collectBytes) byteChunks.push(Buffer.from(chunk));
     if (probeRemaining > 0) {
       const probe = Buffer.from(chunk.subarray(0, probeRemaining));
@@ -383,8 +381,23 @@ async function digest(
 }
 
 function canonicalMediaType(value: string): string | null {
-  if (value === "application/json") return "application/json";
-  if (value === "application/xml") return "application/xml";
+  if (
+    [
+      "application/json",
+      "application/vnd.cyclonedx+json",
+      "application/spdx+json",
+    ].includes(value)
+  )
+    return "application/json";
+  if (
+    [
+      "application/xml",
+      "text/xml",
+      "application/vnd.cyclonedx+xml",
+      "application/spdx+xml",
+    ].includes(value)
+  )
+    return "application/xml";
   return mediaTypes.has(value) ? value : null;
 }
 

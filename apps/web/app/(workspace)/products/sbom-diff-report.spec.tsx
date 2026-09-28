@@ -246,12 +246,51 @@ describe("SbomDiffReport", () => {
     ).toBeInTheDocument();
     expect(
       screen.getAllByText("M4 finding integration is not available."),
-    ).toHaveLength(2);
+    ).toHaveLength(1);
+    expect(screen.getByText("Finding comparison")).toBeInTheDocument();
+    expect(screen.getByText("Computed separately")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "The live advisory comparison is shown below after matching finishes.",
+      ),
+    ).toBeInTheDocument();
     fireEvent.change(
       screen.getByRole("textbox", { name: "Filter by ecosystem" }),
       { target: { value: "npm" } },
     );
     await waitFor(() => expect(navigation.replace).toHaveBeenCalled());
+  });
+
+  it("preserves available stored finding comparison details", async () => {
+    mockCompleted();
+    queries.useSbomDiffReportQuery.mockReturnValue(
+      queryResult({
+        data: {
+          report: {
+            ...completedReport,
+            findingDelta: {
+              status: "available",
+              reason: "Stored comparison details.",
+              summary: null,
+            },
+          },
+        },
+      }),
+    );
+    render(
+      <SbomDiffReport
+        productId={DOCUMENT_ID}
+        documentId={DOCUMENT_ID}
+        sourceId={SOURCE_ID}
+        canView
+        canStart
+        enabled
+      />,
+    );
+    expect(await screen.findByText("Finding comparison")).toBeInTheDocument();
+    expect(screen.getByText("Available")).toBeInTheDocument();
+    expect(screen.getByText("Stored comparison details.")).toBeInTheDocument();
+    expect(screen.queryByText("Computed separately")).not.toBeInTheDocument();
   });
 
   it("rejects an invalid baseline from the URL before starting a comparison", () => {
