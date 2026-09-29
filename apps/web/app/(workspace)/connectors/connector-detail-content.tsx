@@ -22,6 +22,8 @@ import {
 } from "../../dashboard/_components/dashboard-chrome";
 
 import { ConnectorConnectionSection } from "./connector-connection-section";
+import { ConnectorFieldMapSection } from "./connector-field-map-section";
+import { ConnectorSyncHistorySection } from "./connector-sync-history-section";
 import { ConnectorMappingSection } from "./connector-mapping-section";
 import { ConnectorSyncRunSection } from "./connector-sync-run-section";
 import { ConnectorConflictsSection } from "./connector-conflicts-section";
@@ -237,6 +239,12 @@ function ConnectorDetailWorkspace({ connectorId }: { connectorId: string }) {
         isOwner={isOwner}
         onReload={() => void connector.refetch()}
       />
+      <ConnectorFieldMapSection
+        connectorId={connectorId}
+        connectorVersion={current.version}
+        canView={canView}
+        canEdit={canEdit}
+      />
       <ConnectorMappingSection
         connectorId={connectorId}
         policies={policies}
@@ -257,6 +265,11 @@ function ConnectorDetailWorkspace({ connectorId }: { connectorId: string }) {
         runId={selectedRunId}
         canView={canView}
         canApprove={canApprove}
+      />
+      <ConnectorSyncHistorySection
+        connectorId={connectorId}
+        canView={canView}
+        canEdit={canEdit}
       />
       <ConnectorDeadLettersSection
         connectorId={connectorId}

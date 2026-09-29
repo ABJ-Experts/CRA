@@ -1,3 +1,5 @@
+import type { z } from "zod";
+import type { connectorCapabilitiesSchema } from "@repo/contracts/connectors/schemas";
 /**
  * The one seam vendor-specific code may cross. Every adapter (the reference
  * conformance adapter today, a real vendor SDK later) implements this and
@@ -40,24 +42,11 @@ export type ConnectorTestResult =
       message: string;
     }>;
 
-export type ConnectorFieldCapability = Readonly<{
-  field: string;
-  supportsPull: boolean;
-  supportsPush: boolean;
-  vendorFieldPath: string;
-}>;
-
-export type ConnectorCapabilities = Readonly<{
-  adapterVersion: string;
-  mappingVersion: string;
-  entities: readonly Readonly<{
-    entityType: ConnectorEntityType;
-    fields: readonly ConnectorFieldCapability[];
-    supportsPush: boolean;
-    supportsTombstones: boolean;
-    supportsHierarchy: boolean;
-  }>[];
-}>;
+export type ConnectorCapabilities = z.output<
+  typeof connectorCapabilitiesSchema
+>;
+export type ConnectorFieldCapability =
+  ConnectorCapabilities["entities"][number]["fields"][number];
 
 export type SyncCursor = Readonly<{ token: string; watermark: string }>;
 
@@ -80,6 +69,8 @@ export type PullPage = Readonly<{
   records: readonly ExternalRecord[];
   nextCursor: SyncCursor | null;
   adapterSignal: AdapterSignal;
+  /** Parsed provider not-before duration; scheduling remains durable SQL policy. */
+  retryAfterSeconds?: number;
 }>;
 
 export type PushRecord = Readonly<{

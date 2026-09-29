@@ -11,6 +11,8 @@ import {
 } from "./identity-matching-policy";
 import type { ExternalRecord } from "./connector-port";
 import { planEmbeddedParent, type PlanIssue } from "./embedded-parent-planner";
+import { productSchema, releaseSchema } from "@repo/contracts/products/schemas";
+import type { z } from "zod";
 
 /** product|release field names field_authority_policies governs (mirrors m2_v2_valid_field_authority_field). */
 const PRODUCT_POLICY_FIELDS = [
@@ -238,6 +240,29 @@ function createPolicyIssue(
   };
 }
 
+function creationFieldDiffs(
+  record: ExternalRecord,
+  policies: ReadonlyMap<string, FieldAuthorityPolicy | null>,
+): Record<string, PlanFieldDiff> {
+  const fields =
+    record.entityType === "product"
+      ? PRODUCT_MATERIAL_FIELDS
+      : RELEASE_POLICY_FIELDS;
+  return Object.fromEntries(
+    fields
+      .filter((field) => Object.hasOwn(record.fields, field))
+      .map((field) => [
+        field,
+        planFieldDiff(
+          field,
+          null,
+          record.fields[field],
+          policies.get(field) ?? null,
+        ),
+      ]),
+  );
+}
+
 /** Plans one external record against current CRA state. Never mutates anything. */
 export async function planExternalRecord(
   ctx: SyncPlanContext,
@@ -302,6 +327,61 @@ export async function planExternalRecord(
       ? PRODUCT_MATERIAL_FIELDS
       : RELEASE_POLICY_FIELDS;
 
+  const fieldSchemas: Readonly<Record<string, z.ZodType>> =
+    record.entityType === "product"
+      ? {
+          name: productSchema.shape.name,
+          internalCode: productSchema.shape.internalCode,
+          productType: productSchema.shape.productType,
+          description: productSchema.shape.description,
+        }
+      : {
+          label: releaseSchema.shape.label,
+          releaseVersion: releaseSchema.shape.version,
+          description: releaseSchema.shape.description,
+        };
+  const requiredFields =
+    record.entityType === "product"
+      ? ["name", "internalCode", "productType"]
+      : ["label", "releaseVersion"];
+  const invalidFields = Object.entries(fieldSchemas).filter(
+    ([field, schema]) =>
+      Object.hasOwn(record.fields, field) &&
+      !schema.safeParse(record.fields[field]).success,
+  );
+  const missingFields = existing
+    ? []
+    : requiredFields.filter((field) => !Object.hasOwn(record.fields, field));
+  if (invalidFields.length > 0 || missingFields.length > 0) {
+    return {
+      item: {
+        externalId: record.externalId,
+        entityType: record.entityType,
+        proposedAction:
+          invalidFields.length > 0 ? "rejected" : "pending_required_fields",
+        fieldDiffs: {},
+        issues: [
+          ...invalidFields.map(() => ({
+            code: "invalid_target_field",
+            message:
+              "A supplied target field has an invalid value. Review the field mapping and source schema.",
+            severity: "error" as const,
+          })),
+          ...missingFields.map(() => ({
+            code: "missing_required_target_field",
+            message:
+              "A required target field is missing. Review the field mapping and source schema.",
+            severity: "error" as const,
+          })),
+        ],
+        craProductId: existing?.craProductId ?? null,
+        craReleaseId: existing?.craReleaseId ?? null,
+        expectedVersion: null,
+      },
+      conflicts: [],
+    };
+  }
+
   if (existing) {
     const current =
       record.entityType === "product"
@@ -339,7 +419,8 @@ export async function planExternalRecord(
     const conflicts: PlanConflict[] = [];
     let anyChange = false;
     for (const field of fields) {
-      const externalValue = record.fields[wireToExternalKey(field)] ?? null;
+      if (!Object.hasOwn(record.fields, wireToExternalKey(field))) continue;
+      const externalValue = record.fields[wireToExternalKey(field)];
       const craValue =
         (current as Record<string, unknown>)[wireToLocalKey(field)] ?? null;
       const policy = policies.get(field) ?? null;
@@ -472,38 +553,18 @@ export async function planExternalRecord(
       policy: policies.get("parentExternalId") ?? null,
     });
     if (!ctx.defaultOwnerBinding) {
-      const createIssue = createPolicyIssue(policies, PRODUCT_MATERIAL_FIELDS);
+      const createIssue = createPolicyIssue(
+        policies,
+        PRODUCT_MATERIAL_FIELDS.filter((field) =>
+          Object.hasOwn(record.fields, field),
+        ),
+      );
       return {
         item: {
           externalId: record.externalId,
           entityType: "product",
           proposedAction: "pending_required_fields",
-          fieldDiffs: {
-            name: planFieldDiff(
-              "name",
-              null,
-              record.fields.name ?? null,
-              policies.get("name") ?? null,
-            ),
-            internalCode: planFieldDiff(
-              "internalCode",
-              null,
-              record.fields.internalCode ?? null,
-              policies.get("internalCode") ?? null,
-            ),
-            productType: planFieldDiff(
-              "productType",
-              null,
-              record.fields.productType ?? null,
-              policies.get("productType") ?? null,
-            ),
-            description: planFieldDiff(
-              "description",
-              null,
-              record.fields.description ?? null,
-              policies.get("description") ?? null,
-            ),
-          },
+          fieldDiffs: creationFieldDiffs(record, policies),
           issues: [
             {
               code: "missing_default_owner_binding",
@@ -521,39 +582,19 @@ export async function planExternalRecord(
         conflicts: [],
       };
     }
-    const createIssue = createPolicyIssue(policies, PRODUCT_MATERIAL_FIELDS);
+    const createIssue = createPolicyIssue(
+      policies,
+      PRODUCT_MATERIAL_FIELDS.filter((field) =>
+        Object.hasOwn(record.fields, field),
+      ),
+    );
     if (createIssue) {
       return {
         item: {
           externalId: record.externalId,
           entityType: "product",
           proposedAction: "pending_required_fields",
-          fieldDiffs: {
-            name: planFieldDiff(
-              "name",
-              null,
-              record.fields.name ?? null,
-              policies.get("name") ?? null,
-            ),
-            internalCode: planFieldDiff(
-              "internalCode",
-              null,
-              record.fields.internalCode ?? null,
-              policies.get("internalCode") ?? null,
-            ),
-            productType: planFieldDiff(
-              "productType",
-              null,
-              record.fields.productType ?? null,
-              policies.get("productType") ?? null,
-            ),
-            description: planFieldDiff(
-              "description",
-              null,
-              record.fields.description ?? null,
-              policies.get("description") ?? null,
-            ),
-          },
+          fieldDiffs: creationFieldDiffs(record, policies),
           issues: [
             createIssue,
             ...(initialParent.issue ? [initialParent.issue] : []),
@@ -571,30 +612,7 @@ export async function planExternalRecord(
         entityType: "product",
         proposedAction: "create",
         fieldDiffs: {
-          name: planFieldDiff(
-            "name",
-            null,
-            record.fields.name ?? null,
-            policies.get("name") ?? null,
-          ),
-          internalCode: planFieldDiff(
-            "internalCode",
-            null,
-            record.fields.internalCode ?? null,
-            policies.get("internalCode") ?? null,
-          ),
-          productType: planFieldDiff(
-            "productType",
-            null,
-            record.fields.productType ?? null,
-            policies.get("productType") ?? null,
-          ),
-          description: planFieldDiff(
-            "description",
-            null,
-            record.fields.description ?? null,
-            policies.get("description") ?? null,
-          ),
+          ...creationFieldDiffs(record, policies),
           responsibleOwnerId: configurationFieldDiff(
             "responsibleOwnerId",
             ctx.defaultOwnerBinding.responsibleOwnerId,
@@ -641,7 +659,7 @@ export async function planExternalRecord(
     parentActiveProductMappingIds: parentIds,
     candidateReleasesByNormalizedVersion: releaseCandidates,
   });
-  if (match.outcome === "ambiguous") {
+  if (match.outcome === "ambiguous" && parentIds.length !== 0) {
     return {
       item: {
         externalId: record.externalId,
@@ -668,20 +686,7 @@ export async function planExternalRecord(
         externalId: record.externalId,
         entityType: "release",
         proposedAction: "pending_required_fields",
-        fieldDiffs: {
-          label: planFieldDiff(
-            "label",
-            null,
-            record.fields.label ?? null,
-            policies.get("label") ?? null,
-          ),
-          releaseVersion: planFieldDiff(
-            "releaseVersion",
-            null,
-            record.fields.releaseVersion ?? null,
-            policies.get("releaseVersion") ?? null,
-          ),
-        },
+        fieldDiffs: creationFieldDiffs(record, policies),
         issues: [
           {
             code: "missing_parent_product",
@@ -696,33 +701,19 @@ export async function planExternalRecord(
       conflicts: [],
     };
   }
-  const createIssue = createPolicyIssue(policies, RELEASE_POLICY_FIELDS);
+  const createIssue = createPolicyIssue(
+    policies,
+    RELEASE_POLICY_FIELDS.filter((field) =>
+      Object.hasOwn(record.fields, field),
+    ),
+  );
   if (createIssue) {
     return {
       item: {
         externalId: record.externalId,
         entityType: "release",
         proposedAction: "pending_required_fields",
-        fieldDiffs: {
-          label: planFieldDiff(
-            "label",
-            null,
-            record.fields.label ?? null,
-            policies.get("label") ?? null,
-          ),
-          releaseVersion: planFieldDiff(
-            "releaseVersion",
-            null,
-            record.fields.releaseVersion ?? null,
-            policies.get("releaseVersion") ?? null,
-          ),
-          description: planFieldDiff(
-            "description",
-            null,
-            record.fields.description ?? null,
-            policies.get("description") ?? null,
-          ),
-        },
+        fieldDiffs: creationFieldDiffs(record, policies),
         issues: [createIssue],
         craProductId: parentIds[0]!,
         craReleaseId: null,
@@ -736,26 +727,7 @@ export async function planExternalRecord(
       externalId: record.externalId,
       entityType: "release",
       proposedAction: "create",
-      fieldDiffs: {
-        label: planFieldDiff(
-          "label",
-          null,
-          record.fields.label ?? null,
-          policies.get("label") ?? null,
-        ),
-        releaseVersion: planFieldDiff(
-          "releaseVersion",
-          null,
-          record.fields.releaseVersion ?? null,
-          policies.get("releaseVersion") ?? null,
-        ),
-        description: planFieldDiff(
-          "description",
-          null,
-          record.fields.description ?? null,
-          policies.get("description") ?? null,
-        ),
-      },
+      fieldDiffs: creationFieldDiffs(record, policies),
       issues: [],
       craProductId: parentIds[0]!,
       craReleaseId: null,

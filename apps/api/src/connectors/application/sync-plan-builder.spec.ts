@@ -97,6 +97,78 @@ function context(overrides: Partial<SyncPlanContext> = {}): SyncPlanContext {
 }
 
 describe("planExternalRecord embedded parent planning", () => {
+  it("preserves omitted fields rather than proposing destructive null writes", async () => {
+    const result = await planExternalRecord(
+      context(),
+      productRecord({
+        parentExternalId: null,
+        fields: {
+          name: "Child",
+          internalCode: "CHILD-001",
+          productType: "component",
+        },
+      }),
+    );
+    expect(result.item.fieldDiffs.description).toBeUndefined();
+    expect(
+      result.conflicts.some((item) => item.fieldPath === "description"),
+    ).toBe(false);
+  });
+
+  it("keeps an explicit nullable description clear distinct from omission", async () => {
+    const result = await planExternalRecord(
+      context({
+        getProductFields: jest.fn().mockResolvedValue({
+          name: "Child",
+          internalCode: "CHILD-001",
+          productType: "component",
+          description: "Keep unless cleared",
+          version: 3,
+        }),
+      }),
+      productRecord({ parentExternalId: null }),
+    );
+    expect(result.item.fieldDiffs.description).toMatchObject({
+      externalValue: null,
+    });
+  });
+
+  it.each<Readonly<Record<string, string | number | null>>>([
+    { name: null },
+    { name: 42 },
+    { name: "" },
+    { productType: "invented" },
+  ])("makes invalid supplied target fields reviewable: %p", async (invalid) => {
+    const result = await planExternalRecord(
+      context(),
+      productRecord({ fields: { ...productRecord().fields, ...invalid } }),
+    );
+    expect(result.item.proposedAction).toBe("rejected");
+    expect(result.item.issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "invalid_target_field",
+          severity: "error",
+        }),
+      ]),
+    );
+    expect(result.item.fieldDiffs).toEqual({});
+  });
+
+  it("does not create a product with a missing required field", async () => {
+    const result = await planExternalRecord(
+      context({ findActiveMapping: jest.fn().mockResolvedValue(null) }),
+      productRecord({
+        fields: { internalCode: "CHILD-001", productType: "component" },
+      }),
+    );
+    expect(result.item.proposedAction).toBe("pending_required_fields");
+    expect(result.item.issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: "missing_required_target_field" }),
+      ]),
+    );
+  });
   it("fails closed with a canonical diff when the parent field has no authority policy", async () => {
     const result = await planExternalRecord(
       context({
@@ -375,5 +447,228 @@ describe("planExternalRecord embedded parent planning", () => {
         }),
       ]),
     );
+  });
+});
+
+describe("planExternalRecord safe materialization", () => {
+  it("creates with required mapped fields while omitting absent optional fields", async () => {
+    const result = await planExternalRecord(
+      context({
+        defaultOwnerBinding: {
+          responsibleOwnerId: "owner",
+          legalEntityId: "legal",
+        },
+        findActiveMapping: jest.fn().mockResolvedValue(null),
+        getFieldAuthorityPolicy: jest
+          .fn()
+          .mockImplementation((_entity, field) =>
+            Promise.resolve(field === "description" ? null : externalPolicy),
+          ),
+      }),
+      productRecord({
+        parentExternalId: null,
+        fields: {
+          name: "Child",
+          internalCode: "CHILD-001",
+          productType: "component",
+        },
+      }),
+    );
+    expect(result.item.proposedAction).toBe("create");
+    expect(result.item.fieldDiffs.description).toBeUndefined();
+  });
+  const owner = { responsibleOwnerId: "owner", legalEntityId: "legal" };
+  const releaseMapping = {
+    id: "identity",
+    craProductId: "product",
+    craReleaseId: "release",
+  };
+  const releaseFields = {
+    label: "Release 2",
+    releaseVersion: "2.0",
+    description: null,
+    version: 2,
+  };
+
+  it.each(["product", "release"] as const)(
+    "ignores unconfirmed and unmapped %s tombstones",
+    async (entityType) => {
+      for (const existing of [null, releaseMapping]) {
+        const result = await planExternalRecord(
+          context({ findActiveMapping: jest.fn().mockResolvedValue(existing) }),
+          productRecord({ entityType, changeKind: "tombstone" }),
+        );
+        expect(result.item.proposedAction).toBe("skipped_tombstone");
+      }
+    },
+  );
+  it.each(["product", "release"] as const)(
+    "archives only a confirmed mapped %s with its current version",
+    async (entityType) => {
+      const result = await planExternalRecord(
+        context({
+          findActiveMapping: jest.fn().mockResolvedValue(releaseMapping),
+          getReleaseFields: jest.fn().mockResolvedValue(releaseFields),
+        }),
+        productRecord({
+          entityType,
+          changeKind: "tombstone",
+          tombstoneReliability: "confirmed",
+        }),
+      );
+      expect(result.item).toMatchObject({
+        proposedAction: "archive",
+        expectedVersion: entityType === "product" ? 3 : 2,
+      });
+      expect(result.item.fieldDiffs).toEqual({});
+    },
+  );
+  it("rejects deleted mapped entities and malformed release mappings", async () => {
+    for (const record of [productRecord(), releaseRecord()]) {
+      const result = await planExternalRecord(
+        context({ getProductFields: jest.fn().mockResolvedValue(null) }),
+        record,
+      );
+      expect(result.item.proposedAction).toBe("rejected");
+      expect(result.item.issues[0]?.code).toBe("mapped_entity_missing");
+    }
+  });
+  it("keeps CRA-owned data and creates review conflicts for protected changes", async () => {
+    for (const protectedField of [false, true]) {
+      const result = await planExternalRecord(
+        context({
+          getFieldAuthorityPolicy: jest
+            .fn()
+            .mockResolvedValue({ ...manualPolicy, protected: protectedField }),
+        }),
+        productRecord({ parentExternalId: null, fields: { name: "Changed" } }),
+      );
+      expect(result.item.proposedAction).toBe("conflict");
+      expect(result.conflicts[0]?.permittedActions).toEqual(
+        protectedField
+          ? ["keep_cra", "enter_manual_value"]
+          : ["accept_external", "keep_cra", "enter_manual_value"],
+      );
+    }
+    const result = await planExternalRecord(
+      context({
+        getFieldAuthorityPolicy: jest.fn().mockResolvedValue({
+          ...externalPolicy,
+          policyValue: "cra_authoritative",
+        }),
+      }),
+      productRecord({ parentExternalId: null, fields: { name: "Changed" } }),
+    );
+    expect(
+      result.item.issues.some(
+        (issue) => issue.code === "cra_authoritative_change_ignored",
+      ),
+    ).toBe(true);
+  });
+  it("requires owner configuration and explicit creation authority", async () => {
+    for (const defaultOwnerBinding of [null, owner]) {
+      const result = await planExternalRecord(
+        context({
+          defaultOwnerBinding,
+          findActiveMapping: jest.fn().mockResolvedValue(null),
+          getFieldAuthorityPolicy: jest.fn().mockResolvedValue(null),
+        }),
+        productRecord({ parentExternalId: null }),
+      );
+      expect(result.item.proposedAction).toBe("pending_required_fields");
+      expect(
+        result.item.issues.some(
+          (issue) =>
+            issue.code === "missing_or_non_authoritative_create_policy",
+        ),
+      ).toBe(true);
+    }
+    const result = await planExternalRecord(
+      context({ findActiveMapping: jest.fn().mockResolvedValue(null) }),
+      productRecord({ parentExternalId: null }),
+    );
+    expect(
+      result.item.issues.some(
+        (issue) => issue.code === "missing_default_owner_binding",
+      ),
+    ).toBe(true);
+  });
+  it("does not materialize an ambiguous product identity", async () => {
+    const result = await planExternalRecord(
+      context({
+        findActiveMapping: jest.fn().mockResolvedValue(null),
+        findProductCandidatesByCode: jest.fn().mockResolvedValue([
+          { productId: "one", hasOtherActiveMapping: false },
+          { productId: "two", hasOtherActiveMapping: false },
+        ]),
+      }),
+      productRecord(),
+    );
+    expect(result.item.proposedAction).toBe("ambiguous_match");
+  });
+  it("creates a release only under one mapped parent and approved fields", async () => {
+    const result = await planExternalRecord(
+      context({ findActiveMapping: jest.fn().mockResolvedValue(null) }),
+      releaseRecord(),
+    );
+    expect(result.item).toMatchObject({
+      proposedAction: "create",
+      craProductId: "parent-product",
+    });
+    expect(result.item.fieldDiffs.releaseVersion?.externalValue).toBe("2.0");
+  });
+  it("blocks absent and ambiguous release parents", async () => {
+    const ctx = context({
+      findActiveMapping: jest.fn().mockResolvedValue(null),
+      getActiveProductMappingsForExternalParent: jest
+        .fn()
+        .mockResolvedValue([]),
+    });
+    expect(
+      (
+        await planExternalRecord(ctx, {
+          ...releaseRecord(),
+          parentExternalId: null,
+        })
+      ).item.proposedAction,
+    ).toBe("pending_required_fields");
+    const ambiguous = context({
+      findActiveMapping: jest.fn().mockResolvedValue(null),
+      getActiveProductMappingsForExternalParent: jest.fn().mockResolvedValue([
+        { identityId: "one", craProductId: "one" },
+        { identityId: "two", craProductId: "two" },
+      ]),
+    });
+    expect(
+      (await planExternalRecord(ambiguous, releaseRecord())).item
+        .proposedAction,
+    ).toBe("ambiguous_match");
+  });
+  it("requires release creation authority and validates missing release fields", async () => {
+    const ctx = context({
+      findActiveMapping: jest.fn().mockResolvedValue(null),
+      getFieldAuthorityPolicy: jest.fn().mockResolvedValue(null),
+    });
+    expect(
+      (await planExternalRecord(ctx, releaseRecord())).item.proposedAction,
+    ).toBe("pending_required_fields");
+    expect(
+      (
+        await planExternalRecord(ctx, {
+          ...releaseRecord(),
+          fields: { label: "Release" },
+        })
+      ).item.issues[0]?.code,
+    ).toBe("missing_required_target_field");
+  });
+  it("keeps a mapped release unchanged when its values agree", async () => {
+    const result = await planExternalRecord(
+      context({
+        findActiveMapping: jest.fn().mockResolvedValue(releaseMapping),
+        getReleaseFields: jest.fn().mockResolvedValue(releaseFields),
+      }),
+      releaseRecord(),
+    );
+    expect(result.item.proposedAction).toBe("unchanged");
   });
 });

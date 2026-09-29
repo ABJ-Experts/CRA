@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import {
   Body,
+  ConflictException,
   Controller,
   Get,
   HttpCode,
@@ -626,21 +627,20 @@ export class ConnectorsController {
   @Post(":connectorId/sync-runs/:syncRunId/retry")
   @HttpCode(HttpStatus.OK)
   @ZodResponse(syncRunResponseSchema)
-  async retry(
+  retry(
     @Param(zodParams(syncRunParamsSchema))
     params: { connectorId: string; syncRunId: string },
     @Body(zodBody(retrySyncRunInputSchema)) _body: unknown,
     @CurrentUser() user: RequestUser,
   ) {
-    const run = await this.connectors.run(
-      this.connectors.repository.retrySyncRun(
-        this.organizationId(user),
-        params.connectorId,
-        params.syncRunId,
-        user.id,
-      ),
+    this.organizationId(user);
+    void params;
+    return Promise.reject(
+      new ConflictException({
+        message: "Preview this batch and request a reviewed replay.",
+        code: "preview_required",
+      }),
     );
-    return { run };
   }
 
   @RequirePermissions("can_view_connectors")

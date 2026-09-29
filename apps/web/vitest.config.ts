@@ -5,6 +5,8 @@ export default defineConfig({
     jsx: "automatic",
   },
   test: {
+    // Turbo also runs API and live SQL checks; bound this pool to avoid starving them.
+    maxWorkers: 2,
     include: [
       "app/**/*.spec.{ts,tsx}",
       "middleware.spec.ts",

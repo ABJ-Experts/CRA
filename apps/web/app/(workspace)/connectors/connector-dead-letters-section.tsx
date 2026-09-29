@@ -1,80 +1,14 @@
 "use client";
-
 import { Button } from "@repo/ui/button";
-import { Tag } from "@repo/ui/tag";
 import { useState } from "react";
-
-import {
-  useConnectorDeadLettersQuery,
-  useRetrySyncRunMutation,
-} from "../../_features/connectors/connectors.queries";
-import { ApiClientError } from "../../_lib/http/api-client";
+import { useDeadLetterRecordsQuery } from "../../_features/connectors/sync-operations.queries";
 import { SectionCard } from "../../dashboard/_components/dashboard-chrome";
-
-function errorMessage(error: unknown, fallback: string): string {
-  if (error instanceof ApiClientError && error.status === 403)
-    return "You do not have permission to perform that action.";
-  if (error instanceof ApiClientError && error.kind === "api")
-    return error.message;
-  if (error instanceof ApiClientError && error.kind === "network")
-    return "We could not reach the connector registry.";
-  return fallback;
-}
-
-function DeadLetterRow({
-  connectorId,
-  runId,
-  errorCode,
-  onRetried,
-}: {
-  connectorId: string;
-  runId: string;
-  errorCode: string | null;
-  onRetried: () => void;
-}) {
-  const retry = useRetrySyncRunMutation(connectorId, runId);
-  const [message, setMessage] = useState<string | null>(null);
-
-  async function retryRun() {
-    setMessage(null);
-    try {
-      await retry.mutateAsync();
-      onRetried();
-    } catch (error) {
-      setMessage(errorMessage(error, "The sync run could not be retried."));
-    }
-  }
-
-  return (
-    <li className="flex flex-wrap items-center justify-between gap-3 py-3">
-      <div className="flex flex-wrap items-center gap-3">
-        <Tag variant="fill" tone="red" size="sm">
-          Failed
-        </Tag>
-        <span className="text-caption-1-regular text-fg-muted">
-          {errorCode ?? "No error code recorded"}
-        </span>
-        {message ? (
-          <span role="alert" className="text-caption-1-regular text-danger">
-            {message}
-          </span>
-        ) : null}
-      </div>
-      <Button
-        type="button"
-        variant="outline"
-        tone="grey"
-        onClick={() => void retryRun()}
-        loading={retry.isPending}
-        loadingLabel="Retrying"
-      >
-        Retry
-      </Button>
-    </li>
-  );
-}
-
-/** Deliverable 6: dead-letters screen — failed runs with a retry action. */
+import {
+  OperationMessage,
+  OperationPagination,
+  operationDate,
+} from "./connector-operation-ui";
+import { ConnectorReplaySection } from "./connector-replay-section";
 export function ConnectorDeadLettersSection({
   connectorId,
   canView,
@@ -84,73 +18,122 @@ export function ConnectorDeadLettersSection({
   canView: boolean;
   canEdit: boolean;
 }) {
-  const deadLetters = useConnectorDeadLettersQuery(
+  const [page, setPage] = useState(1);
+  const [runId, setRunId] = useState<string | null>(null);
+  const deadLetters = useDeadLetterRecordsQuery(
     connectorId,
-    { page: 1, pageSize: 25 },
+    { page, pageSize: 25 },
     canView,
   );
-
-  if (!canView) {
-    return (
-      <SectionCard title="Dead letters">
-        <p role="alert" className="text-subhead-regular text-danger">
-          You do not have permission to view dead letters.
-        </p>
-      </SectionCard>
-    );
-  }
-
   return (
     <SectionCard title="Dead letters">
-      {deadLetters.isPending ? (
-        <p role="status" className="text-subhead-regular text-fg-muted">
-          Loading dead letters…
-        </p>
-      ) : deadLetters.isError ? (
-        <div role="alert" className="flex flex-wrap items-center gap-3">
-          <p className="text-subhead-regular text-danger">
-            Dead letters could not be loaded.
-          </p>
-          <Button
-            type="button"
-            variant="outline"
-            tone="grey"
-            onClick={() => void deadLetters.refetch()}
-          >
-            Try again
-          </Button>
-        </div>
-      ) : deadLetters.data?.runs.rows.length === 0 ? (
-        <p className="text-subhead-regular text-fg-muted">
-          No failed sync runs.
-        </p>
-      ) : (
-        <ul className="divide-y divide-border" aria-label="Dead letters">
-          {deadLetters.data?.runs.rows.map((run) =>
-            canEdit ? (
-              <DeadLetterRow
-                key={run.id}
-                connectorId={connectorId}
-                runId={run.id}
-                errorCode={run.errorCode}
-                onRetried={() => void deadLetters.refetch()}
-              />
-            ) : (
-              <li
-                key={run.id}
-                className="flex flex-wrap items-center gap-3 py-3"
-              >
-                <Tag variant="fill" tone="red" size="sm">
-                  Failed
-                </Tag>
-                <span className="text-caption-1-regular text-fg-muted">
-                  {run.errorCode ?? "No error code recorded"}
-                </span>
-              </li>
-            ),
-          )}
-        </ul>
-      )}
+      <div className="space-y-4">
+        {!canView ? (
+          <OperationMessage alert>
+            You do not have permission to view dead letters.
+          </OperationMessage>
+        ) : deadLetters.isPending ? (
+          <OperationMessage>Loading dead letters…</OperationMessage>
+        ) : deadLetters.isError ? (
+          <>
+            <OperationMessage alert>
+              Dead letters could not be loaded.
+            </OperationMessage>
+            <Button
+              variant="outline"
+              tone="grey"
+              onClick={() => void deadLetters.refetch()}
+            >
+              Try again
+            </Button>
+          </>
+        ) : !deadLetters.data?.records.rows.length ? (
+          <OperationMessage>No failed sync records.</OperationMessage>
+        ) : (
+          <>
+            <OperationMessage>
+              Failed records block their whole batch. Withheld records have no
+              committed effects.
+            </OperationMessage>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-caption-1-regular text-fg">
+                <thead>
+                  <tr className="border-b border-border">
+                    <th scope="col" className="p-2">
+                      Record
+                    </th>
+                    <th scope="col" className="p-2">
+                      Outcome
+                    </th>
+                    <th scope="col" className="p-2">
+                      Safe error
+                    </th>
+                    <th scope="col" className="p-2">
+                      Dead-lettered
+                    </th>
+                    {canEdit ? (
+                      <th scope="col" className="p-2">
+                        Action
+                      </th>
+                    ) : null}
+                  </tr>
+                </thead>
+                <tbody>
+                  {deadLetters.data.records.rows.map((record) => (
+                    <tr key={record.id} className="border-b border-border">
+                      <td className="p-2 break-all">
+                        {record.entityType}: {record.externalId}
+                      </td>
+                      <td className="p-2 capitalize">{record.outcome}</td>
+                      <td className="p-2">
+                        {record.errorCategory ?? "Unknown"} ·{" "}
+                        {record.errorCode ?? "Not recorded"}
+                      </td>
+                      <td className="p-2">
+                        {operationDate(record.deadLetteredAt)}
+                      </td>
+                      {canEdit ? (
+                        <td className="p-2">
+                          <Button
+                            variant="outline"
+                            tone="grey"
+                            aria-label={`Review replay for ${record.externalId}`}
+                            onClick={() => setRunId(record.runId)}
+                          >
+                            Review replay
+                          </Button>
+                        </td>
+                      ) : null}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <OperationPagination
+              page={deadLetters.data.records.page}
+              pageCount={deadLetters.data.records.pageCount}
+              onPage={setPage}
+            />
+          </>
+        )}
+        {runId && canEdit && canView ? (
+          <>
+            <ConnectorReplaySection
+              key={runId}
+              connectorId={connectorId}
+              runId={runId}
+              canEdit={canEdit}
+            />
+            <Button
+              variant="outline"
+              tone="grey"
+              onClick={() => setRunId(null)}
+            >
+              Close replay review
+            </Button>
+          </>
+        ) : null}
+      </div>
     </SectionCard>
   );
 }

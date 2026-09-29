@@ -108,6 +108,12 @@ export class ConnectorsService {
         return new BadRequestException({ message, code });
       case "not_found":
         return new NotFoundException({ message, code });
+      case "blocked_by_dead_letter":
+        return new ConflictException({
+          message:
+            "Review and replay the unresolved batch before starting another sync.",
+          code,
+        });
       case "conflict":
       case "invalid_state":
       case "already_running":

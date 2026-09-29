@@ -6,3 +6,5 @@ export * from "./sync-conflict.schema.js";
 export * from "./connector-responses.schema.js";
 
 export * from "./connector-hub.schema.js";
+
+export * from "./sync-operations.schema.js";

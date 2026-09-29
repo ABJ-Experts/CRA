@@ -97,6 +97,12 @@ export class ReferenceConformanceAdapter implements ConnectorPort {
             productField("internalCode"),
             productField("productType"),
             productField("description"),
+            {
+              ...productField("fixtureCredential"),
+              required: false,
+              sensitive: true,
+              supportsPush: false,
+            },
           ],
         },
         {
@@ -275,6 +281,10 @@ function productField(field: string) {
     supportsPull: true,
     supportsPush: true,
     vendorFieldPath: field,
+    type: "string" as const,
+    nullable: field === "description",
+    required: field !== "description",
+    sensitive: false,
   };
 }
 
@@ -284,5 +294,9 @@ function releaseField(field: string) {
     supportsPull: true,
     supportsPush: true,
     vendorFieldPath: field,
+    type: "string" as const,
+    nullable: field === "description",
+    required: field !== "description",
+    sensitive: false,
   };
 }

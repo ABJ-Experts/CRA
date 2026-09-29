@@ -178,6 +178,7 @@ export const exportSourceRegistry: readonly ExportSourceRegistration[] =
         "product_external_identities",
         "field_authority_policies",
         "sync_runs",
+        "sync_run_attempts",
         "sync_run_plan_items",
         "sync_conflicts",
         "sync_connector_cursors",

@@ -39,7 +39,7 @@ import type {
 } from "@repo/contracts/connectors/types";
 
 /** Reject stale tenant callbacks before dispatch and before mutation success is published. */
-function useConnectorMutation<Data, Variables = void>(
+export function useConnectorMutation<Data, Variables = void>(
   options: UseMutationOptions<Data, Error, Variables>,
 ) {
   const { session } = useSession();
@@ -63,7 +63,7 @@ function useConnectorMutation<Data, Variables = void>(
   });
 }
 
-function useConnectorKeys() {
+export function useConnectorKeys() {
   const { session } = useSession();
   const orgId = session?.organization?.id ?? "no-organization";
   const scoped = (key: readonly unknown[]) =>
@@ -197,10 +197,14 @@ export function useConnectorSyncRunsQuery(
   enabled: boolean,
 ) {
   const connectorKeys = useConnectorKeys();
-  return useQuery({
+  return useQuery<Awaited<ReturnType<typeof connectorsApi.listSyncRuns>>>({
     queryKey: connectorKeys.syncRuns(connectorId, listKey(query)),
     enabled: enabled && connectorId !== "",
     retry: false,
+    refetchInterval: (query) =>
+      query.state.data?.runs.rows.some((run) => shouldPollSyncRun(run.status))
+        ? 2_000
+        : false,
     queryFn: ({ signal }) =>
       connectorsApi.listSyncRuns(connectorId, query, signal),
   });

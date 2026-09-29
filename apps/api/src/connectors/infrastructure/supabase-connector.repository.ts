@@ -708,9 +708,12 @@ export class SupabaseConnectorRepository {
   async listDueSyncRunOrganizations(limit: number) {
     let result: RpcResult;
     try {
-      result = await this.client().rpc("list_due_sync_run_organizations", {
-        p_limit: limit,
-      });
+      result = await this.client().rpc(
+        "m1102_list_due_sync_run_organizations",
+        {
+          p_limit: limit,
+        },
+      );
     } catch {
       throw new ConnectorError("unavailable");
     }
@@ -724,7 +727,7 @@ export class SupabaseConnectorRepository {
     workerId: string,
     leaseSeconds: number,
   ) {
-    const row = await this.singleRpc("claim_sync_run", {
+    const row = await this.singleRpc("m1102_claim_sync_run", {
       p_organization_id: organizationId,
       p_worker_id: workerId,
       p_lease_seconds: leaseSeconds,
@@ -744,18 +747,53 @@ export class SupabaseConnectorRepository {
   }
 
   async saveSyncRunPlan(args: Readonly<Record<string, unknown>>) {
-    const row = await this.singleRpc("save_sync_run_plan_atomic", args);
+    const row = await this.singleRpc("m1102_save_sync_run_plan_atomic", args);
     const outcome = this.outcome(
       row,
-      new Set(["saved", "not_found", "invalid_request", "invalid_state"]),
+      new Set([
+        "saved",
+        "not_found",
+        "invalid_request",
+        "invalid_state",
+        "lease_lost",
+        "schema_changed",
+        "invalid_data",
+      ]),
     );
     this.assertFound(outcome);
+    if (outcome === "lease_lost") return null;
+    if (outcome === "schema_changed") throw new ConnectorError("stale_preview");
+    if (outcome === "invalid_data") throw new ConnectorError("invalid_request");
     if (outcome === "invalid_state") throw new ConnectorError("invalid_state");
     return row.run;
   }
 
+  async renewSyncRunLease(
+    organizationId: string,
+    syncRunId: string,
+    workerId: string,
+    generation: number,
+    leaseSeconds: number,
+  ): Promise<boolean> {
+    let result: RpcResult;
+    try {
+      result = await this.client().rpc("m1102_renew_sync_run_lease", {
+        p_organization_id: organizationId,
+        p_sync_run_id: syncRunId,
+        p_worker_id: workerId,
+        p_generation: generation,
+        p_lease_seconds: leaseSeconds,
+      });
+    } catch {
+      throw new ConnectorError("unavailable");
+    }
+    if (result.error || typeof result.data !== "boolean")
+      throw new ConnectorError("unavailable");
+    return result.data;
+  }
+
   async commitSyncRun(args: Readonly<Record<string, unknown>>) {
-    const row = await this.singleRpc("commit_sync_run_atomic", args);
+    const row = await this.singleRpc("m1102_commit_sync_run_atomic", args);
     return row; // caller inspects `outcome` directly -- several non-error outcomes are valid states here
   }
 
@@ -764,12 +802,18 @@ export class SupabaseConnectorRepository {
     syncRunId: string,
     workerId: string,
     errorCode: string,
+    generation: number,
+    retryable: boolean,
+    retryAfterSeconds: number | null = null,
   ) {
-    const row = await this.singleRpc("fail_sync_run_atomic", {
+    const row = await this.singleRpc("m1102_fail_sync_run_atomic", {
       p_organization_id: organizationId,
       p_sync_run_id: syncRunId,
       p_worker_id: workerId,
       p_error_code: errorCode,
+      p_generation: generation,
+      p_retryable: retryable,
+      p_retry_after_seconds: retryAfterSeconds,
     });
     return row;
   }

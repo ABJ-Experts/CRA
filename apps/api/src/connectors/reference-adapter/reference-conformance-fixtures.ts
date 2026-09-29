@@ -232,6 +232,50 @@ export const REFERENCE_ADAPTER_SCENARIO_RECORDS = Object.freeze({
   invalid: INVALID_SCENARIO_RECORDS,
   cycle: CYCLE_SCENARIO_RECORDS,
   pagination: PAGINATION_SCENARIO_RECORDS,
+  poison: Object.freeze([
+    record({
+      externalId: "M11-02-VALID",
+      externalUpdatedAt: "2026-01-06T00:00:00.000Z",
+      fields: {
+        name: "Valid reference",
+        internalCode: "M1102-VALID",
+        productType: "component",
+        description: "Atomic batch fixture",
+      },
+    }),
+    record({
+      externalId: "M11-02-POISON",
+      externalUpdatedAt: "2026-01-07T00:00:00.000Z",
+      fields: {
+        name: "Poison reference",
+        internalCode: "M1102-POISON",
+        productType: "unsupported",
+        description: "Review invalid type",
+      },
+    }),
+  ]),
+  repaired: Object.freeze([
+    record({
+      externalId: "M11-02-VALID",
+      externalUpdatedAt: "2026-01-06T00:00:00.000Z",
+      fields: {
+        name: "Valid reference",
+        internalCode: "M1102-VALID",
+        productType: "component",
+        description: "Atomic batch fixture",
+      },
+    }),
+    record({
+      externalId: "M11-02-POISON",
+      externalUpdatedAt: "2026-01-07T00:00:00.000Z",
+      fields: {
+        name: "Poison reference",
+        internalCode: "M1102-POISON",
+        productType: "component",
+        description: "Review invalid type",
+      },
+    }),
+  ]),
 });
 
 export type ReferenceAdapterScenario =

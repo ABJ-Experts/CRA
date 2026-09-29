@@ -10,7 +10,6 @@ import {
   useConnectorSyncRunsQuery,
   usePlanItemsQuery,
   useRequestCommitMutation,
-  useRetrySyncRunMutation,
   useStartSyncRunMutation,
   useSyncRunQuery,
 } from "../../_features/connectors/connectors.queries";
@@ -112,17 +111,20 @@ export function ConnectorSyncRunSection({
     runId ?? "",
     runId !== null && canView,
   );
+  const current = run.data?.run ?? null;
+  const planReady =
+    current !== null &&
+    (current.workKind === "commit" ||
+      !["queued", "running", "retrying"].includes(current.status));
   const planItems = usePlanItemsQuery(
     connectorId,
     runId ?? "",
     { page, pageSize: 25 },
-    runId !== null && canView,
+    runId !== null && canView && planReady,
   );
   const start = useStartSyncRunMutation(connectorId);
   const requestCommit = useRequestCommitMutation(connectorId, runId ?? "");
   const cancel = useCancelSyncRunMutation(connectorId, runId ?? "");
-  const retry = useRetrySyncRunMutation(connectorId, runId ?? "");
-  const current = run.data?.run ?? null;
   const canCancel =
     canManage &&
     current !== null &&
@@ -130,10 +132,18 @@ export function ConnectorSyncRunSection({
       current.status,
     );
   const canRetry = canManage && current?.status === "failed";
+  const planCountMismatch =
+    planReady &&
+    planItems.data !== undefined &&
+    planItems.data.planItems.total !== current?.rowCount;
   const canRequestCommit =
     canApprove &&
     current?.status === "waiting_for_review" &&
-    current.counts.conflict === 0;
+    current.counts.conflict === 0 &&
+    planItems.data !== undefined &&
+    !planItems.isPending &&
+    !planItems.isError &&
+    !planCountMismatch;
 
   function selectRun(id: string) {
     setRunId(id);
@@ -176,16 +186,6 @@ export function ConnectorSyncRunSection({
       setMessage("Sync run canceled.");
     } catch (error) {
       setMessage(errorMessage(error, "The sync run could not be canceled."));
-    }
-  }
-
-  async function retryRun() {
-    setMessage(null);
-    try {
-      await retry.mutateAsync();
-      setMessage("Sync run retrying.");
-    } catch (error) {
-      setMessage(errorMessage(error, "The sync run could not be retried."));
     }
   }
 
@@ -282,16 +282,10 @@ export function ConnectorSyncRunSection({
                 </Button>
               ) : null}
               {canRetry ? (
-                <Button
-                  type="button"
-                  variant="outline"
-                  tone="grey"
-                  onClick={() => void retryRun()}
-                  loading={retry.isPending}
-                  loadingLabel="Retrying"
-                >
-                  Retry
-                </Button>
+                <p className="text-subhead-regular text-fg-muted">
+                  Review failed records in Dead letters before replaying this
+                  batch.
+                </p>
               ) : null}
             </div>
             <div className="border-t border-border pt-4">
@@ -303,13 +297,22 @@ export function ConnectorSyncRunSection({
                 >
                   Loading plan items…
                 </p>
-              ) : planItems.isError ? (
-                <p
-                  role="alert"
-                  className="mt-3 text-subhead-regular text-danger"
-                >
-                  Plan items could not be loaded.
-                </p>
+              ) : planItems.isError || planCountMismatch ? (
+                <div className="mt-3 flex flex-col items-start gap-3">
+                  <p role="alert" className="text-subhead-regular text-danger">
+                    {planCountMismatch
+                      ? "The plan changed. Reload all plan items before requesting commit."
+                      : "Plan items could not be loaded."}
+                  </p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    tone="grey"
+                    onClick={() => void planItems.refetch()}
+                  >
+                    Retry plan items
+                  </Button>
+                </div>
               ) : planItems.data?.planItems.rows.length ? (
                 <div className="mt-3 overflow-x-auto">
                   <table className="w-full text-left text-caption-1-regular text-fg">

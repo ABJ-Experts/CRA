@@ -8,6 +8,7 @@ export type ConnectorErrorCode =
   | "dry_run_expired"
   | "stale_preview"
   | "blocked_by_conflicts"
+  | "blocked_by_dead_letter"
   | "forbidden_by_policy"
   | "retryable_unavailable"
   | "unavailable"

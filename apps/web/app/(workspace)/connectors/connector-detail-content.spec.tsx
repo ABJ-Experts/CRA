@@ -325,3 +325,10 @@ it("preserves the connection workspace during a failed background refresh", () =
   state.canView = false;
   state.pending = true;
 });
+
+vi.mock("./connector-field-map-section", () => ({
+  ConnectorFieldMapSection: () => <p>Source field mapping</p>,
+}));
+vi.mock("./connector-sync-history-section", () => ({
+  ConnectorSyncHistorySection: () => <p>Sync history</p>,
+}));

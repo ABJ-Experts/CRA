@@ -133,7 +133,9 @@ describe("ConnectorsController route contracts", () => {
       },
       user,
     );
-    await controller.retry({ connectorId, syncRunId: runId }, {}, user);
+    await expect(
+      controller.retry({ connectorId, syncRunId: runId }, {}, user),
+    ).rejects.toMatchObject({ response: { code: "preview_required" } });
     await controller.exportDiagnostics({ connectorId }, {}, user);
 
     expect(
@@ -148,12 +150,7 @@ describe("ConnectorsController route contracts", () => {
       p_protected: false,
       p_protected_reason: null,
     });
-    expect(connectors.repository.retrySyncRun).toHaveBeenCalledWith(
-      organizationId,
-      connectorId,
-      runId,
-      actorId,
-    );
+    expect(connectors.repository.retrySyncRun).not.toHaveBeenCalled();
     expect(connectors.repository.diagnosticsExport).toHaveBeenCalledWith(
       organizationId,
       connectorId,
@@ -470,14 +467,6 @@ describe("ConnectorsController trust boundaries", () => {
       method: "cancelSyncRun",
       invoke: (c, u) => c.cancel(params, {}, u),
       args: [organizationId, connectorId, runId, actorId, null],
-      envelope: "run",
-    },
-    {
-      name: "retry",
-      target: "repository",
-      method: "retrySyncRun",
-      invoke: (c, u) => c.retry(params, {}, u),
-      args: [organizationId, connectorId, runId, actorId],
       envelope: "run",
     },
     {

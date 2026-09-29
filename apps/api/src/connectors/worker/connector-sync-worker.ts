@@ -1,17 +1,18 @@
+import { createConnectorSyncPlanContext } from "./connector-sync-plan-context";
+export { createConnectorSyncPlanContext } from "./connector-sync-plan-context";
 import { Logger } from "@nestjs/common";
 import { createHash, randomUUID } from "node:crypto";
+import { z } from "zod";
+import { normalizeIdentity } from "../application/identity-matching-policy";
 
 import type {
   ConnectorConnectionConfig,
   ConnectorPort,
   ConnectorType,
+  ExternalRecord,
+  ConnectorCapabilities,
 } from "../application/connector-port";
-import {
-  planExternalRecord,
-  type SyncPlanContext,
-} from "../application/sync-plan-builder";
-import type { FieldAuthorityPolicy } from "../application/field-authority-policy";
-import { normalizeIdentity } from "../application/identity-matching-policy";
+import { planExternalRecord } from "../application/sync-plan-builder";
 import { SupabaseConnectorRepository } from "../infrastructure/supabase-connector.repository";
 import type { SupabaseService } from "../../supabase/supabase.service";
 import type {
@@ -26,9 +27,23 @@ import type {
 } from "../application/connector-hub-repository.port";
 import type { PermissionKey } from "@repo/contracts/permissions";
 import {
+  connectorCapabilitiesSchema,
+  connectorFieldMappingsSchema,
+  connectorExternalRecordSchema,
+  connectorPullPageSchema,
   syncProposedActionSchema,
   testConnectorResultSchema,
 } from "@repo/contracts/connectors/schemas";
+import type { ConnectorFieldMapping } from "@repo/contracts/connectors/types";
+import {
+  applyConnectorFieldMappings,
+  protectConnectorSourceRecord,
+  hasConnectorCredentialEcho,
+} from "../application/connector-field-mapping-policy";
+import {
+  classifyConnectorWorkerFailure,
+  ConnectorWorkerFailure,
+} from "./connector-worker-failure";
 
 const configuredMaximumClaims = Number(
   process.env.CONNECTOR_SYNC_MAX_CLAIMS_PER_CYCLE ?? 200,
@@ -40,6 +55,12 @@ const maximumClaimsPerCycle =
     ? configuredMaximumClaims
     : 200;
 const pullPageSize = 200;
+const externalRecordSchema = connectorExternalRecordSchema;
+// Preserve individual malformed records for review; the provider envelope stays strict.
+const pullPageSchema = connectorPullPageSchema.extend({
+  records: z.array(z.unknown()).max(pullPageSize),
+  retryAfterSeconds: z.number().int().nonnegative().optional(),
+});
 
 type ClaimedSyncRun = Readonly<{
   id: string;
@@ -47,6 +68,7 @@ type ClaimedSyncRun = Readonly<{
   connectorId: string;
   workKind: "dry_run" | "commit";
   cursorFrom: string | null;
+  cursorTo: string | null;
   fetchContentHash: string | null;
   correlationId: string | null;
   actorId: string | null;
@@ -54,12 +76,12 @@ type ClaimedSyncRun = Readonly<{
   connectionRevision: number | null;
   credentialRevision: number | null;
   permissionVersion: number | null;
-}>;
-
-type PersistedConnector = Readonly<{
-  connectorType: ConnectorType;
-  connectionConfig: Readonly<Record<string, unknown>>;
-  hasSecret: boolean;
+  leaseGeneration: number;
+  fieldMappingSnapshot: readonly ConnectorFieldMapping[];
+  fieldMappingRevision: number;
+  schemaSnapshot: ConnectorCapabilities | null;
+  replaySourceMode: "retained" | "refetch" | null;
+  replaySourceRecords: readonly unknown[];
 }>;
 
 function unique(values: readonly string[]): string[] {
@@ -126,11 +148,15 @@ export class ConnectorSyncWorker {
       this.logger.warn(
         `connector_sync_worker_cycle_failed_safely run=${String(run.id)} organization=${organizationId}`,
       );
+      const failure = classifyConnectorWorkerFailure(error);
       await this.repository.failSyncRun(
         organizationId,
         run.id,
         this.workerId,
-        error instanceof Error ? "worker_exception" : "unknown",
+        failure.code,
+        run.leaseGeneration,
+        failure.retryable,
+        failure.retryAfterSeconds,
       );
     }
     return true;
@@ -145,7 +171,7 @@ export class ConnectorSyncWorker {
         p_organization_id: organizationId,
         p_sync_run_id: run.id,
       });
-    if (error) throw new Error("Connector commit plan lookup failed");
+    if (error) throw new ConnectorWorkerFailure("transient_database");
     const productPermissions = productPermissionsFor(
       syncProposedActionSchema
         .array()
@@ -154,25 +180,46 @@ export class ConnectorSyncWorker {
     );
     await this.assertAuthorized(run, productPermissions);
     const actorId = run.commitActorId;
-    if (!actorId) throw new Error("Connector approval identity unavailable");
+    if (!actorId) throw new ConnectorWorkerFailure("authorization_changed");
     const approval = await this.security!.authorization.authorize(
       organizationId,
       actorId,
       ["can_approve_connectors", ...productPermissions],
     );
-    if (approval.permissionVersion !== run.permissionVersion)
-      throw new Error("Connector authorization changed");
-    await this.repository.commitSyncRun({
+    if (
+      approval.permissionVersion !== run.permissionVersion ||
+      approval.organizationId !== organizationId ||
+      approval.actorId !== actorId
+    )
+      throw new ConnectorWorkerFailure("authorization_changed");
+    const result = await this.repository.commitSyncRun({
       p_organization_id: organizationId,
       p_sync_run_id: run.id,
       p_actor_user_id: actorId,
       p_fetch_content_hash: run.fetchContentHash,
       p_idempotency_key: run.id,
       p_correlation_id: run.correlationId ?? randomUUID(),
+      p_worker_id: this.workerId,
+      p_generation: run.leaseGeneration,
     });
-    // commit_sync_run_atomic is fully self-contained (apply + cursor advance +
-    // retry/fail bookkeeping all happen inside that one transaction) -- the
-    // worker's job here is only to invoke it, never to reinterpret its result.
+    // SQL owns completed effects and scheduled retries. Early fenced exits still
+    // need a terminal attempt while this generation holds its lease.
+    if (
+      [
+        "completed",
+        "retrying",
+        "failed",
+        "lease_lost",
+        "not_found",
+        "waiting_for_review",
+      ].includes(String(result.outcome))
+    )
+      return;
+    if (result.outcome === "invalid_state")
+      throw new ConnectorWorkerFailure("authorization_changed");
+    if (result.outcome === "blocked_by_records")
+      throw new ConnectorWorkerFailure("invalid_data");
+    throw new ConnectorWorkerFailure("stale_preview");
   }
 
   private async buildAndSavePlan(run: ClaimedSyncRun): Promise<void> {
@@ -182,129 +229,252 @@ export class ConnectorSyncWorker {
     const connector = securedContext.connector;
     const adapter = this.adapters.get(connector.connectorType);
     if (!adapter) {
-      await this.repository.failSyncRun(
-        organizationId,
-        run.id,
-        this.workerId,
-        "unsupported_connector_type",
-      );
-      return;
+      throw new ConnectorWorkerFailure("unsupported_connector_type");
     }
 
-    const secret = securedContext.secret;
-    if (connector.hasSecret && !secret)
-      throw new Error("Connector credentials unavailable");
-    const secretContext = secret
-      ? {
-          orgId: organizationId,
-          connectorId,
-          secretId: secret.secretId,
-          credentialRevision: secret.credentialRevision,
-        }
-      : null;
-    let secretValue: string | null = null;
-    if (secret && secretContext) {
-      if (this.security!.credentialReader)
-        secretValue = await this.security!.credentialReader.read(
-          secretContext,
-          secret,
+    let capabilities: ConnectorCapabilities;
+    let credentialCanary: string | null = null;
+    let sourceRecords: readonly unknown[];
+    let cursorTo: string | null;
+    if (run.replaySourceMode === "retained") {
+      if (!run.schemaSnapshot)
+        throw new ConnectorWorkerFailure("stale_preview");
+      capabilities = run.schemaSnapshot;
+      sourceRecords = run.replaySourceRecords;
+      cursorTo = run.cursorTo;
+    } else {
+      const secret = securedContext.secret;
+      if (connector.hasSecret && !secret)
+        throw new ConnectorWorkerFailure("vault_unavailable");
+      const secretContext = secret
+        ? {
+            orgId: organizationId,
+            connectorId,
+            secretId: secret.secretId,
+            credentialRevision: secret.credentialRevision,
+          }
+        : null;
+      let secretValue: string | null = null;
+      if (secret && secretContext) {
+        if (this.security!.credentialReader)
+          secretValue = await this.security!.credentialReader.read(
+            secretContext,
+            secret,
+          );
+        else if (secret.envelope && !secret.legacy)
+          secretValue = this.security!.vault.decrypt(
+            secretContext,
+            secret.envelope,
+          );
+        else throw new ConnectorWorkerFailure("vault_unavailable");
+      }
+      const config: ConnectorConnectionConfig = {
+        connectorType: connector.connectorType,
+        ...connector.connectionConfig,
+        secretReference: { provider: "vault", reference: secretValue ?? "" },
+        executionIdentity: `${organizationId}:${connectorId}:${run.id}`,
+        signal: AbortSignal.timeout(15_000),
+      };
+      credentialCanary = secretValue;
+      await this.assertEgress(connector.connectionConfig, config.signal!);
+      const connectionResult = testConnectorResultSchema.parse(
+        await withDeadline(adapter.testConnection(config), config.signal!),
+      );
+      if (connectionResult.outcome === "failure") {
+        throw new ConnectorWorkerFailure(
+          connectionResult.errorCode === "unreachable"
+            ? "provider_unavailable"
+            : connectionResult.errorCode,
         );
-      else if (secret.envelope && !secret.legacy)
-        secretValue = this.security!.vault.decrypt(
-          secretContext,
-          secret.envelope,
+      }
+      await this.assertAuthorized(run);
+      await this.assertEgress(connector.connectionConfig, config.signal!);
+      const discovered = connectorCapabilitiesSchema.parse(
+        await withDeadline(
+          adapter.discoverCapabilities(config),
+          config.signal!,
+        ),
+      );
+      if (
+        credentialCanary &&
+        hasConnectorCredentialEcho(
+          [
+            discovered.adapterVersion,
+            discovered.mappingVersion,
+            ...discovered.entities.flatMap((entry) =>
+              entry.fields.flatMap((field) => [
+                field.field,
+                field.vendorFieldPath,
+              ]),
+            ),
+          ],
+          credentialCanary,
+        )
+      )
+        throw new ConnectorWorkerFailure("malformed_response");
+      // The pinned interpretation is immutable; discovery cannot silently rebase a run.
+      if (
+        run.schemaSnapshot &&
+        JSON.stringify(run.schemaSnapshot) !== JSON.stringify(discovered)
+      )
+        throw new ConnectorWorkerFailure("stale_preview");
+      capabilities = run.schemaSnapshot ?? discovered;
+      await this.assertAuthorized(run);
+      await this.assertEgress(connector.connectionConfig, config.signal!);
+      const page = pullPageSchema.parse(
+        await withDeadline(
+          adapter.pull(config, cursorInputFor(run.cursorFrom), pullPageSize),
+          config.signal!,
+        ),
+      );
+      if (page.adapterSignal !== "ok")
+        throw new ConnectorWorkerFailure(
+          page.adapterSignal === "unavailable"
+            ? "provider_unavailable"
+            : page.adapterSignal,
+          page.retryAfterSeconds ?? null,
         );
-      else throw new Error("Connector credentials unavailable");
+      sourceRecords = page.records;
+      if (
+        credentialCanary &&
+        page.nextCursor &&
+        (page.nextCursor.token.includes(credentialCanary) ||
+          page.nextCursor.watermark.includes(credentialCanary))
+      ) {
+        throw new ConnectorWorkerFailure("malformed_response");
+      }
+      cursorTo = cursorAfterPage(
+        {
+          ...page,
+          records: page.records.flatMap((record) => {
+            const parsed = externalRecordSchema.safeParse(record);
+            return parsed.success &&
+              (!credentialCanary ||
+                protectConnectorSourceRecord(
+                  safeSourceSnapshot(parsed.data, capabilities),
+                  credentialCanary,
+                ).issues.length === 0)
+              ? [parsed.data]
+              : [];
+          }),
+        },
+        run.cursorFrom,
+      );
     }
-    const config: ConnectorConnectionConfig = {
-      connectorType: connector.connectorType,
-      ...connector.connectionConfig,
-      secretReference: {
-        provider: "vault",
-        reference: secretValue ?? "",
-      },
-      executionIdentity: `${organizationId}:${connectorId}:${run.id}`,
-      signal: AbortSignal.timeout(15_000),
-    };
-
-    await this.assertEgress(connector.connectionConfig, config.signal!);
-    const connectionResult = testConnectorResultSchema.parse(
-      await withDeadline(adapter.testConnection(config), config.signal!),
+    const records = sourceRecords.map((record) =>
+      externalRecordSchema.safeParse(record),
     );
-    if (connectionResult.outcome === "failure") {
-      await this.repository.failSyncRun(
-        organizationId,
-        run.id,
-        this.workerId,
-        connectionResult.errorCode,
-      );
-      return;
+    const identities = new Set<string>();
+    for (const record of records) {
+      if (!record.success) continue;
+      const identity = `${record.data.entityType}:${normalizeIdentity(record.data.externalId)}`;
+      if (identities.has(identity))
+        throw new ConnectorWorkerFailure("invalid_data");
+      identities.add(identity);
     }
-
-    const cursorFrom = run.cursorFrom;
-    await this.assertAuthorized(run);
-    await this.assertEgress(connector.connectionConfig, config.signal!);
-    const page = await withDeadline(
-      adapter.pull(config, cursorInputFor(cursorFrom), pullPageSize),
-      config.signal!,
-    );
-    if (page.records.length > pullPageSize)
-      throw new Error("Connector provider page exceeded its bound");
-
-    if (page.adapterSignal === "rate_limited") {
-      await this.repository.failSyncRun(
-        organizationId,
-        run.id,
-        this.workerId,
-        "rate_limited",
-      );
-      return;
-    }
-    if (
-      page.adapterSignal === "cursor_expired" ||
-      page.adapterSignal === "cursor_invalid"
-    ) {
-      await this.repository.failSyncRun(
-        organizationId,
-        run.id,
-        this.workerId,
-        page.adapterSignal,
-      );
-      return;
-    }
-    if (page.adapterSignal === "unavailable") {
-      await this.repository.failSyncRun(
-        organizationId,
-        run.id,
-        this.workerId,
-        "provider_unavailable",
-      );
-      return;
-    }
-
     const context = createConnectorSyncPlanContext(
       this.supabase,
       organizationId,
       connectorId,
       connector,
-      page.records,
+      records.flatMap((record) => (record.success ? [record.data] : [])),
     );
     const planItems: Record<string, unknown>[] = [];
     const conflicts: Record<string, unknown>[] = [];
-    for (const record of page.records) {
-      const { item, conflicts: recordConflicts } = await planExternalRecord(
-        context,
-        record,
+    let renewedAt = Date.now();
+    for (const [index, parsed] of records.entries()) {
+      if (Date.now() - renewedAt >= 20_000) {
+        await this.renewLease(run);
+        renewedAt = Date.now();
+      }
+      if (!parsed.success) {
+        planItems.push({
+          externalId: `invalid-record-${index + 1}`,
+          entityType: "product",
+          proposedAction: "rejected",
+          fieldDiffs: {},
+          issues: [
+            {
+              code: "malformed_record",
+              message:
+                "The provider record does not satisfy the supported source contract.",
+              severity: "error",
+            },
+          ],
+          craProductId: null,
+          craReleaseId: null,
+          expectedVersion: null,
+          sourceSnapshot: null,
+          errorCategory: "invalid_data",
+          errorCode: "malformed_record",
+        });
+        continue;
+      }
+      const source = parsed.data;
+      const sourceSnapshot = safeSourceSnapshot(source, capabilities);
+      const guarded = credentialCanary
+        ? protectConnectorSourceRecord(sourceSnapshot, credentialCanary)
+        : { record: sourceSnapshot, issues: [] };
+      if (guarded.issues.length > 0) {
+        planItems.push({
+          externalId: `redacted-record-${index + 1}`,
+          entityType: source.entityType,
+          proposedAction: "rejected",
+          fieldDiffs: {},
+          issues: [
+            {
+              code: "invalid_data",
+              message:
+                "The source record is unsafe to retain. Review the provider field selection.",
+              severity: "error",
+            },
+          ],
+          craProductId: null,
+          craReleaseId: null,
+          expectedVersion: null,
+          sourceSnapshot: null,
+          errorCategory: "invalid_data",
+          errorCode: "invalid_data",
+        });
+        continue;
+      }
+      const mapped = applyConnectorFieldMappings(
+        guarded.record,
+        run.fieldMappingSnapshot,
+        capabilities,
       );
+      const planned =
+        mapped.issues.length > 0
+          ? {
+              item: {
+                externalId: source.externalId,
+                entityType: source.entityType,
+                proposedAction: "rejected",
+                fieldDiffs: {},
+                issues: mapped.issues.map((issue) => ({
+                  code: issue.code,
+                  message: issue.message,
+                  severity: "error" as const,
+                })),
+                craProductId: null,
+                craReleaseId: null,
+                expectedVersion: null,
+              },
+              conflicts: [],
+            }
+          : await withDeadline(
+              planExternalRecord(context, mapped.record),
+              AbortSignal.timeout(15_000),
+            );
+      const { item, conflicts: recordConflicts } = planned;
+      const failed = item.issues.some((issue) => issue.severity === "error");
       planItems.push({
-        externalId: item.externalId,
-        entityType: item.entityType,
-        proposedAction: item.proposedAction,
-        fieldDiffs: item.fieldDiffs,
-        issues: item.issues,
-        craProductId: item.craProductId,
-        craReleaseId: item.craReleaseId,
-        expectedVersion: item.expectedVersion,
+        ...item,
+        sourceSnapshot,
+        errorCategory: failed ? "invalid_data" : null,
+        errorCode: failed
+          ? item.issues.find((issue) => issue.severity === "error")!.code
+          : null,
       });
       for (const conflict of recordConflicts) {
         conflicts.push({
@@ -328,23 +498,40 @@ export class ConnectorSyncWorker {
     }
 
     const fetchContentHash = createHash("sha256")
-      .update(JSON.stringify(page.records))
+      .update(JSON.stringify(planItems.map((item) => item.sourceSnapshot)))
       .digest("hex");
 
     const productPermissions = productPermissionsFor(
       planItems.map((item) => item.proposedAction),
     );
     await this.assertAuthorized(run, productPermissions);
+    await this.renewLease(run);
 
     await this.repository.saveSyncRunPlan({
       p_organization_id: organizationId,
       p_sync_run_id: run.id,
       p_worker_id: this.workerId,
-      p_cursor_to: cursorAfterPage(page, cursorFrom),
+      p_cursor_to: cursorTo,
+      p_generation: run.leaseGeneration,
+      p_schema_snapshot: capabilities,
       p_fetch_content_hash: fetchContentHash,
       p_plan_items: planItems,
       p_conflicts: conflicts,
     });
+  }
+
+  private async renewLease(run: ClaimedSyncRun): Promise<void> {
+    if (
+      !(await this.repository.renewSyncRunLease(
+        run.organizationId,
+        run.id,
+        this.workerId,
+        run.leaseGeneration,
+        this.leaseSeconds,
+      ))
+    ) {
+      throw new ConnectorWorkerFailure("stale_preview");
+    }
   }
 
   private async assertEgress(
@@ -368,7 +555,7 @@ export class ConnectorSyncWorker {
       run.credentialRevision === null ||
       run.permissionVersion === null
     )
-      throw new Error("Connector recorded authorization unavailable");
+      throw new ConnectorWorkerFailure("authorization_changed");
     const authority = await this.security.authorization.authorize(
       run.organizationId,
       run.actorId,
@@ -379,7 +566,7 @@ export class ConnectorSyncWorker {
       authority.organizationId !== run.organizationId ||
       authority.actorId !== run.actorId
     )
-      throw new Error("Connector authorization changed");
+      throw new ConnectorWorkerFailure("authorization_changed");
     const context = await this.security.hub.context(
       run.organizationId,
       run.connectorId,
@@ -390,7 +577,7 @@ export class ConnectorSyncWorker {
       context.connectionRevision !== run.connectionRevision ||
       context.credentialRevision !== run.credentialRevision
     )
-      throw new Error("Connector configuration changed");
+      throw new ConnectorWorkerFailure("configuration_changed");
     return context;
   }
 }
@@ -405,235 +592,21 @@ function productPermissionsFor(actions: readonly unknown[]): PermissionKey[] {
   ];
 }
 
-export function createConnectorSyncPlanContext(
-  supabase: SupabaseService,
-  organizationId: string,
-  connectorId: string,
-  connector: PersistedConnector,
-  pageRecords: readonly Readonly<{
-    entityType: "product" | "release";
-    externalId: string;
-    changeKind: "upsert" | "tombstone";
-  }>[],
-): SyncPlanContext {
-  const admin = () => supabase.admin();
-  const config = connector.connectionConfig;
-  const defaultOwnerBinding =
-    typeof config.defaultOwnerBinding === "object" &&
-    config.defaultOwnerBinding !== null
-      ? (config.defaultOwnerBinding as {
-          responsibleOwnerId: string;
-          legalEntityId: string;
-        })
-      : null;
-  const productRecordCounts = new Map<string, number>();
-  for (const record of pageRecords) {
-    if (record.entityType !== "product" || record.changeKind !== "upsert") {
-      continue;
-    }
-    const normalized = normalizeIdentity(record.externalId);
-    productRecordCounts.set(
-      normalized,
-      (productRecordCounts.get(normalized) ?? 0) + 1,
-    );
-  }
-
+function safeSourceSnapshot(
+  record: ExternalRecord,
+  capabilities: ConnectorCapabilities,
+): ExternalRecord {
+  const approved = new Set(
+    capabilities.entities
+      .find((entry) => entry.entityType === record.entityType)
+      ?.fields.filter((field) => field.supportsPull && !field.sensitive)
+      .map((field) => field.vendorFieldPath) ?? [],
+  );
   return {
-    organizationId,
-    connectorId,
-    defaultOwnerBinding,
-    findActiveMapping: async (entityType, externalIdNormalized) => {
-      const { data, error } = await admin()
-        .from("product_external_identities")
-        .select("id, cra_product_id, cra_release_id")
-        .eq("organization_id", organizationId)
-        .eq("connector_id", connectorId)
-        .eq("entity_type", entityType)
-        .eq("external_id_normalized", externalIdNormalized)
-        .is("superseded_at", null)
-        .is("unlinked_at", null)
-        .maybeSingle();
-      if (error) throw new Error("connector_identity_lookup_failed");
-      if (!data) return null;
-      return {
-        id: data.id,
-        craProductId: data.cra_product_id,
-        craReleaseId: data.cra_release_id,
-      };
-    },
-    findProductCandidatesByCode: async (normalizedCode) => {
-      const { data, error } = await admin()
-        .from("products")
-        .select("id")
-        .eq("organization_id", organizationId)
-        .eq("internal_code_normalized", normalizedCode);
-      if (error) throw new Error("connector_product_candidates_lookup_failed");
-      const rows = (data ?? []) as readonly { id: string }[];
-      return Promise.all(
-        rows.map(async (row) => {
-          const { count, error: countError } = await admin()
-            .from("product_external_identities")
-            .select("id", { count: "exact", head: true })
-            .eq("organization_id", organizationId)
-            .eq("cra_product_id", row.id)
-            .neq("connector_id", connectorId)
-            .is("superseded_at", null)
-            .is("unlinked_at", null);
-          if (countError)
-            throw new Error("connector_product_mapping_lookup_failed");
-          return {
-            productId: row.id,
-            hasOtherActiveMapping: (count ?? 0) > 0,
-          };
-        }),
-      );
-    },
-    findReleaseCandidatesByVersion: async (productId, normalizedVersion) => {
-      const { data, error } = await admin()
-        .from("product_releases")
-        .select("id")
-        .eq("organization_id", organizationId)
-        .eq("product_id", productId)
-        .eq("release_version_normalized", normalizedVersion);
-      if (error) throw new Error("connector_release_candidates_lookup_failed");
-      const rows = (data ?? []) as readonly { id: string }[];
-      return rows.map((row) => ({
-        releaseId: row.id,
-        hasOtherActiveMapping: false,
-      }));
-    },
-    getActiveProductMappingsForExternalParent: async (
-      parentExternalIdNormalized,
-    ) => {
-      const { data, error } = await admin()
-        .from("product_external_identities")
-        .select("id, cra_product_id")
-        .eq("organization_id", organizationId)
-        .eq("connector_id", connectorId)
-        .eq("entity_type", "product")
-        .eq("external_id_normalized", parentExternalIdNormalized)
-        .is("superseded_at", null)
-        .is("unlinked_at", null);
-      if (error) throw new Error("connector_parent_mapping_lookup_failed");
-      return (data ?? []).map((row) => ({
-        identityId: row.id,
-        craProductId: row.cra_product_id,
-      }));
-    },
-    getConnectorOwnedParent: async (childProductId) => {
-      const { data, error } = await admin()
-        .from("product_relationships")
-        .select("source_product_id")
-        .eq("organization_id", organizationId)
-        .eq("relationship_type", "embedded")
-        .eq("target_product_id", childProductId)
-        .eq("source", "connector_sync")
-        .like("provenance", `connector-sync:v1:${connectorId}:%`)
-        .is("ended_at", null)
-        .limit(2);
-      if (error) throw new Error("connector_owned_parent_lookup_failed");
-
-      const rows = (data ?? []) as readonly {
-        source_product_id: string;
-      }[];
-      const parentProductIds = unique(rows.map((row) => row.source_product_id));
-      if (parentProductIds.length === 0) return { outcome: "none" };
-      if (parentProductIds.length === 1) {
-        return {
-          outcome: "one",
-          parentProductId: parentProductIds[0]!,
-        };
-      }
-      return { outcome: "ambiguous", parentProductIds };
-    },
-    wouldCreateEmbeddedComponentCycle: async (
-      parentProductId,
-      childProductId,
-    ) => {
-      const { data: settings, error: settingsError } = await admin()
-        .from("organization_settings")
-        .select("product_relationship_graph_version")
-        .eq("organization_id", organizationId)
-        .maybeSingle();
-      if (settingsError || !settings) {
-        throw new Error("connector_relationship_graph_lookup_failed");
-      }
-      const { data: preview, error: previewError } = await admin().rpc(
-        "m2_component_link_preview",
-        {
-          p_organization_id: organizationId,
-          p_parent_product_id: parentProductId,
-          p_component_product_id: childProductId,
-          p_effective_at: new Date().toISOString(),
-          p_graph_version: settings.product_relationship_graph_version,
-          p_excluding_relationship_id: undefined,
-        },
-      );
-      if (previewError || !preview || typeof preview !== "object") {
-        throw new Error("connector_relationship_graph_preview_failed");
-      }
-      return (preview as { outcome?: unknown }).outcome !== "allowed";
-    },
-    isProductExternalIdPlanned: (externalIdNormalized) =>
-      productRecordCounts.get(externalIdNormalized) === 1,
-    getProductFields: async (productId) => {
-      const { data, error } = await admin()
-        .from("products")
-        .select("name, internal_code, product_type, description, version")
-        .eq("organization_id", organizationId)
-        .eq("id", productId)
-        .maybeSingle();
-      if (error) throw new Error("connector_product_fields_lookup_failed");
-      if (!data) return null;
-      return {
-        name: data.name,
-        internalCode: data.internal_code,
-        productType: data.product_type,
-        description: data.description,
-        version: data.version,
-      };
-    },
-    getReleaseFields: async (productId, releaseId) => {
-      const { data, error } = await admin()
-        .from("product_releases")
-        .select("label, release_version, description, version")
-        .eq("organization_id", organizationId)
-        .eq("product_id", productId)
-        .eq("id", releaseId)
-        .maybeSingle();
-      if (error) throw new Error("connector_release_fields_lookup_failed");
-      if (!data) return null;
-      return {
-        label: data.label,
-        releaseVersion: data.release_version,
-        description: data.description,
-        version: data.version,
-      };
-    },
-    getFieldAuthorityPolicy: async (entityType, field) => {
-      const { data, error } = await admin()
-        .from("field_authority_policies")
-        .select("id, policy_value, protected, policy_version")
-        .eq("organization_id", organizationId)
-        .eq("connector_id", connectorId)
-        .eq("entity_type", entityType)
-        .eq("field_name", field)
-        .is("superseded_at", null)
-        .maybeSingle();
-      if (error) throw new Error("connector_field_policy_lookup_failed");
-      if (!data) return null;
-      return {
-        id: data.id,
-        policyValue: data.policy_value as FieldAuthorityPolicy["policyValue"],
-        protected: data.protected,
-        policyVersion: data.policy_version,
-      };
-    },
-    hashValue: (value) =>
-      createHash("sha256")
-        .update(JSON.stringify(value ?? null))
-        .digest("hex"),
-    nowIso: () => new Date().toISOString(),
+    ...record,
+    fields: Object.fromEntries(
+      Object.entries(record.fields).filter(([field]) => approved.has(field)),
+    ),
   };
 }
 
@@ -655,6 +628,7 @@ export function toClaimedSyncRun(value: unknown): ClaimedSyncRun {
     connectorId,
     workKind,
     cursorFrom: optionalString(row.cursorFrom),
+    cursorTo: optionalString(row.cursorTo),
     fetchContentHash: optionalString(row.fetchContentHash),
     correlationId: optionalString(row.correlationId),
     actorId: optionalString(row.actorId),
@@ -662,6 +636,31 @@ export function toClaimedSyncRun(value: unknown): ClaimedSyncRun {
     connectionRevision: optionalInteger(row.connectionRevision, 1),
     credentialRevision: optionalInteger(row.credentialRevision, 0),
     permissionVersion: optionalInteger(row.permissionVersion, 0),
+    leaseGeneration:
+      optionalInteger(row.leaseGeneration, 1) ??
+      (() => {
+        throw new Error("Connector claim generation is unavailable");
+      })(),
+    fieldMappingSnapshot: connectorFieldMappingsSchema.parse(
+      row.fieldMappingSnapshot,
+    ),
+    fieldMappingRevision:
+      optionalInteger(row.fieldMappingRevision, 0) ??
+      (() => {
+        throw new Error("Connector mapping revision is unavailable");
+      })(),
+    schemaSnapshot:
+      row.schemaSnapshot === null || row.schemaSnapshot === undefined
+        ? null
+        : connectorCapabilitiesSchema.parse(row.schemaSnapshot),
+    replaySourceMode: z
+      .enum(["retained", "refetch"])
+      .nullable()
+      .parse(row.replaySourceMode ?? null),
+    replaySourceRecords: z
+      .array(z.unknown())
+      .max(pullPageSize)
+      .parse(row.replaySourceRecords ?? []),
   };
 }
 
@@ -680,13 +679,13 @@ async function withDeadline<T>(
   operation: Promise<T>,
   signal: AbortSignal,
 ): Promise<T> {
-  if (signal.aborted) throw new Error("Connector provider timeout");
+  if (signal.aborted) throw new ConnectorWorkerFailure("timeout");
   let interrupt: (() => void) | undefined;
   try {
     return await Promise.race([
       operation,
       new Promise<never>((_resolve, reject) => {
-        interrupt = () => reject(new Error("Connector provider timeout"));
+        interrupt = () => reject(new ConnectorWorkerFailure("timeout"));
         signal.addEventListener("abort", interrupt, { once: true });
       }),
     ]);

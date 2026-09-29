@@ -517,11 +517,14 @@ export type Database = {
           disabled_by: string | null
           display_name: string
           enabled: boolean
+          field_map: Json
+          field_mapping_revision: number
           id: string
           last_test_connection_revision: number | null
           last_test_error_code: string | null
           last_test_outcome: string | null
           last_tested_at: string | null
+          mapping_schema_digest: string | null
           mapping_version: string
           organization_id: string
           scope_assessment: Json
@@ -548,11 +551,14 @@ export type Database = {
           disabled_by?: string | null
           display_name: string
           enabled?: boolean
+          field_map?: Json
+          field_mapping_revision?: number
           id?: string
           last_test_connection_revision?: number | null
           last_test_error_code?: string | null
           last_test_outcome?: string | null
           last_tested_at?: string | null
+          mapping_schema_digest?: string | null
           mapping_version: string
           organization_id: string
           scope_assessment?: Json
@@ -579,11 +585,14 @@ export type Database = {
           disabled_by?: string | null
           display_name?: string
           enabled?: boolean
+          field_map?: Json
+          field_mapping_revision?: number
           id?: string
           last_test_connection_revision?: number | null
           last_test_error_code?: string | null
           last_test_outcome?: string | null
           last_tested_at?: string | null
+          mapping_schema_digest?: string | null
           mapping_version?: string
           organization_id?: string
           scope_assessment?: Json
@@ -13586,13 +13595,80 @@ export type Database = {
           },
         ]
       }
+      sync_run_attempts: {
+        Row: {
+          affected_record_ids: string[]
+          error_category: string | null
+          error_code: string | null
+          finished_at: string | null
+          id: string
+          lease_generation: number
+          next_attempt_at: string | null
+          organization_id: string
+          outcome: string | null
+          phase: string
+          started_at: string
+          sync_run_id: string
+          worker_id: string
+        }
+        Insert: {
+          affected_record_ids?: string[]
+          error_category?: string | null
+          error_code?: string | null
+          finished_at?: string | null
+          id?: string
+          lease_generation: number
+          next_attempt_at?: string | null
+          organization_id: string
+          outcome?: string | null
+          phase: string
+          started_at?: string
+          sync_run_id: string
+          worker_id: string
+        }
+        Update: {
+          affected_record_ids?: string[]
+          error_category?: string | null
+          error_code?: string | null
+          finished_at?: string | null
+          id?: string
+          lease_generation?: number
+          next_attempt_at?: string | null
+          organization_id?: string
+          outcome?: string | null
+          phase?: string
+          started_at?: string
+          sync_run_id?: string
+          worker_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sync_run_attempts_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sync_run_attempts_organization_id_sync_run_id_fkey"
+            columns: ["organization_id", "sync_run_id"]
+            isOneToOne: false
+            referencedRelation: "sync_runs"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
       sync_run_plan_items: {
         Row: {
           applied_at: string | null
           cra_product_id: string | null
           cra_release_id: string | null
           created_at: string
+          dead_letter_resolved_at: string | null
+          dead_lettered_at: string | null
           entity_type: string
+          error_category: string | null
+          error_code: string | null
           expected_version: number | null
           external_id: string
           field_diffs: Json
@@ -13600,6 +13676,8 @@ export type Database = {
           issues: Json
           organization_id: string
           proposed_action: string
+          record_outcome: string
+          source_snapshot: Json | null
           sync_run_id: string
         }
         Insert: {
@@ -13607,7 +13685,11 @@ export type Database = {
           cra_product_id?: string | null
           cra_release_id?: string | null
           created_at?: string
+          dead_letter_resolved_at?: string | null
+          dead_lettered_at?: string | null
           entity_type: string
+          error_category?: string | null
+          error_code?: string | null
           expected_version?: number | null
           external_id: string
           field_diffs?: Json
@@ -13615,6 +13697,8 @@ export type Database = {
           issues?: Json
           organization_id: string
           proposed_action: string
+          record_outcome?: string
+          source_snapshot?: Json | null
           sync_run_id: string
         }
         Update: {
@@ -13622,7 +13706,11 @@ export type Database = {
           cra_product_id?: string | null
           cra_release_id?: string | null
           created_at?: string
+          dead_letter_resolved_at?: string | null
+          dead_lettered_at?: string | null
           entity_type?: string
+          error_category?: string | null
+          error_code?: string | null
           expected_version?: number | null
           external_id?: string
           field_diffs?: Json
@@ -13630,6 +13718,8 @@ export type Database = {
           issues?: Json
           organization_id?: string
           proposed_action?: string
+          record_outcome?: string
+          source_snapshot?: Json | null
           sync_run_id?: string
         }
         Relationships: [
@@ -13654,6 +13744,7 @@ export type Database = {
           actor_kind: string
           actor_user_id: string | null
           adapter_version: string
+          authority_snapshot: Json | null
           canceled_at: string | null
           cancellation_reason: string | null
           checkpoint_cursor: string | null
@@ -13668,39 +13759,55 @@ export type Database = {
           create_count: number
           created_at: string
           credential_revision: number
+          cursor_baseline: string | null
           cursor_from: string | null
           cursor_to: string | null
           cycle_blocked_count: number
           error_code: string | null
           estimated_graph_impact: Json
           expires_at: string
+          failed_count: number
           fetch_content_hash: string | null
+          field_mapping_revision: number | null
+          finished_at: string | null
           id: string
           lease_expires_at: string | null
+          lease_generation: number
           lease_owner: string | null
+          mapping_snapshot: Json | null
           mapping_version: string
           next_attempt_at: string
           organization_id: string
+          pending_count: number
           permission_version: number | null
           plan_basis_digest: string | null
           processed_count: number
           reconciliation_kind: string
+          replay_parent_run_id: string | null
+          replay_root_run_id: string | null
+          replay_source_mode: string | null
           retry_count: number
           row_count: number
+          schema_snapshot: Json | null
           skip_count: number
+          skipped_count: number
+          started_at: string | null
           status: string
+          succeeded_count: number
           tombstone_count: number
           trigger_idempotency_key: string
           trigger_request_digest: string
           unchanged_count: number
           update_count: number
           updated_at: string
+          version: number
           work_kind: string
         }
         Insert: {
           actor_kind: string
           actor_user_id?: string | null
           adapter_version: string
+          authority_snapshot?: Json | null
           canceled_at?: string | null
           cancellation_reason?: string | null
           checkpoint_cursor?: string | null
@@ -13715,39 +13822,55 @@ export type Database = {
           create_count?: number
           created_at?: string
           credential_revision?: number
+          cursor_baseline?: string | null
           cursor_from?: string | null
           cursor_to?: string | null
           cycle_blocked_count?: number
           error_code?: string | null
           estimated_graph_impact?: Json
           expires_at?: string
+          failed_count?: number
           fetch_content_hash?: string | null
+          field_mapping_revision?: number | null
+          finished_at?: string | null
           id?: string
           lease_expires_at?: string | null
+          lease_generation?: number
           lease_owner?: string | null
+          mapping_snapshot?: Json | null
           mapping_version: string
           next_attempt_at?: string
           organization_id: string
+          pending_count?: number
           permission_version?: number | null
           plan_basis_digest?: string | null
           processed_count?: number
           reconciliation_kind: string
+          replay_parent_run_id?: string | null
+          replay_root_run_id?: string | null
+          replay_source_mode?: string | null
           retry_count?: number
           row_count?: number
+          schema_snapshot?: Json | null
           skip_count?: number
+          skipped_count?: number
+          started_at?: string | null
           status?: string
+          succeeded_count?: number
           tombstone_count?: number
           trigger_idempotency_key: string
           trigger_request_digest: string
           unchanged_count?: number
           update_count?: number
           updated_at?: string
+          version?: number
           work_kind?: string
         }
         Update: {
           actor_kind?: string
           actor_user_id?: string | null
           adapter_version?: string
+          authority_snapshot?: Json | null
           canceled_at?: string | null
           cancellation_reason?: string | null
           checkpoint_cursor?: string | null
@@ -13762,33 +13885,48 @@ export type Database = {
           create_count?: number
           created_at?: string
           credential_revision?: number
+          cursor_baseline?: string | null
           cursor_from?: string | null
           cursor_to?: string | null
           cycle_blocked_count?: number
           error_code?: string | null
           estimated_graph_impact?: Json
           expires_at?: string
+          failed_count?: number
           fetch_content_hash?: string | null
+          field_mapping_revision?: number | null
+          finished_at?: string | null
           id?: string
           lease_expires_at?: string | null
+          lease_generation?: number
           lease_owner?: string | null
+          mapping_snapshot?: Json | null
           mapping_version?: string
           next_attempt_at?: string
           organization_id?: string
+          pending_count?: number
           permission_version?: number | null
           plan_basis_digest?: string | null
           processed_count?: number
           reconciliation_kind?: string
+          replay_parent_run_id?: string | null
+          replay_root_run_id?: string | null
+          replay_source_mode?: string | null
           retry_count?: number
           row_count?: number
+          schema_snapshot?: Json | null
           skip_count?: number
+          skipped_count?: number
+          started_at?: string | null
           status?: string
+          succeeded_count?: number
           tombstone_count?: number
           trigger_idempotency_key?: string
           trigger_request_digest?: string
           unchanged_count?: number
           update_count?: number
           updated_at?: string
+          version?: number
           work_kind?: string
         }
         Relationships: [
@@ -13819,6 +13957,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sync_runs_replay_parent_fkey"
+            columns: ["organization_id", "replay_parent_run_id"]
+            isOneToOne: false
+            referencedRelation: "sync_runs"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "sync_runs_replay_root_fkey"
+            columns: ["organization_id", "replay_root_run_id"]
+            isOneToOne: false
+            referencedRelation: "sync_runs"
+            referencedColumns: ["organization_id", "id"]
           },
         ]
       }
@@ -25529,6 +25681,154 @@ export type Database = {
       m11_valid_connector_scope_assessment: {
         Args: { p_scope: Json }
         Returns: boolean
+      }
+      m1102_authority_snapshot: {
+        Args: { p_connector: string; p_org: string }
+        Returns: Json
+      }
+      m1102_claim_sync_run: {
+        Args: {
+          p_lease_seconds: number
+          p_organization_id: string
+          p_worker_id: string
+        }
+        Returns: {
+          outcome: string
+          run: Json
+        }[]
+      }
+      m1102_commit_plan_internal: {
+        Args: {
+          p_actor_user_id: string
+          p_correlation_id: string
+          p_fetch_content_hash: string
+          p_idempotency_key: string
+          p_organization_id: string
+          p_sync_run_id: string
+        }
+        Returns: {
+          outcome: string
+          run: Json
+        }[]
+      }
+      m1102_commit_sync_run_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_correlation_id: string
+          p_fetch_content_hash: string
+          p_generation: number
+          p_idempotency_key: string
+          p_organization_id: string
+          p_sync_run_id: string
+          p_worker_id: string
+        }
+        Returns: {
+          outcome: string
+          run: Json
+        }[]
+      }
+      m1102_fail_sync_run_atomic: {
+        Args: {
+          p_error_code: string
+          p_generation: number
+          p_organization_id: string
+          p_retry_after_seconds: number
+          p_retryable: boolean
+          p_sync_run_id: string
+          p_worker_id: string
+        }
+        Returns: {
+          outcome: string
+          run: Json
+        }[]
+      }
+      m1102_list_due_sync_run_organizations: {
+        Args: { p_limit: number }
+        Returns: {
+          oldest_due_at: string
+          organization_id: string
+        }[]
+      }
+      m1102_renew_sync_run_lease: {
+        Args: {
+          p_generation: number
+          p_lease_seconds: number
+          p_organization_id: string
+          p_sync_run_id: string
+          p_worker_id: string
+        }
+        Returns: boolean
+      }
+      m1102_replay_preview: {
+        Args: {
+          p_actor_id: string
+          p_connector_id: string
+          p_expected_version: number
+          p_mapping_mode: string
+          p_org_id: string
+          p_permission_version: number
+          p_run_id: string
+          p_source_mode: string
+        }
+        Returns: Json
+      }
+      m1102_replay_sync_run: {
+        Args: {
+          p_actor_id: string
+          p_connector_id: string
+          p_expected_version: number
+          p_idempotency_key: string
+          p_mapping_mode: string
+          p_org_id: string
+          p_permission_version: number
+          p_preview_digest: string
+          p_reason: string
+          p_request_digest: string
+          p_request_digest_key_id: string
+          p_run_id: string
+          p_source_mode: string
+        }
+        Returns: {
+          outcome: string
+          run: Json
+        }[]
+      }
+      m1102_run_recovered: {
+        Args: { p_org: string; p_run: string }
+        Returns: boolean
+      }
+      m1102_save_field_mapping: {
+        Args: {
+          p_actor_id: string
+          p_connector_id: string
+          p_expected_mapping_revision: number
+          p_expected_version: number
+          p_fields: Json
+          p_idempotency_key: string
+          p_org_id: string
+          p_permission_version: number
+          p_request_digest: string
+          p_request_digest_key_id: string
+          p_schema_digest: string
+        }
+        Returns: Json
+      }
+      m1102_save_sync_run_plan_atomic: {
+        Args: {
+          p_conflicts: Json
+          p_cursor_to: string
+          p_fetch_content_hash: string
+          p_generation: number
+          p_organization_id: string
+          p_plan_items: Json
+          p_schema_snapshot: Json
+          p_sync_run_id: string
+          p_worker_id: string
+        }
+        Returns: {
+          outcome: string
+          run: Json
+        }[]
       }
       m2_active_member: {
         Args: { p_actor_user_id: string; p_organization_id: string }

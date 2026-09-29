@@ -1,5 +1,9 @@
 import type { ConnectorPort } from "./application/connector-port";
 import { ConnectorsService } from "./connectors.service";
+import {
+  ConnectorError,
+  type ConnectorErrorCode,
+} from "./application/connector-errors";
 
 const organizationId = "00000000-0000-4000-8000-000000000001";
 const connectorId = "00000000-0000-4000-8000-000000000002";
@@ -44,6 +48,113 @@ function fixture(result: Awaited<ReturnType<ConnectorPort["testConnection"]>>) {
 }
 
 describe("ConnectorsService.testConnection", () => {
+  it("uses the authorized hub for versioned tests and fails closed without it", async () => {
+    const { repository } = fixture({
+      outcome: "success",
+      latencyMs: 1,
+      adapterVersion: "1.0.0",
+    });
+    const test = jest.fn().mockResolvedValue({ safe: true });
+    const service = new ConnectorsService(
+      repository as never,
+      undefined,
+      undefined,
+      { test } as never,
+    );
+    const input = { expectedVersion: 1, idempotencyKey: connectorId };
+    await expect(
+      service.testConnection({ organizationId, connectorId, actorId, input }),
+    ).resolves.toEqual({ safe: true });
+    expect(test).toHaveBeenCalledWith(
+      organizationId,
+      connectorId,
+      actorId,
+      input,
+    );
+    expect(repository.getConnector).not.toHaveBeenCalled();
+    expect(() => new ConnectorsService(repository as never).hub).toThrow(
+      ConnectorError,
+    );
+  });
+
+  it.each([
+    null,
+    [],
+    {
+      baseUrl: "https://fixture.example",
+      tenantOrSiteId: "site",
+      scopeFilter: { scenario: "create", unsafe: 42 },
+    },
+  ])(
+    "preserves legacy tests without a configured credential or unsafe scope values",
+    async (connectionConfig) => {
+      const { service, repository, testConnection } = fixture({
+        outcome: "success",
+        latencyMs: 1,
+        adapterVersion: "1.0.0",
+      });
+      repository.getConnector.mockResolvedValueOnce(
+        connector({ hasSecret: false, connectionConfig }),
+      );
+      await service.testConnection({ organizationId, connectorId, actorId });
+      expect(repository.resolveConnectorSecret).not.toHaveBeenCalled();
+      expect(testConnection).toHaveBeenCalledWith(
+        expect.objectContaining({
+          secretReference: { provider: "reference_fixture", reference: "" },
+        }),
+      );
+      expect(JSON.stringify(testConnection.mock.calls)).not.toContain("unsafe");
+    },
+  );
+  it.each<readonly [ConnectorErrorCode, number]>([
+    ["invalid_request", 400],
+    ["not_found", 404],
+    ["conflict", 409],
+    ["invalid_state", 409],
+    ["already_running", 409],
+    ["stale_preview", 409],
+    ["blocked_by_conflicts", 409],
+    ["blocked_by_dead_letter", 409],
+    ["idempotency_mismatch", 409],
+    ["dry_run_expired", 410],
+    ["forbidden_by_policy", 403],
+    ["rate_limited", 429],
+    ["retryable_unavailable", 503],
+    ["unavailable", 503],
+    ["payload_too_large", 400],
+    ["unsupported_content_type", 400],
+  ])("returns safe HTTP %s outcomes with status %s", async (code, status) => {
+    const { service } = fixture({
+      outcome: "success",
+      latencyMs: 1,
+      adapterVersion: "1.0.0",
+    });
+    await expect(
+      service.run(
+        Promise.reject(new ConnectorError(code, "upstream-secret-canary")),
+      ),
+    ).rejects.toMatchObject({ status, response: { code } });
+    try {
+      await service.run(
+        Promise.reject(new ConnectorError(code, "upstream-secret-canary")),
+      );
+    } catch (error) {
+      expect(JSON.stringify(error)).not.toContain("upstream-secret-canary");
+    }
+  });
+
+  it("passes successful results and unexpected errors through the existing boundary", async () => {
+    const { service } = fixture({
+      outcome: "success",
+      latencyMs: 1,
+      adapterVersion: "1.0.0",
+    });
+    await expect(service.run(Promise.resolve("safe result"))).resolves.toBe(
+      "safe result",
+    );
+    const error = new Error("unexpected");
+    await expect(service.run(Promise.reject(error))).rejects.toBe(error);
+  });
   it("resolves the secret only on the server, calls the selected port, and persists a safe success outcome", async () => {
     const { service, repository, testConnection } = fixture({
       outcome: "success",

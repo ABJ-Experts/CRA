@@ -14,6 +14,51 @@ describe("connector gateway route and boundary regression", () => {
   afterEach(() => vi.clearAllMocks());
   const cases: [string, () => Promise<unknown>, string, string?][] = [
     [
+      "field schema",
+      () => api.fieldMapSchema(id),
+      `${base}/field-mapping/schema`,
+    ],
+    ["field map", () => api.fieldMap(id), `${base}/field-mapping`],
+    [
+      "preview field map",
+      () => api.previewFieldMap(id, { fields: [] }),
+      `${base}/field-mapping/preview`,
+      "POST",
+    ],
+    [
+      "save field map",
+      () => api.saveFieldMap(id, {} as never),
+      `${base}/field-mapping`,
+      "POST",
+    ],
+    [
+      "history",
+      () => api.syncHistory(id),
+      `${base}/sync-history?page=1&pageSize=15`,
+    ],
+    [
+      "history detail",
+      () => api.syncDetail(id, run),
+      `${sync}/history?page=1&pageSize=15`,
+    ],
+    [
+      "dead letter records",
+      () => api.deadLetterRecords(id),
+      `${base}/dead-letter-records?page=1&pageSize=15`,
+    ],
+    [
+      "preview replay",
+      () => api.previewReplay(id, run, {} as never),
+      `${sync}/replay/preview`,
+      "POST",
+    ],
+    [
+      "replay",
+      () => api.replay(id, run, {} as never),
+      `${sync}/replay`,
+      "POST",
+    ],
+    [
       "list",
       () => api.list({ q: "reference" }),
       "/api/v1/connectors?q=reference",

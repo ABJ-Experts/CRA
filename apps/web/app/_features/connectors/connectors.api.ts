@@ -1,4 +1,25 @@
 import {
+  connectorMappingSchemaResponseSchema,
+  connectorFieldMapResponseSchema,
+  connectorMappingPreviewResponseSchema,
+  previewConnectorFieldMappingInputSchema,
+  saveConnectorFieldMappingInputSchema,
+  syncHistoryQuerySchema,
+  syncRunHistoryResponseSchema,
+  syncRunDetailResponseSchema,
+  syncDeadLettersResponseSchema,
+  replaySyncRunPreviewInputSchema,
+  replaySyncRunPreviewResponseSchema,
+  replaySyncRunInputSchema,
+} from "@repo/contracts/connectors/schemas";
+import type {
+  PreviewConnectorFieldMappingInput,
+  SaveConnectorFieldMappingInput,
+  SyncHistoryQuery,
+  ReplaySyncRunPreviewInput,
+  ReplaySyncRunInput,
+} from "@repo/contracts/connectors/types";
+import {
   connectorCatalogueResponseSchema,
   connectorOverviewResponseSchema,
   connectorOverviewsResponseSchema,
@@ -151,6 +172,118 @@ function queryPath(
 
 /** Typed browser boundary for the connectors PLM/ALM sync API. */
 export class ConnectorsApi {
+  async fieldMapSchema(connectorId: string, signal?: AbortSignal) {
+    return authenticatedRequestJson({
+      path: connectorPath(connectorId, "/field-mapping/schema"),
+      schema: connectorMappingSchemaResponseSchema,
+      signal,
+    });
+  }
+  async fieldMap(connectorId: string, signal?: AbortSignal) {
+    return authenticatedRequestJson({
+      path: connectorPath(connectorId, "/field-mapping"),
+      schema: connectorFieldMapResponseSchema,
+      signal,
+    });
+  }
+  async previewFieldMap(
+    connectorId: string,
+    input: PreviewConnectorFieldMappingInput,
+    signal?: AbortSignal,
+  ) {
+    return authenticatedRequestJson({
+      path: connectorPath(connectorId, "/field-mapping/preview"),
+      method: "POST",
+      body: input,
+      inputSchema: previewConnectorFieldMappingInputSchema,
+      schema: connectorMappingPreviewResponseSchema,
+      signal,
+    });
+  }
+  async saveFieldMap(
+    connectorId: string,
+    input: SaveConnectorFieldMappingInput,
+    signal?: AbortSignal,
+  ) {
+    return authenticatedRequestJson({
+      path: connectorPath(connectorId, "/field-mapping"),
+      method: "POST",
+      body: input,
+      inputSchema: saveConnectorFieldMappingInputSchema,
+      schema: connectorFieldMapResponseSchema,
+      signal,
+    });
+  }
+  async syncHistory(
+    connectorId: string,
+    input: Partial<SyncHistoryQuery> = {},
+    signal?: AbortSignal,
+  ) {
+    const query = apiClient.parseInput(syncHistoryQuerySchema, input);
+    return authenticatedRequestJson({
+      path: queryPath(connectorPath(connectorId, "/sync-history"), query),
+      schema: syncRunHistoryResponseSchema,
+      signal,
+    });
+  }
+  async syncDetail(
+    connectorId: string,
+    runId: string,
+    input: Partial<SyncHistoryQuery> = {},
+    signal?: AbortSignal,
+  ) {
+    const query = apiClient.parseInput(syncHistoryQuerySchema, input);
+    return authenticatedRequestJson({
+      path: queryPath(syncRunPath(connectorId, runId, "/history"), query),
+      schema: syncRunDetailResponseSchema,
+      signal,
+    });
+  }
+  async deadLetterRecords(
+    connectorId: string,
+    input: Partial<SyncHistoryQuery> = {},
+    signal?: AbortSignal,
+  ) {
+    const query = apiClient.parseInput(syncHistoryQuerySchema, input);
+    return authenticatedRequestJson({
+      path: queryPath(
+        connectorPath(connectorId, "/dead-letter-records"),
+        query,
+      ),
+      schema: syncDeadLettersResponseSchema,
+      signal,
+    });
+  }
+  async previewReplay(
+    connectorId: string,
+    runId: string,
+    input: ReplaySyncRunPreviewInput,
+    signal?: AbortSignal,
+  ) {
+    return authenticatedRequestJson({
+      path: syncRunPath(connectorId, runId, "/replay/preview"),
+      method: "POST",
+      body: input,
+      inputSchema: replaySyncRunPreviewInputSchema,
+      schema: replaySyncRunPreviewResponseSchema,
+      signal,
+    });
+  }
+  async replay(
+    connectorId: string,
+    runId: string,
+    input: ReplaySyncRunInput,
+    signal?: AbortSignal,
+  ) {
+    return authenticatedRequestJson({
+      path: syncRunPath(connectorId, runId, "/replay"),
+      method: "POST",
+      body: input,
+      inputSchema: replaySyncRunInputSchema,
+      schema: syncRunResponseSchema,
+      signal,
+    });
+  }
   async catalogue(signal?: AbortSignal) {
     return authenticatedRequestJson({
       path: "/api/v1/connectors/catalogue",

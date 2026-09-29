@@ -835,35 +835,30 @@ begin
   where organization_id = v_org and id = v_second_run_id;
   select * into v_result from public.retry_sync_run_atomic(v_org, v_second_run_id, v_actor);
   perform pg_temp.check(
-    'a privileged retry preserves a failed commit phase and its retry history for durable replay',
-    v_result.outcome = 'queued'
-    and (v_result.run ->> 'status') = 'queued'
-    and (v_result.run ->> 'workKind') = 'commit'
+    'legacy retry requires a reviewed child rather than reactivating the failed parent',
+    v_result.outcome = 'preview_required' and v_result.run is null
     and exists (
-      select 1 from public.sync_runs
-      where organization_id = v_org and id = v_second_run_id
-        and work_kind = 'commit' and retry_count = 1 and expires_at > now() + interval '23 hours'
+      select 1 from public.sync_runs where organization_id = v_org and id = v_second_run_id
+        and status = 'failed' and work_kind = 'commit' and retry_count = 1
+        and error_code = 'retry_window_exhausted'
     )
-    and exists (
-      select 1 from public.audit_logs
-      where organization_id = v_org and user_id = v_actor and action = 'sync_run.retried'
-        and entity_type = 'sync_run' and entity_id = v_second_run_id::text
-        and changes ->> 'priorErrorCode' = 'retry_window_exhausted'
+    and not exists (
+      select 1 from public.audit_logs where organization_id = v_org and user_id = v_actor
+        and action = 'sync_run.retried' and entity_type = 'sync_run' and entity_id = v_second_run_id::text
     )
   );
   select * into v_result from public.claim_sync_run(v_org, 'test-worker-2', 60);
-  perform pg_temp.check(
-    'the retried failed commit is claimed as a commit rather than re-planned as a dry run',
-    v_result.outcome = 'claimed' and (v_result.run ->> 'workKind') = 'commit'
-  );
+  perform pg_temp.check('legacy retry never makes the terminal parent claimable',v_result.outcome = 'not_found');
   select * into v_commit from public.commit_sync_run_atomic(
     v_org, v_second_run_id, v_actor, encode(sha256('page-2-fixture-content'), 'hex'), gen_random_uuid(), gen_random_uuid()
   );
   perform pg_temp.check(
-    'replaying a failed commit preserves the original plan rather than inserting duplicate plan items or conflicts',
-    v_commit.outcome in ('retrying', 'failed')
-    and (select count(*) from public.sync_run_plan_items where organization_id = v_org and sync_run_id = v_second_run_id) = 1
-    and not exists (select 1 from public.sync_conflicts where organization_id = v_org and sync_run_id = v_second_run_id)
+    'a rejected blind retry preserves plan, conflicts and cursor without domain effects',
+    v_commit.outcome = 'not_found'
+    and (select status='failed' from public.sync_runs where organization_id=v_org and id=v_second_run_id)
+    and (select count(*) from public.sync_run_plan_items where organization_id=v_org and sync_run_id=v_second_run_id)=1
+    and not exists(select 1 from public.sync_conflicts where organization_id=v_org and sync_run_id=v_second_run_id)
+    and (select cursor='cursor-parent-1' from public.sync_connector_cursors where organization_id=v_org and connector_id=v_connector_id)
   );
 
   -- --- Cleanup: leave no privileges or cross-cutting state behind for later suites. ---

@@ -21,6 +21,17 @@ function policy(
 }
 
 describe("decideFieldAction", () => {
+  it("does not turn an absent external field into a change", () => {
+    expect(
+      decideFieldAction({
+        policy: policy({ policyValue: "external_authoritative" }),
+        craValue: "Keep",
+        craObservedAt: earlier,
+        externalValue: undefined,
+        externalObservedAt: later,
+      }),
+    ).toBe("keep_cra");
+  });
   it("defaults to manual_only, fail-closed, when no policy row exists", () => {
     expect(
       decideFieldAction({
@@ -174,6 +185,24 @@ function externalRecord(
 }
 
 describe("previewFieldAuthorityImpact", () => {
+  it("ignores samples with an omitted source field, including would-be creates", () => {
+    expect(
+      previewFieldAuthorityImpact({
+        proposedPolicy: policy({ policyValue: "external_authoritative" }),
+        sample: ["Keep", undefined].map((craFieldValue) => ({
+          externalRecord: externalRecord({ fields: {} }),
+          field: "name",
+          craFieldValue,
+          craObservedAt: earlier,
+        })),
+      }),
+    ).toEqual({
+      wouldCreate: 0,
+      wouldUpdate: 0,
+      wouldBeIgnored: 2,
+      wouldConflict: 0,
+    });
+  });
   it("tallies create, update, ignore, and conflict outcomes across a sample", () => {
     const proposedPolicy = policy({ policyValue: "newest_with_review" });
     const result = previewFieldAuthorityImpact({

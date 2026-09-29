@@ -63,6 +63,8 @@ export const connectorConfigurationInputSchema = z
             "invalid",
             "cycle",
             "pagination",
+            "poison",
+            "repaired",
           ])
           .optional(),
         simulate: z.enum(["rate_limit", "malformed"]).optional(),

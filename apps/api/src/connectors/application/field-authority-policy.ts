@@ -38,6 +38,7 @@ export function decideFieldAction(
     externalObservedAt: string;
   }>,
 ): FieldAction {
+  if (input.externalValue === undefined) return "keep_cra";
   const policyValue: FieldAuthorityPolicyValue =
     input.policy?.policyValue ?? "manual_only";
   const changed = !valuesEqual(input.craValue, input.externalValue);
@@ -96,6 +97,9 @@ export function previewFieldAuthorityImpact(
 ): FieldAuthorityImpactTally {
   return input.sample.reduce<FieldAuthorityImpactTally>(
     (tally, item) => {
+      if (!Object.hasOwn(item.externalRecord.fields, item.field)) {
+        return { ...tally, wouldBeIgnored: tally.wouldBeIgnored + 1 };
+      }
       if (item.craFieldValue === undefined) {
         return { ...tally, wouldCreate: tally.wouldCreate + 1 };
       }
@@ -103,7 +107,7 @@ export function previewFieldAuthorityImpact(
         policy: input.proposedPolicy,
         craValue: item.craFieldValue,
         craObservedAt: item.craObservedAt,
-        externalValue: item.externalRecord.fields[item.field] ?? null,
+        externalValue: item.externalRecord.fields[item.field],
         externalObservedAt: item.externalRecord.externalUpdatedAt,
       });
       switch (action) {

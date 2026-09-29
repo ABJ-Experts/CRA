@@ -3,6 +3,9 @@ import { Module } from "@nestjs/common";
 import { PermissionsModule } from "../permissions/permissions.module";
 import { PermissionsService } from "../permissions/permissions.service";
 import { ConnectorHubUseCases } from "./application/connector-hub-use-cases";
+import { ConnectorSyncOperationsUseCases } from "./application/connector-sync-operations-use-cases";
+import { SupabaseSyncOperationsRepository } from "./infrastructure/supabase-sync-operations.repository";
+import { ConnectorsSyncOperationsController } from "./connectors-sync-operations.controller";
 import { ConnectorAuthorizationAdapter } from "./infrastructure/connector-authorization.adapter";
 import { ConnectorCredentialReader } from "./infrastructure/connector-vault-reader";
 import { AesGcmConnectorVault } from "./infrastructure/connector-vault";
@@ -24,9 +27,15 @@ export const CONNECTOR_PORTS = Symbol("CONNECTOR_PORTS");
 
 @Module({
   imports: [SupabaseModule, PermissionsModule],
-  controllers: [ConnectorsController],
+  controllers: [ConnectorsController, ConnectorsSyncOperationsController],
   providers: [
     SupabaseConnectorRepository,
+    {
+      provide: SupabaseSyncOperationsRepository,
+      useFactory: (supabase: SupabaseService) =>
+        new SupabaseSyncOperationsRepository(supabase),
+      inject: [SupabaseService],
+    },
     {
       provide: CONNECTOR_PORTS,
       useFactory: () => {
@@ -98,6 +107,36 @@ export const CONNECTOR_PORTS = Symbol("CONNECTOR_PORTS");
       inject: [
         SupabaseConnectorHubRepository,
         ConnectorAuthorizationAdapter,
+        AesGcmConnectorVault,
+        CONNECTOR_PORTS,
+        NodeConnectorEgressPolicy,
+        ConnectorCredentialReader,
+      ],
+    },
+    {
+      provide: ConnectorSyncOperationsUseCases,
+      useFactory: (
+        repository: SupabaseSyncOperationsRepository,
+        authorization: ConnectorAuthorizationAdapter,
+        hub: SupabaseConnectorHubRepository,
+        vault: AesGcmConnectorVault,
+        adapters: ReadonlyMap<ConnectorType, ConnectorPort>,
+        egress: NodeConnectorEgressPolicy,
+        reader: ConnectorCredentialReader,
+      ) =>
+        new ConnectorSyncOperationsUseCases(
+          repository,
+          authorization,
+          hub,
+          vault,
+          adapters,
+          egress,
+          reader,
+        ),
+      inject: [
+        SupabaseSyncOperationsRepository,
+        ConnectorAuthorizationAdapter,
+        SupabaseConnectorHubRepository,
         AesGcmConnectorVault,
         CONNECTOR_PORTS,
         NodeConnectorEgressPolicy,

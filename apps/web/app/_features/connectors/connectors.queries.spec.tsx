@@ -32,6 +32,7 @@ const state = vi.hoisted(() => ({
       updatedBy: "33333333-3333-4333-8333-333333333333",
     } satisfies Connector,
     run: { id: "run", status: "queued" },
+    runs: { rows: [] as { id: string; status: string }[] },
   },
 }));
 vi.mock("../../_providers/session-provider", () => ({
@@ -89,6 +90,8 @@ afterEach(() => {
   vi.clearAllMocks();
   state.org = "org-a";
   state.response.run.status = "queued";
+  state.response.runs.rows = [];
+  vi.useRealTimers();
 });
 
 describe("connector tenant query boundaries", () => {
@@ -127,6 +130,39 @@ describe("connector tenant query boundaries", () => {
     });
     client.clear();
   });
+  it("refreshes recent active runs until their worker completion, then stops polling", async () => {
+    vi.useFakeTimers();
+    const { client, wrapper } = setup();
+    state.response.runs.rows = [{ id: "run", status: "queued" }];
+    const { result } = renderHook(
+      () => hooks.useConnectorSyncRunsQuery("connector", { page: 1 }, true),
+      { wrapper },
+    );
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(50);
+    });
+    expect(result.current.isSuccess).toBe(true);
+    expect(connectorsApi.listSyncRuns).toHaveBeenCalledOnce();
+    expect(result.current.data?.runs.rows[0]?.status).toBe("queued");
+    state.response = {
+      ...state.response,
+      runs: { rows: [{ id: "run", status: "completed" }] },
+    };
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2_050);
+    });
+    expect(connectorsApi.listSyncRuns).toHaveBeenCalledTimes(2);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(50);
+    });
+    expect(result.current.data?.runs.rows[0]?.status).toBe("completed");
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(4_000);
+    });
+    expect(connectorsApi.listSyncRuns).toHaveBeenCalledTimes(2);
+    client.clear();
+  });
+
   it("does not display prior-tenant list data during organization switch", async () => {
     const { client, wrapper } = setup();
     const { result, rerender } = renderHook(

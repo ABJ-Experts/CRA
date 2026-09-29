@@ -5,6 +5,8 @@ import { Test } from "@nestjs/testing";
 import { PermissionsService } from "../permissions/permissions.service";
 import { SupabaseService } from "../supabase/supabase.service";
 import { ConnectorHubUseCases } from "./application/connector-hub-use-cases";
+import { ConnectorSyncOperationsUseCases } from "./application/connector-sync-operations-use-cases";
+import { ConnectorsSyncOperationsController } from "./connectors-sync-operations.controller";
 import { ConnectorError } from "./application/connector-errors";
 import { ConnectorVaultUnavailableError } from "./application/connector-vault.port";
 import type {
@@ -101,6 +103,12 @@ describe("ConnectorsModule production composition", () => {
         .compile();
       try {
         const service = module.get(ConnectorsService);
+        expect(module.get(ConnectorSyncOperationsUseCases)).toBeInstanceOf(
+          ConnectorSyncOperationsUseCases,
+        );
+        expect(module.get(ConnectorsSyncOperationsController)).toBeInstanceOf(
+          ConnectorsSyncOperationsController,
+        );
         const hub = module.get(ConnectorHubUseCases);
         expect(service.hub).toBe(hub);
         const adapters =
@@ -154,6 +162,12 @@ describe("ConnectorsModule production composition", () => {
             connectionRevision: 1,
             credentialRevision: 1,
             permissionVersion: 1,
+            leaseGeneration: 1,
+            fieldMappingSnapshot: [],
+            fieldMappingRevision: 0,
+            schemaSnapshot: null,
+            replaySourceMode: null,
+            replaySourceRecords: [],
             cursorFrom: null,
             fetchContentHash: null,
             correlationId: null,
@@ -177,7 +191,10 @@ describe("ConnectorsModule production composition", () => {
           context.orgId,
           "run-fixture",
           expect.stringMatching(/^connector-sync-/),
-          "worker_exception",
+          "authorization_changed",
+          1,
+          false,
+          null,
         );
         expect(hubContext).not.toHaveBeenCalled();
         expect(test).not.toHaveBeenCalled();

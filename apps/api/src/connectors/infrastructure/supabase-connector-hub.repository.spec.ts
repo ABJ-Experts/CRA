@@ -429,6 +429,7 @@ describe("connector atomic command routing", () => {
     ["in_progress", "already_running"],
     ["interrupted", "invalid_state"],
     ["invalid_state", "invalid_state"],
+    ["blocked_by_dead_letter", "blocked_by_dead_letter"],
     ["invalid_request", "invalid_request"],
     ["invented", "unavailable"],
     [null, "unavailable"],

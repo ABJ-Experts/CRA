@@ -24,6 +24,10 @@ vi.mock("next/navigation", () => ({
 vi.mock("./_components/dashboard-onboarding-resume", () => ({
   DashboardOnboardingResume: () => null,
 }));
+vi.mock("../_providers/session-provider", () => ({
+  SessionProvider: ({ children }: { children: React.ReactNode }) => children,
+  useSession: () => ({ session: null, isLoading: false, isError: false }),
+}));
 vi.mock("./_lib/use-table-query", () => ({
   useTableQuery: () => ({
     ...table,

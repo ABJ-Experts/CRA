@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { SessionProvider } from "../_providers/session-provider";
 import { WorkspaceShell } from "../(workspace)/workspace-shell";
 
 /**
@@ -10,5 +11,9 @@ import { WorkspaceShell } from "../(workspace)/workspace-shell";
  * the Crypto frame is 1938 tall and must scroll rather than be clipped.
  */
 export default function DashboardLayout({ children }: { children: ReactNode }) {
-  return <WorkspaceShell>{children}</WorkspaceShell>;
+  return (
+    <SessionProvider>
+      <WorkspaceShell>{children}</WorkspaceShell>
+    </SessionProvider>
+  );
 }

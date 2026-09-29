@@ -71,15 +71,25 @@ const lockedSnapshotTables = (functionSql: string): readonly string[] => {
 const dynamicSnapshotLockAdditions = (sql: string): readonly string[] =>
   Object.freeze(
     [
-      ...[...sql.matchAll(/v_new(?:_lock)? text := '([^']+)'/g)].flatMap(
-        (match) => [...(match[1] ?? "").matchAll(/public\.([a-z_]+)/g)],
-      ),
+      ...[
+        ...sql.matchAll(
+          /(?:v_new(?:_lock)? text := |execute replace\(v_def,v_anchor,)'([^']+)'/g,
+        ),
+      ].flatMap((match) => [
+        ...(match[1] ?? "").matchAll(/public\.([a-z_]+)/g),
+      ]),
     ]
       .map((match) => match[1])
       .filter((table): table is string => Boolean(table)),
   );
 
 describe("tenant export source registry architecture", () => {
+  it("exports safe connector attempt history with the connector source", () => {
+    const connectorSource = exportSourceRegistry.find(
+      (source) => source.sourceId === "connector_sync",
+    );
+    expect(connectorSource?.tables).toContain("sync_run_attempts");
+  });
   it("exports reviewed M6-M9 durable tenant business records", () => {
     const exported = new Set(
       exportSourceRegistry.flatMap((source) => source.tables),

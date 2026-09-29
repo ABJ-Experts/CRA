@@ -471,6 +471,7 @@ function assertOutcome(
     dry_run_expired: "dry_run_expired",
     stale_preview: "stale_preview",
     blocked_by_conflicts: "blocked_by_conflicts",
+    blocked_by_dead_letter: "blocked_by_dead_letter",
     connector_disabled: "invalid_state",
     plan_count_changed: "conflict",
   } as const;

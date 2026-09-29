@@ -1,135 +1,405 @@
+import { secureWorker } from "./connector-sync-worker.fixture";
 import {
   ConnectorSyncWorker,
   cursorAfterPage,
   cursorInputFor,
   toClaimedSyncRun,
-  createConnectorSyncPlanContext,
 } from "./connector-sync-worker";
-import { AesGcmConnectorVault } from "../infrastructure/connector-vault";
-import type { ConnectorCredentialReaderPort } from "../application/connector-vault.port";
-
-const connectorContext = {
-  connector: {
-    connectorType: "reference_conformance",
-    connectionConfig: {},
-    hasSecret: true,
-    enabled: true,
-    archivedAt: null,
-  },
-  connectionRevision: 2,
-  credentialRevision: 1,
-  secret: {
-    secretId: "secret-a",
-    credentialRevision: 1,
-    legacy: false,
-    envelope: null,
-  },
-};
-const claim = {
-  id: "run-a",
-  organizationId: "org-a",
-  connectorId: "connector-a",
-  workKind: "dry_run",
-  actorId: "actor-a",
-  commitActorId: "approver-a",
-  connectionRevision: 2,
-  credentialRevision: 1,
-  permissionVersion: 4,
-  cursorFrom: null,
-  fetchContentHash: "hash",
-  correlationId: "correlation",
-};
-
-function secureWorker(
-  overrides: Record<string, unknown> = {},
-  credentialReader?: ConnectorCredentialReaderPort,
-  egress: { validate: jest.Mock } | null = {
-    validate: jest.fn().mockResolvedValue(undefined),
-  },
-) {
-  const vault = new AesGcmConnectorVault(
-    JSON.stringify({
-      activeKeyId: "key",
-      keys: { key: Buffer.alloc(32, 1).toString("base64") },
-    }),
-  );
-  const envelope = vault.encrypt(
-    {
-      orgId: "org-a",
-      connectorId: "connector-a",
-      secretId: "secret-a",
-      credentialRevision: 1,
-    },
-    "worker-canary",
-  );
-  const context = {
-    ...connectorContext,
-    secret: { ...connectorContext.secret, envelope },
-  };
-  const authorization = {
-    authorize: jest.fn().mockResolvedValue({
-      organizationId: "org-a",
-      actorId: "actor-a",
-      role: "owner",
-      permissionVersion: 4,
-    }),
-  };
-  const hub = { context: jest.fn().mockResolvedValue(context) };
-  const repository = {
-    listDueSyncRunOrganizations: jest
-      .fn()
-      .mockResolvedValue([{ organization_id: "org-a" }]),
-    claimSyncRun: jest
-      .fn()
-      .mockResolvedValueOnce({ ...claim, ...overrides })
-      .mockResolvedValue(null),
-    failSyncRun: jest.fn().mockResolvedValue(undefined),
-    commitSyncRun: jest.fn().mockResolvedValue(undefined),
-    saveSyncRunPlan: jest.fn().mockResolvedValue(undefined),
-    resolveWorkerActor: jest.fn(),
-    resolveConnectorSecret: jest.fn(),
-  };
-  const adapter = {
-    testConnection: jest.fn().mockResolvedValue({
-      outcome: "success",
-      latencyMs: 1,
-      adapterVersion: "1.0.0",
-    }),
-    pull: jest.fn().mockResolvedValue({
-      records: [],
-      nextCursor: null,
-      adapterSignal: "ok",
-    }),
-  };
-  const rpc = jest.fn().mockResolvedValue({ data: [], error: null });
-  const worker = new ConnectorSyncWorker(
-    repository as never,
-    { admin: () => ({ rpc }) } as never,
-    new Map([["reference_conformance", adapter as never]]),
-    "legacy-key",
-    "worker-a",
-    60,
-    {
-      vault,
-      credentialReader,
-      egress: egress ?? undefined,
-      authorization,
-      hub: hub as never,
-    },
-  );
-  return {
-    worker,
-    repository,
-    adapter,
-    authorization,
-    hub,
-    context,
-    rpc,
-    egress,
-  };
-}
+import { ReferenceConformanceAdapter } from "../reference-adapter/reference-conformance-adapter";
 
 describe("connector worker recorded authorization and credential fences", () => {
+  it("rejects duplicate normalized source identities before persisting or advancing any plan", async () => {
+    const { worker, adapter, repository } = secureWorker();
+    const record = {
+      entityType: "product",
+      externalId: "DUPLICATE",
+      externalDisplayLabel: "Duplicate",
+      externalUpdatedAt: "2026-01-01T00:00:00.000Z",
+      changeKind: "upsert",
+      tombstoneReliability: "unknown",
+      parentExternalId: null,
+      fields: {
+        name: "Duplicate",
+        internalCode: "DUPLICATE",
+        productType: "component",
+      },
+    };
+    adapter.pull.mockResolvedValue({
+      records: [record, { ...record, externalId: " duplicate " }],
+      nextCursor: null,
+      adapterSignal: "ok",
+    });
+    await worker.runOnce();
+    expect(repository.saveSyncRunPlan).not.toHaveBeenCalled();
+    expect(repository.failSyncRun).toHaveBeenCalledWith(
+      "org-a",
+      "run-a",
+      "worker-a",
+      "invalid_data",
+      2,
+      false,
+      null,
+    );
+  });
+  it("rejects credential echoes in discovered version metadata and provider cursors", async () => {
+    const discovery =
+      await new ReferenceConformanceAdapter().discoverCapabilities();
+    const schemaLeak = secureWorker();
+    schemaLeak.adapter.discoverCapabilities.mockResolvedValue({
+      ...discovery,
+      adapterVersion: "worker-canary",
+    });
+    await schemaLeak.worker.runOnce();
+    expect(schemaLeak.repository.saveSyncRunPlan).not.toHaveBeenCalled();
+    expect(
+      JSON.stringify(schemaLeak.repository.failSyncRun.mock.calls),
+    ).not.toContain("worker-canary");
+    const cursorLeak = secureWorker();
+    cursorLeak.adapter.pull.mockResolvedValue({
+      records: [],
+      nextCursor: { token: "worker-canary", watermark: "2026-01-01" },
+      adapterSignal: "ok",
+    });
+    await cursorLeak.worker.runOnce();
+    expect(cursorLeak.repository.saveSyncRunPlan).not.toHaveBeenCalled();
+    expect(
+      JSON.stringify(cursorLeak.repository.failSyncRun.mock.calls),
+    ).not.toContain("worker-canary");
+  });
+  it.each(["externalId", "externalDisplayLabel", "parentExternalId", "name"])(
+    "never retains a credential echoed into approved %s",
+    async (field) => {
+      const { worker, adapter, repository } = secureWorker();
+      const record: Record<string, unknown> = {
+        entityType: "product",
+        externalId: "safe-id",
+        externalDisplayLabel: "Safe",
+        externalUpdatedAt: "2026-01-01T00:00:00.000Z",
+        changeKind: "upsert",
+        tombstoneReliability: "unknown",
+        parentExternalId: null,
+        fields: {
+          name: "Safe",
+          internalCode: "SAFE",
+          productType: "component",
+        },
+      };
+      if (field === "name")
+        record.fields = { ...(record.fields as object), name: "worker-canary" };
+      else record[field] = "worker-canary";
+      adapter.pull.mockResolvedValue({
+        records: [record],
+        nextCursor: null,
+        adapterSignal: "ok",
+      });
+      await worker.runOnce();
+      const serialized = JSON.stringify(repository.saveSyncRunPlan.mock.calls);
+      expect(serialized).not.toContain("worker-canary");
+      expect(repository.saveSyncRunPlan).toHaveBeenCalledWith(
+        expect.objectContaining({
+          p_plan_items: [
+            expect.objectContaining({
+              externalId: "redacted-record-1",
+              sourceSnapshot: null,
+            }),
+          ],
+        }),
+      );
+    },
+  );
+  it.each([
+    "plan_basis_changed",
+    "cursor_drifted",
+    "blocked_by_records",
+    "invalid_state",
+  ])(
+    "terminalizes a claimed commit that cannot progress: %s",
+    async (outcome) => {
+      const { worker, repository } = secureWorker({ workKind: "commit" });
+      repository.commitSyncRun.mockResolvedValue({ outcome });
+      await worker.runOnce();
+      expect(repository.failSyncRun).toHaveBeenCalledWith(
+        "org-a",
+        "run-a",
+        "worker-a",
+        outcome === "invalid_state"
+          ? "authorization_changed"
+          : outcome === "blocked_by_records"
+            ? "invalid_data"
+            : "stale_preview",
+        2,
+        false,
+        null,
+      );
+    },
+  );
+  it.each([
+    "completed",
+    "retrying",
+    "failed",
+    "lease_lost",
+    "not_found",
+    "waiting_for_review",
+  ])(
+    "does not replace a SQL-owned or lost commit outcome: %s",
+    async (outcome) => {
+      const { worker, repository } = secureWorker({ workKind: "commit" });
+      repository.commitSyncRun.mockResolvedValue({ outcome });
+      await worker.runOnce();
+      expect(repository.failSyncRun).not.toHaveBeenCalled();
+    },
+  );
+  it("drops late results when an expired generation can no longer renew its lease", async () => {
+    const { worker, repository } = secureWorker();
+    repository.renewSyncRunLease.mockResolvedValue(false);
+    await worker.runOnce();
+    expect(repository.renewSyncRunLease).toHaveBeenCalledWith(
+      "org-a",
+      "run-a",
+      "worker-a",
+      2,
+      60,
+    );
+    expect(repository.saveSyncRunPlan).not.toHaveBeenCalled();
+  });
+  it("isolates poison records, strips raw and sensitive values, and persists the entire blocked batch", async () => {
+    const { worker, hub, context, adapter, repository } = secureWorker();
+    hub.context.mockResolvedValue({
+      ...context,
+      connector: {
+        ...context.connector,
+        connectionConfig: {
+          defaultOwnerBinding: {
+            responsibleOwnerId: "owner",
+            legalEntityId: "legal",
+          },
+        },
+      },
+    });
+    const base = {
+      entityType: "product",
+      externalDisplayLabel: "Reference",
+      externalUpdatedAt: "2026-01-01T00:00:00.000Z",
+      changeKind: "upsert",
+      tombstoneReliability: "unknown",
+      parentExternalId: null,
+    };
+    adapter.pull.mockResolvedValue({
+      records: [
+        {
+          ...base,
+          externalId: "valid",
+          fields: {
+            name: "Valid",
+            internalCode: "VALID",
+            productType: "component",
+            description: null,
+            fixtureCredential: "secret-canary",
+          },
+          raw: { token: "secret-canary" },
+        },
+        {
+          ...base,
+          externalId: "poison",
+          fields: {
+            name: "Poison",
+            internalCode: "POISON",
+            productType: "unsupported",
+          },
+        },
+        {
+          ...base,
+          externalId: "malformed",
+          fields: { name: "x".repeat(4_001) },
+        },
+      ],
+      nextCursor: null,
+      adapterSignal: "ok",
+    });
+    await worker.runOnce();
+    expect(repository.saveSyncRunPlan).toHaveBeenCalledWith(
+      expect.objectContaining({
+        p_plan_items: expect.arrayContaining([
+          expect.objectContaining({
+            externalId: "valid",
+            proposedAction: "create",
+            errorCategory: null,
+          }),
+          expect.objectContaining({
+            externalId: "poison",
+            proposedAction: "rejected",
+            errorCategory: "invalid_data",
+          }),
+          expect.objectContaining({
+            externalId: "invalid-record-3",
+            proposedAction: "rejected",
+            sourceSnapshot: null,
+          }),
+        ]) as unknown,
+      }),
+    );
+    expect(JSON.stringify(repository.saveSyncRunPlan.mock.calls)).not.toContain(
+      "secret-canary",
+    );
+    expect(repository.commitSyncRun).not.toHaveBeenCalled();
+  });
+  it("persists review conflicts with safe authority metadata", async () => {
+    const schemaSnapshot =
+      await new ReferenceConformanceAdapter().discoverCapabilities();
+    const { worker, hub, context, repository } = secureWorker({
+      replaySourceMode: "retained",
+      schemaSnapshot,
+      replaySourceRecords: [
+        {
+          entityType: "product",
+          externalId: "new",
+          externalDisplayLabel: "New",
+          externalUpdatedAt: "2026-01-01T00:00:00.000Z",
+          changeKind: "upsert",
+          tombstoneReliability: "unknown",
+          parentExternalId: "missing-parent",
+          fields: {
+            name: "New",
+            internalCode: "NEW",
+            productType: "component",
+            description: null,
+          },
+        },
+      ],
+    });
+    hub.context.mockResolvedValue({
+      ...context,
+      connector: {
+        ...context.connector,
+        connectionConfig: {
+          defaultOwnerBinding: {
+            responsibleOwnerId: "owner",
+            legalEntityId: "legal",
+          },
+        },
+      },
+    });
+    await worker.runOnce();
+    expect(repository.saveSyncRunPlan).toHaveBeenCalledWith(
+      expect.objectContaining({
+        p_conflicts: expect.arrayContaining([
+          expect.objectContaining({
+            fieldPath: "parentExternalId",
+            permittedActions: ["keep_cra", "enter_manual_value"],
+          }),
+        ]) as unknown,
+      }),
+    );
+  });
+  it("fails closed for stale discovered schemas, missing retained schemas, and unsupported adapters", async () => {
+    const schemaSnapshot =
+      await new ReferenceConformanceAdapter().discoverCapabilities();
+    for (const overrides of [
+      { schemaSnapshot: { ...schemaSnapshot, adapterVersion: "old" } },
+      { replaySourceMode: "retained" },
+    ]) {
+      const { worker, repository } = secureWorker(overrides);
+      await worker.runOnce();
+      expect(repository.saveSyncRunPlan).not.toHaveBeenCalled();
+      expect(repository.failSyncRun).toHaveBeenCalledWith(
+        "org-a",
+        "run-a",
+        "worker-a",
+        "stale_preview",
+        2,
+        false,
+        null,
+      );
+    }
+    const { worker, hub, context, repository } = secureWorker();
+    hub.context.mockResolvedValue({
+      ...context,
+      connector: { ...context.connector, connectorType: "unregistered" },
+    });
+    await worker.runOnce();
+    expect(repository.failSyncRun).toHaveBeenCalledWith(
+      "org-a",
+      "run-a",
+      "worker-a",
+      "unsupported_connector_type",
+      2,
+      false,
+      null,
+    );
+  });
+  it("classifies valid authentication and availability failures without storing provider messages", async () => {
+    for (const errorCode of ["auth_failed", "unreachable"]) {
+      const { worker, adapter, repository } = secureWorker();
+      adapter.testConnection.mockResolvedValue({
+        outcome: "failure",
+        errorCode,
+        message: "private provider detail",
+      });
+      await worker.runOnce();
+      expect(repository.failSyncRun).toHaveBeenCalledWith(
+        "org-a",
+        "run-a",
+        "worker-a",
+        errorCode === "unreachable" ? "provider_unavailable" : "auth_failed",
+        2,
+        errorCode === "unreachable",
+        null,
+      );
+    }
+  });
+  it("fences persisted plans and commits by claim generation", async () => {
+    const dry = secureWorker();
+    await dry.worker.runOnce();
+    expect(dry.repository.saveSyncRunPlan).toHaveBeenCalledWith(
+      expect.objectContaining({
+        p_generation: 2,
+        p_schema_snapshot: expect.any(Object) as unknown,
+      }),
+    );
+    const commit = secureWorker({ workKind: "commit" });
+    await commit.worker.runOnce();
+    expect(commit.repository.commitSyncRun).toHaveBeenCalledWith(
+      expect.objectContaining({ p_generation: 2, p_worker_id: "worker-a" }),
+    );
+  });
+  it("replays retained records without another provider read", async () => {
+    const schemaSnapshot =
+      await new ReferenceConformanceAdapter().discoverCapabilities();
+    const { worker, adapter, repository } = secureWorker({
+      replaySourceMode: "retained",
+      replaySourceRecords: [],
+      schemaSnapshot,
+    });
+    await worker.runOnce();
+    expect(adapter.pull).not.toHaveBeenCalled();
+    expect(repository.saveSyncRunPlan).toHaveBeenCalled();
+  });
+  it("does not discover or persist malformed source schema", async () => {
+    const { worker, adapter, repository } = secureWorker();
+    adapter.discoverCapabilities.mockResolvedValue({ entities: [] });
+    await worker.runOnce();
+    expect(adapter.pull).not.toHaveBeenCalled();
+    expect(repository.saveSyncRunPlan).not.toHaveBeenCalled();
+  });
+  it("persists a provider not-before wait and generation without payload messages", async () => {
+    const { worker, adapter, repository } = secureWorker();
+    adapter.pull.mockResolvedValue({
+      records: [],
+      nextCursor: null,
+      adapterSignal: "rate_limited",
+      retryAfterSeconds: 900,
+    });
+    await worker.runOnce();
+    expect(repository.failSyncRun).toHaveBeenCalledWith(
+      "org-a",
+      "run-a",
+      "worker-a",
+      "rate_limited",
+      2,
+      true,
+      900,
+    );
+  });
   it("checks egress immediately before each provider call and rejects changed DNS", async () => {
     const { worker, egress, adapter, repository } = secureWorker();
     egress!.validate
@@ -232,6 +502,9 @@ describe("connector worker recorded authorization and credential fences", () => 
         adapterSignal === "unavailable"
           ? "provider_unavailable"
           : adapterSignal,
+        2,
+        ["unavailable", "rate_limited"].includes(adapterSignal),
+        null,
       );
     },
   );
@@ -248,6 +521,9 @@ describe("connector worker recorded authorization and credential fences", () => 
       "run-a",
       "worker-a",
       "worker_exception",
+      2,
+      false,
+      null,
     );
     expect(JSON.stringify(repository.failSyncRun.mock.calls)).not.toContain(
       "secret_canary",
@@ -416,6 +692,9 @@ describe("connector sync worker durable cursor handling", () => {
     expect(
       toClaimedSyncRun({
         id: "run-1",
+        leaseGeneration: 1,
+        fieldMappingSnapshot: [],
+        fieldMappingRevision: 0,
         organizationId: "org-1",
         connectorId: "connector-1",
         workKind: "dry_run",
@@ -456,217 +735,5 @@ describe("connector sync worker durable cursor handling", () => {
       watermark: "2026-08-20T00:00:00.000Z",
       token: "2026-08-20T00:00:00.000Z|PLM-1",
     });
-  });
-});
-
-function queryFixture() {
-  const queued: Record<string, unknown>[] = [];
-  const queries: { table: string; eq: jest.Mock }[] = [];
-  const rpc = jest
-    .fn()
-    .mockResolvedValue({ data: { outcome: "allowed" }, error: null });
-  const from = jest.fn((table: string) => {
-    const result = queued.shift() ?? { data: null, error: null };
-    const query: Record<string, unknown> = {};
-    for (const method of ["select", "eq", "is", "neq", "like", "limit"])
-      query[method] = jest.fn().mockReturnValue(query);
-    query.maybeSingle = jest.fn().mockResolvedValue(result);
-    query.then = (resolve: (value: unknown) => unknown) =>
-      Promise.resolve(result).then(resolve);
-    queries.push({ table, eq: query.eq as jest.Mock });
-    return query;
-  });
-  const context = createConnectorSyncPlanContext(
-    { admin: () => ({ from, rpc }) } as never,
-    "org-a",
-    "connector-a",
-    {
-      ...connectorContext.connector,
-      connectionConfig: {
-        defaultOwnerBinding: {
-          responsibleOwnerId: "owner-a",
-          legalEntityId: "entity-a",
-        },
-      },
-    } as never,
-    [
-      { entityType: "product", externalId: "single", changeKind: "upsert" },
-      { entityType: "product", externalId: "duplicate", changeKind: "upsert" },
-      { entityType: "product", externalId: "duplicate", changeKind: "upsert" },
-      { entityType: "release", externalId: "release", changeKind: "upsert" },
-      { entityType: "product", externalId: "deleted", changeKind: "tombstone" },
-    ],
-  );
-  return { queued, queries, rpc, context };
-}
-
-describe("connector planner tenant-scoped storage", () => {
-  it("fails closed on mapping, candidate, field and policy lookup outages", async () => {
-    const { context, queued } = queryFixture();
-    const methods = [
-      () => context.findActiveMapping("product", "external"),
-      () => context.findProductCandidatesByCode("code"),
-      () => context.findReleaseCandidatesByVersion("product", "version"),
-      () => context.getProductFields("product"),
-      () => context.getReleaseFields("product", "release"),
-      () => context.getFieldAuthorityPolicy("product", "name"),
-    ];
-    for (const method of methods) {
-      queued.push({ data: null, error: { message: "upstream-canary" } });
-      await expect(method()).rejects.toThrow(/connector_.*_lookup_failed/);
-    }
-  });
-  it("resolves mappings and fields without treating other tenants as candidates", async () => {
-    const { context, queued, queries } = queryFixture();
-    queued.push({ data: null, error: null });
-    expect(await context.findActiveMapping("product", "external")).toBeNull();
-    queued.push({
-      data: { id: "identity", cra_product_id: "product", cra_release_id: null },
-      error: null,
-    });
-    expect(await context.findActiveMapping("product", "external")).toEqual({
-      id: "identity",
-      craProductId: "product",
-      craReleaseId: null,
-    });
-    queued.push(
-      { data: [{ id: "product" }], error: null },
-      { data: null, count: 1, error: null },
-    );
-    expect(await context.findProductCandidatesByCode("code")).toEqual([
-      { productId: "product", hasOtherActiveMapping: true },
-    ]);
-    queued.push({ data: [{ id: "release" }], error: null });
-    expect(
-      await context.findReleaseCandidatesByVersion("product", "version"),
-    ).toEqual([{ releaseId: "release", hasOtherActiveMapping: false }]);
-    queued.push({ data: null, error: null });
-    expect(await context.getProductFields("product")).toBeNull();
-    queued.push({
-      data: {
-        name: "name",
-        internal_code: "code",
-        product_type: "software",
-        description: null,
-        version: 3,
-      },
-      error: null,
-    });
-    expect(await context.getProductFields("product")).toMatchObject({
-      internalCode: "code",
-      version: 3,
-    });
-    queued.push({ data: null, error: null });
-    expect(await context.getReleaseFields("product", "release")).toBeNull();
-    queued.push({
-      data: {
-        label: "label",
-        release_version: "1.0",
-        description: null,
-        version: 2,
-      },
-      error: null,
-    });
-    expect(await context.getReleaseFields("product", "release")).toMatchObject({
-      releaseVersion: "1.0",
-      version: 2,
-    });
-    queued.push({ data: null, error: null });
-    expect(await context.getFieldAuthorityPolicy("product", "name")).toBeNull();
-    queued.push({
-      data: {
-        id: "policy",
-        policy_value: "external",
-        protected: true,
-        policy_version: 2,
-      },
-      error: null,
-    });
-    expect(
-      await context.getFieldAuthorityPolicy("product", "name"),
-    ).toMatchObject({ id: "policy", policyVersion: 2, protected: true });
-    for (const query of queries)
-      expect(query.eq).toHaveBeenCalledWith("organization_id", "org-a");
-    expect(context.isProductExternalIdPlanned("single")).toBe(true);
-    expect(context.isProductExternalIdPlanned("duplicate")).toBe(false);
-    expect(context.isProductExternalIdPlanned("deleted")).toBe(false);
-    expect(context.hashValue(null)).toMatch(/^[a-f0-9]{64}$/);
-    expect(context.hashValue("value")).not.toBe(context.hashValue(null));
-    expect(context.nowIso()).toMatch(/^\d{4}-/);
-  });
-  it("uses connector-owned hierarchy and the existing organization graph preview", async () => {
-    const { context, queued, queries, rpc } = queryFixture();
-    queued.push({
-      data: [{ id: "identity", cra_product_id: "parent" }],
-      error: null,
-    });
-    expect(
-      await context.getActiveProductMappingsForExternalParent(
-        "parent-external",
-      ),
-    ).toEqual([{ identityId: "identity", craProductId: "parent" }]);
-    queued.push({ data: null, error: null });
-    expect(await context.getConnectorOwnedParent("child")).toEqual({
-      outcome: "none",
-    });
-    queued.push({ data: [{ source_product_id: "parent" }], error: null });
-    expect(await context.getConnectorOwnedParent("child")).toEqual({
-      outcome: "one",
-      parentProductId: "parent",
-    });
-    queued.push({
-      data: [{ source_product_id: "first" }, { source_product_id: "second" }],
-      error: null,
-    });
-    expect(await context.getConnectorOwnedParent("child")).toEqual({
-      outcome: "ambiguous",
-      parentProductIds: ["first", "second"],
-    });
-    queued.push({
-      data: { product_relationship_graph_version: 2 },
-      error: null,
-    });
-    expect(
-      await context.wouldCreateEmbeddedComponentCycle("parent", "child"),
-    ).toBe(false);
-    expect(rpc).toHaveBeenCalledWith(
-      "m2_component_link_preview",
-      expect.objectContaining({
-        p_organization_id: "org-a",
-        p_parent_product_id: "parent",
-        p_component_product_id: "child",
-        p_graph_version: 2,
-      }),
-    );
-    rpc.mockResolvedValue({ data: { outcome: "cycle" }, error: null });
-    queued.push({
-      data: { product_relationship_graph_version: 2 },
-      error: null,
-    });
-    expect(
-      await context.wouldCreateEmbeddedComponentCycle("parent", "child"),
-    ).toBe(true);
-    for (const query of queries)
-      expect(query.eq).toHaveBeenCalledWith("organization_id", "org-a");
-    queued.push({ data: null, error: {} });
-    await expect(
-      context.getActiveProductMappingsForExternalParent("external"),
-    ).rejects.toThrow("connector_parent_mapping_lookup_failed");
-    queued.push({ data: null, error: {} });
-    await expect(context.getConnectorOwnedParent("child")).rejects.toThrow(
-      "connector_owned_parent_lookup_failed",
-    );
-    queued.push({ data: null, error: {} });
-    await expect(
-      context.wouldCreateEmbeddedComponentCycle("parent", "child"),
-    ).rejects.toThrow("connector_relationship_graph_lookup_failed");
-    rpc.mockResolvedValue({ data: null, error: {} });
-    queued.push({
-      data: { product_relationship_graph_version: 2 },
-      error: null,
-    });
-    await expect(
-      context.wouldCreateEmbeddedComponentCycle("parent", "child"),
-    ).rejects.toThrow("connector_relationship_graph_preview_failed");
   });
 });
