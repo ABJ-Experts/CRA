@@ -1,4 +1,10 @@
 import {
+  connectorCatalogueResponseSchema,
+  connectorOverviewResponseSchema,
+  connectorOverviewsResponseSchema,
+  revokeConnectorSecretInputSchema,
+  disconnectConnectorInputSchema,
+  reconnectConnectorInputSchema,
   archiveConnectorInputSchema,
   beginSyncRunInputSchema,
   cancelSyncRunInputSchema,
@@ -35,6 +41,10 @@ import {
   upsertFieldAuthorityPolicyInputSchema,
 } from "@repo/contracts/connectors/schemas";
 import type {
+  TestConnectorInput,
+  RevokeConnectorSecretInput,
+  DisconnectConnectorInput,
+  ReconnectConnectorInput,
   ArchiveConnectorInput,
   BeginSyncRunInput,
   CancelSyncRunInput,
@@ -141,6 +151,73 @@ function queryPath(
 
 /** Typed browser boundary for the connectors PLM/ALM sync API. */
 export class ConnectorsApi {
+  async catalogue(signal?: AbortSignal) {
+    return authenticatedRequestJson({
+      path: "/api/v1/connectors/catalogue",
+      schema: connectorCatalogueResponseSchema,
+      signal,
+    });
+  }
+  async overviews(
+    input: Partial<ConnectorListQuery> = {},
+    signal?: AbortSignal,
+  ) {
+    const query = apiClient.parseInput(connectorListQuerySchema, input);
+    return authenticatedRequestJson({
+      path: queryPath("/api/v1/connectors/overview", query),
+      schema: connectorOverviewsResponseSchema,
+      signal,
+    });
+  }
+  async overview(connectorId: string, signal?: AbortSignal) {
+    return authenticatedRequestJson({
+      path: connectorPath(connectorId, "/overview"),
+      schema: connectorOverviewResponseSchema,
+      signal,
+    });
+  }
+  async revokeSecret(
+    connectorId: string,
+    input: RevokeConnectorSecretInput,
+    signal?: AbortSignal,
+  ) {
+    return authenticatedRequestJson({
+      path: connectorPath(connectorId, "/secret/revoke"),
+      method: "POST",
+      body: input,
+      inputSchema: revokeConnectorSecretInputSchema,
+      schema: connectorResponseSchema,
+      signal,
+    });
+  }
+  async disconnect(
+    connectorId: string,
+    input: DisconnectConnectorInput,
+    signal?: AbortSignal,
+  ) {
+    return authenticatedRequestJson({
+      path: connectorPath(connectorId, "/disconnect"),
+      method: "POST",
+      body: input,
+      inputSchema: disconnectConnectorInputSchema,
+      schema: connectorResponseSchema,
+      signal,
+    });
+  }
+  async reconnect(
+    connectorId: string,
+    input: ReconnectConnectorInput,
+    signal?: AbortSignal,
+  ) {
+    return authenticatedRequestJson({
+      path: connectorPath(connectorId, "/reconnect"),
+      method: "POST",
+      body: input,
+      inputSchema: reconnectConnectorInputSchema,
+      schema: connectorResponseSchema,
+      signal,
+    });
+  }
   async list(input: Partial<ConnectorListQuery> = {}, signal?: AbortSignal) {
     const query = apiClient.parseInput(connectorListQuerySchema, input);
     return authenticatedRequestJson({
@@ -199,11 +276,15 @@ export class ConnectorsApi {
     });
   }
 
-  async test(connectorId: string, signal?: AbortSignal) {
+  async test(
+    connectorId: string,
+    input: TestConnectorInput,
+    signal?: AbortSignal,
+  ) {
     return authenticatedRequestJson({
       path: connectorPath(connectorId, "/test"),
       method: "POST",
-      body: {},
+      body: input,
       inputSchema: testConnectorInputSchema,
       schema: connectorResponseSchema,
       signal,

@@ -336,31 +336,134 @@ export type Database = {
           },
         ]
       }
+      connector_commands: {
+        Row: {
+          actor_user_id: string
+          completed_at: string | null
+          connection_revision: number
+          connector_id: string
+          created_at: string
+          credential_revision: number
+          deadline_at: string
+          expected_version: number
+          id: string
+          idempotency_key: string
+          operation: string
+          organization_id: string
+          permission_version: number
+          request_digest: string
+          request_digest_key_id: string
+          result: Json
+          state: string
+        }
+        Insert: {
+          actor_user_id: string
+          completed_at?: string | null
+          connection_revision: number
+          connector_id: string
+          created_at?: string
+          credential_revision: number
+          deadline_at: string
+          expected_version: number
+          id?: string
+          idempotency_key: string
+          operation: string
+          organization_id: string
+          permission_version: number
+          request_digest: string
+          request_digest_key_id: string
+          result?: Json
+          state: string
+        }
+        Update: {
+          actor_user_id?: string
+          completed_at?: string | null
+          connection_revision?: number
+          connector_id?: string
+          created_at?: string
+          credential_revision?: number
+          deadline_at?: string
+          expected_version?: number
+          id?: string
+          idempotency_key?: string
+          operation?: string
+          organization_id?: string
+          permission_version?: number
+          request_digest?: string
+          request_digest_key_id?: string
+          result?: Json
+          state?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "connector_commands_actor_user_id_fkey"
+            columns: ["actor_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "connector_commands_organization_id_connector_id_fkey"
+            columns: ["organization_id", "connector_id"]
+            isOneToOne: false
+            referencedRelation: "connectors"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "connector_commands_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       connector_secrets: {
         Row: {
+          auth_tag: string | null
           ciphertext: string
           connector_id: string
           created_at: string
+          credential_revision: number
+          encryption_scheme: string
           id: string
+          key_id: string | null
+          nonce: string | null
           organization_id: string
+          revoked_at: string | null
+          revoked_by: string | null
           rotated_at: string
           rotated_by: string
         }
         Insert: {
+          auth_tag?: string | null
           ciphertext: string
           connector_id: string
           created_at?: string
+          credential_revision?: number
+          encryption_scheme?: string
           id?: string
+          key_id?: string | null
+          nonce?: string | null
           organization_id: string
+          revoked_at?: string | null
+          revoked_by?: string | null
           rotated_at?: string
           rotated_by: string
         }
         Update: {
+          auth_tag?: string | null
           ciphertext?: string
           connector_id?: string
           created_at?: string
+          credential_revision?: number
+          encryption_scheme?: string
           id?: string
+          key_id?: string | null
+          nonce?: string | null
           organization_id?: string
+          revoked_at?: string | null
+          revoked_by?: string | null
           rotated_at?: string
           rotated_by?: string
         }
@@ -380,6 +483,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "connector_secrets_revoked_by_fkey"
+            columns: ["revoked_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "connector_secrets_rotated_by_fkey"
             columns: ["rotated_by"]
             isOneToOne: false
@@ -396,19 +506,25 @@ export type Database = {
           archived_reason: string | null
           commit_policy: string
           connection_config: Json
+          connection_revision: number
           connector_type: string
           create_idempotency_key: string | null
           create_request_digest: string | null
           created_at: string
           created_by: string
+          credential_revision: number
+          disabled_at: string | null
+          disabled_by: string | null
           display_name: string
           enabled: boolean
           id: string
+          last_test_connection_revision: number | null
           last_test_error_code: string | null
           last_test_outcome: string | null
           last_tested_at: string | null
           mapping_version: string
           organization_id: string
+          scope_assessment: Json
           secret_ref: string | null
           updated_at: string
           updated_by: string
@@ -421,19 +537,25 @@ export type Database = {
           archived_reason?: string | null
           commit_policy?: string
           connection_config?: Json
+          connection_revision?: number
           connector_type: string
           create_idempotency_key?: string | null
           create_request_digest?: string | null
           created_at?: string
           created_by: string
+          credential_revision?: number
+          disabled_at?: string | null
+          disabled_by?: string | null
           display_name: string
           enabled?: boolean
           id?: string
+          last_test_connection_revision?: number | null
           last_test_error_code?: string | null
           last_test_outcome?: string | null
           last_tested_at?: string | null
           mapping_version: string
           organization_id: string
+          scope_assessment?: Json
           secret_ref?: string | null
           updated_at?: string
           updated_by: string
@@ -446,19 +568,25 @@ export type Database = {
           archived_reason?: string | null
           commit_policy?: string
           connection_config?: Json
+          connection_revision?: number
           connector_type?: string
           create_idempotency_key?: string | null
           create_request_digest?: string | null
           created_at?: string
           created_by?: string
+          credential_revision?: number
+          disabled_at?: string | null
+          disabled_by?: string | null
           display_name?: string
           enabled?: boolean
           id?: string
+          last_test_connection_revision?: number | null
           last_test_error_code?: string | null
           last_test_outcome?: string | null
           last_tested_at?: string | null
           mapping_version?: string
           organization_id?: string
+          scope_assessment?: Json
           secret_ref?: string | null
           updated_at?: string
           updated_by?: string
@@ -480,6 +608,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "connectors_disabled_by_fkey"
+            columns: ["disabled_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "connectors_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
@@ -488,10 +623,10 @@ export type Database = {
           },
           {
             foreignKeyName: "connectors_secret_ref_fkey"
-            columns: ["organization_id", "secret_ref"]
+            columns: ["organization_id", "id", "secret_ref"]
             isOneToOne: false
             referencedRelation: "connector_secrets"
-            referencedColumns: ["organization_id", "id"]
+            referencedColumns: ["organization_id", "connector_id", "id"]
           },
           {
             foreignKeyName: "connectors_updated_by_fkey"
@@ -13527,10 +13662,12 @@ export type Database = {
           commit_request_digest: string | null
           committed_at: string | null
           conflict_count: number
+          connection_revision: number
           connector_id: string
           correlation_id: string
           create_count: number
           created_at: string
+          credential_revision: number
           cursor_from: string | null
           cursor_to: string | null
           cycle_blocked_count: number
@@ -13544,6 +13681,7 @@ export type Database = {
           mapping_version: string
           next_attempt_at: string
           organization_id: string
+          permission_version: number | null
           plan_basis_digest: string | null
           processed_count: number
           reconciliation_kind: string
@@ -13571,10 +13709,12 @@ export type Database = {
           commit_request_digest?: string | null
           committed_at?: string | null
           conflict_count?: number
+          connection_revision?: number
           connector_id: string
           correlation_id: string
           create_count?: number
           created_at?: string
+          credential_revision?: number
           cursor_from?: string | null
           cursor_to?: string | null
           cycle_blocked_count?: number
@@ -13588,6 +13728,7 @@ export type Database = {
           mapping_version: string
           next_attempt_at?: string
           organization_id: string
+          permission_version?: number | null
           plan_basis_digest?: string | null
           processed_count?: number
           reconciliation_kind: string
@@ -13615,10 +13756,12 @@ export type Database = {
           commit_request_digest?: string | null
           committed_at?: string | null
           conflict_count?: number
+          connection_revision?: number
           connector_id?: string
           correlation_id?: string
           create_count?: number
           created_at?: string
+          credential_revision?: number
           cursor_from?: string | null
           cursor_to?: string | null
           cycle_blocked_count?: number
@@ -13632,6 +13775,7 @@ export type Database = {
           mapping_version?: string
           next_attempt_at?: string
           organization_id?: string
+          permission_version?: number | null
           plan_basis_digest?: string | null
           processed_count?: number
           reconciliation_kind?: string
@@ -25216,6 +25360,174 @@ export type Database = {
           p_draft_id: string
           p_organization_id: string
         }
+        Returns: boolean
+      }
+      m11_assert_sync_run_fence: {
+        Args: {
+          p_actor_user_id: string
+          p_organization_id: string
+          p_sync_run_id: string
+        }
+        Returns: boolean
+      }
+      m11_begin_connector_test_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_connector_id: string
+          p_expected_version: number
+          p_idempotency_key: string
+          p_organization_id: string
+          p_permission_version: number
+          p_request_digest: string
+          p_request_digest_key_id: string
+        }
+        Returns: {
+          command: Json
+          connector: Json
+          outcome: string
+        }[]
+      }
+      m11_begin_sync_run_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_connector_id: string
+          p_correlation_id: string
+          p_idempotency_key: string
+          p_organization_id: string
+          p_permission_version: number
+          p_reconciliation_kind: string
+        }
+        Returns: {
+          outcome: string
+          run: Json
+        }[]
+      }
+      m11_connector_command_json: {
+        Args: {
+          p_command: Database["public"]["Tables"]["connector_commands"]["Row"]
+        }
+        Returns: Json
+      }
+      m11_connector_connection_summaries: {
+        Args: { p_connector_ids: string[]; p_organization_id: string }
+        Returns: {
+          active_sync_status: string
+          connection_revision: number
+          connector_id: string
+          credential_revision: number
+          credential_revoked: boolean
+          last_sync_at: string
+          last_test_connection_revision: number
+          scope_assessment: Json
+        }[]
+      }
+      m11_connector_key_references: {
+        Args: { p_organization_id: string }
+        Returns: Json
+      }
+      m11_create_connector_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_adapter_version: string
+          p_commit_policy: string
+          p_connection_config: Json
+          p_connector_type: string
+          p_display_name: string
+          p_idempotency_key: string
+          p_mapping_version: string
+          p_organization_id: string
+          p_permission_version: number
+        }
+        Returns: {
+          connector: Json
+          outcome: string
+        }[]
+      }
+      m11_execute_connector_command_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_connector_id: string
+          p_expected_version: number
+          p_idempotency_key: string
+          p_operation: string
+          p_organization_id: string
+          p_payload: Json
+          p_permission_version: number
+          p_request_digest: string
+          p_request_digest_key_id: string
+        }
+        Returns: {
+          command: Json
+          connector: Json
+          outcome: string
+        }[]
+      }
+      m11_finalize_connector_test_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_command_id: string
+          p_connection_revision: number
+          p_credential_revision: number
+          p_organization_id: string
+          p_permission_version: number
+          p_result: Json
+        }
+        Returns: {
+          command: Json
+          connector: Json
+          outcome: string
+        }[]
+      }
+      m11_list_connector_secret_envelopes: {
+        Args: { p_after_id: string; p_limit: number; p_organization_id: string }
+        Returns: Json
+      }
+      m11_lock_connector_authorization: {
+        Args: {
+          p_actor_user_id: string
+          p_organization_id: string
+          p_owner_only?: boolean
+          p_permission_version: number
+        }
+        Returns: boolean
+      }
+      m11_request_sync_run_commit_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_expected_row_count: number
+          p_organization_id: string
+          p_permission_version: number
+          p_sync_run_id: string
+        }
+        Returns: {
+          outcome: string
+          run: Json
+        }[]
+      }
+      m11_retire_legacy_connector_secret_rpc: { Args: never; Returns: boolean }
+      m11_rewrap_connector_secret_atomic: {
+        Args: {
+          p_connector_id: string
+          p_expected_ciphertext: string
+          p_expected_key_id: string
+          p_organization_id: string
+          p_payload: Json
+          p_secret_id: string
+        }
+        Returns: {
+          outcome: string
+        }[]
+      }
+      m11_sync_run_required_product_actions: {
+        Args: { p_organization_id: string; p_sync_run_id: string }
+        Returns: Json
+      }
+      m11_valid_connector_config: {
+        Args: { p_config: Json; p_organization_id: string }
+        Returns: boolean
+      }
+      m11_valid_connector_scope_assessment: {
+        Args: { p_scope: Json }
         Returns: boolean
       }
       m2_active_member: {

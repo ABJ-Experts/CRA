@@ -735,6 +735,7 @@ export class SupabaseConnectorRepository {
         "claimed",
         "not_found",
         "connector_disabled",
+        "invalid_state",
         "invalid_request",
       ]),
     ) === "claimed"
@@ -746,9 +747,10 @@ export class SupabaseConnectorRepository {
     const row = await this.singleRpc("save_sync_run_plan_atomic", args);
     const outcome = this.outcome(
       row,
-      new Set(["saved", "not_found", "invalid_request"]),
+      new Set(["saved", "not_found", "invalid_request", "invalid_state"]),
     );
     this.assertFound(outcome);
+    if (outcome === "invalid_state") throw new ConnectorError("invalid_state");
     return row.run;
   }
 

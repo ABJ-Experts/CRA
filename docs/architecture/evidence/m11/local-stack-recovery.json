@@ -1,0 +1,168 @@
+{
+  "capturedAt": "2026-09-29T07:51:46.833Z",
+  "apiUrl": "http://127.0.0.1:54321",
+  "auth_triggers": [
+    {
+      "name": "on_auth_user_created",
+      "enabled": "O",
+      "definition": "CREATE TRIGGER on_auth_user_created AFTER INSERT ON auth.users FOR EACH ROW EXECUTE FUNCTION handle_new_user()"
+    },
+    {
+      "name": "on_auth_user_email_changed",
+      "enabled": "O",
+      "definition": "CREATE TRIGGER on_auth_user_email_changed AFTER UPDATE OF email ON auth.users FOR EACH ROW EXECUTE FUNCTION handle_user_email_change()"
+    }
+  ],
+  "private_functions": [
+    {
+      "signature": "acknowledge_vulnerability_kev_alert_atomic(uuid,uuid,uuid,uuid)",
+      "anon_execute": false,
+      "service_execute": false,
+      "authenticated_execute": false
+    },
+    {
+      "signature": "guard_completed_sbom_graph()",
+      "anon_execute": false,
+      "service_execute": false,
+      "authenticated_execute": false
+    },
+    {
+      "signature": "m4_07_mark_reachability_stale_after_occurrence_change()",
+      "anon_execute": false,
+      "service_execute": false,
+      "authenticated_execute": false
+    },
+    {
+      "signature": "m9_05_decide_supplier_document_field_core(uuid,uuid,uuid,uuid,uuid,integer,timestamp with time zone,uuid,text,uuid,integer,text,text,uuid)",
+      "anon_execute": false,
+      "service_execute": false,
+      "authenticated_execute": false
+    },
+    {
+      "signature": "record_vulnerability_kev_reporting_intent_atomic(uuid,uuid,uuid,uuid,text,text)",
+      "anon_execute": false,
+      "service_execute": false,
+      "authenticated_execute": false
+    }
+  ],
+  "repair_migrations": [
+    {
+      "name": "restore_auth_profile_triggers_and_sbom_grants",
+      "version": "20260929073352"
+    },
+    {
+      "name": "restore_private_trigger_helper_grants",
+      "version": "20260929073905"
+    },
+    {
+      "name": "restore_retired_kev_rpc_and_graph_helper_grants",
+      "version": "20260929074103"
+    },
+    {
+      "name": "restore_supplier_confidence_gate_grants",
+      "version": "20260929074159"
+    },
+    {
+      "name": "restore_supplier_archive_only_grants",
+      "version": "20260929074402"
+    },
+    {
+      "name": "restore_authenticated_rls_helper_grants",
+      "version": "20260929074513"
+    },
+    {
+      "name": "finalize_private_auth_and_supplier_ledger_grants",
+      "version": "20260929074916"
+    }
+  ],
+  "graph_bypass_count": 0,
+  "seed_org_preserved": 1,
+  "current_kev_action_execute": true,
+  "archive_registry": [
+    {
+      "table": "supplier_organizations",
+      "service_insert": true,
+      "service_select": true,
+      "service_update": true,
+      "service_destructive_privileges": false
+    },
+    {
+      "table": "supplier_contacts",
+      "service_insert": true,
+      "service_select": true,
+      "service_update": true,
+      "service_destructive_privileges": false
+    },
+    {
+      "table": "supplier_component_responsibilities",
+      "service_insert": true,
+      "service_select": true,
+      "service_update": true,
+      "service_destructive_privileges": false
+    }
+  ],
+  "authenticated_rls_helpers": [
+    {
+      "signature": "get_current_user_id()",
+      "anon_execute": false,
+      "service_execute": false,
+      "authenticated_execute": true
+    },
+    {
+      "signature": "user_is_member_of(uuid)",
+      "anon_execute": false,
+      "service_execute": false,
+      "authenticated_execute": true
+    },
+    {
+      "signature": "user_is_org_admin(uuid)",
+      "anon_execute": false,
+      "service_execute": false,
+      "authenticated_execute": true
+    },
+    {
+      "signature": "user_org_role(uuid)",
+      "anon_execute": false,
+      "service_execute": false,
+      "authenticated_execute": true
+    },
+    {
+      "signature": "user_shares_org_with(uuid)",
+      "anon_execute": false,
+      "service_execute": false,
+      "authenticated_execute": true
+    }
+  ],
+  "m11_browser_executable_count": 0,
+  "run_owned_accounts_remaining": 0,
+  "auth_trigger_functions": [
+    {
+      "name": "handle_new_user",
+      "anon_execute": false,
+      "service_execute": false,
+      "authenticated_execute": false
+    },
+    {
+      "name": "handle_user_email_change",
+      "anon_execute": false,
+      "service_execute": false,
+      "authenticated_execute": false
+    }
+  ],
+  "supplier_command_ledger": {
+    "service_insert": true,
+    "service_select": true,
+    "service_update": true,
+    "service_destructive_privileges": false
+  },
+  "verifiedChecks": {
+    "pnpmVerify": "passed",
+    "sqlFiles": 80,
+    "authChecksPassed": 33,
+    "apiTestsPassed": 3119,
+    "webTestsPassed": 1020,
+    "contractTestsPassed": 549,
+    "m11BrowserJourneysPassed": 1,
+    "independentReview": "findings resolved; no remaining high finding in scoped recovery patch"
+  }
+}

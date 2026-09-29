@@ -67,7 +67,7 @@ select pg_temp.check(
 );
 
 select pg_temp.check(
-  'every connector sync RPC is a service-role-only security definer with pinned search_path',
+  'active connector RPCs are service-role-only; deprecated PGP RPCs may be retired',
   not exists (
     select 1 from pg_proc procedures
     join pg_namespace namespaces on namespaces.oid = procedures.pronamespace
@@ -84,6 +84,11 @@ select pg_temp.check(
       ])
       and (
         not procedures.prosecdef
+        or has_function_privilege('public',procedures.oid,'execute')
+        or has_function_privilege('anon',procedures.oid,'execute')
+        or has_function_privilege('authenticated',procedures.oid,'execute')
+        or (procedures.proname not in ('set_connector_secret_atomic','resolve_connector_secret')
+          and not has_function_privilege('service_role',procedures.oid,'execute'))
         or procedures.proconfig is null
         or not ('search_path=public, pg_temp' = any (procedures.proconfig))
         or exists (
@@ -93,6 +98,18 @@ select pg_temp.check(
         )
       )
   )
+);
+
+select pg_temp.check(
+  'legacy PGP read and write retirement is paired and never grants PUBLIC/browser execution',
+  has_function_privilege('service_role','public.resolve_connector_secret(uuid,uuid,text)','execute')
+    = has_function_privilege('service_role','public.set_connector_secret_atomic(uuid,uuid,uuid,text,text)','execute')
+  and not has_function_privilege('public','public.resolve_connector_secret(uuid,uuid,text)','execute')
+  and not has_function_privilege('anon','public.resolve_connector_secret(uuid,uuid,text)','execute')
+  and not has_function_privilege('authenticated','public.resolve_connector_secret(uuid,uuid,text)','execute')
+  and not has_function_privilege('public','public.set_connector_secret_atomic(uuid,uuid,uuid,text,text)','execute')
+  and not has_function_privilege('anon','public.set_connector_secret_atomic(uuid,uuid,uuid,text,text)','execute')
+  and not has_function_privilege('authenticated','public.set_connector_secret_atomic(uuid,uuid,uuid,text,text)','execute')
 );
 
 select pg_temp.check(

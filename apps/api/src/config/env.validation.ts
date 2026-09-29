@@ -119,12 +119,16 @@ export const envSchema = z.object({
     .string()
     .optional()
     .default("[]"),
+  /** Recovery only for legacy PGP envelopes; no new writes use this key. */
+  CONNECTOR_SECRET_ENCRYPTION_KEY: z.string().optional(),
   /**
-   * pgcrypto pgp_sym_encrypt/decrypt key for connector_secrets.ciphertext.
-   * Postgres functions can't read env vars, so this is threaded in as an RPC
-   * parameter on every call -- never logged, never returned to a browser.
+   * External secret-manager-injected JSON: {activeKeyId,keys:{id:base64}}.
+   * Validated inside the vault adapter, so missing/malformed keys disable
+   * credential operations without taking core reporting or evidence offline.
    */
-  CONNECTOR_SECRET_ENCRYPTION_KEY: z.string().min(32),
+  CONNECTOR_VAULT_KEYRING: z.string().optional(),
+  CONNECTOR_VAULT_GPG_BINARY: z.string().optional(),
+  CONNECTOR_ALLOWED_HOSTS: z.string().optional().default(""),
 
   // --- Mail -------------------------------------------------------------
   /**

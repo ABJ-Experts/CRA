@@ -19,6 +19,8 @@ import {
   type ConnectorErrorCode,
 } from "./application/connector-errors";
 import { SupabaseConnectorRepository } from "./infrastructure/supabase-connector.repository";
+import type { ConnectorHubUseCases } from "./application/connector-hub-use-cases";
+import type { TestConnectorInput } from "@repo/contracts/connectors/types";
 
 /** Result -> HttpException mapping, mirroring ProductComplianceService. */
 @Injectable()
@@ -31,7 +33,13 @@ export class ConnectorsService {
     > = new Map(),
     private readonly connectorSecretEncryptionKey = process.env
       .CONNECTOR_SECRET_ENCRYPTION_KEY ?? "",
+    private readonly hubUseCases?: ConnectorHubUseCases,
   ) {}
+
+  get hub(): ConnectorHubUseCases {
+    if (!this.hubUseCases) throw new ConnectorError("unavailable");
+    return this.hubUseCases;
+  }
 
   /**
    * Resolve a connector secret only inside the API process, pass it directly
@@ -44,8 +52,16 @@ export class ConnectorsService {
       organizationId: string;
       connectorId: string;
       actorId: string;
+      input?: TestConnectorInput;
     }>,
   ) {
+    if (input.input)
+      return this.hub.test(
+        input.organizationId,
+        input.connectorId,
+        input.actorId,
+        input.input,
+      );
     const connector = (await this.repository.getConnector(
       input.organizationId,
       input.connectorId,

@@ -20,7 +20,7 @@ type ValidatedReference =
 type Resolver = Readonly<{
   lookup(hostname: string): Promise<readonly Readonly<{ address: string }>[]>;
 }>;
-type SafeRequestTarget = Readonly<{
+export type SafeRequestTarget = Readonly<{
   url: URL;
   address: string;
   family: 4 | 6;
@@ -183,39 +183,7 @@ export class NodeProductComplianceExternalReferenceValidator implements ProductC
   private async targetFor(
     value: string | URL,
   ): Promise<SafeRequestTarget | null> {
-    let url: URL;
-    let addresses: readonly Readonly<{ address: string }>[];
-    try {
-      url = value instanceof URL ? new URL(value.toString()) : new URL(value);
-    } catch {
-      return null;
-    }
-    const hostname = url.hostname.toLowerCase();
-    if (
-      url.protocol !== "https:" ||
-      url.username !== "" ||
-      url.password !== "" ||
-      url.port !== "" ||
-      isIP(hostname) !== 0 ||
-      !this.allowedHosts.has(hostname)
-    ) {
-      return null;
-    }
-    try {
-      addresses = await this.resolver.lookup(hostname);
-    } catch {
-      return null;
-    }
-    if (
-      addresses.length === 0 ||
-      addresses.some(({ address }) => !isPublicNetworkAddress(address))
-    ) {
-      return null;
-    }
-    const address = addresses[0]?.address;
-    const family = address ? isIP(address) : 0;
-    if (!address || (family !== 4 && family !== 6)) return null;
-    return Object.freeze({ url, address, family });
+    return resolveApprovedHttpsTarget(value, this.allowedHosts, this.resolver);
   }
 
   private async monitorBody(
@@ -458,3 +426,44 @@ const ipv6Bytes = (address: string): readonly number[] | null => {
 };
 
 const ipv4FromBytes = (bytes: readonly number[]): string => bytes.join(".");
+
+/** Revalidated DNS targets are pinned by requestPinnedHttps, including redirects. */
+export async function resolveApprovedHttpsTarget(
+  value: string | URL,
+  allowedHosts: ReadonlySet<string>,
+  resolver: Resolver = { lookup: resolveAllAddresses },
+): Promise<SafeRequestTarget | null> {
+  let url: URL;
+  let addresses: readonly Readonly<{ address: string }>[];
+  try {
+    url = value instanceof URL ? new URL(value.toString()) : new URL(value);
+  } catch {
+    return null;
+  }
+  const hostname = url.hostname.toLowerCase();
+  if (
+    url.protocol !== "https:" ||
+    url.username !== "" ||
+    url.password !== "" ||
+    url.port !== "" ||
+    isIP(hostname) !== 0 ||
+    !allowedHosts.has(hostname)
+  ) {
+    return null;
+  }
+  try {
+    addresses = await resolver.lookup(hostname);
+  } catch {
+    return null;
+  }
+  if (
+    addresses.length === 0 ||
+    addresses.some(({ address }) => !isPublicNetworkAddress(address))
+  ) {
+    return null;
+  }
+  const address = addresses[0]?.address;
+  const family = address ? isIP(address) : 0;
+  if (!address || (family !== 4 && family !== 6)) return null;
+  return Object.freeze({ url, address, family });
+}

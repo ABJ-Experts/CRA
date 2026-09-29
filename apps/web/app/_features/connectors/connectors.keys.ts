@@ -49,6 +49,9 @@ const metricsSnapshot = Object.freeze((connectorId: string) =>
 );
 
 export const connectorKeys = Object.freeze({
+  organization: connectorOrganizationKey,
+  scoped: (organizationId: string, key: readonly unknown[]) =>
+    Object.freeze(["connectors", organizationId, ...key.slice(1)]),
   all,
   lists,
   list,
@@ -63,3 +66,7 @@ export const connectorKeys = Object.freeze({
   deadLetters,
   metricsSnapshot,
 });
+
+export function connectorOrganizationKey(organizationId: string) {
+  return Object.freeze(["connectors", organizationId] as const);
+}

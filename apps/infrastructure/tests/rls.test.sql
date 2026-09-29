@@ -50,6 +50,16 @@ begin
    where table_schema = 'public' and grantee in ('anon', 'authenticated', 'PUBLIC');
   perform pg_temp.check('no table privileges leak to anon/authenticated/PUBLIC', n = 0);
 
+  perform pg_temp.check('authenticated can evaluate the five identity-scoped RLS helpers; anon cannot',
+    not exists (
+      select 1 from (values ('public.get_current_user_id()'),
+        ('public.user_is_member_of(uuid)'), ('public.user_org_role(uuid)'),
+        ('public.user_is_org_admin(uuid)'), ('public.user_shares_org_with(uuid)')) helpers(signature)
+      where not has_function_privilege('authenticated', signature, 'execute')
+        or has_function_privilege('anon', signature, 'execute')
+        or has_function_privilege('service_role', signature, 'execute')
+    ));
+
   select count(*) into n from pg_tables
    where schemaname = 'public' and not rowsecurity;
   perform pg_temp.check('every public table has RLS enabled', n = 0);

@@ -16,6 +16,7 @@ set -uo pipefail
 API=${API:-http://localhost:3333/api/v1}
 MAILPIT=${MAILPIT:-http://127.0.0.1:54324}
 JAR=$(mktemp)
+trap 'rm -f "$JAR"' EXIT
 PASS=0
 FAIL=0
 
@@ -33,7 +34,7 @@ post()   { curl -s -b "$JAR" -c "$JAR" -X POST "$API$1" -H 'content-type: applic
 get()    { curl -s -b "$JAR" -c "$JAR" "$API$1" -w '\n%{http_code}'; }
 
 latest_otp() {
-  curl -s "$MAILPIT/api/v1/messages?limit=1" | python3 -c "
+  curl -sG "$MAILPIT/api/v1/search" --data-urlencode "query=to:$EMAIL" --data-urlencode "limit=50" | python3 -c "
 import sys, json, re, urllib.request
 d = json.load(sys.stdin)
 if not d.get('messages'):
@@ -51,7 +52,7 @@ EMAIL="e2e$TS@cra.test"
 USERNAME="e2e$TS"
 
 echo "auth flow e2e — $EMAIL"
-curl -s -X DELETE "$MAILPIT/api/v1/messages" >/dev/null 2>&1
+# Preserve unrelated Mailpit messages; OTP lookup is scoped to this unique recipient.
 
 echo "sign up"
 R=$(post /auth/sign-up "{\"email\":\"$EMAIL\",\"username\":\"$USERNAME\",\"password\":\"Password123\"}")

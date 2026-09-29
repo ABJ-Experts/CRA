@@ -9,6 +9,9 @@ do $$ begin
       or has_table_privilege('service_role','public.'||name,'REFERENCES')) then
     raise exception 'Service-role graph ACL permits bypassing retained row guards';
   end if;
+  if has_function_privilege('service_role', 'public.guard_completed_sbom_graph()', 'EXECUTE') then
+    raise exception 'Service-role graph guard must remain trigger-only';
+  end if;
 end $$;
 create function pg_temp.expect_immutable(p_sql text) returns void language plpgsql as $$
 begin

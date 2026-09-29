@@ -1,3 +1,4 @@
+import { createHmac, randomBytes } from "node:crypto";
 import type {
   ConnectorCapabilities,
   ConnectorConnectionConfig,
@@ -31,12 +32,32 @@ export class ReferenceConformanceAdapter implements ConnectorPort {
   readonly adapterVersion = "1.0.0";
   readonly mappingVersion = "reference-conformance-v1";
 
-  /** Keyed by `secretReference.reference` so independently configured connectors get independent windows. */
-  private readonly rateLimitCallCounts = new Map<string, number>();
+  private readonly rateLimitCallCounts = new Map<
+    string,
+    Readonly<{ count: number; expiresAt: number }>
+  >();
+  private readonly cacheIdentityKey = randomBytes(32);
+
+  constructor(
+    private readonly clock = Date.now,
+    private readonly maximumCacheEntries = 512,
+    private readonly cacheLifetimeMs = 300_000,
+  ) {
+    if (
+      !Number.isInteger(maximumCacheEntries) ||
+      maximumCacheEntries < 1 ||
+      maximumCacheEntries > 512 ||
+      !Number.isFinite(cacheLifetimeMs) ||
+      cacheLifetimeMs < 1 ||
+      cacheLifetimeMs > 300_000
+    )
+      throw new Error("Invalid reference cache bounds");
+  }
 
   testConnection(
     config: ConnectorConnectionConfig,
   ): Promise<ConnectorTestResult> {
+    assertActive(config);
     if (config.scopeFilter?.simulate === "malformed") {
       return Promise.resolve({
         outcome: "failure",
@@ -58,7 +79,10 @@ export class ReferenceConformanceAdapter implements ConnectorPort {
     });
   }
 
-  discoverCapabilities(): Promise<ConnectorCapabilities> {
+  discoverCapabilities(
+    config?: ConnectorConnectionConfig,
+  ): Promise<ConnectorCapabilities> {
+    if (config) assertActive(config);
     return Promise.resolve({
       adapterVersion: this.adapterVersion,
       mappingVersion: this.mappingVersion,
@@ -95,15 +119,28 @@ export class ReferenceConformanceAdapter implements ConnectorPort {
     cursor: SyncCursor | null,
     pageSize: number,
   ): Promise<PullPage> {
+    assertActive(config);
     if (config.scopeFilter?.simulate === "malformed") {
       return Promise.resolve(
         paginate(REFERENCE_ADAPTER_SCENARIO_RECORDS.invalid, cursor, pageSize),
       );
     }
     if (config.scopeFilter?.simulate === "rate_limit") {
-      const key = rateLimitKey(config);
-      const callCount = (this.rateLimitCallCounts.get(key) ?? 0) + 1;
-      this.rateLimitCallCounts.set(key, callCount);
+      const key = this.rateLimitKey(config);
+      const now = this.clock();
+      for (const [entryKey, entry] of this.rateLimitCallCounts) {
+        if (entry.expiresAt <= now) this.rateLimitCallCounts.delete(entryKey);
+      }
+      const entry = this.rateLimitCallCounts.get(key);
+      const callCount = (entry?.count ?? 0) + 1;
+      if (!entry && this.rateLimitCallCounts.size >= this.maximumCacheEntries)
+        this.rateLimitCallCounts.delete(
+          this.rateLimitCallCounts.keys().next().value!,
+        );
+      this.rateLimitCallCounts.set(key, {
+        count: Math.min(callCount, RATE_LIMITED_CALL_COUNT + 1),
+        expiresAt: entry?.expiresAt ?? now + this.cacheLifetimeMs,
+      });
       if (callCount <= RATE_LIMITED_CALL_COUNT) {
         return Promise.resolve({
           records: Object.freeze([]),
@@ -120,13 +157,20 @@ export class ReferenceConformanceAdapter implements ConnectorPort {
   }
 
   push(
-    _config: ConnectorConnectionConfig,
+    config: ConnectorConnectionConfig,
     records: readonly PushRecord[],
   ): Promise<readonly PushResult[]> {
+    assertActive(config);
     const now = new Date().toISOString();
     return Promise.resolve(
       Object.freeze(records.map((pushRecord) => validatePush(pushRecord, now))),
     );
+  }
+
+  private rateLimitKey(config: ConnectorConnectionConfig): string {
+    return createHmac("sha256", this.cacheIdentityKey)
+      .update(config.executionIdentity ?? config.secretReference.reference)
+      .digest("hex");
   }
 }
 
@@ -220,8 +264,9 @@ function compareRecords(left: ExternalRecord, right: ExternalRecord): number {
       : 0;
 }
 
-function rateLimitKey(config: ConnectorConnectionConfig): string {
-  return config.secretReference.reference;
+function assertActive(config: ConnectorConnectionConfig): void {
+  if (config.signal?.aborted)
+    throw new Error("Connector operation interrupted");
 }
 
 function productField(field: string) {

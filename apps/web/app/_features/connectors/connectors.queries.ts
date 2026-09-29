@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  keepPreviousData,
+  type UseMutationOptions,
   useMutation,
   useQuery,
   useQueryClient,
@@ -27,8 +27,103 @@ import type {
   UpdateConnectorInput,
   UpsertFieldAuthorityPolicyInput,
 } from "./connectors.schemas";
-import { connectorKeys } from "./connectors.keys";
+import { connectorKeys as baseConnectorKeys } from "./connectors.keys";
 import { connectorsApi } from "./connectors.api";
+import { useRef, useState } from "react";
+import { useSession } from "../../_providers/session-provider";
+import type {
+  TestConnectorInput,
+  RevokeConnectorSecretInput,
+  DisconnectConnectorInput,
+  ReconnectConnectorInput,
+} from "@repo/contracts/connectors/types";
+
+/** Reject stale tenant callbacks before dispatch and before mutation success is published. */
+function useConnectorMutation<Data, Variables = void>(
+  options: UseMutationOptions<Data, Error, Variables>,
+) {
+  const { session } = useSession();
+  const orgId = session?.organization?.id;
+  const currentOrg = useRef(orgId);
+  currentOrg.current = orgId;
+  return useMutation({
+    ...options,
+    mutationFn: async (variables, context) => {
+      if (!orgId || currentOrg.current !== orgId)
+        throw new Error(
+          "Organization changed. Reopen the connector in the selected organization.",
+        );
+      const result = await options.mutationFn!(variables, context);
+      if (currentOrg.current !== orgId)
+        throw new Error(
+          "Organization changed during the action. Reload current data.",
+        );
+      return result;
+    },
+  });
+}
+
+function useConnectorKeys() {
+  const { session } = useSession();
+  const orgId = session?.organization?.id ?? "no-organization";
+  const scoped = (key: readonly unknown[]) =>
+    baseConnectorKeys.scoped(orgId, key);
+  return {
+    all: baseConnectorKeys.organization(orgId),
+    list: (query: string) => scoped(baseConnectorKeys.list(query)),
+    detail: (id: string) => scoped(baseConnectorKeys.detail(id)),
+    mapping: (id: string) => scoped(baseConnectorKeys.mapping(id)),
+    identities: (id: string, query: string) =>
+      scoped(baseConnectorKeys.identities(id, query)),
+    syncRuns: (id: string, query: string) =>
+      scoped(baseConnectorKeys.syncRuns(id, query)),
+    syncRun: (id: string, run: string) =>
+      scoped(baseConnectorKeys.syncRun(id, run)),
+    planItems: (id: string, run: string, query: string) =>
+      scoped(baseConnectorKeys.planItems(id, run, query)),
+    runConflicts: (id: string, run: string) =>
+      scoped(baseConnectorKeys.runConflicts(id, run)),
+    conflict: (id: string) => scoped(baseConnectorKeys.conflict(id)),
+    deadLetters: (id: string, query: string) =>
+      scoped(baseConnectorKeys.deadLetters(id, query)),
+    metricsSnapshot: (id: string) =>
+      scoped(baseConnectorKeys.metricsSnapshot(id)),
+  };
+}
+
+export function useConnectorCatalogueQuery(enabled: boolean) {
+  const keys = useConnectorKeys();
+  return useQuery({
+    queryKey: [...keys.all, "catalogue"],
+    enabled,
+    retry: false,
+    queryFn: ({ signal }) => connectorsApi.catalogue(signal),
+  });
+}
+export function useConnectorOverviewsQuery(
+  query: Partial<ConnectorListQuery>,
+  enabled: boolean,
+) {
+  const keys = useConnectorKeys();
+  return useQuery({
+    queryKey: [...keys.all, "overviews", listKey(query)],
+    enabled,
+    retry: false,
+    queryFn: ({ signal }) => connectorsApi.overviews(query, signal),
+  });
+}
+export function useConnectorOverviewQuery(
+  connectorId: string,
+  enabled: boolean,
+) {
+  const keys = useConnectorKeys();
+  return useQuery({
+    queryKey: [...keys.detail(connectorId), "overview"],
+    enabled: enabled && connectorId !== "",
+    retry: false,
+    queryFn: ({ signal }) => connectorsApi.overview(connectorId, signal),
+  });
+}
 
 function listKey(query: Record<string, unknown>): string {
   return JSON.stringify(
@@ -49,16 +144,17 @@ export function useConnectorsQuery(
   query: Partial<ConnectorListQuery>,
   enabled: boolean,
 ) {
+  const connectorKeys = useConnectorKeys();
   return useQuery({
     queryKey: connectorKeys.list(listKey(query)),
     enabled,
     retry: false,
-    placeholderData: keepPreviousData,
     queryFn: ({ signal }) => connectorsApi.list(query, signal),
   });
 }
 
 export function useConnectorQuery(connectorId: string, enabled: boolean) {
+  const connectorKeys = useConnectorKeys();
   return useQuery({
     queryKey: connectorKeys.detail(connectorId),
     enabled: enabled && connectorId !== "",
@@ -71,6 +167,7 @@ export function useConnectorMappingQuery(
   connectorId: string,
   enabled: boolean,
 ) {
+  const connectorKeys = useConnectorKeys();
   return useQuery({
     queryKey: connectorKeys.mapping(connectorId),
     enabled: enabled && connectorId !== "",
@@ -84,11 +181,11 @@ export function useConnectorIdentitiesQuery(
   query: Partial<IdentitiesQuery>,
   enabled: boolean,
 ) {
+  const connectorKeys = useConnectorKeys();
   return useQuery({
     queryKey: connectorKeys.identities(connectorId, listKey(query)),
     enabled: enabled && connectorId !== "",
     retry: false,
-    placeholderData: keepPreviousData,
     queryFn: ({ signal }) =>
       connectorsApi.listIdentities(connectorId, query, signal),
   });
@@ -99,11 +196,11 @@ export function useConnectorSyncRunsQuery(
   query: Partial<SyncRunsQuery>,
   enabled: boolean,
 ) {
+  const connectorKeys = useConnectorKeys();
   return useQuery({
     queryKey: connectorKeys.syncRuns(connectorId, listKey(query)),
     enabled: enabled && connectorId !== "",
     retry: false,
-    placeholderData: keepPreviousData,
     queryFn: ({ signal }) =>
       connectorsApi.listSyncRuns(connectorId, query, signal),
   });
@@ -114,6 +211,7 @@ export function useSyncRunQuery(
   runId: string,
   enabled: boolean,
 ) {
+  const connectorKeys = useConnectorKeys();
   return useQuery<SyncRunResponse>({
     queryKey: connectorKeys.syncRun(connectorId, runId),
     enabled: enabled && connectorId !== "" && runId !== "",
@@ -131,11 +229,11 @@ export function usePlanItemsQuery(
   query: Partial<PlanItemsQuery>,
   enabled: boolean,
 ) {
+  const connectorKeys = useConnectorKeys();
   return useQuery({
     queryKey: connectorKeys.planItems(connectorId, runId, listKey(query)),
     enabled: enabled && connectorId !== "" && runId !== "",
     retry: false,
-    placeholderData: keepPreviousData,
     queryFn: ({ signal }) =>
       connectorsApi.listPlanItems(connectorId, runId, query, signal),
   });
@@ -146,6 +244,7 @@ export function useRunConflictsQuery(
   runId: string,
   enabled: boolean,
 ) {
+  const connectorKeys = useConnectorKeys();
   return useQuery({
     queryKey: connectorKeys.runConflicts(connectorId, runId),
     enabled: enabled && connectorId !== "" && runId !== "",
@@ -160,11 +259,11 @@ export function useConnectorDeadLettersQuery(
   query: Partial<SyncRunsQuery>,
   enabled: boolean,
 ) {
+  const connectorKeys = useConnectorKeys();
   return useQuery({
     queryKey: connectorKeys.deadLetters(connectorId, listKey(query)),
     enabled: enabled && connectorId !== "",
     retry: false,
-    placeholderData: keepPreviousData,
     queryFn: ({ signal }) =>
       connectorsApi.listDeadLetters(connectorId, query, signal),
   });
@@ -174,6 +273,7 @@ export function useConnectorMetricsSnapshotQuery(
   connectorId: string,
   enabled: boolean,
 ) {
+  const connectorKeys = useConnectorKeys();
   return useQuery({
     queryKey: connectorKeys.metricsSnapshot(connectorId),
     enabled: enabled && connectorId !== "",
@@ -184,6 +284,7 @@ export function useConnectorMetricsSnapshotQuery(
 }
 
 function useInvalidateConnectors() {
+  const connectorKeys = useConnectorKeys();
   const client = useQueryClient();
   return async (connectorId?: string) => {
     await Promise.all([
@@ -201,7 +302,7 @@ function useInvalidateConnectors() {
 
 export function useCreateConnectorMutation() {
   const invalidate = useInvalidateConnectors();
-  return useMutation({
+  return useConnectorMutation({
     mutationFn: (input: CreateConnectorInput) => connectorsApi.create(input),
     onSuccess: () => invalidate(),
   });
@@ -209,33 +310,79 @@ export function useCreateConnectorMutation() {
 
 export function useUpdateConnectorMutation(connectorId: string) {
   const invalidate = useInvalidateConnectors();
-  return useMutation({
+  return useConnectorMutation({
     mutationFn: (input: UpdateConnectorInput) =>
       connectorsApi.update(connectorId, input),
     onSuccess: () => invalidate(connectorId),
   });
 }
 
+/** Secrets bypass MutationCache entirely: no plaintext variables or completed mutation objects. */
 export function useSetConnectorSecretMutation(connectorId: string) {
   const invalidate = useInvalidateConnectors();
-  return useMutation({
-    mutationFn: (input: SetConnectorSecretInput) =>
-      connectorsApi.setSecret(connectorId, input),
+  const { session } = useSession();
+  const orgId = session?.organization?.id;
+  const activeOrg = useRef(orgId);
+  activeOrg.current = orgId;
+  const [isPending, setPending] = useState(false);
+  return {
+    isPending,
+    async mutateAsync(input: SetConnectorSecretInput) {
+      if (!orgId || activeOrg.current !== orgId)
+        throw new Error(
+          "Organization changed. Reopen the connector before submitting credentials.",
+        );
+      setPending(true);
+      try {
+        const result = await connectorsApi.setSecret(connectorId, input);
+        await invalidate(connectorId);
+        if (activeOrg.current !== orgId)
+          throw new Error("Organization changed during credential submission.");
+        return result;
+      } finally {
+        setPending(false);
+      }
+    },
+  };
+}
+
+export function useRevokeConnectorSecretMutation(connectorId: string) {
+  const invalidate = useInvalidateConnectors();
+  return useConnectorMutation({
+    mutationFn: (input: RevokeConnectorSecretInput) =>
+      connectorsApi.revokeSecret(connectorId, input),
+    onSuccess: () => invalidate(connectorId),
+  });
+}
+export function useDisconnectConnectorMutation(connectorId: string) {
+  const invalidate = useInvalidateConnectors();
+  return useConnectorMutation({
+    mutationFn: (input: DisconnectConnectorInput) =>
+      connectorsApi.disconnect(connectorId, input),
+    onSuccess: () => invalidate(connectorId),
+  });
+}
+export function useReconnectConnectorMutation(connectorId: string) {
+  const invalidate = useInvalidateConnectors();
+  return useConnectorMutation({
+    mutationFn: (input: ReconnectConnectorInput) =>
+      connectorsApi.reconnect(connectorId, input),
     onSuccess: () => invalidate(connectorId),
   });
 }
 
 export function useTestConnectorMutation(connectorId: string) {
   const invalidate = useInvalidateConnectors();
-  return useMutation({
-    mutationFn: () => connectorsApi.test(connectorId),
+  return useConnectorMutation({
+    mutationFn: (input: TestConnectorInput) =>
+      connectorsApi.test(connectorId, input),
     onSuccess: () => invalidate(connectorId),
   });
 }
 
 export function useArchiveConnectorMutation(connectorId: string) {
   const invalidate = useInvalidateConnectors();
-  return useMutation({
+  return useConnectorMutation({
     mutationFn: (input: ArchiveConnectorInput) =>
       connectorsApi.archive(connectorId, input),
     onSuccess: () => invalidate(connectorId),
@@ -243,15 +390,16 @@ export function useArchiveConnectorMutation(connectorId: string) {
 }
 
 export function usePreviewMappingMutation(connectorId: string) {
-  return useMutation({
+  return useConnectorMutation({
     mutationFn: (input: PreviewFieldAuthorityPolicyInput) =>
       connectorsApi.previewMapping(connectorId, input),
   });
 }
 
 export function useSaveMappingMutation(connectorId: string) {
+  const connectorKeys = useConnectorKeys();
   const client = useQueryClient();
-  return useMutation({
+  return useConnectorMutation({
     mutationFn: (input: UpsertFieldAuthorityPolicyInput) =>
       connectorsApi.saveMapping(connectorId, input),
     onSuccess: () =>
@@ -262,16 +410,17 @@ export function useSaveMappingMutation(connectorId: string) {
 }
 
 function useInvalidateIdentities(connectorId: string) {
+  const connectorKeys = useConnectorKeys();
   const client = useQueryClient();
   return () =>
     client.invalidateQueries({
-      queryKey: ["connectors", connectorId, "identities"],
+      queryKey: connectorKeys.identities(connectorId, "").slice(0, -1),
     });
 }
 
 export function useLinkIdentityMutation(connectorId: string) {
   const invalidate = useInvalidateIdentities(connectorId);
-  return useMutation({
+  return useConnectorMutation({
     mutationFn: (input: LinkExternalIdentityInput) =>
       connectorsApi.linkIdentity(connectorId, input),
     onSuccess: () => invalidate(),
@@ -280,7 +429,7 @@ export function useLinkIdentityMutation(connectorId: string) {
 
 export function useUnlinkIdentityMutation(connectorId: string) {
   const invalidate = useInvalidateIdentities(connectorId);
-  return useMutation({
+  return useConnectorMutation({
     mutationFn: ({
       mappingId,
       input,
@@ -292,7 +441,7 @@ export function useUnlinkIdentityMutation(connectorId: string) {
 
 export function useMergeIdentitiesMutation(connectorId: string) {
   const invalidate = useInvalidateIdentities(connectorId);
-  return useMutation({
+  return useConnectorMutation({
     mutationFn: (input: MergeExternalIdentityInput) =>
       connectorsApi.mergeIdentities(connectorId, input),
     onSuccess: () => invalidate(),
@@ -300,14 +449,15 @@ export function useMergeIdentitiesMutation(connectorId: string) {
 }
 
 function useInvalidateSyncRuns(connectorId: string) {
+  const connectorKeys = useConnectorKeys();
   const client = useQueryClient();
   return async (runId?: string) => {
     await Promise.all([
       client.invalidateQueries({
-        queryKey: ["connectors", connectorId, "sync-runs"],
+        queryKey: connectorKeys.syncRuns(connectorId, "").slice(0, -1),
       }),
       client.invalidateQueries({
-        queryKey: ["connectors", connectorId, "dead-letters"],
+        queryKey: connectorKeys.deadLetters(connectorId, "").slice(0, -1),
       }),
       client.invalidateQueries({
         queryKey: connectorKeys.metricsSnapshot(connectorId),
@@ -325,7 +475,7 @@ function useInvalidateSyncRuns(connectorId: string) {
 
 export function useStartSyncRunMutation(connectorId: string) {
   const invalidate = useInvalidateSyncRuns(connectorId);
-  return useMutation({
+  return useConnectorMutation({
     mutationFn: (input: StartSyncRunInput) =>
       connectorsApi.startSyncRun(connectorId, input),
     onSuccess: (response) => invalidate(response.run.id),
@@ -334,7 +484,7 @@ export function useStartSyncRunMutation(connectorId: string) {
 
 export function useRequestCommitMutation(connectorId: string, runId: string) {
   const invalidate = useInvalidateSyncRuns(connectorId);
-  return useMutation({
+  return useConnectorMutation({
     mutationFn: (input: RequestSyncRunCommitInput) =>
       connectorsApi.requestCommit(connectorId, runId, input),
     onSuccess: () => invalidate(runId),
@@ -343,7 +493,7 @@ export function useRequestCommitMutation(connectorId: string, runId: string) {
 
 export function useCancelSyncRunMutation(connectorId: string, runId: string) {
   const invalidate = useInvalidateSyncRuns(connectorId);
-  return useMutation({
+  return useConnectorMutation({
     mutationFn: (input: CancelSyncRunInput) =>
       connectorsApi.cancelSyncRun(connectorId, runId, input),
     onSuccess: () => invalidate(runId),
@@ -352,15 +502,16 @@ export function useCancelSyncRunMutation(connectorId: string, runId: string) {
 
 export function useRetrySyncRunMutation(connectorId: string, runId: string) {
   const invalidate = useInvalidateSyncRuns(connectorId);
-  return useMutation({
+  return useConnectorMutation({
     mutationFn: () => connectorsApi.retrySyncRun(connectorId, runId),
     onSuccess: () => invalidate(runId),
   });
 }
 
 export function useResolveConflictMutation(connectorId: string, runId: string) {
+  const connectorKeys = useConnectorKeys();
   const client = useQueryClient();
-  return useMutation({
+  return useConnectorMutation({
     mutationFn: ({
       conflictId,
       input,
@@ -383,7 +534,7 @@ export function useResolveConflictMutation(connectorId: string, runId: string) {
 }
 
 export function useExportDiagnosticsMutation(connectorId: string) {
-  return useMutation({
+  return useConnectorMutation({
     mutationFn: () => connectorsApi.exportDiagnostics(connectorId),
   });
 }

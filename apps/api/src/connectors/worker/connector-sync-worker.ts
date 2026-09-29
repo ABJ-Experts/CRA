@@ -14,10 +14,31 @@ import type { FieldAuthorityPolicy } from "../application/field-authority-policy
 import { normalizeIdentity } from "../application/identity-matching-policy";
 import { SupabaseConnectorRepository } from "../infrastructure/supabase-connector.repository";
 import type { SupabaseService } from "../../supabase/supabase.service";
+import type {
+  ConnectorCredentialReaderPort,
+  ConnectorVaultPort,
+} from "../application/connector-vault.port";
+import type { ConnectorAuthorizationPort } from "../application/connector-authorization.port";
+import type {
+  ConnectorHubContext,
+  ConnectorHubRepository,
+  ConnectorEgressPolicy,
+} from "../application/connector-hub-repository.port";
+import type { PermissionKey } from "@repo/contracts/permissions";
+import {
+  syncProposedActionSchema,
+  testConnectorResultSchema,
+} from "@repo/contracts/connectors/schemas";
 
-const maximumClaimsPerCycle = Number(
+const configuredMaximumClaims = Number(
   process.env.CONNECTOR_SYNC_MAX_CLAIMS_PER_CYCLE ?? 200,
 );
+const maximumClaimsPerCycle =
+  Number.isSafeInteger(configuredMaximumClaims) &&
+  configuredMaximumClaims > 0 &&
+  configuredMaximumClaims <= 200
+    ? configuredMaximumClaims
+    : 200;
 const pullPageSize = 200;
 
 type ClaimedSyncRun = Readonly<{
@@ -28,6 +49,11 @@ type ClaimedSyncRun = Readonly<{
   cursorFrom: string | null;
   fetchContentHash: string | null;
   correlationId: string | null;
+  actorId: string | null;
+  commitActorId: string | null;
+  connectionRevision: number | null;
+  credentialRevision: number | null;
+  permissionVersion: number | null;
 }>;
 
 type PersistedConnector = Readonly<{
@@ -48,9 +74,16 @@ export class ConnectorSyncWorker {
     private readonly repository: SupabaseConnectorRepository,
     private readonly supabase: SupabaseService,
     private readonly adapters: ReadonlyMap<ConnectorType, ConnectorPort>,
-    private readonly encryptionKey: string,
+    _legacyEncryptionKey: string,
     private readonly workerId: string,
     private readonly leaseSeconds = 60,
+    private readonly security?: Readonly<{
+      vault: ConnectorVaultPort;
+      credentialReader?: ConnectorCredentialReaderPort;
+      egress?: ConnectorEgressPolicy;
+      authorization: ConnectorAuthorizationPort;
+      hub: ConnectorHubRepository;
+    }>,
   ) {}
 
   async runOnce(): Promise<void> {
@@ -80,6 +113,8 @@ export class ConnectorSyncWorker {
     );
     if (!claimed) return false;
     const run = toClaimedSyncRun(claimed);
+    if (run.organizationId !== organizationId)
+      throw new Error("Connector claim tenant mismatch");
 
     try {
       if (run.workKind === "commit") {
@@ -103,22 +138,36 @@ export class ConnectorSyncWorker {
 
   private async applyCommit(run: ClaimedSyncRun): Promise<void> {
     const organizationId = run.organizationId;
-    const actorId = await this.repository.resolveWorkerActor(organizationId);
-    if (!actorId) {
-      await this.repository.failSyncRun(
-        organizationId,
-        run.id,
-        this.workerId,
-        "no_worker_actor_available",
-      );
-      return;
-    }
+    await this.assertAuthorized(run);
+    const { data: actions, error } = await this.supabase
+      .admin()
+      .rpc("m11_sync_run_required_product_actions", {
+        p_organization_id: organizationId,
+        p_sync_run_id: run.id,
+      });
+    if (error) throw new Error("Connector commit plan lookup failed");
+    const productPermissions = productPermissionsFor(
+      syncProposedActionSchema
+        .array()
+        .max(syncProposedActionSchema.options.length)
+        .parse(actions),
+    );
+    await this.assertAuthorized(run, productPermissions);
+    const actorId = run.commitActorId;
+    if (!actorId) throw new Error("Connector approval identity unavailable");
+    const approval = await this.security!.authorization.authorize(
+      organizationId,
+      actorId,
+      ["can_approve_connectors", ...productPermissions],
+    );
+    if (approval.permissionVersion !== run.permissionVersion)
+      throw new Error("Connector authorization changed");
     await this.repository.commitSyncRun({
       p_organization_id: organizationId,
       p_sync_run_id: run.id,
       p_actor_user_id: actorId,
       p_fetch_content_hash: run.fetchContentHash,
-      p_idempotency_key: randomUUID(),
+      p_idempotency_key: run.id,
       p_correlation_id: run.correlationId ?? randomUUID(),
     });
     // commit_sync_run_atomic is fully self-contained (apply + cursor advance +
@@ -129,10 +178,8 @@ export class ConnectorSyncWorker {
   private async buildAndSavePlan(run: ClaimedSyncRun): Promise<void> {
     const organizationId = run.organizationId;
     const connectorId = run.connectorId;
-    const connector = (await this.repository.getConnector(
-      organizationId,
-      connectorId,
-    )) as PersistedConnector;
+    const securedContext = await this.assertAuthorized(run);
+    const connector = securedContext.connector;
     const adapter = this.adapters.get(connector.connectorType);
     if (!adapter) {
       await this.repository.failSyncRun(
@@ -144,23 +191,46 @@ export class ConnectorSyncWorker {
       return;
     }
 
-    const secretValue = connector.hasSecret
-      ? await this.repository.resolveConnectorSecret(
-          organizationId,
+    const secret = securedContext.secret;
+    if (connector.hasSecret && !secret)
+      throw new Error("Connector credentials unavailable");
+    const secretContext = secret
+      ? {
+          orgId: organizationId,
           connectorId,
-          this.encryptionKey,
-        )
+          secretId: secret.secretId,
+          credentialRevision: secret.credentialRevision,
+        }
       : null;
+    let secretValue: string | null = null;
+    if (secret && secretContext) {
+      if (this.security!.credentialReader)
+        secretValue = await this.security!.credentialReader.read(
+          secretContext,
+          secret,
+        );
+      else if (secret.envelope && !secret.legacy)
+        secretValue = this.security!.vault.decrypt(
+          secretContext,
+          secret.envelope,
+        );
+      else throw new Error("Connector credentials unavailable");
+    }
     const config: ConnectorConnectionConfig = {
       connectorType: connector.connectorType,
       ...connector.connectionConfig,
       secretReference: {
-        provider: "reference_fixture",
+        provider: "vault",
         reference: secretValue ?? "",
       },
+      executionIdentity: `${organizationId}:${connectorId}:${run.id}`,
+      signal: AbortSignal.timeout(15_000),
     };
 
-    const connectionResult = await adapter.testConnection(config);
+    await this.assertEgress(connector.connectionConfig, config.signal!);
+    const connectionResult = testConnectorResultSchema.parse(
+      await withDeadline(adapter.testConnection(config), config.signal!),
+    );
     if (connectionResult.outcome === "failure") {
       await this.repository.failSyncRun(
         organizationId,
@@ -172,11 +242,14 @@ export class ConnectorSyncWorker {
     }
 
     const cursorFrom = run.cursorFrom;
-    const page = await adapter.pull(
-      config,
-      cursorInputFor(cursorFrom),
-      pullPageSize,
+    await this.assertAuthorized(run);
+    await this.assertEgress(connector.connectionConfig, config.signal!);
+    const page = await withDeadline(
+      adapter.pull(config, cursorInputFor(cursorFrom), pullPageSize),
+      config.signal!,
     );
+    if (page.records.length > pullPageSize)
+      throw new Error("Connector provider page exceeded its bound");
 
     if (page.adapterSignal === "rate_limited") {
       await this.repository.failSyncRun(
@@ -209,7 +282,8 @@ export class ConnectorSyncWorker {
       return;
     }
 
-    const context = this.buildPlanContext(
+    const context = createConnectorSyncPlanContext(
+      this.supabase,
       organizationId,
       connectorId,
       connector,
@@ -257,6 +331,11 @@ export class ConnectorSyncWorker {
       .update(JSON.stringify(page.records))
       .digest("hex");
 
+    const productPermissions = productPermissionsFor(
+      planItems.map((item) => item.proposedAction),
+    );
+    await this.assertAuthorized(run, productPermissions);
+
     await this.repository.saveSyncRunPlan({
       p_organization_id: organizationId,
       p_sync_run_id: run.id,
@@ -268,230 +347,294 @@ export class ConnectorSyncWorker {
     });
   }
 
-  private buildPlanContext(
-    organizationId: string,
-    connectorId: string,
-    connector: PersistedConnector,
-    pageRecords: readonly Readonly<{
-      entityType: "product" | "release";
-      externalId: string;
-      changeKind: "upsert" | "tombstone";
-    }>[],
-  ): SyncPlanContext {
-    const admin = () => this.supabase.admin();
-    const config = connector.connectionConfig;
-    const defaultOwnerBinding =
-      typeof config.defaultOwnerBinding === "object" &&
-      config.defaultOwnerBinding !== null
-        ? (config.defaultOwnerBinding as {
-            responsibleOwnerId: string;
-            legalEntityId: string;
-          })
-        : null;
-    const productRecordCounts = new Map<string, number>();
-    for (const record of pageRecords) {
-      if (record.entityType !== "product" || record.changeKind !== "upsert") {
-        continue;
-      }
-      const normalized = normalizeIdentity(record.externalId);
-      productRecordCounts.set(
-        normalized,
-        (productRecordCounts.get(normalized) ?? 0) + 1,
-      );
-    }
-
-    return {
-      organizationId,
-      connectorId,
-      defaultOwnerBinding,
-      findActiveMapping: async (entityType, externalIdNormalized) => {
-        const { data } = await admin()
-          .from("product_external_identities")
-          .select("id, cra_product_id, cra_release_id")
-          .eq("organization_id", organizationId)
-          .eq("connector_id", connectorId)
-          .eq("entity_type", entityType)
-          .eq("external_id_normalized", externalIdNormalized)
-          .is("superseded_at", null)
-          .is("unlinked_at", null)
-          .maybeSingle();
-        if (!data) return null;
-        return {
-          id: data.id,
-          craProductId: data.cra_product_id,
-          craReleaseId: data.cra_release_id,
-        };
-      },
-      findProductCandidatesByCode: async (normalizedCode) => {
-        const { data } = await admin()
-          .from("products")
-          .select("id")
-          .eq("organization_id", organizationId)
-          .eq("internal_code_normalized", normalizedCode);
-        const rows = (data ?? []) as readonly { id: string }[];
-        return Promise.all(
-          rows.map(async (row) => {
-            const { count } = await admin()
-              .from("product_external_identities")
-              .select("id", { count: "exact", head: true })
-              .eq("organization_id", organizationId)
-              .eq("cra_product_id", row.id)
-              .neq("connector_id", connectorId)
-              .is("superseded_at", null)
-              .is("unlinked_at", null);
-            return {
-              productId: row.id,
-              hasOtherActiveMapping: (count ?? 0) > 0,
-            };
-          }),
-        );
-      },
-      findReleaseCandidatesByVersion: async (productId, normalizedVersion) => {
-        const { data } = await admin()
-          .from("product_releases")
-          .select("id")
-          .eq("organization_id", organizationId)
-          .eq("product_id", productId)
-          .eq("release_version_normalized", normalizedVersion);
-        const rows = (data ?? []) as readonly { id: string }[];
-        return rows.map((row) => ({
-          releaseId: row.id,
-          hasOtherActiveMapping: false,
-        }));
-      },
-      getActiveProductMappingsForExternalParent: async (
-        parentExternalIdNormalized,
-      ) => {
-        const { data, error } = await admin()
-          .from("product_external_identities")
-          .select("id, cra_product_id")
-          .eq("organization_id", organizationId)
-          .eq("connector_id", connectorId)
-          .eq("entity_type", "product")
-          .eq("external_id_normalized", parentExternalIdNormalized)
-          .is("superseded_at", null)
-          .is("unlinked_at", null);
-        if (error) throw new Error("connector_parent_mapping_lookup_failed");
-        return (data ?? []).map((row) => ({
-          identityId: row.id,
-          craProductId: row.cra_product_id,
-        }));
-      },
-      getConnectorOwnedParent: async (childProductId) => {
-        const { data, error } = await admin()
-          .from("product_relationships")
-          .select("source_product_id")
-          .eq("organization_id", organizationId)
-          .eq("relationship_type", "embedded")
-          .eq("target_product_id", childProductId)
-          .eq("source", "connector_sync")
-          .like("provenance", `connector-sync:v1:${connectorId}:%`)
-          .is("ended_at", null)
-          .limit(2);
-        if (error) throw new Error("connector_owned_parent_lookup_failed");
-
-        const rows = (data ?? []) as readonly {
-          source_product_id: string;
-        }[];
-        const parentProductIds = unique(
-          rows.map((row) => row.source_product_id),
-        );
-        if (parentProductIds.length === 0) return { outcome: "none" };
-        if (parentProductIds.length === 1) {
-          return {
-            outcome: "one",
-            parentProductId: parentProductIds[0]!,
-          };
-        }
-        return { outcome: "ambiguous", parentProductIds };
-      },
-      wouldCreateEmbeddedComponentCycle: async (
-        parentProductId,
-        childProductId,
-      ) => {
-        const { data: settings, error: settingsError } = await admin()
-          .from("organization_settings")
-          .select("product_relationship_graph_version")
-          .eq("organization_id", organizationId)
-          .maybeSingle();
-        if (settingsError || !settings) {
-          throw new Error("connector_relationship_graph_lookup_failed");
-        }
-        const { data: preview, error: previewError } = await admin().rpc(
-          "m2_component_link_preview",
-          {
-            p_organization_id: organizationId,
-            p_parent_product_id: parentProductId,
-            p_component_product_id: childProductId,
-            p_effective_at: new Date().toISOString(),
-            p_graph_version: settings.product_relationship_graph_version,
-            p_excluding_relationship_id: undefined,
-          },
-        );
-        if (previewError || !preview || typeof preview !== "object") {
-          throw new Error("connector_relationship_graph_preview_failed");
-        }
-        return (preview as { outcome?: unknown }).outcome !== "allowed";
-      },
-      isProductExternalIdPlanned: (externalIdNormalized) =>
-        productRecordCounts.get(externalIdNormalized) === 1,
-      getProductFields: async (productId) => {
-        const { data } = await admin()
-          .from("products")
-          .select("name, internal_code, product_type, description, version")
-          .eq("organization_id", organizationId)
-          .eq("id", productId)
-          .maybeSingle();
-        if (!data) return null;
-        return {
-          name: data.name,
-          internalCode: data.internal_code,
-          productType: data.product_type,
-          description: data.description,
-          version: data.version,
-        };
-      },
-      getReleaseFields: async (productId, releaseId) => {
-        const { data } = await admin()
-          .from("product_releases")
-          .select("label, release_version, description, version")
-          .eq("organization_id", organizationId)
-          .eq("product_id", productId)
-          .eq("id", releaseId)
-          .maybeSingle();
-        if (!data) return null;
-        return {
-          label: data.label,
-          releaseVersion: data.release_version,
-          description: data.description,
-          version: data.version,
-        };
-      },
-      getFieldAuthorityPolicy: async (entityType, field) => {
-        const { data } = await admin()
-          .from("field_authority_policies")
-          .select("id, policy_value, protected, policy_version")
-          .eq("organization_id", organizationId)
-          .eq("connector_id", connectorId)
-          .eq("entity_type", entityType)
-          .eq("field_name", field)
-          .is("superseded_at", null)
-          .maybeSingle();
-        if (!data) return null;
-        return {
-          id: data.id,
-          policyValue: data.policy_value as FieldAuthorityPolicy["policyValue"],
-          protected: data.protected,
-          policyVersion: data.policy_version,
-        };
-      },
-      hashValue: (value) =>
-        createHash("sha256")
-          .update(JSON.stringify(value ?? null))
-          .digest("hex"),
-      nowIso: () => new Date().toISOString(),
-    };
+  private async assertEgress(
+    config: Readonly<Record<string, unknown>>,
+    signal: AbortSignal,
+  ): Promise<void> {
+    if (this.security?.egress)
+      await withDeadline(this.security.egress.validate(config), signal);
+    else if (config.baseUrl !== undefined)
+      throw new Error("Connector endpoint validation unavailable");
   }
+
+  private async assertAuthorized(
+    run: ClaimedSyncRun,
+    additionalPermissions: readonly PermissionKey[] = [],
+  ): Promise<ConnectorHubContext> {
+    if (
+      !this.security ||
+      !run.actorId ||
+      run.connectionRevision === null ||
+      run.credentialRevision === null ||
+      run.permissionVersion === null
+    )
+      throw new Error("Connector recorded authorization unavailable");
+    const authority = await this.security.authorization.authorize(
+      run.organizationId,
+      run.actorId,
+      ["can_create_connectors", "can_view_products", ...additionalPermissions],
+    );
+    if (
+      authority.permissionVersion !== run.permissionVersion ||
+      authority.organizationId !== run.organizationId ||
+      authority.actorId !== run.actorId
+    )
+      throw new Error("Connector authorization changed");
+    const context = await this.security.hub.context(
+      run.organizationId,
+      run.connectorId,
+    );
+    if (
+      !context.connector.enabled ||
+      context.connector.archivedAt !== null ||
+      context.connectionRevision !== run.connectionRevision ||
+      context.credentialRevision !== run.credentialRevision
+    )
+      throw new Error("Connector configuration changed");
+    return context;
+  }
+}
+
+function productPermissionsFor(actions: readonly unknown[]): PermissionKey[] {
+  return [
+    ...(actions.includes("create") ? ["can_create_products" as const] : []),
+    ...(actions.includes("update") || actions.includes("conflict")
+      ? ["can_edit_products" as const]
+      : []),
+    ...(actions.includes("archive") ? ["can_delete_products" as const] : []),
+  ];
+}
+
+export function createConnectorSyncPlanContext(
+  supabase: SupabaseService,
+  organizationId: string,
+  connectorId: string,
+  connector: PersistedConnector,
+  pageRecords: readonly Readonly<{
+    entityType: "product" | "release";
+    externalId: string;
+    changeKind: "upsert" | "tombstone";
+  }>[],
+): SyncPlanContext {
+  const admin = () => supabase.admin();
+  const config = connector.connectionConfig;
+  const defaultOwnerBinding =
+    typeof config.defaultOwnerBinding === "object" &&
+    config.defaultOwnerBinding !== null
+      ? (config.defaultOwnerBinding as {
+          responsibleOwnerId: string;
+          legalEntityId: string;
+        })
+      : null;
+  const productRecordCounts = new Map<string, number>();
+  for (const record of pageRecords) {
+    if (record.entityType !== "product" || record.changeKind !== "upsert") {
+      continue;
+    }
+    const normalized = normalizeIdentity(record.externalId);
+    productRecordCounts.set(
+      normalized,
+      (productRecordCounts.get(normalized) ?? 0) + 1,
+    );
+  }
+
+  return {
+    organizationId,
+    connectorId,
+    defaultOwnerBinding,
+    findActiveMapping: async (entityType, externalIdNormalized) => {
+      const { data, error } = await admin()
+        .from("product_external_identities")
+        .select("id, cra_product_id, cra_release_id")
+        .eq("organization_id", organizationId)
+        .eq("connector_id", connectorId)
+        .eq("entity_type", entityType)
+        .eq("external_id_normalized", externalIdNormalized)
+        .is("superseded_at", null)
+        .is("unlinked_at", null)
+        .maybeSingle();
+      if (error) throw new Error("connector_identity_lookup_failed");
+      if (!data) return null;
+      return {
+        id: data.id,
+        craProductId: data.cra_product_id,
+        craReleaseId: data.cra_release_id,
+      };
+    },
+    findProductCandidatesByCode: async (normalizedCode) => {
+      const { data, error } = await admin()
+        .from("products")
+        .select("id")
+        .eq("organization_id", organizationId)
+        .eq("internal_code_normalized", normalizedCode);
+      if (error) throw new Error("connector_product_candidates_lookup_failed");
+      const rows = (data ?? []) as readonly { id: string }[];
+      return Promise.all(
+        rows.map(async (row) => {
+          const { count, error: countError } = await admin()
+            .from("product_external_identities")
+            .select("id", { count: "exact", head: true })
+            .eq("organization_id", organizationId)
+            .eq("cra_product_id", row.id)
+            .neq("connector_id", connectorId)
+            .is("superseded_at", null)
+            .is("unlinked_at", null);
+          if (countError)
+            throw new Error("connector_product_mapping_lookup_failed");
+          return {
+            productId: row.id,
+            hasOtherActiveMapping: (count ?? 0) > 0,
+          };
+        }),
+      );
+    },
+    findReleaseCandidatesByVersion: async (productId, normalizedVersion) => {
+      const { data, error } = await admin()
+        .from("product_releases")
+        .select("id")
+        .eq("organization_id", organizationId)
+        .eq("product_id", productId)
+        .eq("release_version_normalized", normalizedVersion);
+      if (error) throw new Error("connector_release_candidates_lookup_failed");
+      const rows = (data ?? []) as readonly { id: string }[];
+      return rows.map((row) => ({
+        releaseId: row.id,
+        hasOtherActiveMapping: false,
+      }));
+    },
+    getActiveProductMappingsForExternalParent: async (
+      parentExternalIdNormalized,
+    ) => {
+      const { data, error } = await admin()
+        .from("product_external_identities")
+        .select("id, cra_product_id")
+        .eq("organization_id", organizationId)
+        .eq("connector_id", connectorId)
+        .eq("entity_type", "product")
+        .eq("external_id_normalized", parentExternalIdNormalized)
+        .is("superseded_at", null)
+        .is("unlinked_at", null);
+      if (error) throw new Error("connector_parent_mapping_lookup_failed");
+      return (data ?? []).map((row) => ({
+        identityId: row.id,
+        craProductId: row.cra_product_id,
+      }));
+    },
+    getConnectorOwnedParent: async (childProductId) => {
+      const { data, error } = await admin()
+        .from("product_relationships")
+        .select("source_product_id")
+        .eq("organization_id", organizationId)
+        .eq("relationship_type", "embedded")
+        .eq("target_product_id", childProductId)
+        .eq("source", "connector_sync")
+        .like("provenance", `connector-sync:v1:${connectorId}:%`)
+        .is("ended_at", null)
+        .limit(2);
+      if (error) throw new Error("connector_owned_parent_lookup_failed");
+
+      const rows = (data ?? []) as readonly {
+        source_product_id: string;
+      }[];
+      const parentProductIds = unique(rows.map((row) => row.source_product_id));
+      if (parentProductIds.length === 0) return { outcome: "none" };
+      if (parentProductIds.length === 1) {
+        return {
+          outcome: "one",
+          parentProductId: parentProductIds[0]!,
+        };
+      }
+      return { outcome: "ambiguous", parentProductIds };
+    },
+    wouldCreateEmbeddedComponentCycle: async (
+      parentProductId,
+      childProductId,
+    ) => {
+      const { data: settings, error: settingsError } = await admin()
+        .from("organization_settings")
+        .select("product_relationship_graph_version")
+        .eq("organization_id", organizationId)
+        .maybeSingle();
+      if (settingsError || !settings) {
+        throw new Error("connector_relationship_graph_lookup_failed");
+      }
+      const { data: preview, error: previewError } = await admin().rpc(
+        "m2_component_link_preview",
+        {
+          p_organization_id: organizationId,
+          p_parent_product_id: parentProductId,
+          p_component_product_id: childProductId,
+          p_effective_at: new Date().toISOString(),
+          p_graph_version: settings.product_relationship_graph_version,
+          p_excluding_relationship_id: undefined,
+        },
+      );
+      if (previewError || !preview || typeof preview !== "object") {
+        throw new Error("connector_relationship_graph_preview_failed");
+      }
+      return (preview as { outcome?: unknown }).outcome !== "allowed";
+    },
+    isProductExternalIdPlanned: (externalIdNormalized) =>
+      productRecordCounts.get(externalIdNormalized) === 1,
+    getProductFields: async (productId) => {
+      const { data, error } = await admin()
+        .from("products")
+        .select("name, internal_code, product_type, description, version")
+        .eq("organization_id", organizationId)
+        .eq("id", productId)
+        .maybeSingle();
+      if (error) throw new Error("connector_product_fields_lookup_failed");
+      if (!data) return null;
+      return {
+        name: data.name,
+        internalCode: data.internal_code,
+        productType: data.product_type,
+        description: data.description,
+        version: data.version,
+      };
+    },
+    getReleaseFields: async (productId, releaseId) => {
+      const { data, error } = await admin()
+        .from("product_releases")
+        .select("label, release_version, description, version")
+        .eq("organization_id", organizationId)
+        .eq("product_id", productId)
+        .eq("id", releaseId)
+        .maybeSingle();
+      if (error) throw new Error("connector_release_fields_lookup_failed");
+      if (!data) return null;
+      return {
+        label: data.label,
+        releaseVersion: data.release_version,
+        description: data.description,
+        version: data.version,
+      };
+    },
+    getFieldAuthorityPolicy: async (entityType, field) => {
+      const { data, error } = await admin()
+        .from("field_authority_policies")
+        .select("id, policy_value, protected, policy_version")
+        .eq("organization_id", organizationId)
+        .eq("connector_id", connectorId)
+        .eq("entity_type", entityType)
+        .eq("field_name", field)
+        .is("superseded_at", null)
+        .maybeSingle();
+      if (error) throw new Error("connector_field_policy_lookup_failed");
+      if (!data) return null;
+      return {
+        id: data.id,
+        policyValue: data.policy_value as FieldAuthorityPolicy["policyValue"],
+        protected: data.protected,
+        policyVersion: data.policy_version,
+      };
+    },
+    hashValue: (value) =>
+      createHash("sha256")
+        .update(JSON.stringify(value ?? null))
+        .digest("hex"),
+    nowIso: () => new Date().toISOString(),
+  };
 }
 
 export function toClaimedSyncRun(value: unknown): ClaimedSyncRun {
@@ -514,7 +657,42 @@ export function toClaimedSyncRun(value: unknown): ClaimedSyncRun {
     cursorFrom: optionalString(row.cursorFrom),
     fetchContentHash: optionalString(row.fetchContentHash),
     correlationId: optionalString(row.correlationId),
+    actorId: optionalString(row.actorId),
+    commitActorId: optionalString(row.commitActorId),
+    connectionRevision: optionalInteger(row.connectionRevision, 1),
+    credentialRevision: optionalInteger(row.credentialRevision, 0),
+    permissionVersion: optionalInteger(row.permissionVersion, 0),
   };
+}
+
+function optionalInteger(value: unknown, minimum: number): number | null {
+  if (value === null || value === undefined) return null;
+  if (
+    typeof value !== "number" ||
+    !Number.isSafeInteger(value) ||
+    value < minimum
+  )
+    throw new Error("Connector claim returned invalid authorization metadata");
+  return value;
+}
+
+async function withDeadline<T>(
+  operation: Promise<T>,
+  signal: AbortSignal,
+): Promise<T> {
+  if (signal.aborted) throw new Error("Connector provider timeout");
+  let interrupt: (() => void) | undefined;
+  try {
+    return await Promise.race([
+      operation,
+      new Promise<never>((_resolve, reject) => {
+        interrupt = () => reject(new Error("Connector provider timeout"));
+        signal.addEventListener("abort", interrupt, { once: true });
+      }),
+    ]);
+  } finally {
+    if (interrupt) signal.removeEventListener("abort", interrupt);
+  }
 }
 
 function requiredString(value: unknown): string {

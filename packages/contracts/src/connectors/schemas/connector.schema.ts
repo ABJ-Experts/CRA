@@ -21,13 +21,65 @@ export const connectorErrorCodeSchema = z.enum([
   "unsupported_capability",
   "payload_too_large",
   "unknown",
+  "missing_scope",
+  "unsupported_version",
+  "vault_unavailable",
+  "interrupted",
+  "timeout",
 ]);
 
 export const connectorParamsSchema = z
   .object({ connectorId: z.uuid() })
   .strict();
 
-/** Vendor connection metadata only. The DB rejects any password/secret/token-shaped key here. */
+/** Syntax validation only: the server additionally applies host/DNS/egress policy. */
+const connectorEndpointSchema = requiredText(2_048)
+  .regex(
+    /^https:\/\/[a-zA-Z0-9.-]+(?:\/[^?#\\]*)?$/,
+    "Use an HTTPS endpoint without credentials, query, fragment, IP address or custom port",
+  )
+  .pipe(
+    z.url({
+      protocol: /^https$/,
+      hostname:
+        /^(?!localhost(?:\.localdomain)?$)(?!\d+(?:\.\d+){3}$)[a-zA-Z0-9.-]+$/,
+    }),
+  );
+
+/** Only reference metadata is supported; arbitrary provider payloads and secrets are rejected. */
+export const connectorConfigurationInputSchema = z
+  .object({
+    baseUrl: connectorEndpointSchema.optional(),
+    tenantOrSiteId: requiredText(200).optional(),
+    scopeFilter: z
+      .object({
+        scenario: z
+          .enum([
+            "create",
+            "update",
+            "unchanged",
+            "tombstone",
+            "conflict",
+            "invalid",
+            "cycle",
+            "pagination",
+          ])
+          .optional(),
+        simulate: z.enum(["rate_limit", "malformed"]).optional(),
+      })
+      .strict()
+      .optional(),
+    defaultOwnerBinding: z
+      .object({
+        responsibleOwnerId: z.uuid(),
+        legalEntityId: z.uuid(),
+      })
+      .strict()
+      .optional(),
+  })
+  .strict();
+
+/** Historical response metadata is preserved; new writes use the strict input whitelist. */
 export const connectorConnectionConfigSchema = z.record(
   z.string(),
   z.unknown(),
@@ -67,7 +119,7 @@ export const createConnectorInputSchema = z
     displayName: requiredText(200),
     adapterVersion: connectorAdapterVersionSchema,
     mappingVersion: requiredText(100),
-    connectionConfig: connectorConnectionConfigSchema.optional(),
+    connectionConfig: connectorConfigurationInputSchema.optional(),
     commitPolicy: connectorCommitPolicySchema,
     idempotencyKey: idempotencyKeySchema,
   })
@@ -78,9 +130,10 @@ export const updateConnectorInputSchema = z
   .object({
     displayName: requiredText(200),
     mappingVersion: requiredText(100),
-    connectionConfig: connectorConnectionConfigSchema.optional(),
+    connectionConfig: connectorConfigurationInputSchema.optional(),
     commitPolicy: connectorCommitPolicySchema,
     expectedVersion: expectedVersionSchema,
+    idempotencyKey: idempotencyKeySchema,
   })
   .strict();
 
@@ -91,13 +144,36 @@ export const archiveConnectorInputSchema = z
   })
   .strict();
 
+const connectorCommandShape = {
+  expectedVersion: expectedVersionSchema,
+  idempotencyKey: idempotencyKeySchema,
+};
+
 /** Not trimmed: whitespace may be a meaningful part of the secret itself. */
 export const setConnectorSecretInputSchema = z
-  .object({ secretValue: z.string().min(1).max(20_000) })
+  .object({
+    ...connectorCommandShape,
+    secretValue: z.string().min(1).max(20_000),
+  })
   .strict();
-
-/** Every mutation below has a real body; a connectivity test does not. */
-export const testConnectorInputSchema = z.object({}).strict();
+export const testConnectorInputSchema = z
+  .object(connectorCommandShape)
+  .strict();
+export const revokeConnectorSecretInputSchema = z
+  .object({
+    ...connectorCommandShape,
+    reason: requiredText(500),
+  })
+  .strict();
+export const disconnectConnectorInputSchema = z
+  .object({
+    ...connectorCommandShape,
+    reason: requiredText(500),
+  })
+  .strict();
+export const reconnectConnectorInputSchema = z
+  .object(connectorCommandShape)
+  .strict();
 
 /** Explicit empty body for a server-generated, redacted diagnostic report. */
 export const diagnosticsExportInputSchema = z.object({}).strict();

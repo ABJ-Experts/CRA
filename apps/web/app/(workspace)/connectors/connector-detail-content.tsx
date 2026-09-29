@@ -10,7 +10,7 @@ import type { FieldAuthorityPolicy } from "../../_features/connectors/connectors
 
 import {
   useConnectorMappingQuery,
-  useConnectorQuery,
+  useConnectorOverviewQuery,
   useExportDiagnosticsMutation,
 } from "../../_features/connectors/connectors.queries";
 import { useMocksReady } from "../../_providers/providers";
@@ -61,11 +61,11 @@ export function isMappingIncomplete(
     policies.map((policy) => `${policy.entityType}:${policy.fieldName}`),
   );
   return [
-    ...productFieldAuthorityFieldSchema.options.map((field) =>
-      `product:${field}`,
+    ...productFieldAuthorityFieldSchema.options.map(
+      (field) => `product:${field}`,
     ),
-    ...releaseFieldAuthorityFieldSchema.options.map((field) =>
-      `release:${field}`,
+    ...releaseFieldAuthorityFieldSchema.options.map(
+      (field) => `release:${field}`,
     ),
   ].some((required) => !configured.has(required));
 }
@@ -110,11 +110,7 @@ export function DiagnosticsExportButton({
   );
 }
 
-export function ConnectorDetailContent({
-  connectorId,
-}: {
-  connectorId: string;
-}) {
+function ConnectorDetailWorkspace({ connectorId }: { connectorId: string }) {
   const mocksReady = useMocksReady();
   const {
     session,
@@ -124,10 +120,10 @@ export function ConnectorDetailContent({
   } = useSession();
   const liveApiEnabled =
     mocksReady && process.env.NEXT_PUBLIC_ENABLE_MOCKS === "false";
-  const hasMembership = (session?.organizations.length ?? 0) > 0;
+  const hasMembership = Boolean(session?.organization?.id);
   const canView = permissions.can_view_connectors === true;
   const enabled = liveApiEnabled && hasMembership && canView;
-  const connector = useConnectorQuery(connectorId, enabled);
+  const connector = useConnectorOverviewQuery(connectorId, enabled);
   const mapping = useConnectorMappingQuery(connectorId, enabled);
   const canEdit = permissions.can_edit_connectors === true;
   const canCreate = permissions.can_create_connectors === true;
@@ -175,7 +171,11 @@ export function ConnectorDetailContent({
     );
   }
 
-  if (connector.isError || !connector.data) {
+  const accessLost =
+    connector.isError &&
+    connector.error instanceof ApiClientError &&
+    (connector.error.status === 403 || connector.error.status === 404);
+  if (!connector.data || accessLost) {
     return (
       <div className="flex flex-col gap-6 px-6 py-6 lg:px-[30px]">
         <SectionCard>
@@ -185,12 +185,20 @@ export function ConnectorDetailContent({
               "This connector could not be loaded.",
             )}
           </p>
+          <Button
+            type="button"
+            variant="outline"
+            tone="grey"
+            onClick={() => void connector.refetch()}
+          >
+            Try again
+          </Button>
         </SectionCard>
       </div>
     );
   }
 
-  const current = connector.data.connector;
+  const current = connector.data.overview.connector;
 
   return (
     <div className="flex flex-col gap-6 px-6 py-6 lg:px-[30px]">
@@ -203,8 +211,28 @@ export function ConnectorDetailContent({
           ) : undefined
         }
       />
+      {connector.isError ? (
+        <SectionCard>
+          <div role="alert" className="space-y-3">
+            <p className="text-subhead-regular text-fg">
+              Current data could not be refreshed. Your unsaved draft is
+              preserved.
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              tone="grey"
+              onClick={() => void connector.refetch()}
+            >
+              Retry refresh
+            </Button>
+          </div>
+        </SectionCard>
+      ) : null}
       <ConnectorConnectionSection
+        key={`${session?.organization?.id}:${connectorId}`}
         connector={current}
+        connection={connector.data.overview.connection}
         canEdit={canEdit}
         isOwner={isOwner}
         onReload={() => void connector.refetch()}
@@ -236,5 +264,20 @@ export function ConnectorDetailContent({
         canEdit={canEdit}
       />
     </div>
+  );
+}
+
+/** Tenant changes remount every draft, selection and in-flight visual state. */
+export function ConnectorDetailContent({
+  connectorId,
+}: {
+  connectorId: string;
+}) {
+  const { session } = useSession();
+  return (
+    <ConnectorDetailWorkspace
+      key={`${session?.organization?.id ?? "none"}:${connectorId}`}
+      connectorId={connectorId}
+    />
   );
 }

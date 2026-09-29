@@ -25,6 +25,88 @@ function config(
 }
 
 describe("ReferenceConformanceAdapter", () => {
+  it("isolates fixture windows by opaque identity without retaining plaintext secrets", async () => {
+    const adapter = new ReferenceConformanceAdapter();
+    const cfg = config({
+      executionIdentity: "org-a:connector-a",
+      scopeFilter: { simulate: "rate_limit" },
+      secretReference: {
+        provider: "reference_fixture",
+        reference: "secret-canary",
+      },
+    });
+    await adapter.pull(cfg, null, 1);
+    await adapter.pull(cfg, null, 1);
+    expect(
+      (
+        await adapter.pull(
+          {
+            ...cfg,
+            secretReference: {
+              ...cfg.secretReference,
+              reference: "rotated-canary",
+            },
+          },
+          null,
+          1,
+        )
+      ).adapterSignal,
+    ).toBe("ok");
+    expect(
+      (
+        await adapter.pull(
+          { ...cfg, executionIdentity: "org-b:connector-a" },
+          null,
+          1,
+        )
+      ).adapterSignal,
+    ).toBe("rate_limited");
+    const cache = (
+      adapter as unknown as { rateLimitCallCounts: Map<string, unknown> }
+    ).rateLimitCallCounts;
+    expect(JSON.stringify([...cache])).not.toContain("secret-canary");
+  });
+
+  it("expires fixture windows and bounds cache memory", async () => {
+    let time = 0;
+    const adapter = new ReferenceConformanceAdapter(() => time, 2, 10);
+    const cfg = config({
+      executionIdentity: "first",
+      scopeFilter: { simulate: "rate_limit" },
+    });
+    await adapter.pull(cfg, null, 1);
+    await adapter.pull(cfg, null, 1);
+    expect((await adapter.pull(cfg, null, 1)).adapterSignal).toBe("ok");
+    time = 11;
+    expect((await adapter.pull(cfg, null, 1)).adapterSignal).toBe(
+      "rate_limited",
+    );
+    await adapter.pull({ ...cfg, executionIdentity: "second" }, null, 1);
+    await adapter.pull({ ...cfg, executionIdentity: "third" }, null, 1);
+    expect(
+      (adapter as unknown as { rateLimitCallCounts: Map<string, unknown> })
+        .rateLimitCallCounts.size,
+    ).toBe(2);
+    expect((await adapter.pull(cfg, null, 1)).adapterSignal).toBe(
+      "rate_limited",
+    );
+  });
+
+  it("honors cancellation before any fixture work", () => {
+    const abort = new AbortController();
+    abort.abort();
+    const adapter = new ReferenceConformanceAdapter();
+    const cfg = config({ signal: abort.signal });
+    expect(() => adapter.testConnection(cfg)).toThrow(
+      "Connector operation interrupted",
+    );
+    expect(() => adapter.pull(cfg, null, 1)).toThrow(
+      "Connector operation interrupted",
+    );
+    expect(() => adapter.push(cfg, [])).toThrow(
+      "Connector operation interrupted",
+    );
+  });
   it("reports success on testConnection with a configured secret", async () => {
     const adapter = new ReferenceConformanceAdapter();
     await expect(adapter.testConnection(config())).resolves.toMatchObject({

@@ -34,10 +34,11 @@ select pg_temp.check('M9-01 registry tables use RLS and do not expose browser pr
   )
 );
 
-select pg_temp.check('M9-01 archive-only records do not grant service-role DELETE',
-  not has_table_privilege('service_role','public.supplier_organizations','delete')
-  and not has_table_privilege('service_role','public.supplier_contacts','delete')
-  and not has_table_privilege('service_role','public.supplier_component_responsibilities','delete')
+select pg_temp.check('M9-01 archive-only records deny service-role deletion and guard bypass',
+  not has_table_privilege('service_role','public.supplier_organizations','delete,truncate,trigger,references')
+  and not has_table_privilege('service_role','public.supplier_contacts','delete,truncate,trigger,references')
+  and not has_table_privilege('service_role','public.supplier_component_responsibilities','delete,truncate,trigger,references')
+  and not has_table_privilege('service_role','public.supplier_registry_commands','delete,truncate,trigger,references')
 );
 
 select pg_temp.check('M9-01 responsibility identity is exact and restrictive',

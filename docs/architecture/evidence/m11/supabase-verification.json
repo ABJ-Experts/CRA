@@ -1,0 +1,457 @@
+{
+  "capturedAt": "2026-09-29T07:11:50.538Z",
+  "apiUrl": "http://127.0.0.1:54321",
+  "database": "postgres",
+  "legacyRpc": [
+    {
+      "name": "resolve_connector_secret",
+      "anonExecute": false,
+      "serviceExecute": false,
+      "authenticatedExecute": false
+    },
+    {
+      "name": "set_connector_secret_atomic",
+      "anonExecute": false,
+      "serviceExecute": false,
+      "authenticatedExecute": false
+    }
+  ],
+  "migrations": [
+    {
+      "name": "m11_01_restore_scoped_vault_grants",
+      "version": "20260929065443"
+    },
+    {
+      "version": "20260929065551",
+      "name": "m11_01_repair_service_only_grants"
+    },
+    {
+      "name": "m11_01_restore_connector_dependency_grants",
+      "version": "20260929065754"
+    },
+    {
+      "name": "m11_01_preserve_private_sync_helpers",
+      "version": "20260929065836"
+    },
+    {
+      "version": "20260929104413",
+      "name": "full_schema"
+    }
+  ],
+  "vaultTables": [
+    {
+      "rls": true,
+      "name": "connector_commands",
+      "forcedRls": false,
+      "anonSelect": false,
+      "serviceInsert": false,
+      "serviceSelect": true,
+      "authenticatedSelect": false
+    },
+    {
+      "rls": true,
+      "name": "connector_secrets",
+      "forcedRls": false,
+      "anonSelect": false,
+      "serviceInsert": true,
+      "serviceSelect": true,
+      "authenticatedSelect": false
+    }
+  ],
+  "m11Functions": [
+    {
+      "signature": "m11_assert_sync_run_fence(uuid,uuid,uuid)",
+      "anonExecute": false,
+      "serviceExecute": true,
+      "pinnedSearchPath": true,
+      "authenticatedExecute": false
+    },
+    {
+      "signature": "m11_begin_connector_test_atomic(uuid,uuid,uuid,integer,uuid,text,text,bigint)",
+      "anonExecute": false,
+      "serviceExecute": true,
+      "pinnedSearchPath": true,
+      "authenticatedExecute": false
+    },
+    {
+      "signature": "m11_begin_sync_run_atomic(uuid,uuid,uuid,bigint,text,uuid,uuid)",
+      "anonExecute": false,
+      "serviceExecute": true,
+      "pinnedSearchPath": true,
+      "authenticatedExecute": false
+    },
+    {
+      "signature": "m11_capture_sync_run_basis()",
+      "anonExecute": false,
+      "serviceExecute": true,
+      "pinnedSearchPath": true,
+      "authenticatedExecute": false
+    },
+    {
+      "signature": "m11_connector_command_json(connector_commands)",
+      "anonExecute": false,
+      "serviceExecute": true,
+      "pinnedSearchPath": true,
+      "authenticatedExecute": false
+    },
+    {
+      "signature": "m11_connector_connection_summaries(uuid,uuid[])",
+      "anonExecute": false,
+      "serviceExecute": true,
+      "pinnedSearchPath": true,
+      "authenticatedExecute": false
+    },
+    {
+      "signature": "m11_connector_key_references(uuid)",
+      "anonExecute": false,
+      "serviceExecute": true,
+      "pinnedSearchPath": true,
+      "authenticatedExecute": false
+    },
+    {
+      "signature": "m11_connector_security_revision_trigger()",
+      "anonExecute": false,
+      "serviceExecute": true,
+      "pinnedSearchPath": true,
+      "authenticatedExecute": false
+    },
+    {
+      "signature": "m11_create_connector_atomic(uuid,uuid,bigint,uuid,text,text,text,text,jsonb,text)",
+      "anonExecute": false,
+      "serviceExecute": true,
+      "pinnedSearchPath": true,
+      "authenticatedExecute": false
+    },
+    {
+      "signature": "m11_execute_connector_command_atomic(uuid,uuid,uuid,text,integer,uuid,text,text,bigint,jsonb)",
+      "anonExecute": false,
+      "serviceExecute": true,
+      "pinnedSearchPath": true,
+      "authenticatedExecute": false
+    },
+    {
+      "signature": "m11_finalize_connector_test_atomic(uuid,uuid,uuid,bigint,integer,integer,jsonb)",
+      "anonExecute": false,
+      "serviceExecute": true,
+      "pinnedSearchPath": true,
+      "authenticatedExecute": false
+    },
+    {
+      "signature": "m11_list_connector_secret_envelopes(uuid,uuid,integer)",
+      "anonExecute": false,
+      "serviceExecute": true,
+      "pinnedSearchPath": true,
+      "authenticatedExecute": false
+    },
+    {
+      "signature": "m11_lock_connector_authorization(uuid,uuid,bigint,boolean)",
+      "anonExecute": false,
+      "serviceExecute": true,
+      "pinnedSearchPath": true,
+      "authenticatedExecute": false
+    },
+    {
+      "signature": "m11_request_sync_run_commit_atomic(uuid,uuid,uuid,bigint,integer)",
+      "anonExecute": false,
+      "serviceExecute": true,
+      "pinnedSearchPath": true,
+      "authenticatedExecute": false
+    },
+    {
+      "signature": "m11_retire_legacy_connector_secret_rpc()",
+      "anonExecute": false,
+      "serviceExecute": true,
+      "pinnedSearchPath": true,
+      "authenticatedExecute": false
+    },
+    {
+      "signature": "m11_rewrap_connector_secret_atomic(uuid,uuid,uuid,text,text,jsonb)",
+      "anonExecute": false,
+      "serviceExecute": true,
+      "pinnedSearchPath": true,
+      "authenticatedExecute": false
+    },
+    {
+      "signature": "m11_sync_run_required_product_actions(uuid,uuid)",
+      "anonExecute": false,
+      "serviceExecute": true,
+      "pinnedSearchPath": true,
+      "authenticatedExecute": false
+    },
+    {
+      "signature": "m11_valid_connector_config(uuid,jsonb)",
+      "anonExecute": false,
+      "serviceExecute": true,
+      "pinnedSearchPath": true,
+      "authenticatedExecute": false
+    },
+    {
+      "signature": "m11_valid_connector_scope_assessment(jsonb)",
+      "anonExecute": false,
+      "serviceExecute": true,
+      "pinnedSearchPath": true,
+      "authenticatedExecute": false
+    }
+  ],
+  "postgresVersion": "17.6",
+  "configuredLegacyCredentials": 0,
+  "authUserCreatedTriggerPresent": false,
+  "advisorSummary": {
+    "count": 1998,
+    "groups": {
+      "rls_enabled_no_policy": 212,
+      "anon_security_definer_function_executable": 893,
+      "authenticated_security_definer_function_executable": 893
+    },
+    "m11": []
+  },
+  "verification": {
+    "m11SqlAssertions": 53,
+    "m11ConcurrencyRaces": 3,
+    "fullSqlResult": "Blocked at M1 service-only RPC grant assertion by unrelated full_schema restore ACL drift",
+    "dbLint": "passed; 24 unrelated warnings, no M11 warnings",
+    "generatedTypes": "Live CLI-generated normalized public types exactly match infrastructure copy (954930 characters); API copy identical after intentional generated header",
+    "m2ConnectorSql": "Passed full focused connector regression",
+    "m2ConnectorSqlAssertions": 78
+  },
+  "preservation": {
+    "seedDump": "Unrelated user-restored dump preserved unchanged; contains auth/session data and must not be committed as M11 work",
+    "dataReset": false,
+    "broaderGrantRepair": false,
+    "legacyCommandFingerprints": "Prior recovery key unavailable; old ledger retained without rewriting"
+  },
+  "connectorDependencyRpcs": [
+    {
+      "signature": "archive_connector_atomic(uuid,uuid,uuid,integer,text)",
+      "anonExecute": false,
+      "serviceExecute": true,
+      "authenticatedExecute": false
+    },
+    {
+      "signature": "begin_sync_run_atomic(uuid,uuid,uuid,text,uuid,uuid)",
+      "anonExecute": false,
+      "serviceExecute": true,
+      "authenticatedExecute": false
+    },
+    {
+      "signature": "cancel_sync_run_atomic(uuid,uuid,uuid,text)",
+      "anonExecute": false,
+      "serviceExecute": true,
+      "authenticatedExecute": false
+    },
+    {
+      "signature": "claim_sync_run(uuid,text,integer)",
+      "anonExecute": false,
+      "serviceExecute": true,
+      "authenticatedExecute": false
+    },
+    {
+      "signature": "commit_sync_run_atomic(uuid,uuid,uuid,text,uuid,uuid)",
+      "anonExecute": false,
+      "serviceExecute": true,
+      "authenticatedExecute": false
+    },
+    {
+      "signature": "connector_compliance_metrics_snapshot(uuid)",
+      "anonExecute": false,
+      "serviceExecute": true,
+      "authenticatedExecute": false
+    },
+    {
+      "signature": "create_connector_atomic(uuid,uuid,uuid,text,text,text,text,jsonb,text)",
+      "anonExecute": false,
+      "serviceExecute": true,
+      "authenticatedExecute": false
+    },
+    {
+      "signature": "fail_sync_run_atomic(uuid,uuid,text,text)",
+      "anonExecute": false,
+      "serviceExecute": true,
+      "authenticatedExecute": false
+    },
+    {
+      "signature": "link_external_identity_atomic(uuid,uuid,uuid,text,text,text,uuid,uuid,text)",
+      "anonExecute": false,
+      "serviceExecute": true,
+      "authenticatedExecute": false
+    },
+    {
+      "signature": "list_due_sync_run_organizations(integer)",
+      "anonExecute": false,
+      "serviceExecute": true,
+      "authenticatedExecute": false
+    },
+    {
+      "signature": "list_field_authority_policies(uuid,uuid,uuid)",
+      "anonExecute": false,
+      "serviceExecute": true,
+      "authenticatedExecute": false
+    },
+    {
+      "signature": "merge_external_identities_atomic(uuid,uuid,uuid,uuid,text)",
+      "anonExecute": false,
+      "serviceExecute": true,
+      "authenticatedExecute": false
+    },
+    {
+      "signature": "preview_field_authority_policy(uuid,uuid,uuid,text,text,text,boolean,text)",
+      "anonExecute": false,
+      "serviceExecute": true,
+      "authenticatedExecute": false
+    },
+    {
+      "signature": "record_connector_test_atomic(uuid,uuid,uuid,text,text,integer)",
+      "anonExecute": false,
+      "serviceExecute": true,
+      "authenticatedExecute": false
+    },
+    {
+      "signature": "request_sync_run_commit_atomic(uuid,uuid,uuid,integer)",
+      "anonExecute": false,
+      "serviceExecute": true,
+      "authenticatedExecute": false
+    },
+    {
+      "signature": "resolve_connector_secret(uuid,uuid,text)",
+      "anonExecute": false,
+      "serviceExecute": false,
+      "authenticatedExecute": false
+    },
+    {
+      "signature": "resolve_sync_conflict_atomic(uuid,uuid,uuid,integer,text,jsonb,text,uuid)",
+      "anonExecute": false,
+      "serviceExecute": true,
+      "authenticatedExecute": false
+    },
+    {
+      "signature": "retry_sync_run_atomic(uuid,uuid,uuid)",
+      "anonExecute": false,
+      "serviceExecute": true,
+      "authenticatedExecute": false
+    },
+    {
+      "signature": "save_sync_run_plan_atomic(uuid,uuid,text,text,text,jsonb,jsonb)",
+      "anonExecute": false,
+      "serviceExecute": true,
+      "authenticatedExecute": false
+    },
+    {
+      "signature": "set_connector_secret_atomic(uuid,uuid,uuid,text,text)",
+      "anonExecute": false,
+      "serviceExecute": false,
+      "authenticatedExecute": false
+    },
+    {
+      "signature": "unlink_external_identity_atomic(uuid,uuid,uuid,text)",
+      "anonExecute": false,
+      "serviceExecute": true,
+      "authenticatedExecute": false
+    },
+    {
+      "signature": "update_connector_atomic(uuid,uuid,uuid,integer,text,text,jsonb,text)",
+      "anonExecute": false,
+      "serviceExecute": true,
+      "authenticatedExecute": false
+    },
+    {
+      "signature": "upsert_field_authority_policy_atomic(uuid,uuid,uuid,text,text,text,boolean,text,text)",
+      "anonExecute": false,
+      "serviceExecute": true,
+      "authenticatedExecute": false
+    }
+  ],
+  "connectorDependencyTables": [
+    {
+      "rls": true,
+      "name": "connector_secrets",
+      "forcedRls": false,
+      "anonSelect": false,
+      "serviceInsert": true,
+      "serviceSelect": true,
+      "authenticatedSelect": false
+    },
+    {
+      "rls": true,
+      "name": "connectors",
+      "forcedRls": false,
+      "anonSelect": false,
+      "serviceInsert": true,
+      "serviceSelect": true,
+      "authenticatedSelect": false
+    },
+    {
+      "rls": true,
+      "name": "field_authority_policies",
+      "forcedRls": false,
+      "anonSelect": false,
+      "serviceInsert": true,
+      "serviceSelect": true,
+      "authenticatedSelect": false
+    },
+    {
+      "rls": true,
+      "name": "product_external_identities",
+      "forcedRls": false,
+      "anonSelect": false,
+      "serviceInsert": true,
+      "serviceSelect": true,
+      "authenticatedSelect": false
+    },
+    {
+      "rls": true,
+      "name": "sync_conflicts",
+      "forcedRls": false,
+      "anonSelect": false,
+      "serviceInsert": true,
+      "serviceSelect": true,
+      "authenticatedSelect": false
+    },
+    {
+      "rls": true,
+      "name": "sync_connector_cursors",
+      "forcedRls": false,
+      "anonSelect": false,
+      "serviceInsert": true,
+      "serviceSelect": true,
+      "authenticatedSelect": false
+    },
+    {
+      "rls": true,
+      "name": "sync_run_plan_items",
+      "forcedRls": false,
+      "anonSelect": false,
+      "serviceInsert": true,
+      "serviceSelect": true,
+      "authenticatedSelect": false
+    },
+    {
+      "rls": true,
+      "name": "sync_runs",
+      "forcedRls": false,
+      "anonSelect": false,
+      "serviceInsert": true,
+      "serviceSelect": true,
+      "authenticatedSelect": false
+    }
+  ],
+  "recoveryNotes": "Three additive scoped ACL migrations restored only M11 and existing connector-owned dependency grants. Two private value helpers remain denied even to service_role, as pinned by preexisting hardening tests. Original full_schema restore and broader feature ACL drift remain.",
+  "performanceAdvisorResult": "Unavailable: MCP returned tool call error",
+  "resumeAudit": {
+    "reviewerBroadRepair": "20260929065551_m11_01_repair_service_only_grants.sql",
+    "scopeViolation": "Reviewer assigned read-only applied broader ACL SQL and repaired migration history",
+    "originalHistoryRestored": {
+      "version": "20260929104413",
+      "name": "full_schema",
+      "statementsRecovered": false
+    },
+    "fullVerificationBlockedAt": "m3-completed-graph-immutability.test.sql: service-role graph ACL permits bypassing retained row guards",
+    "authProfileTriggerCount": 0,
+    "fixtureCleanup": {
+      "organizationRows": 0,
+      "connectorRows": 0,
+      "productRows": 0,
+      "seedOrganizationPreserved": true,
+      "preexistingCommandRows": 6
+    }
+  }
+}

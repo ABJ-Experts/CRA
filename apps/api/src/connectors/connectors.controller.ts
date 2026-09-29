@@ -21,6 +21,12 @@ import {
   connectorOutcomeResponseSchema,
   connectorParamsSchema,
   connectorResponseSchema,
+  connectorCatalogueResponseSchema,
+  connectorOverviewResponseSchema,
+  connectorOverviewsResponseSchema,
+  disconnectConnectorInputSchema,
+  reconnectConnectorInputSchema,
+  revokeConnectorSecretInputSchema,
   connectorsResponseSchema,
   createConnectorInputSchema,
   diagnosticsExportInputSchema,
@@ -53,7 +59,7 @@ import {
 } from "@repo/contracts/connectors/schemas";
 import type { SyncRunListQuery } from "@repo/contracts/connectors/types";
 import { pageParamsSchema, type PageParams } from "@repo/contracts/pagination";
-import { z } from "zod";
+import type { z } from "zod";
 
 import {
   CurrentUser,
@@ -68,6 +74,7 @@ import {
   zodQuery,
 } from "../common/pipes/zod-validation.pipe";
 import { ConnectorsService } from "./connectors.service";
+import { CONNECTOR_CATALOGUE } from "./application/connector-catalogue";
 
 @Controller("connectors")
 export class ConnectorsController {
@@ -79,6 +86,45 @@ export class ConnectorsController {
       message: "Connector request could not be completed.",
       code: "not_found",
     });
+  }
+
+  @RequirePermissions("can_view_connectors")
+  @Get("catalogue")
+  @ZodResponse(connectorCatalogueResponseSchema)
+  catalogue() {
+    return { catalogue: CONNECTOR_CATALOGUE };
+  }
+
+  @RequirePermissions("can_view_connectors")
+  @Get("overview")
+  @ZodResponse(connectorOverviewsResponseSchema)
+  async overviews(
+    @Query(zodQuery(pageParamsSchema)) params: PageParams,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return {
+      connectors: await this.connectors.run(
+        this.connectors.hub.overviews(this.organizationId(user), params),
+      ),
+    };
+  }
+
+  @RequirePermissions("can_view_connectors")
+  @Get(":connectorId/overview")
+  @ZodResponse(connectorOverviewResponseSchema)
+  async overview(
+    @Param(zodParams(connectorParamsSchema))
+    params: z.output<typeof connectorParamsSchema>,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return {
+      overview: await this.connectors.run(
+        this.connectors.hub.overview(
+          this.organizationId(user),
+          params.connectorId,
+        ),
+      ),
+    };
   }
 
   @RequirePermissions("can_view_connectors")
@@ -119,21 +165,11 @@ export class ConnectorsController {
   @ZodResponse(connectorResponseSchema)
   async create(
     @Body(zodBody(createConnectorInputSchema))
-    body: z.infer<typeof createConnectorInputSchema>,
+    body: z.output<typeof createConnectorInputSchema>,
     @CurrentUser() user: RequestUser,
   ) {
     const connector = await this.connectors.run(
-      this.connectors.repository.createConnector({
-        p_organization_id: this.organizationId(user),
-        p_actor_user_id: user.id,
-        p_idempotency_key: body.idempotencyKey,
-        p_connector_type: body.connectorType,
-        p_display_name: body.displayName,
-        p_adapter_version: body.adapterVersion,
-        p_mapping_version: body.mappingVersion,
-        p_connection_config: body.connectionConfig ?? {},
-        p_commit_policy: body.commitPolicy,
-      }),
+      this.connectors.hub.create(this.organizationId(user), user.id, body),
     );
     return { connector };
   }
@@ -144,20 +180,16 @@ export class ConnectorsController {
   async update(
     @Param(zodParams(connectorParamsSchema)) params: { connectorId: string },
     @Body(zodBody(updateConnectorInputSchema))
-    body: z.infer<typeof updateConnectorInputSchema>,
+    body: z.output<typeof updateConnectorInputSchema>,
     @CurrentUser() user: RequestUser,
   ) {
     const connector = await this.connectors.run(
-      this.connectors.repository.updateConnector({
-        p_organization_id: this.organizationId(user),
-        p_connector_id: params.connectorId,
-        p_actor_user_id: user.id,
-        p_expected_version: body.expectedVersion,
-        p_display_name: body.displayName,
-        p_mapping_version: body.mappingVersion,
-        p_connection_config: body.connectionConfig ?? {},
-        p_commit_policy: body.commitPolicy,
-      }),
+      this.connectors.hub.configure(
+        this.organizationId(user),
+        params.connectorId,
+        user.id,
+        body,
+      ),
     );
     return { connector };
   }
@@ -170,22 +202,15 @@ export class ConnectorsController {
   async setSecret(
     @Param(zodParams(connectorParamsSchema)) params: { connectorId: string },
     @Body(zodBody(setConnectorSecretInputSchema))
-    body: z.infer<typeof setConnectorSecretInputSchema>,
+    body: z.output<typeof setConnectorSecretInputSchema>,
     @CurrentUser() user: RequestUser,
   ) {
-    const key = process.env.CONNECTOR_SECRET_ENCRYPTION_KEY;
-    if (!key)
-      throw new NotFoundException({
-        message: "Connector secret storage is not configured.",
-        code: "not_found",
-      });
     const connector = await this.connectors.run(
-      this.connectors.repository.setConnectorSecret(
+      this.connectors.hub.replaceSecret(
         this.organizationId(user),
         params.connectorId,
         user.id,
-        body.secretValue,
-        key,
+        body,
       ),
     );
     return { connector };
@@ -197,7 +222,8 @@ export class ConnectorsController {
   @ZodResponse(connectorResponseSchema)
   async test(
     @Param(zodParams(connectorParamsSchema)) params: { connectorId: string },
-    @Body(zodBody(testConnectorInputSchema)) _body: unknown,
+    @Body(zodBody(testConnectorInputSchema))
+    body: z.output<typeof testConnectorInputSchema>,
     @CurrentUser() user: RequestUser,
   ) {
     const connector = await this.connectors.run(
@@ -205,9 +231,80 @@ export class ConnectorsController {
         organizationId: this.organizationId(user),
         connectorId: params.connectorId,
         actorId: user.id,
+        input: body,
       }),
     );
     return { connector };
+  }
+
+  @RequireRole("owner")
+  @RequirePermissions("can_edit_connectors")
+  @Post(":connectorId/secret/revoke")
+  @HttpCode(HttpStatus.OK)
+  @ZodResponse(connectorResponseSchema)
+  async revokeSecret(
+    @Param(zodParams(connectorParamsSchema))
+    params: z.output<typeof connectorParamsSchema>,
+    @Body(zodBody(revokeConnectorSecretInputSchema))
+    body: z.output<typeof revokeConnectorSecretInputSchema>,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return {
+      connector: await this.connectors.run(
+        this.connectors.hub.revokeSecret(
+          this.organizationId(user),
+          params.connectorId,
+          user.id,
+          body,
+        ),
+      ),
+    };
+  }
+
+  @RequirePermissions("can_edit_connectors")
+  @Post(":connectorId/disconnect")
+  @HttpCode(HttpStatus.OK)
+  @ZodResponse(connectorResponseSchema)
+  async disconnect(
+    @Param(zodParams(connectorParamsSchema))
+    params: z.output<typeof connectorParamsSchema>,
+    @Body(zodBody(disconnectConnectorInputSchema))
+    body: z.output<typeof disconnectConnectorInputSchema>,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return {
+      connector: await this.connectors.run(
+        this.connectors.hub.disconnect(
+          this.organizationId(user),
+          params.connectorId,
+          user.id,
+          body,
+        ),
+      ),
+    };
+  }
+
+  @RequirePermissions("can_edit_connectors")
+  @Post(":connectorId/reconnect")
+  @HttpCode(HttpStatus.OK)
+  @ZodResponse(connectorResponseSchema)
+  async reconnect(
+    @Param(zodParams(connectorParamsSchema))
+    params: z.output<typeof connectorParamsSchema>,
+    @Body(zodBody(reconnectConnectorInputSchema))
+    body: z.output<typeof reconnectConnectorInputSchema>,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return {
+      connector: await this.connectors.run(
+        this.connectors.hub.reconnect(
+          this.organizationId(user),
+          params.connectorId,
+          user.id,
+          body,
+        ),
+      ),
+    };
   }
 
   @RequirePermissions("can_delete_connectors")
@@ -217,7 +314,7 @@ export class ConnectorsController {
   async archive(
     @Param(zodParams(connectorParamsSchema)) params: { connectorId: string },
     @Body(zodBody(archiveConnectorInputSchema))
-    body: z.infer<typeof archiveConnectorInputSchema>,
+    body: z.output<typeof archiveConnectorInputSchema>,
     @CurrentUser() user: RequestUser,
   ) {
     const connector = await this.connectors.run(
@@ -260,7 +357,7 @@ export class ConnectorsController {
     @Param(zodParams(fieldAuthorityPolicyParamsSchema))
     params: { connectorId: string },
     @Body(zodBody(previewFieldAuthorityPolicyInputSchema))
-    body: z.infer<typeof previewFieldAuthorityPolicyInputSchema>,
+    body: z.output<typeof previewFieldAuthorityPolicyInputSchema>,
     @CurrentUser() user: RequestUser,
   ) {
     const preview = await this.connectors.run(
@@ -287,7 +384,7 @@ export class ConnectorsController {
     @Param(zodParams(fieldAuthorityPolicyParamsSchema))
     params: { connectorId: string },
     @Body(zodBody(upsertFieldAuthorityPolicyInputSchema))
-    body: z.infer<typeof upsertFieldAuthorityPolicyInputSchema>,
+    body: z.output<typeof upsertFieldAuthorityPolicyInputSchema>,
     @CurrentUser() user: RequestUser,
   ) {
     const policy = await this.connectors.run(
@@ -333,7 +430,7 @@ export class ConnectorsController {
   async link(
     @Param(zodParams(connectorParamsSchema)) params: { connectorId: string },
     @Body(zodBody(linkExternalIdentityInputSchema))
-    body: z.infer<typeof linkExternalIdentityInputSchema>,
+    body: z.output<typeof linkExternalIdentityInputSchema>,
     @CurrentUser() user: RequestUser,
   ) {
     const mapping = await this.connectors.run(
@@ -360,7 +457,7 @@ export class ConnectorsController {
     @Param(zodParams(externalIdentityParamsSchema))
     params: { connectorId: string; mappingId: string },
     @Body(zodBody(unlinkExternalIdentityInputSchema))
-    body: z.infer<typeof unlinkExternalIdentityInputSchema>,
+    body: z.output<typeof unlinkExternalIdentityInputSchema>,
     @CurrentUser() user: RequestUser,
   ) {
     const outcome = await this.connectors.run(
@@ -382,7 +479,7 @@ export class ConnectorsController {
   async merge(
     @Param(zodParams(connectorParamsSchema)) params: { connectorId: string },
     @Body(zodBody(mergeExternalIdentitiesInputSchema))
-    body: z.infer<typeof mergeExternalIdentitiesInputSchema>,
+    body: z.output<typeof mergeExternalIdentitiesInputSchema>,
     @CurrentUser() user: RequestUser,
   ) {
     const outcome = await this.connectors.run(
@@ -407,18 +504,16 @@ export class ConnectorsController {
   async beginRun(
     @Param(zodParams(connectorParamsSchema)) params: { connectorId: string },
     @Body(zodBody(beginSyncRunInputSchema))
-    body: z.infer<typeof beginSyncRunInputSchema>,
+    body: z.output<typeof beginSyncRunInputSchema>,
     @CurrentUser() user: RequestUser,
   ) {
     const run = await this.connectors.run(
-      this.connectors.repository.beginSyncRun({
-        p_organization_id: this.organizationId(user),
-        p_connector_id: params.connectorId,
-        p_actor_user_id: user.id,
-        p_reconciliation_kind: body.reconciliationKind,
-        p_idempotency_key: body.idempotencyKey,
-        p_correlation_id: randomUUID(),
-      }),
+      this.connectors.hub.beginSync(
+        this.organizationId(user),
+        params.connectorId,
+        user.id,
+        body,
+      ),
     );
     return { run };
   }
@@ -489,11 +584,11 @@ export class ConnectorsController {
     @Param(zodParams(syncRunParamsSchema))
     params: { connectorId: string; syncRunId: string },
     @Body(zodBody(requestSyncRunCommitInputSchema))
-    body: z.infer<typeof requestSyncRunCommitInputSchema>,
+    body: z.output<typeof requestSyncRunCommitInputSchema>,
     @CurrentUser() user: RequestUser,
   ) {
     const run = await this.connectors.run(
-      this.connectors.repository.requestSyncRunCommit(
+      this.connectors.hub.requestCommit(
         this.organizationId(user),
         params.connectorId,
         params.syncRunId,
@@ -512,7 +607,7 @@ export class ConnectorsController {
     @Param(zodParams(syncRunParamsSchema))
     params: { connectorId: string; syncRunId: string },
     @Body(zodBody(cancelSyncRunInputSchema))
-    body: z.infer<typeof cancelSyncRunInputSchema>,
+    body: z.output<typeof cancelSyncRunInputSchema>,
     @CurrentUser() user: RequestUser,
   ) {
     const run = await this.connectors.run(
@@ -592,7 +687,7 @@ export class ConnectorsController {
     @Param(zodParams(conflictParamsSchema))
     params: { conflictId: string },
     @Body(zodBody(resolveSyncConflictInputSchema))
-    body: z.infer<typeof resolveSyncConflictInputSchema>,
+    body: z.output<typeof resolveSyncConflictInputSchema>,
     @CurrentUser() user: RequestUser,
   ) {
     const conflict = await this.connectors.run(

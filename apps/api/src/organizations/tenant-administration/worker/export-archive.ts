@@ -414,6 +414,8 @@ export const exportSourceExclusions: Readonly<Record<string, string>> =
       "Release idempotency keys and request digests are request-security material.",
     software_baseline_lifecycle_dependency_facts:
       "Historical M2 projection copied into product_lifecycle_dependency_facts and dropped by the forward consolidation migration.",
+    connector_commands:
+      "Security command fingerprints and internal replay state are not portable tenant business records.",
     connector_secrets:
       "Ciphertext-encrypted connector credential material, not portable tenant record data.",
     sbom_ci_credentials:

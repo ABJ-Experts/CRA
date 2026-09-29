@@ -10,6 +10,16 @@ const required = Object.freeze({
 });
 
 describe("environment validation", () => {
+  it("keeps core API available without legacy or new vault key material", () => {
+    const { CONNECTOR_SECRET_ENCRYPTION_KEY: _legacy, ...core } = required;
+    expect(_legacy).toHaveLength(32);
+    expect(validateEnv(core).CONNECTOR_SECRET_ENCRYPTION_KEY).toBeUndefined();
+    expect(validateEnv(core).CONNECTOR_VAULT_KEYRING).toBeUndefined();
+    expect(
+      validateEnv({ ...core, CONNECTOR_VAULT_KEYRING: "malformed" })
+        .CONNECTOR_VAULT_KEYRING,
+    ).toBe("malformed");
+  });
   it("applies secure local defaults", () => {
     expect(validateEnv(required)).toMatchObject({
       NODE_ENV: "development",

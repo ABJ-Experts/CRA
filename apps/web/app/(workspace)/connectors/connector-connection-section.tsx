@@ -1,12 +1,20 @@
 "use client";
 
-import { setConnectorSecretInputSchema } from "../../_features/connectors/connectors.schemas";
+import {
+  updateConnectorInputSchema,
+  setConnectorSecretInputSchema,
+} from "../../_features/connectors/connectors.schemas";
 import type { Connector } from "../../_features/connectors/connectors.schemas";
 import { Button } from "@repo/ui/button";
 import { Tag } from "@repo/ui/tag";
-import { useState } from "react";
+import { useRef, useState } from "react";
+import type { ConnectorConnectionState } from "@repo/contracts/connectors/types";
+import { cn } from "@repo/ui/cn";
 
 import {
+  useRevokeConnectorSecretMutation,
+  useDisconnectConnectorMutation,
+  useReconnectConnectorMutation,
   useSetConnectorSecretMutation,
   useTestConnectorMutation,
   useUpdateConnectorMutation,
@@ -87,15 +95,23 @@ export function ConnectorConnectionSection({
   canEdit,
   isOwner,
   onReload,
+  connection,
 }: {
   connector: Connector;
   canEdit: boolean;
   isOwner: boolean;
   onReload: () => void;
+  connection?: ConnectorConnectionState;
 }) {
   const update = useUpdateConnectorMutation(connector.id);
   const setSecret = useSetConnectorSecretMutation(connector.id);
   const test = useTestConnectorMutation(connector.id);
+  const revoke = useRevokeConnectorSecretMutation(connector.id);
+  const disconnect = useDisconnectConnectorMutation(connector.id);
+  const reconnect = useReconnectConnectorMutation(connector.id);
+  const [reason, setReason] = useState("");
+  const [baseVersion, setBaseVersion] = useState(connector.version);
+  const displayNameField = useRef<HTMLInputElement>(null);
   const [displayName, setDisplayName] = useState(connector.displayName);
   const [mappingVersion, setMappingVersion] = useState(
     connector.mappingVersion,
@@ -107,6 +123,69 @@ export function ConnectorConnectionSection({
   const [secretValue, setSecretValue] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [staleUpdate, setStaleUpdate] = useState(false);
+
+  const changedVersion = connector.version !== baseVersion;
+  const busy =
+    update.isPending ||
+    setSecret.isPending ||
+    test.isPending ||
+    revoke.isPending ||
+    disconnect.isPending ||
+    reconnect.isPending;
+  const dirty =
+    displayName !== connector.displayName ||
+    mappingVersion !== connector.mappingVersion ||
+    commitPolicy !== connector.commitPolicy ||
+    connectionConfigJson !==
+      JSON.stringify(connector.connectionConfig, null, 2);
+  function discardDraft() {
+    setDisplayName(connector.displayName);
+    setMappingVersion(connector.mappingVersion);
+    setCommitPolicy(connector.commitPolicy);
+    setConnectionConfigJson(
+      JSON.stringify(connector.connectionConfig, null, 2),
+    );
+    setBaseVersion(connector.version);
+    setStaleUpdate(false);
+    displayNameField.current?.focus();
+  }
+  async function control(action: "revoke" | "disconnect" | "reconnect") {
+    setMessage(null);
+    const input = {
+      expectedVersion: connector.version,
+      idempotencyKey: crypto.randomUUID(),
+      reason,
+    };
+    if (action !== "reconnect" && !reason.trim()) {
+      setMessage("Enter a reason for this action.");
+      return;
+    }
+    try {
+      const result =
+        action === "revoke"
+          ? await revoke.mutateAsync(input)
+          : action === "disconnect"
+            ? await disconnect.mutateAsync(input)
+            : await reconnect.mutateAsync({
+                expectedVersion: input.expectedVersion,
+                idempotencyKey: input.idempotencyKey,
+              });
+      if (!dirty) setBaseVersion(result.connector.version);
+      setReason("");
+      setMessage(
+        action === "revoke"
+          ? "Credential revoked; future jobs are stopped."
+          : action === "disconnect"
+            ? "Disconnected; future jobs are stopped."
+            : "Reconnected; test again before starting new work.",
+      );
+    } catch (error) {
+      setStaleUpdate(isConflict(error));
+      setMessage(
+        errorMessage(error, "The connection action could not be completed."),
+      );
+    }
+  }
 
   async function saveConnection(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -123,14 +202,23 @@ export function ConnectorConnectionSection({
       return;
     }
     try {
-      await update.mutateAsync({
+      const parsed = updateConnectorInputSchema.safeParse({
         displayName,
         mappingVersion,
         commitPolicy,
         connectionConfig,
-        expectedVersion: connector.version,
+        expectedVersion: baseVersion,
+        idempotencyKey: crypto.randomUUID(),
       });
-      setMessage("Connector saved.");
+      if (!parsed.success) {
+        setMessage(
+          "Check configuration metadata. Only supported non-secret fields are allowed.",
+        );
+        return;
+      }
+      const result = await update.mutateAsync(parsed.data);
+      setBaseVersion(result.connector.version);
+      setMessage("Connector saved. Test again before starting new work.");
     } catch (error) {
       setStaleUpdate(isConflict(error));
       setMessage(errorMessage(error, "The connector could not be saved."));
@@ -140,13 +228,18 @@ export function ConnectorConnectionSection({
   async function rotateSecret(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setMessage(null);
-    const parsed = setConnectorSecretInputSchema.safeParse({ secretValue });
+    const parsed = setConnectorSecretInputSchema.safeParse({
+      secretValue,
+      expectedVersion: connector.version,
+      idempotencyKey: crypto.randomUUID(),
+    });
     if (!parsed.success) {
       setMessage(parsed.error.issues[0]?.message ?? "Enter a secret value.");
       return;
     }
     try {
-      await setSecret.mutateAsync(parsed.data);
+      const result = await setSecret.mutateAsync(parsed.data);
+      if (!dirty) setBaseVersion(result.connector.version);
       setSecretValue("");
       setMessage("Secret saved.");
     } catch (error) {
@@ -157,7 +250,10 @@ export function ConnectorConnectionSection({
   async function runTest() {
     setMessage(null);
     try {
-      await test.mutateAsync();
+      await test.mutateAsync({
+        expectedVersion: connector.version,
+        idempotencyKey: crypto.randomUUID(),
+      });
     } catch (error) {
       setMessage(errorMessage(error, "The connection test could not run."));
     }
@@ -165,6 +261,87 @@ export function ConnectorConnectionSection({
 
   return (
     <SectionCard title="Connection">
+      <p className={cn("mb-4 text-subhead-regular text-fg")}>
+        Reference adapter only: tests validate local fixtures and do not contact
+        a vendor.
+      </p>
+      {connection ? (
+        <div className="mb-4 space-y-2" aria-live="polite">
+          <p className="text-subhead-semibold text-fg">
+            State: {connection.status.replaceAll("_", " ")}
+          </p>
+          <p className="text-subhead-regular text-fg">
+            {connection.test.message}
+          </p>
+          <p className="text-caption-1-regular text-fg">
+            Last sync:{" "}
+            {connection.lastSyncAt
+              ? new Date(connection.lastSyncAt).toLocaleString()
+              : "Never"}
+          </p>
+          <h3 className="text-subhead-semibold text-fg">
+            Least-privilege guidance
+          </h3>
+          <p className="text-caption-1-regular text-fg">
+            Use disposable fixture credentials only. Scope policy{" "}
+            {connection.scope.policyVersion}. Scope introspection:{" "}
+            {connection.scope.status.replaceAll("_", " ")}.
+          </p>
+          {connection.scope.warnings.map((warning) => (
+            <p
+              key={warning}
+              role="status"
+              className="text-caption-1-regular text-fg"
+            >
+              {warning.replaceAll("_", " ")}
+            </p>
+          ))}
+          {connection.scope.missingScopes.length ? (
+            <p role="alert" className="text-caption-1-regular text-danger">
+              Required privileges missing:{" "}
+              {connection.scope.missingScopes.join(", ")}
+            </p>
+          ) : null}
+          {connection.scope.excessScopes.length ? (
+            <p className="text-caption-1-regular text-fg">
+              Excess privileges: {connection.scope.excessScopes.join(", ")}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+      {changedVersion ? (
+        <div role="status" className="mb-4 space-y-2">
+          <p className="text-subhead-regular text-fg">
+            A newer configuration is available. Your draft has been preserved.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              tone="grey"
+              onClick={discardDraft}
+            >
+              Discard draft and use current data
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              tone="grey"
+              onClick={() => {
+                setBaseVersion(connector.version);
+                setStaleUpdate(false);
+                displayNameField.current?.focus();
+              }}
+            >
+              Reapply draft to current version
+            </Button>
+          </div>
+        </div>
+      ) : dirty ? (
+        <p role="status" className="mb-4 text-caption-1-regular text-fg">
+          Unsaved configuration changes
+        </p>
+      ) : null}
       <div className="flex flex-col gap-6">
         <div className="flex flex-wrap items-center gap-3">
           <TestResultBadge connector={connector} testing={test.isPending} />
@@ -174,6 +351,9 @@ export function ConnectorConnectionSection({
               variant="outline"
               tone="grey"
               onClick={() => void runTest()}
+              disabled={
+                busy || !connector.hasSecret || connector.archivedAt !== null
+              }
               loading={test.isPending}
               loadingLabel="Testing connection"
             >
@@ -190,6 +370,7 @@ export function ConnectorConnectionSection({
             <label className="flex flex-col gap-2 text-caption-1-regular text-fg">
               Display name
               <input
+                ref={displayNameField}
                 required
                 value={displayName}
                 onChange={(event) => setDisplayName(event.target.value)}
@@ -248,6 +429,7 @@ export function ConnectorConnectionSection({
             <div className="sm:col-span-2">
               <Button
                 type="submit"
+                disabled={changedVersion || busy}
                 loading={update.isPending}
                 loadingLabel="Saving connector"
               >
@@ -294,6 +476,7 @@ export function ConnectorConnectionSection({
                 </label>
                 <Button
                   type="submit"
+                  disabled={busy}
                   loading={setSecret.isPending}
                   loadingLabel="Saving secret"
                 >
@@ -303,6 +486,64 @@ export function ConnectorConnectionSection({
             )
           ) : null}
         </div>
+        {canEdit ? (
+          <div className="space-y-3 border-t border-border pt-5">
+            <h3 className="text-headline-semibold text-fg">
+              Connection controls
+            </h3>
+            <p className="text-caption-1-regular text-fg">
+              Disconnect stops future jobs. In-flight reads may finish, but
+              stale work cannot commit or advance the cursor.
+            </p>
+            <label className="flex flex-col gap-2 text-caption-1-regular text-fg">
+              Reason for disconnect or revoke
+              <input
+                value={reason}
+                maxLength={500}
+                onChange={(event) => setReason(event.target.value)}
+                className="h-10 rounded-xl border border-border bg-canvas px-3 text-subhead-regular text-fg"
+              />
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {connector.enabled ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  tone="grey"
+                  disabled={busy}
+                  onClick={() => void control("disconnect")}
+                >
+                  Disconnect
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  variant="outline"
+                  tone="grey"
+                  disabled={
+                    busy ||
+                    !connector.hasSecret ||
+                    connector.archivedAt !== null
+                  }
+                  onClick={() => void control("reconnect")}
+                >
+                  Reconnect
+                </Button>
+              )}
+              {isOwner && connector.hasSecret ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  tone="grey"
+                  disabled={busy}
+                  onClick={() => void control("revoke")}
+                >
+                  Revoke credential
+                </Button>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
         {message ? (
           <div className="flex flex-wrap items-center gap-2">
             <p role="alert" className="text-caption-1-regular text-danger">

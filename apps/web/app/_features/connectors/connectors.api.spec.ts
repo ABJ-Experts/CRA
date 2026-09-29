@@ -46,7 +46,9 @@ describe("connectorsApi", () => {
       previewDigest: "a".repeat(64),
     };
 
-    await expect(connectorsApi.saveMapping(CONNECTOR_ID, input)).resolves.toEqual({
+    await expect(
+      connectorsApi.saveMapping(CONNECTOR_ID, input),
+    ).resolves.toEqual({
       policy: POLICY,
     });
 
@@ -95,13 +97,42 @@ describe("connectorsApi", () => {
     const fetcher = vi.fn(async () => json(DIAGNOSTICS));
     vi.stubGlobal("fetch", fetcher);
 
-    await expect(connectorsApi.exportDiagnostics(CONNECTOR_ID)).resolves.toEqual(
-      DIAGNOSTICS,
-    );
+    await expect(
+      connectorsApi.exportDiagnostics(CONNECTOR_ID),
+    ).resolves.toEqual(DIAGNOSTICS);
 
     expect(fetcher).toHaveBeenCalledWith(
       `/api/v1/connectors/${CONNECTOR_ID}/diagnostics/export`,
       expect.objectContaining({ method: "POST", body: JSON.stringify({}) }),
     );
+  });
+});
+
+describe("connector hub transport contracts", () => {
+  afterEach(() => vi.unstubAllGlobals());
+  it("parses authenticated catalogue and rejects invented vendor configuration", async () => {
+    const fetcher = vi.fn(async () => json({ catalogue: [] }));
+    vi.stubGlobal("fetch", fetcher);
+    await expect(connectorsApi.catalogue()).resolves.toEqual({ catalogue: [] });
+    expect(fetcher).toHaveBeenCalledWith(
+      "/api/v1/connectors/catalogue",
+      expect.any(Object),
+    );
+  });
+  it("rejects blind credential replacement before sending a request", async () => {
+    const fetcher = vi.fn();
+    vi.stubGlobal("fetch", fetcher);
+    await expect(
+      connectorsApi.setSecret(CONNECTOR_ID, { secretValue: "canary" } as never),
+    ).rejects.toMatchObject({ kind: "invalid_request" });
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+  it("requires concurrency metadata for non-destructive tests", async () => {
+    const fetcher = vi.fn();
+    vi.stubGlobal("fetch", fetcher);
+    await expect(
+      connectorsApi.test(CONNECTOR_ID, {} as never),
+    ).rejects.toMatchObject({ kind: "invalid_request" });
+    expect(fetcher).not.toHaveBeenCalled();
   });
 });

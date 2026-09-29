@@ -309,6 +309,16 @@ test("a run-scoped owner completes connector sync, observes retry safety, and ca
       .getByRole("button", { name: "Save connection", exact: true })
       .click();
     expect((await connectionSaved).status()).toBe(200);
+    // New connection revision needs explicit fixture validation before work starts.
+    const retested = page.waitForResponse(
+      (response) =>
+        response.url().endsWith("/test") &&
+        response.request().method() === "POST",
+    );
+    await page
+      .getByRole("button", { name: "Test connection", exact: true })
+      .click();
+    expect((await retested).status()).toBe(200);
 
     await page
       .getByRole("button", { name: "Start dry run (incremental)", exact: true })

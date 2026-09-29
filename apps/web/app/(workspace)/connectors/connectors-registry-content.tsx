@@ -1,4 +1,6 @@
 "use client";
+import type { ConnectorConnectionState } from "@repo/contracts/connectors/types";
+import { ConnectorCatalogueSection } from "./connector-catalogue-section";
 
 import { createConnectorInputSchema } from "../../_features/connectors/connectors.schemas";
 import { Button } from "@repo/ui/button";
@@ -8,7 +10,8 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import {
-  useConnectorsQuery,
+  useConnectorCatalogueQuery,
+  useConnectorOverviewsQuery,
   useCreateConnectorMutation,
 } from "../../_features/connectors/connectors.queries";
 import type { Connector } from "../../_features/connectors/connectors.schemas";
@@ -19,12 +22,6 @@ import {
   PageHeading,
   SectionCard,
 } from "../../dashboard/_components/dashboard-chrome";
-
-import {
-  CONNECTOR_CARD_STATUS_LABEL,
-  CONNECTOR_CARD_STATUS_TONE,
-  deriveConnectorCardStatus,
-} from "./connector-status";
 
 function errorMessage(error: unknown, fallback: string): string {
   if (error instanceof ApiClientError && error.kind === "api")
@@ -41,8 +38,8 @@ function ConnectorCreateForm({
   onCreated: (connector: Connector) => void;
 }) {
   const [displayName, setDisplayName] = useState("");
-  const [adapterVersion, setAdapterVersion] = useState("");
-  const [mappingVersion, setMappingVersion] = useState("");
+  const [adapterVersion, setAdapterVersion] = useState("1.0.0");
+  const [mappingVersion, setMappingVersion] = useState("v1");
   const [commitPolicy, setCommitPolicy] = useState<"manual" | "auto">("manual");
   const [connectionConfigJson, setConnectionConfigJson] = useState("{}");
   const [message, setMessage] = useState<string | null>(null);
@@ -165,21 +162,31 @@ function ConnectorCreateForm({
   );
 }
 
-function ConnectorStatusBadge({ connector }: { connector: Connector }) {
-  const status = deriveConnectorCardStatus(connector);
-  const tone = CONNECTOR_CARD_STATUS_TONE[status];
+function ConnectorStatusBadge({
+  connection,
+}: {
+  connection: ConnectorConnectionState;
+}) {
+  const tone =
+    connection.status === "healthy"
+      ? "green"
+      : connection.status === "auth_expired"
+        ? "red"
+        : undefined;
   return (
     <Tag variant={tone ? "fill" : "cool"} tone={tone} size="sm">
-      {CONNECTOR_CARD_STATUS_LABEL[status]}
+      {connection.status.replaceAll("_", " ")}
     </Tag>
   );
 }
 
 function ConnectorCard({
   connector,
+  connection,
   onOpen,
 }: {
   connector: Connector;
+  connection: ConnectorConnectionState;
   onOpen: (id: string) => void;
 }) {
   return (
@@ -192,12 +199,18 @@ function ConnectorCard({
           <Tag variant="cool" size="sm">
             {connector.connectorType}
           </Tag>
-          <ConnectorStatusBadge connector={connector} />
+          <ConnectorStatusBadge connection={connection} />
         </div>
         <p className="text-caption-1-regular text-fg-muted">
           Adapter {connector.adapterVersion} · Mapping{" "}
           {connector.mappingVersion} ·{" "}
           {connector.commitPolicy === "auto" ? "Auto commit" : "Manual commit"}
+        </p>
+        <p className="text-caption-1-regular text-fg">
+          Reference fixture validation only · Last sync:{" "}
+          {connection.lastSyncAt
+            ? new Date(connection.lastSyncAt).toLocaleString()
+            : "Never"}
         </p>
       </div>
       <Button
@@ -221,13 +234,17 @@ export function ConnectorsRegistryContent() {
   const { session, permissions, isLoading: sessionLoading } = useSession();
   const liveApiEnabled =
     mocksReady && process.env.NEXT_PUBLIC_ENABLE_MOCKS === "false";
-  const hasMembership = (session?.organizations.length ?? 0) > 0;
+  const hasMembership = Boolean(session?.organization?.id);
   const canView = permissions.can_view_connectors === true;
   const canCreate = permissions.can_create_connectors === true;
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
   const [showCreate, setShowCreate] = useState(false);
-  const connectors = useConnectorsQuery(
-    { page: 1, pageSize: 25, q: search.trim() || undefined },
+  const catalogue = useConnectorCatalogueQuery(
+    liveApiEnabled && hasMembership && canView,
+  );
+  const connectors = useConnectorOverviewsQuery(
+    { page, pageSize: 25, q: search.trim() || undefined },
     liveApiEnabled && hasMembership && canView,
   );
   const connectorCount = connectors.data?.connectors.total ?? 0;
@@ -237,7 +254,7 @@ export function ConnectorsRegistryContent() {
     <div className="flex flex-col gap-6 px-6 py-6 lg:px-[30px]">
       <PageHeading
         title="Connectors"
-        subtitle="PLM/ALM connectors syncing product and release structure into this organization."
+        subtitle="Integration availability, configuration and safe connection diagnostics for this organization."
         actions={
           canCreate ? (
             <Button
@@ -275,8 +292,41 @@ export function ConnectorsRegistryContent() {
         </SectionCard>
       ) : (
         <>
+          {catalogue.isPending ? (
+            <SectionCard>
+              <p role="status" className="text-subhead-regular text-fg">
+                Loading integration catalogue…
+              </p>
+            </SectionCard>
+          ) : catalogue.isError ? (
+            <SectionCard>
+              <div role="alert" className="space-y-3">
+                <p className="text-subhead-regular text-danger">
+                  {errorMessage(
+                    catalogue.error,
+                    "The integration catalogue could not be loaded.",
+                  )}
+                </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  tone="grey"
+                  onClick={() => void catalogue.refetch()}
+                >
+                  Retry catalogue
+                </Button>
+              </div>
+            </SectionCard>
+          ) : (
+            <ConnectorCatalogueSection
+              entries={catalogue.data?.catalogue ?? []}
+              canCreate={canCreate}
+              onConfigure={() => setShowCreate(true)}
+            />
+          )}
           {showCreate ? (
             <ConnectorCreateForm
+              key={session?.organization?.id}
               onCreated={(connector) => {
                 setShowCreate(false);
                 router.push(`/connectors/${connector.id}`);
@@ -299,7 +349,10 @@ export function ConnectorsRegistryContent() {
                 type="search"
                 aria-label="Search connectors"
                 value={search}
-                onChange={(event) => setSearch(event.target.value)}
+                onChange={(event) => {
+                  setSearch(event.target.value);
+                  setPage(1);
+                }}
                 placeholder="Search by name"
                 className="h-10 w-full max-w-xl rounded-xl border border-border bg-canvas px-3 text-subhead-regular text-fg"
               />
@@ -333,15 +386,42 @@ export function ConnectorsRegistryContent() {
               </p>
             ) : (
               <ul aria-label="Connectors">
-                {connectors.data?.connectors.rows.map((connector) => (
-                  <ConnectorCard
-                    key={connector.id}
-                    connector={connector}
-                    onOpen={(id) => router.push(`/connectors/${id}`)}
-                  />
-                ))}
+                {connectors.data?.connectors.rows.map(
+                  ({ connector, connection }) => (
+                    <ConnectorCard
+                      key={connector.id}
+                      connector={connector}
+                      connection={connection}
+                      onOpen={(id) => router.push(`/connectors/${id}`)}
+                    />
+                  ),
+                )}
               </ul>
             )}
+            <div className="mt-4 flex flex-wrap items-center gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                tone="grey"
+                disabled={page <= 1 || connectors.isPending}
+                onClick={() => setPage((value) => value - 1)}
+              >
+                Previous page
+              </Button>
+              <p className="text-caption-1-regular text-fg">Page {page}</p>
+              <Button
+                type="button"
+                variant="outline"
+                tone="grey"
+                disabled={
+                  page >= (connectors.data?.connectors.pageCount ?? 1) ||
+                  connectors.isPending
+                }
+                onClick={() => setPage((value) => value + 1)}
+              >
+                Next page
+              </Button>
+            </div>
           </SectionCard>
         </>
       )}

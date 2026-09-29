@@ -18,6 +18,9 @@ export type ConnectorConnectionConfig = Readonly<{
   tenantOrSiteId?: string;
   scopeFilter?: Readonly<Record<string, string>>;
   secretReference: SecretReference;
+  /** Opaque operation identity, never a credential or browser-selected authority. */
+  executionIdentity?: string;
+  signal?: AbortSignal;
 }>;
 
 export type ConnectorErrorCode =
