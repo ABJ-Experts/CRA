@@ -231,6 +231,10 @@ describe("tenant export source registry architecture", () => {
       "ai_inference_runs",
       "technical_file_auditor_snapshot_grants",
       "technical_file_risk_commands",
+      "ci_provider_release_bindings",
+      "ci_provider_release_binding_commands",
+      "ci_build_runs",
+      "ci_provider_webhook_events",
     ]) {
       expect(exported.has(table)).toBe(false);
       expect(exportSourceExclusions[table]).toMatch(

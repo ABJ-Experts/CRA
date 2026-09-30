@@ -51,6 +51,14 @@ const ALLOWED_PUBLIC: Record<string, string> = {
     "CI cannot have a browser session; the dedicated SBOM CI credential guard authenticates this narrow intake route.",
   "POST ci/sbom-uploads/:sourceId/complete":
     "Continuation of the CI direct-upload protocol, guarded by the same organization-scoped credential.",
+  "POST ci/sbom-build-uploads":
+    "CI build upload uses the dedicated credential plus server-side provider/release binding, not a browser session.",
+  "POST ci/sbom-build-uploads/:sourceId/complete":
+    "Continuation of the bound CI build upload protocol with the same organization-scoped credential and provider identity.",
+  "GET ci/sbom-build-gate":
+    "CI polls the build-correlated SBOM gate with the dedicated credential after upload and processing.",
+  "POST ci/provider-events/:provider/:organizationId/:bindingId":
+    "Provider delivery is authenticated from the raw-body signature and revalidated against the bound provider run.",
   "POST supplier-sbom-portal/sessions":
     "A supplier has no CRA session; the one-time opaque invitation bearer is the only credential accepted here.",
   "POST supplier-sbom-portal/submissions":
@@ -231,6 +239,9 @@ describe("route guard coverage", () => {
       "POST sbom-diffs/:diffId/retry": false,
       "POST ci/sbom-uploads": true,
       "POST ci/sbom-uploads/:sourceId/complete": true,
+      "POST ci/sbom-build-uploads": true,
+      "POST ci/sbom-build-uploads/:sourceId/complete": true,
+      "GET ci/sbom-build-gate": true,
       "POST supplier-sbom-portal/sessions": true,
       "POST supplier-sbom-portal/submissions": true,
       "POST supplier-sbom-portal/submissions/:sourceId/complete": true,

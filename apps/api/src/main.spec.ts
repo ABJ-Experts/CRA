@@ -50,6 +50,7 @@ describe("API bootstrap", () => {
 
     expect(create).toHaveBeenCalledWith(expect.any(Function), {
       bufferLogs: false,
+      rawBody: true,
     });
     expect(app.setGlobalPrefix).toHaveBeenCalledWith("api/v1");
     expect(app.useBodyParser).toHaveBeenCalledWith("json", { limit: "2200kb" });

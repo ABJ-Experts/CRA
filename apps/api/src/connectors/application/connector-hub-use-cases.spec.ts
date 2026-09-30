@@ -189,6 +189,33 @@ describe("ConnectorHubUseCases security boundaries", () => {
     ).rejects.toMatchObject({ code: "invalid_request" });
     expect(f.repository.create).not.toHaveBeenCalled();
   });
+  it("allows CI metadata without a product/release adapter and requires owner authorization", async () => {
+    const f = fixture();
+    await f.useCases.create(org, actor, {
+      connectorType: "github_actions",
+      adapterVersion: "1.0.0",
+      mappingVersion: "ci-v1",
+      displayName: "GitHub App",
+      connectionConfig: {
+        providerHost: "github.com",
+        appId: "123",
+        installationId: "456",
+      },
+      commitPolicy: "manual",
+      idempotencyKey: key,
+    });
+    expect(f.authorization.authorize).toHaveBeenCalledWith(
+      org,
+      actor,
+      ["can_create_connectors"],
+      true,
+    );
+    expect(f.egress.validate).toHaveBeenCalledWith(
+      { providerHost: "github.com", appId: "123", installationId: "456" },
+      "github_actions",
+    );
+    expect(f.repository.create).toHaveBeenCalledTimes(1);
+  });
   it("checks the active envelope before reconnecting", async () => {
     const f = fixture();
     f.vault.decrypt.mockImplementation(() => {
@@ -297,6 +324,24 @@ describe("ConnectorHubUseCases command lifecycle", () => {
       3,
     );
   });
+  it("does not enqueue product or release sync for a CI connection", async () => {
+    const f = fixture();
+    f.repository.context.mockResolvedValue({
+      ...f.context,
+      connector: { ...f.connector, connectorType: "github_actions" },
+    });
+    await expect(
+      f.useCases.beginSync(org, id, actor, {
+        reconciliationKind: "full",
+        idempotencyKey: key,
+      }),
+    ).rejects.toMatchObject({ code: "invalid_state" });
+    await expect(
+      f.useCases.requestCommit(org, id, key, actor, 0),
+    ).rejects.toMatchObject({ code: "invalid_state" });
+    expect(f.repository.beginSync).not.toHaveBeenCalled();
+    expect(f.repository.requestCommit).not.toHaveBeenCalled();
+  });
   it("revoke is owner-only and disconnect is edit-only with a redacted reason", async () => {
     const f = fixture();
     await f.useCases.revokeSecret(org, id, actor, {
@@ -309,12 +354,29 @@ describe("ConnectorHubUseCases command lifecycle", () => {
     });
     expect(
       f.authorization.authorize.mock.calls.map((call: unknown[]) => call[3]),
-    ).toEqual([true, false]);
+    ).toEqual([true, undefined, false]);
     expect(
       f.repository.execute.mock.calls.map(
         (call: unknown[]) => (call[1] as { operation: string }).operation,
       ),
     ).toEqual(["revoke_secret", "disconnect"]);
+  });
+  it("requires owner authority before disconnecting a CI connection", async () => {
+    const f = fixture();
+    f.repository.context.mockResolvedValue({
+      ...f.context,
+      connector: { ...f.connector, connectorType: "gitlab_ci" },
+    });
+    await f.useCases.disconnect(org, id, actor, {
+      ...input,
+      reason: "Project access revoked",
+    });
+    expect(f.authorization.authorize).toHaveBeenLastCalledWith(
+      org,
+      actor,
+      ["can_edit_connectors"],
+      true,
+    );
   });
   it("reconnect authenticates before vault access and submits an empty command payload", async () => {
     const f = fixture();

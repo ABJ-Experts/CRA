@@ -1,5 +1,8 @@
 "use client";
-import type { ConnectorCatalogueEntry } from "@repo/contracts/connectors/types";
+import type {
+  ConnectorCatalogueEntry,
+  ConnectorType,
+} from "@repo/contracts/connectors/types";
 import { Button } from "@repo/ui/button";
 import { cn } from "@repo/ui/cn";
 import { SectionCard } from "../../dashboard/_components/dashboard-chrome";
@@ -11,7 +14,7 @@ export function ConnectorCatalogueSection({
 }: Readonly<{
   entries: readonly ConnectorCatalogueEntry[];
   canCreate: boolean;
-  onConfigure: () => void;
+  onConfigure: (type: ConnectorType) => void;
 }>) {
   return (
     <SectionCard title="Integration catalogue">
@@ -22,8 +25,8 @@ export function ConnectorCatalogueSection({
       <div className="overflow-x-auto">
         <table className="w-full text-left text-caption-1-regular text-fg">
           <caption className="sr-only">
-            Supported reference adapter and planned integrations with
-            least-privilege guidance
+            Supported reference adapter and CI integrations with least-privilege
+            guidance
           </caption>
           <thead>
             <tr className="border-b border-border text-caption-1-semibold">
@@ -69,7 +72,9 @@ export function ConnectorCatalogueSection({
                 <td className="px-3 py-4">
                   {entry.implementation === "reference"
                     ? "Reference/test adapter"
-                    : "Planned integration"}
+                    : entry.implementation === "ci"
+                      ? "CI run verification"
+                      : "Planned integration"}
                 </td>
                 <td className="whitespace-nowrap px-3 py-4">
                   {entry.phase} / {entry.priority}
@@ -80,9 +85,11 @@ export function ConnectorCatalogueSection({
                       type="button"
                       variant="outline"
                       tone="grey"
-                      onClick={onConfigure}
+                      onClick={() => onConfigure(entry.id as ConnectorType)}
                     >
-                      Configure reference adapter
+                      {entry.implementation === "reference"
+                        ? "Configure reference adapter"
+                        : `Configure ${entry.name}`}
                     </Button>
                   ) : entry.canConfigure ? (
                     "Requires create permission"

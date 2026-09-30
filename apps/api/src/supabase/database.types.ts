@@ -336,6 +336,379 @@ export type Database = {
           },
         ]
       }
+      ci_build_runs: {
+        Row: {
+          binding_id: string
+          commit_sha: string
+          completed_at: string | null
+          created_at: string
+          credential_id: string
+          event_name: string
+          id: string
+          idempotency_key: string
+          ingest_job_id: string | null
+          organization_id: string
+          pipeline_definition_id: string | null
+          project_key: string | null
+          provider: string
+          provider_host: string
+          provider_installation_id: string | null
+          provider_job_id: string | null
+          ref: string
+          repository_id: string
+          repository_name: string
+          repository_owner: string
+          request_digest: string
+          run_attempt: string | null
+          run_id: string
+          source_id: string
+          updated_at: string
+        }
+        Insert: {
+          binding_id: string
+          commit_sha: string
+          completed_at?: string | null
+          created_at?: string
+          credential_id: string
+          event_name: string
+          id?: string
+          idempotency_key: string
+          ingest_job_id?: string | null
+          organization_id: string
+          pipeline_definition_id?: string | null
+          project_key?: string | null
+          provider: string
+          provider_host: string
+          provider_installation_id?: string | null
+          provider_job_id?: string | null
+          ref: string
+          repository_id: string
+          repository_name: string
+          repository_owner: string
+          request_digest: string
+          run_attempt?: string | null
+          run_id: string
+          source_id: string
+          updated_at?: string
+        }
+        Update: {
+          binding_id?: string
+          commit_sha?: string
+          completed_at?: string | null
+          created_at?: string
+          credential_id?: string
+          event_name?: string
+          id?: string
+          idempotency_key?: string
+          ingest_job_id?: string | null
+          organization_id?: string
+          pipeline_definition_id?: string | null
+          project_key?: string | null
+          provider?: string
+          provider_host?: string
+          provider_installation_id?: string | null
+          provider_job_id?: string | null
+          ref?: string
+          repository_id?: string
+          repository_name?: string
+          repository_owner?: string
+          request_digest?: string
+          run_attempt?: string | null
+          run_id?: string
+          source_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ci_build_runs_organization_id_binding_id_fkey"
+            columns: ["organization_id", "binding_id"]
+            isOneToOne: false
+            referencedRelation: "ci_provider_release_bindings"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "ci_build_runs_organization_id_credential_id_fkey"
+            columns: ["organization_id", "credential_id"]
+            isOneToOne: false
+            referencedRelation: "sbom_ci_credentials"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "ci_build_runs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ci_build_runs_organization_id_ingest_job_id_fkey"
+            columns: ["organization_id", "ingest_job_id"]
+            isOneToOne: false
+            referencedRelation: "sbom_ingest_jobs"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "ci_build_runs_organization_id_source_id_fkey"
+            columns: ["organization_id", "source_id"]
+            isOneToOne: true
+            referencedRelation: "sbom_sources"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      ci_provider_release_binding_commands: {
+        Row: {
+          actor_user_id: string
+          binding_id: string | null
+          created_at: string
+          id: string
+          idempotency_key: string
+          operation: string
+          organization_id: string
+          request_digest: string
+          result: Json
+        }
+        Insert: {
+          actor_user_id: string
+          binding_id?: string | null
+          created_at?: string
+          id?: string
+          idempotency_key: string
+          operation: string
+          organization_id: string
+          request_digest: string
+          result?: Json
+        }
+        Update: {
+          actor_user_id?: string
+          binding_id?: string | null
+          created_at?: string
+          id?: string
+          idempotency_key?: string
+          operation?: string
+          organization_id?: string
+          request_digest?: string
+          result?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ci_provider_release_binding_com_organization_id_binding_id_fkey"
+            columns: ["organization_id", "binding_id"]
+            isOneToOne: false
+            referencedRelation: "ci_provider_release_bindings"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "ci_provider_release_binding_commands_actor_user_id_fkey"
+            columns: ["actor_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ci_provider_release_binding_commands_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ci_provider_release_bindings: {
+        Row: {
+          allowed_ref: string
+          connection_revision: number
+          connector_id: string
+          created_at: string
+          created_by: string
+          credential_id: string
+          credential_revision: number
+          id: string
+          organization_id: string
+          pipeline_definition_id: string | null
+          product_id: string
+          project_key: string | null
+          provider: string
+          provider_host: string
+          provider_installation_id: string | null
+          release_id: string
+          repository_id: string
+          repository_name: string
+          repository_owner: string
+          revoked_at: string | null
+          revoked_by: string | null
+          revoked_reason: string | null
+          status: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          allowed_ref: string
+          connection_revision: number
+          connector_id: string
+          created_at?: string
+          created_by: string
+          credential_id: string
+          credential_revision: number
+          id?: string
+          organization_id: string
+          pipeline_definition_id?: string | null
+          product_id: string
+          project_key?: string | null
+          provider: string
+          provider_host: string
+          provider_installation_id?: string | null
+          release_id: string
+          repository_id: string
+          repository_name: string
+          repository_owner: string
+          revoked_at?: string | null
+          revoked_by?: string | null
+          revoked_reason?: string | null
+          status?: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          allowed_ref?: string
+          connection_revision?: number
+          connector_id?: string
+          created_at?: string
+          created_by?: string
+          credential_id?: string
+          credential_revision?: number
+          id?: string
+          organization_id?: string
+          pipeline_definition_id?: string | null
+          product_id?: string
+          project_key?: string | null
+          provider?: string
+          provider_host?: string
+          provider_installation_id?: string | null
+          release_id?: string
+          repository_id?: string
+          repository_name?: string
+          repository_owner?: string
+          revoked_at?: string | null
+          revoked_by?: string | null
+          revoked_reason?: string | null
+          status?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ci_provider_release_bindings_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ci_provider_release_bindings_organization_id_connector_id_fkey"
+            columns: ["organization_id", "connector_id"]
+            isOneToOne: false
+            referencedRelation: "connectors"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "ci_provider_release_bindings_organization_id_credential_id_fkey"
+            columns: ["organization_id", "credential_id"]
+            isOneToOne: false
+            referencedRelation: "sbom_ci_credentials"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "ci_provider_release_bindings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ci_provider_release_bindings_organization_id_product_id_fkey"
+            columns: ["organization_id", "product_id"]
+            isOneToOne: false
+            referencedRelation: "product_retention_alert_operations"
+            referencedColumns: ["organization_id", "product_id"]
+          },
+          {
+            foreignKeyName: "ci_provider_release_bindings_organization_id_product_id_fkey"
+            columns: ["organization_id", "product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "ci_provider_release_bindings_organization_id_product_id_re_fkey"
+            columns: ["organization_id", "product_id", "release_id"]
+            isOneToOne: false
+            referencedRelation: "product_releases"
+            referencedColumns: ["organization_id", "product_id", "id"]
+          },
+          {
+            foreignKeyName: "ci_provider_release_bindings_revoked_by_fkey"
+            columns: ["revoked_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ci_provider_webhook_events: {
+        Row: {
+          binding_id: string
+          body_sha256: string
+          delivery_id: string
+          id: string
+          organization_id: string
+          provider: string
+          provider_host: string
+          received_at: string
+          run_attempt: string | null
+          run_id: string
+        }
+        Insert: {
+          binding_id: string
+          body_sha256: string
+          delivery_id: string
+          id?: string
+          organization_id: string
+          provider: string
+          provider_host: string
+          received_at?: string
+          run_attempt?: string | null
+          run_id: string
+        }
+        Update: {
+          binding_id?: string
+          body_sha256?: string
+          delivery_id?: string
+          id?: string
+          organization_id?: string
+          provider?: string
+          provider_host?: string
+          received_at?: string
+          run_attempt?: string | null
+          run_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ci_provider_webhook_events_organization_id_binding_id_fkey"
+            columns: ["organization_id", "binding_id"]
+            isOneToOne: false
+            referencedRelation: "ci_provider_release_bindings"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "ci_provider_webhook_events_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       connector_commands: {
         Row: {
           actor_user_id: string
@@ -20732,6 +21105,10 @@ export type Database = {
         }
         Returns: string
       }
+      ci_provider_release_binding_json: {
+        Args: { p_binding_id: string; p_organization_id: string }
+        Returns: Json
+      }
       claim_evidence_document_deletion_cleanup_atomic: {
         Args: {
           p_lease_seconds: number
@@ -23043,6 +23420,27 @@ export type Database = {
         Returns: {
           outcome: string
           result: Json
+        }[]
+      }
+      finalize_ci_build_sbom_atomic: {
+        Args: {
+          p_actual_byte_size: number
+          p_actual_media_type: string
+          p_actual_sha256: string
+          p_binding_id: string
+          p_correlation_id: string
+          p_credential_id: string
+          p_idempotency_key: string
+          p_organization_id: string
+          p_run_attempt: string
+          p_run_id: string
+          p_source_id: string
+        }
+        Returns: {
+          build_run_id: string
+          job: Json
+          outcome: string
+          source: Json
         }[]
       }
       finalize_evidence_document_upload_atomic: {
@@ -28478,6 +28876,21 @@ export type Database = {
           resolved_count: number
         }[]
       }
+      record_ci_provider_webhook_event_atomic: {
+        Args: {
+          p_binding_id: string
+          p_body_sha256: string
+          p_delivery_id: string
+          p_organization_id: string
+          p_provider: string
+          p_run_attempt: string
+          p_run_id: string
+        }
+        Returns: {
+          event_id: string
+          outcome: string
+        }[]
+      }
       record_connector_test_atomic: {
         Args: {
           p_actor_user_id: string
@@ -29282,6 +29695,44 @@ export type Database = {
           outcome: string
         }[]
       }
+      reserve_ci_build_sbom_atomic: {
+        Args: {
+          p_binding_id: string
+          p_build_digest: string
+          p_commit_sha: string
+          p_correlation_id: string
+          p_credential_id: string
+          p_declared_byte_size: number
+          p_declared_format: string
+          p_declared_media_type: string
+          p_declared_sha256: string
+          p_declared_spec_version: string
+          p_event_name: string
+          p_idempotency_key: string
+          p_organization_id: string
+          p_original_filename: string
+          p_pipeline_definition_id: string
+          p_project_key: string
+          p_provider_installation_id: string
+          p_provider_job_id: string
+          p_ref: string
+          p_repository_id: string
+          p_repository_name: string
+          p_repository_owner: string
+          p_request_digest: string
+          p_run_attempt: string
+          p_run_id: string
+          p_source_id: string
+          p_staging_storage_key: string
+          p_supersedes_source_id: string
+          p_upload_expires_at: string
+        }
+        Returns: {
+          build_run_id: string
+          outcome: string
+          source: Json
+        }[]
+      }
       reserve_evidence_document_replacement_atomic: {
         Args: {
           p_actor_user_id: string
@@ -29855,6 +30306,21 @@ export type Database = {
         Returns: {
           outcome: string
           result: Json
+        }[]
+      }
+      revoke_ci_provider_release_binding_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_binding_id: string
+          p_expected_version: number
+          p_idempotency_key: string
+          p_organization_id: string
+          p_reason: string
+          p_request_digest: string
+        }
+        Returns: {
+          binding: Json
+          outcome: string
         }[]
       }
       revoke_invitation_atomic: {
@@ -30782,6 +31248,35 @@ export type Database = {
         Returns: {
           outcome: string
           result: Json
+        }[]
+      }
+      upsert_ci_provider_release_binding_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_allowed_ref: string
+          p_connector_id: string
+          p_credential_id: string
+          p_expected_binding_id: string
+          p_expected_connection_revision: number
+          p_expected_credential_revision: number
+          p_expected_version: number
+          p_idempotency_key: string
+          p_organization_id: string
+          p_pipeline_definition_id: string
+          p_product_id: string
+          p_project_key: string
+          p_provider: string
+          p_provider_host: string
+          p_provider_installation_id: string
+          p_release_id: string
+          p_repository_id: string
+          p_repository_name: string
+          p_repository_owner: string
+          p_request_digest: string
+        }
+        Returns: {
+          binding: Json
+          outcome: string
         }[]
       }
       upsert_field_authority_policy_atomic: {

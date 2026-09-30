@@ -1,5 +1,8 @@
 "use client";
-import type { ConnectorConnectionState } from "@repo/contracts/connectors/types";
+import type {
+  ConnectorConnectionState,
+  ConnectorType,
+} from "@repo/contracts/connectors/types";
 import { ConnectorCatalogueSection } from "./connector-catalogue-section";
 
 import { createConnectorInputSchema } from "../../_features/connectors/connectors.schemas";
@@ -35,15 +38,25 @@ function errorMessage(error: unknown, fallback: string): string {
 }
 
 function ConnectorCreateForm({
+  initialType,
   onCreated,
 }: {
+  initialType: ConnectorType;
   onCreated: (connector: Connector) => void;
 }) {
   const [displayName, setDisplayName] = useState("");
+  const [connectorType, setConnectorType] =
+    useState<ConnectorType>(initialType);
   const [adapterVersion, setAdapterVersion] = useState("1.0.0");
   const [mappingVersion, setMappingVersion] = useState("v1");
   const [commitPolicy, setCommitPolicy] = useState<"manual" | "auto">("manual");
   const [connectionConfigJson, setConnectionConfigJson] = useState("{}");
+  const [providerHost, setProviderHost] = useState("gitlab.com");
+  const [appId, setAppId] = useState("");
+  const [installationId, setInstallationId] = useState("");
+  const [projectId, setProjectId] = useState("");
+  const [organization, setOrganization] = useState("");
+  const [serviceConnectionId, setServiceConnectionId] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const create = useCreateConnectorMutation();
 
@@ -51,22 +64,36 @@ function ConnectorCreateForm({
     event.preventDefault();
     setMessage(null);
     let connectionConfig: Record<string, unknown>;
-    try {
-      connectionConfig = JSON.parse(connectionConfigJson) as Record<
-        string,
-        unknown
-      >;
-    } catch {
-      setMessage("Connection config must be valid JSON.");
-      return;
+    if (connectorType === "reference_conformance") {
+      try {
+        connectionConfig = JSON.parse(connectionConfigJson) as Record<
+          string,
+          unknown
+        >;
+      } catch {
+        setMessage("Connection config must be valid JSON.");
+        return;
+      }
+    } else if (connectorType === "github_actions") {
+      connectionConfig = { providerHost: "github.com", appId, installationId };
+    } else if (connectorType === "gitlab_ci") {
+      connectionConfig = { providerHost, projectId };
+    } else {
+      connectionConfig = {
+        providerHost: "dev.azure.com",
+        organization,
+        projectId,
+        serviceConnectionId,
+      };
     }
     const parsed = createConnectorInputSchema.safeParse({
-      connectorType: "reference_conformance",
+      connectorType,
       displayName,
       adapterVersion,
       mappingVersion,
       connectionConfig,
-      commitPolicy,
+      commitPolicy:
+        connectorType === "reference_conformance" ? commitPolicy : "manual",
       idempotencyKey: crypto.randomUUID(),
     });
     if (!parsed.success) {
@@ -91,6 +118,23 @@ function ConnectorCreateForm({
         onSubmit={(event) => void submit(event)}
       >
         <label className="flex flex-col gap-2 text-caption-1-regular text-fg">
+          Connector type
+          <select
+            aria-label="Connector type"
+            value={connectorType}
+            onChange={(event) => {
+              setConnectorType(event.target.value as ConnectorType);
+              setCommitPolicy("manual");
+            }}
+            className="h-10 rounded-xl border border-border bg-canvas px-3 text-subhead-regular text-fg focus-visible:ring-2 focus-visible:ring-active-500"
+          >
+            <option value="reference_conformance">Reference adapter</option>
+            <option value="github_actions">GitHub Actions App</option>
+            <option value="gitlab_ci">GitLab CI project</option>
+            <option value="azure_devops">Azure DevOps pipeline</option>
+          </select>
+        </label>
+        <label className="flex flex-col gap-2 text-caption-1-regular text-fg">
           Display name
           <input
             required
@@ -99,23 +143,25 @@ function ConnectorCreateForm({
             className="h-10 rounded-xl border border-border bg-canvas px-3 text-subhead-regular text-fg"
           />
         </label>
-        <label
-          className="flex flex-col gap-2 text-caption-1-regular text-fg"
-          htmlFor="connector-commit-policy"
-        >
-          Commit policy
-          <select
-            id="connector-commit-policy"
-            value={commitPolicy}
-            onChange={(event) =>
-              setCommitPolicy(event.target.value as "manual" | "auto")
-            }
-            className="h-10 rounded-xl border border-border bg-canvas px-3 text-subhead-regular text-fg"
+        {connectorType === "reference_conformance" ? (
+          <label
+            className="flex flex-col gap-2 text-caption-1-regular text-fg"
+            htmlFor="connector-commit-policy"
           >
-            <option value="manual">Manual commit</option>
-            <option value="auto">Auto commit</option>
-          </select>
-        </label>
+            Commit policy
+            <select
+              id="connector-commit-policy"
+              value={commitPolicy}
+              onChange={(event) =>
+                setCommitPolicy(event.target.value as "manual" | "auto")
+              }
+              className="h-10 rounded-xl border border-border bg-canvas px-3 text-subhead-regular text-fg"
+            >
+              <option value="manual">Manual commit</option>
+              <option value="auto">Auto commit</option>
+            </select>
+          </label>
+        ) : null}
         <label className="flex flex-col gap-2 text-caption-1-regular text-fg">
           Adapter version
           <input
@@ -134,14 +180,102 @@ function ConnectorCreateForm({
             className="h-10 rounded-xl border border-border bg-canvas px-3 text-subhead-regular text-fg"
           />
         </label>
-        <label className="flex flex-col gap-2 text-caption-1-regular text-fg sm:col-span-2">
-          Connection config (JSON, no secrets)
-          <textarea
-            value={connectionConfigJson}
-            onChange={(event) => setConnectionConfigJson(event.target.value)}
-            className="min-h-28 rounded-xl border border-border bg-canvas px-3 py-2 font-mono text-caption-1-regular text-fg"
-          />
-        </label>
+        {connectorType === "reference_conformance" ? (
+          <label className="flex flex-col gap-2 text-caption-1-regular text-fg sm:col-span-2">
+            Connection config (JSON, no secrets)
+            <textarea
+              value={connectionConfigJson}
+              onChange={(event) => setConnectionConfigJson(event.target.value)}
+              className="min-h-28 rounded-xl border border-border bg-canvas px-3 py-2 font-mono text-caption-1-regular text-fg"
+            />
+          </label>
+        ) : null}
+        {connectorType === "github_actions" ? (
+          <>
+            <p className={cn("text-caption-1-regular text-fg-muted sm:col-span-2")}>
+              Install the GitHub App only on the intended repositories. Grant
+              Actions: read for run verification and Contents: read for release
+              tag verification. Manual workflow_dispatch runs are unsupported.
+            </p>
+            <label className="flex flex-col gap-2 text-caption-1-regular text-fg">
+              GitHub App ID
+              <input
+                aria-label="GitHub App ID"
+                value={appId}
+                onChange={(event) => setAppId(event.target.value)}
+                className="h-10 rounded-xl border border-border bg-canvas px-3 text-subhead-regular text-fg focus-visible:ring-2 focus-visible:ring-active-500"
+              />
+            </label>
+            <label className="flex flex-col gap-2 text-caption-1-regular text-fg">
+              GitHub installation ID
+              <input
+                aria-label="GitHub installation ID"
+                value={installationId}
+                onChange={(event) => setInstallationId(event.target.value)}
+                className="h-10 rounded-xl border border-border bg-canvas px-3 text-subhead-regular text-fg focus-visible:ring-2 focus-visible:ring-active-500"
+              />
+            </label>
+          </>
+        ) : null}
+        {connectorType === "gitlab_ci" ? (
+          <>
+            <label className="flex flex-col gap-2 text-caption-1-regular text-fg">
+              GitLab host
+              <input
+                aria-label="GitLab host"
+                value={providerHost}
+                onChange={(event) => setProviderHost(event.target.value)}
+                className="h-10 rounded-xl border border-border bg-canvas px-3 text-subhead-regular text-fg focus-visible:ring-2 focus-visible:ring-active-500"
+              />
+            </label>
+            <label className="flex flex-col gap-2 text-caption-1-regular text-fg">
+              GitLab project ID
+              <input
+                aria-label="GitLab project ID"
+                value={projectId}
+                onChange={(event) => setProjectId(event.target.value)}
+                className="h-10 rounded-xl border border-border bg-canvas px-3 text-subhead-regular text-fg focus-visible:ring-2 focus-visible:ring-active-500"
+              />
+            </label>
+          </>
+        ) : null}
+        {connectorType === "azure_devops" ? (
+          <>
+            <label className="flex flex-col gap-2 text-caption-1-regular text-fg">
+              Azure organization
+              <input
+                aria-label="Azure organization"
+                value={organization}
+                onChange={(event) => setOrganization(event.target.value)}
+                className="h-10 rounded-xl border border-border bg-canvas px-3 text-subhead-regular text-fg focus-visible:ring-2 focus-visible:ring-active-500"
+              />
+            </label>
+            <label className="flex flex-col gap-2 text-caption-1-regular text-fg">
+              Azure project ID
+              <input
+                aria-label="Azure project ID"
+                value={projectId}
+                onChange={(event) => setProjectId(event.target.value)}
+                className="h-10 rounded-xl border border-border bg-canvas px-3 text-subhead-regular text-fg focus-visible:ring-2 focus-visible:ring-active-500"
+              />
+            </label>
+            <label className="flex flex-col gap-2 text-caption-1-regular text-fg">
+              Service connection ID
+              <input
+                aria-label="Service connection ID"
+                value={serviceConnectionId}
+                onChange={(event) => setServiceConnectionId(event.target.value)}
+                className="h-10 rounded-xl border border-border bg-canvas px-3 text-subhead-regular text-fg focus-visible:ring-2 focus-visible:ring-active-500"
+              />
+            </label>
+          </>
+        ) : null}
+        {connectorType !== "reference_conformance" ? (
+          <p className="text-caption-1-regular text-fg-muted sm:col-span-2">
+            Save the provider credential in this connector&apos;s Secret section
+            after creation. The configuration above contains no credential.
+          </p>
+        ) : null}
         {message ? (
           <p
             role="alert"
@@ -242,6 +376,9 @@ export function ConnectorsRegistryContent() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [showCreate, setShowCreate] = useState(false);
+  const [createType, setCreateType] = useState<ConnectorType>(
+    "reference_conformance",
+  );
   const catalogue = useConnectorCatalogueQuery(
     liveApiEnabled && hasMembership && canView,
   );
@@ -269,14 +406,24 @@ export function ConnectorsRegistryContent() {
         }
       />
       {canView ? (
-        <Link
-          href="/connectors/webhooks"
-          className={cn(
-            "text-subhead-regular text-fg underline underline-offset-4",
-          )}
-        >
-          Outbound webhooks
-        </Link>
+        <div className={cn("flex flex-wrap gap-4")}>
+          <Link
+            href="/connectors/webhooks"
+            className={cn(
+              "text-subhead-regular text-fg underline underline-offset-4 focus-visible:ring-2 focus-visible:ring-active-500",
+            )}
+          >
+            Outbound webhooks
+          </Link>
+          <Link
+            href="/connectors/ci"
+            className={cn(
+              "text-subhead-regular text-fg underline underline-offset-4 focus-visible:ring-2 focus-visible:ring-active-500",
+            )}
+          >
+            CI SBOM bindings
+          </Link>
+        </div>
       ) : null}
       {!liveApiEnabled ? (
         <SectionCard>
@@ -333,12 +480,16 @@ export function ConnectorsRegistryContent() {
             <ConnectorCatalogueSection
               entries={catalogue.data?.catalogue ?? []}
               canCreate={canCreate}
-              onConfigure={() => setShowCreate(true)}
+              onConfigure={(type) => {
+                setCreateType(type);
+                setShowCreate(true);
+              }}
             />
           )}
           {showCreate ? (
             <ConnectorCreateForm
-              key={session?.organization?.id}
+              key={`${session?.organization?.id}:${createType}`}
+              initialType={createType}
               onCreated={(connector) => {
                 setShowCreate(false);
                 router.push(`/connectors/${connector.id}`);

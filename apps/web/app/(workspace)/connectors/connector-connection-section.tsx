@@ -103,6 +103,7 @@ export function ConnectorConnectionSection({
   onReload: () => void;
   connection?: ConnectorConnectionState;
 }) {
+  const isReference = connector.connectorType === "reference_conformance";
   const update = useUpdateConnectorMutation(connector.id);
   const setSecret = useSetConnectorSecretMutation(connector.id);
   const test = useTestConnectorMutation(connector.id);
@@ -121,6 +122,8 @@ export function ConnectorConnectionSection({
     JSON.stringify(connector.connectionConfig, null, 2),
   );
   const [secretValue, setSecretValue] = useState("");
+  const [privateKeyFile, setPrivateKeyFile] = useState<File | null>(null);
+  const privateKeyInput = useRef<HTMLInputElement>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [staleUpdate, setStaleUpdate] = useState(false);
 
@@ -218,7 +221,11 @@ export function ConnectorConnectionSection({
       }
       const result = await update.mutateAsync(parsed.data);
       setBaseVersion(result.connector.version);
-      setMessage("Connector saved. Test again before starting new work.");
+      setMessage(
+        isReference
+          ? "Connector saved. Test again before starting new work."
+          : "Connector saved. Provider identity is verified when a binding or run is used.",
+      );
     } catch (error) {
       setStaleUpdate(isConflict(error));
       setMessage(errorMessage(error, "The connector could not be saved."));
@@ -228,8 +235,21 @@ export function ConnectorConnectionSection({
   async function rotateSecret(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setMessage(null);
+    let credential = secretValue;
+    if (connector.connectorType === "github_actions") {
+      if (!privateKeyFile || privateKeyFile.size > 20_000) {
+        setMessage("Choose a GitHub App private key file under 20 KB.");
+        return;
+      }
+      try {
+        credential = await privateKeyFile.text();
+      } catch {
+        setMessage("The GitHub App private key file could not be read.");
+        return;
+      }
+    }
     const parsed = setConnectorSecretInputSchema.safeParse({
-      secretValue,
+      secretValue: credential,
       expectedVersion: connector.version,
       idempotencyKey: crypto.randomUUID(),
     });
@@ -241,6 +261,8 @@ export function ConnectorConnectionSection({
       const result = await setSecret.mutateAsync(parsed.data);
       if (!dirty) setBaseVersion(result.connector.version);
       setSecretValue("");
+      setPrivateKeyFile(null);
+      if (privateKeyInput.current) privateKeyInput.current.value = "";
       setMessage("Secret saved.");
     } catch (error) {
       setMessage(errorMessage(error, "The secret could not be saved."));
@@ -262,8 +284,9 @@ export function ConnectorConnectionSection({
   return (
     <SectionCard title="Connection">
       <p className={cn("mb-4 text-subhead-regular text-fg")}>
-        Reference adapter only: tests validate local fixtures and do not contact
-        a vendor.
+        {isReference
+          ? "Reference adapter only: tests validate local fixtures and do not contact a vendor."
+          : "This CI connection verifies provider runs for owner-approved release bindings. Save its provider credential in the vault below before binding."}
       </p>
       {connection ? (
         <div className="mb-4 space-y-2" aria-live="polite">
@@ -283,8 +306,10 @@ export function ConnectorConnectionSection({
             Least-privilege guidance
           </h3>
           <p className="text-caption-1-regular text-fg">
-            Use disposable fixture credentials only. Scope policy{" "}
-            {connection.scope.policyVersion}. Scope introspection:{" "}
+            {isReference
+              ? "Use disposable fixture credentials only."
+              : "Use the narrowest provider scope and rotate credentials before expiry. Enable the connection after saving its secret."}{" "}
+            Scope policy {connection.scope.policyVersion}. Scope introspection:{" "}
             {connection.scope.status.replaceAll("_", " ")}.
           </p>
           {connection.scope.warnings.map((warning) => (
@@ -344,8 +369,10 @@ export function ConnectorConnectionSection({
       ) : null}
       <div className="flex flex-col gap-6">
         <div className="flex flex-wrap items-center gap-3">
-          <TestResultBadge connector={connector} testing={test.isPending} />
-          {canEdit ? (
+          {isReference ? (
+            <TestResultBadge connector={connector} testing={test.isPending} />
+          ) : null}
+          {canEdit && isReference ? (
             <Button
               type="button"
               variant="outline"
@@ -440,6 +467,23 @@ export function ConnectorConnectionSection({
         ) : null}
         <div className="border-t border-border pt-5">
           <h3 className="text-headline-semibold text-fg">Secret</h3>
+          {!isReference ? (
+            <p className={cn("mt-2 text-caption-1-regular text-fg-muted")}>
+              {connector.connectorType === "github_actions"
+                ? "GitHub App private key credential"
+                : connector.connectorType === "gitlab_ci"
+                  ? "Project-scoped GitLab access token"
+                  : "Project-scoped Azure DevOps access bearer (rotate before expiry)"}
+              . This value is never shown after saving.
+            </p>
+          ) : null}
+          {connector.connectorType === "github_actions" ? (
+            <p className={cn("mt-2 text-caption-1-regular text-fg-muted")}>
+              The GitHub App needs Actions: read for run verification and
+              Contents: read for release tag verification on the bound
+              repositories. Manual workflow_dispatch runs are unsupported.
+            </p>
+          ) : null}
           <div className="mt-2 flex items-center gap-3">
             <Tag
               variant="fill"
@@ -465,14 +509,30 @@ export function ConnectorConnectionSection({
                 onSubmit={(event) => void rotateSecret(event)}
               >
                 <label className="flex min-w-0 flex-1 flex-col gap-2 text-caption-1-regular text-fg">
-                  {connector.hasSecret ? "Rotate secret" : "Set secret"}
-                  <input
-                    type="password"
-                    autoComplete="new-password"
-                    value={secretValue}
-                    onChange={(event) => setSecretValue(event.target.value)}
-                    className="h-10 rounded-xl border border-border bg-canvas px-3 text-subhead-regular text-fg"
-                  />
+                  {connector.connectorType === "github_actions"
+                    ? "GitHub App private key file"
+                    : connector.hasSecret
+                      ? "Rotate secret"
+                      : "Set secret"}
+                  {connector.connectorType === "github_actions" ? (
+                    <input
+                      ref={privateKeyInput}
+                      type="file"
+                      accept=".pem,.key,text/plain"
+                      onChange={(event) =>
+                        setPrivateKeyFile(event.target.files?.[0] ?? null)
+                      }
+                      className="h-10 rounded-xl border border-border bg-canvas px-3 py-2 text-subhead-regular text-fg"
+                    />
+                  ) : (
+                    <input
+                      type="password"
+                      autoComplete="new-password"
+                      value={secretValue}
+                      onChange={(event) => setSecretValue(event.target.value)}
+                      className="h-10 rounded-xl border border-border bg-canvas px-3 text-subhead-regular text-fg"
+                    />
+                  )}
                 </label>
                 <Button
                   type="submit"

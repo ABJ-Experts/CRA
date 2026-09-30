@@ -6,7 +6,8 @@ import type { connectorCapabilitiesSchema } from "@repo/contracts/connectors/sch
  * nothing else in the sync engine may reach past it into vendor specifics.
  */
 
-export type ConnectorType = "reference_conformance";
+export type ConnectorType =
+  "reference_conformance" | "github_actions" | "gitlab_ci" | "azure_devops";
 export type ConnectorEntityType = "product" | "release";
 
 export type SecretReference = Readonly<{

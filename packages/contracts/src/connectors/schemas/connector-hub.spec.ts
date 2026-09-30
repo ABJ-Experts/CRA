@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   connectorCatalogueResponseSchema,
   connectorConfigurationInputSchema,
+  ciConnectorConfigurationSchema,
+  createConnectorInputSchema,
   connectorScopeDiagnosticsSchema,
   connectorTestDiagnosticSchema,
   disconnectConnectorInputSchema,
@@ -64,6 +66,81 @@ describe("connector hub security boundaries", () => {
         false,
       );
     }
+  });
+
+  it("accepts only provider-specific CI connection metadata, never credentials", () => {
+    const base = {
+      displayName: "CI connection",
+      adapterVersion: "1.0.0",
+      mappingVersion: "ci-v1",
+      commitPolicy: "manual",
+      idempotencyKey,
+    };
+    for (const [connectorType, connectionConfig] of [
+      [
+        "github_actions",
+        { providerHost: "github.com", appId: "123", installationId: "456" },
+      ],
+      ["gitlab_ci", { providerHost: "gitlab.example.com", projectId: "789" }],
+      [
+        "azure_devops",
+        {
+          providerHost: "dev.azure.com",
+          organization: "acme",
+          projectId: idempotencyKey,
+          serviceConnectionId: idempotencyKey,
+        },
+      ],
+    ] as const) {
+      expect(
+        createConnectorInputSchema.safeParse({
+          ...base,
+          connectorType,
+          connectionConfig,
+        }).success,
+      ).toBe(true);
+      expect(
+        ciConnectorConfigurationSchema.safeParse(connectionConfig).success,
+      ).toBe(true);
+      expect(
+        createConnectorInputSchema.safeParse({
+          ...base,
+          connectorType,
+          connectionConfig: { ...connectionConfig, token: "secret" },
+        }).success,
+      ).toBe(false);
+    }
+    expect(
+      createConnectorInputSchema.safeParse({
+        ...base,
+        connectorType: "github_actions",
+        connectionConfig: {
+          providerHost: "evil.example",
+          appId: "123",
+          installationId: "456",
+        },
+      }).success,
+    ).toBe(false);
+    expect(
+      createConnectorInputSchema.safeParse({
+        ...base,
+        connectorType: "gitlab_ci",
+        connectionConfig: { providerHost: "127.0.0.1", projectId: "789" },
+      }).success,
+    ).toBe(false);
+    expect(
+      createConnectorInputSchema.safeParse({
+        ...base,
+        connectorType: "azure_devops",
+        connectionConfig: {
+          providerHost: "dev.azure.com",
+          organization: "acme",
+          projectId: idempotencyKey,
+          serviceConnectionId: idempotencyKey,
+        },
+        commitPolicy: "auto",
+      }).success,
+    ).toBe(false);
   });
 
   it("rejects unsafe endpoint syntax and secret-bearing URL components", () => {

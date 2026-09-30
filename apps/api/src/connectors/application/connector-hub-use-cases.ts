@@ -1,5 +1,8 @@
 import { randomUUID } from "node:crypto";
-import { testConnectorResultSchema } from "@repo/contracts/connectors/schemas";
+import {
+  parseConnectorConfigurationForType,
+  testConnectorResultSchema,
+} from "@repo/contracts/connectors/schemas";
 import type {
   CreateConnectorInput,
   ConnectorOverview,
@@ -94,13 +97,32 @@ export class ConnectorHubUseCases {
   }
 
   async create(orgId: string, actorId: string, input: CreateConnectorInput) {
-    const authorization = await this.authorization.authorize(orgId, actorId, [
-      "can_create_connectors",
-    ]);
+    const ci = input.connectorType !== "reference_conformance";
+    const authorization = await this.authorization.authorize(
+      orgId,
+      actorId,
+      ["can_create_connectors"],
+      ci,
+    );
     const adapter = this.adapters.get(input.connectorType);
-    if (!adapter || adapter.adapterVersion !== input.adapterVersion)
+    if (
+      (!ci && (!adapter || adapter.adapterVersion !== input.adapterVersion)) ||
+      (ci &&
+        (input.adapterVersion !== "1.0.0" || input.commitPolicy !== "manual"))
+    )
       throw new ConnectorError("invalid_request");
-    await this.egress.validate(input.connectionConfig ?? {});
+    try {
+      parseConnectorConfigurationForType(
+        input.connectorType,
+        input.connectionConfig ?? {},
+      );
+    } catch {
+      throw new ConnectorError("invalid_request");
+    }
+    await this.egress.validate(
+      input.connectionConfig ?? {},
+      input.connectorType,
+    );
     if (input.commitPolicy === "auto")
       await this.authorization.authorize(orgId, actorId, [
         "can_approve_connectors",
@@ -117,6 +139,9 @@ export class ConnectorHubUseCases {
     const authorization = await this.authorization.authorize(orgId, actorId, [
       "can_create_connectors",
     ]);
+    const context = await this.repository.context(orgId, connectorId);
+    if (context.connector.connectorType !== "reference_conformance")
+      throw new ConnectorError("invalid_state");
     return this.repository.beginSync(
       orgId,
       authorization,
@@ -136,6 +161,9 @@ export class ConnectorHubUseCases {
     const authorization = await this.authorization.authorize(orgId, actorId, [
       "can_approve_connectors",
     ]);
+    const context = await this.repository.context(orgId, connectorId);
+    if (context.connector.connectorType !== "reference_conformance")
+      throw new ConnectorError("invalid_state");
     return this.repository.requestCommit(
       orgId,
       authorization,
@@ -150,15 +178,31 @@ export class ConnectorHubUseCases {
     actorId: string,
     input: UpdateConnectorInput,
   ) {
+    await this.authorization.authorize(orgId, actorId, ["can_edit_connectors"]);
+    const context = await this.repository.context(orgId, connectorId);
+    const ci = context.connector.connectorType !== "reference_conformance";
     const request = await this.request(
       orgId,
       connectorId,
       actorId,
       "configure",
       input,
-      false,
+      ci,
     );
-    await this.egress.validate(input.connectionConfig ?? {});
+    if (ci && input.commitPolicy !== "manual")
+      throw new ConnectorError("invalid_request");
+    try {
+      parseConnectorConfigurationForType(
+        context.connector.connectorType,
+        input.connectionConfig ?? {},
+      );
+    } catch {
+      throw new ConnectorError("invalid_request");
+    }
+    await this.egress.validate(
+      input.connectionConfig ?? {},
+      context.connector.connectorType,
+    );
     if (input.commitPolicy === "auto")
       await this.authorization.authorize(orgId, actorId, [
         "can_approve_connectors",
@@ -235,13 +279,15 @@ export class ConnectorHubUseCases {
     actorId: string,
     input: ReconnectConnectorInput,
   ) {
+    await this.authorization.authorize(orgId, actorId, ["can_edit_connectors"]);
+    const existing = await this.repository.context(orgId, connectorId);
     const request = await this.request(
       orgId,
       connectorId,
       actorId,
       "reconnect",
       input,
-      false,
+      existing.connector.connectorType !== "reference_conformance",
     );
     const context = await this.repository.context(orgId, connectorId);
     try {
@@ -271,7 +317,10 @@ export class ConnectorHubUseCases {
     let result: ConnectorSafeTestResult;
     try {
       const context = await this.repository.context(orgId, connectorId);
-      await this.egress.validate(context.connector.connectionConfig);
+      await this.egress.validate(
+        context.connector.connectionConfig,
+        context.connector.connectorType,
+      );
       const adapter = this.adapters.get(context.connector.connectorType);
       if (!adapter) result = failure("unsupported_capability");
       else
@@ -373,13 +422,21 @@ export class ConnectorHubUseCases {
     input: { expectedVersion: number; idempotencyKey: string; reason?: string },
     ownerOnly: boolean,
   ) {
+    let restricted = ownerOnly;
+    if (operation === "disconnect") {
+      await this.authorization.authorize(orgId, actorId, [
+        "can_edit_connectors",
+      ]);
+      const existing = await this.repository.context(orgId, connectorId);
+      restricted = existing.connector.connectorType !== "reference_conformance";
+    }
     const request = await this.request(
       orgId,
       connectorId,
       actorId,
       operation,
       input,
-      ownerOnly,
+      restricted,
     );
     return this.repository.execute(orgId, {
       ...request,

@@ -3,6 +3,8 @@ import { Module } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 
 import { SupabaseModule } from "../supabase/supabase.module";
+import { ConnectorsModule } from "../connectors/connectors.module";
+import { CiConnectorCredentialReader } from "../connectors/application/ci-connector-credential-reader";
 import { SupabaseService } from "../supabase/supabase.service";
 import { SupabaseBsiEvidenceAdapter } from "./infrastructure/supabase-bsi-evidence.adapter";
 import { extractBsiProfileFacts } from "./validation/bsi-profile-extractor";
@@ -41,6 +43,10 @@ import { SupabaseSbomRepository } from "./infrastructure/supabase-sbom.repositor
 import { SupabaseSbomStorageAdapter } from "./infrastructure/supabase-sbom-storage.adapter";
 import { SbomCiCredentialsController } from "./sbom-ci-credentials.controller";
 import {
+  SbomCiBuildController,
+  SbomCiReleaseBindingsController,
+} from "./sbom-ci-integrations.controller";
+import {
   ProductReleaseSbomCompositeController,
   SbomCompositeReviewsController,
 } from "./sbom-composite.controller";
@@ -56,6 +62,13 @@ import {
   SbomUploadsController,
 } from "./sbom.controller";
 import { SbomService } from "./sbom.service";
+import { SbomCiIntegrationUseCases } from "./application/sbom-ci-integration-use-cases";
+import { CiProviderVerifierAdapter } from "./infrastructure/ci-provider-verifier.adapter";
+import { CiProviderWebhookController } from "./ci-providers/ci-provider-webhook.controller";
+import { CiProviderWebhookUseCases } from "./ci-providers/ci-provider-webhook";
+import { EnvironmentCiWebhookSecretReader } from "./ci-providers/environment-ci-webhook-secret-reader";
+import { SupabaseCiWebhookEventLedger } from "./ci-providers/supabase-ci-webhook-event-ledger";
+import { SBOM_CI_INTEGRATION_REPOSITORY } from "./application/sbom-ci-integration.port";
 import { SupplierSbomService } from "./supplier-sbom.service";
 import {
   ProductReleaseSupplierSbomController,
@@ -71,7 +84,7 @@ import { createM4SbomDiffVersionComparator } from "./infrastructure/m4-sbom-diff
 import { SbomCompositeWorker } from "./worker/sbom-composite-worker";
 
 @Module({
-  imports: [SupabaseModule],
+  imports: [SupabaseModule, ConnectorsModule],
   controllers: [
     SbomExportController,
     ProductReleaseSbomController,
@@ -83,6 +96,9 @@ import { SbomCompositeWorker } from "./worker/sbom-composite-worker";
     SbomQualitySettingsController,
     SbomCiController,
     SbomCiCredentialsController,
+    SbomCiReleaseBindingsController,
+    SbomCiBuildController,
+    CiProviderWebhookController,
     ProductReleaseSupplierSbomController,
     SupplierSbomRequestsController,
     SupplierSbomSubmissionsController,
@@ -103,6 +119,38 @@ import { SbomCompositeWorker } from "./worker/sbom-composite-worker";
         new SbomExportUseCases(repository),
     },
     SupabaseSbomStorageAdapter,
+    CiProviderVerifierAdapter,
+    EnvironmentCiWebhookSecretReader,
+    {
+      provide: SupabaseCiWebhookEventLedger,
+      inject: [SupabaseService],
+      useFactory: (supabase: SupabaseService) =>
+        new SupabaseCiWebhookEventLedger(supabase),
+    },
+    {
+      provide: CiProviderWebhookUseCases,
+      inject: [
+        SBOM_CI_INTEGRATION_REPOSITORY,
+        CiConnectorCredentialReader,
+        CiProviderVerifierAdapter,
+        EnvironmentCiWebhookSecretReader,
+        SupabaseCiWebhookEventLedger,
+      ],
+      useFactory: (
+        repository: SupabaseSbomRepository,
+        connections: CiConnectorCredentialReader,
+        verifier: CiProviderVerifierAdapter,
+        secrets: EnvironmentCiWebhookSecretReader,
+        ledger: SupabaseCiWebhookEventLedger,
+      ) =>
+        new CiProviderWebhookUseCases(
+          repository,
+          connections,
+          verifier,
+          secrets,
+          ledger,
+        ),
+    },
     {
       provide: SupabaseBsiEvidenceAdapter,
       inject: [SupabaseService, SupabaseSbomStorageAdapter],
@@ -131,12 +179,37 @@ import { SbomCompositeWorker } from "./worker/sbom-composite-worker";
     },
     { provide: SBOM_CI_CREDENTIALS, useExisting: SupabaseSbomRepository },
     {
+      provide: SBOM_CI_INTEGRATION_REPOSITORY,
+      useExisting: SupabaseSbomRepository,
+    },
+    {
       provide: SbomIntakeUseCases,
       inject: [SBOM_INTAKE_REPOSITORY, SupabaseSbomStorageAdapter],
       useFactory: (
         repository: SupabaseSbomRepository,
         storage: SupabaseSbomStorageAdapter,
       ) => new SbomIntakeUseCases(repository, storage),
+    },
+    {
+      provide: SbomCiIntegrationUseCases,
+      inject: [
+        SBOM_CI_INTEGRATION_REPOSITORY,
+        SupabaseSbomStorageAdapter,
+        CiConnectorCredentialReader,
+        CiProviderVerifierAdapter,
+      ],
+      useFactory: (
+        repository: SupabaseSbomRepository,
+        storage: SupabaseSbomStorageAdapter,
+        connections: CiConnectorCredentialReader,
+        verifier: CiProviderVerifierAdapter,
+      ) =>
+        new SbomCiIntegrationUseCases(
+          repository,
+          storage,
+          connections,
+          verifier,
+        ),
     },
     {
       provide: SupplierSbomUseCases,

@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@repo/ui/button";
+import Link from "next/link";
 import { useState } from "react";
 import {
   productFieldAuthorityFieldSchema,
@@ -126,7 +127,12 @@ function ConnectorDetailWorkspace({ connectorId }: { connectorId: string }) {
   const canView = permissions.can_view_connectors === true;
   const enabled = liveApiEnabled && hasMembership && canView;
   const connector = useConnectorOverviewQuery(connectorId, enabled);
-  const mapping = useConnectorMappingQuery(connectorId, enabled);
+  const mapping = useConnectorMappingQuery(
+    connectorId,
+    enabled &&
+      connector.data?.overview.connector.connectorType ===
+        "reference_conformance",
+  );
   const canEdit = permissions.can_edit_connectors === true;
   const canCreate = permissions.can_create_connectors === true;
   const canApprove = permissions.can_approve_connectors === true;
@@ -201,6 +207,7 @@ function ConnectorDetailWorkspace({ connectorId }: { connectorId: string }) {
   }
 
   const current = connector.data.overview.connector;
+  const isReference = current.connectorType === "reference_conformance";
 
   return (
     <div className="flex flex-col gap-6 px-6 py-6 lg:px-[30px]">
@@ -208,7 +215,7 @@ function ConnectorDetailWorkspace({ connectorId }: { connectorId: string }) {
         title={current.displayName}
         subtitle={`${current.connectorType} · adapter ${current.adapterVersion}`}
         actions={
-          canExport ? (
+          canExport && isReference ? (
             <DiagnosticsExportButton connectorId={connectorId} />
           ) : undefined
         }
@@ -239,43 +246,62 @@ function ConnectorDetailWorkspace({ connectorId }: { connectorId: string }) {
         isOwner={isOwner}
         onReload={() => void connector.refetch()}
       />
-      <ConnectorFieldMapSection
-        connectorId={connectorId}
-        connectorVersion={current.version}
-        canView={canView}
-        canEdit={canEdit}
-      />
-      <ConnectorMappingSection
-        connectorId={connectorId}
-        policies={policies}
-        canEdit={canEdit}
-        isOwner={isOwner}
-      />
-      <ConnectorSyncRunSection
-        connectorId={connectorId}
-        canView={canView}
-        canStart={canCreate}
-        canManage={canEdit}
-        canApprove={canApprove}
-        mappingIncomplete={isMappingIncomplete(policies)}
-        onSelectRun={setSelectedRunId}
-      />
-      <ConnectorConflictsSection
-        connectorId={connectorId}
-        runId={selectedRunId}
-        canView={canView}
-        canApprove={canApprove}
-      />
-      <ConnectorSyncHistorySection
-        connectorId={connectorId}
-        canView={canView}
-        canEdit={canEdit}
-      />
-      <ConnectorDeadLettersSection
-        connectorId={connectorId}
-        canView={canView}
-        canEdit={canEdit}
-      />
+      {!isReference ? (
+        <SectionCard title="CI release bindings">
+          <p className="text-subhead-regular text-fg-muted">
+            This provider connection verifies CI runs. Product and release
+            mappings are managed in{" "}
+            <Link
+              href="/connectors/ci"
+              className="underline underline-offset-4 focus-visible:ring-2 focus-visible:ring-active-500"
+            >
+              CI SBOM bindings
+            </Link>
+            .
+          </p>
+        </SectionCard>
+      ) : null}
+      {isReference ? (
+        <>
+          <ConnectorFieldMapSection
+            connectorId={connectorId}
+            connectorVersion={current.version}
+            canView={canView}
+            canEdit={canEdit}
+          />
+          <ConnectorMappingSection
+            connectorId={connectorId}
+            policies={policies}
+            canEdit={canEdit}
+            isOwner={isOwner}
+          />
+          <ConnectorSyncRunSection
+            connectorId={connectorId}
+            canView={canView}
+            canStart={canCreate}
+            canManage={canEdit}
+            canApprove={canApprove}
+            mappingIncomplete={isMappingIncomplete(policies)}
+            onSelectRun={setSelectedRunId}
+          />
+          <ConnectorConflictsSection
+            connectorId={connectorId}
+            runId={selectedRunId}
+            canView={canView}
+            canApprove={canApprove}
+          />
+          <ConnectorSyncHistorySection
+            connectorId={connectorId}
+            canView={canView}
+            canEdit={canEdit}
+          />
+          <ConnectorDeadLettersSection
+            connectorId={connectorId}
+            canView={canView}
+            canEdit={canEdit}
+          />
+        </>
+      ) : null}
     </div>
   );
 }

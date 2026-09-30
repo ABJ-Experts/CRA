@@ -5,8 +5,12 @@ import { z } from "zod";
 const requiredText = (maximum: number) => z.string().trim().min(1).max(maximum);
 const expectedVersionSchema = z.number().int().nonnegative();
 
-/** Only the reference conformance adapter exists; no vendor SDK is wired in yet. */
-export const connectorTypeSchema = z.enum(["reference_conformance"]);
+export const connectorTypeSchema = z.enum([
+  "reference_conformance",
+  "github_actions",
+  "gitlab_ci",
+  "azure_devops",
+]);
 export const connectorAdapterVersionSchema = z
   .string()
   .regex(/^\d+\.\d+\.\d+$/, "Use a semantic adapter version");
@@ -81,6 +85,64 @@ export const connectorConfigurationInputSchema = z
   })
   .strict();
 
+const providerHostSchema = z
+  .string()
+  .min(4)
+  .max(253)
+  .regex(/^(?!-)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/)
+  .refine((host) => !host.endsWith(".local") && !host.endsWith(".internal"));
+const providerIdSchema = z.string().regex(/^[1-9][0-9]{0,19}$/);
+const organizationSlugSchema = z
+  .string()
+  .regex(/^[A-Za-z0-9][A-Za-z0-9-]{0,99}$/);
+
+export const githubActionsConnectorConfigurationSchema = z
+  .object({
+    providerHost: z.literal("github.com"),
+    appId: providerIdSchema,
+    installationId: providerIdSchema,
+  })
+  .strict();
+export const gitlabCiConnectorConfigurationSchema = z
+  .object({
+    providerHost: providerHostSchema,
+    projectId: providerIdSchema,
+  })
+  .strict();
+export const azureDevopsConnectorConfigurationSchema = z
+  .object({
+    providerHost: z.literal("dev.azure.com"),
+    organization: organizationSlugSchema,
+    projectId: z.uuid(),
+    serviceConnectionId: z.uuid(),
+  })
+  .strict();
+export const ciConnectorConfigurationSchema = z.union([
+  githubActionsConnectorConfigurationSchema,
+  gitlabCiConnectorConfigurationSchema,
+  azureDevopsConnectorConfigurationSchema,
+]);
+const connectorConfigurationSchema = z.union([
+  connectorConfigurationInputSchema,
+  ciConnectorConfigurationSchema,
+]);
+
+export function parseConnectorConfigurationForType(
+  type: z.output<typeof connectorTypeSchema>,
+  configuration: unknown,
+) {
+  switch (type) {
+    case "reference_conformance":
+      return connectorConfigurationInputSchema.parse(configuration);
+    case "github_actions":
+      return githubActionsConnectorConfigurationSchema.parse(configuration);
+    case "gitlab_ci":
+      return gitlabCiConnectorConfigurationSchema.parse(configuration);
+    case "azure_devops":
+      return azureDevopsConnectorConfigurationSchema.parse(configuration);
+  }
+}
+
 /** Historical response metadata is preserved; new writes use the strict input whitelist. */
 export const connectorConnectionConfigSchema = z.record(
   z.string(),
@@ -121,18 +183,45 @@ export const createConnectorInputSchema = z
     displayName: requiredText(200),
     adapterVersion: connectorAdapterVersionSchema,
     mappingVersion: requiredText(100),
-    connectionConfig: connectorConfigurationInputSchema.optional(),
+    connectionConfig: connectorConfigurationSchema.optional(),
     commitPolicy: connectorCommitPolicySchema,
     idempotencyKey: idempotencyKeySchema,
   })
-  .strict();
+  .strict()
+  .superRefine((input, ctx) => {
+    if (
+      input.connectorType !== "reference_conformance" &&
+      input.commitPolicy !== "manual"
+    )
+      ctx.addIssue({
+        code: "custom",
+        path: ["commitPolicy"],
+        message: "CI connectors do not support product/release auto-commit",
+      });
+    if (
+      !(
+        input.connectorType === "reference_conformance"
+          ? connectorConfigurationInputSchema
+          : input.connectorType === "github_actions"
+            ? githubActionsConnectorConfigurationSchema
+            : input.connectorType === "gitlab_ci"
+              ? gitlabCiConnectorConfigurationSchema
+              : azureDevopsConnectorConfigurationSchema
+      ).safeParse(input.connectionConfig ?? {}).success
+    )
+      ctx.addIssue({
+        code: "custom",
+        path: ["connectionConfig"],
+        message: "Connector configuration does not match its provider",
+      });
+  });
 
 /** Mirrors `update_connector_atomic`: connectorType and adapterVersion are immutable. */
 export const updateConnectorInputSchema = z
   .object({
     displayName: requiredText(200),
     mappingVersion: requiredText(100),
-    connectionConfig: connectorConfigurationInputSchema.optional(),
+    connectionConfig: connectorConfigurationSchema.optional(),
     commitPolicy: connectorCommitPolicySchema,
     expectedVersion: expectedVersionSchema,
     idempotencyKey: idempotencyKeySchema,

@@ -92,6 +92,70 @@ describe("ConnectorConnectionSection", () => {
     expect(screen.getByText("Not tested yet")).toBeInTheDocument();
   });
 
+  it("shows CI credential setup without reference-fixture or PLM test claims", () => {
+    render(
+      <ConnectorConnectionSection
+        connector={{
+          ...CONNECTOR,
+          connectorType: "github_actions",
+          connectionConfig: {
+            providerHost: "github.com",
+            appId: "123",
+            installationId: "456",
+          },
+        }}
+        canEdit
+        isOwner
+        onReload={vi.fn()}
+      />,
+    );
+    expect(
+      screen.getByText(/GitHub App private key credential/i),
+    ).toBeVisible();
+    expect(
+      screen.getByText(/Contents: read for release tag verification/i),
+    ).toBeVisible();
+    expect(
+      screen.queryByText(/Reference adapter only/i),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Test connection" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("reads a GitHub App private key file only when setting the secret", async () => {
+    render(
+      <ConnectorConnectionSection
+        connector={{
+          ...CONNECTOR,
+          connectorType: "github_actions",
+          connectionConfig: {
+            providerHost: "github.com",
+            appId: "123",
+            installationId: "456",
+          },
+        }}
+        canEdit
+        isOwner
+        onReload={vi.fn()}
+      />,
+    );
+    const pem =
+      "-----BEGIN PRIVATE KEY-----\nfixture\n-----END PRIVATE KEY-----";
+    const file = new File([pem], "app.pem");
+    Object.defineProperty(file, "text", { value: async () => pem });
+    fireEvent.change(screen.getByLabelText("GitHub App private key file"), {
+      target: { files: [file] },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Set secret" }));
+    await waitFor(() =>
+      expect(secret).toHaveBeenCalledWith(
+        expect.objectContaining({ secretValue: pem }),
+      ),
+    );
+    expect(screen.queryByText(pem)).not.toBeInTheDocument();
+  });
+
   it("shows the testing state while the test mutation is pending", () => {
     testPending = true;
     render(

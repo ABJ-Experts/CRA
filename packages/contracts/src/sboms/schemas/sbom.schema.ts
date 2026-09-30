@@ -60,7 +60,7 @@ export const sbomJobStageSchema = z.enum([
   "dead_letter",
 ]);
 
-const safeSbomFileNameSchema = z
+export const safeSbomFileNameSchema = z
   .string()
   .trim()
   .min(1)

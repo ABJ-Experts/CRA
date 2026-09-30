@@ -15,6 +15,7 @@ import { SbomNormalizationUseCases } from "./application/sbom-normalization-use-
 import { SbomQualityUseCases } from "./application/sbom-quality-use-cases";
 import { SbomDiffUseCases } from "./application/sbom-diff-use-cases";
 import { SbomCompositeUseCases } from "./application/sbom-composite-use-cases";
+import { SbomCiIntegrationUseCases } from "./application/sbom-ci-integration-use-cases";
 import {
   SBOM_CI_CREDENTIALS,
   type SbomCiCredentialPort,
@@ -29,6 +30,7 @@ export class SbomService {
     private readonly quality: SbomQualityUseCases,
     private readonly diffs: SbomDiffUseCases,
     private readonly composites: SbomCompositeUseCases,
+    private readonly ciIntegrations: SbomCiIntegrationUseCases,
     @Inject(SBOM_CI_CREDENTIALS)
     private readonly credentials: SbomCiCredentialPort,
   ) {}
@@ -155,6 +157,46 @@ export class SbomService {
 
   replay(command: Parameters<SbomIntakeUseCases["replay"]>[0]) {
     return this.unwrap(this.useCases.replay(command));
+  }
+
+  createCiReleaseBinding(
+    command: Parameters<SbomCiIntegrationUseCases["upsertBinding"]>[0],
+  ) {
+    return this.unwrap(this.ciIntegrations.upsertBinding(command));
+  }
+
+  listCiReleaseBindings(
+    command: Parameters<SbomCiIntegrationUseCases["listBindings"]>[0],
+  ) {
+    return this.unwrap(this.ciIntegrations.listBindings(command));
+  }
+
+  listCiBuildRuns(
+    command: Parameters<SbomCiIntegrationUseCases["listBuildRuns"]>[0],
+  ) {
+    return this.unwrap(this.ciIntegrations.listBuildRuns(command));
+  }
+
+  revokeCiReleaseBinding(
+    command: Parameters<SbomCiIntegrationUseCases["revokeBinding"]>[0],
+  ) {
+    return this.unwrap(this.ciIntegrations.revokeBinding(command));
+  }
+
+  initializeCiBuildUpload(
+    command: Parameters<SbomCiIntegrationUseCases["initializeBuildUpload"]>[0],
+  ) {
+    return this.unwrap(this.ciIntegrations.initializeBuildUpload(command));
+  }
+
+  completeCiBuildUpload(
+    command: Parameters<SbomCiIntegrationUseCases["completeBuildUpload"]>[0],
+  ) {
+    return this.unwrap(this.ciIntegrations.completeBuildUpload(command));
+  }
+
+  ciBuildGate(command: Parameters<SbomCiIntegrationUseCases["gate"]>[0]) {
+    return this.unwrap(this.ciIntegrations.gate(command));
   }
 
   async createCredential(

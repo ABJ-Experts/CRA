@@ -57,3 +57,22 @@ it("fails closed on unsupported configuration keys", async () => {
     new NodeConnectorEgressPolicy([]).validate({ secret: "forbidden" }),
   ).rejects.toMatchObject({ code: "invalid_request" });
 });
+
+it("requires explicit approved self-managed GitLab hosts and public DNS on every read", async () => {
+  const resolver = jest.fn().mockResolvedValue([{ address: "93.184.216.34" }]);
+  const config = { providerHost: "gitlab.example.com", projectId: "123" };
+  await expect(
+    new NodeConnectorEgressPolicy([], resolver).validate(config, "gitlab_ci"),
+  ).rejects.toMatchObject({ code: "invalid_request" });
+  expect(resolver).not.toHaveBeenCalled();
+  const policy = new NodeConnectorEgressPolicy(
+    ["gitlab.example.com"],
+    resolver,
+  );
+  await policy.validate(config, "gitlab_ci");
+  expect(resolver).toHaveBeenCalledWith("gitlab.example.com");
+  resolver.mockResolvedValue([{ address: "10.0.0.1" }]);
+  await expect(policy.validate(config, "gitlab_ci")).rejects.toMatchObject({
+    code: "invalid_request",
+  });
+});

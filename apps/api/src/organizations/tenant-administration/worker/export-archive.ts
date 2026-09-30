@@ -426,6 +426,14 @@ export const exportSourceExclusions: Readonly<Record<string, string>> =
       "Security command fingerprints and internal replay state are not portable tenant business records.",
     connector_secrets:
       "Ciphertext-encrypted connector credential material, not portable tenant record data.",
+    ci_provider_release_bindings:
+      "Active authorization links between provider identities, CI credentials, products, and releases are security configuration, not portable tenant records.",
+    ci_provider_release_binding_commands:
+      "Binding command idempotency keys, request digests, and replay results are request-security material.",
+    ci_build_runs:
+      "Build rows carry CI credential links, intake idempotency keys, request digests, and pending worker state; finalized SBOM and findings records export separately.",
+    ci_provider_webhook_events:
+      "Webhook delivery identifiers and body digests are security replay material, not portable tenant records.",
     sbom_ci_credentials:
       "Contains salted CI credential verifiers and token identifiers; credential-security material is never exported.",
     sbom_raw_objects:

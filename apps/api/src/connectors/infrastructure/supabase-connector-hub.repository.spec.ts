@@ -574,6 +574,27 @@ describe("connector atomic command routing", () => {
       ),
     ).toBe(true);
   });
+  it("returns a durable create replay instead of treating retry as an outage", async () => {
+    const { repository, client } = setup();
+    client.rpc.mockResolvedValueOnce(
+      result([{ outcome: "replayed", connector }]),
+    );
+    await expect(
+      repository.create(orgId, authorization, {
+        connectorType: "github_actions",
+        displayName: "GitHub App",
+        adapterVersion: "1.0.0",
+        mappingVersion: "ci-v1",
+        connectionConfig: {
+          providerHost: "github.com",
+          appId: "1",
+          installationId: "2",
+        },
+        commitPolicy: "manual",
+        idempotencyKey: commandId,
+      }),
+    ).resolves.toEqual(connector);
+  });
 });
 
 describe("bounded connector health summaries", () => {

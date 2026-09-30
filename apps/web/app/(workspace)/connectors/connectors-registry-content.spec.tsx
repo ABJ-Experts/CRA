@@ -305,6 +305,43 @@ describe("registry operational states", () => {
       }),
     );
   });
+  it("creates a scoped GitHub App connector without placing credentials in its config", async () => {
+    state.connectors.data.connectors.rows = [];
+    render(<ConnectorsRegistryContent />);
+    fireEvent.click(screen.getByRole("button", { name: "Add connector" }));
+    fireEvent.change(screen.getByLabelText("Connector type"), {
+      target: { value: "github_actions" },
+    });
+    expect(
+      screen.getByText(/Contents: read for release tag verification/i),
+    ).toBeVisible();
+    fireEvent.change(screen.getByLabelText("Display name"), {
+      target: { value: "GitHub App" },
+    });
+    fireEvent.change(screen.getByLabelText("GitHub App ID"), {
+      target: { value: "123" },
+    });
+    fireEvent.change(screen.getByLabelText("GitHub installation ID"), {
+      target: { value: "456" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Add connector" }));
+    await waitFor(() =>
+      expect(create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          connectorType: "github_actions",
+          commitPolicy: "manual",
+          connectionConfig: {
+            providerHost: "github.com",
+            appId: "123",
+            installationId: "456",
+          },
+        }),
+      ),
+    );
+    expect(JSON.stringify(create.mock.lastCall?.[0])).not.toContain(
+      "secretValue",
+    );
+  });
   it("shows mocks and session loading without making availability claims", () => {
     process.env.NEXT_PUBLIC_ENABLE_MOCKS = "true";
     const { rerender } = render(<ConnectorsRegistryContent />);

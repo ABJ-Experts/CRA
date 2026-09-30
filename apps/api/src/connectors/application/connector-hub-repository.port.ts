@@ -114,5 +114,8 @@ export interface ConnectorHubRepository {
 
 /** URL policy may resolve DNS; references never perform an unguarded request. */
 export interface ConnectorEgressPolicy {
-  validate(config: Readonly<Record<string, unknown>>): Promise<void>;
+  validate(
+    config: Readonly<Record<string, unknown>>,
+    connectorType?: string,
+  ): Promise<void>;
 }

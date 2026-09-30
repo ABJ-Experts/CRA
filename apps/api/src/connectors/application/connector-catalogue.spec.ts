@@ -10,7 +10,7 @@ import {
 import { parseConnectorConfiguration } from "./connector-config-policy";
 
 describe("connector catalogue", () => {
-  it("publishes the BRD catalogue without granting planned vendor execution", () => {
+  it("publishes the BRD catalogue with CI configuration and keeps other vendors planned", () => {
     expect(
       connectorCatalogueResponseSchema.parse({ catalogue: CONNECTOR_CATALOGUE })
         .catalogue,
@@ -19,11 +19,17 @@ describe("connector catalogue", () => {
       CONNECTOR_CATALOGUE.filter((entry) => entry.canConfigure).map(
         (entry) => entry.id,
       ),
-    ).toEqual(["reference_conformance"]);
+    ).toEqual([
+      "reference_conformance",
+      "github_actions",
+      "gitlab_ci",
+      "azure_devops",
+    ]);
     expect(findConnectorCatalogueEntry("github_actions")).toMatchObject({
-      implementation: "planned",
+      implementation: "ci",
       phase: "MVP",
       priority: "P0",
+      requiredScopes: ["actions:read", "contents:read", "metadata:read"],
     });
     expect(findConnectorCatalogueEntry("enisa")).toMatchObject({
       phase: "V2",
@@ -95,12 +101,19 @@ describe("connector scope policy", () => {
 });
 
 describe("connector configuration policy", () => {
-  it("parses only registered reference configuration", () => {
+  it("parses registered provider configuration", () => {
     expect(
       parseConnectorConfiguration("reference_conformance", {
         scopeFilter: { scenario: "create" },
       }),
     ).toEqual({ scopeFilter: { scenario: "create" } });
+    expect(
+      parseConnectorConfiguration("github_actions", {
+        providerHost: "github.com",
+        appId: "1",
+        installationId: "2",
+      }),
+    ).toEqual({ providerHost: "github.com", appId: "1", installationId: "2" });
     expect(() => parseConnectorConfiguration("github_actions", {})).toThrow();
     expect(() =>
       parseConnectorConfiguration("reference_conformance", {

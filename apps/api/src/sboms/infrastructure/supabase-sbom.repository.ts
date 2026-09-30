@@ -8,6 +8,9 @@ import {
 
 import { Injectable } from "@nestjs/common";
 import {
+  ciBuildGateVerdictSchema,
+  ciBuildRunSummarySchema,
+  ciProviderReleaseBindingSchema,
   sbomComponentSearchResponseSchema,
   sbomCompositeGenerationResponseSchema,
   sbomCompositeReviewResponseSchema,
@@ -41,6 +44,7 @@ import type {
   SbomCiCredential,
   SbomCiCredentialPort,
 } from "../application/sbom-ci-credential.port";
+import type { SbomCiIntegrationRepository } from "../application/sbom-ci-integration.port";
 import type {
   SbomIntakeRepository,
   SbomJob,
@@ -95,6 +99,8 @@ type RpcClient = Readonly<{
 }>;
 type SelectQuery = Readonly<{
   eq(column: string, value: string): SelectQuery;
+  in(column: string, values: readonly string[]): SelectQuery;
+  limit(count: number): SelectQuery;
   order(
     column: string,
     options?: Readonly<{ ascending?: boolean }>,
@@ -114,6 +120,21 @@ type TableClient = RpcClient &
 const sourceRowSchema = sbomSourceSchema.extend({
   objectKey: z.string().min(1),
 });
+const providerRowsSchema = z.array(z.record(z.string(), z.unknown()));
+const ciGateBuildRowSchema = z.object({
+  id: z.uuid(),
+  source_id: z.uuid().nullable(),
+  ingest_job_id: z.uuid().nullable(),
+});
+const ciGateJobRowSchema = z.object({
+  source_id: z.uuid(),
+  status: z.string(),
+  error_code: z.string().nullable(),
+});
+const ciGateSourceRowSchema = z.object({
+  status: z.string(),
+});
+const ciGateDocumentRowSchema = z.object({ document_id: z.uuid() });
 const workerWorkSchema = z
   .object({
     sourceId: z.uuid(),
@@ -268,6 +289,7 @@ export class SupabaseSbomRepository
     SbomDiffRepository,
     SbomCompositeRepository,
     SbomCiCredentialPort,
+    SbomCiIntegrationRepository,
     SupplierSbomRepository,
     SbomIngestQueue,
     SbomQualityQueue,
@@ -275,6 +297,653 @@ export class SupabaseSbomRepository
     SbomCompositeQueue
 {
   constructor(private readonly supabase: SupabaseService) {}
+
+  async upsertBinding(
+    orgId: string,
+    actorId: string,
+    input: Parameters<SbomCiIntegrationRepository["upsertBinding"]>[2],
+  ): Promise<
+    Awaited<ReturnType<SbomCiIntegrationRepository["upsertBinding"]>>
+  > {
+    const row = await this.one("upsert_ci_provider_release_binding_atomic", {
+      p_organization_id: orgId,
+      p_actor_user_id: actorId,
+      p_connector_id: input.connectorId,
+      p_expected_connection_revision: input.expectedConnectionRevision,
+      p_expected_credential_revision: input.expectedCredentialRevision,
+      p_product_id: input.productId,
+      p_release_id: input.releaseId,
+      p_credential_id: input.credentialId,
+      p_provider: input.provider,
+      p_provider_host: input.providerHost,
+      p_repository_owner: input.repositoryOwner,
+      p_repository_name: input.repositoryName,
+      p_repository_id: input.repositoryId,
+      p_provider_installation_id: input.providerInstallationId ?? null,
+      p_project_key: input.projectKey ?? null,
+      p_pipeline_definition_id: input.pipelineDefinitionId ?? null,
+      p_allowed_ref: input.allowedRef,
+      p_expected_binding_id: input.expectedBindingId ?? null,
+      p_expected_version: input.expectedVersion ?? null,
+      p_idempotency_key: input.idempotencyKey,
+      p_request_digest: ciBindingDigest(input),
+    });
+    const outcome = this.outcome(
+      row,
+      new Set([
+        "upserted",
+        "replayed",
+        "not_found",
+        "conflict",
+        "idempotency_mismatch",
+      ]),
+    );
+    if (outcome !== "upserted" && outcome !== "replayed")
+      return {
+        outcome: outcome as "not_found" | "conflict" | "idempotency_mismatch",
+      };
+    return {
+      outcome,
+      binding: ciProviderReleaseBindingSchema.parse(row.binding),
+    };
+  }
+
+  async listBindings(
+    orgId: string,
+  ): Promise<Awaited<ReturnType<SbomCiIntegrationRepository["listBindings"]>>> {
+    const result = await (this.supabase.admin() as unknown as TableClient)
+      .from("ci_provider_release_bindings")
+      .select("*")
+      .eq("organization_id", orgId)
+      .order("updated_at", { ascending: false })
+      .limit(100);
+    if (result.error) throw new SbomRepositoryError("unavailable");
+    return providerRowsSchema
+      .parse(result.data)
+      .map((row) =>
+        ciProviderReleaseBindingSchema.parse(ciBindingFromRow(row)),
+      );
+  }
+
+  async revokeBinding(
+    orgId: string,
+    actorId: string,
+    input: Parameters<SbomCiIntegrationRepository["revokeBinding"]>[2],
+  ): Promise<
+    Awaited<ReturnType<SbomCiIntegrationRepository["revokeBinding"]>>
+  > {
+    const row = await this.one("revoke_ci_provider_release_binding_atomic", {
+      p_organization_id: orgId,
+      p_actor_user_id: actorId,
+      p_binding_id: input.expectedBindingId,
+      p_expected_version: input.expectedVersion,
+      p_idempotency_key: input.idempotencyKey,
+      p_request_digest: ciBindingDigest(input),
+      p_reason: input.reason,
+    });
+    const outcome = this.outcome(
+      row,
+      new Set([
+        "revoked",
+        "replayed",
+        "not_found",
+        "conflict",
+        "idempotency_mismatch",
+      ]),
+    );
+    if (outcome !== "revoked" && outcome !== "replayed")
+      return {
+        outcome: outcome as "not_found" | "conflict" | "idempotency_mismatch",
+      };
+    return {
+      outcome,
+      binding: ciProviderReleaseBindingSchema.parse(row.binding),
+    };
+  }
+
+  async getBinding(
+    orgId: string,
+    bindingId: string,
+  ): Promise<Awaited<ReturnType<SbomCiIntegrationRepository["getBinding"]>>> {
+    const result = await (this.supabase.admin() as unknown as TableClient)
+      .from("ci_provider_release_bindings")
+      .select("*")
+      .eq("organization_id", orgId)
+      .eq("id", bindingId)
+      .maybeSingle();
+    if (result.error) throw new SbomRepositoryError("unavailable");
+    return result.data
+      ? ciProviderReleaseBindingSchema.parse(
+          ciBindingFromRow(this.record(result.data)),
+        )
+      : null;
+  }
+
+  async listBuildRuns(
+    orgId: string,
+    bindingId: string,
+    limit: number,
+  ): Promise<
+    Awaited<ReturnType<SbomCiIntegrationRepository["listBuildRuns"]>>
+  > {
+    const binding = await this.getBinding(orgId, bindingId);
+    if (!binding) return [];
+    const boundedLimit = Math.min(Math.max(limit, 1), 50);
+    const result = await (this.supabase.admin() as unknown as TableClient)
+      .from("ci_build_runs")
+      .select(
+        "id,binding_id,run_id,run_attempt,commit_sha,ref,source_id,ingest_job_id,created_at",
+      )
+      .eq("organization_id", orgId)
+      .eq("binding_id", bindingId)
+      .order("created_at", { ascending: false })
+      .limit(boundedLimit);
+    if (result.error) throw new SbomRepositoryError("unavailable");
+    const rows = providerRowsSchema.parse(result.data);
+    if (rows.length === 0) return [];
+    const jobIds = rows.flatMap((row) =>
+      typeof row.ingest_job_id === "string" ? [row.ingest_job_id] : [],
+    );
+    const sourceIds = rows.flatMap((row) =>
+      typeof row.source_id === "string" ? [row.source_id] : [],
+    );
+    const [jobs, sources, documentSources] = await Promise.all([
+      jobIds.length
+        ? (this.supabase.admin() as unknown as TableClient)
+            .from("sbom_ingest_jobs")
+            .select("id,status")
+            .eq("organization_id", orgId)
+            .in("id", jobIds)
+        : { data: [], error: null },
+      sourceIds.length
+        ? (this.supabase.admin() as unknown as TableClient)
+            .from("sbom_sources")
+            .select("id,status")
+            .eq("organization_id", orgId)
+            .in("id", sourceIds)
+        : { data: [], error: null },
+      sourceIds.length
+        ? (this.supabase.admin() as unknown as TableClient)
+            .from("sbom_document_sources")
+            .select("source_id,document_id")
+            .eq("organization_id", orgId)
+            .in("source_id", sourceIds)
+            .order("created_at", { ascending: false })
+            .limit(500)
+        : { data: [], error: null },
+    ]);
+    if (jobs.error || sources.error || documentSources.error)
+      throw new SbomRepositoryError("unavailable");
+    const jobRows = providerRowsSchema.parse(jobs.data);
+    const sourceRows = providerRowsSchema.parse(sources.data);
+    const documentSourceRows = providerRowsSchema.parse(documentSources.data);
+    const jobStatus = new Map<string, string>(
+      jobRows.flatMap((row) =>
+        typeof row.id === "string" && typeof row.status === "string"
+          ? [[row.id, row.status] as const]
+          : [],
+      ),
+    );
+    const sourceDocuments = new Map<string, string>();
+    for (const row of documentSourceRows) {
+      if (
+        typeof row.source_id === "string" &&
+        typeof row.document_id === "string" &&
+        !sourceDocuments.has(row.source_id)
+      )
+        sourceDocuments.set(row.source_id, row.document_id);
+    }
+    const sourceStatus = new Map<string, string>(
+      sourceRows.flatMap((row) =>
+        typeof row.id === "string" && typeof row.status === "string"
+          ? [[row.id, row.status] as const]
+          : [],
+      ),
+    );
+    const documentIds = [...new Set(sourceDocuments.values())];
+    const matches = documentIds.length
+      ? await (this.supabase.admin() as unknown as TableClient)
+          .from("vulnerability_match_jobs")
+          .select("document_id,status")
+          .eq("organization_id", orgId)
+          .in("document_id", documentIds)
+          .order("created_at", { ascending: false })
+          .limit(500)
+      : { data: [], error: null };
+    if (matches.error) throw new SbomRepositoryError("unavailable");
+    const matchStatus = new Map<string, string>();
+    for (const row of providerRowsSchema.parse(matches.data)) {
+      if (
+        typeof row.document_id === "string" &&
+        typeof row.status === "string" &&
+        !matchStatus.has(row.document_id)
+      )
+        matchStatus.set(row.document_id, row.status);
+    }
+    return rows.map((row) => {
+      const sourceId = typeof row.source_id === "string" ? row.source_id : null;
+      const jobId =
+        typeof row.ingest_job_id === "string" ? row.ingest_job_id : null;
+      const documentId = sourceId ? sourceDocuments.get(sourceId) : undefined;
+      return ciBuildRunSummarySchema.parse({
+        id: row.id,
+        bindingId: row.binding_id,
+        runId: row.run_id,
+        runAttempt: row.run_attempt,
+        commitSha: row.commit_sha,
+        ref: row.ref,
+        sourceId,
+        jobId,
+        state: ciGateState(
+          jobId ? jobStatus.get(jobId) : undefined,
+          documentId ? matchStatus.get(documentId) : undefined,
+          sourceId ? sourceStatus.get(sourceId) : undefined,
+        ),
+        createdAt: row.created_at,
+      });
+    });
+  }
+
+  async reserveBuildUpload(
+    orgId: string,
+    credentialId: string,
+    verified: Parameters<SbomCiIntegrationRepository["reserveBuildUpload"]>[2],
+    upload: Parameters<SbomCiIntegrationRepository["reserveBuildUpload"]>[3],
+    correlationId: string,
+  ): Promise<
+    Awaited<ReturnType<SbomCiIntegrationRepository["reserveBuildUpload"]>>
+  > {
+    const binding = await this.getBinding(orgId, verified.bindingId);
+    if (
+      !binding ||
+      binding.status !== "active" ||
+      binding.credentialId !== credentialId
+    )
+      return { outcome: "not_found" };
+    const sourceId = randomUUID();
+    const expiresAt = new Date(Date.now() + 10 * 60_000).toISOString();
+    const intakeInput = {
+      productId: binding.productId,
+      releaseId: binding.releaseId,
+      filename: upload.fileName,
+      byteSize: upload.byteSize,
+      mediaType: upload.mediaType,
+      sha256: upload.sha256,
+      source: "ci_upload" as const,
+      idempotencyKey: upload.idempotencyKey,
+      declaredFormat: upload.declaredFormat,
+      declaredSpecVersion: upload.declaredSpecVersion,
+    };
+    const row = await this.one("reserve_ci_build_sbom_atomic", {
+      p_organization_id: orgId,
+      p_credential_id: credentialId,
+      p_binding_id: verified.bindingId,
+      p_run_id: verified.runId,
+      p_run_attempt: verified.runAttempt ?? null,
+      p_provider_job_id: verified.jobId ?? null,
+      p_ref: verified.ref,
+      p_commit_sha: verified.commitSha,
+      p_event_name: verified.eventName,
+      p_repository_owner: verified.repositoryOwner,
+      p_repository_name: verified.repositoryName,
+      p_repository_id: verified.repositoryId,
+      p_provider_installation_id: verified.providerInstallationId ?? null,
+      p_project_key: verified.projectKey ?? null,
+      p_pipeline_definition_id: verified.pipelineDefinitionId ?? null,
+      p_source_id: sourceId,
+      p_idempotency_key: upload.idempotencyKey,
+      p_request_digest: sbomRequestDigest(intakeInput),
+      p_build_digest: ciBuildDigest(verified, upload),
+      p_original_filename: upload.fileName,
+      p_declared_media_type: upload.mediaType,
+      p_declared_byte_size: upload.byteSize,
+      p_declared_sha256: upload.sha256,
+      p_staging_storage_key: `${orgId}/${sourceId}/${upload.sha256}`,
+      p_upload_expires_at: expiresAt,
+      p_correlation_id: correlationId,
+      p_declared_format: upload.declaredFormat ?? null,
+      p_declared_spec_version: upload.declaredSpecVersion ?? null,
+      p_supersedes_source_id: null,
+    });
+    const outcome = this.outcome(
+      row,
+      new Set<
+        | "created"
+        | "replayed"
+        | "not_found"
+        | "conflict"
+        | "idempotency_mismatch"
+        | "invalid_request"
+      >([
+        "created",
+        "replayed",
+        "not_found",
+        "conflict",
+        "idempotency_mismatch",
+        "invalid_request",
+      ]),
+    );
+    if (outcome !== "created" && outcome !== "replayed") return { outcome };
+    return {
+      outcome,
+      reservation: this.source(row.source),
+      buildRunId: z.uuid().parse(row.build_run_id),
+    };
+  }
+
+  async getBuildSourceForCompletion(
+    orgId: string,
+    credentialId: string,
+    reference: Parameters<
+      SbomCiIntegrationRepository["getBuildSourceForCompletion"]
+    >[2],
+    sourceId: string,
+  ): Promise<
+    Awaited<
+      ReturnType<SbomCiIntegrationRepository["getBuildSourceForCompletion"]>
+    >
+  > {
+    const binding = await this.getBinding(orgId, reference.bindingId);
+    if (
+      !binding ||
+      binding.status !== "active" ||
+      binding.credentialId !== credentialId
+    )
+      return null;
+    const query = (this.supabase.admin() as unknown as TableClient)
+      .from("ci_build_runs")
+      .select("id,idempotency_key")
+      .eq("organization_id", orgId)
+      .eq("credential_id", credentialId)
+      .eq("binding_id", reference.bindingId)
+      .eq("run_id", reference.runId)
+      .eq("run_attempt", reference.runAttempt)
+      .eq("source_id", sourceId);
+    const result = await query.maybeSingle();
+    if (result.error) throw new SbomRepositoryError("unavailable");
+    if (!result.data) return null;
+    const row = await this.one("get_sbom_source_for_completion", {
+      p_organization_id: orgId,
+      p_source_id: sourceId,
+      p_actor_user_id: null,
+      p_actor_credential_id: credentialId,
+      p_idempotency_key: z
+        .uuid()
+        .parse(this.record(result.data).idempotency_key),
+    });
+    const outcome = this.outcome(
+      row,
+      new Set(["ready", "replayed", "not_found", "invalid_request"]),
+    );
+    if (outcome !== "ready" && outcome !== "replayed") return null;
+    if (
+      outcome === "ready" &&
+      (row.storage_bucket !== "sbom-originals" ||
+        typeof row.storage_key !== "string")
+    )
+      throw new SbomRepositoryError("malformed");
+    return {
+      outcome,
+      source: this.source(
+        row.source,
+        outcome === "ready" ? (row.storage_key as string) : undefined,
+      ),
+    };
+  }
+
+  async rejectBuildIntegrity(
+    orgId: string,
+    credentialId: string,
+    reference: Parameters<
+      SbomCiIntegrationRepository["rejectBuildIntegrity"]
+    >[2],
+    sourceId: string,
+    idempotencyKey: string,
+    code: Parameters<SbomCiIntegrationRepository["rejectBuildIntegrity"]>[5],
+    actual: Parameters<SbomCiIntegrationRepository["rejectBuildIntegrity"]>[6],
+    correlationId: string,
+  ): Promise<
+    Awaited<ReturnType<SbomCiIntegrationRepository["rejectBuildIntegrity"]>>
+  > {
+    const lookup = await this.getBuildSourceForCompletion(
+      orgId,
+      credentialId,
+      reference,
+      sourceId,
+    );
+    if (!lookup) return "not_found";
+    if (lookup.outcome !== "ready") return "conflict";
+    const result = await this.rejectIntegrity(orgId, {
+      sourceId,
+      actorId: "",
+      ciCredentialId: credentialId,
+      idempotencyKey,
+      code,
+      actualHash: actual.sha256,
+      actualByteSize: actual.byteSize,
+      actualMediaType: actual.contentType,
+      correlationId,
+    });
+    return result.outcome === "rejected" || result.outcome === "replayed"
+      ? result.outcome
+      : result.outcome === "not_found"
+        ? "not_found"
+        : "conflict";
+  }
+
+  async finalizeBuildUpload(
+    orgId: string,
+    credentialId: string,
+    verified: Parameters<SbomCiIntegrationRepository["finalizeBuildUpload"]>[2],
+    sourceId: string,
+    inspection: Parameters<
+      SbomCiIntegrationRepository["finalizeBuildUpload"]
+    >[4],
+    idempotencyKey: string,
+    correlationId: string,
+  ): Promise<
+    Awaited<ReturnType<SbomCiIntegrationRepository["finalizeBuildUpload"]>>
+  > {
+    const row = await this.one("finalize_ci_build_sbom_atomic", {
+      p_organization_id: orgId,
+      p_credential_id: credentialId,
+      p_binding_id: verified.bindingId,
+      p_run_id: verified.runId,
+      p_run_attempt: verified.runAttempt ?? null,
+      p_source_id: sourceId,
+      p_actual_sha256: inspection.sha256,
+      p_actual_byte_size: inspection.byteSize,
+      p_actual_media_type: inspection.contentType,
+      p_idempotency_key: idempotencyKey,
+      p_correlation_id: correlationId,
+    });
+    const outcome = this.outcome(
+      row,
+      new Set([
+        "queued",
+        "replayed",
+        "deduplicated",
+        "not_found",
+        "conflict",
+        "idempotency_mismatch",
+        "invalid_request",
+        "invalid_state",
+        "expired",
+        "integrity_mismatch",
+      ]),
+    );
+    if (
+      outcome !== "queued" &&
+      outcome !== "replayed" &&
+      outcome !== "deduplicated"
+    )
+      return {
+        outcome:
+          outcome === "not_found" ||
+          outcome === "idempotency_mismatch" ||
+          outcome === "invalid_request"
+            ? outcome
+            : "conflict",
+      };
+    return {
+      outcome,
+      job: this.job(row.job),
+      buildRunId: z.uuid().parse(row.build_run_id),
+    };
+  }
+
+  async gateVerdict(
+    orgId: string,
+    credentialId: string,
+    input: Parameters<SbomCiIntegrationRepository["gateVerdict"]>[2],
+  ): Promise<Awaited<ReturnType<SbomCiIntegrationRepository["gateVerdict"]>>> {
+    const now = new Date().toISOString();
+    const correlationId = `${input.bindingId}:${input.runId}:${input.runAttempt}`;
+    const binding = await this.getBinding(orgId, input.bindingId);
+    if (
+      !binding ||
+      binding.status !== "active" ||
+      binding.credentialId !== credentialId
+    )
+      return ciBuildGateVerdictSchema.parse({
+        policy: "unconfigured",
+        state: "error",
+        buildRunId: null,
+        sourceId: null,
+        jobId: null,
+        correlationId,
+        message: "The CI binding is revoked or unavailable.",
+        checkedAt: now,
+      });
+    const buildQuery = (this.supabase.admin() as unknown as TableClient)
+      .from("ci_build_runs")
+      .select("id,source_id,ingest_job_id,run_id,created_at")
+      .eq("organization_id", orgId)
+      .eq("credential_id", credentialId)
+      .eq("binding_id", input.bindingId)
+      .eq("run_id", input.runId)
+      .eq("run_attempt", input.runAttempt);
+    const buildResult = await buildQuery.maybeSingle();
+    if (buildResult.error) throw new SbomRepositoryError("unavailable");
+    if (!buildResult.data)
+      return ciBuildGateVerdictSchema.parse({
+        policy: "unconfigured",
+        state: "pending",
+        buildRunId: null,
+        sourceId: null,
+        jobId: null,
+        correlationId,
+        message: "No SBOM intake has been recorded for this build.",
+        checkedAt: now,
+      });
+    const buildRow = ciGateBuildRowSchema.parse(buildResult.data);
+    if (!buildRow.source_id || !buildRow.ingest_job_id) {
+      const sourceResult = buildRow.source_id
+        ? await (this.supabase.admin() as unknown as TableClient)
+            .from("sbom_sources")
+            .select("status")
+            .eq("organization_id", orgId)
+            .eq("id", buildRow.source_id)
+            .maybeSingle()
+        : { data: null, error: null };
+      if (sourceResult.error) throw new SbomRepositoryError("unavailable");
+      const state = ciGateState(
+        undefined,
+        undefined,
+        sourceResult.data
+          ? ciGateSourceRowSchema.parse(sourceResult.data).status
+          : undefined,
+      );
+      return ciBuildGateVerdictSchema.parse({
+        policy: "unconfigured",
+        state,
+        buildRunId: buildRow.id,
+        sourceId: buildRow.source_id,
+        jobId: buildRow.ingest_job_id,
+        correlationId,
+        message:
+          state === "error"
+            ? "SBOM upload was rejected or expired."
+            : "SBOM upload or intake job creation is still pending.",
+        checkedAt: now,
+      });
+    }
+    const jobResult = await (this.supabase.admin() as unknown as TableClient)
+      .from("sbom_ingest_jobs")
+      .select("id,source_id,status,error_code")
+      .eq("organization_id", orgId)
+      .eq("id", buildRow.ingest_job_id)
+      .maybeSingle();
+    if (jobResult.error) throw new SbomRepositoryError("unavailable");
+    const job = jobResult.data
+      ? ciGateJobRowSchema.parse(jobResult.data)
+      : null;
+    if (!job || job.source_id !== buildRow.source_id)
+      throw new SbomRepositoryError("malformed");
+    let state: "pending" | "error" | "policy_not_configured" =
+      job.status === "failed" || job.status === "dead_letter"
+        ? "error"
+        : "pending";
+    if (job.status === "completed") {
+      const sourceResult = await (
+        this.supabase.admin() as unknown as TableClient
+      )
+        .from("sbom_sources")
+        .select("status")
+        .eq("organization_id", orgId)
+        .eq("id", buildRow.source_id)
+        .maybeSingle();
+      if (sourceResult.error || !sourceResult.data)
+        throw new SbomRepositoryError("unavailable");
+      const source = ciGateSourceRowSchema.parse(sourceResult.data);
+      const documentResult = await (
+        this.supabase.admin() as unknown as TableClient
+      )
+        .from("sbom_document_sources")
+        .select("document_id")
+        .eq("organization_id", orgId)
+        .eq("source_id", buildRow.source_id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (documentResult.error) throw new SbomRepositoryError("unavailable");
+      const documentId = documentResult.data
+        ? ciGateDocumentRowSchema.parse(documentResult.data).document_id
+        : null;
+      if (typeof documentId === "string") {
+        const matchResult = await (
+          this.supabase.admin() as unknown as TableClient
+        )
+          .from("vulnerability_match_jobs")
+          .select("status")
+          .eq("organization_id", orgId)
+          .eq("document_id", documentId)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (matchResult.error) throw new SbomRepositoryError("unavailable");
+        const matchStatus = matchResult.data
+          ? z.object({ status: z.string() }).parse(matchResult.data).status
+          : undefined;
+        state = ciGateState(job.status, matchStatus, source.status);
+      }
+    }
+    return ciBuildGateVerdictSchema.parse({
+      policy: "unconfigured",
+      state,
+      buildRunId: buildRow.id,
+      sourceId: buildRow.source_id,
+      jobId: buildRow.ingest_job_id,
+      correlationId,
+      message:
+        state === "policy_not_configured"
+          ? "SBOM intake and matching completed; no build gate policy is configured."
+          : state === "error"
+            ? `SBOM processing failed${job.error_code ? `: ${job.error_code}` : "."}`
+            : "SBOM intake or matching is still processing.",
+      checkedAt: now,
+    });
+  }
 
   async reserve(
     organizationId: string,
@@ -2397,6 +3066,109 @@ function diffProgressMessage(
     case "failed":
       return "Component comparison failed.";
   }
+}
+
+function ciBindingDigest(input: Readonly<Record<string, unknown>>): string {
+  return createHash("sha256")
+    .update(
+      JSON.stringify({
+        connectorId: input.connectorId ?? null,
+        expectedConnectionRevision: input.expectedConnectionRevision ?? null,
+        expectedCredentialRevision: input.expectedCredentialRevision ?? null,
+        productId: input.productId ?? null,
+        releaseId: input.releaseId ?? null,
+        credentialId: input.credentialId ?? null,
+        provider: input.provider ?? null,
+        providerHost: input.providerHost ?? null,
+        repositoryOwner: input.repositoryOwner ?? null,
+        repositoryName: input.repositoryName ?? null,
+        repositoryId: input.repositoryId ?? null,
+        providerInstallationId: input.providerInstallationId ?? null,
+        projectKey: input.projectKey ?? null,
+        pipelineDefinitionId: input.pipelineDefinitionId ?? null,
+        allowedRef: input.allowedRef ?? null,
+        expectedBindingId: input.expectedBindingId ?? null,
+        expectedVersion: input.expectedVersion ?? null,
+        reason: input.reason ?? null,
+      }),
+    )
+    .digest("hex");
+}
+
+function ciGateState(
+  ingestStatus: string | undefined,
+  matchStatus: string | undefined,
+  sourceStatus: unknown,
+): "pending" | "error" | "policy_not_configured" {
+  if (
+    sourceStatus === "rejected" ||
+    sourceStatus === "expired" ||
+    ingestStatus === "failed" ||
+    ingestStatus === "dead_letter" ||
+    matchStatus === "failed" ||
+    matchStatus === "dead_letter"
+  )
+    return "error";
+  return ingestStatus === "completed" && matchStatus === "completed"
+    ? "policy_not_configured"
+    : "pending";
+}
+
+function ciBuildDigest(
+  build: Readonly<Record<string, unknown>>,
+  upload: Readonly<Record<string, unknown>>,
+): string {
+  return createHash("sha256")
+    .update(
+      JSON.stringify({
+        bindingId: build.bindingId,
+        provider: build.provider,
+        providerHost: build.providerHost,
+        repositoryId: build.repositoryId,
+        providerInstallationId: build.providerInstallationId ?? null,
+        projectKey: build.projectKey ?? null,
+        pipelineDefinitionId: build.pipelineDefinitionId ?? null,
+        runId: build.runId,
+        runAttempt: build.runAttempt ?? null,
+        jobId: build.jobId ?? null,
+        ref: build.ref,
+        commitSha: build.commitSha,
+        eventName: build.eventName,
+        fileName: upload.fileName,
+        mediaType: upload.mediaType,
+        byteSize: upload.byteSize,
+        sha256: upload.sha256,
+        declaredFormat: upload.declaredFormat ?? null,
+        declaredSpecVersion: upload.declaredSpecVersion ?? null,
+      }),
+    )
+    .digest("hex");
+}
+
+function ciBindingFromRow(row: Record<string, unknown>) {
+  return {
+    id: row.id,
+    organizationId: row.organization_id,
+    connectorId: row.connector_id,
+    connectionRevision: row.connection_revision,
+    credentialRevision: row.credential_revision,
+    productId: row.product_id,
+    releaseId: row.release_id,
+    credentialId: row.credential_id,
+    provider: row.provider,
+    providerHost: row.provider_host,
+    repositoryOwner: row.repository_owner,
+    repositoryName: row.repository_name,
+    repositoryId: row.repository_id,
+    providerInstallationId: row.provider_installation_id,
+    projectKey: row.project_key,
+    pipelineDefinitionId: row.pipeline_definition_id,
+    allowedRef: row.allowed_ref,
+    status: row.status,
+    version: row.version,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
 }
 
 export class SbomRepositoryError extends Error {

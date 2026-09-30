@@ -73,8 +73,12 @@ async function uiCommand(
   );
   await page.getByRole("button", { name: label, exact: true }).click();
   const response = await pending;
-  expect(response.status(), `${label} response`).toBe(200);
   const body: unknown = await response.json();
+  const errorCode =
+    body && typeof body === "object" && "code" in body
+      ? String(body.code)
+      : "none";
+  expect(response.status(), `${label} response (code: ${errorCode})`).toBe(200);
   expect(JSON.stringify(body)).not.toContain(canary);
   return connectorResponseSchema.parse(body).connector;
 }
@@ -256,15 +260,35 @@ test("M11 owner manages write-only credentials, conflicts and safe connection li
     expect(catalogue).toHaveLength(16);
     expect(
       catalogue.filter((entry) => entry.canConfigure).map((entry) => entry.id),
-    ).toEqual(["reference_conformance"]);
+    ).toEqual([
+      "reference_conformance",
+      "github_actions",
+      "gitlab_ci",
+      "azure_devops",
+    ]);
+    expect(
+      catalogue.find((entry) => entry.id === "reference_conformance"),
+    ).toMatchObject({
+      implementation: "reference",
+      scopeIntrospection: "not_applicable",
+    });
+    for (const id of ["github_actions", "gitlab_ci", "azure_devops"]) {
+      expect(catalogue.find((entry) => entry.id === id)).toMatchObject({
+        implementation: "ci",
+        canConfigure: true,
+        scopeIntrospection: "unavailable",
+      });
+    }
     const githubRow = page
       .getByRole("row")
       .filter({ has: page.getByText("GitHub and Actions", { exact: true }) });
-    await expect(githubRow.getByRole("button")).toHaveCount(0);
+    await expect(
+      githubRow.getByRole("button", { name: "Configure GitHub and Actions" }),
+    ).toBeVisible();
     await githubRow.locator("summary").focus();
     await page.keyboard.press("Enter");
     await expect(
-      githubRow.getByText(/Prefer a least-privilege GitHub App/),
+      githubRow.getByText(/least-privilege GitHub App/),
     ).toBeVisible();
     await page.screenshot({
       path: testInfo.outputPath("m11-catalogue-desktop.png"),
@@ -281,6 +305,19 @@ test("M11 owner manages write-only credentials, conflicts and safe connection li
       ),
     ).toBe(true);
     await page.setViewportSize({ width: 1280, height: 900 });
+
+    await githubRow
+      .getByRole("button", { name: "Configure GitHub and Actions" })
+      .click();
+    await expect(page.getByLabel("Connector type")).toHaveValue(
+      "github_actions",
+    );
+    await expect(page.getByLabel("GitHub App ID")).toBeVisible();
+    await expect(page.getByLabel("GitHub installation ID")).toBeVisible();
+    await expect(
+      page.getByText(/Contents: read for release tag verification/),
+    ).toBeVisible();
+    await page.getByRole("button", { name: "Close form" }).click();
 
     const configure = page.getByRole("button", {
       name: "Configure reference adapter",

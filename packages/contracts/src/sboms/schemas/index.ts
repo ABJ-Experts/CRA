@@ -6,3 +6,4 @@ export * from "./sbom-diff.schema.js";
 export * from "./sbom-composite.schema.js";
 export * from "./sbom-supplier.schema.js";
 export * from "./sbom-export.schema.js";
+export * from "./sbom-ci-integration.schema.js";

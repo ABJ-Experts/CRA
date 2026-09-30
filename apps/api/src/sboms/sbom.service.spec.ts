@@ -24,6 +24,16 @@ function harness(result: unknown = success) {
       "replay",
     ].map((name) => [name, jest.fn().mockResolvedValue(result)]),
   );
+  const ciIntegrations = Object.fromEntries(
+    [
+      "upsertBinding",
+      "listBindings",
+      "revokeBinding",
+      "initializeBuildUpload",
+      "completeBuildUpload",
+      "gate",
+    ].map((name) => [name, jest.fn().mockResolvedValue(result)]),
+  );
   const credentials = {
     create: jest.fn(),
     list: jest.fn(),
@@ -36,9 +46,11 @@ function harness(result: unknown = success) {
       useCases as never,
       useCases as never,
       useCases as never,
+      ciIntegrations as never,
       credentials as never,
     ),
     useCases,
+    ciIntegrations,
     credentials,
   };
 }

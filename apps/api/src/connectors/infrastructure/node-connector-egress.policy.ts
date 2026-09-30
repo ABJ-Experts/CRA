@@ -16,17 +16,31 @@ export class NodeConnectorEgressPolicy implements ConnectorEgressPolicy {
       allowedHosts.map((host) => host.toLowerCase().trim()).filter(Boolean),
     );
   }
-  async validate(config: Readonly<Record<string, unknown>>): Promise<void> {
+  async validate(
+    config: Readonly<Record<string, unknown>>,
+    connectorType = "reference_conformance",
+  ): Promise<void> {
     let parsed;
     try {
-      parsed = parseConnectorConfiguration("reference_conformance", config);
+      parsed = parseConnectorConfiguration(connectorType, config);
     } catch {
       throw new ConnectorError("invalid_request");
     }
-    if (!parsed.baseUrl) return;
+    const targetUrl =
+      "providerHost" in parsed
+        ? `https://${parsed.providerHost}`
+        : parsed.baseUrl;
+    if (!targetUrl) return;
     const target = await resolveApprovedHttpsTarget(
-      parsed.baseUrl,
-      this.allowedHosts,
+      targetUrl,
+      connectorType === "reference_conformance"
+        ? this.allowedHosts
+        : new Set([
+            ...this.allowedHosts,
+            "github.com",
+            "gitlab.com",
+            "dev.azure.com",
+          ]),
       this.lookup ? { lookup: this.lookup } : undefined,
     );
     if (!target) throw new ConnectorError("invalid_request");

@@ -281,7 +281,7 @@ export class SupabaseConnectorHubRepository implements ConnectorHubRepository {
       p_connection_config: input.connectionConfig ?? {},
       p_commit_policy: input.commitPolicy,
     });
-    assertOutcome(row, ["created"]);
+    assertOutcome(row, ["created", "replayed"]);
     return connectorSchema.parse(row.connector);
   }
   async beginSync(

@@ -1,0 +1,14 @@
+.cra-sentinel-sbom-gate:
+  image: node:20-alpine
+  script:
+    - |
+      case "$CI_PIPELINE_SOURCE" in
+        push) ;;
+        *) echo "CRA Sentinel CI upload is unavailable for this pipeline source" >&2; exit 1 ;;
+      esac
+      export CRA_SENTINEL_RUN_ID="$CI_PIPELINE_ID"
+      export CRA_SENTINEL_RUN_ATTEMPT=1
+      export CRA_SENTINEL_MODE=upload
+      node tools/ci/cra-sentinel-sbom-gate.mjs
+      export CRA_SENTINEL_MODE=gate
+      node tools/ci/cra-sentinel-sbom-gate.mjs

@@ -28,7 +28,7 @@ export const connectorCatalogueEntrySchema = z
       "enisa",
     ]),
     name: text(100),
-    implementation: z.enum(["reference", "planned"]),
+    implementation: z.enum(["reference", "ci", "planned"]),
     phase: z.enum(["MVP", "V1", "V2"]),
     priority: z.enum(["P0", "P1", "P2"]),
     canConfigure: z.boolean(),
@@ -39,13 +39,20 @@ export const connectorCatalogueEntrySchema = z
     scopeIntrospection: z.enum(["unavailable", "not_applicable"]),
   })
   .strict()
-  .refine(
-    (entry) =>
-      entry.canConfigure === (entry.id === "reference_conformance") &&
-      (entry.implementation === "reference") ===
-        (entry.id === "reference_conformance"),
-    "Only the registered reference adapter can be configured",
-  );
+  .refine((entry) => {
+    const ci = ["github_actions", "gitlab_ci", "azure_devops"].includes(
+      entry.id,
+    );
+    return (
+      entry.canConfigure === (entry.id === "reference_conformance" || ci) &&
+      entry.implementation ===
+        (ci
+          ? "ci"
+          : entry.id === "reference_conformance"
+            ? "reference"
+            : "planned")
+    );
+  }, "Only registered reference and CI connections can be configured");
 export const connectorCatalogueResponseSchema = z
   .object({
     catalogue: z.array(connectorCatalogueEntrySchema).max(100),

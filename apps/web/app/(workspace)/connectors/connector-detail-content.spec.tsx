@@ -171,6 +171,7 @@ describe("ConnectorDetailContent", () => {
 
   afterEach(() => {
     cleanup();
+    overview.connector.connectorType = "reference_conformance";
     process.env.NEXT_PUBLIC_ENABLE_MOCKS = environment;
     state.hasData = true;
     state.pending = true;
@@ -179,6 +180,19 @@ describe("ConnectorDetailContent", () => {
     state.canView = false;
     state.canExport = false;
     state.organizationId = "22222222-2222-4222-8222-222222222222";
+  });
+
+  it("keeps PLM mapping and sync controls out of CI connector setup", () => {
+    process.env.NEXT_PUBLIC_ENABLE_MOCKS = "false";
+    state.pending = false;
+    state.canView = true;
+    overview.connector.connectorType = "github_actions";
+    render(<ConnectorDetailContent connectorId={connectorId} />);
+    expect(screen.getByText("Connection section")).toBeVisible();
+    expect(screen.queryByText("Mapping section")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Select run" }),
+    ).not.toBeInTheDocument();
   });
 
   it("shows the forbidden state when the viewer cannot view this connector", () => {

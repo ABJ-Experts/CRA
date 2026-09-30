@@ -6,3 +6,4 @@ export type * from "./sbom-diff.type.js";
 export type * from "./sbom-composite.type.js";
 export type * from "./sbom-supplier.type.js";
 export type * from "./sbom-export.type.js";
+export type * from "./sbom-ci-integration.type.js";

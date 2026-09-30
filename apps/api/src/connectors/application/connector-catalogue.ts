@@ -2,6 +2,30 @@ import type { ConnectorCatalogueEntry } from "@repo/contracts/connectors/types";
 
 export const CONNECTOR_SCOPE_POLICY_VERSION = "2026-09-28.1";
 
+function ci(
+  id: "github_actions" | "gitlab_ci" | "azure_devops",
+  name: string,
+  phase: "MVP" | "V1",
+  priority: "P0" | "P1",
+  guidance: string,
+  requiredScopes: readonly string[],
+): Readonly<ConnectorCatalogueEntry> {
+  return Object.freeze({
+    id,
+    name,
+    implementation: "ci",
+    phase,
+    priority,
+    canConfigure: true,
+    description:
+      "CI build identity and SBOM intake; no product/release synchronization or passing gate policy.",
+    guidance,
+    scopePolicyVersion: CONNECTOR_SCOPE_POLICY_VERSION,
+    requiredScopes: Object.freeze([...requiredScopes]) as unknown as string[],
+    scopeIntrospection: "unavailable",
+  });
+}
+
 function planned(
   id: ConnectorCatalogueEntry["id"],
   name: string,
@@ -25,7 +49,7 @@ function planned(
   });
 }
 
-/** BRD p51 matrix phases; availability reflects registered adapters, not roadmap promises. */
+/** BRD p51 phases; availability reflects implemented connection boundaries. */
 export const CONNECTOR_CATALOGUE: readonly Readonly<ConnectorCatalogueEntry>[] =
   Object.freeze([
     Object.freeze({
@@ -43,29 +67,29 @@ export const CONNECTOR_CATALOGUE: readonly Readonly<ConnectorCatalogueEntry>[] =
       requiredScopes: Object.freeze([]) as unknown as string[],
       scopeIntrospection: "not_applicable",
     }),
-    planned(
+    ci(
       "github_actions",
       "GitHub and Actions",
       "MVP",
       "P0",
-      "Planned SBOM, release and repository ingestion with findings and build gate verdicts.",
-      "Prefer a least-privilege GitHub App limited to selected repositories, not a personal access token. The roadmap names V1; no hub vendor adapter is registered.",
+      "Use a least-privilege GitHub App limited to selected repositories with Actions read, Contents read for release tag proof, and Metadata read; never use a personal access token.",
+      ["actions:read", "contents:read", "metadata:read"],
     ),
-    planned(
+    ci(
       "gitlab_ci",
       "GitLab CI",
       "V1",
       "P0",
-      "Planned SBOM and pipeline metadata ingestion with findings and gate verdicts.",
-      "Use a dedicated project token and the minimum project permissions. Self-managed endpoints require approved egress; no hub vendor adapter is registered.",
+      "Use a dedicated project token and the minimum project permissions. Self-managed hosts require approved egress.",
+      ["read_api"],
     ),
-    planned(
+    ci(
       "azure_devops",
       "Azure DevOps",
       "V1",
       "P1",
-      "Planned SBOM and build metadata ingestion through a service connection.",
-      "Restrict the service connection to approved projects and pipelines. The matrix assigns V1; the V1 roadmap bullet does not name this integration.",
+      "Restrict the service connection to approved projects and pipelines. Azure DevOps Services only.",
+      ["vso.build"],
     ),
     planned(
       "entra_id",

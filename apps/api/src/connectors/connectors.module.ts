@@ -3,6 +3,7 @@ import { Module } from "@nestjs/common";
 import { PermissionsModule } from "../permissions/permissions.module";
 import { PermissionsService } from "../permissions/permissions.service";
 import { ConnectorHubUseCases } from "./application/connector-hub-use-cases";
+import { CiConnectorCredentialReader } from "./application/ci-connector-credential-reader";
 import { ConnectorSyncOperationsUseCases } from "./application/connector-sync-operations-use-cases";
 import { WebhookUseCases } from "./application/webhook-use-cases";
 import { SupabaseSyncOperationsRepository } from "./infrastructure/supabase-sync-operations.repository";
@@ -91,6 +92,19 @@ export const CONNECTOR_PORTS = Symbol("CONNECTOR_PORTS");
           { binary: process.env.CONNECTOR_VAULT_GPG_BINARY },
         ),
       inject: [AesGcmConnectorVault],
+    },
+    {
+      provide: CiConnectorCredentialReader,
+      useFactory: (
+        repository: SupabaseConnectorHubRepository,
+        reader: ConnectorCredentialReader,
+        egress: NodeConnectorEgressPolicy,
+      ) => new CiConnectorCredentialReader(repository, reader, egress),
+      inject: [
+        SupabaseConnectorHubRepository,
+        ConnectorCredentialReader,
+        NodeConnectorEgressPolicy,
+      ],
     },
     {
       provide: NodeConnectorEgressPolicy,
@@ -265,6 +279,10 @@ export const CONNECTOR_PORTS = Symbol("CONNECTOR_PORTS");
       ],
     },
   ],
-  exports: [ConnectorSyncWorker, WebhookDeliveryWorker],
+  exports: [
+    ConnectorSyncWorker,
+    WebhookDeliveryWorker,
+    CiConnectorCredentialReader,
+  ],
 })
 export class ConnectorsModule {}

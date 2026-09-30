@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ConnectorCatalogueSection } from "./connector-catalogue-section";
 import type { ConnectorCatalogueEntry } from "@repo/contracts/connectors/types";
@@ -59,5 +59,20 @@ describe("connector catalogue availability", () => {
     );
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
     expect(screen.getAllByText("Use minimum privileges")).toHaveLength(2);
+  });
+  it("opens the implemented CI provider setup without calling it a reference fixture", () => {
+    const onConfigure = vi.fn();
+    render(
+      <ConnectorCatalogueSection
+        entries={[{ ...entries[1]!, implementation: "ci", canConfigure: true }]}
+        canCreate
+        onConfigure={onConfigure}
+      />,
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Configure GitHub and Actions" }),
+    );
+    expect(onConfigure).toHaveBeenCalledWith("github_actions");
+    expect(screen.getByText("CI run verification")).toBeVisible();
   });
 });
