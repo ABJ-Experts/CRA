@@ -172,6 +172,9 @@ export const exportSourceRegistry: readonly ExportSourceRegistration[] =
       ],
     },
     {
+      // Webhook configuration and delivery history are portable metadata only.
+      // SQL table-aware projections exclude both encrypted key slots, command
+      // fingerprints/results, exact payload bytes, and deployment-local leases.
       sourceId: "connector_sync",
       tables: [
         "connectors",
@@ -182,6 +185,10 @@ export const exportSourceRegistry: readonly ExportSourceRegistration[] =
         "sync_run_plan_items",
         "sync_conflicts",
         "sync_connector_cursors",
+        "webhook_endpoints",
+        "webhook_endpoint_commands",
+        "webhook_deliveries",
+        "webhook_delivery_attempts",
       ],
     },
     {

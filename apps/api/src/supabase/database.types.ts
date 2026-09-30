@@ -19604,6 +19604,468 @@ export type Database = {
           },
         ]
       }
+      webhook_deliveries: {
+        Row: {
+          attempt_count: number
+          authorization_actor_user_id: string
+          base_delay_seconds: number
+          completed_at: string | null
+          created_at: string
+          deadline_at: string
+          delivery_id: string
+          destination_revision: number
+          endpoint_id: string
+          endpoint_url: string
+          endpoint_version: number
+          event_id: string
+          event_type: string
+          id: string
+          last_failure_category: string | null
+          last_failure_code: string | null
+          last_http_status: number | null
+          lease_expires_at: string | null
+          lease_generation: number
+          lease_owner: string | null
+          max_attempts: number
+          max_delay_seconds: number
+          next_attempt_at: string
+          occurred_at: string
+          organization_id: string
+          parent_delivery_id: string | null
+          payload_bytes: string | null
+          permission_version: number
+          product_ids: string[]
+          replay_reason: string | null
+          resource_id: string
+          resource_type: string
+          resource_url: string
+          scope_revision: number
+          signing_secret_revision: number | null
+          source_id: string
+          source_kind: string
+          status: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          attempt_count?: number
+          authorization_actor_user_id: string
+          base_delay_seconds: number
+          completed_at?: string | null
+          created_at?: string
+          deadline_at?: string
+          delivery_id: string
+          destination_revision: number
+          endpoint_id: string
+          endpoint_url: string
+          endpoint_version: number
+          event_id: string
+          event_type: string
+          id?: string
+          last_failure_category?: string | null
+          last_failure_code?: string | null
+          last_http_status?: number | null
+          lease_expires_at?: string | null
+          lease_generation?: number
+          lease_owner?: string | null
+          max_attempts: number
+          max_delay_seconds: number
+          next_attempt_at?: string
+          occurred_at: string
+          organization_id: string
+          parent_delivery_id?: string | null
+          payload_bytes?: string | null
+          permission_version: number
+          product_ids?: string[]
+          replay_reason?: string | null
+          resource_id: string
+          resource_type: string
+          resource_url: string
+          scope_revision: number
+          signing_secret_revision?: number | null
+          source_id: string
+          source_kind: string
+          status?: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          attempt_count?: number
+          authorization_actor_user_id?: string
+          base_delay_seconds?: number
+          completed_at?: string | null
+          created_at?: string
+          deadline_at?: string
+          delivery_id?: string
+          destination_revision?: number
+          endpoint_id?: string
+          endpoint_url?: string
+          endpoint_version?: number
+          event_id?: string
+          event_type?: string
+          id?: string
+          last_failure_category?: string | null
+          last_failure_code?: string | null
+          last_http_status?: number | null
+          lease_expires_at?: string | null
+          lease_generation?: number
+          lease_owner?: string | null
+          max_attempts?: number
+          max_delay_seconds?: number
+          next_attempt_at?: string
+          occurred_at?: string
+          organization_id?: string
+          parent_delivery_id?: string | null
+          payload_bytes?: string | null
+          permission_version?: number
+          product_ids?: string[]
+          replay_reason?: string | null
+          resource_id?: string
+          resource_type?: string
+          resource_url?: string
+          scope_revision?: number
+          signing_secret_revision?: number | null
+          source_id?: string
+          source_kind?: string
+          status?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "webhook_deliveries_authorization_actor_user_id_fkey"
+            columns: ["authorization_actor_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "webhook_deliveries_organization_id_endpoint_id_fkey"
+            columns: ["organization_id", "endpoint_id"]
+            isOneToOne: false
+            referencedRelation: "webhook_endpoints"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "webhook_deliveries_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "webhook_deliveries_organization_id_parent_delivery_id_fkey"
+            columns: ["organization_id", "parent_delivery_id"]
+            isOneToOne: false
+            referencedRelation: "webhook_deliveries"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      webhook_delivery_attempts: {
+        Row: {
+          attempt_number: number
+          delivery_row_id: string
+          duration_ms: number | null
+          failure_category: string | null
+          failure_code: string | null
+          finished_at: string | null
+          http_status: number | null
+          id: string
+          lease_generation: number
+          organization_id: string
+          outcome: string | null
+          response_bytes: number | null
+          started_at: string
+          worker_id: string
+        }
+        Insert: {
+          attempt_number: number
+          delivery_row_id: string
+          duration_ms?: number | null
+          failure_category?: string | null
+          failure_code?: string | null
+          finished_at?: string | null
+          http_status?: number | null
+          id?: string
+          lease_generation: number
+          organization_id: string
+          outcome?: string | null
+          response_bytes?: number | null
+          started_at?: string
+          worker_id: string
+        }
+        Update: {
+          attempt_number?: number
+          delivery_row_id?: string
+          duration_ms?: number | null
+          failure_category?: string | null
+          failure_code?: string | null
+          finished_at?: string | null
+          http_status?: number | null
+          id?: string
+          lease_generation?: number
+          organization_id?: string
+          outcome?: string | null
+          response_bytes?: number | null
+          started_at?: string
+          worker_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "webhook_delivery_attempts_organization_id_delivery_row_id_fkey"
+            columns: ["organization_id", "delivery_row_id"]
+            isOneToOne: false
+            referencedRelation: "webhook_deliveries"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "webhook_delivery_attempts_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      webhook_endpoint_commands: {
+        Row: {
+          actor_user_id: string
+          completed_at: string
+          created_at: string
+          endpoint_id: string | null
+          expected_version: number | null
+          id: string
+          idempotency_key: string
+          operation: string
+          organization_id: string
+          permission_version: number
+          reason: string | null
+          request_digest: string
+          request_digest_key_id: string
+          result: Json
+          state: string
+        }
+        Insert: {
+          actor_user_id: string
+          completed_at?: string
+          created_at?: string
+          endpoint_id?: string | null
+          expected_version?: number | null
+          id?: string
+          idempotency_key: string
+          operation: string
+          organization_id: string
+          permission_version: number
+          reason?: string | null
+          request_digest: string
+          request_digest_key_id: string
+          result?: Json
+          state: string
+        }
+        Update: {
+          actor_user_id?: string
+          completed_at?: string
+          created_at?: string
+          endpoint_id?: string | null
+          expected_version?: number | null
+          id?: string
+          idempotency_key?: string
+          operation?: string
+          organization_id?: string
+          permission_version?: number
+          reason?: string | null
+          request_digest?: string
+          request_digest_key_id?: string
+          result?: Json
+          state?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "webhook_endpoint_commands_actor_user_id_fkey"
+            columns: ["actor_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "webhook_endpoint_commands_organization_id_endpoint_id_fkey"
+            columns: ["organization_id", "endpoint_id"]
+            isOneToOne: false
+            referencedRelation: "webhook_endpoints"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "webhook_endpoint_commands_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      webhook_endpoints: {
+        Row: {
+          authorization_actor_user_id: string
+          base_delay_seconds: number
+          created_at: string
+          created_by: string
+          destination_revision: number
+          disabled_at: string | null
+          disabled_by: string | null
+          disabled_reason: string | null
+          display_name: string
+          enabled: boolean
+          event_types: string[]
+          id: string
+          last_delivered_at: string | null
+          last_failure_category: string | null
+          max_attempts: number
+          max_delay_seconds: number
+          organization_id: string
+          permission_version: number
+          previous_secret_auth_tag: string | null
+          previous_secret_ciphertext: string | null
+          previous_secret_expires_at: string | null
+          previous_secret_id: string | null
+          previous_secret_key_id: string | null
+          previous_secret_nonce: string | null
+          previous_secret_revision: number | null
+          previous_signing_key_id: string | null
+          product_ids: string[]
+          scope_revision: number
+          secret_auth_tag: string | null
+          secret_ciphertext: string | null
+          secret_id: string | null
+          secret_key_id: string | null
+          secret_nonce: string | null
+          secret_revision: number
+          signing_key_id: string | null
+          updated_at: string
+          updated_by: string
+          url: string
+          version: number
+        }
+        Insert: {
+          authorization_actor_user_id: string
+          base_delay_seconds?: number
+          created_at?: string
+          created_by: string
+          destination_revision?: number
+          disabled_at?: string | null
+          disabled_by?: string | null
+          disabled_reason?: string | null
+          display_name: string
+          enabled?: boolean
+          event_types: string[]
+          id?: string
+          last_delivered_at?: string | null
+          last_failure_category?: string | null
+          max_attempts?: number
+          max_delay_seconds?: number
+          organization_id: string
+          permission_version: number
+          previous_secret_auth_tag?: string | null
+          previous_secret_ciphertext?: string | null
+          previous_secret_expires_at?: string | null
+          previous_secret_id?: string | null
+          previous_secret_key_id?: string | null
+          previous_secret_nonce?: string | null
+          previous_secret_revision?: number | null
+          previous_signing_key_id?: string | null
+          product_ids: string[]
+          scope_revision?: number
+          secret_auth_tag?: string | null
+          secret_ciphertext?: string | null
+          secret_id?: string | null
+          secret_key_id?: string | null
+          secret_nonce?: string | null
+          secret_revision?: number
+          signing_key_id?: string | null
+          updated_at?: string
+          updated_by: string
+          url: string
+          version?: number
+        }
+        Update: {
+          authorization_actor_user_id?: string
+          base_delay_seconds?: number
+          created_at?: string
+          created_by?: string
+          destination_revision?: number
+          disabled_at?: string | null
+          disabled_by?: string | null
+          disabled_reason?: string | null
+          display_name?: string
+          enabled?: boolean
+          event_types?: string[]
+          id?: string
+          last_delivered_at?: string | null
+          last_failure_category?: string | null
+          max_attempts?: number
+          max_delay_seconds?: number
+          organization_id?: string
+          permission_version?: number
+          previous_secret_auth_tag?: string | null
+          previous_secret_ciphertext?: string | null
+          previous_secret_expires_at?: string | null
+          previous_secret_id?: string | null
+          previous_secret_key_id?: string | null
+          previous_secret_nonce?: string | null
+          previous_secret_revision?: number | null
+          previous_signing_key_id?: string | null
+          product_ids?: string[]
+          scope_revision?: number
+          secret_auth_tag?: string | null
+          secret_ciphertext?: string | null
+          secret_id?: string | null
+          secret_key_id?: string | null
+          secret_nonce?: string | null
+          secret_revision?: number
+          signing_key_id?: string | null
+          updated_at?: string
+          updated_by?: string
+          url?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "webhook_endpoints_authorization_actor_user_id_fkey"
+            columns: ["authorization_actor_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "webhook_endpoints_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "webhook_endpoints_disabled_by_fkey"
+            columns: ["disabled_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "webhook_endpoints_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "webhook_endpoints_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       m2_product_relationship_operations: {
@@ -25828,6 +26290,225 @@ export type Database = {
         Returns: {
           outcome: string
           run: Json
+        }[]
+      }
+      m1103_cancel_webhook_work: {
+        Args: {
+          p_code: string
+          p_endpoint_id: string
+          p_organization_id: string
+        }
+        Returns: undefined
+      }
+      m1103_capture_webhook_event: {
+        Args: {
+          p_event_type: string
+          p_occurred_at: string
+          p_organization_id: string
+          p_source_id: string
+          p_source_kind: string
+        }
+        Returns: undefined
+      }
+      m1103_claim_webhook_delivery: {
+        Args: {
+          p_lease_seconds: number
+          p_organization_id: string
+          p_worker_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      m1103_complete_webhook_delivery: {
+        Args: {
+          p_delivery_id: string
+          p_duration_ms: number
+          p_generation: number
+          p_http_status: number
+          p_organization_id: string
+          p_response_bytes: number
+          p_worker_id: string
+        }
+        Returns: {
+          delivery: Json
+          outcome: string
+        }[]
+      }
+      m1103_distinct_array: { Args: { p_values: unknown }; Returns: boolean }
+      m1103_execute_webhook_endpoint_command_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_endpoint_id: string
+          p_expected_version: number
+          p_idempotency_key: string
+          p_operation: string
+          p_organization_id: string
+          p_payload: Json
+          p_permission_version: number
+          p_reason?: string
+          p_request_digest: string
+          p_request_digest_key_id: string
+        }
+        Returns: {
+          command: Json
+          endpoint: Json
+          outcome: string
+        }[]
+      }
+      m1103_fail_webhook_delivery: {
+        Args: {
+          p_category: string
+          p_code: string
+          p_delivery_id: string
+          p_duration_ms: number
+          p_generation: number
+          p_http_status: number
+          p_organization_id: string
+          p_response_bytes: number
+          p_retry_after_seconds: number
+          p_worker_id: string
+        }
+        Returns: {
+          delivery: Json
+          outcome: string
+        }[]
+      }
+      m1103_list_due_webhook_delivery_organizations: {
+        Args: { p_limit?: number }
+        Returns: {
+          oldest_due_at: string
+          organization_id: string
+        }[]
+      }
+      m1103_list_webhook_secret_envelopes: {
+        Args: {
+          p_after_secret_id?: string
+          p_limit?: number
+          p_organization_id: string
+        }
+        Returns: {
+          authTag: string
+          ciphertext: string
+          credentialRevision: number
+          endpointId: string
+          format: string
+          keyId: string
+          nonce: string
+          secretId: string
+        }[]
+      }
+      m1103_metadata_contains_credential: {
+        Args: { p_text: string }
+        Returns: boolean
+      }
+      m1103_prepare_webhook_delivery: {
+        Args: {
+          p_actor_user_id: string
+          p_delivery_id: string
+          p_generation: number
+          p_organization_id: string
+          p_payload_bytes: string
+          p_permission_version: number
+          p_secret_revision: number
+          p_worker_id: string
+        }
+        Returns: {
+          delivery: Json
+          outcome: string
+        }[]
+      }
+      m1103_preview_webhook_replay: {
+        Args: {
+          p_actor_user_id: string
+          p_delivery_id: string
+          p_endpoint_id: string
+          p_expected_delivery_version: number
+          p_expected_endpoint_version: number
+          p_organization_id: string
+          p_permission_version: number
+        }
+        Returns: {
+          outcome: string
+          preview: Json
+        }[]
+      }
+      m1103_rewrap_webhook_secret_atomic: {
+        Args: {
+          p_endpoint_id: string
+          p_expected_envelope: Json
+          p_expected_revision: number
+          p_next_envelope: Json
+          p_organization_id: string
+          p_secret_id: string
+        }
+        Returns: {
+          outcome: string
+        }[]
+      }
+      m1103_valid_webhook_event_types: {
+        Args: { p_event_types: string[] }
+        Returns: boolean
+      }
+      m1103_valid_webhook_url: { Args: { p_url: string }; Returns: boolean }
+      m1103_webhook_attempt_json: {
+        Args: {
+          p_attempt: Database["public"]["Tables"]["webhook_delivery_attempts"]["Row"]
+        }
+        Returns: Json
+      }
+      m1103_webhook_delivery_json: {
+        Args: {
+          p_delivery: Database["public"]["Tables"]["webhook_deliveries"]["Row"]
+        }
+        Returns: Json
+      }
+      m1103_webhook_delivery_scopes: {
+        Args: {
+          p_delivery_ids: string[]
+          p_endpoint_id: string
+          p_organization_id: string
+        }
+        Returns: {
+          delivery_id: string
+          outcome: string
+          product_ids: string[]
+          resource: Json
+        }[]
+      }
+      m1103_webhook_endpoint_json: {
+        Args: {
+          p_endpoint: Database["public"]["Tables"]["webhook_endpoints"]["Row"]
+        }
+        Returns: Json
+      }
+      m1103_webhook_key_references: {
+        Args: { p_organization_id: string }
+        Returns: Json
+      }
+      m1103_webhook_secret_from_payload: {
+        Args: { p_payload: Json }
+        Returns: Json
+      }
+      m1103_webhook_slot_json: {
+        Args: {
+          p_endpoint: Database["public"]["Tables"]["webhook_endpoints"]["Row"]
+          p_previous?: boolean
+        }
+        Returns: Json
+      }
+      m1103_webhook_source_scope: {
+        Args: {
+          p_event_type: string
+          p_organization_id: string
+          p_source_id: string
+          p_source_kind: string
+        }
+        Returns: {
+          outcome: string
+          product_ids: string[]
+          resource: Json
         }[]
       }
       m2_active_member: {

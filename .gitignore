@@ -6,6 +6,7 @@ node_modules
 .pnp.js
 
 # Repository documentation
+docs/
 
 # Local env files
 # NOTE: `.env` alone is an EXACT-match pattern, so `.env.production` and

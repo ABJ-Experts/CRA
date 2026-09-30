@@ -8,3 +8,4 @@ export * from "./connector-responses.schema.js";
 export * from "./connector-hub.schema.js";
 
 export * from "./sync-operations.schema.js";
+export * from "./webhook.schema.js";

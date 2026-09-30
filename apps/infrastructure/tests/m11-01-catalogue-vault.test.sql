@@ -15,7 +15,7 @@ select pg_temp.check('credential and command tables never enter tenant exports',
  select 1 from public.organization_export_source_tables where table_name in ('connector_secrets','connector_commands')));
 
 select pg_temp.check('M11 RPCs are service-only with pinned search paths',not exists(
- select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname like 'm11_%'
+ select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and left(p.proname,4)='m11_'
  and (not p.prosecdef and p.proname not in ('m11_connector_command_json','m11_valid_connector_scope_assessment')
  or p.proconfig is null or not ('search_path=public, pg_temp'=any(p.proconfig))
  or has_function_privilege('anon',p.oid,'execute') or has_function_privilege('authenticated',p.oid,'execute'))));

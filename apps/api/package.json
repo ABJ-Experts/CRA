@@ -43,7 +43,9 @@
     "worker:vulnerability-vex-publication": "node dist/vulnerability-vex-publication-worker.js",
     "verify:vulnerability-matching-accuracy": "node dist/vulnerability-matching-accuracy-gate.js",
     "verify:tenant-export-capacity": "node dist/organizations/tenant-administration/worker/tenant-export-capacity.js",
-    "vault:connectors": "node dist/connector-vault-maintenance.js"
+    "vault:connectors": "node dist/connector-vault-maintenance.js",
+    "worker:webhook-delivery": "node dist/webhook-delivery-worker.js",
+    "vault:webhooks": "node dist/webhook-vault-maintenance.js"
   },
   "dependencies": {
     "@cyclonedx/cyclonedx-library": "10.2.0",

@@ -90,6 +90,70 @@ describe("tenant export source registry architecture", () => {
     );
     expect(connectorSource?.tables).toContain("sync_run_attempts");
   });
+  it("registers webhook metadata and history with the existing connector source", () => {
+    const connectorSource = exportSourceRegistry.find(
+      (source) => source.sourceId === "connector_sync",
+    );
+    expect(connectorSource?.tables).toEqual(
+      expect.arrayContaining([
+        "webhook_endpoints",
+        "webhook_endpoint_commands",
+        "webhook_deliveries",
+        "webhook_delivery_attempts",
+      ]),
+    );
+  });
+
+  it("redacts webhook credentials, fingerprints, payload bytes and worker state in SQL", () => {
+    // Forward migrations patch the existing materializer via quoted SQL.
+    const sql = migrationSql().replaceAll("''", "'");
+    const projection = (table: string): string => {
+      const branch = sql.match(
+        new RegExp(
+          String.raw`if p_table_name='${table}' then return ([\s\S]*?); end if`,
+        ),
+      )?.[1];
+      expect(branch).toBeDefined();
+      return branch ?? "";
+    };
+    const endpointProjection = projection("webhook_endpoints");
+    expect(endpointProjection).toMatch(/^jsonb_build_object\(/);
+    const endpointFields = [...endpointProjection.matchAll(/'([a-z_]+)'/g)].map(
+      (match) => match[1],
+    );
+    expect([...new Set(endpointFields)].sort()).toEqual([
+      "display_name",
+      "enabled",
+      "event_types",
+      "id",
+      "product_ids",
+      "version",
+    ]);
+    const excludedColumns = {
+      webhook_endpoint_commands: [
+        "idempotency_key",
+        "request_digest",
+        "request_digest_key_id",
+        "result",
+        "reason",
+      ],
+      webhook_deliveries: [
+        "payload_bytes",
+        "endpoint_url",
+        "lease_owner",
+        "lease_expires_at",
+        "lease_generation",
+        "replay_reason",
+      ],
+      webhook_delivery_attempts: ["worker_id", "lease_generation"],
+    };
+    for (const [table, columns] of Object.entries(excludedColumns)) {
+      const branch = projection(table);
+      expect(branch).toMatch(/^v_record\s*-\s*array\[/);
+      for (const column of columns) expect(branch).toContain(`'${column}'`);
+    }
+  });
+
   it("exports reviewed M6-M9 durable tenant business records", () => {
     const exported = new Set(
       exportSourceRegistry.flatMap((source) => source.tables),

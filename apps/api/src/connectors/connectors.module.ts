@@ -4,10 +4,14 @@ import { PermissionsModule } from "../permissions/permissions.module";
 import { PermissionsService } from "../permissions/permissions.service";
 import { ConnectorHubUseCases } from "./application/connector-hub-use-cases";
 import { ConnectorSyncOperationsUseCases } from "./application/connector-sync-operations-use-cases";
+import { WebhookUseCases } from "./application/webhook-use-cases";
 import { SupabaseSyncOperationsRepository } from "./infrastructure/supabase-sync-operations.repository";
+import { SupabaseWebhookRepository } from "./infrastructure/supabase-webhook.repository";
 import { ConnectorsSyncOperationsController } from "./connectors-sync-operations.controller";
+import { ConnectorsWebhooksController } from "./connectors-webhooks.controller";
 import { ConnectorAuthorizationAdapter } from "./infrastructure/connector-authorization.adapter";
 import { ConnectorCredentialReader } from "./infrastructure/connector-vault-reader";
+import { WebhookVault } from "./infrastructure/webhook-vault";
 import { AesGcmConnectorVault } from "./infrastructure/connector-vault";
 import { NodeConnectorEgressPolicy } from "./infrastructure/node-connector-egress.policy";
 import { SupabaseConnectorHubRepository } from "./infrastructure/supabase-connector-hub.repository";
@@ -22,14 +26,26 @@ import { ConnectorsService } from "./connectors.service";
 import { SupabaseConnectorRepository } from "./infrastructure/supabase-connector.repository";
 import { ReferenceConformanceAdapter } from "./reference-adapter/reference-conformance-adapter";
 import { ConnectorSyncWorker } from "./worker/connector-sync-worker";
+import { WebhookDeliveryWorker } from "./worker/webhook-delivery-worker";
+import { NodeWebhookTransport } from "./infrastructure/node-webhook-transport";
 
 export const CONNECTOR_PORTS = Symbol("CONNECTOR_PORTS");
 
 @Module({
   imports: [SupabaseModule, PermissionsModule],
-  controllers: [ConnectorsController, ConnectorsSyncOperationsController],
+  controllers: [
+    ConnectorsWebhooksController,
+    ConnectorsSyncOperationsController,
+    ConnectorsController,
+  ],
   providers: [
     SupabaseConnectorRepository,
+    {
+      provide: SupabaseWebhookRepository,
+      useFactory: (supabase: SupabaseService) =>
+        new SupabaseWebhookRepository(supabase),
+      inject: [SupabaseService],
+    },
     {
       provide: SupabaseSyncOperationsRepository,
       useFactory: (supabase: SupabaseService) =>
@@ -84,6 +100,57 @@ export const CONNECTOR_PORTS = Symbol("CONNECTOR_PORTS");
             .split(",")
             .filter(Boolean),
         ),
+    },
+
+    {
+      provide: WebhookVault,
+      useFactory: (vault: AesGcmConnectorVault) => new WebhookVault(vault),
+      inject: [AesGcmConnectorVault],
+    },
+    {
+      provide: NodeWebhookTransport,
+      useFactory: () =>
+        new NodeWebhookTransport(
+          (process.env.WEBHOOK_ALLOWED_HOSTS ?? "").split(",").filter(Boolean),
+        ),
+    },
+    {
+      provide: WebhookUseCases,
+      useFactory: (
+        repository: SupabaseWebhookRepository,
+        authorization: ConnectorAuthorizationAdapter,
+        vault: WebhookVault,
+        egress: NodeWebhookTransport,
+      ) => new WebhookUseCases(repository, authorization, vault, egress),
+      inject: [
+        SupabaseWebhookRepository,
+        ConnectorAuthorizationAdapter,
+        WebhookVault,
+        NodeWebhookTransport,
+      ],
+    },
+    {
+      provide: WebhookDeliveryWorker,
+      useFactory: (
+        repository: SupabaseWebhookRepository,
+        vault: WebhookVault,
+        transport: NodeWebhookTransport,
+        authorization: ConnectorAuthorizationAdapter,
+      ) =>
+        new WebhookDeliveryWorker(
+          repository,
+          vault,
+          transport,
+          authorization,
+          `webhook-delivery-${process.pid}`,
+          60,
+        ),
+      inject: [
+        SupabaseWebhookRepository,
+        WebhookVault,
+        NodeWebhookTransport,
+        ConnectorAuthorizationAdapter,
+      ],
     },
     {
       provide: ConnectorHubUseCases,
@@ -198,6 +265,6 @@ export const CONNECTOR_PORTS = Symbol("CONNECTOR_PORTS");
       ],
     },
   ],
-  exports: [ConnectorSyncWorker],
+  exports: [ConnectorSyncWorker, WebhookDeliveryWorker],
 })
 export class ConnectorsModule {}

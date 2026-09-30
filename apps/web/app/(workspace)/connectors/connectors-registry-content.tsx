@@ -4,9 +4,11 @@ import { ConnectorCatalogueSection } from "./connector-catalogue-section";
 
 import { createConnectorInputSchema } from "../../_features/connectors/connectors.schemas";
 import { Button } from "@repo/ui/button";
+import { cn } from "@repo/ui/cn";
 import { Tag } from "@repo/ui/tag";
 import { ArrowUpRight } from "lucide-react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useState } from "react";
 
 import {
@@ -266,6 +268,16 @@ export function ConnectorsRegistryContent() {
           ) : undefined
         }
       />
+      {canView ? (
+        <Link
+          href="/connectors/webhooks"
+          className={cn(
+            "text-subhead-regular text-fg underline underline-offset-4",
+          )}
+        >
+          Outbound webhooks
+        </Link>
+      ) : null}
       {!liveApiEnabled ? (
         <SectionCard>
           <p className="text-subhead-regular text-fg-muted">

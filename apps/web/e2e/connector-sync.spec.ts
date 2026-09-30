@@ -250,13 +250,25 @@ test("a run-scoped owner completes connector sync, observes retry safety, and ca
       .getByRole("button", { name: "Start dry run (incremental)", exact: true })
       .click();
     expect((await dryRunStarted).status()).toBe(202);
+    const recentRuns = page.getByRole("list", {
+      name: "Recent sync runs",
+      exact: true,
+    });
     await expect(
-      page.getByText("Waiting for review", { exact: true }),
+      recentRuns.getByText("Waiting for review", { exact: true }),
     ).toBeVisible({
       timeout: 40_000,
     });
-    await expect(page.getByText("1", { exact: true })).toBeVisible();
-    await expect(page.getByText("create", { exact: true })).toBeVisible();
+    const createCount = page.locator("dl > div").filter({
+      has: page.locator("dt").filter({ hasText: /^create$/ }),
+    });
+    await expect(createCount.locator("dd")).toHaveText("1");
+    const planTable = page.getByRole("table").filter({
+      has: page.getByRole("columnheader", { name: "External ID", exact: true }),
+    });
+    await expect(
+      planTable.getByRole("cell", { name: "create", exact: true }),
+    ).toBeVisible();
 
     stage = "commit sync";
     const commitRequested = page.waitForResponse(
@@ -269,7 +281,9 @@ test("a run-scoped owner completes connector sync, observes retry safety, and ca
       .getByRole("button", { name: "Request commit", exact: true })
       .click();
     expect((await commitRequested).status()).toBe(200);
-    await expect(page.getByText("Completed", { exact: true })).toBeVisible({
+    await expect(
+      recentRuns.getByText("Completed", { exact: true }),
+    ).toBeVisible({
       timeout: 40_000,
     });
 
@@ -323,9 +337,11 @@ test("a run-scoped owner completes connector sync, observes retry safety, and ca
     await page
       .getByRole("button", { name: "Start dry run (incremental)", exact: true })
       .click();
-    await expect(page.getByText("Retrying", { exact: true })).toBeVisible({
-      timeout: 40_000,
-    });
+    await expect(recentRuns.getByText("Retrying", { exact: true })).toBeVisible(
+      {
+        timeout: 40_000,
+      },
+    );
     await page.goto("/products");
     await expect(
       page.getByText("Sentinel Gateway", { exact: true }),
