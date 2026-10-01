@@ -166,7 +166,13 @@ function errorText(error: unknown) {
 
 export function EvidenceLibrary({
   productId,
-}: Readonly<{ productId: string }>) {
+  selectedDocumentId = null,
+  selectedVersionId = null,
+}: Readonly<{
+  productId: string;
+  selectedDocumentId?: string | null;
+  selectedVersionId?: string | null;
+}>) {
   const { session, permissions, isLoading } = useSession();
   const live =
     useMocksReady() && process.env.NEXT_PUBLIC_ENABLE_MOCKS === "false";
@@ -183,10 +189,14 @@ export function EvidenceLibrary({
   const initialize = useInitializeEvidenceUploadMutation(productId);
   const replace = useReplaceEvidenceMutation(productId);
   const complete = useCompleteEvidenceUploadMutation(productId);
-  const [selected, setSelected] = useState<EvidenceDocument | null>(null);
+  const [manualSelected, setManualSelected] = useState<EvidenceDocument | null>(
+    null,
+  );
+  const [manualOverride, setManualOverride] = useState(false);
+  const linkedDocumentId = manualOverride ? null : selectedDocumentId;
   const versions = useEvidenceVersionsQuery(
     productId,
-    selected?.id ?? null,
+    linkedDocumentId ?? manualSelected?.id ?? null,
     enabled,
   );
   const [versionId, setVersionId] = useState<string | null>(null);
@@ -202,6 +212,27 @@ export function EvidenceLibrary({
   const [message, setMessage] = useState<string | null>(null);
   const [progress, setProgress] = useState<number | null>(null);
   const [uploading, setUploading] = useState(false);
+  // The exact scoped versions endpoint also works when the document is beyond
+  // the first library page. Its first version is the current replacement.
+  const linkedCurrent =
+    versions.data?.versions.find(
+      (version) => version.documentId === linkedDocumentId,
+    ) ?? null;
+  const linkedVersion = versions.data?.versions.find(
+    (version) =>
+      version.id === selectedVersionId &&
+      version.documentId === linkedDocumentId,
+  );
+  const selected = linkedDocumentId
+    ? !versions.isError && linkedVersion && linkedCurrent
+      ? {
+          id: linkedDocumentId,
+          currentVersionId: linkedCurrent.id,
+          currentVersion: linkedCurrent,
+        }
+      : null
+    : manualSelected;
+  const selectedCurrentVersionId = selected?.currentVersionId ?? null;
   const selectedVersion =
     versions.data?.versions.find((version) => version.id === versionId) ??
     selected?.currentVersion ??
@@ -214,11 +245,17 @@ export function EvidenceLibrary({
   );
 
   useEffect(() => {
-    if (selected) {
-      setVersionId(selected.currentVersionId);
+    if (selectedCurrentVersionId) {
+      setVersionId(
+        linkedDocumentId ? selectedVersionId : selectedCurrentVersionId,
+      );
       setDelivery(null);
     }
-  }, [selected]);
+  }, [selectedCurrentVersionId, linkedDocumentId, selectedVersionId]);
+  useEffect(() => {
+    setManualOverride(false);
+    setManualSelected(null);
+  }, [selectedDocumentId]);
   useEffect(() => {
     if (
       versions.data &&
@@ -229,7 +266,8 @@ export function EvidenceLibrary({
   }, [versionId, versions.data]);
 
   function replaceDocument(document: EvidenceDocument) {
-    setSelected(document);
+    setManualSelected(document);
+    setManualOverride(true);
     setShowReuse(false);
     setMode("replacement");
     setTitle(document.currentVersion.title);
@@ -302,7 +340,8 @@ export function EvidenceLibrary({
       setValidUntil("");
       setProgress(null);
       setMode("new");
-      setSelected(reserved.document);
+      setManualSelected(reserved.document);
+      setManualOverride(true);
       setMessage(
         "Evidence is uploaded and awaiting malware scanning. It cannot be viewed or downloaded until clean.",
       );
@@ -313,7 +352,10 @@ export function EvidenceLibrary({
         const current = refreshed.data?.items.find(
           ({ document }) => document.id === selected.id,
         )?.document;
-        if (current) setSelected(current);
+        if (current) {
+          setManualSelected(current);
+          setManualOverride(true);
+        }
       }
     } finally {
       setUploading(false);
@@ -466,6 +508,43 @@ export function EvidenceLibrary({
         title="Evidence library"
         subtitle="Private, tenant-scoped evidence for this product. Files become usable only after a clean scan."
       />
+      {linkedDocumentId && enabled && versions.isLoading ? (
+        <p role="status" className="text-subhead-regular text-fg-muted">
+          Loading linked evidence version…
+        </p>
+      ) : null}
+      {linkedDocumentId &&
+      enabled &&
+      versions.isError &&
+      !(
+        versions.error instanceof ApiClientError &&
+        versions.error.status === 404
+      ) ? (
+        <div role="alert" className="flex flex-wrap items-center gap-2">
+          <p className="text-subhead-regular text-danger">
+            {errorText(versions.error)}
+          </p>
+          <Button
+            type="button"
+            variant="outline"
+            tone="grey"
+            onClick={() => void versions.refetch()}
+          >
+            Retry
+          </Button>
+        </div>
+      ) : null}
+      {linkedDocumentId &&
+      enabled &&
+      !versions.isLoading &&
+      !selected &&
+      (!versions.isError ||
+        (versions.error instanceof ApiClientError &&
+          versions.error.status === 404)) ? (
+        <p role="status" className="text-subhead-regular text-fg-muted">
+          Linked evidence is unavailable for this product.
+        </p>
+      ) : null}
       {!live ? (
         <SectionCard>
           <p className="text-subhead-regular text-fg-muted">
@@ -559,9 +638,11 @@ export function EvidenceLibrary({
               </div>
             ) : list.data?.items.length === 0 ? (
               <p className="text-subhead-regular text-fg-muted">
-                {validityFilter === "all"
-                  ? "No evidence has been uploaded for this product."
-                  : "No evidence matches this validity filter."}
+                {selected
+                  ? "Linked evidence version is open below; it is outside this list page."
+                  : validityFilter === "all"
+                    ? "No evidence has been uploaded for this product."
+                    : "No evidence matches this validity filter."}
               </p>
             ) : (
               <div className="overflow-x-auto">
@@ -640,7 +721,8 @@ export function EvidenceLibrary({
                                 type="button"
                                 className="text-caption-1-semibold text-active-500 underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
                                 onClick={() => {
-                                  setSelected(document);
+                                  setManualSelected(document);
+                                  setManualOverride(true);
                                   setVersionId(document.currentVersionId);
                                   setShowReuse(true);
                                 }}
@@ -655,7 +737,8 @@ export function EvidenceLibrary({
                                 variant="outline"
                                 tone="grey"
                                 onClick={() => {
-                                  setSelected(document);
+                                  setManualSelected(document);
+                                  setManualOverride(true);
                                   setShowReuse(false);
                                 }}
                               >

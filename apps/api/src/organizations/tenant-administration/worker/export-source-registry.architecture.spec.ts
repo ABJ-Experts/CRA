@@ -260,12 +260,18 @@ describe("tenant export source registry architecture", () => {
       "ci_provider_release_binding_commands",
       "ci_build_runs",
       "ci_provider_webhook_events",
+      "workflow_task_groups",
+      "workflow_task_group_members",
+      "workflow_task_routes",
+      "workflow_out_of_office",
+      "workflow_task_commands",
     ]) {
       expect(exported.has(table)).toBe(false);
       expect(exportSourceExclusions[table]).toMatch(
         /token|session|bearer|security|idempotency|lease|worker|private|artifact/i,
       );
     }
+    expect(exported.has("audit_logs")).toBe(true);
 
     expect(() =>
       validateExportRegistryCoverage([

@@ -9,6 +9,7 @@ import {
   Settings2,
   ShieldAlert,
   ShieldCheck,
+  ListTodo,
   UserRound,
   type LucideIcon,
 } from "lucide-react";
@@ -85,6 +86,12 @@ export const NAV: NavSection[] = [
         href: "/reporting",
         icon: Clock3,
         menuKey: "reporting",
+      },
+      {
+        label: "Tasks",
+        href: "/tasks",
+        icon: ListTodo,
+        menuKey: "tasks",
       },
       {
         label: "Connectors",

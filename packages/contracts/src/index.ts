@@ -18,3 +18,4 @@ export * from "./evidence.js";
 export * from "./suppliers.js";
 export * from "./supplier-evidence.js";
 export * from "./frameworks.js";
+export * from "./tasks/index.js";

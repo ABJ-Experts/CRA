@@ -473,7 +473,8 @@ function AssociateSupplierRequest({
 
 export function SupplierDetailContent({
   supplierId,
-}: Readonly<{ supplierId: string }>) {
+  selectedRequestId = null,
+}: Readonly<{ supplierId: string; selectedRequestId?: string | null }>) {
   const { session, permissions, isLoading } = useSession();
   const live =
     useMocksReady() && process.env.NEXT_PUBLIC_ENABLE_MOCKS === "false";
@@ -699,6 +700,7 @@ export function SupplierDetailContent({
           {supplier.state === "active" ? (
             <SupplierEvidenceRequestPanel
               supplierId={supplier.id}
+              selectedRequestId={selectedRequestId}
               contacts={supplier.contacts}
               ownerUserId={session?.user.id ?? null}
               readEnabled={

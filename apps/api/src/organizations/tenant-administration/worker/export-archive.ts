@@ -437,6 +437,16 @@ export const exportSourceExclusions: Readonly<Record<string, string>> =
       "Frame nonce ledger is security replay state and cannot be restored into another deployment.",
     connector_agent_batches:
       "Uncommitted agent staging payloads and delivery checkpoints are deployment-local worker state; committed product records export separately.",
+    workflow_task_groups:
+      "Active workflow group configuration is authorization-adjacent security state; source business facts and audited changes export separately.",
+    workflow_task_group_members:
+      "Current workflow group membership is authorization-adjacent security state that must be revalidated after restore.",
+    workflow_task_routes:
+      "Current task assignment and claims are security-sensitive routing state tied to live source permissions; source records and audited changes export separately.",
+    workflow_out_of_office:
+      "Current substitute intervals are private authorization-adjacent state that must be revalidated after restore.",
+    workflow_task_commands:
+      "Idempotency keys, request digests, and replay results are request-security material, not portable tenant records.",
     ci_provider_release_bindings:
       "Active authorization links between provider identities, CI credentials, products, and releases are security configuration, not portable tenant records.",
     ci_provider_release_binding_commands:

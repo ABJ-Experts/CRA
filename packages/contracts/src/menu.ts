@@ -8,6 +8,7 @@ import type { PermissionKey } from "./permissions.js";
 
 export const MENU_KEYS = [
   "dashboard",
+  "tasks",
   "management",
   "organization",
   "products",
@@ -40,6 +41,7 @@ export const MENU_PERMISSION_MAP: Readonly<
   Record<MenuKey, PermissionKey | null>
 > = {
   dashboard: null,
+  tasks: null,
   management: "can_view_users",
   organization: "can_view_organization",
   products: "can_view_products",

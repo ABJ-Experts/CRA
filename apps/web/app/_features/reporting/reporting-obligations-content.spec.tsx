@@ -14,15 +14,21 @@ const sessionState = vi.hoisted(() => ({
   isError: false,
   isLoading: true,
 }));
-const permissionState = vi.hoisted(() => ({ canEdit: false, canView: false }));
+const permissionState = vi.hoisted(() => ({
+  canEdit: false,
+  canView: false,
+  canSubmit: false,
+}));
 const querySpy = vi.hoisted(() => vi.fn());
+const navigation = vi.hoisted(() => ({ search: new URLSearchParams() }));
+const detailState = vi.hoisted(() => ({ data: undefined as unknown }));
 
 vi.mock("../../_providers/providers", () => ({
   useMocksReady: () => true,
 }));
 
 vi.mock("next/navigation", () => ({
-  useSearchParams: () => new URLSearchParams(),
+  useSearchParams: () => navigation.search,
 }));
 
 vi.mock("../../_providers/session-provider", () => ({
@@ -31,8 +37,11 @@ vi.mock("../../_providers/session-provider", () => ({
       ? permissionState.canView
       : permission === "can_edit_findings"
         ? permissionState.canEdit
-        : permissionState.canEdit,
+        : permissionState.canSubmit,
   useSession: () => sessionState,
+}));
+vi.mock("./reporting-stage-draft-editor", () => ({
+  ReportingStageDraftEditor: () => <p>Stage draft controls</p>,
 }));
 
 vi.mock("./reporting.queries", () => ({
@@ -52,6 +61,11 @@ vi.mock("./reporting.queries", () => ({
       refetch: vi.fn(),
     };
   },
+  useReportingObligationDetailQuery: () => ({
+    data: detailState.data,
+    isLoading: false,
+    isError: false,
+  }),
 }));
 
 describe("ReportingObligationsContent", () => {
@@ -62,7 +76,10 @@ describe("ReportingObligationsContent", () => {
     sessionState.isLoading = true;
     permissionState.canEdit = false;
     permissionState.canView = false;
+    permissionState.canSubmit = false;
     querySpy.mockClear();
+    navigation.search = new URLSearchParams();
+    detailState.data = undefined;
   });
 
   it("waits for session permissions instead of briefly rendering a false denial", () => {
@@ -104,6 +121,7 @@ describe("ReportingObligationsContent", () => {
     sessionState.isLoading = false;
     permissionState.canView = true;
     permissionState.canEdit = true;
+    permissionState.canSubmit = true;
     const user = (await import("@testing-library/user-event")).default.setup();
 
     render(<ReportingObligationsContent />);
@@ -126,5 +144,69 @@ describe("ReportingObligationsContent", () => {
     expect(
       screen.getByText(/cannot use a production finding/i),
     ).toBeInTheDocument();
+  });
+
+  it("selects the exact authorized stage even when its obligation is outside the first list page", () => {
+    sessionState.isLoading = false;
+    permissionState.canView = true;
+    const obligationId = "11111111-1111-4111-8111-111111111111";
+    const stageId = "22222222-2222-4222-8222-222222222222";
+    navigation.search = new URLSearchParams({ obligationId, stageId });
+    detailState.data = {
+      obligation: {
+        id: obligationId,
+        type: "severe_incident",
+        status: "active",
+        isRehearsal: false,
+        ruleSet: { jurisdiction: "EU-CRA", version: 1 },
+        createdBy: { displayName: "Owner" },
+        stages: [
+          {
+            id: stageId,
+            kind: "notification",
+            state: "running",
+            dueAt: "2026-10-02T00:00:00Z",
+            elapsedPercent: 10,
+            breachedAt: null,
+          },
+        ],
+      },
+    };
+
+    render(<ReportingObligationsContent />);
+
+    expect(screen.getByText(/selected obligation/i)).toBeInTheDocument();
+    expect(screen.getByText("Linked task stage")).toBeInTheDocument();
+    expect(screen.getByText("Notification")).toBeInTheDocument();
+  });
+
+  it("keeps source approval controls available to a submitter without draft-edit permission", () => {
+    sessionState.isLoading = false;
+    permissionState.canView = true;
+    permissionState.canSubmit = true;
+    const obligationId = "11111111-1111-4111-8111-111111111111";
+    navigation.search = new URLSearchParams({ obligationId });
+    detailState.data = {
+      obligation: {
+        id: obligationId,
+        type: "severe_incident",
+        status: "active",
+        isRehearsal: false,
+        ruleSet: { jurisdiction: "EU-CRA", version: 1 },
+        createdBy: { displayName: "Owner" },
+        stages: [
+          {
+            id: "22222222-2222-4222-8222-222222222222",
+            kind: "notification",
+            state: "running",
+            dueAt: "2026-10-02T00:00:00Z",
+            elapsedPercent: 10,
+            breachedAt: null,
+          },
+        ],
+      },
+    };
+    render(<ReportingObligationsContent />);
+    expect(screen.getByText("Stage draft controls")).toBeInTheDocument();
   });
 });

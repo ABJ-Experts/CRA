@@ -94,7 +94,13 @@ function uuid(): string {
 
 export function FindingAssessment({
   findingId,
-}: Readonly<{ findingId: string }>) {
+  linkedAssessmentId = null,
+  invalidAssessmentLink = false,
+}: Readonly<{
+  findingId: string;
+  linkedAssessmentId?: string | null;
+  invalidAssessmentLink?: boolean;
+}>) {
   const canEdit = useHasPermission("can_edit_findings");
   const canApprove = useHasPermission("can_approve_findings");
   const canManagePolicy = useHasPermission(
@@ -132,6 +138,38 @@ export function FindingAssessment({
         >
           Retry assessment
         </Button>
+      </section>
+    );
+  }
+
+  if (
+    invalidAssessmentLink ||
+    (linkedAssessmentId !== null &&
+      (currentAssessment?.id !== linkedAssessmentId ||
+        currentAssessment.findingId !== findingId ||
+        !currentAssessment.isCurrent))
+  ) {
+    return (
+      <section
+        aria-label="VEX assessment"
+        className="mt-6 rounded-xl border border-border bg-canvas p-4"
+      >
+        <h3 className="text-subhead-semibold text-fg">VEX assessment</h3>
+        <p role="status" className="mt-2 text-caption-1-regular text-fg-muted">
+          {invalidAssessmentLink
+            ? "This assessment link is invalid. Open the finding from triage to review its current assessment."
+            : "Linked assessment is no longer current or available. Open the finding from triage to review its current assessment."}
+        </p>
+        {!invalidAssessmentLink ? (
+          <Button
+            className="mt-3"
+            size="sm"
+            variant="outline"
+            onClick={() => void assessment.refetch()}
+          >
+            Retry linked assessment
+          </Button>
+        ) : null}
       </section>
     );
   }

@@ -19,6 +19,18 @@
       "types": "./dist/menu.d.ts",
       "default": "./dist/menu.js"
     },
+    "./tasks": {
+      "types": "./dist/tasks/index.d.ts",
+      "default": "./dist/tasks/index.js"
+    },
+    "./tasks/schemas": {
+      "types": "./dist/tasks/schemas/index.d.ts",
+      "default": "./dist/tasks/schemas/index.js"
+    },
+    "./tasks/types": {
+      "types": "./dist/tasks/types/index.d.ts",
+      "default": "./dist/tasks/types/index.js"
+    },
     "./auth": {
       "types": "./dist/auth.d.ts",
       "default": "./dist/auth.js"

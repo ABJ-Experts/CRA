@@ -5,8 +5,12 @@ import type {
   ReportingObligationListResponse,
   ReportingObligationScope,
 } from "@repo/contracts/reporting";
-import { reportingObligationParamsSchema } from "@repo/contracts/reporting";
+import {
+  reportingObligationParamsSchema,
+  reportingStageDraftParamsSchema,
+} from "@repo/contracts/reporting";
 import { Button } from "@repo/ui/button";
+import { cn } from "@repo/ui/cn";
 import { Input } from "@repo/ui/input";
 import { Tag } from "@repo/ui/tag";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -29,6 +33,7 @@ import {
   useReplayReportingRehearsalMutation,
   useRecordReportingSubmissionMutation,
   useReportingDeadlineSummaryQuery,
+  useReportingObligationDetailQuery,
   useReportingObligationsQuery,
 } from "./reporting.queries";
 import { ReportingStageDraftEditor } from "./reporting-stage-draft-editor";
@@ -94,23 +99,51 @@ export function ReportingObligationsContent() {
   );
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const selectedFromUrl = useMemo(() => {
+    const values = searchParams.getAll("obligationId");
+    if (values.length !== 1) return null;
     const parsed = reportingObligationParamsSchema.safeParse({
-      obligationId: searchParams.get("obligationId"),
+      obligationId: values[0],
     });
     return parsed.success ? parsed.data.obligationId : null;
   }, [searchParams]);
+  const stageFromUrl = useMemo(() => {
+    const values = searchParams.getAll("stageId");
+    if (values.length !== 1) return null;
+    const parsed = reportingStageDraftParamsSchema.safeParse({
+      obligationId: selectedFromUrl,
+      stageId: values[0],
+    });
+    return parsed.success ? parsed.data.stageId : null;
+  }, [searchParams, selectedFromUrl]);
   useEffect(() => {
     if (selectedFromUrl !== null) setSelectedId(selectedFromUrl);
   }, [selectedFromUrl]);
+  const linkedDetail = useReportingObligationDetailQuery(
+    selectedFromUrl,
+    canView && !sessionLoading && scope === "real",
+  );
   const summary = useReportingDeadlineSummaryQuery(canView && !sessionLoading);
   // A just-created or URL-selected obligation can be absent during an
   // invalidation refetch. Never fall back to a different row: that would let
   // an operator edit or approve the wrong reporting record.
+  const activeSelectedId =
+    selectedId ?? (scope === "real" ? selectedFromUrl : null);
   const selected =
-    selectedId === null
-      ? (query.data?.obligations[0] ?? null)
-      : (query.data?.obligations.find((item) => item.id === selectedId) ??
-        null);
+    activeSelectedId === selectedFromUrl && linkedDetail.isError
+      ? null
+      : activeSelectedId === null
+        ? (query.data?.obligations[0] ?? null)
+        : (query.data?.obligations.find(
+            (item) => item.id === activeSelectedId,
+          ) ??
+          (activeSelectedId === selectedFromUrl &&
+          linkedDetail.data?.obligation.id === activeSelectedId &&
+          linkedDetail.data.obligation.isRehearsal === (scope === "rehearsal")
+            ? linkedDetail.data.obligation
+            : null));
+  const linkedNotFound =
+    linkedDetail.error instanceof ApiClientError &&
+    linkedDetail.error.status === 404;
 
   if (sessionLoading) {
     return (
@@ -200,7 +233,7 @@ export function ReportingObligationsContent() {
           </div>
         </SectionCard>
       ) : null}
-      {query.data?.obligations.length === 0 ? (
+      {query.data?.obligations.length === 0 && !selected ? (
         <SectionCard>
           <p className="text-subhead-regular text-fg-muted">
             No reporting obligations have been opened yet.
@@ -208,65 +241,114 @@ export function ReportingObligationsContent() {
         </SectionCard>
       ) : null}
 
-      {query.data && query.data.obligations.length > 0 ? (
-        <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(320px,420px)]">
-          <div className="overflow-x-auto rounded-2xl border border-border bg-canvas">
-            <table className="min-w-full text-left text-caption-1-regular">
-              <thead className="border-b border-border text-fg-muted">
-                <tr>
-                  <th className="px-3 py-2 font-medium">Type</th>
-                  <th className="px-3 py-2 font-medium">Status</th>
-                  <th className="px-3 py-2 font-medium">Next deadline</th>
-                  <th className="px-3 py-2 font-medium">Version</th>
-                </tr>
-              </thead>
-              <tbody>
-                {query.data.obligations.map((obligation) => (
-                  <tr
-                    key={obligation.id}
-                    className="border-b border-border last:border-0"
-                  >
-                    <td className="px-3 py-3">
-                      <button
-                        className="text-left text-link underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
-                        onClick={() => setSelectedId(obligation.id)}
-                      >
-                        {typeLabel(obligation.type)}
-                      </button>
-                      <p className="mt-1 text-fg-muted">
-                        Awareness {formatInstant(obligation.awarenessAt)}
-                      </p>
-                    </td>
-                    <td className="px-3 py-3">
-                      <Tag
-                        variant="dot"
-                        tone={
-                          obligation.status === "cancelled" ? "purple" : "green"
-                        }
-                      >
-                        {obligation.status}
-                      </Tag>
-                    </td>
-                    <td className="px-3 py-3 text-fg-muted">
-                      {nextDeadline(obligation)}
-                    </td>
-                    <td className="px-3 py-3 text-fg-muted">
-                      {obligation.version}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+      {selectedFromUrl &&
+      scope === "real" &&
+      !selected &&
+      linkedDetail.isError &&
+      !linkedNotFound ? (
+        <SectionCard>
+          <div role="alert" className="flex flex-wrap items-center gap-3">
+            <p className="text-subhead-regular text-danger">
+              {linkedDetail.error instanceof ApiClientError &&
+              linkedDetail.error.status === 403
+                ? "You no longer have access to this reporting obligation."
+                : requestMessage(linkedDetail.error)}
+            </p>
+            <Button
+              size="sm"
+              variant="outline"
+              tone="grey"
+              onClick={() => void linkedDetail.refetch()}
+            >
+              Retry
+            </Button>
           </div>
-          {selected ? (
-            <ObligationDetail
-              obligation={selected}
-              canEdit={canEdit}
-              canSubmit={canSubmit}
-              onSelected={setSelectedId}
-              serverNow={summary.data?.summary.serverNow}
-            />
+        </SectionCard>
+      ) : null}
+      {selectedFromUrl &&
+      scope === "real" &&
+      !selected &&
+      (!linkedDetail.isError || linkedNotFound) &&
+      !linkedDetail.isLoading &&
+      !query.isLoading ? (
+        <SectionCard>
+          <p role="status" className="text-subhead-regular text-fg-muted">
+            Linked reporting obligation or stage is unavailable in this
+            organization.
+          </p>
+        </SectionCard>
+      ) : null}
+
+      {selected ? (
+        <div
+          className={cn(
+            "grid gap-4",
+            query.data?.obligations.length &&
+              "xl:grid-cols-[minmax(0,1fr)_minmax(320px,420px)]",
+          )}
+        >
+          {query.data && query.data.obligations.length > 0 ? (
+            <div className="overflow-x-auto rounded-2xl border border-border bg-canvas">
+              <table className="min-w-full text-left text-caption-1-regular">
+                <thead className="border-b border-border text-fg-muted">
+                  <tr>
+                    <th className="px-3 py-2 font-medium">Type</th>
+                    <th className="px-3 py-2 font-medium">Status</th>
+                    <th className="px-3 py-2 font-medium">Next deadline</th>
+                    <th className="px-3 py-2 font-medium">Version</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {query.data.obligations.map((obligation) => (
+                    <tr
+                      key={obligation.id}
+                      className="border-b border-border last:border-0"
+                    >
+                      <td className="px-3 py-3">
+                        <button
+                          className="text-left text-link underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+                          onClick={() => setSelectedId(obligation.id)}
+                        >
+                          {typeLabel(obligation.type)}
+                        </button>
+                        <p className="mt-1 text-fg-muted">
+                          Awareness {formatInstant(obligation.awarenessAt)}
+                        </p>
+                      </td>
+                      <td className="px-3 py-3">
+                        <Tag
+                          variant="dot"
+                          tone={
+                            obligation.status === "cancelled"
+                              ? "purple"
+                              : "green"
+                          }
+                        >
+                          {obligation.status}
+                        </Tag>
+                      </td>
+                      <td className="px-3 py-3 text-fg-muted">
+                        {nextDeadline(obligation)}
+                      </td>
+                      <td className="px-3 py-3 text-fg-muted">
+                        {obligation.version}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           ) : null}
+          <ObligationDetail
+            obligation={selected}
+            canEdit={canEdit}
+            canSubmit={canSubmit}
+            onSelected={setSelectedId}
+            serverNow={summary.data?.summary.serverNow}
+            linkedStageId={
+              activeSelectedId === selectedFromUrl ? stageFromUrl : null
+            }
+          />
         </div>
       ) : null}
     </div>
@@ -487,13 +569,23 @@ function ObligationDetail({
   canSubmit,
   onSelected,
   serverNow,
+  linkedStageId,
 }: Readonly<{
   obligation: ReportingObligation;
   canEdit: boolean;
   canSubmit: boolean;
   onSelected: (obligationId: string) => void;
   serverNow: string | undefined;
+  linkedStageId: string | null;
 }>) {
+  const hasLinkedStage = obligation.stages.some(
+    (stage) => stage.id === linkedStageId,
+  );
+  useEffect(() => {
+    if (linkedStageId && hasLinkedStage) {
+      document.getElementById(`reporting-stage-${linkedStageId}`)?.focus();
+    }
+  }, [hasLinkedStage, linkedStageId, obligation.id]);
   return (
     <aside
       className="rounded-xl border border-border bg-canvas p-4"
@@ -521,12 +613,25 @@ function ObligationDetail({
           <dd className="text-fg">{obligation.createdBy.displayName}</dd>
         </div>
       </dl>
+      {linkedStageId && !hasLinkedStage ? (
+        <p role="status" className="mt-3 text-caption-1-regular text-fg-muted">
+          Linked reporting stage is unavailable.
+        </p>
+      ) : null}
       <ol className="mt-4 space-y-2">
         {obligation.stages.map((stage) => (
           <li
             key={stage.id}
+            id={`reporting-stage-${stage.id}`}
+            tabIndex={stage.id === linkedStageId ? -1 : undefined}
             className="rounded-lg border border-border p-3 text-caption-1-regular"
+            aria-current={stage.id === linkedStageId ? "location" : undefined}
           >
+            {stage.id === linkedStageId ? (
+              <p className="mb-1 text-caption-1-semibold text-fg">
+                Linked task stage
+              </p>
+            ) : null}
             <div className="flex items-center justify-between gap-2">
               <span className="font-medium text-fg">
                 {stageLabel(stage.kind)}
@@ -556,7 +661,7 @@ function ObligationDetail({
             {stage.breachedAt !== null && stage.state === "submitted" ? (
               <p className="mt-1 text-danger">Submitted late</p>
             ) : null}
-            {canEdit &&
+            {(canEdit || canSubmit) &&
             obligation.status === "active" &&
             stage.state !== "submitted" ? (
               <ReportingStageDraftEditor

@@ -35,9 +35,13 @@ function severityTone(severity: string): TagProps["tone"] {
 export function FindingTriageDetail({
   detail,
   onClose,
+  linkedAssessmentId = null,
+  invalidAssessmentLink = false,
 }: Readonly<{
   detail: VulnerabilityTriageDetailResponse["detail"];
   onClose: () => void;
+  linkedAssessmentId?: string | null;
+  invalidAssessmentLink?: boolean;
 }>) {
   const finding = detail.finding;
   const intelligence = finding.intelligence;
@@ -214,7 +218,11 @@ export function FindingTriageDetail({
         </section>
       ) : null}
 
-      <FindingAssessment findingId={finding.id} />
+      <FindingAssessment
+        findingId={finding.id}
+        linkedAssessmentId={linkedAssessmentId}
+        invalidAssessmentLink={invalidAssessmentLink}
+      />
       <FindingRemediation
         findingId={finding.id}
         remediation={detail.operational.remediation}

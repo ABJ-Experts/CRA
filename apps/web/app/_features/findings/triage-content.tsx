@@ -4,7 +4,10 @@ import type {
   VulnerabilityTriageQueueQuery,
   VulnerabilityTriageQueueResponse,
 } from "@repo/contracts/vulnerabilities";
-import { vulnerabilityTriageFindingParamsSchema } from "@repo/contracts/vulnerabilities";
+import {
+  vulnerabilityFindingAssessmentRevisionParamsSchema,
+  vulnerabilityTriageFindingParamsSchema,
+} from "@repo/contracts/vulnerabilities";
 import { Button } from "@repo/ui/button";
 import { Checkbox } from "@repo/ui/checkbox";
 import { cn } from "@repo/ui/cn";
@@ -74,6 +77,37 @@ function rowLabel(row: QueueRow) {
 }
 function uuid() {
   return crypto.randomUUID();
+}
+
+export function readFindingAssessmentDeepLink(
+  searchParams: Pick<URLSearchParams, "getAll">,
+) {
+  const findingValues = searchParams.getAll("findingId");
+  const finding =
+    findingValues.length === 1
+      ? vulnerabilityTriageFindingParamsSchema.safeParse({
+          findingId: findingValues[0],
+        })
+      : null;
+  const findingId = finding?.success ? finding.data.findingId : null;
+  const assessmentValues = searchParams.getAll("assessmentId");
+  if (!findingId || assessmentValues.length === 0) {
+    return { findingId, assessmentId: null, invalidAssessmentLink: false };
+  }
+  const assessment =
+    assessmentValues.length === 1
+      ? vulnerabilityFindingAssessmentRevisionParamsSchema.safeParse({
+          findingId,
+          assessmentId: assessmentValues[0],
+        })
+      : null;
+  return assessment?.success
+    ? {
+        findingId,
+        assessmentId: assessment.data.assessmentId,
+        invalidAssessmentLink: false,
+      }
+    : { findingId, assessmentId: null, invalidAssessmentLink: true };
 }
 function readIdList(value: string): string[] | undefined {
   const ids = value
@@ -876,20 +910,18 @@ export function FindingTriageContent() {
   const [scrollTop, setScrollTop] = useState(0);
   const activeIndex = useRef(0);
   const gridRef = useRef<HTMLDivElement>(null);
-  const deepLinkedFindingId = useMemo(() => {
-    const parsed = vulnerabilityTriageFindingParamsSchema.safeParse({
-      findingId: searchParams.get("findingId"),
-    });
-    return parsed.success ? parsed.data.findingId : null;
-  }, [searchParams]);
+  const deepLink = useMemo(
+    () => readFindingAssessmentDeepLink(searchParams),
+    [searchParams],
+  );
   const query = useMemo(
     () => ({ ...filters, cursor, limit: 50 }),
     [cursor, filters],
   );
   useEffect(() => {
     setSelectedFindingIds([]);
-    setSelectedId(deepLinkedFindingId);
-  }, [deepLinkedFindingId, organizationId]);
+    setSelectedId(deepLink.findingId);
+  }, [deepLink.findingId, organizationId]);
   const queue = useVulnerabilityTriageQueueQuery(
     query,
     organizationId,
@@ -1289,6 +1321,12 @@ export function FindingTriageContent() {
         <FindingTriageDetail
           detail={detail.data.detail}
           onClose={() => setSelectedId(null)}
+          linkedAssessmentId={
+            selectedId === deepLink.findingId ? deepLink.assessmentId : null
+          }
+          invalidAssessmentLink={
+            selectedId === deepLink.findingId && deepLink.invalidAssessmentLink
+          }
         />
       ) : null}
     </div>

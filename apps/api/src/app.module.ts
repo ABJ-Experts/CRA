@@ -24,6 +24,7 @@ import { EvidenceModule } from "./evidence/evidence.module";
 import { SuppliersModule } from "./suppliers/suppliers.module";
 import { SupplierEvidenceModule } from "./supplier-evidence/supplier-evidence.module";
 import { FrameworksModule } from "./frameworks/frameworks.module";
+import { TasksModule } from "./tasks/tasks.module";
 
 @Module({
   imports: [
@@ -68,6 +69,7 @@ import { FrameworksModule } from "./frameworks/frameworks.module";
     SuppliersModule,
     SupplierEvidenceModule,
     FrameworksModule,
+    TasksModule,
   ],
   controllers: [HealthController],
 })

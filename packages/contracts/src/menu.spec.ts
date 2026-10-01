@@ -131,5 +131,6 @@ describe("visibleMenuKeys", () => {
     const visible = visibleMenuKeys({ can: () => false });
     expect(visible.length).toBeGreaterThan(0);
     expect(visible).toContain("dashboard");
+    expect(visible).toContain("tasks");
   });
 });

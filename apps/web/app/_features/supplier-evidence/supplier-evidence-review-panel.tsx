@@ -529,16 +529,30 @@ export function SupplierEvidenceReviewPanel({
   requests,
   canReview,
   enabled,
+  selectedRequestId = null,
 }: Readonly<{
   requests: readonly SupplierEvidenceRequestSummary[];
   canReview: boolean;
   enabled: boolean;
+  selectedRequestId?: string | null;
 }>) {
-  const [requestId, setRequestId] = useState(requests[0]?.id ?? "");
+  const [requestId, setRequestId] = useState(
+    requests.some((request) => request.id === selectedRequestId)
+      ? (selectedRequestId ?? "")
+      : (requests[0]?.id ?? ""),
+  );
   const detail = useSupplierEvidenceReviewRequestQuery(
     requestId || null,
     enabled && canReview,
   );
+
+  useEffect(() => {
+    if (
+      selectedRequestId &&
+      requests.some((request) => request.id === selectedRequestId)
+    )
+      setRequestId(selectedRequestId);
+  }, [requests, selectedRequestId]);
 
   useEffect(() => {
     if (requests.some((request) => request.id === requestId)) return;

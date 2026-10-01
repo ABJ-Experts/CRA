@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import "@testing-library/jest-dom/vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { EvidenceLibrary } from "./evidence-library";
@@ -85,6 +85,7 @@ describe("EvidenceLibrary", () => {
   });
 
   afterEach(() => {
+    cleanup();
     vi.clearAllMocks();
     vi.unstubAllEnvs();
   });
@@ -113,12 +114,14 @@ describe("EvidenceLibrary", () => {
       },
       refetch: vi.fn(),
     });
-    queries.useEvidenceVersionsQuery.mockReturnValue({
-      data: { versions: [version] },
-      isLoading: false,
-      isError: false,
-      refetch: vi.fn(),
-    });
+    queries.useEvidenceVersionsQuery.mockImplementation(
+      (_productId: string, documentId: string) => ({
+        data: { versions: documentId === version.documentId ? [version] : [] },
+        isLoading: false,
+        isError: false,
+        refetch: vi.fn(),
+      }),
+    );
     queries.useEvidenceVersionReuseQuery.mockReturnValue({
       isLoading: false,
       isError: false,
@@ -153,5 +156,68 @@ describe("EvidenceLibrary", () => {
       version.id,
       true,
     );
+  });
+
+  it("opens only a matching document and version from an inbox deep link", () => {
+    queries.useEvidenceDocumentsQuery.mockReturnValue({
+      isLoading: false,
+      isError: false,
+      data: {
+        items: [],
+        nextCursor: "another-page",
+      },
+      refetch: vi.fn(),
+    });
+    queries.useEvidenceVersionsQuery.mockImplementation(
+      (_productId: string, documentId: string) => ({
+        data: { versions: documentId === version.documentId ? [version] : [] },
+        isLoading: false,
+        isError: false,
+        refetch: vi.fn(),
+      }),
+    );
+    queries.useEvidenceVersionReuseQuery.mockReturnValue({
+      isLoading: false,
+      isError: false,
+      data: { reuse: { technicalFileLinks: [], frameworkControls: [] } },
+      refetch: vi.fn(),
+    });
+    for (const mutation of [
+      queries.useCompleteEvidenceUploadMutation,
+      queries.useInitializeEvidenceUploadMutation,
+      queries.useReplaceEvidenceMutation,
+    ])
+      mutation.mockReturnValue({ mutateAsync: vi.fn() });
+
+    const { rerender } = render(
+      <EvidenceLibrary
+        productId="11111111-1111-4111-8111-111111111111"
+        selectedDocumentId={version.documentId}
+        selectedVersionId={version.id}
+      />,
+    );
+    expect(
+      screen.getByRole("heading", { name: "Verified version viewer" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "Version" })).toHaveValue(
+      version.id,
+    );
+    expect(
+      screen.queryByText("No evidence has been uploaded for this product."),
+    ).not.toBeInTheDocument();
+
+    rerender(
+      <EvidenceLibrary
+        productId="11111111-1111-4111-8111-111111111111"
+        selectedDocumentId="aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+        selectedVersionId={version.id}
+      />,
+    );
+    expect(
+      screen.queryByRole("heading", { name: "Verified version viewer" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByText(/linked evidence is unavailable/i),
+    ).toBeInTheDocument();
   });
 });

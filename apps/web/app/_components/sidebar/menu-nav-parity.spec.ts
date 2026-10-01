@@ -34,6 +34,7 @@ describe("menu key parity", () => {
       "frameworks",
       "findings",
       "reporting",
+      "tasks",
       "connectors",
       "profile",
       "profile.account",

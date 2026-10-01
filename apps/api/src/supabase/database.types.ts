@@ -21157,6 +21157,301 @@ export type Database = {
           },
         ]
       }
+      workflow_out_of_office: {
+        Row: {
+          created_at: string
+          ends_at: string
+          id: string
+          organization_id: string
+          starts_at: string
+          substitute_user_id: string
+          user_id: string
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          ends_at: string
+          id?: string
+          organization_id: string
+          starts_at: string
+          substitute_user_id: string
+          user_id: string
+          version?: number
+        }
+        Update: {
+          created_at?: string
+          ends_at?: string
+          id?: string
+          organization_id?: string
+          starts_at?: string
+          substitute_user_id?: string
+          user_id?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_out_of_office_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workflow_out_of_office_substitute_user_id_fkey"
+            columns: ["substitute_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workflow_out_of_office_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workflow_task_commands: {
+        Row: {
+          action: string
+          actor_user_id: string
+          created_at: string
+          id: string
+          idempotency_key: string
+          organization_id: string
+          outcome: string
+          request_digest: string
+          result: Json | null
+        }
+        Insert: {
+          action: string
+          actor_user_id: string
+          created_at?: string
+          id?: string
+          idempotency_key: string
+          organization_id: string
+          outcome: string
+          request_digest: string
+          result?: Json | null
+        }
+        Update: {
+          action?: string
+          actor_user_id?: string
+          created_at?: string
+          id?: string
+          idempotency_key?: string
+          organization_id?: string
+          outcome?: string
+          request_digest?: string
+          result?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_task_commands_actor_user_id_fkey"
+            columns: ["actor_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workflow_task_commands_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workflow_task_group_members: {
+        Row: {
+          added_at: string
+          added_by: string
+          group_id: string
+          organization_id: string
+          user_id: string
+        }
+        Insert: {
+          added_at?: string
+          added_by: string
+          group_id: string
+          organization_id: string
+          user_id: string
+        }
+        Update: {
+          added_at?: string
+          added_by?: string
+          group_id?: string
+          organization_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_task_group_members_added_by_fkey"
+            columns: ["added_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workflow_task_group_members_organization_id_group_id_fkey"
+            columns: ["organization_id", "group_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_task_groups"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "workflow_task_group_members_organization_id_user_id_fkey"
+            columns: ["organization_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "organization_members"
+            referencedColumns: ["organization_id", "user_id"]
+          },
+        ]
+      }
+      workflow_task_groups: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          name: string
+          organization_id: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          name: string
+          organization_id: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          name?: string
+          organization_id?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_task_groups_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workflow_task_groups_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workflow_task_routes: {
+        Row: {
+          assignee_user_id: string | null
+          claimed_by_user_id: string | null
+          delegated_to_user_id: string | null
+          delegation_expires_at: string | null
+          group_id: string | null
+          organization_id: string
+          product_id: string | null
+          source_id: string
+          source_owner_user_id: string | null
+          task_type: string
+          updated_at: string
+          updated_by: string
+          version: number
+        }
+        Insert: {
+          assignee_user_id?: string | null
+          claimed_by_user_id?: string | null
+          delegated_to_user_id?: string | null
+          delegation_expires_at?: string | null
+          group_id?: string | null
+          organization_id: string
+          product_id?: string | null
+          source_id: string
+          source_owner_user_id?: string | null
+          task_type: string
+          updated_at?: string
+          updated_by: string
+          version?: number
+        }
+        Update: {
+          assignee_user_id?: string | null
+          claimed_by_user_id?: string | null
+          delegated_to_user_id?: string | null
+          delegation_expires_at?: string | null
+          group_id?: string | null
+          organization_id?: string
+          product_id?: string | null
+          source_id?: string
+          source_owner_user_id?: string | null
+          task_type?: string
+          updated_at?: string
+          updated_by?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_task_routes_assignee_user_id_fkey"
+            columns: ["assignee_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workflow_task_routes_claimed_by_user_id_fkey"
+            columns: ["claimed_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workflow_task_routes_delegated_to_user_id_fkey"
+            columns: ["delegated_to_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workflow_task_routes_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workflow_task_routes_organization_id_group_id_fkey"
+            columns: ["organization_id", "group_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_task_groups"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "workflow_task_routes_source_owner_user_id_fkey"
+            columns: ["source_owner_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workflow_task_routes_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       m2_product_relationship_operations: {
@@ -27883,6 +28178,237 @@ export type Database = {
         }[]
       }
       m1106_valid_envelope: { Args: { p_value: Json }; Returns: boolean }
+      m1201_absence_json: {
+        Args: { p_absence_id: string; p_organization_id: string }
+        Returns: Json
+      }
+      m1201_active_member: {
+        Args: { p_organization_id: string; p_user_id: string }
+        Returns: boolean
+      }
+      m1201_assign_can: {
+        Args: {
+          p_actor_user_id: string
+          p_organization_id: string
+          p_source_id: string
+          p_task_type: string
+        }
+        Returns: boolean
+      }
+      m1201_assign_can_prechecked: {
+        Args: {
+          p_actor_user_id: string
+          p_organization_id: string
+          p_source_active: boolean
+          p_source_id: string
+          p_task_type: string
+        }
+        Returns: boolean
+      }
+      m1201_eligible_actor: {
+        Args: {
+          p_actor_user_id: string
+          p_organization_id: string
+          p_source_id: string
+          p_task_type: string
+        }
+        Returns: boolean
+      }
+      m1201_eligible_actor_prechecked: {
+        Args: {
+          p_actor_user_id: string
+          p_organization_id: string
+          p_source_active: boolean
+          p_source_id: string
+          p_task_type: string
+        }
+        Returns: boolean
+      }
+      m1201_eligible_assignees: {
+        Args: {
+          p_actor_user_id: string
+          p_organization_id: string
+          p_source_id: string
+          p_task_type: string
+        }
+        Returns: {
+          groups: Json
+          outcome: string
+          users: Json
+        }[]
+      }
+      m1201_finding_triage_due_at: {
+        Args: { p_finding_id: string; p_organization_id: string }
+        Returns: string
+      }
+      m1201_get_group: {
+        Args: {
+          p_actor_user_id: string
+          p_group_id: string
+          p_organization_id: string
+        }
+        Returns: {
+          group: Json
+          members: Json
+          outcome: string
+        }[]
+      }
+      m1201_get_task: {
+        Args: {
+          p_actor_user_id: string
+          p_organization_id: string
+          p_source_id: string
+          p_task_type: string
+        }
+        Returns: {
+          outcome: string
+          task: Json
+        }[]
+      }
+      m1201_group_admin: {
+        Args: { p_actor_user_id: string; p_organization_id: string }
+        Returns: boolean
+      }
+      m1201_group_json: {
+        Args: { p_group_id: string; p_organization_id: string }
+        Returns: Json
+      }
+      m1201_list_absences: {
+        Args: { p_actor_user_id: string; p_organization_id: string }
+        Returns: {
+          absences: Json
+          outcome: string
+        }[]
+      }
+      m1201_list_groups: {
+        Args: { p_actor_user_id: string; p_organization_id: string }
+        Returns: {
+          groups: Json
+          outcome: string
+        }[]
+      }
+      m1201_list_tasks: {
+        Args: {
+          p_actor_user_id: string
+          p_cursor: string
+          p_due_from: string
+          p_due_to: string
+          p_limit: number
+          p_organization_id: string
+          p_owner_user_id: string
+          p_scope: string
+          p_state: string
+          p_type: string
+        }
+        Returns: {
+          counts: Json
+          next_cursor: string
+          outcome: string
+          tasks: Json
+        }[]
+      }
+      m1201_manage_absence: {
+        Args: {
+          p_absence_id: string
+          p_action: string
+          p_actor_user_id: string
+          p_ends_at: string
+          p_expected_version: number
+          p_idempotency_key: string
+          p_organization_id: string
+          p_starts_at: string
+          p_substitute_user_id: string
+        }
+        Returns: {
+          absence: Json
+          outcome: string
+        }[]
+      }
+      m1201_manage_group: {
+        Args: {
+          p_action: string
+          p_actor_user_id: string
+          p_expected_version: number
+          p_group_id: string
+          p_idempotency_key: string
+          p_member_user_id: string
+          p_name: string
+          p_organization_id: string
+        }
+        Returns: {
+          group: Json
+          outcome: string
+        }[]
+      }
+      m1201_member_candidates: {
+        Args: { p_actor_user_id: string; p_organization_id: string }
+        Returns: {
+          outcome: string
+          users: Json
+        }[]
+      }
+      m1201_route_task: {
+        Args: {
+          p_action: string
+          p_actor_user_id: string
+          p_delegation_expires_at: string
+          p_expected_route_version: number
+          p_expected_source_revision: string
+          p_group_id: string
+          p_idempotency_key: string
+          p_organization_id: string
+          p_source_id: string
+          p_target_user_id: string
+          p_task_type: string
+        }
+        Returns: {
+          outcome: string
+          task: Json
+        }[]
+      }
+      m1201_source: {
+        Args: {
+          p_actor_user_id: string
+          p_organization_id: string
+          p_source_id: string
+          p_task_type: string
+        }
+        Returns: Json
+      }
+      m1201_source_can: {
+        Args: {
+          p_actor_user_id: string
+          p_edit: boolean
+          p_organization_id: string
+          p_task_type: string
+        }
+        Returns: boolean
+      }
+      m1201_source_permission: {
+        Args: {
+          p_actor_user_id: string
+          p_organization_id: string
+          p_permission_key: string
+        }
+        Returns: boolean
+      }
+      m1201_supplier_actor_can_act: {
+        Args: {
+          p_actor_user_id: string
+          p_organization_id: string
+          p_source_id: string
+        }
+        Returns: boolean
+      }
+      m1201_task_row: {
+        Args: {
+          p_actor_user_id: string
+          p_organization_id: string
+          p_source_id: string
+          p_task_type: string
+        }
+        Returns: Json
+      }
       m2_active_member: {
         Args: { p_actor_user_id: string; p_organization_id: string }
         Returns: boolean

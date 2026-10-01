@@ -3,6 +3,8 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+const linkedRequest = vi.hoisted(() => ({ current: null as unknown }));
+
 vi.mock("../../_providers/session-provider", () => ({
   useHasPermission: () => true,
 }));
@@ -32,6 +34,11 @@ vi.mock("./supplier-evidence.queries", () => ({
     data: { requests: [] },
     refetch: vi.fn(),
   }),
+  useSupplierEvidenceRequestQuery: () => ({
+    data: linkedRequest.current,
+    isLoading: false,
+    isError: false,
+  }),
   useSupplierEvidenceEligibleSbomRequestsQuery: () => ({
     data: {
       pages: [
@@ -56,7 +63,11 @@ vi.mock("./supplier-evidence.queries", () => ({
   }),
 }));
 vi.mock("./supplier-evidence-review-panel", () => ({
-  SupplierEvidenceReviewPanel: () => null,
+  SupplierEvidenceReviewPanel: ({
+    selectedRequestId,
+  }: {
+    selectedRequestId?: string;
+  }) => <span>Review target {selectedRequestId}</span>,
 }));
 vi.mock("./supplier-evidence-reminders-panel", () => ({
   SupplierEvidenceRemindersPanel: () => null,
@@ -68,6 +79,7 @@ describe("SupplierEvidenceRequestPanel SBOM assignment", () => {
   afterEach(() => {
     cleanup();
     vi.clearAllMocks();
+    linkedRequest.current = null;
   });
 
   it("offers only an eligible pre-existing request after selecting a product and SBOM class", async () => {
@@ -101,5 +113,68 @@ describe("SupplierEvidenceRequestPanel SBOM assignment", () => {
     expect(
       screen.getByText(/existing supplier SBOM request/i),
     ).toBeInTheDocument();
+  });
+
+  it("opens the requested supplier-scoped review even when it is outside the list page", () => {
+    const requestId = "77777777-7777-4777-8777-777777777777";
+    linkedRequest.current = {
+      request: {
+        id: requestId,
+        supplierId: "44444444-4444-4444-8444-444444444444",
+        state: "closed",
+        activeInvitation: null,
+        currentRevision: {
+          title: "Current declaration",
+          dueAt: "2026-10-01T00:00:00Z",
+          revisionNumber: 1,
+          items: [],
+        },
+      },
+    };
+    render(
+      <SupplierEvidenceRequestPanel
+        supplierId="44444444-4444-4444-8444-444444444444"
+        contacts={[]}
+        ownerUserId={null}
+        readEnabled
+        canReview
+        canManage={false}
+        disabled
+        selectedRequestId={requestId}
+      />,
+    );
+    expect(screen.getByText("Current declaration")).toBeInTheDocument();
+    expect(screen.getByText(`Review target ${requestId}`)).toBeInTheDocument();
+  });
+
+  it("does not expose a linked request from another supplier", () => {
+    linkedRequest.current = {
+      request: {
+        id: "77777777-7777-4777-8777-777777777777",
+        supplierId: "99999999-9999-4999-8999-999999999999",
+        currentRevision: { title: "Other supplier private title" },
+      },
+    };
+    render(
+      <SupplierEvidenceRequestPanel
+        supplierId="44444444-4444-4444-8444-444444444444"
+        contacts={[]}
+        ownerUserId={null}
+        readEnabled
+        canReview
+        canManage={false}
+        disabled
+        selectedRequestId="77777777-7777-4777-8777-777777777777"
+      />,
+    );
+    expect(
+      screen.queryByText("Other supplier private title"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByText(/linked evidence request is unavailable/i),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(/Review target 77777777/),
+    ).not.toBeInTheDocument();
   });
 });

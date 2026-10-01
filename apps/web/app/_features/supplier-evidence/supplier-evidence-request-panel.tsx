@@ -23,6 +23,7 @@ import { useProductsQuery } from "../products/products.queries";
 import {
   useCreateSupplierEvidenceRequestMutation,
   useSupplierEvidenceEligibleSbomRequestsQuery,
+  useSupplierEvidenceRequestQuery,
   useSupplierEvidenceRequestsQuery,
 } from "./supplier-evidence.queries";
 import { supplierEvidenceApi } from "./supplier-evidence.api";
@@ -241,9 +242,11 @@ function RequestActions({
 function IssuedRequestHistory({
   requests,
   onChanged,
+  selectedRequestId,
 }: Readonly<{
   requests: readonly SupplierEvidenceRequestSummary[];
   onChanged: () => Promise<unknown>;
+  selectedRequestId: string | null;
 }>) {
   if (requests.length === 0)
     return (
@@ -257,7 +260,15 @@ function IssuedRequestHistory({
         <li
           key={request.id}
           className="rounded-xl border border-border p-3 text-caption-1-regular text-fg"
+          aria-current={
+            request.id === selectedRequestId ? "location" : undefined
+          }
         >
+          {request.id === selectedRequestId ? (
+            <p className="mb-1 text-caption-1-semibold text-fg">
+              Linked task request
+            </p>
+          ) : null}
           <div className="flex flex-wrap items-center justify-between gap-2">
             <strong>{request.currentRevision.title}</strong>
             <Tag
@@ -298,6 +309,7 @@ function IssuedRequestHistory({
 /** Compact internal flow: create a draft, preview the supplier payload, then issue the pinned revision. */
 export function SupplierEvidenceRequestPanel({
   supplierId,
+  selectedRequestId = null,
   contacts,
   ownerUserId,
   readEnabled,
@@ -306,6 +318,7 @@ export function SupplierEvidenceRequestPanel({
   disabled,
 }: Readonly<{
   supplierId: string;
+  selectedRequestId?: string | null;
   contacts: readonly Readonly<{
     id: string;
     name: string;
@@ -319,7 +332,14 @@ export function SupplierEvidenceRequestPanel({
   disabled: boolean;
 }>) {
   const create = useCreateSupplierEvidenceRequestMutation();
-  const requests = useSupplierEvidenceRequestsQuery(readEnabled);
+  const requests = useSupplierEvidenceRequestsQuery(readEnabled, {
+    supplierId,
+    limit: 100,
+  });
+  const linkedRequest = useSupplierEvidenceRequestQuery(
+    selectedRequestId,
+    readEnabled,
+  );
   const products = useProductsQuery(
     { page: 1, pageSize: 100, archived: false },
     !disabled,
@@ -352,13 +372,22 @@ export function SupplierEvidenceRequestPanel({
       ),
     [contacts],
   );
-  const history = useMemo(
-    () =>
-      (requests.data?.requests ?? []).filter(
-        (request) => request.supplierId === supplierId,
-      ),
-    [requests.data?.requests, supplierId],
-  );
+  const history = useMemo(() => {
+    const listed = (requests.data?.requests ?? []).filter(
+      (request) =>
+        request.supplierId === supplierId &&
+        !(linkedRequest.isError && request.id === selectedRequestId),
+    );
+    const linked = linkedRequest.isError ? null : linkedRequest.data?.request;
+    if (!linked || linked.supplierId !== supplierId) return listed;
+    return [linked, ...listed.filter((request) => request.id !== linked.id)];
+  }, [
+    requests.data?.requests,
+    linkedRequest.data?.request,
+    linkedRequest.isError,
+    selectedRequestId,
+    supplierId,
+  ]);
 
   const content = () => ({
     title,
@@ -849,6 +878,42 @@ export function SupplierEvidenceRequestPanel({
       <div className="mt-6">
         <h3 className="text-subhead-semibold text-fg">Issued revisions</h3>
         <div className="mt-2">
+          {selectedRequestId && linkedRequest.isLoading ? (
+            <p role="status" className="text-caption-1-regular text-fg-muted">
+              Loading linked evidence request…
+            </p>
+          ) : null}
+          {selectedRequestId &&
+          linkedRequest.isError &&
+          !(
+            linkedRequest.error instanceof ApiClientError &&
+            linkedRequest.error.status === 404
+          ) ? (
+            <div role="alert" className="flex flex-wrap items-center gap-2">
+              <p className="text-caption-1-regular text-danger">
+                Linked evidence request could not be loaded.
+              </p>
+              <Button
+                size="sm"
+                variant="outline"
+                tone="grey"
+                onClick={() => void linkedRequest.refetch()}
+              >
+                Retry
+              </Button>
+            </div>
+          ) : null}
+          {selectedRequestId &&
+          !linkedRequest.isLoading &&
+          (!linkedRequest.isError ||
+            (linkedRequest.error instanceof ApiClientError &&
+              linkedRequest.error.status === 404)) &&
+          (!linkedRequest.data?.request ||
+            linkedRequest.data.request.supplierId !== supplierId) ? (
+            <p role="status" className="text-caption-1-regular text-fg-muted">
+              Linked evidence request is unavailable for this supplier.
+            </p>
+          ) : null}
           {requests.isLoading ? (
             <p role="status" className="text-caption-1-regular text-fg-muted">
               Loading requests…
@@ -856,6 +921,7 @@ export function SupplierEvidenceRequestPanel({
           ) : (
             <IssuedRequestHistory
               requests={history}
+              selectedRequestId={selectedRequestId}
               onChanged={async () => {
                 await requests.refetch();
               }}
@@ -866,6 +932,11 @@ export function SupplierEvidenceRequestPanel({
       {canReview ? (
         <SupplierEvidenceReviewPanel
           requests={history}
+          selectedRequestId={
+            history.some((request) => request.id === selectedRequestId)
+              ? selectedRequestId
+              : null
+          }
           canReview={canReview}
           enabled={readEnabled}
         />
