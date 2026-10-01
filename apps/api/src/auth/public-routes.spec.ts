@@ -4,6 +4,7 @@ import { METHOD_METADATA, PATH_METADATA } from "@nestjs/common/constants";
 import { MetadataScanner, ModulesContainer, Reflector } from "@nestjs/core";
 
 import { AppModule } from "../app.module";
+import { AgentIngressModule } from "../connectors/agent/agent-ingress.module";
 import { IS_PUBLIC_KEY } from "./auth.types";
 
 /**
@@ -253,5 +254,23 @@ describe("route guard coverage", () => {
   it("keeps sign-out authenticated", () => {
     const signOut = routes.find((r) => r.path === "auth/sign-out");
     expect(signOut?.isPublic).toBe(false);
+  });
+});
+
+describe("isolated agent ingress route coverage", () => {
+  it("contains exactly the two credential-authenticated routes", async () => {
+    const moduleRef = await Test.createTestingModule({
+      imports: [AgentIngressModule],
+    }).compile();
+    const app = moduleRef.createNestApplication();
+    try {
+      await app.init();
+      expect(collectRoutes(app)).toEqual([
+        { method: "POST", path: "agent/enroll", isPublic: true },
+        { method: "POST", path: "agent/frames", isPublic: true },
+      ]);
+    } finally {
+      await app.close();
+    }
   });
 });

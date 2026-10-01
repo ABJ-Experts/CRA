@@ -17,6 +17,7 @@ export const connectorCatalogueEntrySchema = z
       "entra_id",
       "okta",
       "jira",
+      "on_prem_agent",
       "slack",
       "teams",
       "smtp",
@@ -28,7 +29,7 @@ export const connectorCatalogueEntrySchema = z
       "enisa",
     ]),
     name: text(100),
-    implementation: z.enum(["reference", "ci", "ticketing", "planned"]),
+    implementation: z.enum(["reference", "ci", "ticketing", "agent", "planned"]),
     phase: z.enum(["MVP", "V1", "V2"]),
     priority: z.enum(["P0", "P1", "P2"]),
     canConfigure: z.boolean(),
@@ -44,19 +45,22 @@ export const connectorCatalogueEntrySchema = z
       entry.id,
     );
     const ticketing = entry.id === "jira";
+    const agent = entry.id === "on_prem_agent";
     return (
       entry.canConfigure ===
-        (entry.id === "reference_conformance" || ci || ticketing) &&
+        (entry.id === "reference_conformance" || ci || ticketing || agent) &&
       entry.implementation ===
         (ticketing
           ? "ticketing"
-          : ci
+          : agent
+            ? "agent"
+            : ci
             ? "ci"
             : entry.id === "reference_conformance"
               ? "reference"
               : "planned")
     );
-  }, "Only registered reference and CI connections can be configured");
+  }, "Only registered reference, CI, ticketing and agent connections can be configured");
 export const connectorCatalogueResponseSchema = z
   .object({
     catalogue: z.array(connectorCatalogueEntrySchema).max(100),

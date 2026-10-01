@@ -88,6 +88,67 @@ describe("verifyAgentFrame (local-loopback proof of ADR-0002)", () => {
     expect(replay).toEqual({ outcome: "rejected", reason: "replay" });
   });
 
+  it("allows only one concurrent frame with the same nonce", async () => {
+    const identity = baseIdentity();
+    const frame = frameFor(identity);
+    const nonces = new InMemoryNonceCache();
+    const results = await Promise.all(
+      Array.from({ length: 20 }, () =>
+        verifyAgentFrame(
+          frame,
+          loopbackDirectory([identity]),
+          nonces,
+          identity.agentId,
+        ),
+      ),
+    );
+    expect(
+      results.filter((result) => result.outcome === "accepted"),
+    ).toHaveLength(1);
+    expect(
+      results.filter(
+        (result) => result.outcome === "rejected" && result.reason === "replay",
+      ),
+    ).toHaveLength(19);
+  });
+
+  it("rejects malformed key issuance timestamps as requiring rotation", async () => {
+    const identity = baseIdentity({ signingKeyIssuedAt: "not-a-date" });
+    const result = await verifyAgentFrame(
+      frameFor(identity),
+      loopbackDirectory([identity]),
+      new InMemoryNonceCache(),
+      identity.agentId,
+    );
+    expect(result).toEqual({
+      outcome: "rejected",
+      reason: "key_rotation_required",
+    });
+  });
+
+  it("does not consume a nonce for an invalid signature", async () => {
+    const identity = baseIdentity();
+    const frame = frameFor(identity);
+    const nonces = new InMemoryNonceCache();
+    const invalid = await verifyAgentFrame(
+      { ...frame, signature: "00".repeat(32) },
+      loopbackDirectory([identity]),
+      nonces,
+      identity.agentId,
+    );
+    const valid = await verifyAgentFrame(
+      frame,
+      loopbackDirectory([identity]),
+      nonces,
+      identity.agentId,
+    );
+    expect(invalid).toEqual({
+      outcome: "rejected",
+      reason: "invalid_signature",
+    });
+    expect(valid).toEqual({ outcome: "accepted", agentId: identity.agentId });
+  });
+
   it("rejects a frame signed with a revoked key", async () => {
     const identity = baseIdentity({ revoked: true });
     const directory = loopbackDirectory([identity]);

@@ -8,3 +8,4 @@ export type * from "./connector-hub.type.js";
 
 export type * from "./sync-operations.type.js";
 export type * from "./webhook.type.js";
+export type * from "./agent.type.js";

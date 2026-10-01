@@ -42,7 +42,8 @@
       "libxmljs2",
       "msw",
       "sharp",
-      "unrs-resolver"
+      "unrs-resolver",
+      "better-sqlite3"
     ]
   }
 }

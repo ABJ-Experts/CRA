@@ -37,9 +37,8 @@ export type AgentDirectory = Readonly<{
 }>;
 
 export type NonceCache = Readonly<{
-  /** Returns true if (agentId, nonce) was already seen within the skew window. */
-  seen(agentId: string, nonce: string): Promise<boolean>;
-  record(agentId: string, nonce: string): Promise<void>;
+  /** Atomic across every ingress replica: true only for the first use. */
+  consumeIfAbsent(agentId: string, nonce: string): Promise<boolean>;
 }>;
 
 export type VerifyAgentFrameResult =
@@ -86,7 +85,11 @@ export async function verifyAgentFrame(
   const keyAgeDays =
     (Date.now() - Date.parse(identity.signingKeyIssuedAt)) /
     (1000 * 60 * 60 * 24);
-  if (keyAgeDays > MAX_KEY_AGE_DAYS) {
+  if (
+    !Number.isFinite(keyAgeDays) ||
+    keyAgeDays < 0 ||
+    keyAgeDays > MAX_KEY_AGE_DAYS
+  ) {
     return { outcome: "rejected", reason: "key_rotation_required" };
   }
 
@@ -104,10 +107,6 @@ export async function verifyAgentFrame(
     return { outcome: "rejected", reason: "org_mismatch" };
   }
 
-  if (await nonces.seen(agentId, frame.nonce)) {
-    return { outcome: "rejected", reason: "replay" };
-  }
-
   const bodyHash = createHash("sha256").update(frame.body).digest("hex");
   const expectedSignature = createHmac("sha256", identity.signingKey)
     .update(
@@ -123,7 +122,9 @@ export async function verifyAgentFrame(
     return { outcome: "rejected", reason: "invalid_signature" };
   }
 
-  await nonces.record(agentId, frame.nonce);
+  if (!(await nonces.consumeIfAbsent(agentId, frame.nonce))) {
+    return { outcome: "rejected", reason: "replay" };
+  }
   return { outcome: "accepted", agentId };
 }
 
@@ -144,14 +145,12 @@ export function signFrame(
 export class InMemoryNonceCache implements NonceCache {
   private readonly seenAt = new Map<string, number>();
 
-  seen(agentId: string, nonce: string): Promise<boolean> {
+  consumeIfAbsent(agentId: string, nonce: string): Promise<boolean> {
     this.prune();
-    return Promise.resolve(this.seenAt.has(`${agentId}:${nonce}`));
-  }
-
-  record(agentId: string, nonce: string): Promise<void> {
-    this.seenAt.set(`${agentId}:${nonce}`, Date.now());
-    return Promise.resolve();
+    const key = `${agentId}:${nonce}`;
+    if (this.seenAt.has(key)) return Promise.resolve(false);
+    this.seenAt.set(key, Date.now());
+    return Promise.resolve(true);
   }
 
   private prune(): void {

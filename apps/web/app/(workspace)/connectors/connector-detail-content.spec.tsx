@@ -108,6 +108,9 @@ vi.mock("./connector-conflicts-section", () => ({
 vi.mock("./connector-dead-letters-section", () => ({
   ConnectorDeadLettersSection: () => <p>Dead letters section</p>,
 }));
+vi.mock("./connector-agent-section", () => ({
+  ConnectorAgentSection: () => <p>On-premises agent section</p>,
+}));
 
 describe("DiagnosticsExportButton", () => {
   afterEach(() => {
@@ -180,6 +183,16 @@ describe("ConnectorDetailContent", () => {
     state.canView = false;
     state.canExport = false;
     state.organizationId = "22222222-2222-4222-8222-222222222222";
+  });
+
+  it("renders the agent operational view without CI release bindings", () => {
+    process.env.NEXT_PUBLIC_ENABLE_MOCKS = "false";
+    state.pending = false;
+    state.canView = true;
+    overview.connector.connectorType = "on_prem_agent";
+    render(<ConnectorDetailContent connectorId={connectorId} />);
+    expect(screen.getByText("On-premises agent section")).toBeInTheDocument();
+    expect(screen.queryByText("CI release bindings")).not.toBeInTheDocument();
   });
 
   it("keeps PLM mapping and sync controls out of CI connector setup", () => {

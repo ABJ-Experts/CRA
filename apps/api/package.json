@@ -7,6 +7,7 @@
     "dev": "nest start --watch",
     "build": "nest build",
     "start": "node dist/main",
+    "agent:ingress": "node dist/agent-main.js",
     "lint": "eslint src test --max-warnings 0",
     "check-types": "tsc --noEmit",
     "test": "jest",

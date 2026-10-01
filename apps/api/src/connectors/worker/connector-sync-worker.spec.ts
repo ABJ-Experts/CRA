@@ -552,6 +552,8 @@ describe("connector worker recorded authorization and credential fences", () => 
     expect(adapter.pull).toHaveBeenCalledWith(
       expect.objectContaining({
         executionIdentity: "org-a:connector-a:run-a",
+        organizationId: "org-a",
+        connectorId: "connector-a",
         secretReference: { provider: "vault", reference: "worker-canary" },
       }),
       null,
@@ -563,6 +565,28 @@ describe("connector worker recorded authorization and credential fences", () => 
       expect.arrayContaining(["can_create_connectors", "can_view_products"]),
     );
     expect(repository.saveSyncRunPlan).toHaveBeenCalled();
+  });
+  it("does not let stored connector configuration override worker tenant scope", async () => {
+    const { worker, hub, context, adapter } = secureWorker();
+    hub.context.mockResolvedValue({
+      ...context,
+      connector: {
+        ...context.connector,
+        connectionConfig: {
+          organizationId: "other-organization",
+          connectorId: "other-connector",
+        },
+      },
+    });
+    await worker.runOnce();
+    expect(adapter.pull).toHaveBeenCalledWith(
+      expect.objectContaining({
+        organizationId: "org-a",
+        connectorId: "connector-a",
+      }),
+      null,
+      200,
+    );
   });
   it.each([
     { connectionRevision: 1 },

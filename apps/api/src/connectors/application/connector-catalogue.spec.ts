@@ -14,7 +14,7 @@ describe("connector catalogue", () => {
     expect(
       connectorCatalogueResponseSchema.parse({ catalogue: CONNECTOR_CATALOGUE })
         .catalogue,
-    ).toHaveLength(16);
+    ).toHaveLength(17);
     expect(
       CONNECTOR_CATALOGUE.filter((entry) => entry.canConfigure).map(
         (entry) => entry.id,
@@ -25,6 +25,7 @@ describe("connector catalogue", () => {
       "gitlab_ci",
       "azure_devops",
       "jira",
+      "on_prem_agent",
     ]);
     expect(findConnectorCatalogueEntry("jira")).toMatchObject({
       implementation: "ticketing",
@@ -58,6 +59,15 @@ describe("connector catalogue", () => {
     expect(findConnectorCatalogueEntry("enisa")).toMatchObject({
       phase: "V2",
       priority: "P0",
+    });
+    expect(findConnectorCatalogueEntry("on_prem_agent")).toMatchObject({
+      implementation: "agent",
+      phase: "V2",
+      canConfigure: true,
+      scopeIntrospection: "unavailable",
+    });
+    expect(findConnectorCatalogueEntry("teamcenter")).toMatchObject({
+      canConfigure: false,
     });
     expect(findConnectorCatalogueEntry("invented")).toBeUndefined();
     expect(Object.isFrozen(CONNECTOR_CATALOGUE)).toBe(true);
@@ -139,6 +149,10 @@ describe("connector configuration policy", () => {
       }),
     ).toEqual({ providerHost: "github.com", appId: "1", installationId: "2" });
     expect(() => parseConnectorConfiguration("github_actions", {})).toThrow();
+    expect(parseConnectorConfiguration("on_prem_agent", {})).toEqual({});
+    expect(() =>
+      parseConnectorConfiguration("on_prem_agent", { command: "run" }),
+    ).toThrow();
     expect(() =>
       parseConnectorConfiguration("reference_conformance", {
         secret: "canary",

@@ -29,6 +29,7 @@ import { ConnectorMappingSection } from "./connector-mapping-section";
 import { ConnectorSyncRunSection } from "./connector-sync-run-section";
 import { ConnectorConflictsSection } from "./connector-conflicts-section";
 import { ConnectorDeadLettersSection } from "./connector-dead-letters-section";
+import { ConnectorAgentSection } from "./connector-agent-section";
 
 function errorMessage(error: unknown, fallback: string): string {
   if (error instanceof ApiClientError && error.status === 404)
@@ -130,8 +131,9 @@ function ConnectorDetailWorkspace({ connectorId }: { connectorId: string }) {
   const mapping = useConnectorMappingQuery(
     connectorId,
     enabled &&
-      connector.data?.overview.connector.connectorType ===
-        "reference_conformance",
+      ["reference_conformance", "on_prem_agent"].includes(
+        connector.data?.overview.connector.connectorType ?? "",
+      ),
   );
   const canEdit = permissions.can_edit_connectors === true;
   const canCreate = permissions.can_create_connectors === true;
@@ -208,6 +210,11 @@ function ConnectorDetailWorkspace({ connectorId }: { connectorId: string }) {
 
   const current = connector.data.overview.connector;
   const isReference = current.connectorType === "reference_conformance";
+  const isAgent = current.connectorType === "on_prem_agent";
+  const isSource = isReference || isAgent;
+  const isCi = ["github_actions", "gitlab_ci", "azure_devops"].includes(
+    current.connectorType,
+  );
 
   return (
     <div className="flex flex-col gap-6 px-6 py-6 lg:px-[30px]">
@@ -238,15 +245,19 @@ function ConnectorDetailWorkspace({ connectorId }: { connectorId: string }) {
           </div>
         </SectionCard>
       ) : null}
-      <ConnectorConnectionSection
-        key={`${session?.organization?.id}:${connectorId}`}
-        connector={current}
-        connection={connector.data.overview.connection}
-        canEdit={canEdit}
-        isOwner={isOwner}
-        onReload={() => void connector.refetch()}
-      />
-      {!isReference ? (
+      {isAgent ? (
+        <ConnectorAgentSection connectorId={connectorId} isOwner={isOwner} />
+      ) : (
+        <ConnectorConnectionSection
+          key={`${session?.organization?.id}:${connectorId}`}
+          connector={current}
+          connection={connector.data.overview.connection}
+          canEdit={canEdit}
+          isOwner={isOwner}
+          onReload={() => void connector.refetch()}
+        />
+      )}
+      {isCi ? (
         <SectionCard title="CI release bindings">
           <p className="text-subhead-regular text-fg-muted">
             This provider connection verifies CI runs. Product and release
@@ -261,7 +272,7 @@ function ConnectorDetailWorkspace({ connectorId }: { connectorId: string }) {
           </p>
         </SectionCard>
       ) : null}
-      {isReference ? (
+      {isSource ? (
         <>
           <ConnectorFieldMapSection
             connectorId={connectorId}
@@ -275,15 +286,17 @@ function ConnectorDetailWorkspace({ connectorId }: { connectorId: string }) {
             canEdit={canEdit}
             isOwner={isOwner}
           />
-          <ConnectorSyncRunSection
-            connectorId={connectorId}
-            canView={canView}
-            canStart={canCreate}
-            canManage={canEdit}
-            canApprove={canApprove}
-            mappingIncomplete={isMappingIncomplete(policies)}
-            onSelectRun={setSelectedRunId}
-          />
+          <div id="connector-sync-runs">
+            <ConnectorSyncRunSection
+              connectorId={connectorId}
+              canView={canView}
+              canStart={canCreate}
+              canManage={canEdit}
+              canApprove={canApprove}
+              mappingIncomplete={isMappingIncomplete(policies)}
+              onSelectRun={setSelectedRunId}
+            />
+          </div>
           <ConnectorConflictsSection
             connectorId={connectorId}
             runId={selectedRunId}

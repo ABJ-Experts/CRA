@@ -598,6 +598,63 @@ describe("connector atomic command routing", () => {
 });
 
 describe("bounded connector health summaries", () => {
+  it("uses the scoped agent identity instead of a provider secret for agent readiness", async () => {
+    const { repository, client, legacy } = setup();
+    legacy.getConnector.mockResolvedValue({
+      ...connector,
+      connectorType: "on_prem_agent",
+      hasSecret: false,
+    });
+    client.rpc
+      .mockResolvedValueOnce(result([{ ...summary }]))
+      .mockResolvedValueOnce(
+        result([
+          {
+            connector_id: connectorId,
+            active_agent: true,
+            last_contact_at: now,
+          },
+        ]),
+      );
+    expect(
+      (await repository.overview(orgId, connectorId)).connection,
+    ).toMatchObject({
+      status: "healthy",
+      reason: "ready",
+    });
+    expect(client.rpc).toHaveBeenCalledWith(
+      "m1106_agent_connection_summaries",
+      {
+        p_organization_id: orgId,
+        p_connector_ids: [connectorId],
+      },
+    );
+  });
+  it("shows an unenrolled agent as disconnected", async () => {
+    const { repository, client, legacy } = setup();
+    legacy.getConnector.mockResolvedValue({
+      ...connector,
+      connectorType: "on_prem_agent",
+      hasSecret: false,
+    });
+    client.rpc
+      .mockResolvedValueOnce(result([{ ...summary }]))
+      .mockResolvedValueOnce(
+        result([
+          {
+            connector_id: connectorId,
+            active_agent: false,
+            last_contact_at: null,
+          },
+        ]),
+      );
+    expect(
+      (await repository.overview(orgId, connectorId)).connection,
+    ).toMatchObject({
+      status: "not_connected",
+      reason: "credentials_missing",
+    });
+  });
   it.each([
     [{ enabled: false }, {}, "not_connected", "disabled"],
     [{}, { credential_revoked: true }, "not_connected", "credentials_revoked"],

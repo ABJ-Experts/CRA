@@ -157,6 +157,21 @@ export const CONNECTOR_CATALOGUE: readonly Readonly<ConnectorCatalogueEntry>[] =
         "write:issue.property:jira",
       ],
     ),
+    Object.freeze({
+      id: "on_prem_agent",
+      name: "On-premises agent",
+      implementation: "agent",
+      phase: "V2",
+      priority: "P2",
+      canConfigure: true,
+      description:
+        "Outbound-only canonical product and release ingestion through a customer-hosted agent.",
+      guidance:
+        "Use a dedicated read-only source identity and approve only the required files or HTTPS hosts. Source privileges cannot be introspected by CRA; validate customer schemas and review each dry run before commit.",
+      scopePolicyVersion: CONNECTOR_SCOPE_POLICY_VERSION,
+      requiredScopes: Object.freeze([]) as unknown as string[],
+      scopeIntrospection: "unavailable",
+    }),
     planned(
       "slack",
       "Slack",
@@ -203,7 +218,7 @@ export const CONNECTOR_CATALOGUE: readonly Readonly<ConnectorCatalogueEntry>[] =
       "V2",
       "P2",
       "Planned product structure, versions and lifecycle ingestion with compliance status export.",
-      "Use explicitly approved on-premises agent routing and a restricted integration identity. Private targets are not globally permitted; no production agent route is available.",
+      "Use the approved on-premises agent and a restricted integration identity only after validating the customer schema. No turnkey Teamcenter adapter or writeback is available.",
     ),
     planned(
       "windchill",
@@ -211,7 +226,7 @@ export const CONNECTOR_CATALOGUE: readonly Readonly<ConnectorCatalogueEntry>[] =
       "V2",
       "P2",
       "Planned product structure, versions and lifecycle ingestion with compliance status export.",
-      "Use explicitly approved on-premises agent routing and minimum permissions. This catalogue does not duplicate the existing PLM integration ownership.",
+      "Use the approved on-premises agent and minimum read permissions only after validating the customer schema. This catalogue does not duplicate the existing PLM integration ownership or offer writeback.",
     ),
     planned(
       "siem",

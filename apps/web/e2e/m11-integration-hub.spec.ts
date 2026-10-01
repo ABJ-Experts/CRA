@@ -257,7 +257,7 @@ test("M11 owner manages write-only credentials, conflicts and safe connection li
     const catalogue = connectorCatalogueResponseSchema.parse(
       await catalogueResponse.json(),
     ).catalogue;
-    expect(catalogue).toHaveLength(16);
+    expect(catalogue).toHaveLength(17);
     expect(
       catalogue.filter((entry) => entry.canConfigure).map((entry) => entry.id),
     ).toEqual([
@@ -265,6 +265,8 @@ test("M11 owner manages write-only credentials, conflicts and safe connection li
       "github_actions",
       "gitlab_ci",
       "azure_devops",
+      "jira",
+      "on_prem_agent",
     ]);
     expect(
       catalogue.find((entry) => entry.id === "reference_conformance"),

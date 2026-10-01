@@ -22,6 +22,7 @@ import { NodeConnectorEgressPolicy } from "./infrastructure/node-connector-egres
 import { SupabaseConnectorHubRepository } from "./infrastructure/supabase-connector-hub.repository";
 import { SupabaseConnectorRepository } from "./infrastructure/supabase-connector.repository";
 import { ReferenceConformanceAdapter } from "./reference-adapter/reference-conformance-adapter";
+import { AgentBackedAdapter } from "./agent-adapter/agent-backed-adapter";
 import { ConnectorSyncWorker } from "./worker/connector-sync-worker";
 
 const variables = [
@@ -115,9 +116,15 @@ describe("ConnectorsModule production composition", () => {
           module.get<ReadonlyMap<ConnectorType, ConnectorPort>>(
             CONNECTOR_PORTS,
           );
-        expect([...adapters.keys()]).toEqual(["reference_conformance"]);
+        expect([...adapters.keys()]).toEqual([
+          "reference_conformance",
+          "on_prem_agent",
+        ]);
         expect(adapters.get("reference_conformance")).toBeInstanceOf(
           ReferenceConformanceAdapter,
+        );
+        expect(adapters.get("on_prem_agent")).toBeInstanceOf(
+          AgentBackedAdapter,
         );
         expect(supabase.admin).not.toHaveBeenCalled();
         const vault = module.get(AesGcmConnectorVault);

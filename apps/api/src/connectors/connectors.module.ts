@@ -30,6 +30,10 @@ import { ReferenceConformanceAdapter } from "./reference-adapter/reference-confo
 import { ConnectorSyncWorker } from "./worker/connector-sync-worker";
 import { WebhookDeliveryWorker } from "./worker/webhook-delivery-worker";
 import { NodeWebhookTransport } from "./infrastructure/node-webhook-transport";
+import { AgentBackedAdapter } from "./agent-adapter/agent-backed-adapter";
+import { AgentManagementController } from "./agent/agent-management.controller";
+import { AgentManagementUseCases } from "./agent/agent-management.use-cases";
+import { SupabaseAgentRepository } from "./agent/supabase-agent.repository";
 
 export const CONNECTOR_PORTS = Symbol("CONNECTOR_PORTS");
 
@@ -37,11 +41,31 @@ export const CONNECTOR_PORTS = Symbol("CONNECTOR_PORTS");
   imports: [SupabaseModule, PermissionsModule],
   controllers: [
     ConnectorsWebhooksController,
+    AgentManagementController,
     ConnectorsSyncOperationsController,
     ConnectorsController,
   ],
   providers: [
     SupabaseConnectorRepository,
+    {
+      provide: SupabaseAgentRepository,
+      useFactory: (supabase: SupabaseService, vault: AesGcmConnectorVault) =>
+        new SupabaseAgentRepository(supabase, vault),
+      inject: [SupabaseService, AesGcmConnectorVault],
+    },
+    {
+      provide: AgentManagementUseCases,
+      useFactory: (
+        repository: SupabaseAgentRepository,
+        authorization: ConnectorAuthorizationAdapter,
+        hub: SupabaseConnectorHubRepository,
+      ) => new AgentManagementUseCases(repository, authorization, hub),
+      inject: [
+        SupabaseAgentRepository,
+        ConnectorAuthorizationAdapter,
+        SupabaseConnectorHubRepository,
+      ],
+    },
     {
       provide: SupabaseWebhookRepository,
       useFactory: (supabase: SupabaseService) =>
@@ -56,12 +80,15 @@ export const CONNECTOR_PORTS = Symbol("CONNECTOR_PORTS");
     },
     {
       provide: CONNECTOR_PORTS,
-      useFactory: () => {
+      useFactory: (repository: SupabaseAgentRepository) => {
         const adapter = new ReferenceConformanceAdapter();
+        const agent = new AgentBackedAdapter(repository);
         return new Map<ConnectorType, ConnectorPort>([
           [adapter.connectorType, adapter],
+          [agent.connectorType, agent],
         ]);
       },
+      inject: [SupabaseAgentRepository],
     },
     {
       provide: SupabaseConnectorHubRepository,

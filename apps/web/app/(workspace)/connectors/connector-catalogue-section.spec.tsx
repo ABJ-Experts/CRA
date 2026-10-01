@@ -1,6 +1,12 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ConnectorCatalogueSection } from "./connector-catalogue-section";
 import type { ConnectorCatalogueEntry } from "@repo/contracts/connectors/types";
@@ -74,5 +80,53 @@ describe("connector catalogue availability", () => {
     );
     expect(onConfigure).toHaveBeenCalledWith("github_actions");
     expect(screen.getByText("CI run verification")).toBeVisible();
+  });
+  it("labels the outbound agent as implemented while keeping PLM vendors planned", () => {
+    render(
+      <ConnectorCatalogueSection
+        entries={[
+          {
+            ...base,
+            id: "on_prem_agent",
+            name: "On-premises agent",
+            implementation: "agent",
+            canConfigure: true,
+          },
+          {
+            ...base,
+            id: "teamcenter",
+            name: "Teamcenter",
+            implementation: "planned",
+            canConfigure: false,
+          },
+          {
+            ...base,
+            id: "windchill",
+            name: "Windchill",
+            implementation: "planned",
+            canConfigure: false,
+          },
+        ]}
+        canCreate
+        onConfigure={vi.fn()}
+      />,
+    );
+    expect(
+      within(screen.getByRole("row", { name: /On-premises agent/ })).getByText(
+        "Outbound agent",
+      ),
+    ).toBeVisible();
+    expect(
+      within(screen.getByRole("row", { name: /On-premises agent/ })).getByText(
+        /CRA cannot inspect them/,
+      ),
+    ).toBeInTheDocument();
+    for (const vendor of ["Teamcenter", "Windchill"]) {
+      expect(
+        within(screen.getByRole("row", { name: new RegExp(vendor) })).getByText(
+          "Planned integration",
+        ),
+      ).toBeVisible();
+    }
   });
 });

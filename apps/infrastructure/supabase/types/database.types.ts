@@ -707,6 +707,261 @@ export type Database = {
           },
         ]
       }
+      connector_agent_batches: {
+        Row: {
+          agent_id: string
+          batch_id: string
+          connector_id: string
+          content_hash: string
+          cursor_from: string | null
+          cursor_to: string
+          id: string
+          organization_id: string
+          payload_bytes: number
+          received_at: string
+          record_count: number
+          records: Json
+          sequence: number
+          source_id: string
+          status: string
+        }
+        Insert: {
+          agent_id: string
+          batch_id: string
+          connector_id: string
+          content_hash: string
+          cursor_from?: string | null
+          cursor_to: string
+          id?: string
+          organization_id: string
+          payload_bytes: number
+          received_at?: string
+          record_count: number
+          records: Json
+          sequence: number
+          source_id: string
+          status?: string
+        }
+        Update: {
+          agent_id?: string
+          batch_id?: string
+          connector_id?: string
+          content_hash?: string
+          cursor_from?: string | null
+          cursor_to?: string
+          id?: string
+          organization_id?: string
+          payload_bytes?: number
+          received_at?: string
+          record_count?: number
+          records?: Json
+          sequence?: number
+          source_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "connector_agent_batches_organization_id_connector_id_agent_fkey"
+            columns: ["organization_id", "connector_id", "agent_id"]
+            isOneToOne: false
+            referencedRelation: "connector_agents"
+            referencedColumns: ["organization_id", "connector_id", "id"]
+          },
+        ]
+      }
+      connector_agent_nonces: {
+        Row: {
+          agent_id: string
+          connector_id: string
+          consumed_at: string
+          expires_at: string
+          nonce: string
+          organization_id: string
+        }
+        Insert: {
+          agent_id: string
+          connector_id: string
+          consumed_at?: string
+          expires_at: string
+          nonce: string
+          organization_id: string
+        }
+        Update: {
+          agent_id?: string
+          connector_id?: string
+          consumed_at?: string
+          expires_at?: string
+          nonce?: string
+          organization_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "connector_agent_nonces_organization_id_connector_id_agent__fkey"
+            columns: ["organization_id", "connector_id", "agent_id"]
+            isOneToOne: false
+            referencedRelation: "connector_agents"
+            referencedColumns: ["organization_id", "connector_id", "id"]
+          },
+        ]
+      }
+      connector_agents: {
+        Row: {
+          agent_version: string | null
+          backlog_bytes: number
+          backlog_count: number
+          capabilities: Json
+          connector_id: string
+          created_at: string
+          current_cert_fingerprint: string | null
+          current_cert_pem: string | null
+          current_cert_serial: string | null
+          current_expires_at: string | null
+          current_key_issued_at: string | null
+          current_signing_key_envelope: Json | null
+          current_signing_key_id: string | null
+          enrolled_at: string | null
+          enrollment_csr_hash: string | null
+          enrollment_expires_at: string
+          enrollment_idempotency_key: string
+          enrollment_issued_by: string
+          enrollment_token_envelope: Json
+          enrollment_token_hash: string
+          id: string
+          last_contact_at: string | null
+          last_error_code: string | null
+          last_sequence: number
+          last_source_cursor: string | null
+          organization_id: string
+          previous_cert_fingerprint: string | null
+          previous_cert_pem: string | null
+          previous_cert_serial: string | null
+          previous_key_issued_at: string | null
+          previous_signing_key_envelope: Json | null
+          previous_signing_key_id: string | null
+          previous_valid_until: string | null
+          revocation_idempotency_key: string | null
+          revoked_at: string | null
+          revoked_by: string | null
+          rotation_csr_hash: string | null
+          rotation_idempotency_key: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          agent_version?: string | null
+          backlog_bytes?: number
+          backlog_count?: number
+          capabilities?: Json
+          connector_id: string
+          created_at?: string
+          current_cert_fingerprint?: string | null
+          current_cert_pem?: string | null
+          current_cert_serial?: string | null
+          current_expires_at?: string | null
+          current_key_issued_at?: string | null
+          current_signing_key_envelope?: Json | null
+          current_signing_key_id?: string | null
+          enrolled_at?: string | null
+          enrollment_csr_hash?: string | null
+          enrollment_expires_at: string
+          enrollment_idempotency_key: string
+          enrollment_issued_by: string
+          enrollment_token_envelope: Json
+          enrollment_token_hash: string
+          id?: string
+          last_contact_at?: string | null
+          last_error_code?: string | null
+          last_sequence?: number
+          last_source_cursor?: string | null
+          organization_id: string
+          previous_cert_fingerprint?: string | null
+          previous_cert_pem?: string | null
+          previous_cert_serial?: string | null
+          previous_key_issued_at?: string | null
+          previous_signing_key_envelope?: Json | null
+          previous_signing_key_id?: string | null
+          previous_valid_until?: string | null
+          revocation_idempotency_key?: string | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+          rotation_csr_hash?: string | null
+          rotation_idempotency_key?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          agent_version?: string | null
+          backlog_bytes?: number
+          backlog_count?: number
+          capabilities?: Json
+          connector_id?: string
+          created_at?: string
+          current_cert_fingerprint?: string | null
+          current_cert_pem?: string | null
+          current_cert_serial?: string | null
+          current_expires_at?: string | null
+          current_key_issued_at?: string | null
+          current_signing_key_envelope?: Json | null
+          current_signing_key_id?: string | null
+          enrolled_at?: string | null
+          enrollment_csr_hash?: string | null
+          enrollment_expires_at?: string
+          enrollment_idempotency_key?: string
+          enrollment_issued_by?: string
+          enrollment_token_envelope?: Json
+          enrollment_token_hash?: string
+          id?: string
+          last_contact_at?: string | null
+          last_error_code?: string | null
+          last_sequence?: number
+          last_source_cursor?: string | null
+          organization_id?: string
+          previous_cert_fingerprint?: string | null
+          previous_cert_pem?: string | null
+          previous_cert_serial?: string | null
+          previous_key_issued_at?: string | null
+          previous_signing_key_envelope?: Json | null
+          previous_signing_key_id?: string | null
+          previous_valid_until?: string | null
+          revocation_idempotency_key?: string | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+          rotation_csr_hash?: string | null
+          rotation_idempotency_key?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "connector_agents_enrollment_issued_by_fkey"
+            columns: ["enrollment_issued_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "connector_agents_organization_id_connector_id_fkey"
+            columns: ["organization_id", "connector_id"]
+            isOneToOne: false
+            referencedRelation: "connectors"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "connector_agents_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "connector_agents_revoked_by_fkey"
+            columns: ["revoked_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       connector_commands: {
         Row: {
           actor_user_id: string
@@ -27497,6 +27752,135 @@ export type Database = {
           resource: Json
         }[]
       }
+      m1106_agent_connection_summaries: {
+        Args: { p_connector_ids: string[]; p_organization_id: string }
+        Returns: {
+          active_agent: boolean
+          connector_id: string
+          last_contact_at: string
+        }[]
+      }
+      m1106_agent_live: {
+        Args: {
+          p_agent_id: string
+          p_connector_id: string
+          p_organization_id: string
+        }
+        Returns: boolean
+      }
+      m1106_consume_agent_nonce: {
+        Args: {
+          p_agent_id: string
+          p_cert_fingerprint: string
+          p_connector_id: string
+          p_expires_at: string
+          p_nonce: string
+          p_organization_id: string
+          p_signing_key_id: string
+        }
+        Returns: {
+          outcome: string
+        }[]
+      }
+      m1106_issue_agent_enrollment: {
+        Args: {
+          p_actor_user_id: string
+          p_connector_id: string
+          p_idempotency_key: string
+          p_organization_id: string
+          p_permission_version: number
+          p_token_envelope: Json
+          p_token_hash: string
+        }
+        Returns: {
+          agent: Json
+          outcome: string
+        }[]
+      }
+      m1106_prune_agent_nonces: { Args: { p_limit?: number }; Returns: number }
+      m1106_record_agent_health: {
+        Args: {
+          p_agent_id: string
+          p_agent_version: string
+          p_backlog_bytes: number
+          p_backlog_count: number
+          p_capabilities: Json
+          p_connector_id: string
+          p_organization_id: string
+          p_safe_error_code: string
+        }
+        Returns: {
+          accepted_at: string
+          outcome: string
+        }[]
+      }
+      m1106_redeem_agent_enrollment: {
+        Args: {
+          p_cert_fingerprint: string
+          p_cert_pem: string
+          p_cert_serial: string
+          p_csr_hash: string
+          p_signing_key_envelope: Json
+          p_signing_key_id: string
+          p_token_hash: string
+        }
+        Returns: {
+          agent: Json
+          outcome: string
+        }[]
+      }
+      m1106_revoke_agent: {
+        Args: {
+          p_actor_user_id: string
+          p_agent_id: string
+          p_connector_id: string
+          p_idempotency_key: string
+          p_organization_id: string
+          p_permission_version: number
+        }
+        Returns: {
+          agent: Json
+          outcome: string
+        }[]
+      }
+      m1106_rotate_agent_credential: {
+        Args: {
+          p_agent_id: string
+          p_cert_fingerprint: string
+          p_cert_pem: string
+          p_cert_serial: string
+          p_connector_id: string
+          p_csr_hash: string
+          p_idempotency_key: string
+          p_organization_id: string
+          p_signing_key_envelope: Json
+          p_signing_key_id: string
+        }
+        Returns: {
+          agent: Json
+          outcome: string
+        }[]
+      }
+      m1106_stage_agent_batch: {
+        Args: {
+          p_agent_id: string
+          p_backlog_bytes: number
+          p_backlog_count: number
+          p_batch_id: string
+          p_connector_id: string
+          p_cursor_from: string
+          p_cursor_to: string
+          p_organization_id: string
+          p_records: Json
+          p_sequence: number
+          p_source_id: string
+        }
+        Returns: {
+          accepted_at: string
+          outcome: string
+        }[]
+      }
+      m1106_valid_envelope: { Args: { p_value: Json }; Returns: boolean }
       m2_active_member: {
         Args: { p_actor_user_id: string; p_organization_id: string }
         Returns: boolean

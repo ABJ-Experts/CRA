@@ -342,6 +342,28 @@ describe("registry operational states", () => {
       "secretValue",
     );
   });
+  it("creates an on-premises connector with fixed manual mapping and no server-side source credential", async () => {
+    render(<ConnectorsRegistryContent />);
+    fireEvent.click(screen.getByRole("button", { name: "Add connector" }));
+    fireEvent.change(screen.getByLabelText("Connector type"), {
+      target: { value: "on_prem_agent" },
+    });
+    fireEvent.change(screen.getByLabelText("Display name"), {
+      target: { value: "Factory source" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Add connector" }));
+    await waitFor(() =>
+      expect(create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          connectorType: "on_prem_agent",
+          adapterVersion: "1.0.0",
+          mappingVersion: "on-prem-agent-v1",
+          commitPolicy: "manual",
+          connectionConfig: {},
+        }),
+      ),
+    );
+  });
   it("shows mocks and session loading without making availability claims", () => {
     process.env.NEXT_PUBLIC_ENABLE_MOCKS = "true";
     const { rerender } = render(<ConnectorsRegistryContent />);

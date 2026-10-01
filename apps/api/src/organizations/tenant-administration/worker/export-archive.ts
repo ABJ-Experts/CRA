@@ -431,6 +431,12 @@ export const exportSourceExclusions: Readonly<Record<string, string>> =
       "Security command fingerprints and internal replay state are not portable tenant business records.",
     connector_secrets:
       "Ciphertext-encrypted connector credential material, not portable tenant record data.",
+    connector_agents:
+      "Contains enrollment bearer verifiers, certificate identities, and encrypted signing keys; security configuration is not portable tenant data.",
+    connector_agent_nonces:
+      "Frame nonce ledger is security replay state and cannot be restored into another deployment.",
+    connector_agent_batches:
+      "Uncommitted agent staging payloads and delivery checkpoints are deployment-local worker state; committed product records export separately.",
     ci_provider_release_bindings:
       "Active authorization links between provider identities, CI credentials, products, and releases are security configuration, not portable tenant records.",
     ci_provider_release_binding_commands:

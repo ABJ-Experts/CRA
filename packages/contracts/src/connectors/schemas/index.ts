@@ -9,3 +9,4 @@ export * from "./connector-hub.schema.js";
 
 export * from "./sync-operations.schema.js";
 export * from "./webhook.schema.js";
+export * from "./agent.schema.js";

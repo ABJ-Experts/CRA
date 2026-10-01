@@ -48,7 +48,9 @@ function ConnectorCreateForm({
   const [connectorType, setConnectorType] =
     useState<ConnectorType>(initialType);
   const [adapterVersion, setAdapterVersion] = useState("1.0.0");
-  const [mappingVersion, setMappingVersion] = useState("v1");
+  const [mappingVersion, setMappingVersion] = useState(
+    initialType === "on_prem_agent" ? "on-prem-agent-v1" : "v1",
+  );
   const [commitPolicy, setCommitPolicy] = useState<"manual" | "auto">("manual");
   const [connectionConfigJson, setConnectionConfigJson] = useState("{}");
   const [providerHost, setProviderHost] = useState("gitlab.com");
@@ -74,6 +76,8 @@ function ConnectorCreateForm({
         setMessage("Connection config must be valid JSON.");
         return;
       }
+    } else if (connectorType === "on_prem_agent") {
+      connectionConfig = {};
     } else if (connectorType === "github_actions") {
       connectionConfig = { providerHost: "github.com", appId, installationId };
     } else if (connectorType === "gitlab_ci") {
@@ -125,10 +129,17 @@ function ConnectorCreateForm({
             onChange={(event) => {
               setConnectorType(event.target.value as ConnectorType);
               setCommitPolicy("manual");
+              setAdapterVersion("1.0.0");
+              setMappingVersion(
+                event.target.value === "on_prem_agent"
+                  ? "on-prem-agent-v1"
+                  : "v1",
+              );
             }}
             className="h-10 rounded-xl border border-border bg-canvas px-3 text-subhead-regular text-fg focus-visible:ring-2 focus-visible:ring-active-500"
           >
             <option value="reference_conformance">Reference adapter</option>
+            <option value="on_prem_agent">On-premises agent</option>
             <option value="github_actions">GitHub Actions App</option>
             <option value="gitlab_ci">GitLab CI project</option>
             <option value="azure_devops">Azure DevOps pipeline</option>
@@ -162,12 +173,20 @@ function ConnectorCreateForm({
             </select>
           </label>
         ) : null}
+        {connectorType === "on_prem_agent" ? (
+          <p className="text-caption-1-regular text-fg-muted sm:col-span-2">
+            The agent reads approved internal sources and connects outbound to
+            CRA. Create this connector, then enroll a Linux service or container
+            on its detail page. Internal source credentials stay on that host.
+          </p>
+        ) : null}
         <label className="flex flex-col gap-2 text-caption-1-regular text-fg">
           Adapter version
           <input
             required
             value={adapterVersion}
             onChange={(event) => setAdapterVersion(event.target.value)}
+            readOnly={connectorType === "on_prem_agent"}
             className="h-10 rounded-xl border border-border bg-canvas px-3 text-subhead-regular text-fg"
           />
         </label>
@@ -177,6 +196,7 @@ function ConnectorCreateForm({
             required
             value={mappingVersion}
             onChange={(event) => setMappingVersion(event.target.value)}
+            readOnly={connectorType === "on_prem_agent"}
             className="h-10 rounded-xl border border-border bg-canvas px-3 text-subhead-regular text-fg"
           />
         </label>
@@ -192,7 +212,11 @@ function ConnectorCreateForm({
         ) : null}
         {connectorType === "github_actions" ? (
           <>
-            <p className={cn("text-caption-1-regular text-fg-muted sm:col-span-2")}>
+            <p
+              className={cn(
+                "text-caption-1-regular text-fg-muted sm:col-span-2",
+              )}
+            >
               Install the GitHub App only on the intended repositories. Grant
               Actions: read for run verification and Contents: read for release
               tag verification. Manual workflow_dispatch runs are unsupported.
@@ -270,7 +294,8 @@ function ConnectorCreateForm({
             </label>
           </>
         ) : null}
-        {connectorType !== "reference_conformance" ? (
+        {connectorType !== "reference_conformance" &&
+        connectorType !== "on_prem_agent" ? (
           <p className="text-caption-1-regular text-fg-muted sm:col-span-2">
             Save the provider credential in this connector&apos;s Secret section
             after creation. The configuration above contains no credential.
@@ -343,7 +368,11 @@ function ConnectorCard({
           {connector.commitPolicy === "auto" ? "Auto commit" : "Manual commit"}
         </p>
         <p className="text-caption-1-regular text-fg">
-          Reference fixture validation only · Last sync:{" "}
+          {connector.connectorType === "on_prem_agent"
+            ? "On-premises source · Last sync: "
+            : connector.connectorType === "reference_conformance"
+              ? "Reference fixture validation only · Last sync: "
+              : "Provider integration · Last sync: "}
           {connection.lastSyncAt
             ? new Date(connection.lastSyncAt).toLocaleString()
             : "Never"}

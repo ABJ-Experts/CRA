@@ -3,6 +3,7 @@ import {
   ConnectorHubUseCases,
   canonicalConnectorRequest,
 } from "./connector-hub-use-cases";
+import type { ConnectorPort, ConnectorType } from "./connector-port";
 
 const org = "00000000-0000-4000-8000-000000000001";
 const id = "00000000-0000-4000-8000-000000000002";
@@ -95,12 +96,24 @@ function fixture(timeoutMs = 100) {
     pull: jest.fn(),
     push: jest.fn(),
   };
+  const agentAdapter = {
+    ...adapter,
+    connectorType: "on_prem_agent" as const,
+    testConnection: jest.fn().mockResolvedValue({
+      outcome: "success",
+      latencyMs: 0,
+      adapterVersion: "1.0.0",
+    }),
+  };
   const egress = { validate: jest.fn().mockResolvedValue(undefined) };
   const useCases = new ConnectorHubUseCases(
     repository,
     authorization,
     vault,
-    new Map([["reference_conformance", adapter]]),
+    new Map<ConnectorType, ConnectorPort>([
+      ["reference_conformance", adapter],
+      ["on_prem_agent", agentAdapter],
+    ]),
     egress,
     timeoutMs,
   );
@@ -110,6 +123,7 @@ function fixture(timeoutMs = 100) {
     authorization,
     vault,
     adapter,
+    agentAdapter,
     egress,
     context,
     connector,
@@ -368,6 +382,57 @@ describe("ConnectorHubUseCases command lifecycle", () => {
     ).rejects.toMatchObject({ code: "invalid_state" });
     expect(f.repository.beginSync).not.toHaveBeenCalled();
     expect(f.repository.requestCommit).not.toHaveBeenCalled();
+  });
+  it("allows a staged on-prem agent connector through the reviewed sync path", async () => {
+    const f = fixture();
+    f.repository.context.mockResolvedValue({
+      ...f.context,
+      connector: {
+        ...f.connector,
+        connectorType: "on_prem_agent",
+        hasSecret: false,
+      },
+      secret: null,
+    });
+    await f.useCases.beginSync(org, id, actor, {
+      reconciliationKind: "incremental",
+      idempotencyKey: key,
+    });
+    await f.useCases.requestCommit(org, id, key, actor, 1);
+    expect(f.repository.beginSync).toHaveBeenCalledTimes(1);
+    expect(f.repository.requestCommit).toHaveBeenCalledTimes(1);
+  });
+  it("tests and reconnects an active agent without a provider secret", async () => {
+    const f = fixture();
+    f.repository.context.mockResolvedValue({
+      ...f.context,
+      connector: {
+        ...f.connector,
+        connectorType: "on_prem_agent",
+        hasSecret: false,
+      },
+      secret: null,
+    });
+    await f.useCases.test(org, id, actor, {
+      expectedVersion: 1,
+      idempotencyKey: key,
+    });
+    expect(f.agentAdapter.testConnection).toHaveBeenCalledWith(
+      expect.objectContaining({ organizationId: org, connectorId: id }),
+    );
+    expect(f.repository.finalizeTest).toHaveBeenCalledWith(
+      org,
+      id,
+      expect.any(Object),
+      expect.any(Object),
+      expect.objectContaining({ outcome: "success" }),
+    );
+    await f.useCases.reconnect(org, id, actor, {
+      expectedVersion: 1,
+      idempotencyKey: key,
+    });
+    expect(f.repository.execute).toHaveBeenCalled();
+    expect(f.vault.decrypt).not.toHaveBeenCalled();
   });
   it("revoke is owner-only and disconnect is edit-only with a redacted reason", async () => {
     const f = fixture();

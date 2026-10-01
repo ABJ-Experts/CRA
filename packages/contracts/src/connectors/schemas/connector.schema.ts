@@ -11,6 +11,7 @@ export const connectorTypeSchema = z.enum([
   "gitlab_ci",
   "azure_devops",
   "jira",
+  "on_prem_agent",
 ]);
 export const connectorAdapterVersionSchema = z
   .string()
@@ -125,6 +126,8 @@ export const jiraConnectorConfigurationSchema = z
     cloudId: z.uuid(),
   })
   .strict();
+/** Source credentials and paths stay on the customer's host, never in CRA configuration. */
+export const onPremAgentConnectorConfigurationSchema = z.object({}).strict();
 export const ciConnectorConfigurationSchema = z.union([
   githubActionsConnectorConfigurationSchema,
   gitlabCiConnectorConfigurationSchema,
@@ -134,6 +137,7 @@ const connectorConfigurationSchema = z.union([
   connectorConfigurationInputSchema,
   ciConnectorConfigurationSchema,
   jiraConnectorConfigurationSchema,
+  onPremAgentConnectorConfigurationSchema,
 ]);
 
 export function parseConnectorConfigurationForType(
@@ -151,6 +155,8 @@ export function parseConnectorConfigurationForType(
       return azureDevopsConnectorConfigurationSchema.parse(configuration);
     case "jira":
       return jiraConnectorConfigurationSchema.parse(configuration);
+    case "on_prem_agent":
+      return onPremAgentConnectorConfigurationSchema.parse(configuration);
   }
 }
 
@@ -209,7 +215,9 @@ export const createConnectorInputSchema = z
             ? gitlabCiConnectorConfigurationSchema
             : input.connectorType === "azure_devops"
               ? azureDevopsConnectorConfigurationSchema
-              : jiraConnectorConfigurationSchema;
+              : input.connectorType === "jira"
+                ? jiraConnectorConfigurationSchema
+                : onPremAgentConnectorConfigurationSchema;
     if (
       input.connectorType !== "reference_conformance" &&
       input.commitPolicy !== "manual"

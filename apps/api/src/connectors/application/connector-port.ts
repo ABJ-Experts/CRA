@@ -11,7 +11,8 @@ export type ConnectorType =
   | "github_actions"
   | "gitlab_ci"
   | "azure_devops"
-  | "jira";
+  | "jira"
+  | "on_prem_agent";
 export type ConnectorEntityType = "product" | "release";
 
 export type SecretReference = Readonly<{
@@ -21,6 +22,9 @@ export type SecretReference = Readonly<{
 
 export type ConnectorConnectionConfig = Readonly<{
   connectorType: ConnectorType;
+  /** Verified worker context, never parsed from provider data. */
+  organizationId?: string;
+  connectorId?: string;
   baseUrl?: string;
   tenantOrSiteId?: string;
   scopeFilter?: Readonly<Record<string, string>>;

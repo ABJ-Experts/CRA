@@ -348,9 +348,34 @@ export class SupabaseConnectorHubRepository implements ConnectorHubRepository {
     );
     if (error || !Array.isArray(data)) throw new ConnectorError("unavailable");
     const rows = data.map((row: unknown) => this.parsedRow(row));
+    const agentIds = connectors
+      .filter((connector) => connector.connectorType === "on_prem_agent")
+      .map((connector) => connector.id);
+    const agentRows =
+      agentIds.length === 0
+        ? []
+        : await this.client()
+            .rpc("m1106_agent_connection_summaries", {
+              p_organization_id: orgId,
+              p_connector_ids: agentIds,
+            })
+            .then(({ data: agentData, error: agentError }) => {
+              if (agentError || !Array.isArray(agentData))
+                throw new ConnectorError("unavailable");
+              return agentData.map((row: unknown) => this.parsedRow(row));
+            });
     return connectors.map((connector) => {
       const row = rows.find((item) => item.connector_id === connector.id);
       if (!row) throw new ConnectorError("unavailable");
+      const agentRow =
+        connector.connectorType === "on_prem_agent"
+          ? agentRows.find((item) => item.connector_id === connector.id)
+          : null;
+      if (
+        connector.connectorType === "on_prem_agent" &&
+        (agentRow == null || typeof agentRow.active_agent !== "boolean")
+      )
+        throw new ConnectorError("unavailable");
       const assessment = row.scope_assessment
         ? this.parsedRow(row.scope_assessment)
         : {};
@@ -400,6 +425,7 @@ export class SupabaseConnectorHubRepository implements ConnectorHubRepository {
         row,
         currentTest,
         assessment.status === "missing" || scope.missingScopes.length > 0,
+        agentRow?.active_agent === true,
       );
       return connectorOverviewSchema.parse({
         connector,
@@ -502,10 +528,16 @@ function connectionStatus(
   row: Readonly<Record<string, unknown>>,
   currentTest: boolean,
   missingScope: boolean,
+  agentActive: boolean,
 ): readonly [string, string] {
   if (!connector.enabled) return ["not_connected", "disabled"];
   if (row.credential_revoked) return ["not_connected", "credentials_revoked"];
-  if (!connector.hasSecret) return ["not_connected", "credentials_missing"];
+  if (
+    connector.connectorType === "on_prem_agent"
+      ? !agentActive
+      : !connector.hasSecret
+  )
+    return ["not_connected", "credentials_missing"];
   if (!currentTest) return ["not_connected", "test_required"];
   if (missingScope) return ["degraded", "missing_scope"];
   if (connector.lastTestErrorCode === "auth_failed")

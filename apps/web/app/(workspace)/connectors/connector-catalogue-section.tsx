@@ -25,8 +25,7 @@ export function ConnectorCatalogueSection({
       <div className="overflow-x-auto">
         <table className="w-full text-left text-caption-1-regular text-fg">
           <caption className="sr-only">
-            Supported reference adapter and CI integrations with least-privilege
-            guidance
+            Integration availability and least-privilege guidance
           </caption>
           <thead>
             <tr className="border-b border-border text-caption-1-semibold">
@@ -65,7 +64,9 @@ export function ConnectorCatalogueSection({
                       Scope policy {entry.scopePolicyVersion}.{" "}
                       {entry.scopeIntrospection === "not_applicable"
                         ? "Vendor privilege introspection is not applicable to fixtures."
-                        : "Granted privileges are unknown until a supported adapter can inspect them."}
+                        : entry.implementation === "agent"
+                          ? "Internal source privileges are configured on the agent host; CRA cannot inspect them."
+                          : "Granted privileges are unknown until a supported adapter can inspect them."}
                     </p>
                   </details>
                 </th>
@@ -74,7 +75,9 @@ export function ConnectorCatalogueSection({
                     ? "Reference/test adapter"
                     : entry.implementation === "ci"
                       ? "CI run verification"
-                      : "Planned integration"}
+                      : entry.implementation === "agent"
+                        ? "Outbound agent"
+                        : "Planned integration"}
                 </td>
                 <td className="whitespace-nowrap px-3 py-4">
                   {entry.phase} / {entry.priority}

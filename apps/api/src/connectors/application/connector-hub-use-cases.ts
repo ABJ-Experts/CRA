@@ -40,6 +40,10 @@ const testScope = Object.freeze({
   missingScopes: [],
   excessScopes: [],
 });
+const agentUnknownScope = Object.freeze({
+  ...testScope,
+  status: "unknown" as const,
+});
 
 /** Deterministic ordering is required for keyed request identity across retries. */
 export function canonicalConnectorRequest(value: unknown): string {
@@ -141,7 +145,10 @@ export class ConnectorHubUseCases {
       "can_create_connectors",
     ]);
     const context = await this.repository.context(orgId, connectorId);
-    if (context.connector.connectorType !== "reference_conformance")
+    if (
+      context.connector.connectorType !== "reference_conformance" &&
+      context.connector.connectorType !== "on_prem_agent"
+    )
       throw new ConnectorError("invalid_state");
     return this.repository.beginSync(
       orgId,
@@ -163,7 +170,10 @@ export class ConnectorHubUseCases {
       "can_approve_connectors",
     ]);
     const context = await this.repository.context(orgId, connectorId);
-    if (context.connector.connectorType !== "reference_conformance")
+    if (
+      context.connector.connectorType !== "reference_conformance" &&
+      context.connector.connectorType !== "on_prem_agent"
+    )
       throw new ConnectorError("invalid_state");
     return this.repository.requestCommit(
       orgId,
@@ -292,10 +302,12 @@ export class ConnectorHubUseCases {
       existing.connector.connectorType !== "reference_conformance",
     );
     const context = await this.repository.context(orgId, connectorId);
-    try {
-      await this.readCredential(orgId, context);
-    } catch {
-      throw new ConnectorError("unavailable");
+    if (context.connector.connectorType !== "on_prem_agent") {
+      try {
+        await this.readCredential(orgId, context);
+      } catch {
+        throw new ConnectorError("unavailable");
+      }
     }
     return this.repository.execute(orgId, request);
   }
@@ -359,8 +371,9 @@ export class ConnectorHubUseCases {
     commandId: string,
   ): Promise<ConnectorSafeTestResult> {
     const secret = context.secret;
-    if (!secret) return failure("auth_failed");
-    const value = await this.readCredential(orgId, context);
+    const agent = context.connector.connectorType === "on_prem_agent";
+    if (!secret && !agent) return failure("auth_failed");
+    const value = secret ? await this.readCredential(orgId, context) : "";
     const abort = new AbortController();
     let timer: ReturnType<typeof setTimeout> | undefined;
     try {
@@ -368,6 +381,8 @@ export class ConnectorHubUseCases {
         adapter.testConnection({
           connectorType: context.connector.connectorType,
           ...context.connector.connectionConfig,
+          organizationId: orgId,
+          connectorId: context.connector.id,
           secretReference: { provider: "reference_fixture", reference: value },
           executionIdentity: `${orgId}:${context.connector.id}:test:${commandId}`,
           signal: abort.signal,
@@ -390,7 +405,7 @@ export class ConnectorHubUseCases {
         outcome: "success",
         errorCode: null,
         latencyMs: Math.min(outcome.latencyMs, 120_000),
-        scope: testScope,
+        scope: agent ? agentUnknownScope : testScope,
       });
     } finally {
       if (timer) clearTimeout(timer);

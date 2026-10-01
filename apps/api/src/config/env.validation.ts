@@ -129,6 +129,12 @@ export const envSchema = z.object({
   CONNECTOR_VAULT_KEYRING: z.string().optional(),
   CONNECTOR_VAULT_GPG_BINARY: z.string().optional(),
   CONNECTOR_ALLOWED_HOSTS: z.string().optional().default(""),
+  /** Mounted PEM paths for the separate agent ingress process. */
+  AGENT_INGRESS_PORT: optionalBoundedInt(65535, "must be a TCP port"),
+  AGENT_TLS_KEY_PATH: z.string().optional(),
+  AGENT_TLS_CERT_PATH: z.string().optional(),
+  AGENT_CA_CERT_PATH: z.string().optional(),
+  AGENT_CA_KEY_PATH: z.string().optional(),
 
   // --- Mail -------------------------------------------------------------
   /**

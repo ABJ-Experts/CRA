@@ -1,0 +1,28 @@
+[Unit]
+Description=CRA Sentinel outbound integration agent
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=cra-agent
+Group=cra-agent
+ExecStart=/usr/bin/node /opt/cra-agent/current/dist/main.js serve --config /etc/cra-agent/config.json
+Restart=on-failure
+RestartSec=10s
+StateDirectory=cra-agent
+StateDirectoryMode=0700
+UMask=0077
+NoNewPrivileges=yes
+CapabilityBoundingSet=
+AmbientCapabilities=
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=read-only
+ProtectKernelTunables=yes
+ProtectControlGroups=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+ReadWritePaths=/var/lib/cra-agent
+
+[Install]
+WantedBy=multi-user.target

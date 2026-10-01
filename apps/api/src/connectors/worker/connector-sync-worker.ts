@@ -271,6 +271,8 @@ export class ConnectorSyncWorker {
       const config: ConnectorConnectionConfig = {
         connectorType: connector.connectorType,
         ...connector.connectionConfig,
+        organizationId,
+        connectorId,
         secretReference: { provider: "vault", reference: secretValue ?? "" },
         executionIdentity: `${organizationId}:${connectorId}:${run.id}`,
         signal: AbortSignal.timeout(15_000),
