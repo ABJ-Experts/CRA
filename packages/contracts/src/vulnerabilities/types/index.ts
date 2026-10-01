@@ -9,4 +9,5 @@ export type * from "./vulnerability-assessment-bulk.type.js";
 export type * from "./vulnerability-triage.type.js";
 export type * from "./vulnerability-triage-note.type.js";
 export type * from "./vulnerability-remediation.type.js";
+export type * from "./vulnerability-remediation-ticket.type.js";
 export type * from "./vulnerability-vex-export.type.js";

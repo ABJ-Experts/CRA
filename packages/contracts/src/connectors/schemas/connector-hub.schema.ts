@@ -28,7 +28,7 @@ export const connectorCatalogueEntrySchema = z
       "enisa",
     ]),
     name: text(100),
-    implementation: z.enum(["reference", "ci", "planned"]),
+    implementation: z.enum(["reference", "ci", "ticketing", "planned"]),
     phase: z.enum(["MVP", "V1", "V2"]),
     priority: z.enum(["P0", "P1", "P2"]),
     canConfigure: z.boolean(),
@@ -43,14 +43,18 @@ export const connectorCatalogueEntrySchema = z
     const ci = ["github_actions", "gitlab_ci", "azure_devops"].includes(
       entry.id,
     );
+    const ticketing = entry.id === "jira";
     return (
-      entry.canConfigure === (entry.id === "reference_conformance" || ci) &&
+      entry.canConfigure ===
+        (entry.id === "reference_conformance" || ci || ticketing) &&
       entry.implementation ===
-        (ci
-          ? "ci"
-          : entry.id === "reference_conformance"
-            ? "reference"
-            : "planned")
+        (ticketing
+          ? "ticketing"
+          : ci
+            ? "ci"
+            : entry.id === "reference_conformance"
+              ? "reference"
+              : "planned")
     );
   }, "Only registered reference and CI connections can be configured");
 export const connectorCatalogueResponseSchema = z

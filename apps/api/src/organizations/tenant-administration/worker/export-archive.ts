@@ -256,6 +256,11 @@ export const exportSourceRegistry: readonly ExportSourceRegistration[] =
         "vulnerability_finding_triage_states",
         "vulnerability_triage_alert_events",
         "vulnerability_finding_remediation_anchors",
+        "vulnerability_remediation_ticket_bindings",
+        "vulnerability_remediation_ticket_status_mappings",
+        "vulnerability_remediation_tickets",
+        "vulnerability_remediation_ticket_operations",
+        "vulnerability_remediation_ticket_events",
       ],
     },
     {

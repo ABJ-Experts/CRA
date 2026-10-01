@@ -143,6 +143,51 @@ describe("connector hub security boundaries", () => {
     ).toBe(false);
   });
 
+  it("accepts Jira Cloud metadata separately from CI and rejects credentials", () => {
+    const base = {
+      displayName: "Jira Cloud",
+      adapterVersion: "1.0.0",
+      mappingVersion: "jira-v1",
+      connectorType: "jira",
+      commitPolicy: "manual",
+      idempotencyKey,
+    } as const;
+    const connectionConfig = {
+      providerHost: "api.atlassian.com",
+      siteHost: "tenant.atlassian.net",
+      cloudId: idempotencyKey,
+    };
+    expect(
+      createConnectorInputSchema.safeParse({ ...base, connectionConfig })
+        .success,
+    ).toBe(true);
+    expect(
+      ciConnectorConfigurationSchema.safeParse(connectionConfig).success,
+    ).toBe(false);
+    for (const override of [
+      { connectionConfig: { ...connectionConfig, token: "secret" } },
+      {
+        connectionConfig: {
+          providerHost: "tenant.atlassian.net",
+          siteHost: "tenant.atlassian.net",
+          cloudId: idempotencyKey,
+        },
+      },
+      {
+        connectionConfig: {
+          providerHost: "api.atlassian.com",
+          siteHost: "Tenant.atlassian.net",
+          cloudId: idempotencyKey,
+        },
+      },
+      { connectionConfig, commitPolicy: "auto" },
+    ]) {
+      expect(
+        createConnectorInputSchema.safeParse({ ...base, ...override }).success,
+      ).toBe(false);
+    }
+  });
+
   it("rejects unsafe endpoint syntax and secret-bearing URL components", () => {
     expect(
       connectorConfigurationInputSchema.safeParse({

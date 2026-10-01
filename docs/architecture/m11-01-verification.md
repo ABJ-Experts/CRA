@@ -100,13 +100,7 @@ Coverage artifacts:
 [API](evidence/m11/api-coverage.json), [web](evidence/m11/web-coverage.json),
 [controller](evidence/m11/controller-coverage.json),
 [module wiring](evidence/m11/module-coverage.json).
-Screenshots:
-[catalogue](evidence/m11/catalogue-desktop.png),
-[healthy connection](evidence/m11/connection-healthy-desktop.png),
-[revoked connection](evidence/m11/connection-revoked-desktop.png),
-[mobile](evidence/m11/connection-mobile.png).
-The repaired signup/verification journey is captured in
-[auth recovery](evidence/m11/auth-trigger-recovery.png).
+Browser screenshots were removed after verification.
 
 ## Bounded read measurement
 

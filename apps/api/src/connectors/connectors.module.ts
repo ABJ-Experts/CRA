@@ -4,6 +4,7 @@ import { PermissionsModule } from "../permissions/permissions.module";
 import { PermissionsService } from "../permissions/permissions.service";
 import { ConnectorHubUseCases } from "./application/connector-hub-use-cases";
 import { CiConnectorCredentialReader } from "./application/ci-connector-credential-reader";
+import { JiraConnectorCredentialReader } from "./application/jira-connector-credential-reader";
 import { ConnectorSyncOperationsUseCases } from "./application/connector-sync-operations-use-cases";
 import { WebhookUseCases } from "./application/webhook-use-cases";
 import { SupabaseSyncOperationsRepository } from "./infrastructure/supabase-sync-operations.repository";
@@ -100,6 +101,19 @@ export const CONNECTOR_PORTS = Symbol("CONNECTOR_PORTS");
         reader: ConnectorCredentialReader,
         egress: NodeConnectorEgressPolicy,
       ) => new CiConnectorCredentialReader(repository, reader, egress),
+      inject: [
+        SupabaseConnectorHubRepository,
+        ConnectorCredentialReader,
+        NodeConnectorEgressPolicy,
+      ],
+    },
+    {
+      provide: JiraConnectorCredentialReader,
+      useFactory: (
+        repository: SupabaseConnectorHubRepository,
+        reader: ConnectorCredentialReader,
+        egress: NodeConnectorEgressPolicy,
+      ) => new JiraConnectorCredentialReader(repository, reader, egress),
       inject: [
         SupabaseConnectorHubRepository,
         ConnectorCredentialReader,
@@ -283,6 +297,7 @@ export const CONNECTOR_PORTS = Symbol("CONNECTOR_PORTS");
     ConnectorSyncWorker,
     WebhookDeliveryWorker,
     CiConnectorCredentialReader,
+    JiraConnectorCredentialReader,
   ],
 })
 export class ConnectorsModule {}

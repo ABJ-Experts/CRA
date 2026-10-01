@@ -45,7 +45,8 @@
     "verify:tenant-export-capacity": "node dist/organizations/tenant-administration/worker/tenant-export-capacity.js",
     "vault:connectors": "node dist/connector-vault-maintenance.js",
     "worker:webhook-delivery": "node dist/webhook-delivery-worker.js",
-    "vault:webhooks": "node dist/webhook-vault-maintenance.js"
+    "vault:webhooks": "node dist/webhook-vault-maintenance.js",
+    "worker:vulnerability-remediation-tickets": "node dist/vulnerability-remediation-ticket-operation-worker.js"
   },
   "dependencies": {
     "@cyclonedx/cyclonedx-library": "10.2.0",

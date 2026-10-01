@@ -97,17 +97,18 @@ export class ConnectorHubUseCases {
   }
 
   async create(orgId: string, actorId: string, input: CreateConnectorInput) {
-    const ci = input.connectorType !== "reference_conformance";
+    const external = input.connectorType !== "reference_conformance";
     const authorization = await this.authorization.authorize(
       orgId,
       actorId,
       ["can_create_connectors"],
-      ci,
+      external,
     );
     const adapter = this.adapters.get(input.connectorType);
     if (
-      (!ci && (!adapter || adapter.adapterVersion !== input.adapterVersion)) ||
-      (ci &&
+      (!external &&
+        (!adapter || adapter.adapterVersion !== input.adapterVersion)) ||
+      (external &&
         (input.adapterVersion !== "1.0.0" || input.commitPolicy !== "manual"))
     )
       throw new ConnectorError("invalid_request");
@@ -180,16 +181,17 @@ export class ConnectorHubUseCases {
   ) {
     await this.authorization.authorize(orgId, actorId, ["can_edit_connectors"]);
     const context = await this.repository.context(orgId, connectorId);
-    const ci = context.connector.connectorType !== "reference_conformance";
+    const external =
+      context.connector.connectorType !== "reference_conformance";
     const request = await this.request(
       orgId,
       connectorId,
       actorId,
       "configure",
       input,
-      ci,
+      external,
     );
-    if (ci && input.commitPolicy !== "manual")
+    if (external && input.commitPolicy !== "manual")
       throw new ConnectorError("invalid_request");
     try {
       parseConnectorConfigurationForType(

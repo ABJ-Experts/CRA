@@ -24,7 +24,31 @@ describe("connector catalogue", () => {
       "github_actions",
       "gitlab_ci",
       "azure_devops",
+      "jira",
     ]);
+    expect(findConnectorCatalogueEntry("jira")).toMatchObject({
+      implementation: "ticketing",
+      phase: "V1",
+      priority: "P1",
+      requiredScopes: [
+        "read:application-role:jira",
+        "read:field:jira",
+        "read:field.default-value:jira",
+        "read:field.option:jira",
+        "read:group:jira",
+        "read:issue:jira",
+        "read:issue-details:jira",
+        "read:issue-meta:jira",
+        "read:issue-type:jira",
+        "read:issue.property:jira",
+        "read:issue.transition:jira",
+        "read:project:jira",
+        "read:project.property:jira",
+        "read:user:jira",
+        "write:issue:jira",
+        "write:issue.property:jira",
+      ],
+    });
     expect(findConnectorCatalogueEntry("github_actions")).toMatchObject({
       implementation: "ci",
       phase: "MVP",

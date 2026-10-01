@@ -1,6 +1,8 @@
 import { randomUUID } from "node:crypto";
 import { Module } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
+import { ConnectorsModule } from "../connectors/connectors.module";
+import { JiraConnectorCredentialReader } from "../connectors/application/jira-connector-credential-reader";
 
 import { ProductsModule } from "../products/products.module";
 import { SuppliersModule } from "../suppliers/suppliers.module";
@@ -61,16 +63,25 @@ import type {
   VexExportStoragePort,
 } from "./exports/vex-export.port";
 import { VulnerabilityVexPublicationWorker } from "./exports/worker/vulnerability-vex-publication-worker";
-import { VulnerabilityTriageController } from "./triage/vulnerability-triage.controller";
+import {
+  JiraRemediationWebhookController,
+  VulnerabilityTriageController,
+} from "./triage/vulnerability-triage.controller";
 import {
   VULNERABILITY_TRIAGE_REPOSITORY,
   type VulnerabilityTriageRepository,
 } from "./triage/application/vulnerability-triage.port";
 import { VulnerabilityTriageUseCases } from "./triage/application/vulnerability-triage-use-cases";
 import { SupabaseVulnerabilityTriageRepository } from "./triage/infrastructure/supabase-vulnerability-triage.repository";
+import {
+  JiraRemediationAdapter,
+  jiraWebhookDeliveryIdentity,
+  verifyJiraWebhookSignature,
+} from "./triage/infrastructure/jira-remediation.adapter";
 import { SupabaseVulnerabilityTriageNoteMentionQueue } from "./triage/infrastructure/supabase-vulnerability-triage-note-mention-queue";
 import { MailVulnerabilityTriageNoteMentionNotifierAdapter } from "./triage/infrastructure/mail-vulnerability-triage-note-mention-notifier.adapter";
 import { VulnerabilityTriageNoteMentionWorker } from "./triage/worker/vulnerability-triage-note-mention-worker";
+import { VulnerabilityRemediationTicketOperationWorker } from "./triage/worker/vulnerability-remediation-ticket-operation-worker";
 import {
   VULNERABILITY_TRIAGE_NOTE_MENTION_NOTIFIER,
   VULNERABILITY_TRIAGE_NOTE_MENTION_QUEUE,
@@ -83,7 +94,13 @@ import {
 } from "./worker/finding-propagation-worker";
 
 @Module({
-  imports: [SupabaseModule, ProductsModule, MailModule, SuppliersModule],
+  imports: [
+    SupabaseModule,
+    ProductsModule,
+    MailModule,
+    SuppliersModule,
+    ConnectorsModule,
+  ],
   controllers: [
     // Static supplier resolution must register before generic :findingId routes.
     FindingResponsibleSuppliersController,
@@ -96,12 +113,17 @@ import {
     // VEX static routes must register before the triage :findingId route.
     VulnerabilityVexExportController,
     VulnerabilityTriageController,
+    JiraRemediationWebhookController,
   ],
   providers: [
     SupabaseFindingPropagationRepository,
     SupabaseVulnerabilityAssessmentRepository,
     SupabaseVulnerabilityAssessmentBulkRepository,
     SupabaseVulnerabilityTriageRepository,
+    {
+      provide: JiraRemediationAdapter,
+      useFactory: () => new JiraRemediationAdapter(),
+    },
     SupabaseVulnerabilityTriageNoteMentionQueue,
     MailVulnerabilityTriageNoteMentionNotifierAdapter,
     SupabaseVexExportStorageAdapter,
@@ -146,6 +168,54 @@ import {
     {
       provide: VULNERABILITY_TRIAGE_NOTE_MENTION_NOTIFIER,
       useExisting: MailVulnerabilityTriageNoteMentionNotifierAdapter,
+    },
+    {
+      provide: VulnerabilityRemediationTicketOperationWorker,
+      inject: [
+        VULNERABILITY_TRIAGE_REPOSITORY,
+        JiraConnectorCredentialReader,
+        JiraRemediationAdapter,
+        ConfigService,
+      ],
+      useFactory: (
+        repository: VulnerabilityTriageRepository,
+        credentials: JiraConnectorCredentialReader,
+        adapter: JiraRemediationAdapter,
+        config: ConfigService,
+      ) =>
+        new VulnerabilityRemediationTicketOperationWorker({
+          workerId: randomUUID(),
+          leaseSeconds: config.get<number>(
+            "VULNERABILITY_REMEDIATION_TICKET_OPERATION_LEASE_SECONDS",
+            300,
+          ),
+          organizationLimit: config.get<number>(
+            "VULNERABILITY_REMEDIATION_TICKET_OPERATION_ORG_LIMIT",
+            10,
+          ),
+          maxClaimsPerOrganization: config.get<number>(
+            "VULNERABILITY_REMEDIATION_TICKET_OPERATION_MAX_CLAIMS_PER_ORG",
+            25,
+          ),
+          repository,
+          credentials: {
+            load: async (organizationId, connectorId) => {
+              const connection = await credentials.load(
+                organizationId,
+                connectorId,
+              );
+              return {
+                cloudId: connection.config.cloudId,
+                token: connection.token,
+                webhookSecret: connection.webhookSecret,
+                siteHost: connection.config.siteHost,
+                connectionRevision: connection.connectionRevision,
+                credentialRevision: connection.credentialRevision,
+              };
+            },
+          },
+          adapter,
+        }),
     },
     {
       provide: VulnerabilityTriageNoteMentionWorker,
@@ -227,9 +297,37 @@ import {
     },
     {
       provide: VulnerabilityTriageUseCases,
-      inject: [VULNERABILITY_TRIAGE_REPOSITORY],
-      useFactory: (repository: VulnerabilityTriageRepository) =>
-        new VulnerabilityTriageUseCases(repository),
+      inject: [
+        VULNERABILITY_TRIAGE_REPOSITORY,
+        JiraConnectorCredentialReader,
+        JiraRemediationAdapter,
+      ],
+      useFactory: (
+        repository: VulnerabilityTriageRepository,
+        credentialReader: JiraConnectorCredentialReader,
+        adapter: JiraRemediationAdapter,
+      ) =>
+        new VulnerabilityTriageUseCases(repository, {
+          credentials: {
+            load: async (organizationId, connectorId) => {
+              const connection = await credentialReader.load(
+                organizationId,
+                connectorId,
+              );
+              return {
+                cloudId: connection.config.cloudId,
+                token: connection.token,
+                webhookSecret: connection.webhookSecret,
+                siteHost: connection.config.siteHost,
+              };
+            },
+          },
+          adapter,
+          webhook: {
+            verifySignature: verifyJiraWebhookSignature,
+            deliveryIdentity: jiraWebhookDeliveryIdentity,
+          },
+        }),
     },
     {
       provide: FINDING_PROPAGATION_REPOSITORY,

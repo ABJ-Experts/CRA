@@ -29,6 +29,11 @@ import type {
   CreateVulnerabilityTriageNoteInput,
   UpdateVulnerabilityTriageNoteInput,
   DeleteVulnerabilityTriageNoteInput,
+  PreviewVulnerabilityRemediationTicketInput,
+  ReplayVulnerabilityRemediationTicketInput,
+  SyncVulnerabilityRemediationTicketInput,
+  DryRunVulnerabilityRemediationTicketBindingInput,
+  UpsertVulnerabilityRemediationTicketBindingInput,
 } from "@repo/contracts/vulnerabilities";
 import {
   keepPreviousData,
@@ -39,6 +44,7 @@ import {
 
 import { vulnerabilityTriageApi } from "./triage.api";
 import { vulnerabilityTriageKeys } from "./triage.keys";
+import { useSession } from "../../_providers/session-provider";
 
 export function useVulnerabilityTriageQueueQuery(
   query: Readonly<Partial<VulnerabilityTriageQueueQuery>>,
@@ -58,12 +64,14 @@ export function useVulnerabilityTriageDetailQuery(
   findingId: string | null,
   enabled: boolean,
 ) {
+  const { session } = useSession();
+  const organizationId = session?.organization?.id ?? null;
   return useQuery({
     queryKey:
       findingId === null
         ? vulnerabilityTriageKeys.all
-        : vulnerabilityTriageKeys.detail(findingId),
-    enabled: enabled && findingId !== null,
+        : vulnerabilityTriageKeys.detail(findingId, organizationId),
+    enabled: enabled && findingId !== null && organizationId !== null,
     retry: false,
     queryFn: ({ signal }) => {
       if (findingId === null)
@@ -88,6 +96,30 @@ export function useVulnerabilityRemediationHistoryQuery(
       if (findingId === null)
         throw new Error("A finding identifier is required.");
       return vulnerabilityTriageApi.remediationHistory(findingId, signal);
+    },
+  });
+}
+
+export function useVulnerabilityRemediationTicketsQuery(
+  findingId: string | null,
+  enabled: boolean,
+) {
+  const { session } = useSession();
+  const organizationId = session?.organization?.id ?? null;
+  return useQuery({
+    queryKey:
+      findingId === null
+        ? vulnerabilityTriageKeys.remediationTickets
+        : vulnerabilityTriageKeys.remediationTicketsForFinding(
+            findingId,
+            organizationId,
+          ),
+    enabled: enabled && findingId !== null && organizationId !== null,
+    retry: false,
+    queryFn: ({ signal }) => {
+      if (findingId === null)
+        throw new Error("A finding identifier is required.");
+      return vulnerabilityTriageApi.remediationTickets(findingId, signal);
     },
   });
 }
@@ -352,6 +384,9 @@ function useInvalidateFindingRemediation() {
           vulnerabilityTriageKeys.remediationHistoryForFinding(findingId),
       }),
       client.invalidateQueries({
+        queryKey: vulnerabilityTriageKeys.remediationTickets,
+      }),
+      client.invalidateQueries({
         queryKey: vulnerabilityTriageKeys.detail(findingId),
       }),
       client.invalidateQueries({ queryKey: vulnerabilityTriageKeys.queue }),
@@ -568,6 +603,72 @@ export function useCorrectVulnerabilityRemediationMutation() {
       input: CorrectVulnerabilityRemediationAnchorInput;
     }) => vulnerabilityTriageApi.correctRemediation(findingId, input),
     onSuccess: (_, variables) => invalidate(variables.findingId),
+  });
+}
+
+export function useSyncVulnerabilityRemediationTicketMutation() {
+  const invalidate = useInvalidateFindingRemediation();
+  return useMutation({
+    mutationFn: ({
+      findingId,
+      input,
+    }: {
+      findingId: string;
+      input: SyncVulnerabilityRemediationTicketInput;
+    }) => vulnerabilityTriageApi.syncRemediationTicket(findingId, input),
+    onSuccess: (_, variables) => invalidate(variables.findingId),
+  });
+}
+
+export function usePreviewVulnerabilityRemediationTicketMutation() {
+  return useMutation({
+    mutationFn: ({
+      findingId,
+      input,
+    }: {
+      findingId: string;
+      input: PreviewVulnerabilityRemediationTicketInput;
+    }) => vulnerabilityTriageApi.previewRemediationTicket(findingId, input),
+  });
+}
+
+export function useReplayVulnerabilityRemediationTicketMutation() {
+  const invalidate = useInvalidateFindingRemediation();
+  return useMutation({
+    mutationFn: ({
+      findingId,
+      ticketId,
+      input,
+    }: {
+      findingId: string;
+      ticketId: string;
+      input: ReplayVulnerabilityRemediationTicketInput;
+    }) =>
+      vulnerabilityTriageApi.replayRemediationTicket(
+        findingId,
+        ticketId,
+        input,
+      ),
+    onSuccess: (_, variables) => invalidate(variables.findingId),
+  });
+}
+
+export function useDryRunVulnerabilityRemediationTicketBindingMutation() {
+  return useMutation({
+    mutationFn: (input: DryRunVulnerabilityRemediationTicketBindingInput) =>
+      vulnerabilityTriageApi.dryRunRemediationTicketBinding(input),
+  });
+}
+
+export function useUpsertVulnerabilityRemediationTicketBindingMutation() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (input: UpsertVulnerabilityRemediationTicketBindingInput) =>
+      vulnerabilityTriageApi.upsertRemediationTicketBinding(input),
+    onSuccess: () =>
+      client.invalidateQueries({
+        queryKey: vulnerabilityTriageKeys.remediationTickets,
+      }),
   });
 }
 

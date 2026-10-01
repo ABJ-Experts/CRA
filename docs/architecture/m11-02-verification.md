@@ -93,10 +93,7 @@ was started and no domain trigger/grant was changed. The exact fixture's coverag
 scope was removed before its organization cascade; rollback rehearsal and commit
 confirmed cleanup while unrelated control identities remained unchanged.
 
-Screenshots: [desktop history](evidence/m11-02/history-desktop.png),
-[mobile dead letters](evidence/m11-02/dead-letters-mobile.png),
-[independent owner desktop](evidence/m11-02/mcp-owner-history-desktop.png),
-[independent owner mobile](evidence/m11-02/mcp-owner-history-mobile.png).
+Browser screenshots were removed after verification.
 
 [Read-load measurements](evidence/m11-02/read-load.json): 1,000 synthetic runs,
 3,000 records, 1,000 attempts, 500 dead letters, page size 100, five concurrent

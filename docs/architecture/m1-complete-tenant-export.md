@@ -18,7 +18,7 @@ The identified M1 tenant-export gap is closed and ready for the user's commit an
 | CLI database types                          | Both copies regenerated from local CRA                                                                                                                  |
 | Test cleanup                                | Zero M1 export test organizations and scoped `e2e-` objects; exact fixture left by the September 25 timeout removed                                     |
 
-The connected hosted Supabase MCP projects are unrelated ERP projects. All database implementation and cross-checking used the local `cra` stack. Fresh screenshot evidence is retained in `docs/architecture/evidence/m1/`; obsolete failed-run files generated during this task were removed. Existing tracked screenshots and unrelated site data were preserved.
+The connected hosted Supabase MCP projects are unrelated ERP projects. All database implementation and cross-checking used the local `cra` stack. Testing screenshots were removed from the repository; unrelated site data was preserved.
 
 ## Scope and preserved contracts
 
@@ -87,9 +87,9 @@ For Firefox and WebKit, set `process.env.E2E_CROSS_BROWSER="true"`, remove the `
 
 Screenshots:
 
-- Completed Chromium export: `docs/architecture/evidence/m1/tenant-administration-an-o-970ac-a-verified-private-artifact-chromium/m1-export-completed-{desktop,mobile}.png`
+- Completed Chromium export: browser journey verified; generated screenshots removed.
 - Completed Firefox/WebKit exports: corresponding browser directories under `docs/architecture/evidence/m1/browser/`
-- Seeded-owner Playwright MCP: `docs/architecture/evidence/m1/mcp-owner-export-{desktop,mobile}.png`
+- Seeded-owner Playwright MCP: browser journey verified; generated screenshots removed.
 
 Focused coverage command:
 

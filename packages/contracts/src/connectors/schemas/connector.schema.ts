@@ -10,6 +10,7 @@ export const connectorTypeSchema = z.enum([
   "github_actions",
   "gitlab_ci",
   "azure_devops",
+  "jira",
 ]);
 export const connectorAdapterVersionSchema = z
   .string()
@@ -117,6 +118,13 @@ export const azureDevopsConnectorConfigurationSchema = z
     serviceConnectionId: z.uuid(),
   })
   .strict();
+export const jiraConnectorConfigurationSchema = z
+  .object({
+    providerHost: z.literal("api.atlassian.com"),
+    siteHost: z.string().regex(/^[a-z0-9-]+\.atlassian\.net$/),
+    cloudId: z.uuid(),
+  })
+  .strict();
 export const ciConnectorConfigurationSchema = z.union([
   githubActionsConnectorConfigurationSchema,
   gitlabCiConnectorConfigurationSchema,
@@ -125,6 +133,7 @@ export const ciConnectorConfigurationSchema = z.union([
 const connectorConfigurationSchema = z.union([
   connectorConfigurationInputSchema,
   ciConnectorConfigurationSchema,
+  jiraConnectorConfigurationSchema,
 ]);
 
 export function parseConnectorConfigurationForType(
@@ -140,6 +149,8 @@ export function parseConnectorConfigurationForType(
       return gitlabCiConnectorConfigurationSchema.parse(configuration);
     case "azure_devops":
       return azureDevopsConnectorConfigurationSchema.parse(configuration);
+    case "jira":
+      return jiraConnectorConfigurationSchema.parse(configuration);
   }
 }
 
@@ -189,6 +200,16 @@ export const createConnectorInputSchema = z
   })
   .strict()
   .superRefine((input, ctx) => {
+    const configurationSchema =
+      input.connectorType === "reference_conformance"
+        ? connectorConfigurationInputSchema
+        : input.connectorType === "github_actions"
+          ? githubActionsConnectorConfigurationSchema
+          : input.connectorType === "gitlab_ci"
+            ? gitlabCiConnectorConfigurationSchema
+            : input.connectorType === "azure_devops"
+              ? azureDevopsConnectorConfigurationSchema
+              : jiraConnectorConfigurationSchema;
     if (
       input.connectorType !== "reference_conformance" &&
       input.commitPolicy !== "manual"
@@ -196,19 +217,10 @@ export const createConnectorInputSchema = z
       ctx.addIssue({
         code: "custom",
         path: ["commitPolicy"],
-        message: "CI connectors do not support product/release auto-commit",
+        message:
+          "External connectors do not support product/release auto-commit",
       });
-    if (
-      !(
-        input.connectorType === "reference_conformance"
-          ? connectorConfigurationInputSchema
-          : input.connectorType === "github_actions"
-            ? githubActionsConnectorConfigurationSchema
-            : input.connectorType === "gitlab_ci"
-              ? gitlabCiConnectorConfigurationSchema
-              : azureDevopsConnectorConfigurationSchema
-      ).safeParse(input.connectionConfig ?? {}).success
-    )
+    if (!configurationSchema.safeParse(input.connectionConfig ?? {}).success)
       ctx.addIssue({
         code: "custom",
         path: ["connectionConfig"],

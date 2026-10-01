@@ -40,6 +40,7 @@ export class NodeConnectorEgressPolicy implements ConnectorEgressPolicy {
             "github.com",
             "gitlab.com",
             "dev.azure.com",
+            "api.atlassian.com",
           ]),
       this.lookup ? { lookup: this.lookup } : undefined,
     );

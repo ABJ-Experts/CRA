@@ -21,6 +21,10 @@ const remediationHistory = Object.freeze([
   "remediation-history",
 ] as const);
 const notes = Object.freeze([...all, "notes"] as const);
+const remediationTickets = Object.freeze([
+  ...all,
+  "remediation-tickets",
+] as const);
 const vexExports = Object.freeze([...all, "vex-exports"] as const);
 const vexPublicationTargets = Object.freeze([
   ...vexExports,
@@ -41,6 +45,7 @@ export const vulnerabilityTriageKeys = Object.freeze({
   triageSlaPolicies,
   remediationHistory,
   notes,
+  remediationTickets,
   vexExports,
   vexPublicationTargets,
   queueList: (
@@ -52,12 +57,28 @@ export const vulnerabilityTriageKeys = Object.freeze({
       organizationId ?? "no-organization",
       stableQuery(query),
     ] as const),
-  detail: (findingId: string) =>
-    Object.freeze([...all, "detail", findingId] as const),
+  detail: (findingId: string, organizationId?: string | null) =>
+    Object.freeze([
+      ...all,
+      "detail",
+      findingId,
+      ...(organizationId === undefined
+        ? []
+        : [organizationId ?? "no-organization"]),
+    ] as const),
   remediationHistoryForFinding: (findingId: string) =>
     Object.freeze([...remediationHistory, findingId] as const),
   notesForFinding: (findingId: string) =>
     Object.freeze([...notes, findingId] as const),
+  remediationTicketsForFinding: (
+    findingId: string,
+    organizationId: string | null,
+  ) =>
+    Object.freeze([
+      ...remediationTickets,
+      organizationId ?? "no-organization",
+      findingId,
+    ] as const),
   assessment: (findingId: string) =>
     Object.freeze([...assessments, findingId] as const),
   assessmentBulkOperation: (operationId: string) =>

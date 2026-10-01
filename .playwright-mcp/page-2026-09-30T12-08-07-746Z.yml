@@ -1,0 +1,280 @@
+- generic [active] [ref=f4e1]:
+  - generic [ref=f4e3]:
+    - complementary [ref=f4e4]:
+      - generic [ref=f4e5]:
+        - generic [ref=f4e6]:
+          - link "CRA Sentinel" [ref=f4e7] [cursor=pointer]:
+            - /url: /dashboard
+            - generic [aria-hidden] [ref=f4e8]: C
+            - text: CRA Sentinel
+          - button "Collapse sidebar" [ref=f4e9] [cursor=pointer]
+        - navigation "Main" [ref=f4e12]:
+          - generic [ref=f4e13]:
+            - list [ref=f4e15]:
+              - listitem [ref=f4e16]:
+                - link "Dashboard" [ref=f4e17] [cursor=pointer]:
+                  - /url: /dashboard
+              - listitem [ref=f4e25]:
+                - link "Management" [ref=f4e26] [cursor=pointer]:
+                  - /url: /management
+              - listitem [ref=f4e32]:
+                - link "Organization" [ref=f4e33] [cursor=pointer]:
+                  - /url: /organization
+              - listitem [ref=f4e40]:
+                - link "Products" [ref=f4e41] [cursor=pointer]:
+                  - /url: /products
+              - listitem [ref=f4e48]:
+                - link "Suppliers" [ref=f4e49] [cursor=pointer]:
+                  - /url: /suppliers
+              - listitem [ref=f4e54]:
+                - link "Frameworks" [ref=f4e55] [cursor=pointer]:
+                  - /url: /frameworks
+              - listitem [ref=f4e60]:
+                - link "Findings" [ref=f4e61] [cursor=pointer]:
+                  - /url: /findings
+              - listitem [ref=f4e66]:
+                - link "Reporting" [ref=f4e67] [cursor=pointer]:
+                  - /url: /reporting
+              - listitem [ref=f4e73]:
+                - link "Connectors" [ref=f4e74] [cursor=pointer]:
+                  - /url: /connectors
+            - generic [ref=f4e81]:
+              - paragraph [ref=f4e82]: Account & access
+              - list [ref=f4e83]:
+                - listitem [ref=f4e84]:
+                  - button "Profile" [ref=f4e85] [cursor=pointer]
+                  - generic:
+                    - list:
+                      - listitem [ref=f4e93]:
+                        - link "Account" [ref=f4e94] [cursor=pointer]:
+                          - /url: /account
+                      - listitem [ref=f4e96]:
+                        - link "Security" [ref=f4e97] [cursor=pointer]:
+                          - /url: /security
+                - listitem [ref=f4e99]:
+                  - button "Authorization" [ref=f4e100] [cursor=pointer]
+                  - generic:
+                    - list:
+                      - listitem [ref=f4e108]:
+                        - link "Roles" [ref=f4e109] [cursor=pointer]:
+                          - /url: /roles
+                      - listitem [ref=f4e111]:
+                        - link "Permissions" [ref=f4e112] [cursor=pointer]:
+                          - /url: /permissions
+        - button "Sign out" [ref=f4e116] [cursor=pointer]
+    - generic [ref=f4e121]:
+      - banner [ref=f4e122]:
+        - navigation "Breadcrumb" [ref=f4e124]:
+          - list [ref=f4e125]:
+            - listitem [ref=f4e126]:
+              - link "Dashboard" [ref=f4e127] [cursor=pointer]:
+                - /url: /dashboard
+            - listitem [aria-hidden] [ref=f4e128]
+            - listitem [ref=f4e131]:
+              - generic [ref=f4e132]: Findings
+        - generic [ref=f4e133]:
+          - button "Search" [ref=f4e134] [cursor=pointer]
+          - button "Notifications" [ref=f4e138] [cursor=pointer]
+          - generic [ref=f4e142]:
+            - generic [ref=f4e143]: AF
+            - 'img "Ada Foster: online" [ref=f4e145]'
+      - main [ref=f4e146]:
+        - generic [ref=f4e147]:
+          - generic [ref=f4e148]:
+            - generic [ref=f4e149]:
+              - heading "Findings" [level=1] [ref=f4e150]
+              - paragraph [ref=f4e151]: Tenant-scoped vulnerability triage. Filters and pagination run on the server.
+            - button "Clear filters" [ref=f4e153] [cursor=pointer]
+          - region [ref=f4e154]:
+            - generic [ref=f4e156]:
+              - heading "Saved views" [level=2] [ref=f4e157]
+              - paragraph [ref=f4e158]: Shared with this organization. Your default remains personal.
+            - generic [ref=f4e159]: No shared views yet.
+            - generic [ref=f4e161]:
+              - generic [ref=f4e162]: Saved view name
+              - textbox "Saved view name" [ref=f4e163]:
+                - /placeholder: Save current filters as…
+              - button "Save view" [ref=f4e164] [cursor=pointer]
+          - generic "Finding filters" [ref=f4e165]:
+            - generic [ref=f4e166]:
+              - text: Severity
+              - combobox "Severity" [ref=f4e167] [cursor=pointer]:
+                - option "All severities" [selected]
+                - option "Critical"
+                - option "High"
+                - option "Medium"
+                - option "Low"
+                - option "Unknown"
+            - generic [ref=f4e168]:
+              - text: Product IDs
+              - textbox "Product IDs" [ref=f4e169]:
+                - /placeholder: Comma-separated UUIDs
+            - generic [ref=f4e170]:
+              - text: Release IDs
+              - textbox "Release IDs" [ref=f4e171]:
+                - /placeholder: Comma-separated UUIDs
+            - generic [ref=f4e172]:
+              - text: EPSS
+              - combobox "EPSS" [ref=f4e173] [cursor=pointer]:
+                - option "Any EPSS" [selected]
+                - option "Known"
+                - option "Unknown"
+            - generic [ref=f4e174]:
+              - text: Matcher state
+              - combobox "Matcher state" [ref=f4e175] [cursor=pointer]:
+                - option "Any matcher state" [selected]
+                - option "Active"
+                - option "Superseded"
+            - generic [ref=f4e176]:
+              - text: Re-evaluation
+              - combobox "Re-evaluation" [ref=f4e177] [cursor=pointer]:
+                - option "Any re-evaluation" [selected]
+                - option "Unchanged"
+                - option "Materially changed"
+                - option "Review required"
+                - option "Source unavailable"
+                - option "Re-evaluating"
+            - generic [ref=f4e178]:
+              - text: KEV
+              - combobox "KEV" [ref=f4e179] [cursor=pointer]:
+                - option "Any KEV state" [selected]
+                - option "Listed"
+                - option "Not listed"
+                - option "Unknown"
+            - generic [ref=f4e180]:
+              - text: Assessment
+              - combobox "Assessment" [ref=f4e181] [cursor=pointer]:
+                - option "Any assessment" [selected]
+                - option "Unassessed"
+                - option "Affected"
+                - option "Not affected"
+            - generic [ref=f4e182]:
+              - text: VEX status
+              - combobox "VEX status" [ref=f4e183] [cursor=pointer]:
+                - option "Any VEX status" [selected]
+                - option "Under investigation"
+                - option "Affected"
+                - option "Not affected"
+                - option "Fixed"
+            - generic [ref=f4e184]:
+              - text: Approval
+              - combobox "Approval" [ref=f4e185] [cursor=pointer]:
+                - option "Any approval state" [selected]
+                - option "Awaiting approval"
+                - option "Approved"
+                - option "Rejected"
+                - option "Not required"
+            - generic [ref=f4e186]:
+              - text: Reachability
+              - combobox "Reachability" [ref=f4e187] [cursor=pointer]:
+                - option "Any reachability" [selected]
+                - option "Reachable"
+                - option "Not reachable"
+                - option "Unknown"
+                - option "Not analysed"
+            - generic [ref=f4e188]:
+              - text: Queue state
+              - combobox "Queue state" [ref=f4e189] [cursor=pointer]:
+                - option "Any queue state" [selected]
+                - option "Actionable"
+                - option "Suppressed"
+            - generic [ref=f4e190]:
+              - text: Internal SLA
+              - combobox "Internal SLA" [ref=f4e191] [cursor=pointer]:
+                - option "Any internal SLA" [selected]
+                - option "Not configured"
+                - option "Tracking"
+                - option "Paused"
+                - option "Breached"
+            - generic [ref=f4e192]:
+              - text: Alert delivery
+              - combobox "Alert delivery" [ref=f4e193] [cursor=pointer]:
+                - option "Any alert delivery" [selected]
+                - option "Pending"
+                - option "Retrying"
+                - option "Delivery failed"
+                - option "Recipient unavailable"
+                - option "Delivered"
+            - generic [ref=f4e194]:
+              - text: Remediation
+              - combobox "Remediation" [ref=f4e195] [cursor=pointer]:
+                - option "Any remediation" [selected]
+                - option "No anchor"
+                - option "Fix planned"
+                - option "Fix available"
+                - option "Fix applied"
+            - generic [ref=f4e196]:
+              - text: Reintroduction
+              - combobox "Reintroduction" [ref=f4e197] [cursor=pointer]:
+                - option "Any reintroduction" [selected]
+                - option "Not reintroduced"
+                - option "Reintroduced"
+                - option "Not evaluated"
+            - generic [ref=f4e198]:
+              - text: Sort
+              - combobox "Sort" [ref=f4e199] [cursor=pointer]:
+                - option "Last evaluated" [selected]
+                - option "First detected"
+                - option "Severity"
+                - option "EPSS"
+            - generic [ref=f4e200]:
+              - text: Order
+              - combobox "Order" [ref=f4e201] [cursor=pointer]:
+                - option "Descending" [selected]
+                - option "Ascending"
+            - generic [ref=f4e202]:
+              - text: Minimum age (days)
+              - spinbutton "Minimum age (days)" [ref=f4e203]
+            - generic [ref=f4e204]:
+              - text: Maximum age (days)
+              - spinbutton "Maximum age (days)" [ref=f4e205]
+            - generic [ref=f4e206]:
+              - text: Minimum EPSS
+              - spinbutton "Minimum EPSS" [ref=f4e207]
+            - generic [ref=f4e208]:
+              - text: Maximum EPSS
+              - spinbutton "Maximum EPSS" [ref=f4e209]
+            - generic [ref=f4e210]:
+              - text: Assessed-by user IDs
+              - textbox "Assessed-by user IDs" [ref=f4e211]:
+                - /placeholder: Comma-separated UUIDs
+          - region [ref=f4e212]:
+            - generic [ref=f4e213]:
+              - generic [ref=f4e214]:
+                - heading "Triage queue" [level=2] [ref=f4e215]
+                - paragraph [ref=f4e216]: 1 loaded finding
+              - button "Bulk assess findings" [ref=f4e217] [cursor=pointer]
+            - generic [ref=f4e218]:
+              - generic [aria-hidden] [ref=f4e219]:
+                - generic [ref=f4e220]: Select
+                - generic [ref=f4e221]: Advisory
+                - generic [ref=f4e222]: Product / release
+                - generic [ref=f4e223]: Severity
+                - generic [ref=f4e224]: EPSS / KEV
+                - generic [ref=f4e225]: Reachability
+                - generic [ref=f4e226]: VEX / approval
+                - generic [ref=f4e227]: Operations
+              - grid "Triage findings" [ref=f4e228]:
+                - row "CVE-2026-99001, M9 local fixture product, unknown severity, actionable, internal SLA not_configured, delivery not_requested, remediation not_recorded, reintroduction not_evaluated" [ref=f4e230]:
+                  - gridcell [ref=f4e231]:
+                    - checkbox "Select CVE-2026-99001, M9 local fixture product, unknown severity, actionable, internal SLA not_configured, delivery not_requested, remediation not_recorded, reintroduction not_evaluated" [ref=f4e234] [cursor=pointer]
+                  - gridcell "CVE-2026-99001" [ref=f4e235]
+                  - gridcell "M9 local fixture product M9 local fixture release" [ref=f4e236]:
+                    - text: M9 local fixture product
+                    - generic [ref=f4e237]: M9 local fixture release
+                  - gridcell "Unknown" [ref=f4e238]
+                  - gridcell "EPSS unknown KEV Not Listed" [ref=f4e242]:
+                    - text: EPSS unknown
+                    - generic [ref=f4e243]: KEV Not Listed
+                  - gridcell "Unknown" [ref=f4e244]
+                  - gridcell "Not assessed Approval unavailable" [ref=f4e245]:
+                    - text: Not assessed
+                    - generic [ref=f4e246]: Approval unavailable
+                  - gridcell "Actionable · No remediation anchor SLA Not Configured · Not Requested · Reintroduction not evaluated" [ref=f4e247]:
+                    - text: Actionable · No remediation anchor
+                    - generic [ref=f4e248]: SLA Not Configured · Not Requested · Reintroduction not evaluated
+              - generic [ref=f4e249]:
+                - paragraph [ref=f4e250]: Use arrow keys to move, Space to select, and Enter to inspect.
+                - generic [ref=f4e251]: All loaded findings shown.
+  - button "Open Next.js Dev Tools" [ref=f4e257] [cursor=pointer]
+  - alert [ref=f4e261]

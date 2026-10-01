@@ -54,7 +54,7 @@ Directory outages show retry and never grant permission. Foreign or inactive own
 
 ## Browser and MCP closure
 
-Repository Playwright product-registry journeys passed in Chromium and Firefox with screenshots under `docs/architecture/evidence/m2/cross-browser/`; WebKit screenshots from the verified keyboard/typeahead path are under `docs/architecture/evidence/m2/webkit/`. Relationship browser evidence after the session and Kong/DNS fixes is under `docs/architecture/evidence/m2/relationships-kong-fixed/`. Classification WebKit passed with eight screenshots under `docs/architecture/evidence/m2/classification-webkit/`.
+Repository Playwright product-registry journeys passed in Chromium and Firefox; WebKit covered the keyboard/typeahead path. Relationship browser checks passed after the session and Kong/DNS fixes. Classification WebKit passed. Generated screenshots were removed.
 
 Playwright MCP was run through a fresh pinned local `@playwright/mcp@0.0.82` browser because the earlier registered transport was closed. It verified owner classification history/rerun and viewer readonly access without global sign-out or site-data removal. Evidence is in [mcp-final/verification.json](evidence/m2/mcp-final/verification.json) and related screenshots. The final auth Chromium retry passed after aligning the runtime app origin with the running web port; the earlier failure is recorded as an environment origin mismatch, not an auth source change.
 

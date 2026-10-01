@@ -76,3 +76,27 @@ it("requires explicit approved self-managed GitLab hosts and public DNS on every
     code: "invalid_request",
   });
 });
+
+it("allows only the Jira Cloud API host for Jira metadata", async () => {
+  const resolver = jest.fn().mockResolvedValue([{ address: "93.184.216.34" }]);
+  const policy = new NodeConnectorEgressPolicy([], resolver);
+  await policy.validate(
+    {
+      providerHost: "api.atlassian.com",
+      siteHost: "tenant.atlassian.net",
+      cloudId: "00000000-0000-4000-8000-000000000004",
+    },
+    "jira",
+  );
+  expect(resolver).toHaveBeenCalledWith("api.atlassian.com");
+  await expect(
+    policy.validate(
+      {
+        providerHost: "tenant.atlassian.net",
+        siteHost: "tenant.atlassian.net",
+        cloudId: "00000000-0000-4000-8000-000000000004",
+      },
+      "jira",
+    ),
+  ).rejects.toMatchObject({ code: "invalid_request" });
+});

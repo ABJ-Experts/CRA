@@ -19135,6 +19135,469 @@ export type Database = {
           },
         ]
       }
+      vulnerability_remediation_ticket_bindings: {
+        Row: {
+          connector_id: string
+          created_at: string
+          created_by: string
+          custom_field_mappings: Json
+          external_base_url: string
+          field_mapping: Json
+          id: string
+          issue_type_id: string
+          organization_id: string
+          product_id: string
+          project_id: string
+          project_key: string
+          provider: string
+          provider_cloud_id: string
+          provider_host: string
+          revoked_at: string | null
+          revoked_by: string | null
+          revoked_reason: string | null
+          site_host: string
+          status: string
+          status_mappings: Json
+          status_transitions: Json
+          updated_at: string
+          updated_by: string
+          version: number
+        }
+        Insert: {
+          connector_id: string
+          created_at?: string
+          created_by: string
+          custom_field_mappings?: Json
+          external_base_url: string
+          field_mapping: Json
+          id?: string
+          issue_type_id: string
+          organization_id: string
+          product_id: string
+          project_id: string
+          project_key: string
+          provider: string
+          provider_cloud_id: string
+          provider_host: string
+          revoked_at?: string | null
+          revoked_by?: string | null
+          revoked_reason?: string | null
+          site_host: string
+          status?: string
+          status_mappings: Json
+          status_transitions: Json
+          updated_at?: string
+          updated_by: string
+          version?: number
+        }
+        Update: {
+          connector_id?: string
+          created_at?: string
+          created_by?: string
+          custom_field_mappings?: Json
+          external_base_url?: string
+          field_mapping?: Json
+          id?: string
+          issue_type_id?: string
+          organization_id?: string
+          product_id?: string
+          project_id?: string
+          project_key?: string
+          provider?: string
+          provider_cloud_id?: string
+          provider_host?: string
+          revoked_at?: string | null
+          revoked_by?: string | null
+          revoked_reason?: string | null
+          site_host?: string
+          status?: string
+          status_mappings?: Json
+          status_transitions?: Json
+          updated_at?: string
+          updated_by?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vulnerability_remediation_tic_organization_id_connector_id_fkey"
+            columns: ["organization_id", "connector_id"]
+            isOneToOne: false
+            referencedRelation: "connectors"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "vulnerability_remediation_ticke_organization_id_product_id_fkey"
+            columns: ["organization_id", "product_id"]
+            isOneToOne: false
+            referencedRelation: "product_retention_alert_operations"
+            referencedColumns: ["organization_id", "product_id"]
+          },
+          {
+            foreignKeyName: "vulnerability_remediation_ticke_organization_id_product_id_fkey"
+            columns: ["organization_id", "product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "vulnerability_remediation_ticket_bindings_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vulnerability_remediation_ticket_bindings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vulnerability_remediation_ticket_bindings_revoked_by_fkey"
+            columns: ["revoked_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vulnerability_remediation_ticket_bindings_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vulnerability_remediation_ticket_events: {
+        Row: {
+          binding_id: string
+          delivery_id: string
+          external_issue_id: string
+          external_issue_key: string
+          external_status_id: string
+          external_status_name: string
+          id: string
+          organization_id: string
+          outcome: string
+          processed_at: string
+          provider: string
+          provider_project_id: string
+          provider_updated_at: string
+          ticket_id: string | null
+        }
+        Insert: {
+          binding_id: string
+          delivery_id: string
+          external_issue_id: string
+          external_issue_key: string
+          external_status_id: string
+          external_status_name: string
+          id?: string
+          organization_id: string
+          outcome: string
+          processed_at?: string
+          provider: string
+          provider_project_id: string
+          provider_updated_at: string
+          ticket_id?: string | null
+        }
+        Update: {
+          binding_id?: string
+          delivery_id?: string
+          external_issue_id?: string
+          external_issue_key?: string
+          external_status_id?: string
+          external_status_name?: string
+          id?: string
+          organization_id?: string
+          outcome?: string
+          processed_at?: string
+          provider?: string
+          provider_project_id?: string
+          provider_updated_at?: string
+          ticket_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vulnerability_remediation_tick_organization_id_binding_id_fkey3"
+            columns: ["organization_id", "binding_id"]
+            isOneToOne: false
+            referencedRelation: "vulnerability_remediation_ticket_bindings"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "vulnerability_remediation_ticke_organization_id_ticket_id_fkey1"
+            columns: ["organization_id", "ticket_id"]
+            isOneToOne: false
+            referencedRelation: "vulnerability_remediation_tickets"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "vulnerability_remediation_ticket_events_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vulnerability_remediation_ticket_operations: {
+        Row: {
+          actor_user_id: string | null
+          attempt_count: number
+          binding_id: string
+          completed_at: string | null
+          connector_connection_revision: number | null
+          connector_credential_revision: number | null
+          context_digest: string
+          correlation_id: string
+          created_at: string
+          finding_id: string
+          id: string
+          idempotency_key: string
+          last_error: string | null
+          lease_expires_at: string | null
+          lease_owner: string | null
+          next_attempt_at: string
+          operation: string
+          organization_id: string
+          result: Json
+          state: string
+          ticket_id: string | null
+        }
+        Insert: {
+          actor_user_id?: string | null
+          attempt_count?: number
+          binding_id: string
+          completed_at?: string | null
+          connector_connection_revision?: number | null
+          connector_credential_revision?: number | null
+          context_digest: string
+          correlation_id?: string
+          created_at?: string
+          finding_id: string
+          id?: string
+          idempotency_key: string
+          last_error?: string | null
+          lease_expires_at?: string | null
+          lease_owner?: string | null
+          next_attempt_at?: string
+          operation: string
+          organization_id: string
+          result?: Json
+          state: string
+          ticket_id?: string | null
+        }
+        Update: {
+          actor_user_id?: string | null
+          attempt_count?: number
+          binding_id?: string
+          completed_at?: string | null
+          connector_connection_revision?: number | null
+          connector_credential_revision?: number | null
+          context_digest?: string
+          correlation_id?: string
+          created_at?: string
+          finding_id?: string
+          id?: string
+          idempotency_key?: string
+          last_error?: string | null
+          lease_expires_at?: string | null
+          lease_owner?: string | null
+          next_attempt_at?: string
+          operation?: string
+          organization_id?: string
+          result?: Json
+          state?: string
+          ticket_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vulnerability_remediation_tick_organization_id_binding_id_fkey2"
+            columns: ["organization_id", "binding_id"]
+            isOneToOne: false
+            referencedRelation: "vulnerability_remediation_ticket_bindings"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "vulnerability_remediation_tick_organization_id_finding_id_fkey1"
+            columns: ["organization_id", "finding_id"]
+            isOneToOne: false
+            referencedRelation: "vulnerability_findings"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "vulnerability_remediation_ticket_operation_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vulnerability_remediation_ticket_operations_actor_user_id_fkey"
+            columns: ["actor_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vulnerability_remediation_ticket_organization_id_ticket_id_fkey"
+            columns: ["organization_id", "ticket_id"]
+            isOneToOne: false
+            referencedRelation: "vulnerability_remediation_tickets"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      vulnerability_remediation_ticket_status_mappings: {
+        Row: {
+          binding_id: string
+          created_at: string
+          external_is_closed: boolean
+          external_status_id: string
+          external_status_name: string
+          id: string
+          mapped_status: string
+          organization_id: string
+          version: number
+        }
+        Insert: {
+          binding_id: string
+          created_at?: string
+          external_is_closed?: boolean
+          external_status_id: string
+          external_status_name: string
+          id?: string
+          mapped_status: string
+          organization_id: string
+          version?: number
+        }
+        Update: {
+          binding_id?: string
+          created_at?: string
+          external_is_closed?: boolean
+          external_status_id?: string
+          external_status_name?: string
+          id?: string
+          mapped_status?: string
+          organization_id?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vulnerability_remediation_ticke_organization_id_binding_id_fkey"
+            columns: ["organization_id", "binding_id"]
+            isOneToOne: false
+            referencedRelation: "vulnerability_remediation_ticket_bindings"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "vulnerability_remediation_ticket_status_ma_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vulnerability_remediation_tickets: {
+        Row: {
+          binding_id: string
+          conflict_reason: string | null
+          correlation_id: string
+          created_at: string
+          external_issue_id: string | null
+          external_issue_key: string | null
+          external_status_id: string | null
+          external_status_name: string | null
+          external_url: string | null
+          finding_id: string
+          id: string
+          last_inbound_delivery_id: string | null
+          last_provider_event_at: string | null
+          last_sync_at: string
+          last_sync_direction: string
+          organization_id: string
+          provider: string
+          provider_project_id: string | null
+          status: string
+          sync_revision: number
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          binding_id: string
+          conflict_reason?: string | null
+          correlation_id?: string
+          created_at?: string
+          external_issue_id?: string | null
+          external_issue_key?: string | null
+          external_status_id?: string | null
+          external_status_name?: string | null
+          external_url?: string | null
+          finding_id: string
+          id?: string
+          last_inbound_delivery_id?: string | null
+          last_provider_event_at?: string | null
+          last_sync_at?: string
+          last_sync_direction: string
+          organization_id: string
+          provider: string
+          provider_project_id?: string | null
+          status: string
+          sync_revision?: number
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          binding_id?: string
+          conflict_reason?: string | null
+          correlation_id?: string
+          created_at?: string
+          external_issue_id?: string | null
+          external_issue_key?: string | null
+          external_status_id?: string | null
+          external_status_name?: string | null
+          external_url?: string | null
+          finding_id?: string
+          id?: string
+          last_inbound_delivery_id?: string | null
+          last_provider_event_at?: string | null
+          last_sync_at?: string
+          last_sync_direction?: string
+          organization_id?: string
+          provider?: string
+          provider_project_id?: string | null
+          status?: string
+          sync_revision?: number
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vulnerability_remediation_tick_organization_id_binding_id_fkey1"
+            columns: ["organization_id", "binding_id"]
+            isOneToOne: false
+            referencedRelation: "vulnerability_remediation_ticket_bindings"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "vulnerability_remediation_ticke_organization_id_finding_id_fkey"
+            columns: ["organization_id", "finding_id"]
+            isOneToOne: false
+            referencedRelation: "vulnerability_findings"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "vulnerability_remediation_tickets_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vulnerability_source_record_versions: {
         Row: {
           id: string
@@ -21481,6 +21944,17 @@ export type Database = {
           outcome: string
         }[]
       }
+      claim_vulnerability_remediation_ticket_operation_atomic: {
+        Args: {
+          p_lease_seconds: number
+          p_organization_id: string
+          p_worker_id: string
+        }
+        Returns: {
+          operation: Json
+          outcome: string
+        }[]
+      }
       claim_vulnerability_triage_alert: {
         Args: {
           p_lease_seconds?: number
@@ -21900,6 +22374,18 @@ export type Database = {
           p_worker_id: string
         }
         Returns: {
+          outcome: string
+        }[]
+      }
+      complete_vulnerability_remediation_ticket_operation_atomic: {
+        Args: {
+          p_operation_id: string
+          p_organization_id: string
+          p_result: Json
+          p_worker_id: string
+        }
+        Returns: {
+          operation: Json
           outcome: string
         }[]
       }
@@ -23408,6 +23894,34 @@ export type Database = {
           outcome: string
         }[]
       }
+      fail_vulnerability_remediation_ticket_operation_atomic:
+        | {
+            Args: {
+              p_error: string
+              p_operation_id: string
+              p_organization_id: string
+              p_retryable: boolean
+              p_worker_id: string
+            }
+            Returns: {
+              operation: Json
+              outcome: string
+            }[]
+          }
+        | {
+            Args: {
+              p_error: string
+              p_operation_id: string
+              p_organization_id: string
+              p_retry_after_seconds: number
+              p_retryable: boolean
+              p_worker_id: string
+            }
+            Returns: {
+              operation: Json
+              outcome: string
+            }[]
+          }
       fail_vulnerability_vex_publication_job: {
         Args: {
           p_error_code: string
@@ -23709,6 +24223,23 @@ export type Database = {
         Returns: {
           outcome: string
           result: Json
+        }[]
+      }
+      finalize_vulnerability_remediation_ticket_atomic: {
+        Args: {
+          p_external_issue_id: string
+          p_external_issue_key: string
+          p_external_status_id: string
+          p_external_status_name: string
+          p_operation_id: string
+          p_organization_id: string
+          p_provider_project_id: string
+          p_provider_updated_at: string
+          p_ticket_id: string
+        }
+        Returns: {
+          outcome: string
+          ticket: Json
         }[]
       }
       generate_sbom_composite_atomic: {
@@ -25099,6 +25630,13 @@ export type Database = {
           organization_id: string
         }[]
       }
+      list_due_vulnerability_remediation_ticket_operation_orgs: {
+        Args: { p_limit: number }
+        Returns: {
+          due_count: number
+          organization_id: string
+        }[]
+      }
       list_due_vulnerability_triage_alert_organizations: {
         Args: { p_limit?: number }
         Returns: {
@@ -25196,6 +25734,17 @@ export type Database = {
         Returns: {
           outcome: string
           policies: Json
+        }[]
+      }
+      list_finding_remediation_tickets: {
+        Args: {
+          p_actor_user_id: string
+          p_finding_id: string
+          p_organization_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
         }[]
       }
       list_finding_saved_views: {
@@ -26372,6 +26921,47 @@ export type Database = {
           p_draft_id: string
           p_organization_id: string
         }
+        Returns: boolean
+      }
+      m11_05_actor_is_owner: {
+        Args: { p_actor_user_id: string; p_organization_id: string }
+        Returns: boolean
+      }
+      m11_05_remediation_ticket_operation_json: {
+        Args: { p_operation_id: string }
+        Returns: Json
+      }
+      m11_05_ticket_binding_json: {
+        Args: { p_binding_id: string; p_organization_id: string }
+        Returns: Json
+      }
+      m11_05_ticket_json: {
+        Args: { p_organization_id: string; p_ticket_id: string }
+        Returns: Json
+      }
+      m11_05_ticket_status: {
+        Args: {
+          p_binding_id: string
+          p_external_status_id: string
+          p_external_status_name: string
+          p_organization_id: string
+        }
+        Returns: string
+      }
+      m11_05_valid_custom_field_mappings: {
+        Args: { p_mappings: Json }
+        Returns: boolean
+      }
+      m11_05_valid_status_mappings: {
+        Args: { p_mappings: Json }
+        Returns: boolean
+      }
+      m11_05_valid_status_transitions: {
+        Args: { p_transitions: Json }
+        Returns: boolean
+      }
+      m11_05_valid_ticket_field_mapping: {
+        Args: { p_mapping: Json }
         Returns: boolean
       }
       m11_assert_sync_run_fence: {
@@ -28239,6 +28829,29 @@ export type Database = {
         }
         Returns: number
       }
+      mark_vulnerability_remediation_ticket_create_attempt_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_operation_id: string
+          p_organization_id: string
+        }
+        Returns: {
+          operation: Json
+          outcome: string
+        }[]
+      }
+      mark_vulnerability_remediation_ticket_create_rejected_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_operation_id: string
+          p_organization_id: string
+          p_rejection_code: string
+        }
+        Returns: {
+          operation: Json
+          outcome: string
+        }[]
+      }
       materialize_organization_export_snapshot_atomic: {
         Args: {
           p_expected_checkpoint_version: number
@@ -28979,6 +29592,20 @@ export type Database = {
         }
         Returns: string
       }
+      record_missing_vulnerability_ticket_event_atomic: {
+        Args: {
+          p_binding_id: string
+          p_correlation_id: string
+          p_delivery_id: string
+          p_external_issue_id: string
+          p_organization_id: string
+          p_ticket_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
       record_organization_export_artifact_snapshot_atomic: {
         Args: {
           p_artifact_key: string
@@ -29143,6 +29770,43 @@ export type Database = {
           result: Json
         }[]
       }
+      record_verified_vulnerability_ticket_event_atomic:
+        | {
+            Args: {
+              p_binding_id: string
+              p_delivery_id: string
+              p_external_issue_id: string
+              p_external_issue_key: string
+              p_external_status_id: string
+              p_external_status_name: string
+              p_organization_id: string
+              p_provider_project_id: string
+              p_provider_updated_at: string
+            }
+            Returns: {
+              outcome: string
+              ticket: Json
+            }[]
+          }
+        | {
+            Args: {
+              p_binding_id: string
+              p_correlation_id: string
+              p_delivery_id: string
+              p_external_issue_id: string
+              p_external_issue_key: string
+              p_external_status_id: string
+              p_external_status_name: string
+              p_organization_id: string
+              p_provider_project_id: string
+              p_provider_updated_at: string
+              p_ticket_id: string
+            }
+            Returns: {
+              outcome: string
+              ticket: Json
+            }[]
+          }
       record_vulnerability_finding_advisory_review_atomic: {
         Args: {
           p_document_id: string
@@ -29977,6 +30641,43 @@ export type Database = {
           submission: Json
         }[]
       }
+      reserve_vulnerability_remediation_ticket_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_binding_id: string
+          p_context_digest: string
+          p_expected_version: number
+          p_finding_id: string
+          p_idempotency_key: string
+          p_organization_id: string
+        }
+        Returns: {
+          correlation_id: string
+          operation_id: string
+          outcome: string
+          ticket: Json
+          ticket_id: string
+        }[]
+      }
+      reserve_vulnerability_remediation_ticket_transition_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_expected_version: number
+          p_finding_id: string
+          p_idempotency_key: string
+          p_organization_id: string
+          p_target_status_id: string
+          p_ticket_id: string
+        }
+        Returns: {
+          correlation_id: string
+          operation_id: string
+          outcome: string
+          ticket: Json
+          ticket_id: string
+          transition_id: string
+        }[]
+      }
       resolve_active_organization_legal_entity_context: {
         Args: { p_legal_entity_id: string; p_organization_id: string }
         Returns: {
@@ -30063,6 +30764,31 @@ export type Database = {
         Returns: {
           conflict: Json
           outcome: string
+        }[]
+      }
+      resolve_vulnerability_remediation_ticket_webhook_binding: {
+        Args: { p_binding_id: string }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      resolve_vulnerability_remediation_ticket_webhook_ticket: {
+        Args: {
+          p_binding_id: string
+          p_external_issue_id: string
+          p_organization_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      resolve_vulnerability_remediation_ticket_worker_context: {
+        Args: { p_operation_id: string; p_organization_id: string }
+        Returns: {
+          outcome: string
+          result: Json
         }[]
       }
       retry_evidence_bulk_intake_item_atomic: {
@@ -31357,6 +32083,30 @@ export type Database = {
         Returns: {
           occurrence_id: string
           outcome: string
+        }[]
+      }
+      upsert_vulnerability_remediation_ticket_binding_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_connector_id: string
+          p_context_digest: string
+          p_custom_field_mappings: Json
+          p_expected_binding_id: string
+          p_expected_version: number
+          p_field_mapping: Json
+          p_idempotency_key: string
+          p_issue_type_id: string
+          p_organization_id: string
+          p_product_id: string
+          p_project_id: string
+          p_project_key: string
+          p_provider_cloud_id: string
+          p_status_mappings: Json
+          p_status_transitions: Json
+        }
+        Returns: {
+          outcome: string
+          result: Json
         }[]
       }
       user_is_member_of: { Args: { p_org_id: string }; Returns: boolean }

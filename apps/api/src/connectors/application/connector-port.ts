@@ -7,7 +7,11 @@ import type { connectorCapabilitiesSchema } from "@repo/contracts/connectors/sch
  */
 
 export type ConnectorType =
-  "reference_conformance" | "github_actions" | "gitlab_ci" | "azure_devops";
+  | "reference_conformance"
+  | "github_actions"
+  | "gitlab_ci"
+  | "azure_devops"
+  | "jira";
 export type ConnectorEntityType = "product" | "release";
 
 export type SecretReference = Readonly<{

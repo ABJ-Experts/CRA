@@ -52,7 +52,7 @@ Foreign product/org, revoked permission, archived product, malformed policy, sta
 - API classification suite passed 60 tests. SQL classification base passed 49 assertions and history authorization passed 15 assertions.
 - Coverage summaries: API 100% lines/functions, 99.15% statements, 93.93% branches; history adapter 100% lines/statements/functions, 95.91% branches; web 98.68% lines/statements, 100% functions, 89.93% branches; contracts 100% all reported categories. All new classification modules exceed 80%.
 - Export registry/worker regression passed 12 tests after adding `product_classification_runs` to the TypeScript export registry.
-- Classification WebKit passed with eight screenshots under `docs/architecture/evidence/m2/classification-webkit/`.
+- Classification WebKit passed; generated screenshots were removed.
 - Playwright MCP verified owner history/rerun and viewer readonly access with evidence under `docs/architecture/evidence/m2/mcp-final/`.
 - Local Supabase MCP evidence confirms the local `cra` stack, migration presence, one new table, non-forced RLS, and RPC-only service-role history access. Final closure metadata is in `docs/architecture/evidence/m2/verification-results.json`.
 

@@ -43,24 +43,24 @@ FR-PROD-004 is implemented as a source-linked human-declaration workflow with en
 
 ## Browser and MCP evidence
 
-- Product registry owner/UTC/support/retry journey passed in Chromium and Firefox, with WebKit screenshots retained from the keyboard/typeahead path. Final scoped auth Chromium passed after aligning `APP_URL` with the running web origin; the earlier failure was an environment-origin mismatch.
-- WebKit classification passed in 33 seconds with eight screenshots under `docs/architecture/evidence/m2/classification-webkit/`.
+- Product registry owner/UTC/support/retry journey passed in Chromium and Firefox, with the WebKit keyboard/typeahead path verified. Final scoped auth Chromium passed after aligning `APP_URL` with the running web origin; the earlier failure was an environment-origin mismatch.
+- WebKit classification passed in 33 seconds; generated screenshots were removed.
 - CSV import passed with the existing import worker.
 - Connector journey passed, including dry run, commit, rate-limit retry and tenant isolation; no vendor-specific production connector or on-premises agent was certified.
-- Relationship journey passed after the session race and refresh fixes plus the local Kong old-DNS repair. Evidence: [relationship membership](evidence/m2/relationships-kong-fixed/product-relationships-a-ru-9f1a5-review-and-a-rejected-cycle-chromium/relationship-membership-recorded-desktop.png), [variant](evidence/m2/relationships-kong-fixed/product-relationships-a-ru-9f1a5-review-and-a-rejected-cycle-chromium/relationship-variant-recorded-desktop.png), [component](evidence/m2/relationships-kong-fixed/product-relationships-a-ru-9f1a5-review-and-a-rejected-cycle-chromium/relationship-component-recorded-desktop.png), [fresh graph](evidence/m2/relationships-kong-fixed/product-relationships-a-ru-9f1a5-review-and-a-rejected-cycle-chromium/relationship-fresh-graph-desktop.png), and [cycle rejection](evidence/m2/relationships-kong-fixed/product-relationships-a-ru-9f1a5-review-and-a-rejected-cycle-chromium/relationship-cycle-rejected-desktop.png).
-- Playwright MCP used a fresh pinned `@playwright/mcp@0.0.82` isolated local browser because the registered transport was closed. It verified seeded owner classification history/rerun and viewer readonly access without global sign-out or site-data removal. Evidence: [MCP verification](evidence/m2/mcp-final/verification.json), [owner history](evidence/m2/mcp-final/owner-classification-history-desktop.png), [owner rerun](evidence/m2/mcp-final/owner-classification-rerun-desktop.png), and [viewer readonly](evidence/m2/mcp-final/viewer-registry-readonly-desktop.png).
+- Relationship journey passed after the session race and refresh fixes plus the local Kong old-DNS repair. Evidence: relationship membership, variant, component, fresh graph, and cycle rejection.
+- Playwright MCP used a fresh pinned `@playwright/mcp@0.0.82` isolated local browser because the registered transport was closed. It verified seeded owner classification history/rerun and viewer readonly access without global sign-out or site-data removal. Evidence: [MCP verification](evidence/m2/mcp-final/verification.json), owner history, owner rerun, and viewer readonly.
 
-Representative screenshots:
+Visual states checked (generated screenshots removed):
 
-- [Owner creation selector](evidence/m2/cross-browser/product-registry-an-organi-54419-sees-scoped-support-history-chromium/owner-create-mobile.png)
-- [Owner detail/edit](evidence/m2/cross-browser/product-registry-an-organi-54419-sees-scoped-support-history-chromium/owner-edit-desktop.png)
-- [Product retry](evidence/m2/cross-browser/product-registry-an-organi-54419-sees-scoped-support-history-chromium/product-retry-mobile.png)
-- [Release retry](evidence/m2/cross-browser/product-registry-an-organi-54419-sees-scoped-support-history-chromium/release-retry-mobile.png)
-- [UTC placement](evidence/m2/cross-browser/product-registry-an-organi-54419-sees-scoped-support-history-chromium/utc-placement-mobile.png)
-- [Support scope](evidence/m2/cross-browser/product-registry-an-organi-54419-sees-scoped-support-history-chromium/support-scope-mobile.png)
-- [Classification history](evidence/m2/classification-complete/product-classification-cla-79d84-lly-and-reject-stale-writes-chromium/classification-immutable-history-desktop.png)
-- [Classification conflict preserved](evidence/m2/classification-complete/product-classification-cla-79d84-lly-and-reject-stale-writes-chromium/classification-conflict-preserved-mobile.png)
-- [WebKit classification history](evidence/m2/classification-webkit/product-classification-cla-79d84-lly-and-reject-stale-writes-webkit/classification-immutable-history-desktop.png)
+- Owner creation selector
+- Owner detail/edit
+- Product retry
+- Release retry
+- UTC placement
+- Support scope
+- Classification history
+- Classification conflict preserved
+- WebKit classification history
 
 ## Reproducible command record
 

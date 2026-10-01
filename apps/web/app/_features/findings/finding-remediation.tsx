@@ -2,9 +2,12 @@
 
 import type {
   VulnerabilityRemediationAnchor,
+  VulnerabilityRemediationLinkedTicket,
   VulnerabilityRemediationOperational,
+  VulnerabilityRemediationTicketPreviewResponse,
 } from "@repo/contracts/vulnerabilities";
 import { Button } from "@repo/ui/button";
+import { cn } from "@repo/ui/cn";
 import { Input } from "@repo/ui/input";
 import {
   ModalBody,
@@ -20,12 +23,20 @@ import {
 import { Tag, type TagProps } from "@repo/ui/tag";
 import { useEffect, useState } from "react";
 
-import { useHasPermission } from "../../_providers/session-provider";
+import {
+  useHasPermission,
+  useSession,
+} from "../../_providers/session-provider";
 import { ApiClientError } from "../../_lib/http/api-client";
+import { RemediationTicketBindingSetup } from "./remediation-ticket-binding-setup";
 import {
   useCorrectVulnerabilityRemediationMutation,
   useRecordVulnerabilityRemediationMutation,
+  usePreviewVulnerabilityRemediationTicketMutation,
+  useReplayVulnerabilityRemediationTicketMutation,
+  useSyncVulnerabilityRemediationTicketMutation,
   useVulnerabilityRemediationHistoryQuery,
+  useVulnerabilityRemediationTicketsQuery,
 } from "./triage.queries";
 
 function titleCase(value: string): string {
@@ -92,6 +103,26 @@ export function remediationRequestMessage(error: unknown): string {
   return "This remediation anchor could not be saved. Try again.";
 }
 
+function ticketRequestMessage(error: unknown): string {
+  if (error instanceof ApiClientError && error.status === 403)
+    return "You no longer have permission to change this remediation ticket.";
+  if (error instanceof ApiClientError && error.status === 409)
+    return "The linked ticket or approved preview changed. Refresh the preview or ticket state before retrying.";
+  if (error instanceof ApiClientError && error.kind === "network")
+    return "You are offline. The request outcome is unknown; refresh linked ticket state before retrying.";
+  if (error instanceof ApiClientError && (error.status ?? 0) >= 500)
+    return "The Jira integration is unavailable. The request outcome is unknown; refresh linked ticket state before retrying.";
+  return "This remediation ticket request could not be completed. Try again.";
+}
+
+function ticketListMessage(error: unknown): string {
+  if (error instanceof ApiClientError && error.status === 403)
+    return "You no longer have permission to view linked tickets. Remediation evidence remains available.";
+  if (error instanceof ApiClientError && error.kind === "network")
+    return "You are offline. Linked ticket state is unavailable; remediation evidence remains available.";
+  return "Linked ticket state is unavailable. Core remediation evidence remains usable.";
+}
+
 export function FindingRemediation({
   findingId,
   remediation,
@@ -100,7 +131,10 @@ export function FindingRemediation({
   remediation: VulnerabilityRemediationOperational;
 }>) {
   const canEdit = useHasPermission("can_edit_findings");
+  const canEditOrganization = useHasPermission("can_edit_organization");
+  const { role, session } = useSession();
   const history = useVulnerabilityRemediationHistoryQuery(findingId, true);
+  const tickets = useVulnerabilityRemediationTicketsQuery(findingId, true);
   const anchor = remediation.anchor;
   const reintroduction = remediation.reintroduction;
 
@@ -180,11 +214,436 @@ export function FindingRemediation({
             </Button>
           </div>
         ) : null}
+        <RemediationTicketPanel
+          findingId={findingId}
+          canEdit={canEdit}
+          ticketsQuery={tickets}
+        />
+        {role === "owner" &&
+        canEditOrganization &&
+        !tickets.isLoading &&
+        !tickets.isError &&
+        tickets.data ? (
+          <RemediationTicketBindingSetup
+            key={session?.organization?.id ?? "no-organization"}
+            findingId={findingId}
+            bindings={tickets.data.bindings}
+          />
+        ) : null}
+
         {history.data && history.data.history.length > 1 ? (
           <RemediationHistory history={history.data.history} />
         ) : null}
       </div>
     </section>
+  );
+}
+
+function ticketTone(
+  status: VulnerabilityRemediationLinkedTicket["status"],
+): TagProps["tone"] {
+  if (status === "external_closed_pending_review") return "orange";
+  if (status === "sync_error" || status === "conflict") return "red";
+  if (status === "deleted_or_moved") return "purple";
+  return "green";
+}
+
+function approvedTicketUrl(
+  url: string | null,
+  baseUrl: string | null,
+): string | null {
+  if (!url || !baseUrl) return null;
+  try {
+    const target = new URL(url);
+    const approved = new URL(baseUrl);
+    return target.protocol === "https:" && target.origin === approved.origin
+      ? target.href
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+function RemediationTicketPanel({
+  findingId,
+  canEdit,
+  ticketsQuery,
+}: Readonly<{
+  findingId: string;
+  canEdit: boolean;
+  ticketsQuery: ReturnType<typeof useVulnerabilityRemediationTicketsQuery>;
+}>) {
+  const sync = useSyncVulnerabilityRemediationTicketMutation();
+  const preview = usePreviewVulnerabilityRemediationTicketMutation();
+  const replay = useReplayVulnerabilityRemediationTicketMutation();
+  const [message, setMessage] = useState<string | null>(null);
+  const [approvedPreview, setApprovedPreview] = useState<{
+    findingId: string;
+    bindingId: string;
+    bindingVersion: number;
+    ticketVersion: number;
+    idempotencyKey: string;
+    value: VulnerabilityRemediationTicketPreviewResponse["preview"];
+  } | null>(null);
+  const [previewStale, setPreviewStale] = useState(false);
+  const [replayRequest, setReplayRequest] = useState<{
+    ticketId: string;
+    version: number;
+    idempotencyKey: string;
+  } | null>(null);
+  const binding =
+    ticketsQuery.data?.bindings.find(
+      (candidate) =>
+        candidate.status === "active" && candidate.provider === "jira",
+    ) ??
+    ticketsQuery.data?.bindings.find(
+      (candidate) => candidate.provider === "jira",
+    );
+  const ticket = ticketsQuery.data?.tickets.find(
+    (candidate) => candidate.bindingId === binding?.id,
+  );
+  const canAct =
+    canEdit &&
+    !ticketsQuery.isLoading &&
+    !ticketsQuery.isError &&
+    binding?.status === "active";
+  const currentApproval =
+    approvedPreview?.findingId === findingId &&
+    approvedPreview.bindingId === binding?.id
+      ? approvedPreview
+      : null;
+  const currentPreview = currentApproval?.value ?? null;
+  const isStale =
+    previewStale ||
+    (currentApproval !== null &&
+      (currentApproval.bindingVersion !== binding?.version ||
+        currentApproval.ticketVersion !== (ticket?.version ?? 0)));
+  const replayable =
+    ticket?.status === "sync_pending" ||
+    ticket?.status === "sync_error" ||
+    ticket?.status === "conflict" ||
+    ticket?.status === "deleted_or_moved";
+
+  async function previewTicket() {
+    if (!canAct || binding === undefined) return;
+    setMessage(null);
+    setPreviewStale(true);
+    try {
+      const result = await preview.mutateAsync({
+        findingId,
+        input: { bindingId: binding.id },
+      });
+      setApprovedPreview({
+        findingId,
+        bindingId: binding.id,
+        bindingVersion: binding.version,
+        ticketVersion: ticket?.version ?? 0,
+        idempotencyKey: uuid(),
+        value: result.preview,
+      });
+      setPreviewStale(false);
+    } catch (error) {
+      setMessage(ticketRequestMessage(error));
+    }
+  }
+
+  async function syncTicket() {
+    if (!canAct || binding === undefined || currentApproval === null || isStale)
+      return;
+    setMessage(null);
+    try {
+      const result = await sync.mutateAsync({
+        findingId,
+        input: {
+          bindingId: binding.id,
+          expectedTicketVersion: ticket?.version ?? 0,
+          contextDigest: currentApproval.value.contextDigest,
+          idempotencyKey: currentApproval.idempotencyKey,
+        },
+      });
+      setApprovedPreview(null);
+      setMessage(
+        result.ticket.status === "sync_pending"
+          ? "Ticket request is pending. The Jira issue is not confirmed yet."
+          : "Jira ticket state updated. Review the linked status below.",
+      );
+    } catch (error) {
+      if (error instanceof ApiClientError && error.status === 409)
+        setPreviewStale(true);
+      setMessage(ticketRequestMessage(error));
+    }
+  }
+
+  async function replayTicket() {
+    if (!canAct || ticket === undefined || !replayable) return;
+    setMessage(null);
+    const request =
+      replayRequest?.ticketId === ticket.id &&
+      replayRequest.version === ticket.version
+        ? replayRequest
+        : {
+            ticketId: ticket.id,
+            version: ticket.version,
+            idempotencyKey: uuid(),
+          };
+    setReplayRequest(request);
+    try {
+      const result = await replay.mutateAsync({
+        findingId,
+        ticketId: ticket.id,
+        input: {
+          expectedVersion: ticket.version,
+          idempotencyKey: request.idempotencyKey,
+        },
+      });
+      setReplayRequest(null);
+      setMessage(
+        result.ticket.status === "sync_pending"
+          ? "Ticket recovery is pending. Check the linked state before retrying."
+          : "Reconciliation completed. Review the linked Jira state below.",
+      );
+    } catch (error) {
+      if (error instanceof ApiClientError && error.status === 409)
+        setReplayRequest(null);
+      setMessage(ticketRequestMessage(error));
+    }
+  }
+
+  return (
+    <section
+      className="mt-5 border-t border-border pt-4"
+      aria-labelledby="remediation-tickets-heading"
+    >
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h4
+            id="remediation-tickets-heading"
+            className="text-subhead-semibold text-fg"
+          >
+            Linked remediation tickets
+          </h4>
+          <p className="mt-1 text-caption-1-regular text-fg-muted">
+            External closure starts internal review. It does not prove
+            remediation availability or approve VEX.
+          </p>
+        </div>
+        {canAct ? (
+          <div className={cn("flex flex-wrap gap-2")}>
+            {!replayable && ticket?.status !== "sync_pending" ? (
+              <Button
+                size="sm"
+                variant="outline"
+                tone="grey"
+                disabled={sync.isPending || replay.isPending}
+                loading={preview.isPending}
+                onClick={() => void previewTicket()}
+              >
+                {ticket === undefined
+                  ? "Preview Jira ticket"
+                  : "Preview Jira update"}
+              </Button>
+            ) : null}
+            {replayable ? (
+              <Button
+                size="sm"
+                variant="outline"
+                tone="grey"
+                disabled={sync.isPending || preview.isPending}
+                loading={replay.isPending}
+                onClick={() => void replayTicket()}
+              >
+                Reconcile with Jira
+              </Button>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
+
+      {ticketsQuery.isLoading ? (
+        <p role="status" className="mt-3 text-caption-1-regular text-fg-muted">
+          Loading linked tickets…
+        </p>
+      ) : null}
+      {ticketsQuery.isError ? (
+        <div role="alert" className="mt-3 text-caption-1-regular text-danger">
+          {ticketListMessage(ticketsQuery.error)}
+          <Button
+            className="ml-2"
+            size="sm"
+            variant="gap"
+            tone="grey"
+            onClick={() => void ticketsQuery.refetch()}
+          >
+            Retry tickets
+          </Button>
+        </div>
+      ) : null}
+      {!ticketsQuery.isLoading && ticketsQuery.data?.bindings.length === 0 ? (
+        <p className="mt-3 text-caption-1-regular text-fg-muted">
+          No owner-managed Jira remediation binding is configured for this
+          product and release.
+        </p>
+      ) : null}
+      {!ticketsQuery.isLoading &&
+      !ticketsQuery.isError &&
+      ticketsQuery.data?.bindings.length !== 0 &&
+      ticketsQuery.data?.tickets.length === 0 ? (
+        <p className={cn("mt-3 text-caption-1-regular text-fg-muted")}>
+          No Jira ticket is linked to this finding. Preview the approved context
+          before requesting one.
+        </p>
+      ) : null}
+      {!ticketsQuery.isLoading &&
+      !ticketsQuery.isError &&
+      binding?.status === "revoked" ? (
+        <p
+          role="status"
+          className={cn("mt-3 text-caption-1-regular text-danger")}
+        >
+          This Jira binding has been revoked. Ask an organization owner to
+          restore an approved connection.
+        </p>
+      ) : null}
+      {!ticketsQuery.isLoading && !ticketsQuery.isError && replayable ? (
+        <p className={cn("mt-3 text-caption-1-regular text-fg-muted")}>
+          Reconciliation checks the recorded Jira correlation. Reconciliation
+          does not create another issue; an unresolved or ambiguous match needs
+          owner review.
+        </p>
+      ) : null}
+      {!ticketsQuery.isLoading &&
+      !ticketsQuery.isError &&
+      !canEdit &&
+      binding?.status === "active" ? (
+        <p className={cn("mt-3 text-caption-1-regular text-fg-muted")}>
+          You can view the linked ticket, but do not have permission to change
+          it.
+        </p>
+      ) : null}
+      {currentPreview !== null && canAct ? (
+        <div
+          className={cn(
+            "mt-3 rounded-lg border border-border bg-canvas p-3 text-caption-1-regular text-fg",
+          )}
+        >
+          <h5 className={cn("text-subhead-semibold text-fg")}>
+            Approved Jira preview
+          </h5>
+          <p className={cn("mt-1 text-fg-muted")}>
+            Project {currentPreview.projectKey} · Issue type{" "}
+            {currentPreview.issueTypeId}. Review this server-approved text
+            before sending it to Jira.
+          </p>
+          <p className={cn("mt-3 font-medium")}>{currentPreview.summary}</p>
+          <p className={cn("mt-2 whitespace-pre-wrap")}>
+            {currentPreview.description}
+          </p>
+          {isStale ? (
+            <p role="alert" className={cn("mt-2 text-danger")}>
+              The approved context changed. Refresh the preview before retrying.
+            </p>
+          ) : null}
+          {canAct && !replayable && ticket?.status !== "sync_pending" ? (
+            <Button
+              className={cn("mt-3")}
+              size="sm"
+              variant="outline"
+              tone="grey"
+              disabled={isStale || preview.isPending}
+              loading={sync.isPending}
+              onClick={() => void syncTicket()}
+            >
+              {ticket === undefined ? "Create Jira ticket" : "Sync Jira ticket"}
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
+      {message ? (
+        <p role="alert" className="mt-3 text-caption-1-regular text-danger">
+          {message}
+        </p>
+      ) : null}
+      {!ticketsQuery.isLoading && !ticketsQuery.isError
+        ? ticketsQuery.data?.tickets.map((linkedTicket) => (
+            <LinkedTicket
+              key={linkedTicket.id}
+              ticket={linkedTicket}
+              approvedBaseUrl={
+                ticketsQuery.data?.bindings.find(
+                  (candidate) => candidate.id === linkedTicket.bindingId,
+                )?.externalBaseUrl ?? null
+              }
+            />
+          ))
+        : null}
+    </section>
+  );
+}
+
+function LinkedTicket({
+  ticket,
+  approvedBaseUrl,
+}: Readonly<{
+  ticket: VulnerabilityRemediationLinkedTicket;
+  approvedBaseUrl: string | null;
+}>) {
+  const safeUrl = approvedTicketUrl(ticket.externalUrl, approvedBaseUrl);
+  return (
+    <div className="mt-3 rounded-lg border border-border p-3 text-caption-1-regular text-fg">
+      <div className="flex flex-wrap items-center gap-2">
+        {ticket.externalIssueKey && safeUrl ? (
+          <a
+            className={cn(
+              "font-medium text-link underline-offset-2 hover:underline",
+            )}
+            href={safeUrl}
+            rel="noopener noreferrer"
+            target="_blank"
+          >
+            {ticket.externalIssueKey}
+          </a>
+        ) : (
+          <span className={cn("font-medium")}>
+            {ticket.externalIssueKey ?? "Awaiting Jira issue"}
+          </span>
+        )}
+        <Tag variant="dot" tone={ticketTone(ticket.status)}>
+          {titleCase(ticket.status)}
+        </Tag>
+      </div>
+      <dl className="mt-2 grid gap-2 sm:grid-cols-2">
+        <RemediationFact
+          label="Provider status"
+          value={ticket.externalStatus ?? "Pending provider confirmation"}
+        />
+        <RemediationFact
+          label="Last sync"
+          value={
+            ticket.lastSyncDirection && ticket.lastSyncAt
+              ? `${titleCase(ticket.lastSyncDirection)} · ${formatInstant(ticket.lastSyncAt)}`
+              : "Awaiting first provider sync"
+          }
+        />
+        <RemediationFact
+          label="Sync revision"
+          value={String(ticket.syncRevision)}
+        />
+        <RemediationFact
+          label="Inbound event"
+          value={ticket.lastInboundEventId ?? "No inbound event recorded"}
+        />
+        <RemediationFact label="Correlation" value={ticket.correlationId} />
+        <RemediationFact
+          label="Ticket version"
+          value={String(ticket.version)}
+        />
+      </dl>
+      {ticket.conflictReason ? (
+        <p role="status" className="mt-2 text-caption-1-regular text-danger">
+          Conflict: {ticket.conflictReason}
+        </p>
+      ) : null}
+    </div>
   );
 }
 

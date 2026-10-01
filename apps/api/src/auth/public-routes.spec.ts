@@ -57,6 +57,8 @@ const ALLOWED_PUBLIC: Record<string, string> = {
     "Continuation of the bound CI build upload protocol with the same organization-scoped credential and provider identity.",
   "GET ci/sbom-build-gate":
     "CI polls the build-correlated SBOM gate with the dedicated credential after upload and processing.",
+  "POST jira/remediation-webhooks/:bindingId":
+    "Jira has no CRA session; this narrow route authenticates the raw body with the bound webhook secret and refetches the issue before ingest.",
   "POST ci/provider-events/:provider/:organizationId/:bindingId":
     "Provider delivery is authenticated from the raw-body signature and revalidated against the bound provider run.",
   "POST supplier-sbom-portal/sessions":

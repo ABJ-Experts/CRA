@@ -55,6 +55,17 @@ import {
   vulnerabilityTriageSlaPolicyMutationResponseSchema,
   vulnerabilityRemediationHistoryResponseSchema,
   vulnerabilityRemediationMutationResponseSchema,
+  previewVulnerabilityRemediationTicketInputSchema,
+  vulnerabilityRemediationTicketPreviewResponseSchema,
+  replayVulnerabilityRemediationTicketInputSchema,
+  vulnerabilityRemediationTicketParamsSchema,
+  syncVulnerabilityRemediationTicketInputSchema,
+  vulnerabilityRemediationTicketMutationResponseSchema,
+  vulnerabilityRemediationTicketsResponseSchema,
+  dryRunVulnerabilityRemediationTicketBindingInputSchema,
+  upsertVulnerabilityRemediationTicketBindingInputSchema,
+  vulnerabilityRemediationTicketBindingDryRunResponseSchema,
+  vulnerabilityRemediationTicketBindingResponseSchema,
   createVulnerabilityTriageNoteInputSchema,
   updateVulnerabilityTriageNoteInputSchema,
   deleteVulnerabilityTriageNoteInputSchema,
@@ -91,6 +102,11 @@ import {
   type UpdateVulnerabilityTriageNoteInput,
   type DeleteVulnerabilityTriageNoteInput,
   type VulnerabilityTriageNotesQuery,
+  type PreviewVulnerabilityRemediationTicketInput,
+  type ReplayVulnerabilityRemediationTicketInput,
+  type SyncVulnerabilityRemediationTicketInput,
+  type DryRunVulnerabilityRemediationTicketBindingInput,
+  type UpsertVulnerabilityRemediationTicketBindingInput,
 } from "@repo/contracts/vulnerabilities";
 
 import { ApiClientError, apiClient } from "../../_lib/http/api-client";
@@ -471,6 +487,88 @@ export class VulnerabilityTriageApi {
       inputSchema: correctVulnerabilityRemediationAnchorInputSchema,
       body: input,
       schema: vulnerabilityRemediationMutationResponseSchema,
+    });
+  }
+
+  remediationTickets(findingId: string, signal?: AbortSignal) {
+    return authenticatedRequestJson({
+      path: `${findingPath(findingId)}/remediation-tickets`,
+      schema: vulnerabilityRemediationTicketsResponseSchema,
+      signal,
+    });
+  }
+
+  dryRunRemediationTicketBinding(
+    input: DryRunVulnerabilityRemediationTicketBindingInput,
+  ) {
+    return authenticatedRequestJson({
+      path: "/api/v1/findings/remediation-ticket-bindings/dry-run",
+      method: "POST",
+      inputSchema: dryRunVulnerabilityRemediationTicketBindingInputSchema,
+      body: input,
+      schema: vulnerabilityRemediationTicketBindingDryRunResponseSchema,
+    });
+  }
+
+  upsertRemediationTicketBinding(
+    input: UpsertVulnerabilityRemediationTicketBindingInput,
+  ) {
+    return authenticatedRequestJson({
+      path: "/api/v1/findings/remediation-ticket-bindings",
+      method: "POST",
+      inputSchema: upsertVulnerabilityRemediationTicketBindingInputSchema,
+      body: input,
+      schema: vulnerabilityRemediationTicketBindingResponseSchema,
+    });
+  }
+
+  previewRemediationTicket(
+    findingId: string,
+    input: PreviewVulnerabilityRemediationTicketInput,
+  ) {
+    return authenticatedRequestJson({
+      path: `${findingPath(findingId)}/remediation-tickets/preview`,
+      method: "POST",
+      inputSchema: previewVulnerabilityRemediationTicketInputSchema,
+      body: input,
+      schema: vulnerabilityRemediationTicketPreviewResponseSchema,
+    });
+  }
+
+  syncRemediationTicket(
+    findingId: string,
+    input: SyncVulnerabilityRemediationTicketInput,
+  ) {
+    return authenticatedRequestJson({
+      path: `${findingPath(findingId)}/remediation-tickets/sync`,
+      method: "POST",
+      inputSchema: syncVulnerabilityRemediationTicketInputSchema,
+      body: input,
+      schema: vulnerabilityRemediationTicketMutationResponseSchema,
+    });
+  }
+
+  replayRemediationTicket(
+    findingId: string,
+    ticketId: string,
+    input: ReplayVulnerabilityRemediationTicketInput,
+  ) {
+    const params = vulnerabilityRemediationTicketParamsSchema.safeParse({
+      findingId,
+      ticketId,
+    });
+    if (!params.success)
+      throw new ApiClientError(
+        "invalid_request",
+        "The linked ticket identifier is invalid.",
+        400,
+      );
+    return authenticatedRequestJson({
+      path: `/api/v1/findings/${params.data.findingId}/remediation-tickets/${params.data.ticketId}/replay`,
+      method: "POST",
+      inputSchema: replayVulnerabilityRemediationTicketInputSchema,
+      body: input,
+      schema: vulnerabilityRemediationTicketMutationResponseSchema,
     });
   }
 

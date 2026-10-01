@@ -208,6 +208,31 @@ describe("tenant export source registry architecture", () => {
     );
   });
 
+  it("exports scoped Jira ticket history without replay and lease material", () => {
+    const source = exportSourceRegistry.find(
+      (entry) => entry.sourceId === "vulnerability_triage_operational",
+    );
+    expect(source?.tables).toEqual(
+      expect.arrayContaining([
+        "vulnerability_remediation_ticket_bindings",
+        "vulnerability_remediation_ticket_status_mappings",
+        "vulnerability_remediation_tickets",
+        "vulnerability_remediation_ticket_operations",
+        "vulnerability_remediation_ticket_events",
+      ]),
+    );
+    const sql = migrationSql();
+    expect(sql).toMatch(
+      /when 'vulnerability_remediation_ticket_operations' then[\s\S]*?'last_error'/,
+    );
+    expect(sql).toMatch(
+      /when 'vulnerability_remediation_tickets' then[\s\S]*?'last_inbound_delivery_id'/,
+    );
+    expect(sql).toMatch(
+      /when 'vulnerability_remediation_ticket_events' then[\s\S]*?'delivery_id'/,
+    );
+  });
+
   it("keeps credentials, bearer verifiers, idempotency ledgers, and active leases out of portable sources", () => {
     const exported = new Set(
       exportSourceRegistry.flatMap((source) => source.tables),

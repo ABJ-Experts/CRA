@@ -49,6 +49,30 @@ function planned(
   });
 }
 
+function ticketing(
+  id: "jira",
+  name: string,
+  phase: "V1",
+  priority: "P1",
+  description: string,
+  guidance: string,
+  requiredScopes: readonly string[],
+): Readonly<ConnectorCatalogueEntry> {
+  return Object.freeze({
+    id,
+    name,
+    implementation: "ticketing",
+    phase,
+    priority,
+    canConfigure: true,
+    description,
+    guidance,
+    scopePolicyVersion: CONNECTOR_SCOPE_POLICY_VERSION,
+    requiredScopes: Object.freeze([...requiredScopes]) as unknown as string[],
+    scopeIntrospection: "unavailable",
+  });
+}
+
 /** BRD p51 phases; availability reflects implemented connection boundaries. */
 export const CONNECTOR_CATALOGUE: readonly Readonly<ConnectorCatalogueEntry>[] =
   Object.freeze([
@@ -107,13 +131,31 @@ export const CONNECTOR_CATALOGUE: readonly Readonly<ConnectorCatalogueEntry>[] =
       "Planned SAML identity assertions and groups; SCIM belongs to V2.",
       "Limit assertions and groups to the approved application. Matrix V1 scope is SAML; SCIM is V2. No hub-managed identity integration is available.",
     ),
-    planned(
+    ticketing(
       "jira",
       "Jira",
       "V1",
       "P1",
-      "Planned remediation ticket creation and status transition ingestion.",
-      "Use a dedicated identity restricted to selected projects and necessary ticket permissions. Do not grant site-wide administration.",
+      "Loop-safe remediation ticket creation and status transition ingestion for Jira Cloud.",
+      "Use a dedicated Jira Cloud API token with granular REST scopes and restrict the identity to selected projects with Browse, Create, Edit and Transition issue permissions. Do not grant site-wide administration.",
+      [
+        "read:application-role:jira",
+        "read:field:jira",
+        "read:field.default-value:jira",
+        "read:field.option:jira",
+        "read:group:jira",
+        "read:issue:jira",
+        "read:issue-details:jira",
+        "read:issue-meta:jira",
+        "read:issue-type:jira",
+        "read:issue.property:jira",
+        "read:issue.transition:jira",
+        "read:project:jira",
+        "read:project.property:jira",
+        "read:user:jira",
+        "write:issue:jira",
+        "write:issue.property:jira",
+      ],
     ),
     planned(
       "slack",

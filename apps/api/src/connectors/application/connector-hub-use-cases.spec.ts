@@ -189,21 +189,40 @@ describe("ConnectorHubUseCases security boundaries", () => {
     ).rejects.toMatchObject({ code: "invalid_request" });
     expect(f.repository.create).not.toHaveBeenCalled();
   });
-  it("allows CI metadata without a product/release adapter and requires owner authorization", async () => {
+  it("allows external metadata without a product/release adapter and requires owner authorization", async () => {
     const f = fixture();
-    await f.useCases.create(org, actor, {
-      connectorType: "github_actions",
-      adapterVersion: "1.0.0",
-      mappingVersion: "ci-v1",
-      displayName: "GitHub App",
-      connectionConfig: {
-        providerHost: "github.com",
-        appId: "123",
-        installationId: "456",
-      },
-      commitPolicy: "manual",
-      idempotencyKey: key,
-    });
+    for (const [
+      connectorType,
+      mappingVersion,
+      displayName,
+      connectionConfig,
+    ] of [
+      [
+        "github_actions",
+        "ci-v1",
+        "GitHub App",
+        { providerHost: "github.com", appId: "123", installationId: "456" },
+      ],
+      [
+        "jira",
+        "jira-v1",
+        "Jira Cloud",
+        {
+          providerHost: "api.atlassian.com",
+          siteHost: "tenant.atlassian.net",
+          cloudId: key,
+        },
+      ],
+    ] as const)
+      await f.useCases.create(org, actor, {
+        connectorType,
+        adapterVersion: "1.0.0",
+        mappingVersion,
+        displayName,
+        connectionConfig,
+        commitPolicy: "manual",
+        idempotencyKey: key,
+      });
     expect(f.authorization.authorize).toHaveBeenCalledWith(
       org,
       actor,
@@ -214,7 +233,15 @@ describe("ConnectorHubUseCases security boundaries", () => {
       { providerHost: "github.com", appId: "123", installationId: "456" },
       "github_actions",
     );
-    expect(f.repository.create).toHaveBeenCalledTimes(1);
+    expect(f.egress.validate).toHaveBeenCalledWith(
+      {
+        providerHost: "api.atlassian.com",
+        siteHost: "tenant.atlassian.net",
+        cloudId: key,
+      },
+      "jira",
+    );
+    expect(f.repository.create).toHaveBeenCalledTimes(2);
   });
   it("checks the active envelope before reconnecting", async () => {
     const f = fixture();
@@ -324,11 +351,11 @@ describe("ConnectorHubUseCases command lifecycle", () => {
       3,
     );
   });
-  it("does not enqueue product or release sync for a CI connection", async () => {
+  it("does not enqueue product or release sync for an external connection", async () => {
     const f = fixture();
     f.repository.context.mockResolvedValue({
       ...f.context,
-      connector: { ...f.connector, connectorType: "github_actions" },
+      connector: { ...f.connector, connectorType: "jira" },
     });
     await expect(
       f.useCases.beginSync(org, id, actor, {
@@ -361,11 +388,11 @@ describe("ConnectorHubUseCases command lifecycle", () => {
       ),
     ).toEqual(["revoke_secret", "disconnect"]);
   });
-  it("requires owner authority before disconnecting a CI connection", async () => {
+  it("requires owner authority before disconnecting an external connection", async () => {
     const f = fixture();
     f.repository.context.mockResolvedValue({
       ...f.context,
-      connector: { ...f.connector, connectorType: "gitlab_ci" },
+      connector: { ...f.connector, connectorType: "jira" },
     });
     await f.useCases.disconnect(org, id, actor, {
       ...input,

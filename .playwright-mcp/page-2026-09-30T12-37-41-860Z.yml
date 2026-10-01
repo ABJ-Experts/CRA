@@ -1,0 +1,534 @@
+- generic [active] [ref=f7e1]:
+  - generic [ref=f7e3]:
+    - complementary [ref=f7e4]:
+      - generic [ref=f7e5]:
+        - generic [ref=f7e6]:
+          - link "CRA Sentinel" [ref=f7e7] [cursor=pointer]:
+            - /url: /dashboard
+            - generic [aria-hidden] [ref=f7e8]: C
+            - text: CRA Sentinel
+          - button "Collapse sidebar" [ref=f7e9] [cursor=pointer]
+        - navigation "Main" [ref=f7e12]:
+          - generic [ref=f7e13]:
+            - list [ref=f7e15]:
+              - listitem [ref=f7e16]:
+                - link "Dashboard" [ref=f7e17] [cursor=pointer]:
+                  - /url: /dashboard
+              - listitem [ref=f7e25]:
+                - link "Management" [ref=f7e26] [cursor=pointer]:
+                  - /url: /management
+              - listitem [ref=f7e32]:
+                - link "Organization" [ref=f7e33] [cursor=pointer]:
+                  - /url: /organization
+              - listitem [ref=f7e40]:
+                - link "Products" [ref=f7e41] [cursor=pointer]:
+                  - /url: /products
+              - listitem [ref=f7e48]:
+                - link "Suppliers" [ref=f7e49] [cursor=pointer]:
+                  - /url: /suppliers
+              - listitem [ref=f7e54]:
+                - link "Frameworks" [ref=f7e55] [cursor=pointer]:
+                  - /url: /frameworks
+              - listitem [ref=f7e60]:
+                - link "Findings" [ref=f7e61] [cursor=pointer]:
+                  - /url: /findings
+              - listitem [ref=f7e66]:
+                - link "Reporting" [ref=f7e67] [cursor=pointer]:
+                  - /url: /reporting
+              - listitem [ref=f7e73]:
+                - link "Connectors" [ref=f7e74] [cursor=pointer]:
+                  - /url: /connectors
+            - generic [ref=f7e81]:
+              - paragraph [ref=f7e82]: Account & access
+              - list [ref=f7e83]:
+                - listitem [ref=f7e84]:
+                  - button "Profile" [ref=f7e85] [cursor=pointer]
+                  - generic:
+                    - list:
+                      - listitem [ref=f7e93]:
+                        - link "Account" [ref=f7e94] [cursor=pointer]:
+                          - /url: /account
+                      - listitem [ref=f7e96]:
+                        - link "Security" [ref=f7e97] [cursor=pointer]:
+                          - /url: /security
+                - listitem [ref=f7e99]:
+                  - button "Authorization" [ref=f7e100] [cursor=pointer]
+                  - generic:
+                    - list:
+                      - listitem [ref=f7e108]:
+                        - link "Roles" [ref=f7e109] [cursor=pointer]:
+                          - /url: /roles
+                      - listitem [ref=f7e111]:
+                        - link "Permissions" [ref=f7e112] [cursor=pointer]:
+                          - /url: /permissions
+        - button "Sign out" [ref=f7e116] [cursor=pointer]
+    - generic [ref=f7e121]:
+      - banner [ref=f7e122]:
+        - navigation "Breadcrumb" [ref=f7e124]:
+          - list [ref=f7e125]:
+            - listitem [ref=f7e126]:
+              - link "Dashboard" [ref=f7e127] [cursor=pointer]:
+                - /url: /dashboard
+            - listitem [aria-hidden] [ref=f7e128]
+            - listitem [ref=f7e131]:
+              - generic [ref=f7e132]: Findings
+        - generic [ref=f7e133]:
+          - button "Search" [ref=f7e134] [cursor=pointer]
+          - button "Notifications" [ref=f7e138] [cursor=pointer]
+          - generic [ref=f7e142]:
+            - generic [ref=f7e143]: AF
+            - 'img "Ada Foster: online" [ref=f7e145]'
+      - main [ref=f7e146]:
+        - generic [ref=f7e158]:
+          - generic [ref=f7e159]:
+            - generic [ref=f7e160]:
+              - heading "Findings" [level=1] [ref=f7e161]
+              - paragraph [ref=f7e162]: Tenant-scoped vulnerability triage. Filters and pagination run on the server.
+            - button "Clear filters" [ref=f7e164] [cursor=pointer]
+          - region [ref=f7e165]:
+            - generic [ref=f7e167]:
+              - heading "Saved views" [level=2] [ref=f7e168]
+              - paragraph [ref=f7e169]: Shared with this organization. Your default remains personal.
+            - generic [ref=f7e170]: No shared views yet.
+            - generic [ref=f7e172]:
+              - generic [ref=f7e173]: Saved view name
+              - textbox "Saved view name" [ref=f7e174]:
+                - /placeholder: Save current filters as…
+              - button "Save view" [ref=f7e175] [cursor=pointer]
+          - generic "Finding filters" [ref=f7e176]:
+            - generic [ref=f7e177]:
+              - text: Severity
+              - combobox "Severity" [ref=f7e178] [cursor=pointer]:
+                - option "All severities" [selected]
+                - option "Critical"
+                - option "High"
+                - option "Medium"
+                - option "Low"
+                - option "Unknown"
+            - generic [ref=f7e179]:
+              - text: Product IDs
+              - textbox "Product IDs" [ref=f7e180]:
+                - /placeholder: Comma-separated UUIDs
+            - generic [ref=f7e181]:
+              - text: Release IDs
+              - textbox "Release IDs" [ref=f7e182]:
+                - /placeholder: Comma-separated UUIDs
+            - generic [ref=f7e183]:
+              - text: EPSS
+              - combobox "EPSS" [ref=f7e184] [cursor=pointer]:
+                - option "Any EPSS" [selected]
+                - option "Known"
+                - option "Unknown"
+            - generic [ref=f7e185]:
+              - text: Matcher state
+              - combobox "Matcher state" [ref=f7e186] [cursor=pointer]:
+                - option "Any matcher state" [selected]
+                - option "Active"
+                - option "Superseded"
+            - generic [ref=f7e187]:
+              - text: Re-evaluation
+              - combobox "Re-evaluation" [ref=f7e188] [cursor=pointer]:
+                - option "Any re-evaluation" [selected]
+                - option "Unchanged"
+                - option "Materially changed"
+                - option "Review required"
+                - option "Source unavailable"
+                - option "Re-evaluating"
+            - generic [ref=f7e189]:
+              - text: KEV
+              - combobox "KEV" [ref=f7e190] [cursor=pointer]:
+                - option "Any KEV state" [selected]
+                - option "Listed"
+                - option "Not listed"
+                - option "Unknown"
+            - generic [ref=f7e191]:
+              - text: Assessment
+              - combobox "Assessment" [ref=f7e192] [cursor=pointer]:
+                - option "Any assessment" [selected]
+                - option "Unassessed"
+                - option "Affected"
+                - option "Not affected"
+            - generic [ref=f7e193]:
+              - text: VEX status
+              - combobox "VEX status" [ref=f7e194] [cursor=pointer]:
+                - option "Any VEX status" [selected]
+                - option "Under investigation"
+                - option "Affected"
+                - option "Not affected"
+                - option "Fixed"
+            - generic [ref=f7e195]:
+              - text: Approval
+              - combobox "Approval" [ref=f7e196] [cursor=pointer]:
+                - option "Any approval state" [selected]
+                - option "Awaiting approval"
+                - option "Approved"
+                - option "Rejected"
+                - option "Not required"
+            - generic [ref=f7e197]:
+              - text: Reachability
+              - combobox "Reachability" [ref=f7e198] [cursor=pointer]:
+                - option "Any reachability" [selected]
+                - option "Reachable"
+                - option "Not reachable"
+                - option "Unknown"
+                - option "Not analysed"
+            - generic [ref=f7e199]:
+              - text: Queue state
+              - combobox "Queue state" [ref=f7e200] [cursor=pointer]:
+                - option "Any queue state" [selected]
+                - option "Actionable"
+                - option "Suppressed"
+            - generic [ref=f7e201]:
+              - text: Internal SLA
+              - combobox "Internal SLA" [ref=f7e202] [cursor=pointer]:
+                - option "Any internal SLA" [selected]
+                - option "Not configured"
+                - option "Tracking"
+                - option "Paused"
+                - option "Breached"
+            - generic [ref=f7e203]:
+              - text: Alert delivery
+              - combobox "Alert delivery" [ref=f7e204] [cursor=pointer]:
+                - option "Any alert delivery" [selected]
+                - option "Pending"
+                - option "Retrying"
+                - option "Delivery failed"
+                - option "Recipient unavailable"
+                - option "Delivered"
+            - generic [ref=f7e205]:
+              - text: Remediation
+              - combobox "Remediation" [ref=f7e206] [cursor=pointer]:
+                - option "Any remediation" [selected]
+                - option "No anchor"
+                - option "Fix planned"
+                - option "Fix available"
+                - option "Fix applied"
+            - generic [ref=f7e207]:
+              - text: Reintroduction
+              - combobox "Reintroduction" [ref=f7e208] [cursor=pointer]:
+                - option "Any reintroduction" [selected]
+                - option "Not reintroduced"
+                - option "Reintroduced"
+                - option "Not evaluated"
+            - generic [ref=f7e209]:
+              - text: Sort
+              - combobox "Sort" [ref=f7e210] [cursor=pointer]:
+                - option "Last evaluated" [selected]
+                - option "First detected"
+                - option "Severity"
+                - option "EPSS"
+            - generic [ref=f7e211]:
+              - text: Order
+              - combobox "Order" [ref=f7e212] [cursor=pointer]:
+                - option "Descending" [selected]
+                - option "Ascending"
+            - generic [ref=f7e213]:
+              - text: Minimum age (days)
+              - spinbutton "Minimum age (days)" [ref=f7e214]
+            - generic [ref=f7e215]:
+              - text: Maximum age (days)
+              - spinbutton "Maximum age (days)" [ref=f7e216]
+            - generic [ref=f7e217]:
+              - text: Minimum EPSS
+              - spinbutton "Minimum EPSS" [ref=f7e218]
+            - generic [ref=f7e219]:
+              - text: Maximum EPSS
+              - spinbutton "Maximum EPSS" [ref=f7e220]
+            - generic [ref=f7e221]:
+              - text: Assessed-by user IDs
+              - textbox "Assessed-by user IDs" [ref=f7e222]:
+                - /placeholder: Comma-separated UUIDs
+          - region [ref=f7e223]:
+            - generic [ref=f7e224]:
+              - generic [ref=f7e225]:
+                - heading "Triage queue" [level=2] [ref=f7e226]
+                - paragraph [ref=f7e227]: 1 loaded finding
+              - button "Bulk assess findings" [ref=f7e228] [cursor=pointer]
+            - generic [ref=f7e229]:
+              - generic [aria-hidden] [ref=f7e230]:
+                - generic [ref=f7e231]: Select
+                - generic [ref=f7e232]: Advisory
+                - generic [ref=f7e233]: Product / release
+                - generic [ref=f7e234]: Severity
+                - generic [ref=f7e235]: EPSS / KEV
+                - generic [ref=f7e236]: Reachability
+                - generic [ref=f7e237]: VEX / approval
+                - generic [ref=f7e238]: Operations
+              - grid "Triage findings" [ref=f7e239]:
+                - row "CVE-2026-99001, M9 local fixture product, unknown severity, actionable, internal SLA not_configured, delivery not_requested, remediation not_recorded, reintroduction not_evaluated" [ref=f7e241]:
+                  - gridcell [ref=f7e242]:
+                    - checkbox "Select CVE-2026-99001, M9 local fixture product, unknown severity, actionable, internal SLA not_configured, delivery not_requested, remediation not_recorded, reintroduction not_evaluated" [ref=f7e245] [cursor=pointer]
+                  - gridcell "CVE-2026-99001" [ref=f7e246]
+                  - gridcell "M9 local fixture product M9 local fixture release" [ref=f7e247]:
+                    - text: M9 local fixture product
+                    - generic [ref=f7e248]: M9 local fixture release
+                  - gridcell "Unknown" [ref=f7e249]
+                  - gridcell "EPSS unknown KEV Not Listed" [ref=f7e253]:
+                    - text: EPSS unknown
+                    - generic [ref=f7e254]: KEV Not Listed
+                  - gridcell "Unknown" [ref=f7e255]
+                  - gridcell "Not assessed Approval unavailable" [ref=f7e256]:
+                    - text: Not assessed
+                    - generic [ref=f7e257]: Approval unavailable
+                  - gridcell "Actionable · No remediation anchor SLA Not Configured · Not Requested · Reintroduction not evaluated" [ref=f7e258]:
+                    - text: Actionable · No remediation anchor
+                    - generic [ref=f7e259]: SLA Not Configured · Not Requested · Reintroduction not evaluated
+              - generic [ref=f7e260]:
+                - paragraph [ref=f7e261]: Use arrow keys to move, Space to select, and Enter to inspect.
+                - generic [ref=f7e262]: All loaded findings shown.
+          - complementary [ref=f7e263]:
+            - generic [ref=f7e264]:
+              - generic [ref=f7e265]:
+                - paragraph [ref=f7e266]: Finding detail
+                - heading "CVE-2026-99001" [level=2] [ref=f7e267]
+              - button "Close detail" [ref=f7e268] [cursor=pointer]
+            - generic [ref=f7e269]:
+              - generic [ref=f7e270]:
+                - term [ref=f7e271]: Product / release
+                - definition [ref=f7e272]: M9 local fixture product / M9 local fixture release
+              - generic [ref=f7e273]:
+                - term [ref=f7e274]: Match
+                - definition [ref=f7e275]: PURL-first OSV
+              - generic [ref=f7e276]:
+                - term [ref=f7e277]: Comparator
+                - definition [ref=f7e278]: m9-fixture 1
+              - generic [ref=f7e279]:
+                - term [ref=f7e280]: Component identity
+                - definition [ref=f7e281]: pkg:npm/m9-fixture-component@1.0.0
+            - region [ref=f7e282]:
+              - heading "Advisory enrichment" [level=3] [ref=f7e283]
+              - generic [ref=f7e284]:
+                - generic [ref=f7e285]: Unknown
+                - generic [ref=f7e288]: KEV Not Listed
+                - generic [ref=f7e291]: EPSS unknown
+              - paragraph [ref=f7e294]: No EPSS probability is available; unknown is not treated as zero.
+            - region [ref=f7e295]:
+              - heading "Dependency path" [level=3] [ref=f7e296]
+              - list "Component occurrences" [ref=f7e297]:
+                - listitem [ref=f7e298]:
+                  - text: pkg:npm/m9-fixture-component@1.0.0
+                  - generic [ref=f7e299]: · 1.0.0
+            - region [ref=f7e300]:
+              - heading "Evidence and review" [level=3] [ref=f7e301]
+              - generic [ref=f7e302]:
+                - generic [ref=f7e303]:
+                  - term [ref=f7e304]: Reachability
+                  - definition [ref=f7e305]: Unknown — unavailable
+                - generic [ref=f7e306]:
+                  - term [ref=f7e307]: Advisory review
+                  - definition [ref=f7e308]: No Review Required
+                - generic [ref=f7e309]:
+                  - term [ref=f7e310]: Source assertions
+                  - definition [ref=f7e311]: 1 retained
+            - region [ref=f7e312]:
+              - generic [ref=f7e313]:
+                - generic [ref=f7e314]:
+                  - generic [ref=f7e315]:
+                    - heading "VEX assessment" [level=3] [ref=f7e316]
+                    - paragraph [ref=f7e317]: Immutable revision history is retained separately from matching evidence.
+                  - button "Create assessment" [ref=f7e318] [cursor=pointer]
+                - paragraph [ref=f7e319]: No VEX assessment has been submitted for this finding.
+                - generic [ref=f7e320]:
+                  - heading "Assessment history" [level=4] [ref=f7e321]
+                  - paragraph [ref=f7e322]: No assessment history has been recorded.
+              - region [ref=f7e323]:
+                - heading "Assessment approval policy" [level=3] [ref=f7e324]
+                - paragraph [ref=f7e325]: Changes apply only to future submissions. Pending assessment snapshots are unchanged.
+                - list "Approval policy by severity" [ref=f7e326]:
+                  - listitem [ref=f7e327]:
+                    - generic [ref=f7e328]: Critical · approval required
+                    - button "Make approval optional" [ref=f7e329] [cursor=pointer]
+                  - listitem [ref=f7e330]:
+                    - generic [ref=f7e331]: High · approval required
+                    - button "Make approval optional" [ref=f7e332] [cursor=pointer]
+                  - listitem [ref=f7e333]:
+                    - generic [ref=f7e334]: Medium · approval not required
+                    - button "Require approval" [ref=f7e335] [cursor=pointer]
+                  - listitem [ref=f7e336]:
+                    - generic [ref=f7e337]: Low · approval not required
+                    - button "Require approval" [ref=f7e338] [cursor=pointer]
+                  - listitem [ref=f7e339]:
+                    - generic [ref=f7e340]: Unknown · approval not required
+                    - button "Require approval" [ref=f7e341] [cursor=pointer]
+            - region [ref=f7e342]:
+              - generic [ref=f7e343]:
+                - generic [ref=f7e344]:
+                  - generic [ref=f7e345]:
+                    - heading "Remediation anchor" [level=3] [ref=f7e346]
+                    - paragraph [ref=f7e347]: Human/business availability evidence. Recording it does not change VEX, risk, regulatory obligations, or release history.
+                  - button "Record remediation" [ref=f7e348] [cursor=pointer]
+                - generic [ref=f7e349]:
+                  - generic [ref=f7e350]: No remediation anchor
+                  - generic [ref=f7e353]: Reintroduction not evaluated
+                - paragraph [ref=f7e356]: No remediation availability evidence has been recorded for this finding.
+                - paragraph [ref=f7e357]: Reintroduction is not evaluated because a completed SBOM release lineage is unavailable.
+                - region [ref=f7e358]:
+                  - generic [ref=f7e360]:
+                    - heading "Linked remediation tickets" [level=4] [ref=f7e361]
+                    - paragraph [ref=f7e362]: External closure starts internal review. It does not prove remediation availability or approve VEX.
+                  - paragraph [ref=f7e363]: No owner-managed Jira remediation binding is configured for this product and release.
+                - region [ref=f7e364]:
+                  - heading "Owner Jira binding setup" [level=5] [ref=f7e365]
+                  - paragraph [ref=f7e366]: Select the authorized Jira connection, enter explicit project and workflow IDs, validate with Jira, then save. No credential is shown here.
+                  - generic [ref=f7e367]:
+                    - generic [ref=f7e368]:
+                      - text: Jira connection
+                      - combobox "Jira connection" [ref=f7e369] [cursor=pointer]:
+                        - option "Select a configured connection" [selected]
+                    - generic [ref=f7e370]:
+                      - text: Jira project ID
+                      - textbox "Jira project ID" [ref=f7e373]
+                    - generic [ref=f7e374]:
+                      - text: Jira project key
+                      - textbox "Jira project key" [ref=f7e377]
+                    - generic [ref=f7e378]:
+                      - text: Issue type ID
+                      - textbox "Issue type ID" [ref=f7e381]
+                  - paragraph [ref=f7e382]: Use Jira IDs from the approved project. Each JSON field is validated against the shared contract and the provider before saving.
+                  - generic [ref=f7e383]:
+                    - text: Status transitions JSON
+                    - textbox "Status transitions JSON" [ref=f7e384]: "[]"
+                  - generic [ref=f7e385]:
+                    - text: Status mappings JSON
+                    - textbox "Status mappings JSON" [ref=f7e386]: "[]"
+                  - generic [ref=f7e387]:
+                    - text: Custom field mappings JSON
+                    - textbox "Custom field mappings JSON" [ref=f7e388]: "[]"
+                  - paragraph [ref=f7e389]: No active Jira connection is on this page. Configure one in the integration hub or browse connector pages.
+                  - generic [ref=f7e390]:
+                    - button "Validate Jira mapping" [ref=f7e391] [cursor=pointer]
+                    - button "Save Jira binding" [disabled] [ref=f7e392]
+            - region [ref=f7e393]:
+              - generic [ref=f7e394]:
+                - heading "Internal triage notes" [level=3] [ref=f7e395]
+                - generic [ref=f7e396]: Operational only
+              - generic [ref=f7e397]:
+                - generic [ref=f7e398]:
+                  - text: Add a note
+                  - textbox "Add a note" [ref=f7e399]:
+                    - /placeholder: Add an internal triage note
+                - generic [ref=f7e400]:
+                  - text: Mention authorized members
+                  - textbox "Mention authorized members" [ref=f7e401]:
+                    - /placeholder: Search members
+                - generic [ref=f7e402]:
+                  - generic [ref=f7e403]: 4000 characters remaining · 0/20 mentions
+                  - button "Save note" [disabled] [ref=f7e404]
+              - paragraph [ref=f7e405]: No internal notes have been added.
+            - region [ref=f7e406]:
+              - heading "Responsible suppliers" [level=3] [ref=f7e407]
+              - list "Responsible suppliers" [ref=f7e408]:
+                - listitem [ref=f7e409]:
+                  - link "M9 E2E Supplier 20260921" [ref=f7e410] [cursor=pointer]:
+                    - /url: /suppliers/9247c281-2fe5-4d55-8ac9-7fbe44ecb94a
+                  - generic [ref=f7e411]: · unknown criticality
+                - listitem [ref=f7e412]:
+                  - link "M9 E2E Supplier Two 20260921" [ref=f7e413] [cursor=pointer]:
+                    - /url: /suppliers/90100000-0000-4000-8000-000000000015
+                  - generic [ref=f7e414]: · high criticality
+            - region [ref=f7e415]:
+              - generic [ref=f7e416]:
+                - generic [ref=f7e417]:
+                  - generic [ref=f7e418]:
+                    - heading "Validated VEX export" [level=3] [ref=f7e419]
+                    - paragraph [ref=f7e420]: Exports only current approved VEX revisions for this exact product and release. Internal notes and evidence are never included.
+                  - generic [ref=f7e421]: M9 local fixture product · M9 local fixture release
+                - paragraph [ref=f7e424]: 0 eligible approved revisions · scope version 1
+                - generic [ref=f7e425]:
+                  - generic [ref=f7e426]:
+                    - text: Export format
+                    - combobox "Export format" [ref=f7e427] [cursor=pointer]:
+                      - option "OpenVEX 0.2.0" [selected]
+                      - option "CycloneDX VEX 1.6"
+                  - button "Create validated export" [ref=f7e428] [cursor=pointer]
+                - region [ref=f7e429]:
+                  - heading "Export snapshots" [level=4] [ref=f7e430]
+                  - paragraph [ref=f7e431]: No validated VEX export has been created for this release.
+            - region [ref=f7e432]:
+              - generic [ref=f7e433]:
+                - generic [ref=f7e434]:
+                  - generic [ref=f7e435]:
+                    - heading "Triage operations" [level=3] [ref=f7e436]
+                    - paragraph [ref=f7e437]: Operational queue state only. It does not change VEX, risk, or regulatory deadlines.
+                  - generic [ref=f7e438]:
+                    - button "Assign owner" [ref=f7e439] [cursor=pointer]
+                    - button "Suppress finding" [ref=f7e440] [cursor=pointer]
+                - generic [ref=f7e441]:
+                  - generic [ref=f7e442]:
+                    - term [ref=f7e443]: Responsible user
+                    - definition [ref=f7e444]: Unassigned
+                  - generic [ref=f7e445]:
+                    - term [ref=f7e446]: Queue state
+                    - definition [ref=f7e447]: Actionable
+                  - generic [ref=f7e448]:
+                    - term [ref=f7e449]: Internal triage SLA
+                    - definition [ref=f7e450]: Internal SLA not configured
+                  - generic [ref=f7e451]:
+                    - term [ref=f7e452]: Alert delivery
+                    - definition [ref=f7e453]: Delivery Not Requested
+                - generic [ref=f7e454]:
+                  - generic [ref=f7e455]: Actionable
+                  - generic [ref=f7e458]: Internal SLA Not Configured
+                  - generic [ref=f7e461]: Delivery Not Requested
+              - region [ref=f7e464]:
+                - heading "Internal SLA policy" [level=3] [ref=f7e465]
+                - paragraph [ref=f7e466]: Owner configuration for internal remediation only; this is not a regulatory obligation.
+                - generic [ref=f7e467]:
+                  - generic [ref=f7e468]:
+                    - generic [ref=f7e469]:
+                      - generic [ref=f7e470]:
+                        - checkbox "Critical" [ref=f7e471]
+                        - text: Critical
+                      - paragraph [ref=f7e472]: Internal SLA not configured
+                    - generic [ref=f7e473]:
+                      - text: Target minutes
+                      - spinbutton "Critical SLA target minutes" [disabled] [ref=f7e476]
+                    - button "Save" [ref=f7e477] [cursor=pointer]
+                  - generic [ref=f7e478]:
+                    - generic [ref=f7e479]:
+                      - generic [ref=f7e480]:
+                        - checkbox "High" [ref=f7e481]
+                        - text: High
+                      - paragraph [ref=f7e482]: Internal SLA not configured
+                    - generic [ref=f7e483]:
+                      - text: Target minutes
+                      - spinbutton "High SLA target minutes" [disabled] [ref=f7e486]
+                    - button "Save" [ref=f7e487] [cursor=pointer]
+                  - generic [ref=f7e488]:
+                    - generic [ref=f7e489]:
+                      - generic [ref=f7e490]:
+                        - checkbox "Medium" [ref=f7e491]
+                        - text: Medium
+                      - paragraph [ref=f7e492]: Internal SLA not configured
+                    - generic [ref=f7e493]:
+                      - text: Target minutes
+                      - spinbutton "Medium SLA target minutes" [disabled] [ref=f7e496]
+                    - button "Save" [ref=f7e497] [cursor=pointer]
+                  - generic [ref=f7e498]:
+                    - generic [ref=f7e499]:
+                      - generic [ref=f7e500]:
+                        - checkbox "Low" [ref=f7e501]
+                        - text: Low
+                      - paragraph [ref=f7e502]: Internal SLA not configured
+                    - generic [ref=f7e503]:
+                      - text: Target minutes
+                      - spinbutton "Low SLA target minutes" [disabled] [ref=f7e506]
+                    - button "Save" [ref=f7e507] [cursor=pointer]
+                  - generic [ref=f7e508]:
+                    - generic [ref=f7e509]:
+                      - generic [ref=f7e510]:
+                        - checkbox "Unknown" [ref=f7e511]
+                        - text: Unknown
+                      - paragraph [ref=f7e512]: Internal SLA not configured
+                    - generic [ref=f7e513]:
+                      - text: Target minutes
+                      - spinbutton "Unknown SLA target minutes" [disabled] [ref=f7e516]
+                    - button "Save" [ref=f7e517] [cursor=pointer]
+            - region [ref=f7e518]:
+              - heading "Advisory history" [level=3] [ref=f7e519]
+              - paragraph [ref=f7e520]: No advisory re-evaluation events are retained.
+            - region [ref=f7e521]:
+              - heading "Related findings" [level=3] [ref=f7e522]
+              - paragraph [ref=f7e523]: No other authorized findings are related to this advisory.
+  - button "Open Next.js Dev Tools" [ref=f7e153] [cursor=pointer]
+  - alert [ref=f7e157]

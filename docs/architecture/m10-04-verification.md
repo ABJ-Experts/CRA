@@ -29,12 +29,9 @@ This implementation uses the local `cra` Supabase stack and test-only framework 
 
 ## Browser artifacts
 
-- Desktop selected framework: `/tmp/cra-m10-04-screenshots/m10-framework-tree.png`
-- Desktop curated crosswalk empty state: `/tmp/cra-m10-04-screenshots/m10-04-crosswalk-empty-desktop.png`
-- Mobile curated crosswalk empty state: `/tmp/cra-m10-04-screenshots/m10-04-crosswalk-empty-mobile.png`
-- Desktop disabled framework: `/tmp/cra-m10-04-screenshots/m10-framework-disabled.png`
+The generated testing screenshots were not retained in the repository.
 
-The initial browser command accidentally selected the whole suite and was stopped when missing cleanup configuration caused unrelated failures. The focused command then passed. Playwright cleared its tracked output directory at startup; the pre-existing tracked artifacts were restored from Git immediately. New screenshots were written outside the repository.
+The initial browser command accidentally selected the whole suite and was stopped when missing cleanup configuration caused unrelated failures. The focused command then passed. Playwright cleared its tracked output directory at startup; the pre-existing tracked artifacts were restored from Git immediately. Generated repository screenshots have since been removed.
 
 ## Deployment, rollback, and limitations
 
