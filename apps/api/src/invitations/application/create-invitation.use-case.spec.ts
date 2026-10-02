@@ -70,6 +70,10 @@ class CreateRepositoryFake implements InvitationRepository {
     return Promise.reject(new Error("not used"));
   }
 
+  resendAtomic(): Promise<never> {
+    return Promise.reject(new Error("not used"));
+  }
+
   list(): Promise<readonly Invitation[]> {
     return Promise.reject(new Error("not used"));
   }
@@ -104,6 +108,27 @@ class RecordingNotifier implements InvitationNotifierPort {
   }
 }
 
+class RecordingEvidence {
+  readonly calls: Array<
+    Readonly<{
+      organizationId: string;
+      invitationId: string;
+      actorId: string;
+    }>
+  > = [];
+  failure: Error | null = null;
+
+  recordInvitationDelivery(
+    organizationId: string,
+    invitationId: string,
+    actorId: string,
+  ): Promise<void> {
+    if (this.failure) return Promise.reject(this.failure);
+    this.calls.push(Object.freeze({ organizationId, invitationId, actorId }));
+    return Promise.resolve();
+  }
+}
+
 const actor = Object.freeze({ id: "owner-1", email: "owner@cra.test" });
 const baseInput = Object.freeze({
   email: "member@cra.test",
@@ -113,6 +138,7 @@ const baseInput = Object.freeze({
 function fixture(overrides: { ttlDays?: number } = {}) {
   const repository = new CreateRepositoryFake();
   const notifier = new RecordingNotifier();
+  const evidence = new RecordingEvidence();
   const tokens = {
     create: jest
       .fn()
@@ -126,10 +152,11 @@ function fixture(overrides: { ttlDays?: number } = {}) {
     repository,
     tokens,
     notifier,
+    evidence as never,
     clock,
     overrides.ttlDays ?? 7,
   );
-  return { clock, notifier, repository, tokens, useCase };
+  return { clock, evidence, notifier, repository, tokens, useCase };
 }
 
 describe("CreateInvitationUseCase", () => {
@@ -242,7 +269,7 @@ describe("CreateInvitationUseCase", () => {
   });
 
   it("succeeds with a disabled no-op notifier", async () => {
-    const { repository, tokens } = fixture();
+    const { evidence, repository, tokens } = fixture();
     const disabledNotifier: InvitationNotifierPort = {
       send: () => Promise.resolve(),
     };
@@ -250,6 +277,7 @@ describe("CreateInvitationUseCase", () => {
       repository,
       tokens,
       disabledNotifier,
+      evidence as never,
       { now: () => new Date("2026-08-09T00:00:00.000Z") },
       7,
     );
@@ -260,7 +288,7 @@ describe("CreateInvitationUseCase", () => {
   });
 
   it("reports notification failure without losing the persisted invitation", async () => {
-    const { notifier, repository, useCase } = fixture();
+    const { evidence, notifier, repository, useCase } = fixture();
     notifier.failure = new Error("mail unavailable");
 
     await expect(
@@ -270,6 +298,50 @@ describe("CreateInvitationUseCase", () => {
       error: { code: "notification_failed", invitationId: "invitation-1" },
     });
     expect(repository.lastInsert?.input.email).toBe("member@cra.test");
+    expect(evidence.calls).toEqual([]);
+  });
+
+  it("records invitation evidence only after successful email delivery", async () => {
+    const { evidence, notifier, useCase } = fixture();
+    const order: string[] = [];
+    notifier.send = jest.fn(() => {
+      order.push("mail");
+      return Promise.resolve();
+    });
+    evidence.recordInvitationDelivery = jest.fn(
+      (organizationId, invitationId, actorId) => {
+        order.push("evidence");
+        evidence.calls.push(
+          Object.freeze({ organizationId, invitationId, actorId }),
+        );
+        return Promise.resolve();
+      },
+    );
+
+    await expect(
+      useCase.execute({ orgId: "org-1", actor, input: baseInput }),
+    ).resolves.toEqual({ ok: true, value: { id: "invitation-1" } });
+    expect(order).toEqual(["mail", "evidence"]);
+    expect(evidence.calls).toEqual([
+      {
+        organizationId: "org-1",
+        invitationId: "invitation-1",
+        actorId: "owner-1",
+      },
+    ]);
+  });
+
+  it("does not claim invitation delivery completion when evidence persistence fails", async () => {
+    const { evidence, notifier, useCase } = fixture();
+    evidence.failure = new Error("onboarding unavailable");
+
+    await expect(
+      useCase.execute({ orgId: "org-1", actor, input: baseInput }),
+    ).resolves.toEqual({
+      ok: false,
+      error: { code: "evidence_failed", invitationId: "invitation-1" },
+    });
+    expect(notifier.sent).toHaveLength(1);
   });
 
   it("reports a missing organization after preserving the inserted row", async () => {

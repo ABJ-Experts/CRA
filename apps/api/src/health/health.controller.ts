@@ -10,6 +10,7 @@ import type {
 
 import { Public } from "../auth/auth.types";
 import { ZodResponse } from "../common/http/zod-response.interceptor";
+import { ReportingDeadlineMonitorHealthUseCases } from "../reporting/application/reporting-deadline-monitor-health.port";
 import { SupabaseService } from "../supabase/supabase.service";
 
 /**
@@ -26,7 +27,10 @@ import { SupabaseService } from "../supabase/supabase.service";
 @Public()
 @Controller("health")
 export class HealthController {
-  constructor(private readonly supabase: SupabaseService) {}
+  constructor(
+    private readonly supabase: SupabaseService,
+    private readonly reportingDeadlineMonitor: ReportingDeadlineMonitorHealthUseCases,
+  ) {}
 
   @Get()
   @ZodResponse(livenessResponseSchema)
@@ -38,6 +42,12 @@ export class HealthController {
   @ZodResponse(readinessResponseSchema)
   async readiness(): Promise<ReadinessResponse> {
     const database = await this.supabase.ping();
-    return { status: database ? "ok" : "degraded", database };
+    const reportingMonitor = database
+      ? await this.reportingDeadlineMonitor.isReady().catch(() => false)
+      : false;
+    return {
+      status: database && reportingMonitor ? "ok" : "degraded",
+      database,
+    };
   }
 }

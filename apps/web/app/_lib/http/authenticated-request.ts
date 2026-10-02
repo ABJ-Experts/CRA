@@ -6,6 +6,7 @@ import {
   apiClient,
   type ApiClient,
   type RequestJsonOptions,
+  type RequestMultipartOptions,
 } from "./api-client";
 
 /**
@@ -16,7 +17,8 @@ export class AuthenticatedApiClient {
   private refreshInFlight: Promise<void> | null = null;
 
   constructor(
-    private readonly client: Pick<ApiClient, "request"> = apiClient,
+    private readonly client: Pick<ApiClient, "request" | "requestMultipart"> =
+      apiClient,
   ) {}
 
   async request<
@@ -57,6 +59,15 @@ export class AuthenticatedApiClient {
 
     return this.refreshInFlight;
   }
+
+  requestMultipart<
+    TResponseSchema extends z.ZodTypeAny,
+    TFieldsSchema extends z.ZodTypeAny,
+  >(
+    options: RequestMultipartOptions<TResponseSchema, TFieldsSchema>,
+  ): Promise<z.output<TResponseSchema>> {
+    return this.client.requestMultipart(options);
+  }
 }
 
 export const authenticatedApiClient = new AuthenticatedApiClient();
@@ -69,4 +80,13 @@ export function authenticatedRequestJson<
   options: RequestJsonOptions<TResponseSchema, TInputSchema>,
 ): Promise<z.output<TResponseSchema>> {
   return authenticatedApiClient.request(options);
+}
+
+export function authenticatedRequestMultipart<
+  TResponseSchema extends z.ZodTypeAny,
+  TFieldsSchema extends z.ZodTypeAny,
+>(
+  options: RequestMultipartOptions<TResponseSchema, TFieldsSchema>,
+): Promise<z.output<TResponseSchema>> {
+  return authenticatedApiClient.requestMultipart(options);
 }

@@ -32,6 +32,7 @@ describe("API bootstrap", () => {
     const app = {
       get: jest.fn().mockReturnValue({ getOrThrow }),
       setGlobalPrefix: jest.fn(),
+      useBodyParser: jest.fn(),
       set: jest.fn(),
       use: jest.fn(),
       enableCors: jest.fn(),
@@ -49,8 +50,10 @@ describe("API bootstrap", () => {
 
     expect(create).toHaveBeenCalledWith(expect.any(Function), {
       bufferLogs: false,
+      rawBody: true,
     });
     expect(app.setGlobalPrefix).toHaveBeenCalledWith("api/v1");
+    expect(app.useBodyParser).toHaveBeenCalledWith("json", { limit: "2200kb" });
     expect(app.set).toHaveBeenCalledWith("trust proxy", 1);
     expect(cookieParser).toHaveBeenCalledWith();
     expect(helmet).toHaveBeenCalledWith({

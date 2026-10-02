@@ -13,6 +13,8 @@ async function bootstrap(): Promise<void> {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     // Our own filter shapes every error; Nest's default would double-log 5xx.
     bufferLogs: false,
+    // Provider signatures cover the exact request bytes, before JSON parsing.
+    rawBody: true,
   });
   const config = app.get(ConfigService);
   const logger = new Logger("Bootstrap");
@@ -26,6 +28,10 @@ async function bootstrap(): Promise<void> {
    *     them, and the failure would be intermittent and environment-dependent.
    */
   app.setGlobalPrefix(API_PREFIX);
+
+  // Customer framework imports are capped at 2 MiB by the shared schema;
+  // allow JSON envelope overhead before the Zod boundary rejects larger input.
+  app.useBodyParser("json", { limit: "2200kb" });
 
   /*
    * Trust exactly one proxy hop (the Next rewrite in front of us), so

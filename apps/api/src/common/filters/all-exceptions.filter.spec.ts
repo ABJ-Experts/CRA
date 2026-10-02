@@ -77,6 +77,37 @@ describe("AllExceptionsFilter", () => {
     );
   });
 
+  it("preserves public typed recovery details on a handled client conflict", () => {
+    const { filter, host, json } = fixture();
+    const details = {
+      candidates: [
+        {
+          id: "11111111-1111-4111-8111-111111111111",
+          name: "Example Components",
+        },
+      ],
+    };
+
+    filter.catch(
+      new HttpException(
+        {
+          message: "Confirm the listed same-name suppliers.",
+          code: "duplicate_confirmation_required",
+          details,
+        },
+        HttpStatus.CONFLICT,
+      ),
+      host,
+    );
+
+    expect(json).toHaveBeenCalledWith({
+      statusCode: HttpStatus.CONFLICT,
+      message: "Confirm the listed same-name suppliers.",
+      code: "duplicate_confirmation_required",
+      details,
+    });
+  });
+
   it("uses the safe default when a client exception has no message", () => {
     const { filter, host, json } = fixture();
 
@@ -131,6 +162,7 @@ describe("AllExceptionsFilter", () => {
         message: "duplicate value violates widgets_email_key",
         code: "database_error",
         fieldErrors: { email: "secret detail" },
+        details: { candidates: ["secret detail"] },
       },
       HttpStatus.SERVICE_UNAVAILABLE,
     );
@@ -147,6 +179,29 @@ describe("AllExceptionsFilter", () => {
       exception.stack,
     );
   });
+
+  it.each([
+    [HttpStatus.SERVICE_UNAVAILABLE, "unavailable"],
+    [HttpStatus.BAD_GATEWAY, "malformed_provider"],
+  ] as const)(
+    "preserves only safe structured server code %s/%s",
+    (serverStatus, code) => {
+      const { filter, host, status, json } = fixture();
+      const exception = new HttpException(
+        { message: "private provider detail", code },
+        serverStatus,
+      );
+
+      filter.catch(exception, host);
+
+      expect(status).toHaveBeenCalledWith(serverStatus);
+      expect(json).toHaveBeenCalledWith({
+        statusCode: serverStatus,
+        message: "Something went wrong. Please try again.",
+        code,
+      });
+    },
+  );
 
   it("sanitizes and stringifies a non-Error thrown value", () => {
     const { filter, host, json } = fixture();

@@ -1,0 +1,136 @@
+- generic [active] [ref=f2e1]:
+  - generic [ref=f2e3]:
+    - complementary [ref=f2e4]:
+      - generic [ref=f2e5]:
+        - generic [ref=f2e6]:
+          - link "CRA Sentinel" [ref=f2e7] [cursor=pointer]:
+            - /url: /dashboard
+            - generic [aria-hidden] [ref=f2e8]: C
+            - text: CRA Sentinel
+          - button "Collapse sidebar" [ref=f2e9] [cursor=pointer]
+        - navigation "Main" [ref=f2e12]:
+          - generic [ref=f2e13]:
+            - list [ref=f2e15]:
+              - listitem [ref=f2e16]:
+                - link "Dashboard" [ref=f2e17] [cursor=pointer]:
+                  - /url: /dashboard
+              - listitem [ref=f2e25]:
+                - link "Management" [ref=f2e26] [cursor=pointer]:
+                  - /url: /management
+              - listitem [ref=f2e32]:
+                - link "Organization" [ref=f2e33] [cursor=pointer]:
+                  - /url: /organization
+              - listitem [ref=f2e40]:
+                - link "Products" [ref=f2e41] [cursor=pointer]:
+                  - /url: /products
+              - listitem [ref=f2e48]:
+                - link "Suppliers" [ref=f2e49] [cursor=pointer]:
+                  - /url: /suppliers
+              - listitem [ref=f2e54]:
+                - link "Frameworks" [ref=f2e55] [cursor=pointer]:
+                  - /url: /frameworks
+              - listitem [ref=f2e60]:
+                - link "Findings" [ref=f2e61] [cursor=pointer]:
+                  - /url: /findings
+              - listitem [ref=f2e66]:
+                - link "Reporting" [ref=f2e67] [cursor=pointer]:
+                  - /url: /reporting
+              - listitem [ref=f2e73]:
+                - link "Connectors" [ref=f2e74] [cursor=pointer]:
+                  - /url: /connectors
+            - generic [ref=f2e81]:
+              - paragraph [ref=f2e82]: Account & access
+              - list [ref=f2e83]:
+                - listitem [ref=f2e84]:
+                  - button "Profile" [ref=f2e85] [cursor=pointer]
+                  - generic:
+                    - list:
+                      - listitem [ref=f2e93]:
+                        - link "Account" [ref=f2e94] [cursor=pointer]:
+                          - /url: /account
+                      - listitem [ref=f2e96]:
+                        - link "Security" [ref=f2e97] [cursor=pointer]:
+                          - /url: /security
+                - listitem [ref=f2e99]:
+                  - button "Authorization" [ref=f2e100] [cursor=pointer]
+                  - generic:
+                    - list:
+                      - listitem [ref=f2e108]:
+                        - link "Roles" [ref=f2e109] [cursor=pointer]:
+                          - /url: /roles
+                      - listitem [ref=f2e111]:
+                        - link "Permissions" [ref=f2e112] [cursor=pointer]:
+                          - /url: /permissions
+        - button "Sign out" [ref=f2e116] [cursor=pointer]
+    - generic [ref=f2e121]:
+      - banner [ref=f2e122]:
+        - generic [ref=f2e124]:
+          - generic [ref=f2e125]: Welcome, Robert Fox
+          - generic [ref=f2e126]: Overview your store
+        - generic [ref=f2e127]:
+          - button "Search" [ref=f2e128] [cursor=pointer]
+          - button "Notifications" [ref=f2e132] [cursor=pointer]
+          - generic [ref=f2e136]:
+            - generic [ref=f2e137]: AF
+            - 'img "Ada Foster: online" [ref=f2e138]'
+      - main [ref=f2e139]:
+        - generic [ref=f2e141]:
+          - region "Organization onboarding" [ref=f2e280]:
+            - generic [ref=f2e281]:
+              - paragraph [ref=f2e282]: Continue organization onboarding
+              - paragraph [ref=f2e283]: "Next required action: Organization details."
+            - link "Resume onboarding" [ref=f2e284] [cursor=pointer]:
+              - /url: /onboarding
+          - generic [ref=f2e142]:
+            - generic [ref=f2e143]:
+              - generic [ref=f2e144]: $902.008K
+              - generic [ref=f2e146]:
+                - generic [ref=f2e147]: Total revenue
+                - generic [ref=f2e148]: +8.24%
+            - generic [ref=f2e149]:
+              - generic [ref=f2e150]: $61.108K
+              - generic [ref=f2e152]:
+                - generic [ref=f2e153]: Total profit
+                - generic [ref=f2e154]: +3.11%
+            - generic [ref=f2e155]:
+              - generic [ref=f2e156]: 12,029
+              - generic [ref=f2e158]:
+                - generic [ref=f2e159]: Total orders
+                - generic [ref=f2e160]: +5.40%
+            - generic [ref=f2e161]:
+              - generic [ref=f2e162]: 8,292
+              - generic [ref=f2e164]:
+                - generic [ref=f2e165]: Total customers
+                - generic [ref=f2e166]: +2.18%
+            - generic [ref=f2e167]:
+              - generic [ref=f2e168]: 1,209
+              - generic [ref=f2e170]:
+                - generic [ref=f2e171]: Total products
+                - generic [ref=f2e172]: "-1.20%"
+          - generic [ref=f2e174]:
+            - heading "Revenue & Summary" [level=2] [ref=f2e176]
+            - img "Revenue and order volume by month" [ref=f2e178]
+          - generic [ref=f2e181]:
+            - heading "Latest Orders" [level=2] [ref=f2e183]
+            - table "Latest orders" [ref=f2e187]:
+              - rowgroup [ref=f2e188]:
+                - row [ref=f2e189]:
+                  - columnheader "No." [ref=f2e190]
+                  - columnheader [ref=f2e191] [cursor=pointer]:
+                    - button "Order No & Tracking ID" [ref=f2e192]
+                  - columnheader [ref=f2e196] [cursor=pointer]:
+                    - button "Created & Source" [ref=f2e197]
+                  - columnheader [ref=f2e201] [cursor=pointer]:
+                    - button "Status" [ref=f2e202]
+                  - columnheader [ref=f2e206] [cursor=pointer]:
+                    - button "Quantity & Price" [ref=f2e207]
+                  - columnheader [ref=f2e211]
+              - rowgroup [ref=f2e212]:
+                - row [ref=f2e287]:
+                  - cell [ref=f2e288]:
+                    - alert [ref=f2e289]:
+                      - paragraph [ref=f2e290]: Could not load this table
+                      - paragraph [ref=f2e291]: Something went wrong. Please try again.
+                      - button "Try again" [ref=f2e292] [cursor=pointer]
+  - button "Open Next.js Dev Tools" [ref=f2e298] [cursor=pointer]
+  - alert [ref=f2e302]

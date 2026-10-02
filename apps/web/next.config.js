@@ -26,11 +26,60 @@ const API_ORIGIN = process.env.API_ORIGIN ?? "http://localhost:3333";
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  async redirects() {
+    return [
+      {
+        source: "/dashboard/management",
+        destination: "/management",
+        permanent: true,
+      },
+      {
+        source: "/dashboard/organization",
+        destination: "/organization",
+        permanent: true,
+      },
+      {
+        source: "/dashboard/products",
+        destination: "/products",
+        permanent: true,
+      },
+      {
+        source: "/dashboard/products/:productId",
+        destination: "/products/:productId",
+        permanent: true,
+      },
+      {
+        source: "/dashboard/account",
+        destination: "/account",
+        permanent: true,
+      },
+      {
+        source: "/dashboard/security",
+        destination: "/security",
+        permanent: true,
+      },
+      {
+        source: "/dashboard/roles",
+        destination: "/roles",
+        permanent: true,
+      },
+      {
+        source: "/dashboard/permissions",
+        destination: "/permissions",
+        permanent: true,
+      },
+      {
+        source: "/dashboard/onboarding",
+        destination: "/onboarding",
+        permanent: true,
+      },
+    ];
+  },
   async rewrites() {
     return {
-      // `beforeFiles` so the proxy wins before Next looks for a route handler
-      // or a static file at the same path.
-      beforeFiles: [
+      // Let the auditor redemption route preserve its Set-Cookie header; all
+      // other API paths remain proxied after local route handlers are checked.
+      afterFiles: [
         {
           source: "/api/v1/:path*",
           destination: `${API_ORIGIN}/api/v1/:path*`,

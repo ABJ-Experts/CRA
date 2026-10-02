@@ -1,0 +1,50 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e3]:
+      - banner [ref=e4]:
+        - link "CRA" [ref=e5] [cursor=pointer]:
+          - /url: /
+          - generic [aria-hidden] [ref=e6]: C
+      - main [ref=e8]:
+        - generic [ref=e10]:
+          - generic [ref=e11]:
+            - heading "Welcome Back" [level=1] [ref=e12]
+            - paragraph [ref=e13]: Please, sign in to continue
+          - generic [ref=e14]:
+            - generic [ref=e15]:
+              - generic [ref=e16]:
+                - generic [ref=e17]:
+                  - generic [ref=e18]:
+                    - text: Email or User Name
+                    - generic [aria-hidden] [ref=e19]: "*"
+                  - textbox "Email or User Name" [ref=e25]
+                - generic [ref=e26]:
+                  - generic [ref=e27]:
+                    - text: Password
+                    - generic [aria-hidden] [ref=e28]: "*"
+                  - generic [ref=e29]:
+                    - textbox "Password" [ref=e34]
+                    - button "Show password" [ref=e36] [cursor=pointer]
+              - generic [ref=e42]:
+                - generic [ref=e44]:
+                  - checkbox "Remember me" [checked] [ref=e45] [cursor=pointer]
+                  - checkbox [checked] [aria-hidden]
+                  - generic [ref=e46] [cursor=pointer]: Remember me
+                - link "Forgot Password?" [ref=e47] [cursor=pointer]:
+                  - /url: /forgot-password
+            - button "Sign In" [ref=e48] [cursor=pointer]
+            - generic [ref=e49]: or sign in with
+            - generic [ref=e53]:
+              - button "Sign In with Google" [ref=e54] [cursor=pointer]
+              - button "Sign In with SSO" [ref=e62] [cursor=pointer]
+      - generic [ref=e69]:
+        - generic [ref=e70]: Don’t have an account?
+        - link "Sign Up" [ref=e71] [cursor=pointer]:
+          - /url: /sign-up
+    - figure [ref=e75]:
+      - blockquote [ref=e79]: CRA is Premium UI kits. Super a lot of layouts designed with the atomic system, to help us improve quickly our products
+      - generic [ref=e80]:
+        - button "Show quote 1 of 3" [ref=e81] [cursor=pointer]
+        - button "Show quote 2 of 3" [ref=e82] [cursor=pointer]
+        - button "Show quote 3 of 3" [ref=e83] [cursor=pointer]
+  - button "Open Next.js Dev Tools" [ref=e89] [cursor=pointer]

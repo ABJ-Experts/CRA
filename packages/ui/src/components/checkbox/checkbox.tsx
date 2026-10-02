@@ -72,7 +72,7 @@ export const Checkbox = forwardRef<
           className={cn(checkboxVariants({ size }), className)}
           {...props}
         >
-          <CheckboxPrimitive.Indicator className="flex items-center justify-center text-white">
+          <CheckboxPrimitive.Indicator className="flex items-center justify-center text-on-accent">
             {/*
               Radix renders the indicator for both checked and indeterminate,
               so the glyph is chosen from the resolved state rather than by

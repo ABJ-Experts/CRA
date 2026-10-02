@@ -2,10 +2,14 @@
 
 import "@testing-library/jest-dom/vitest";
 
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const navigation = vi.hoisted(() => ({ pathname: "/dashboard" }));
+const navigation = vi.hoisted(() => ({
+  pathname: "/dashboard",
+  replace: vi.fn(),
+  push: vi.fn(),
+}));
 const table = vi.hoisted(() => ({
   refetch: vi.fn(),
   setPage: vi.fn(),
@@ -16,6 +20,20 @@ const table = vi.hoisted(() => ({
 
 vi.mock("next/navigation", () => ({
   usePathname: () => navigation.pathname,
+  useRouter: () => ({ replace: navigation.replace, push: navigation.push }),
+}));
+vi.mock("../_features/notifications/notifications.queries", () => ({
+  useNotificationUnreadCountQuery: () => ({
+    data: { count: 3 },
+    isError: false,
+  }),
+}));
+vi.mock("./_components/dashboard-onboarding-resume", () => ({
+  DashboardOnboardingResume: () => null,
+}));
+vi.mock("../_providers/session-provider", () => ({
+  SessionProvider: ({ children }: { children: React.ReactNode }) => children,
+  useSession: () => ({ session: null, isLoading: false, isError: false }),
 }));
 vi.mock("./_lib/use-table-query", () => ({
   useTableQuery: () => ({
@@ -104,6 +122,14 @@ vi.mock("@repo/ui/chart", () => {
 });
 vi.mock("../_components/sidebar/sidebar", () => ({
   Sidebar: () => <nav aria-label="Sidebar" />,
+}));
+vi.mock("./organization-theme-provider", () => ({
+  OrganizationThemeProvider: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="organization-theme-provider">{children}</div>
+  ),
+}));
+vi.mock("../_features/reporting/reporting-deadline-header-indicator", () => ({
+  ReportingDeadlineHeaderIndicator: () => null,
 }));
 
 import ComingSoonPage from "./[...slug]/page";
@@ -239,6 +265,14 @@ describe("dashboard pages", () => {
     expect(screen.getByText(label)).toBeVisible();
   });
 
+  it("opens the in-app notification centre from the existing bell", () => {
+    render(<DashboardTopNav />);
+    fireEvent.click(
+      screen.getByRole("button", { name: /Notifications, 3 unread/ }),
+    );
+    expect(navigation.push).toHaveBeenCalledWith("/notifications");
+  });
+
   it("wraps page content in the dashboard shell", () => {
     render(
       <DashboardLayout>
@@ -248,6 +282,9 @@ describe("dashboard pages", () => {
 
     expect(screen.getByRole("navigation", { name: "Sidebar" })).toBeVisible();
     expect(screen.getByRole("main")).toHaveTextContent("Dashboard content");
+    expect(
+      screen.getByTestId("organization-theme-provider"),
+    ).toBeInTheDocument();
   });
 
   it("turns a catch-all slug into a readable placeholder", async () => {

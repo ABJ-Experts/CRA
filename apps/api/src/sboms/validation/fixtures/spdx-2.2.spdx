@@ -1,0 +1,15 @@
+SPDXVersion: SPDX-2.2
+DataLicense: CC0-1.0
+SPDXID: SPDXRef-DOCUMENT
+DocumentName: SPDX 2.2 fixture
+DocumentNamespace: https://cra.test/spdx/2.2/tag-value
+Creator: Tool: CRA deterministic SBOM validator fixture
+Created: 2026-08-21T00:00:00Z
+
+PackageName: example
+SPDXID: SPDXRef-Package
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION

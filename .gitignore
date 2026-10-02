@@ -5,6 +5,9 @@ node_modules
 .pnp
 .pnp.js
 
+# Repository documentation
+docs/
+
 # Local env files
 # NOTE: `.env` alone is an EXACT-match pattern, so `.env.production` and
 # `.env.staging` were committable. `.env*` closes that, with example files

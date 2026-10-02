@@ -1,0 +1,246 @@
+- generic:
+  - generic [aria-hidden]:
+    - generic:
+      - complementary:
+        - generic:
+          - generic:
+            - link:
+              - /url: /dashboard
+              - generic [aria-hidden]: C
+              - text: CRA Sentinel
+            - button
+          - navigation:
+            - generic:
+              - generic:
+                - list:
+                  - listitem:
+                    - link:
+                      - /url: /dashboard
+                      - generic: Dashboard
+                  - listitem:
+                    - link:
+                      - /url: /management
+                      - generic: Management
+                  - listitem:
+                    - link:
+                      - /url: /organization
+                      - generic: Organization
+                  - listitem:
+                    - link:
+                      - /url: /products
+                      - generic: Products
+                  - listitem:
+                    - link:
+                      - /url: /suppliers
+                      - generic: Suppliers
+                  - listitem:
+                    - link:
+                      - /url: /frameworks
+                      - generic: Frameworks
+                  - listitem:
+                    - link:
+                      - /url: /findings
+                      - generic: Findings
+                  - listitem:
+                    - link:
+                      - /url: /reporting
+                      - generic: Reporting
+                  - listitem:
+                    - link:
+                      - /url: /tasks
+                      - generic: Tasks
+                  - listitem:
+                    - link:
+                      - /url: /connectors
+                      - generic: Connectors
+              - generic:
+                - paragraph: Account & access
+                - list:
+                  - listitem:
+                    - button:
+                      - generic: Profile
+                    - listitem:
+                      - link:
+                        - /url: /account
+                        - generic: Account
+                    - listitem:
+                      - link:
+                        - /url: /security
+                        - generic: Security
+                  - listitem:
+                    - button:
+                      - generic: Authorization
+                    - listitem:
+                      - link:
+                        - /url: /roles
+                        - generic: Roles
+                    - listitem:
+                      - link:
+                        - /url: /permissions
+                        - generic: Permissions
+          - generic:
+            - generic:
+              - button:
+                - generic: Sign out
+      - generic:
+        - banner:
+          - generic:
+            - navigation:
+              - list:
+                - listitem:
+                  - link:
+                    - /url: /dashboard
+                    - text: Dashboard
+                - listitem [aria-hidden]
+                - listitem:
+                  - generic: Organization
+          - generic:
+            - button
+            - button
+            - generic: AF
+        - main:
+          - generic:
+            - generic:
+              - generic:
+                - heading [level=1]: Organization administration
+                - paragraph: Settings, retention, export, and tenant data lifecycle controls.
+            - region:
+              - generic:
+                - heading [level=2]: CRA
+                - paragraph: Server-owned tenant configuration, legal identity, and data-lifecycle controls. Browser locale, local storage, and deployment region never select operational policy.
+                - paragraph: "Organization identifier: cra"
+              - generic:
+                - generic:
+                  - term: Settings
+                  - definition: Needs setup
+                - generic:
+                  - term: Legal entities
+                  - definition: 1 recorded
+                - generic:
+                  - term: Tenant lifecycle
+                  - definition: Active
+            - generic:
+              - generic:
+                - heading [level=2]: Organization workbench
+              - generic:
+                - paragraph: Open one focused workspace at a time. Tenant policy and audit-backed controls remain available while you work.
+                - generic:
+                  - button:
+                    - generic: Organization settings
+                    - generic: Set operational policy, retention, and exports.
+                  - button:
+                    - generic: Organization identity
+                    - generic: Manage legal entities and workspace branding.
+                  - button:
+                    - generic: Tenant lifecycle
+                    - generic: Review protected deactivation and recovery controls.
+            - region:
+              - heading [level=2]: SBOM CI credentials
+              - paragraph: Create narrowly scoped credentials for automated SBOM intake. Credentials cannot access product data or organization administration.
+              - generic:
+                - generic:
+                  - generic:
+                    - text: Credential label
+                    - textbox
+                  - button [disabled]: Create credential
+                - paragraph: No CI credentials have been issued.
+  - button "Open Next.js Dev Tools" [ref=f2e165] [cursor=pointer]
+  - alert
+  - dialog [ref=f2e218]:
+    - generic [ref=f2e219]:
+      - heading "Organization settings" [level=2] [ref=f2e220]
+      - paragraph [ref=f2e221]: Set operational policy, retention, and exports.
+      - tablist "Organization settings sections" [ref=f2e222]:
+        - tab "Settings" [active] [selected] [ref=f2e223] [cursor=pointer]
+        - tab "Evidence retention" [ref=f2e226] [cursor=pointer]
+        - tab "Notifications" [ref=f2e229] [cursor=pointer]
+        - tab "Exports" [ref=f2e232] [cursor=pointer]
+      - button "Close" [ref=f2e235] [cursor=pointer]
+    - tabpanel "Settings" [ref=f2e241]:
+      - generic [ref=f2e242]:
+        - generic [ref=f2e243]:
+          - heading "Settings" [level=2] [ref=f2e244]
+          - generic [ref=f2e245]: Unconfigured
+        - generic [ref=f2e247]:
+          - paragraph [ref=f2e248]: Settings are unconfigured. Choose every required value from the server-provided catalog; no browser or deployment default is used.
+          - generic [ref=f2e249]:
+            - generic [ref=f2e250]:
+              - text: IANA timezone
+              - combobox "IANA timezone" [ref=f2e251] [cursor=pointer]:
+                - option "Select timezone" [selected]
+                - option "Etc/UTC"
+                - option "Asia/Kolkata"
+                - option "America/New_York"
+            - generic [ref=f2e252]:
+              - generic [ref=f2e253]:
+                - text: Maximum session age minutes
+                - generic [aria-hidden] [ref=f2e254]: "*"
+              - spinbutton "Maximum session age minutes" [ref=f2e256]
+            - generic [ref=f2e257]:
+              - text: AI provider
+              - combobox "AI provider" [ref=f2e258] [cursor=pointer]:
+                - option "Select provider" [selected]
+                - option "Test Ai"
+            - generic [ref=f2e259]:
+              - text: Data residency indicator
+              - combobox "Data residency indicator" [ref=f2e260] [cursor=pointer]:
+                - option "Select residency" [selected]
+                - option "Local"
+          - group "Working days" [ref=f2e261]:
+            - generic [ref=f2e263]:
+              - generic [ref=f2e265]:
+                - checkbox "Monday" [ref=f2e266] [cursor=pointer]
+                - checkbox [aria-hidden]
+                - generic [ref=f2e267] [cursor=pointer]: Monday
+              - generic [ref=f2e269]:
+                - checkbox "Tuesday" [ref=f2e270] [cursor=pointer]
+                - checkbox [aria-hidden]
+                - generic [ref=f2e271] [cursor=pointer]: Tuesday
+              - generic [ref=f2e273]:
+                - checkbox "Wednesday" [ref=f2e274] [cursor=pointer]
+                - checkbox [aria-hidden]
+                - generic [ref=f2e275] [cursor=pointer]: Wednesday
+              - generic [ref=f2e277]:
+                - checkbox "Thursday" [ref=f2e278] [cursor=pointer]
+                - checkbox [aria-hidden]
+                - generic [ref=f2e279] [cursor=pointer]: Thursday
+              - generic [ref=f2e281]:
+                - checkbox "Friday" [ref=f2e282] [cursor=pointer]
+                - checkbox [aria-hidden]
+                - generic [ref=f2e283] [cursor=pointer]: Friday
+              - generic [ref=f2e285]:
+                - checkbox "Saturday" [ref=f2e286] [cursor=pointer]
+                - checkbox [aria-hidden]
+                - generic [ref=f2e287] [cursor=pointer]: Saturday
+              - generic [ref=f2e289]:
+                - checkbox "Sunday" [ref=f2e290] [cursor=pointer]
+                - checkbox [aria-hidden]
+                - generic [ref=f2e291] [cursor=pointer]: Sunday
+          - group "Default notification channels" [ref=f2e292]:
+            - generic [ref=f2e294]:
+              - generic [ref=f2e296]:
+                - checkbox "Email" [ref=f2e297] [cursor=pointer]
+                - checkbox [aria-hidden]
+                - generic [ref=f2e298] [cursor=pointer]: Email
+              - generic [ref=f2e300]:
+                - checkbox "In App" [ref=f2e301] [cursor=pointer]
+                - checkbox [aria-hidden]
+                - generic [ref=f2e302] [cursor=pointer]: In App
+          - region [ref=f2e303]:
+            - generic [ref=f2e308]:
+              - heading "Organization holidays" [level=3] [ref=f2e309]
+              - paragraph [ref=f2e310]: Add the dates your organization is unavailable.
+            - generic [ref=f2e311]:
+              - generic [ref=f2e312]:
+                - generic [ref=f2e313]: Organization holidays
+                - textbox "Organization holidays" [ref=f2e315]
+              - button "Add holiday" [disabled] [ref=f2e316]
+            - generic [ref=f2e318]:
+              - paragraph [ref=f2e319]: Selected dates
+              - paragraph [ref=f2e320]: No dates added yet.
+          - generic [ref=f2e321]:
+            - generic [ref=f2e322]: MFA enforcement date
+            - textbox "MFA enforcement date" [disabled] [ref=f2e324]
+            - paragraph [ref=f2e325]: MFA enforcement is unavailable until every member has enrolled.
+          - paragraph [ref=f2e326]: "MFA readiness: 0 enrolled, 4 not enrolled. Session policy tightening invalidates affected tenant sessions immediately."
+          - button "Save settings" [ref=f2e327] [cursor=pointer]

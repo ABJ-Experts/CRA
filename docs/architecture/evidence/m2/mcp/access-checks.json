@@ -1,0 +1,21 @@
+{
+  "environment": "local CRA",
+  "webOrigin": "http://localhost:3002",
+  "transport": "fresh pinned Playwright MCP 0.0.82 isolated server",
+  "owner": {
+    "sessionStatus": 200,
+    "directoryStatus": 200,
+    "activeOwners": 4
+  },
+  "viewer": {
+    "signInStatus": 200,
+    "organizationSwitchStatus": 200,
+    "directoryStatus": 403,
+    "productListStatus": 200,
+    "scopedLabelStatus": 200,
+    "directoryRows": 0,
+    "currentOwnerLabelPresent": true,
+    "createProductButtonVisible": false
+  },
+  "otherProfilesTouched": false
+}

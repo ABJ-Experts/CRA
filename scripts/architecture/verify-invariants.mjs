@@ -540,7 +540,12 @@ function isDirectFetchExpression(expression) {
 }
 
 async function verifyWebFetch(rootDir, errors) {
-  const allowed = new Set(["apps/web/app/_lib/http/api-client.ts"]);
+  const allowed = new Set([
+    "apps/web/app/_lib/http/api-client.ts",
+    // Server-only bridge preserving the auditor HttpOnly Set-Cookie on the
+    // first-party origin. Browser feature calls still use ApiClient.
+    "apps/web/app/api/v1/auditor/redeem/route.ts",
+  ]);
   const files = await listSourceFiles(rootDir, "apps/web/app");
   for (const absolutePath of files) {
     const relativePath = displayPath(rootDir, absolutePath);

@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 import {
   acceptInvitationResponseSchema,
   invitationSchema,
+  resendInvitationInputSchema,
+  resendInvitationResponseSchema,
 } from "./invitations.js";
 
 const invitation = {
@@ -29,6 +31,30 @@ describe("invitation wire contracts", () => {
     expect(acceptInvitationResponseSchema.parse(acceptance)).toEqual(
       acceptance,
     );
+  });
+
+  it("accepts the strict resend request and delivery-confirmed response", () => {
+    const response = {
+      id: invitation.id,
+      delivery: "confirmed",
+    } as const;
+
+    expect(resendInvitationInputSchema.parse(undefined)).toEqual({});
+    expect(resendInvitationResponseSchema.parse(response)).toEqual(response);
+  });
+
+  it.each([
+    { unexpected: true },
+    { delivery: "persisted", id: invitation.id },
+    { delivery: "confirmed", id: "not-a-uuid" },
+    { delivery: "confirmed", id: invitation.id, unexpected: true },
+  ])("rejects an invalid resend boundary fixture", (value) => {
+    const schema =
+      "unexpected" in value && Object.keys(value).length === 1
+        ? resendInvitationInputSchema
+        : resendInvitationResponseSchema;
+
+    expect(schema.safeParse(value).success).toBe(false);
   });
 
   it("rejects unknown invitation states", () => {

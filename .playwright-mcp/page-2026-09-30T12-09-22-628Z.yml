@@ -1,0 +1,81 @@
+- generic [active] [ref=f5e1]:
+  - generic [ref=f5e3]:
+    - complementary [ref=f5e4]:
+      - generic [ref=f5e5]:
+        - generic [ref=f5e6]:
+          - link "CRA Sentinel" [ref=f5e7] [cursor=pointer]:
+            - /url: /dashboard
+            - generic [aria-hidden] [ref=f5e8]: C
+            - text: CRA Sentinel
+          - button "Collapse sidebar" [ref=f5e9] [cursor=pointer]
+        - navigation "Main" [ref=f5e12]:
+          - generic [ref=f5e13]:
+            - list [ref=f5e15]:
+              - listitem [ref=f5e16]:
+                - link "Dashboard" [ref=f5e17] [cursor=pointer]:
+                  - /url: /dashboard
+              - listitem [ref=f5e25]:
+                - link "Management" [ref=f5e26] [cursor=pointer]:
+                  - /url: /management
+              - listitem [ref=f5e32]:
+                - link "Organization" [ref=f5e33] [cursor=pointer]:
+                  - /url: /organization
+              - listitem [ref=f5e40]:
+                - link "Products" [ref=f5e41] [cursor=pointer]:
+                  - /url: /products
+              - listitem [ref=f5e48]:
+                - link "Suppliers" [ref=f5e49] [cursor=pointer]:
+                  - /url: /suppliers
+              - listitem [ref=f5e54]:
+                - link "Frameworks" [ref=f5e55] [cursor=pointer]:
+                  - /url: /frameworks
+              - listitem [ref=f5e60]:
+                - link "Findings" [ref=f5e61] [cursor=pointer]:
+                  - /url: /findings
+              - listitem [ref=f5e66]:
+                - link "Reporting" [ref=f5e67] [cursor=pointer]:
+                  - /url: /reporting
+              - listitem [ref=f5e73]:
+                - link "Connectors" [ref=f5e74] [cursor=pointer]:
+                  - /url: /connectors
+            - generic [ref=f5e81]:
+              - paragraph [ref=f5e82]: Account & access
+              - list [ref=f5e83]:
+                - listitem [ref=f5e84]:
+                  - button "Profile" [ref=f5e85] [cursor=pointer]
+                  - generic:
+                    - list:
+                      - listitem [ref=f5e93]:
+                        - link "Account" [ref=f5e94] [cursor=pointer]:
+                          - /url: /account
+                      - listitem [ref=f5e96]:
+                        - link "Security" [ref=f5e97] [cursor=pointer]:
+                          - /url: /security
+                - listitem [ref=f5e99]:
+                  - button "Authorization" [ref=f5e100] [cursor=pointer]
+                  - generic:
+                    - list:
+                      - listitem [ref=f5e108]:
+                        - link "Roles" [ref=f5e109] [cursor=pointer]:
+                          - /url: /roles
+                      - listitem [ref=f5e111]:
+                        - link "Permissions" [ref=f5e112] [cursor=pointer]:
+                          - /url: /permissions
+        - button "Sign out" [ref=f5e116] [cursor=pointer]
+    - generic [ref=f5e121]:
+      - banner [ref=f5e122]:
+        - navigation "Breadcrumb" [ref=f5e124]:
+          - list [ref=f5e125]:
+            - listitem [ref=f5e126]:
+              - link "Dashboard" [ref=f5e127] [cursor=pointer]:
+                - /url: /dashboard
+            - listitem [aria-hidden] [ref=f5e128]
+            - listitem [ref=f5e131]:
+              - generic [ref=f5e132]: Findings
+        - generic [ref=f5e133]:
+          - button "Search" [ref=f5e134] [cursor=pointer]
+          - button "Notifications" [ref=f5e138] [cursor=pointer]
+          - 'img "Ada Foster: online" [ref=f5e144]'
+      - main [ref=f5e145]:
+        - status [ref=f5e146]: Loading triage workspace…
+  - button "Open Next.js Dev Tools" [ref=f5e152] [cursor=pointer]

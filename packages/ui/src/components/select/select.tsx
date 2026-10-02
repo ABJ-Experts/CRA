@@ -108,7 +108,7 @@ export const SelectContent = forwardRef<
         </SelectPrimitive.ScrollUpButton>
 
         {/* Caps the panel so a long list scrolls instead of overflowing. */}
-        <SelectPrimitive.Viewport className="max-h-[--radix-select-content-available-height] overflow-y-auto">
+        <SelectPrimitive.Viewport className="max-h-[var(--radix-select-content-available-height)] overflow-y-auto">
           {children}
         </SelectPrimitive.Viewport>
 

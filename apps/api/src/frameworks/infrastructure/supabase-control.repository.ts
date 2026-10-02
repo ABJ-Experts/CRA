@@ -1,0 +1,1018 @@
+import { Injectable, ServiceUnavailableException } from "@nestjs/common";
+import {
+  controlCommandResponseSchema,
+  controlDetailResponseSchema,
+  controlListResponseSchema,
+  controlOwnerCandidatesResponseSchema,
+  requirementCoverageResponseSchema,
+  requirementCoverageSummarySchema,
+  requirementApplicabilityResponseSchema,
+} from "@repo/contracts/frameworks";
+import type { z } from "zod";
+
+import { SupabaseService } from "../../supabase/supabase.service";
+import type { Json } from "../../supabase/database.types";
+import {
+  ControlBlockedError,
+  ControlConflictError,
+  ControlForbiddenError,
+  ControlInvalidRequestError,
+  ControlNotFoundError,
+  type ControlRepository,
+} from "../application/control-use-cases";
+
+const unavailable = () =>
+  new ServiceUnavailableException({
+    message: "Controls are temporarily unavailable.",
+    code: "controls_unavailable",
+  });
+
+function decodeCursor(cursor: string | undefined): number {
+  if (!cursor) return 0;
+  const decoded = Buffer.from(cursor, "base64url").toString("utf8");
+  if (
+    !/^(0|[1-9]\d{0,8})$/.test(decoded) ||
+    Buffer.from(decoded).toString("base64url") !== cursor
+  )
+    throw new ControlInvalidRequestError();
+  return Number(decoded);
+}
+
+function nextCursor(
+  offset: number,
+  pageSize: number,
+  rowCount: number,
+): string | null {
+  return rowCount > pageSize
+    ? Buffer.from(String(offset + pageSize)).toString("base64url")
+    : null;
+}
+
+function memberDisplayName(user: {
+  id: string;
+  first_name: string | null;
+  last_name: string | null;
+  username: string | null;
+}): string {
+  const candidate =
+    [user.first_name, user.last_name].filter(Boolean).join(" ").trim() ||
+    user.username?.trim() ||
+    `Member ${user.id.slice(0, 8)}`;
+  if (
+    candidate.length > 200 ||
+    /[\p{Cc}\p{Cf}]/u.test(candidate) ||
+    /<[^>]+>/u.test(candidate)
+  )
+    return `Member ${user.id.slice(0, 8)}`;
+  return candidate;
+}
+
+type CoverageEvidenceAvailability =
+  | "available"
+  | "missing"
+  | "expired"
+  | "quarantined"
+  | "not_yet_valid"
+  | "processing"
+  | "deletion_pending"
+  | "archived"
+  | "unavailable";
+
+function evidenceAvailability(
+  input: Readonly<{
+    processingState: string;
+    validityStartsOn: string | null;
+    validityEndsOn: string | null;
+    lifecycleState: string | undefined;
+    pendingDeletion: boolean;
+    today: string;
+  }>,
+): CoverageEvidenceAvailability {
+  if (input.pendingDeletion) return "deletion_pending";
+  if (input.lifecycleState !== "active") return "archived";
+  if (input.processingState === "quarantined") return "quarantined";
+  if (input.processingState !== "clean") return "processing";
+  if (input.validityStartsOn && input.validityStartsOn > input.today)
+    return "not_yet_valid";
+  if (input.validityEndsOn && input.validityEndsOn < input.today)
+    return "expired";
+  return "available";
+}
+
+const availabilityPriority: Record<CoverageEvidenceAvailability, number> = {
+  missing: 0,
+  unavailable: 1,
+  archived: 2,
+  deletion_pending: 3,
+  processing: 4,
+  not_yet_valid: 5,
+  expired: 6,
+  quarantined: 7,
+  available: 8,
+};
+
+function decodeControlCursor(
+  cursor: string | undefined,
+): readonly [string, string] | null {
+  if (!cursor) return null;
+  let decoded: unknown;
+  try {
+    decoded = JSON.parse(Buffer.from(cursor, "base64url").toString("utf8"));
+  } catch {
+    throw new ControlInvalidRequestError();
+  }
+  if (
+    !Array.isArray(decoded) ||
+    decoded.length !== 2 ||
+    typeof decoded[0] !== "string" ||
+    typeof decoded[1] !== "string" ||
+    !/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d+)?(?:Z|\+\d\d:\d\d)$/.test(
+      decoded[0],
+    ) ||
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(
+      decoded[1],
+    ) ||
+    Buffer.from(JSON.stringify(decoded)).toString("base64url") !== cursor
+  )
+    throw new ControlInvalidRequestError();
+  return [decoded[0], decoded[1]];
+}
+
+@Injectable()
+export class SupabaseControlRepository implements ControlRepository {
+  constructor(private readonly supabase: SupabaseService) {}
+
+  async list(orgId: string, input: Parameters<ControlRepository["list"]>[1]) {
+    await this.verifyMembership(orgId, input.actorId);
+    const after = decodeControlCursor(input.cursor);
+    let query = this.supabase
+      .admin()
+      .from("framework_controls")
+      .select(
+        "id,title,description,owner_user_id,implementation_status,revision,archived_at,created_at,updated_at",
+      )
+      .eq("organization_id", orgId)
+      .order("updated_at", { ascending: false })
+      .order("id")
+      .limit(input.limit + 1);
+    if (!input.includeArchived) query = query.is("archived_at", null);
+    if (after)
+      query = query.or(
+        `updated_at.lt.${after[0]},and(updated_at.eq.${after[0]},id.gt.${after[1]})`,
+      );
+    const { data: rows, error } = await query;
+    if (error || !rows) throw unavailable();
+    const owners = await this.activeOwnerIds(
+      orgId,
+      rows.map((row) => row.owner_user_id),
+    );
+    const page = rows.slice(0, input.limit);
+    const last = page.at(-1);
+    return controlListResponseSchema.parse({
+      controls: page.map((row) => this.summary(row, owners)),
+      nextCursor:
+        rows.length > input.limit && last
+          ? Buffer.from(JSON.stringify([last.updated_at, last.id])).toString(
+              "base64url",
+            )
+          : null,
+    });
+  }
+
+  async ownerCandidates(
+    orgId: string,
+    input: Parameters<ControlRepository["ownerCandidates"]>[1],
+  ) {
+    await this.verifyMembership(orgId, input.actorId);
+    const offset = decodeCursor(input.cursor);
+    const { data: members, error } = await this.supabase
+      .admin()
+      .from("organization_members")
+      .select("user_id")
+      .eq("organization_id", orgId)
+      .order("user_id")
+      .range(offset, offset + input.limit);
+    if (error || !members) throw unavailable();
+    const ids = members.slice(0, input.limit).map((row) => row.user_id);
+    const { data: users, error: usersError } = ids.length
+      ? await this.supabase
+          .admin()
+          .from("users")
+          .select("id,first_name,last_name,username,is_active")
+          .in("id", ids)
+          .eq("is_active", true)
+      : { data: [], error: null };
+    if (usersError || !users) throw unavailable();
+    const names = new Map(
+      users.map((user) => [user.id, memberDisplayName(user)]),
+    );
+    return controlOwnerCandidatesResponseSchema.parse({
+      owners: ids
+        .filter((id) => names.has(id))
+        .map((id) => ({ id, displayName: names.get(id) })),
+      nextCursor: nextCursor(offset, input.limit, members.length),
+    });
+  }
+
+  async detail(
+    orgId: string,
+    input: Parameters<ControlRepository["detail"]>[1],
+  ) {
+    await this.verifyMembership(orgId, input.actorId);
+    const client = this.supabase.admin();
+    const { data: control, error: controlError } = await client
+      .from("framework_controls")
+      .select(
+        "id,title,description,owner_user_id,implementation_status,revision,archived_at,created_at,updated_at",
+      )
+      .eq("organization_id", orgId)
+      .eq("id", input.controlId)
+      .maybeSingle();
+    if (controlError) throw unavailable();
+    if (!control) return null;
+    const [linksResult, mappingsResult] = await Promise.all([
+      input.canViewEvidence && input.canViewProducts
+        ? client
+            .from("framework_control_evidence_links")
+            .select(
+              "id,evidence_version_id,product_id,source_control_revision,ended_at,created_at",
+            )
+            .eq("organization_id", orgId)
+            .eq("control_id", input.controlId)
+            .order("created_at", { ascending: false })
+            .limit(101)
+        : Promise.resolve({ data: [], error: null }),
+      client
+        .from("framework_control_requirement_mappings")
+        .select(
+          "id,pack_key,version_key,requirement_key,rationale,source_control_revision,ended_at,created_at",
+        )
+        .eq("organization_id", orgId)
+        .eq("control_id", input.controlId)
+        .order("created_at", { ascending: false })
+        .limit(101),
+    ]);
+    if (
+      linksResult.error ||
+      mappingsResult.error ||
+      !linksResult.data ||
+      !mappingsResult.data ||
+      linksResult.data.length > 100 ||
+      mappingsResult.data.length > 100
+    )
+      throw unavailable();
+    const links = linksResult.data;
+    const mappings = mappingsResult.data;
+    const versionIds = [
+      ...new Set(links.map((row) => row.evidence_version_id)),
+    ];
+    const { data: versions, error: versionsError } = versionIds.length
+      ? await client
+          .from("evidence_document_versions")
+          .select(
+            "id,document_id,title,version_number,processing_state,validity_starts_on,validity_ends_on",
+          )
+          .eq("organization_id", orgId)
+          .in("id", versionIds)
+      : { data: [], error: null };
+    if (versionsError || !versions) throw unavailable();
+    const documentIds = [...new Set(versions.map((row) => row.document_id))];
+    const { data: documents, error: documentsError } = documentIds.length
+      ? await client
+          .from("evidence_documents")
+          .select("id,lifecycle_state")
+          .eq("organization_id", orgId)
+          .in("id", documentIds)
+      : { data: [], error: null };
+    if (documentsError || !documents) throw unavailable();
+    const documentState = new Map(
+      documents.map((row) => [row.id, row.lifecycle_state]),
+    );
+    const pendingDeletionDocuments = await this.deletionDocumentIds(
+      orgId,
+      documentIds,
+    );
+    const versionById = new Map(versions.map((row) => [row.id, row]));
+    const linkedProductIds = [...new Set(links.map((row) => row.product_id))];
+    const { data: linkedProducts, error: linkedProductError } =
+      linkedProductIds.length
+        ? await client
+            .from("products")
+            .select("id,archived_at")
+            .eq("organization_id", orgId)
+            .in("id", linkedProductIds)
+        : { data: [], error: null };
+    if (linkedProductError || !linkedProducts) throw unavailable();
+    const activeLinkedProducts = new Set(
+      linkedProducts.filter((row) => !row.archived_at).map((row) => row.id),
+    );
+    const requirements = await this.requirementDetails(
+      mappings.map((row) => ({
+        packKey: row.pack_key,
+        versionKey: row.version_key,
+        requirementKey: row.requirement_key,
+      })),
+    );
+    const mappingIds = mappings.map((row) => row.id);
+    const { data: products, error: productError } =
+      input.canViewProducts && mappingIds.length
+        ? await client
+            .from("framework_control_mapping_products")
+            .select("mapping_id,product_id")
+            .eq("organization_id", orgId)
+            .in("mapping_id", mappingIds)
+            .limit(10_001)
+        : { data: [], error: null };
+    if (productError || !products || products.length > 10_000)
+      throw unavailable();
+    const productByMapping = new Map<string, string[]>();
+    for (const product of products)
+      productByMapping.set(product.mapping_id, [
+        ...(productByMapping.get(product.mapping_id) ?? []),
+        product.product_id,
+      ]);
+    const owners = await this.activeOwnerIds(orgId, [control.owner_user_id]);
+    return controlDetailResponseSchema.parse({
+      ...this.summary(control, owners),
+      evidenceRestricted: !input.canViewEvidence || !input.canViewProducts,
+      evidenceLinks: links.map((link) => {
+        const version = versionById.get(link.evidence_version_id);
+        if (!version) throw unavailable();
+        const today = new Date().toISOString().slice(0, 10);
+        const availability =
+          !activeLinkedProducts.has(link.product_id) ||
+          pendingDeletionDocuments.has(version.document_id) ||
+          documentState.get(version.document_id) !== "active"
+            ? "unavailable"
+            : version.processing_state === "quarantined"
+              ? "quarantined"
+              : version.processing_state !== "clean"
+                ? "unavailable"
+                : version.validity_starts_on &&
+                    version.validity_starts_on > today
+                  ? "unavailable"
+                  : version.validity_ends_on && version.validity_ends_on < today
+                    ? "expired"
+                    : "available";
+        return {
+          id: link.id,
+          evidenceVersionId: link.evidence_version_id,
+          productId: link.product_id,
+          evidenceTitle: version.title,
+          evidenceVersionNumber: version.version_number,
+          availability,
+          sourceControlRevision: link.source_control_revision,
+          endedAt: link.ended_at,
+          createdAt: link.created_at,
+        };
+      }),
+      mappings: mappings.map((mapping) => {
+        const requirement = requirements.get(
+          `${mapping.pack_key}:${mapping.version_key}:${mapping.requirement_key}`,
+        );
+        if (!requirement) throw unavailable();
+        return {
+          id: mapping.id,
+          packKey: mapping.pack_key,
+          versionKey: mapping.version_key,
+          requirementKey: mapping.requirement_key,
+          identifier: requirement.identifier,
+          heading: requirement.heading,
+          requirementText: requirement.text,
+          rationale: mapping.rationale,
+          productIds: productByMapping.get(mapping.id) ?? [],
+          productsRestricted: !input.canViewProducts,
+          sourceControlRevision: mapping.source_control_revision,
+          endedAt: mapping.ended_at,
+          createdAt: mapping.created_at,
+        };
+      }),
+    });
+  }
+
+  async coverage(
+    orgId: string,
+    input: Parameters<ControlRepository["coverage"]>[1],
+  ) {
+    await this.verifyMembership(orgId, input.actorId);
+    const client = this.supabase.admin();
+    const { data: product, error: productError } = await client
+      .from("products")
+      .select("id")
+      .eq("organization_id", orgId)
+      .eq("id", input.productId)
+      .is("archived_at", null)
+      .maybeSingle();
+    if (productError) throw unavailable();
+    if (!product) throw new ControlForbiddenError();
+    const { data: pack, error: packError } = await client
+      .from("framework_pack_versions")
+      .select("pack_key,owner_org_id")
+      .eq("pack_key", input.packKey)
+      .eq("version_key", input.versionKey)
+      .maybeSingle();
+    if (packError) throw unavailable();
+    if (!pack || (pack.owner_org_id != null && pack.owner_org_id !== orgId))
+      return null;
+    const offset = decodeCursor(input.cursor);
+    const { data: requested, error: requestError } = await client.rpc(
+      "m10_request_coverage",
+      {
+        p_organization_id: orgId,
+        p_product_id: input.productId,
+        p_pack_key: input.packKey,
+        p_version_key: input.versionKey,
+      },
+    );
+    if (requestError || !requested) throw unavailable();
+    const requestedScope = Array.isArray(requested) ? requested[0] : requested;
+    if (
+      !requestedScope ||
+      typeof requestedScope !== "object" ||
+      !("status" in requestedScope)
+    )
+      throw unavailable();
+    const { data: requirements, error: requirementError } = await client
+      .from("framework_requirements")
+      .select(
+        "requirement_key,identifier,heading,text,parent_requirement_key,depth",
+      )
+      .eq("pack_key", input.packKey)
+      .eq("version_key", input.versionKey)
+      .order("tree_order")
+      .limit(1001);
+    if (requirementError || !requirements || requirements.length > 1000)
+      throw unavailable();
+    const [projectionResult, scopeResult] = await Promise.all([
+      client
+        .from("framework_coverage_rows")
+        .select("requirement_key,status,computed_revision")
+        .eq("organization_id", orgId)
+        .eq("product_id", input.productId)
+        .eq("pack_key", input.packKey)
+        .eq("version_key", input.versionKey)
+        .limit(1001),
+      client
+        .from("framework_coverage_scopes")
+        .select("status,source_revision,computed_revision,updated_at")
+        .eq("organization_id", orgId)
+        .eq("product_id", input.productId)
+        .eq("pack_key", input.packKey)
+        .eq("version_key", input.versionKey)
+        .maybeSingle(),
+    ]);
+    if (
+      projectionResult.error ||
+      !projectionResult.data ||
+      projectionResult.data.length > 1000 ||
+      scopeResult.error ||
+      !scopeResult.data
+    )
+      throw unavailable();
+    const scope = scopeResult.data;
+    const projection = new Map(
+      projectionResult.data.map((row) => [row.requirement_key, row]),
+    );
+    let current =
+      requestedScope.status === "current" &&
+      scope.status === "current" &&
+      scope.source_revision === scope.computed_revision &&
+      projection.size === requirements.length &&
+      [...projection.values()].every(
+        (row) => row.computed_revision === scope.computed_revision,
+      );
+    const requestedFilter = input.filter ?? "all";
+    const filtered =
+      current && requestedFilter !== "all"
+        ? requirements.filter((row) => {
+            const state = projection.get(row.requirement_key)?.status;
+            if (requestedFilter === "excluded") return state === "excluded";
+            if (requestedFilter === "evidence_backed")
+              return state === "evidence_backed";
+            return (
+              state !== "structural" &&
+              state !== "excluded" &&
+              state !== "evidence_backed"
+            );
+          })
+        : requirements;
+    const page = filtered.slice(offset, offset + input.limit);
+    const keys = page.map((row) => row.requirement_key);
+    const { data: mappings, error: mappingError } = keys.length
+      ? await client
+          .from("framework_control_requirement_mappings")
+          .select("id,control_id,requirement_key")
+          .eq("organization_id", orgId)
+          .eq("pack_key", input.packKey)
+          .eq("version_key", input.versionKey)
+          .is("ended_at", null)
+          .in("requirement_key", keys)
+          .limit(10_001)
+      : { data: [], error: null };
+    if (mappingError || !mappings || mappings.length > 10_000)
+      throw unavailable();
+    const mappingIds = mappings.map((row) => row.id);
+    const { data: applicable, error: applicableError } = mappingIds.length
+      ? await client
+          .from("framework_control_mapping_products")
+          .select("mapping_id")
+          .eq("organization_id", orgId)
+          .eq("product_id", input.productId)
+          .in("mapping_id", mappingIds)
+          .limit(10_001)
+      : { data: [], error: null };
+    if (applicableError || !applicable || applicable.length > 10_000)
+      throw unavailable();
+    const applicableIds = new Set(applicable.map((row) => row.mapping_id));
+    const activeMappings = mappings.filter((row) => applicableIds.has(row.id));
+    const controlIds = [
+      ...new Set(activeMappings.map((row) => row.control_id)),
+    ];
+    const { data: controls, error: controlsError } = controlIds.length
+      ? await client
+          .from("framework_controls")
+          .select("id,title,owner_user_id,implementation_status")
+          .eq("organization_id", orgId)
+          .is("archived_at", null)
+          .in("id", controlIds)
+      : { data: [], error: null };
+    if (controlsError || !controls) throw unavailable();
+    const { data: evidenceLinks, error: linkError } = controlIds.length
+      ? await client
+          .from("framework_control_evidence_links")
+          .select("control_id,evidence_version_id")
+          .eq("organization_id", orgId)
+          .eq("product_id", input.productId)
+          .is("ended_at", null)
+          .in("control_id", controlIds)
+          .limit(10_001)
+      : { data: [], error: null };
+    if (linkError || !evidenceLinks || evidenceLinks.length > 10_000)
+      throw unavailable();
+    const versionIds = [
+      ...new Set(evidenceLinks.map((row) => row.evidence_version_id)),
+    ];
+    const { data: evidenceVersions, error: evidenceError } = versionIds.length
+      ? await client
+          .from("evidence_document_versions")
+          .select(
+            "id,document_id,processing_state,validity_starts_on,validity_ends_on",
+          )
+          .eq("organization_id", orgId)
+          .in("id", versionIds)
+      : { data: [], error: null };
+    if (evidenceError || !evidenceVersions) throw unavailable();
+    const evidenceDocumentIds = [
+      ...new Set(evidenceVersions.map((row) => row.document_id)),
+    ];
+    const { data: evidenceDocuments, error: evidenceDocumentError } =
+      evidenceDocumentIds.length
+        ? await client
+            .from("evidence_documents")
+            .select("id,lifecycle_state")
+            .eq("organization_id", orgId)
+            .in("id", evidenceDocumentIds)
+        : { data: [], error: null };
+    if (evidenceDocumentError || !evidenceDocuments) throw unavailable();
+    const evidenceDocumentState = new Map(
+      evidenceDocuments.map((row) => [row.id, row.lifecycle_state]),
+    );
+    const pendingDeletionDocuments = await this.deletionDocumentIds(
+      orgId,
+      evidenceDocumentIds,
+    );
+    const today = new Date().toISOString().slice(0, 10);
+    const availabilityByVersion = new Map(
+      evidenceVersions.map((row) => [
+        row.id,
+        evidenceAvailability({
+          processingState: row.processing_state,
+          validityStartsOn: row.validity_starts_on,
+          validityEndsOn: row.validity_ends_on,
+          lifecycleState: evidenceDocumentState.get(row.document_id),
+          pendingDeletion: pendingDeletionDocuments.has(row.document_id),
+          today,
+        }),
+      ]),
+    );
+    const availabilityByControl = new Map<
+      string,
+      CoverageEvidenceAvailability
+    >();
+    for (const link of evidenceLinks) {
+      const candidate =
+        availabilityByVersion.get(link.evidence_version_id) ?? "unavailable";
+      const previous = availabilityByControl.get(link.control_id) ?? "missing";
+      if (availabilityPriority[candidate] > availabilityPriority[previous])
+        availabilityByControl.set(link.control_id, candidate);
+    }
+    const owners = await this.activeOwnerIds(
+      orgId,
+      controls.map((row) => row.owner_user_id),
+    );
+    const controlById = new Map(controls.map((row) => [row.id, row]));
+    const { data: applicability, error: applicabilityError } = keys.length
+      ? await client
+          .from("framework_requirement_applicability")
+          .select("requirement_key,approved_non_applicable,reason,revision")
+          .eq("organization_id", orgId)
+          .eq("product_id", input.productId)
+          .eq("pack_key", input.packKey)
+          .eq("version_key", input.versionKey)
+          .in("requirement_key", keys)
+          .limit(1001)
+      : { data: [], error: null };
+    if (applicabilityError || !applicability) throw unavailable();
+    const applicabilityByKey = new Map(
+      applicability.map((row) => [row.requirement_key, row]),
+    );
+    const { data: finalRequest, error: finalRequestError } = await client.rpc(
+      "m10_request_coverage",
+      {
+        p_organization_id: orgId,
+        p_product_id: input.productId,
+        p_pack_key: input.packKey,
+        p_version_key: input.versionKey,
+      },
+    );
+    if (finalRequestError || !finalRequest?.[0]) throw unavailable();
+    current =
+      current &&
+      finalRequest[0].status === "current" &&
+      finalRequest[0].source_revision === scope.source_revision &&
+      finalRequest[0].computed_revision === scope.computed_revision;
+    if (current) {
+      current = page.every((requirement) => {
+        if (
+          projection.get(requirement.requirement_key)?.status !==
+          "evidence_backed"
+        )
+          return true;
+        return activeMappings.some((mapping) => {
+          if (mapping.requirement_key !== requirement.requirement_key)
+            return false;
+          const control = controlById.get(mapping.control_id);
+          return (
+            control?.implementation_status === "implemented" &&
+            availabilityByControl.get(mapping.control_id) === "available"
+          );
+        });
+      });
+    }
+    let summary: ReturnType<
+      typeof requirementCoverageSummarySchema.parse
+    > | null = null;
+    if (current) {
+      const { data: summaryData, error: summaryError } = await client.rpc(
+        "m10_coverage_summary",
+        {
+          p_organization_id: orgId,
+          p_product_id: input.productId,
+          p_pack_key: input.packKey,
+          p_version_key: input.versionKey,
+        },
+      );
+      if (summaryError) throw unavailable();
+      if (
+        !summaryData ||
+        typeof summaryData !== "object" ||
+        Array.isArray(summaryData)
+      ) {
+        current = false;
+      } else {
+        summary = requirementCoverageSummarySchema.parse({
+          totalRequirements: summaryData.totalRequirements,
+          applicableRequirements: summaryData.applicableRequirements,
+          excludedRequirements: summaryData.excludedRequirements,
+          evidenceBackedRequirements: summaryData.evidenceBackedRequirements,
+          gapRequirements: summaryData.gapRequirements,
+        });
+      }
+    }
+    return requirementCoverageResponseSchema.parse({
+      packKey: input.packKey,
+      versionKey: input.versionKey,
+      productId: input.productId,
+      calculation: {
+        status: current
+          ? "current"
+          : finalRequest[0].status === "error"
+            ? "unavailable"
+            : "stale",
+        calculatedAt: current ? scope.updated_at : null,
+      },
+      summary,
+      requirements: page.map((requirement) => {
+        const rowStatus = current
+          ? projection.get(requirement.requirement_key)?.status
+          : "stale";
+        const state = rowStatus ?? "stale";
+        const applicabilityRow = applicabilityByKey.get(
+          requirement.requirement_key,
+        );
+        const mappedControls = activeMappings
+          .filter((row) => row.requirement_key === requirement.requirement_key)
+          .map((row) => controlById.get(row.control_id))
+          .filter((row): row is NonNullable<typeof row> => !!row)
+          .sort((left, right) => left.id.localeCompare(right.id));
+        const action =
+          state === "no_mapping"
+            ? "map_control"
+            : state === "unimplemented"
+              ? "implement_control"
+              : state === "missing_evidence"
+                ? "link_evidence"
+                : [
+                      "expired_evidence",
+                      "not_yet_valid_evidence",
+                      "quarantined_evidence",
+                      "unavailable_evidence",
+                    ].includes(state)
+                  ? "replace_evidence"
+                  : null;
+        const actionControl =
+          action === "implement_control"
+            ? mappedControls.find(
+                (control) => control.implementation_status !== "implemented",
+              )
+            : action === "link_evidence" || action === "replace_evidence"
+              ? mappedControls.find(
+                  (control) =>
+                    control.implementation_status === "implemented" &&
+                    availabilityByControl.get(control.id) !== "available",
+                )
+              : undefined;
+        return {
+          requirementKey: requirement.requirement_key,
+          identifier: requirement.identifier,
+          heading: requirement.heading,
+          text: requirement.text,
+          parentKey: requirement.parent_requirement_key,
+          assessable: requirement.depth !== 0,
+          applicability: {
+            state: applicabilityRow?.approved_non_applicable
+              ? "not_applicable"
+              : "applicable",
+            reason: applicabilityRow?.reason ?? null,
+            revision: applicabilityRow?.revision ?? 0,
+          },
+          coverageState: state,
+          remediation: { kind: action, controlId: actionControl?.id ?? null },
+          controls: mappedControls.map((row) => ({
+            id: row.id,
+            title: row.title,
+            status: row.implementation_status,
+            ownerActive: owners.has(row.owner_user_id),
+            evidencePresent: availabilityByControl.get(row.id) === "available",
+            evidenceAvailability:
+              availabilityByControl.get(row.id) ?? "missing",
+          })),
+        };
+      }),
+      nextCursor: nextCursor(
+        offset,
+        input.limit,
+        Math.max(0, filtered.length - offset),
+      ),
+    });
+  }
+
+  async command(
+    orgId: string,
+    input: Parameters<ControlRepository["command"]>[1],
+  ) {
+    const { data, error } = await this.supabase
+      .admin()
+      .rpc("m10_control_command", {
+        p_organization_id: orgId,
+        p_actor_user_id: input.actorId,
+        p_operation: input.operation,
+        p_payload: input.payload as Json,
+        p_expected_revision: input.expectedRevision as number,
+        p_idempotency_key: input.idempotencyKey,
+      });
+    if (error || !data) throw unavailable();
+    const row = Array.isArray(data) ? data[0] : data;
+    if (!row || typeof row !== "object" || !("outcome" in row))
+      throw unavailable();
+    if (row.outcome === "conflict") throw new ControlConflictError();
+    if (row.outcome === "forbidden") throw new ControlForbiddenError();
+    if (row.outcome === "invalid_request")
+      throw new ControlInvalidRequestError();
+    if (row.outcome === "blocked") throw new ControlBlockedError();
+    if (row.outcome === "not_found") throw new ControlNotFoundError();
+    if (
+      ![
+        "created",
+        "updated",
+        "archived",
+        "linked",
+        "unlinked",
+        "mapped",
+        "unmapped",
+        "unchanged",
+      ].includes(row.outcome)
+    )
+      throw unavailable();
+    return controlCommandResponseSchema.parse(row.result);
+  }
+
+  async setApplicability(
+    orgId: string,
+    input: Parameters<ControlRepository["setApplicability"]>[1],
+  ) {
+    // Generated RPC types mark p_reason non-nullable; SQL deliberately requires
+    // NULL when restoring applicability, so this one argument object is cast.
+    const { data, error } = await this.supabase
+      .admin()
+      .rpc("m10_set_framework_applicability", {
+        p_organization_id: orgId,
+        p_actor_user_id: input.actorId,
+        p_product_id: input.productId,
+        p_pack_key: input.packKey,
+        p_version_key: input.versionKey,
+        p_requirement_key: input.requirementKey,
+        p_approved: input.state === "not_applicable",
+        p_reason: input.reason ?? null,
+        p_expected_revision: input.expectedRevision,
+        p_idempotency_key: input.idempotencyKey,
+      } as never);
+    if (error || !data) throw unavailable();
+    const row = Array.isArray(data) ? data[0] : data;
+    if (!row || typeof row !== "object" || !("outcome" in row))
+      throw unavailable();
+    if (row.outcome === "conflict") throw new ControlConflictError();
+    if (row.outcome === "forbidden") throw new ControlForbiddenError();
+    if (row.outcome === "invalid_request")
+      throw new ControlInvalidRequestError();
+    if (row.outcome === "blocked") throw new ControlBlockedError();
+    if (row.outcome === "not_found") throw new ControlNotFoundError();
+    if (!["updated", "unchanged"].includes(String(row.outcome)))
+      throw unavailable();
+    const result = row.result;
+    if (
+      !result ||
+      typeof result !== "object" ||
+      !("approvedNonApplicable" in result)
+    )
+      throw unavailable();
+    return requirementApplicabilityResponseSchema.parse({
+      state: result.approvedNonApplicable ? "not_applicable" : "applicable",
+      reason: result.reason,
+      revision: result.revision,
+    });
+  }
+
+  private summary(
+    row: {
+      id: string;
+      title: string;
+      description: string;
+      owner_user_id: string;
+      implementation_status: string;
+      revision: number;
+      archived_at: string | null;
+      created_at: string;
+      updated_at: string;
+    },
+    owners: ReadonlySet<string>,
+  ): z.output<typeof controlListResponseSchema>["controls"][number] {
+    return {
+      id: row.id,
+      title: row.title,
+      description: row.description,
+      ownerUserId: row.owner_user_id,
+      ownerActive: owners.has(row.owner_user_id),
+      status: row.implementation_status as
+        "not_started" | "in_progress" | "implemented",
+      revision: row.revision,
+      archivedAt: row.archived_at,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    };
+  }
+
+  private async activeOwnerIds(
+    orgId: string,
+    ids: readonly string[],
+  ): Promise<Set<string>> {
+    if (!ids.length) return new Set();
+    const [membersResult, usersResult] = await Promise.all([
+      this.supabase
+        .admin()
+        .from("organization_members")
+        .select("user_id")
+        .eq("organization_id", orgId)
+        .in("user_id", [...new Set(ids)]),
+      this.supabase
+        .admin()
+        .from("users")
+        .select("id")
+        .eq("is_active", true)
+        .in("id", [...new Set(ids)]),
+    ]);
+    if (
+      membersResult.error ||
+      usersResult.error ||
+      !membersResult.data ||
+      !usersResult.data
+    )
+      throw unavailable();
+    const active = new Set(usersResult.data.map((row) => row.id));
+    return new Set(
+      membersResult.data
+        .map((row) => row.user_id)
+        .filter((id) => active.has(id)),
+    );
+  }
+
+  private async deletionDocumentIds(
+    orgId: string,
+    documentIds: readonly string[],
+  ): Promise<Set<string>> {
+    if (!documentIds.length) return new Set();
+    const { data, error } = await this.supabase
+      .admin()
+      .from("evidence_document_deletion_intents")
+      .select("document_id")
+      .eq("organization_id", orgId)
+      .in("document_id", [...new Set(documentIds)])
+      .in("state", ["queued", "claimed", "failed", "completed"])
+      .limit(10_001);
+    if (error || !data || data.length > 10_000) throw unavailable();
+    return new Set(data.map((row) => row.document_id));
+  }
+
+  private async requirementDetails(
+    references: readonly {
+      packKey: string;
+      versionKey: string;
+      requirementKey: string;
+    }[],
+  ): Promise<
+    Map<string, { identifier: string; heading: string | null; text: string }>
+  > {
+    const result = new Map<
+      string,
+      { identifier: string; heading: string | null; text: string }
+    >();
+    const grouped = new Map<string, Set<string>>();
+    for (const reference of references) {
+      const groupKey = `${reference.packKey}:${reference.versionKey}`;
+      const keys = grouped.get(groupKey) ?? new Set<string>();
+      keys.add(reference.requirementKey);
+      grouped.set(groupKey, keys);
+    }
+    for (const [groupKey, keys] of grouped) {
+      const separator = groupKey.indexOf(":");
+      const packKey = groupKey.slice(0, separator);
+      const versionKey = groupKey.slice(separator + 1);
+      const { data, error } = await this.supabase
+        .admin()
+        .from("framework_requirements")
+        .select("requirement_key,identifier,heading,text")
+        .eq("pack_key", packKey)
+        .eq("version_key", versionKey)
+        .in("requirement_key", [...keys])
+        .limit(101);
+      if (error || !data || data.length !== keys.size) throw unavailable();
+      for (const row of data)
+        result.set(`${groupKey}:${row.requirement_key}`, row);
+    }
+    return result;
+  }
+
+  private async verifyMembership(
+    orgId: string,
+    actorId: string,
+  ): Promise<void> {
+    const client = this.supabase.admin();
+    const { data, error } = await client
+      .from("organization_members")
+      .select("user_id")
+      .eq("organization_id", orgId)
+      .eq("user_id", actorId)
+      .maybeSingle();
+    if (error) throw unavailable();
+    if (!data) throw new ControlForbiddenError();
+    const [
+      { data: user, error: userError },
+      { data: organization, error: orgError },
+    ] = await Promise.all([
+      client
+        .from("users")
+        .select("id")
+        .eq("id", actorId)
+        .eq("is_active", true)
+        .maybeSingle(),
+      client
+        .from("organizations")
+        .select("id")
+        .eq("id", orgId)
+        .eq("is_active", true)
+        .maybeSingle(),
+    ]);
+    if (userError || orgError) throw unavailable();
+    if (!user || !organization) throw new ControlForbiddenError();
+  }
+}

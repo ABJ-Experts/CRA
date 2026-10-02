@@ -1,0 +1,23 @@
+{
+  "dataset": "101 isolated reference connectors; no vendor I/O",
+  "samples": 50,
+  "concurrency": 10,
+  "rowsPerPage": 100,
+  "p95Ms": 344,
+  "p99Ms": 369,
+  "minMs": 119,
+  "maxMs": 369,
+  "all200": true,
+  "browser": "154.0.8037.58",
+  "durationsMs": [
+    216, 263, 329, 234, 321, 369, 358, 337, 344, 287, 145, 174, 235, 224, 213,
+    196, 166, 186, 160, 180, 164, 153, 159, 131, 142, 126, 136, 119, 148, 170,
+    190, 149, 164, 122, 139, 169, 133, 180, 157, 207, 249, 258, 243, 233, 205,
+    200, 218, 212, 225, 239
+  ],
+  "targets": {
+    "p95Ms": 400,
+    "p99Ms": 1000
+  },
+  "limitation": "Local API smoke measurement; not a production capacity or realistic vendor workload benchmark."
+}

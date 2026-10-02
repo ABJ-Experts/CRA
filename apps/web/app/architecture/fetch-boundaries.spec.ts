@@ -4,7 +4,12 @@ import { join } from "node:path";
 import ts from "typescript";
 import { expect, it } from "vitest";
 
-const ALLOWED = new Set(["app/_lib/http/api-client.ts"]);
+const ALLOWED = new Set([
+  "app/_lib/http/api-client.ts",
+  // Server-only bridge: preserves the auditor session Set-Cookie on the
+  // first-party origin; browser feature code still uses ApiClient.
+  "app/api/v1/auditor/redeem/route.ts",
+]);
 
 function isFetchExpression(node: ts.Expression): boolean {
   if (ts.isIdentifier(node)) return node.text === "fetch";

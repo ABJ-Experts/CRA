@@ -1,0 +1,3 @@
+{"total": {"lines":{"total":979,"covered":876,"skipped":0,"pct":89.47},"statements":{"total":979,"covered":876,"skipped":0,"pct":89.47},"functions":{"total":41,"covered":33,"skipped":0,"pct":80.48},"branches":{"total":272,"covered":227,"skipped":0,"pct":83.45},"branchesTrue":{"total":0,"covered":0,"skipped":0,"pct":"Unknown"}}
+,"/Users/abjmac003/Documents/GitHub/CRA/apps/web/app/(workspace)/products/sbom-intake-section.tsx": {"lines":{"total":979,"covered":876,"skipped":0,"pct":89.47},"functions":{"total":41,"covered":33,"skipped":0,"pct":80.48},"statements":{"total":979,"covered":876,"skipped":0,"pct":89.47},"branches":{"total":272,"covered":227,"skipped":0,"pct":83.45}}
+}
