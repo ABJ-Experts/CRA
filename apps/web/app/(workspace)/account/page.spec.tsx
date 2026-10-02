@@ -23,6 +23,9 @@ vi.mock("@tanstack/react-query", () => ({
 vi.mock("../../_features/account/account.api", () => ({
   accountApi: { updateProfile: vi.fn() },
 }));
+vi.mock("../../_features/notifications/notification-preferences-panel", () => ({
+  NotificationPreferencesPanel: () => <div>Notification preferences panel</div>,
+}));
 vi.mock("../../_providers/session-provider", () => {
   const state = {
     session: {

@@ -72,6 +72,118 @@ describe("ProductRetentionWorker", () => {
     expect(claim).toHaveBeenCalledTimes(1);
   });
 
+  it("uses a currently eligible critical substitute while retaining the original owner", async () => {
+    const calls: string[] = [];
+    const pinOriginal = jest.fn().mockImplementation(() => {
+      calls.push("pin");
+      return Promise.resolve({ outcome: "pinned" });
+    });
+    const route = jest.fn().mockResolvedValue({
+      userId: organizationAdminId,
+      email: "organization-admin@cra.test",
+    });
+    const deliver = jest.fn().mockResolvedValue(undefined);
+    const complete = jest.fn().mockResolvedValue({ outcome: "completed" });
+    const worker = new ProductRetentionWorker(
+      dependencies({
+        criticalRoute: { pinOriginal, resolve: route },
+        delivery: { deliver },
+        queue: { complete },
+      }),
+    );
+
+    await worker.runOnce();
+
+    expect(pinOriginal).toHaveBeenCalledWith({
+      organizationId,
+      deliveryId,
+      leaseOwner: workerId,
+      checkpointVersion: 0,
+      originalUserId: productOwnerId,
+    });
+
+    expect(route).toHaveBeenCalledWith({
+      organizationId,
+      originalUserId: productOwnerId,
+      productId,
+      eventKey: "support-period:8:30",
+    });
+    expect(deliver).toHaveBeenCalledWith(
+      expect.objectContaining({
+        recipient: {
+          userId: organizationAdminId,
+          email: "organization-admin@cra.test",
+        },
+      }),
+    );
+    expect(complete).toHaveBeenCalledWith(
+      expect.objectContaining({ recipientId: organizationAdminId }),
+    );
+  });
+
+  it("retains a mandatory alert when no authorized route remains", async () => {
+    const deliver = jest.fn();
+    const fail = jest.fn().mockResolvedValue(undefined);
+    const worker = new ProductRetentionWorker(
+      dependencies({
+        criticalRoute: { resolve: jest.fn().mockResolvedValue(null) },
+        delivery: { deliver },
+        queue: { fail },
+      }),
+    );
+
+    await worker.runOnce();
+
+    expect(deliver).not.toHaveBeenCalled();
+    expect(fail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        organizationId,
+        code: "recipient_unavailable",
+        retryable: true,
+      }),
+    );
+  });
+
+  it("does not deliver when the frozen accountable recipient conflicts", async () => {
+    const deliver = jest.fn();
+    const fail = jest.fn().mockResolvedValue(undefined);
+    const worker = new ProductRetentionWorker(
+      dependencies({
+        criticalRoute: {
+          pinOriginal: jest.fn().mockResolvedValue({ outcome: "conflict" }),
+          resolve: jest.fn(),
+        },
+        delivery: { deliver },
+        queue: { fail },
+      }),
+    );
+
+    await worker.runOnce();
+
+    expect(deliver).not.toHaveBeenCalled();
+    expect(fail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        code: "original_recipient_changed",
+        retryable: false,
+      }),
+    );
+  });
+
+  it("keeps an accepted alert ambiguous when database completion is unavailable", async () => {
+    const deliver = jest.fn().mockResolvedValue(undefined);
+    const complete = jest.fn().mockRejectedValue(new Error("database timeout"));
+    const fail = jest.fn().mockResolvedValue(undefined);
+    const worker = new ProductRetentionWorker(
+      dependencies({ delivery: { deliver }, queue: { complete, fail } }),
+    );
+
+    await worker.runOnce();
+
+    expect(deliver).toHaveBeenCalledTimes(1);
+    expect(complete).toHaveBeenCalledTimes(1);
+    expect(fail).not.toHaveBeenCalled();
+  });
+
   it("drains every due alert for an organization in the same 30-second cycle", async () => {
     const first = claimedEvent();
     const second = {
@@ -132,17 +244,14 @@ describe("ProductRetentionWorker", () => {
     );
   });
 
-  it("reuses the event key after a restart so delivery providers can deduplicate a lease-expired retry", async () => {
+  it("does not automatically resend an accepted alert after a completion outage and restart", async () => {
     const deliver = jest.fn().mockResolvedValue(undefined);
     const complete = jest
       .fn()
-      .mockRejectedValueOnce(new Error("database completion interrupted"))
-      .mockResolvedValueOnce({ outcome: "completed" });
+      .mockRejectedValueOnce(new Error("database completion interrupted"));
     const fail = jest.fn().mockResolvedValue(undefined);
     const claim = jest
       .fn()
-      .mockResolvedValueOnce(claimedEvent())
-      .mockResolvedValueOnce({ outcome: "none_available" })
       .mockResolvedValueOnce(claimedEvent())
       .mockResolvedValue({ outcome: "none_available" });
     const dependenciesForRestart = dependencies({
@@ -153,26 +262,14 @@ describe("ProductRetentionWorker", () => {
     await new ProductRetentionWorker(dependenciesForRestart).runOnce();
     await new ProductRetentionWorker(dependenciesForRestart).runOnce();
 
-    expect(deliver).toHaveBeenNthCalledWith(
-      1,
+    expect(deliver).toHaveBeenCalledTimes(1);
+    expect(deliver).toHaveBeenCalledWith(
       expect.objectContaining({
         idempotencyKey: "support-period:8:30",
       }),
     );
-    expect(deliver).toHaveBeenNthCalledWith(
-      2,
-      expect.objectContaining({
-        idempotencyKey: "support-period:8:30",
-      }),
-    );
-    expect(fail).toHaveBeenCalledWith(
-      expect.objectContaining({
-        code: "provider_unavailable",
-        retryable: true,
-        nextDeliveryState: "missed_catch_up",
-      }),
-    );
-    expect(complete).toHaveBeenCalledTimes(2);
+    expect(fail).not.toHaveBeenCalled();
+    expect(complete).toHaveBeenCalledTimes(1);
   });
 
   it("records a provider delivery failure durably instead of completing the event", async () => {
@@ -341,7 +438,7 @@ describe("ProductRetentionWorker", () => {
     expect(fail).not.toHaveBeenCalled();
   });
 
-  it("dead-letters unexpected completion outcomes with the durable lease", async () => {
+  it("keeps unexpected completion outcomes ambiguous without resending", async () => {
     const fail = jest.fn().mockResolvedValue(undefined);
     const worker = new ProductRetentionWorker(
       dependencies({
@@ -354,12 +451,7 @@ describe("ProductRetentionWorker", () => {
 
     await worker.runOnce();
 
-    expect(fail).toHaveBeenCalledWith(
-      expect.objectContaining({
-        code: "completion_rejected",
-        retryable: false,
-      }),
-    );
+    expect(fail).not.toHaveBeenCalled();
   });
 
   it("rejects an unsafe worker composition", () => {
@@ -377,12 +469,13 @@ describe("ProductRetentionWorker", () => {
 
 type WorkerDependencyOverrides = Omit<
   Partial<ProductRetentionWorkerDependencies>,
-  "clock" | "delivery" | "queue" | "recipients"
+  "clock" | "delivery" | "queue" | "recipients" | "criticalRoute"
 > & {
   clock?: Partial<ProductRetentionWorkerDependencies["clock"]>;
   delivery?: Partial<ProductRetentionWorkerDependencies["delivery"]>;
   queue?: Partial<ProductRetentionWorkerDependencies["queue"]>;
   recipients?: Partial<ProductRetentionWorkerDependencies["recipients"]>;
+  criticalRoute?: ProductRetentionWorkerDependencies["criticalRoute"];
 };
 
 function dependencies(
@@ -393,6 +486,7 @@ function dependencies(
     delivery: deliveryOverride,
     queue: queueOverride,
     recipients: recipientsOverride,
+    criticalRoute: criticalRouteOverride,
     ...otherOverrides
   } = overrides;
   return {
@@ -423,6 +517,7 @@ function dependencies(
       }),
       ...recipientsOverride,
     },
+    criticalRoute: criticalRouteOverride,
     delivery: {
       deliver: jest.fn().mockResolvedValue(undefined),
       ...deliveryOverride,

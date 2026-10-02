@@ -1233,8 +1233,23 @@ select pg_temp.check(
       'vulnerability_vex_exports', 'framework_selections',
       'framework_controls', 'evidence_business_records',
       'technical_file_business_records', 'supplier_business_records',
-      'vulnerability_detection_records', 'vulnerability_triage_views'
+      'vulnerability_detection_records', 'vulnerability_triage_views',
+      'notification_delivery'
     ]::text[]
+);
+
+-- Digest batches carry active worker leases and frozen execution windows;
+-- their underlying durable dispatch outcomes are exported separately.
+select pg_temp.check(
+  'notification export excludes digest execution state',
+  (select array_agg(table_name order by table_sort)
+     from public.organization_export_source_tables
+    where source_id = 'notification_delivery')
+    = array['notification_preferences', 'notification_dispatches']::text[]
+  and not exists (
+    select 1 from public.organization_export_source_tables
+     where table_name = 'notification_digest_batches'
+  )
 );
 
 select pg_temp.check(

@@ -4,6 +4,7 @@ const organizationId = "11111111-1111-4111-8111-111111111111";
 const deliveryId = "22222222-2222-4222-8222-222222222222";
 const obligationId = "33333333-3333-4333-8333-333333333333";
 const recipientId = "44444444-4444-4444-8444-444444444444";
+const alternateRecipientId = "77777777-7777-4777-8777-777777777777";
 const workerId = "55555555-5555-4555-8555-555555555555";
 
 describe("SupabaseReportingDeadlineMonitorRepository", () => {
@@ -32,7 +33,10 @@ describe("SupabaseReportingDeadlineMonitorRepository", () => {
             outcome: "found",
             details: {
               deliveryId,
-              recipient: { userId: recipientId, email: "owner@cra.test" },
+              recipient: {
+                userId: alternateRecipientId,
+                email: "alternate@cra.test",
+              },
               obligationId,
               stageKind: "early_warning",
               thresholdPercent: 50,
@@ -79,7 +83,7 @@ describe("SupabaseReportingDeadlineMonitorRepository", () => {
     );
     expect(details).toEqual({
       outcome: "deliverable",
-      recipient: { userId: recipientId, email: "owner@cra.test" },
+      recipient: { userId: alternateRecipientId, email: "alternate@cra.test" },
       alert: {
         obligationId,
         stageKind: "early_warning",
@@ -94,6 +98,36 @@ describe("SupabaseReportingDeadlineMonitorRepository", () => {
     const repository = subject(
       jest.fn().mockResolvedValue({
         data: [{ outcome: "found", details: { recipient: {} } }],
+        error: null,
+      }),
+    );
+
+    await expect(
+      repository.queue.deliveryDetails({
+        organizationId,
+        deliveryId,
+        leaseOwner: workerId,
+        checkpointVersion: 2,
+      }),
+    ).rejects.toMatchObject({ code: "malformed_provider", retryable: false });
+  });
+
+  it("refuses details for a different delivery despite a valid recipient", async () => {
+    const repository = subject(
+      jest.fn().mockResolvedValue({
+        data: [
+          {
+            outcome: "found",
+            details: {
+              deliveryId: "99999999-9999-4999-8999-999999999999",
+              recipient: { userId: recipientId, email: "alternate@cra.test" },
+              obligationId,
+              stageKind: "early_warning",
+              thresholdPercent: 50,
+              dueAt: "2026-09-10T10:00:00Z",
+            },
+          },
+        ],
         error: null,
       }),
     );

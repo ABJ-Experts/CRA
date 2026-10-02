@@ -229,7 +229,11 @@ export class SupabaseReportingDeadlineMonitorRepository implements ReportingDead
         const detail = asRecord(row.details);
         const parsedRecipient = recipientSchema.safeParse(detail.recipient);
         const parsedAlert = alertSchema.safeParse(detail);
-        if (!parsedRecipient.success || !parsedAlert.success) {
+        if (
+          !parsedRecipient.success ||
+          !parsedAlert.success ||
+          parsedAlert.data.deliveryId !== deliveryId
+        ) {
           throw new ReportingDeadlineMonitorFailure(
             "malformed_provider",
             false,

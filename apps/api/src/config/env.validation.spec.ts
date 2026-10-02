@@ -34,6 +34,10 @@ describe("environment validation", () => {
       SMTP_HOST: "127.0.0.1",
       SMTP_PORT: 54325,
       SMTP_FROM: "CRA <no-reply@cra.test>",
+      SMTP_TLS_MODE: "mailpit",
+      SMTP_CONNECTION_TIMEOUT_MS: 10_000,
+      SMTP_GREETING_TIMEOUT_MS: 10_000,
+      SMTP_SOCKET_TIMEOUT_MS: 30_000,
       LOGIN_MAX_ATTEMPTS: 5,
       LOGIN_LOCK_MINUTES: 15,
       OTP_TTL_MINUTES: 15,
@@ -99,6 +103,12 @@ describe("environment validation", () => {
         SMTP_USER: "mailer",
         SMTP_PASS: "secret",
         SMTP_FROM: "CRA <mail@cra.test>",
+        SMTP_TLS_MODE: "starttls",
+        SMTP_TLS_SERVERNAME: "smtp.cra.test",
+        SMTP_CA_CERT_PATH: "/etc/cra/smtp-ca.pem",
+        SMTP_CONNECTION_TIMEOUT_MS: "7000",
+        SMTP_GREETING_TIMEOUT_MS: "8000",
+        SMTP_SOCKET_TIMEOUT_MS: "9000",
         LOGIN_MAX_ATTEMPTS: "8",
         LOGIN_LOCK_MINUTES: "20",
         OTP_TTL_MINUTES: "10",
@@ -117,6 +127,12 @@ describe("environment validation", () => {
       COOKIE_SECURE: true,
       ACCESS_TOKEN_MAX_AGE: 1800,
       SMTP_PORT: 2525,
+      SMTP_TLS_MODE: "starttls",
+      SMTP_TLS_SERVERNAME: "smtp.cra.test",
+      SMTP_CA_CERT_PATH: "/etc/cra/smtp-ca.pem",
+      SMTP_CONNECTION_TIMEOUT_MS: 7000,
+      SMTP_GREETING_TIMEOUT_MS: 8000,
+      SMTP_SOCKET_TIMEOUT_MS: 9000,
       LOGIN_MAX_ATTEMPTS: 8,
       SESSION_EPOCH_SKEW_SECONDS: 0,
       BRANDING_SCANNER_STRICT: true,
@@ -140,6 +156,41 @@ describe("environment validation", () => {
       COOKIE_SECURE: false,
       SESSION_EPOCH_SKEW_SECONDS: 0,
     });
+  });
+
+  it("rejects unsafe production SMTP TLS configuration", () => {
+    expect(() =>
+      validateEnv({
+        ...required,
+        NODE_ENV: "production",
+        SMTP_HOST: "smtp.customer.test",
+        SMTP_TLS_MODE: "mailpit",
+      }),
+    ).toThrow("SMTP_TLS_MODE");
+    expect(() =>
+      validateEnv({
+        ...required,
+        SMTP_TLS_MODE: "starttls",
+        SMTP_CONNECTION_TIMEOUT_MS: "999",
+      }),
+    ).toThrow("SMTP_CONNECTION_TIMEOUT_MS");
+  });
+
+  it("allows mailpit mode only for loopback SMTP hosts", () => {
+    expect(() =>
+      validateEnv({
+        ...required,
+        SMTP_HOST: "smtp.customer.test",
+        SMTP_TLS_MODE: "mailpit",
+      }),
+    ).toThrow("SMTP_TLS_MODE");
+    expect(
+      validateEnv({
+        ...required,
+        SMTP_HOST: "::1",
+        SMTP_TLS_MODE: "mailpit",
+      }),
+    ).toMatchObject({ SMTP_HOST: "::1", SMTP_TLS_MODE: "mailpit" });
   });
 
   it("rejects malformed and unsafe configuration with actionable paths", () => {

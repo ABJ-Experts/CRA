@@ -31,6 +31,18 @@
       "types": "./dist/tasks/types/index.d.ts",
       "default": "./dist/tasks/types/index.js"
     },
+    "./notifications": {
+      "types": "./dist/notifications/index.d.ts",
+      "default": "./dist/notifications/index.js"
+    },
+    "./notifications/schemas": {
+      "types": "./dist/notifications/schemas/index.d.ts",
+      "default": "./dist/notifications/schemas/index.js"
+    },
+    "./notifications/types": {
+      "types": "./dist/notifications/types/index.d.ts",
+      "default": "./dist/notifications/types/index.js"
+    },
     "./auth": {
       "types": "./dist/auth.d.ts",
       "default": "./dist/auth.js"

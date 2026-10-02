@@ -489,7 +489,9 @@ export function SupportPeriodRetentionSection({
               {releaseAlerts.map((alert) => (
                 <li key={alert.id} className="rounded-lg bg-canvas px-3 py-2">
                   {alert.thresholdDays} days before support end ·{" "}
-                  {alert.deliveryState}
+                  {alert.deliveryState === "provider_accepted"
+                    ? "Provider accepted; receipt unconfirmed"
+                    : alert.deliveryState.replaceAll("_", " ")}
                   {alert.missed ? " · missed" : ""}
                   {` · due ${displayInstant(alert.dueAt)}`}
                 </li>

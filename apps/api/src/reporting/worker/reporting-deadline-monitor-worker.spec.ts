@@ -1,4 +1,5 @@
 import {
+  ReportingDeadlineMonitorFailure,
   ReportingDeadlineMonitorWorker,
   type ReportingDeadlineMonitorDependencies,
 } from "./reporting-deadline-monitor-worker";
@@ -13,7 +14,7 @@ const databaseNow = new Date("2026-09-09T10:00:00.000Z");
 describe("ReportingDeadlineMonitorWorker", () => {
   it("reconciles database-authoritative thresholds before delivering a claimed alert", async () => {
     const reconcile = jest.fn().mockResolvedValue(undefined);
-    const deliver = jest.fn().mockResolvedValue(undefined);
+    const deliver = jest.fn().mockResolvedValue(providerAccepted());
     const complete = jest.fn().mockResolvedValue({ outcome: "completed" });
     const worker = new ReportingDeadlineMonitorWorker(
       dependencies({ queue: { reconcile, complete }, delivery: { deliver } }),
@@ -93,6 +94,104 @@ describe("ReportingDeadlineMonitorWorker", () => {
     expect(fail).not.toHaveBeenCalled();
   });
 
+  it("uses the recipient from the revalidated details, not the original claim", async () => {
+    const deliver = jest.fn().mockResolvedValue({
+      status: "provider_accepted",
+      deliveryConfirmed: false,
+    });
+    const worker = new ReportingDeadlineMonitorWorker(
+      dependencies({
+        delivery: { deliver },
+        queue: {
+          deliveryDetails: jest.fn().mockResolvedValue({
+            ...details(),
+            recipient: {
+              userId: "77777777-7777-4777-8777-777777777777",
+              email: "alternate@cra.test",
+            },
+          }),
+        },
+      }),
+    );
+
+    await worker.runOnce();
+
+    expect(deliver).toHaveBeenCalledWith(
+      expect.objectContaining({
+        recipient: {
+          userId: "77777777-7777-4777-8777-777777777777",
+          email: "alternate@cra.test",
+        },
+      }),
+    );
+  });
+
+  it("does not send a claimed delivery twice in one cycle", async () => {
+    const deliver = jest.fn().mockResolvedValue({
+      status: "provider_accepted",
+      deliveryConfirmed: false,
+    });
+    const deliveryDetails = jest.fn().mockResolvedValue(details());
+    const complete = jest.fn().mockResolvedValue({ outcome: "conflict" });
+    const worker = new ReportingDeadlineMonitorWorker(
+      dependencies({
+        delivery: { deliver },
+        queue: {
+          claim: jest.fn().mockResolvedValue(claimed()),
+          deliveryDetails,
+          complete,
+        },
+      }),
+    );
+
+    await worker.runOnce();
+
+    expect(deliver).toHaveBeenCalledTimes(1);
+    expect(deliveryDetails).toHaveBeenCalledTimes(1);
+    expect(complete).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not requeue after provider acceptance when database completion is unavailable", async () => {
+    const fail = jest.fn();
+    const deliver = jest.fn().mockResolvedValue(providerAccepted());
+    const worker = new ReportingDeadlineMonitorWorker(
+      dependencies({
+        delivery: { deliver },
+        queue: {
+          complete: jest
+            .fn()
+            .mockRejectedValue(new Error("database unavailable")),
+          fail,
+        },
+      }),
+    );
+
+    await expect(worker.runOnce()).rejects.toThrow("database unavailable");
+    expect(deliver).toHaveBeenCalledTimes(1);
+    expect(fail).not.toHaveBeenCalled();
+  });
+
+  it("dead-letters an invalid provider receipt before database completion", async () => {
+    const complete = jest.fn();
+    const fail = jest.fn().mockResolvedValue(undefined);
+    const worker = new ReportingDeadlineMonitorWorker(
+      dependencies({
+        delivery: { deliver: jest.fn().mockResolvedValue(undefined) },
+        queue: { complete, fail },
+      }),
+    );
+
+    await worker.runOnce();
+
+    expect(complete).not.toHaveBeenCalled();
+    expect(fail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        code: "provider_receipt_invalid",
+        retryable: false,
+      }),
+    );
+  });
+
   it("persists retry state when provider delivery fails", async () => {
     const fail = jest.fn().mockResolvedValue(undefined);
     const worker = new ReportingDeadlineMonitorWorker(
@@ -115,6 +214,34 @@ describe("ReportingDeadlineMonitorWorker", () => {
       retryable: true,
       databaseNow,
     });
+  });
+
+  it("does not persist unreviewed error text as a failure code", async () => {
+    const fail = jest.fn().mockResolvedValue(undefined);
+    const worker = new ReportingDeadlineMonitorWorker(
+      dependencies({
+        delivery: {
+          deliver: jest
+            .fn()
+            .mockRejectedValue(
+              new ReportingDeadlineMonitorFailure(
+                "secret-from-provider" as never,
+                true,
+              ),
+            ),
+        },
+        queue: { fail },
+      }),
+    );
+
+    await worker.runOnce();
+
+    expect(fail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        code: "provider_unavailable",
+        retryable: true,
+      }),
+    );
   });
 
   it("records critical skew but continues database-time evaluation", async () => {
@@ -238,7 +365,7 @@ function dependencies(
       ...queueOverride,
     },
     delivery: {
-      deliver: jest.fn().mockResolvedValue(undefined),
+      deliver: jest.fn().mockResolvedValue(providerAccepted()),
       ...deliveryOverride,
     },
     ...rest,
@@ -273,5 +400,12 @@ function details() {
       dueAt: "2026-09-10T10:00:00Z",
       idempotencyKey: "reporting:stage:revision-1:50:recipient",
     },
+  };
+}
+
+function providerAccepted() {
+  return {
+    status: "provider_accepted" as const,
+    deliveryConfirmed: false as const,
   };
 }

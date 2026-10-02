@@ -69,6 +69,12 @@ export const exportSourceRegistry: readonly ExportSourceRegistration[] =
     },
     { sourceId: "organization_settings", tables: ["organization_settings"] },
     {
+      // Preferences and safe dispatch outcomes are durable tenant records.
+      // Execution leases and frozen digest batches stay deployment-local.
+      sourceId: "notification_delivery",
+      tables: ["notification_preferences", "notification_dispatches"],
+    },
+    {
       sourceId: "organization_lifecycles",
       tables: ["organization_lifecycles"],
     },
@@ -411,6 +417,8 @@ export const exportSourceExclusions: Readonly<Record<string, string>> =
       "Transient immutable copies of registered sources; exporting them would duplicate and recursively re-export tenant records.",
     organization_export_artifact_snapshots:
       "Internal export copy ledger; the archive includes its source metadata and verified bytes without recursively exporting the ledger.",
+    notification_digest_batches:
+      "Frozen digest worker batches contain deployment-local lease and replay state; dispatch evidence exports separately.",
     organization_legal_entity_create_idempotencies:
       "Legal entity create idempotency keys and request digests are request-security material.",
     organization_branding_publish_idempotencies:

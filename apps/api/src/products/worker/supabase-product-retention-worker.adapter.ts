@@ -38,6 +38,9 @@ const alertEvent = z
 const recipient = z
   .object({ user_id: uuid, email: z.string().email().max(320) })
   .strict();
+const criticalRecipient = z
+  .object({ userId: uuid, email: z.string().email().max(320) })
+  .strict();
 
 const asRecord = (value: unknown): ProviderRow => {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
@@ -212,6 +215,52 @@ export class SupabaseProductRetentionWorkerRepository {
           p_organization_id: organizationId,
         }),
     });
+
+  readonly criticalRoute: NonNullable<
+    ProductRetentionWorkerDependencies["criticalRoute"]
+  > = Object.freeze({
+    pinOriginal: async ({
+      organizationId,
+      deliveryId,
+      leaseOwner,
+      checkpointVersion,
+      originalUserId,
+    }) => {
+      const row = await this.rpc(
+        "pin_product_support_alert_original_recipient_atomic",
+        {
+          p_organization_id: organizationId,
+          p_delivery_id: deliveryId,
+          p_lease_owner: leaseOwner,
+          p_expected_checkpoint_version: checkpointVersion,
+          p_original_user_id: originalUserId,
+        },
+      );
+      const value = outcome(row);
+      if (!["pinned", "conflict", "invalid"].includes(value)) {
+        throw new ProductRetentionWorkerFailure("malformed_provider", false);
+      }
+      return { outcome: value as "pinned" | "conflict" | "invalid" };
+    },
+    resolve: async ({ organizationId, originalUserId, productId }) => {
+      const row = await this.rpc("resolve_critical_notification_recipient", {
+        p_organization_id: organizationId,
+        p_original_user_id: originalUserId,
+        p_product_id: productId,
+        p_category: "support_period",
+      });
+      const value = outcome(row);
+      if (value === "unresolved") return null;
+      if (value !== "resolved") {
+        throw new ProductRetentionWorkerFailure("malformed_provider", false);
+      }
+      const parsed = criticalRecipient.safeParse(row.recipient);
+      if (!parsed.success) {
+        throw new ProductRetentionWorkerFailure("malformed_provider", false);
+      }
+      return Object.freeze(parsed.data);
+    },
+  });
 
   private async recipient(
     name: string,

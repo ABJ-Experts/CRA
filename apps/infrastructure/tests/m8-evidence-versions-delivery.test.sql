@@ -71,8 +71,13 @@ select ok(position('evidence_integrity_failure' in pg_get_functiondef(
 select ok(position('terminal_outcome = ''integrity_failed''' in pg_get_functiondef(
   'public.record_evidence_document_integrity_failure_atomic(uuid,uuid,uuid,bigint,text,text,uuid)'::regprocedure)) > 0,
   'integrity failure terminally records the correlated delivery grant');
-select ok(position('''eventType'', n.event_type' in pg_get_functiondef(
-  'public.claim_evidence_document_notification_atomic(uuid,uuid,integer)'::regprocedure)) > 0,
+select ok(position('''eventType'',n.event_type' in regexp_replace(pg_get_functiondef(
+  'public.claim_evidence_document_notification_atomic(uuid,uuid,integer)'::regprocedure),
+  '[[:space:]]+','','g')) > 0
+  and position('evidence_quarantined' in pg_get_functiondef(
+    'public.claim_evidence_document_notification_atomic(uuid,uuid,integer)'::regprocedure)) > 0
+  and position('evidence_integrity_failure' in pg_get_functiondef(
+    'public.claim_evidence_document_notification_atomic(uuid,uuid,integer)'::regprocedure)) > 0,
   'notification claim identifies integrity versus quarantine alert');
 select ok(position('evidence.access_authorized' in pg_get_functiondef(
   'public.authorize_evidence_document_access_atomic(uuid,uuid,uuid,uuid,uuid,text,text,uuid,text,timestamptz)'::regprocedure)) > 0,

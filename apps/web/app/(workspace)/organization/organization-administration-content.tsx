@@ -29,6 +29,7 @@ import {
   useOrganizationBrandingPreviewQuery,
   useOrganizationBrandingQuery,
 } from "../../_features/organizations/organizations.queries";
+import { NotificationAdminPanel } from "../../_features/notifications/notification-admin-panel";
 import { ApiClientError } from "../../_lib/http/api-client";
 import { useMocksReady } from "../../_providers/providers";
 import { useSession } from "../../_providers/session-provider";
@@ -156,6 +157,7 @@ type OrganizationWorkbenchPanel = "settings" | "identity" | "lifecycle";
 type OrganizationWorkbenchTab =
   | "settings"
   | "retention"
+  | "notifications"
   | "export"
   | "legal-entities"
   | "branding"
@@ -193,6 +195,7 @@ const ORGANIZATION_WORKBENCH_TABS = Object.freeze({
   settings: [
     { value: "settings", label: "Settings" },
     { value: "retention", label: "Evidence retention" },
+    { value: "notifications", label: "Notifications" },
     { value: "export", label: "Exports" },
   ],
   identity: [
@@ -336,6 +339,8 @@ export function OrganizationAdministrationContent() {
   const brandingPreview = useOrganizationBrandingPreviewQuery(enabled);
   const canEdit = permissions.can_edit_organization === true;
   const canManageIdentity = role === "owner" && canEdit;
+  const canManageNotifications =
+    canEdit && (role === "owner" || role === "admin");
   // Presentation only. The API independently enforces owner and permission.
   const canExport =
     role === "owner" && permissions.can_export_organization === true;
@@ -507,6 +512,17 @@ export function OrganizationAdministrationContent() {
                       canExport={canExport}
                       organizationTimezone={organizationTimezone}
                     />
+                  </TabsContent>
+                  <TabsContent
+                    value="notifications"
+                    forceMount
+                    className="min-w-0 data-[state=inactive]:hidden"
+                  >
+                    <SectionCard title="Notifications">
+                      <NotificationAdminPanel
+                        canManage={canManageNotifications}
+                      />
+                    </SectionCard>
                   </TabsContent>
                 </>
               ) : null}

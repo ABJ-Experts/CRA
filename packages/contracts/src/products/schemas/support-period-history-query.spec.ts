@@ -1,7 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { supportPeriodHistoryQuerySchema } from "./support-period-retention.schema.js";
+import {
+  supportAlertDeliveryStateSchema,
+  supportPeriodHistoryQuerySchema,
+} from "./support-period-retention.schema.js";
 
 describe("support period history query", () => {
+  it("accepts SMTP provider acceptance without claiming receipt", () => {
+    expect(supportAlertDeliveryStateSchema.parse("provider_accepted")).toBe(
+      "provider_accepted",
+    );
+  });
   it("permits product-wide history and an exact release", () => {
     expect(supportPeriodHistoryQuerySchema.parse({})).toEqual({});
     const releaseId = "00000000-0000-4000-8000-000000000001";

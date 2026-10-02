@@ -29,6 +29,11 @@ const int = (fallback: number) =>
 const boundedInt = (fallback: number, maximum: number, message: string) =>
   int(fallback).refine((value) => value <= maximum, message);
 
+const rangedInt = (fallback: number, minimum: number, maximum: number) =>
+  int(fallback)
+    .refine((value) => value >= minimum, `must be at least ${minimum}`)
+    .refine((value) => value <= maximum, `must not exceed ${maximum}`);
+
 const optionalBoundedInt = (maximum: number, message: string) =>
   z
     .string()
@@ -148,6 +153,12 @@ export const envSchema = z.object({
   SMTP_USER: z.string().optional(),
   SMTP_PASS: z.string().optional(),
   SMTP_FROM: z.string().default("CRA <no-reply@cra.test>"),
+  SMTP_TLS_MODE: z.enum(["mailpit", "starttls", "tls"]).default("mailpit"),
+  SMTP_TLS_SERVERNAME: z.string().trim().min(1).optional(),
+  SMTP_CA_CERT_PATH: z.string().trim().min(1).optional(),
+  SMTP_CONNECTION_TIMEOUT_MS: rangedInt(10_000, 1_000, 120_000),
+  SMTP_GREETING_TIMEOUT_MS: rangedInt(10_000, 1_000, 120_000),
+  SMTP_SOCKET_TIMEOUT_MS: rangedInt(30_000, 1_000, 300_000),
 
   // --- Security knobs ---------------------------------------------------
   LOGIN_MAX_ATTEMPTS: int(5),
@@ -441,7 +452,20 @@ export const envSchema = z.object({
 export type Env = z.infer<typeof envSchema>;
 
 export function validateEnv(raw: Record<string, unknown>): Env {
-  const parsed = envSchema.safeParse(raw);
+  const parsed = envSchema
+    .superRefine((value, context) => {
+      if (
+        value.SMTP_TLS_MODE === "mailpit" &&
+        !isLoopbackHost(value.SMTP_HOST)
+      ) {
+        context.addIssue({
+          code: "custom",
+          message: "mailpit mode requires a loopback SMTP host",
+          path: ["SMTP_TLS_MODE"],
+        });
+      }
+    })
+    .safeParse(raw);
 
   if (!parsed.success) {
     const detail = parsed.error.issues
@@ -469,4 +493,14 @@ export function validateEnv(raw: Record<string, unknown>): Env {
   }
 
   return parsed.data;
+}
+
+function isLoopbackHost(host: string | undefined): boolean {
+  const value = (host ?? "").trim().toLowerCase();
+  return (
+    value === "localhost" ||
+    value === "127.0.0.1" ||
+    value === "::1" ||
+    value === "[::1]"
+  );
 }

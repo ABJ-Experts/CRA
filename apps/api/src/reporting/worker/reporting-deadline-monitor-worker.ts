@@ -6,6 +6,20 @@ const maximumClaimsPerOrganizationPerCycle = 1_000;
 
 export type ReportingDeadlineThreshold = 50 | 75 | 90 | 100;
 
+type ReportingDeadlineFailureCode =
+  | "provider_unavailable"
+  | "delivery_failed"
+  | "provider_receipt_invalid"
+  | "malformed_provider"
+  | "malformed_delivery_details"
+  | "completion_rejected";
+
+export type ReportingDeadlineProviderAcceptance = Readonly<{
+  status: "provider_accepted";
+  /** SMTP provider acceptance does not establish inbox delivery. */
+  deliveryConfirmed: false;
+}>;
+
 export type ReportingDeadlineDeliveryDetails =
   | Readonly<{
       outcome: "deliverable";
@@ -36,7 +50,7 @@ export class ReportingDeadlineMonitorFailure extends Error {
   readonly name = "ReportingDeadlineMonitorFailure";
 
   constructor(
-    readonly code: string,
+    readonly code: ReportingDeadlineFailureCode,
     readonly retryable: boolean,
   ) {
     super(code);
@@ -53,7 +67,7 @@ export interface ReportingDeadlineDeliveryPort {
         { outcome: "deliverable" }
       >["alert"];
     }>,
-  ): Promise<void>;
+  ): Promise<ReportingDeadlineProviderAcceptance>;
 }
 
 export interface ReportingDeadlineMonitorDependencies {
@@ -161,6 +175,7 @@ export class ReportingDeadlineMonitorWorker {
     organizationId: string,
     databaseNow: Date,
   ): Promise<void> {
+    const attemptedDeliveryIds = new Set<string>();
     for (
       let claimCount = 0;
       claimCount < maximumClaimsPerOrganizationPerCycle;
@@ -173,7 +188,12 @@ export class ReportingDeadlineMonitorWorker {
         databaseNow,
       });
       if (claim.outcome !== "claimed") return;
+      // A stale or broken claim implementation must never send the same row
+      // twice in one reconciliation cycle, even if completion conflicts.
+      if (attemptedDeliveryIds.has(claim.deliveryId)) return;
+      attemptedDeliveryIds.add(claim.deliveryId);
 
+      let providerAccepted = false;
       try {
         const details = await this.dependencies.queue.deliveryDetails({
           organizationId,
@@ -190,11 +210,21 @@ export class ReportingDeadlineMonitorWorker {
             false,
           );
         }
-        await this.dependencies.delivery.deliver({
+        const receipt = await this.dependencies.delivery.deliver({
           idempotencyKey: details.alert.idempotencyKey,
           recipient: details.recipient,
           alert: details.alert,
         });
+        if (
+          receipt?.status !== "provider_accepted" ||
+          receipt.deliveryConfirmed !== false
+        ) {
+          throw new ReportingDeadlineMonitorFailure(
+            "provider_receipt_invalid",
+            false,
+          );
+        }
+        providerAccepted = true;
         const completion = await this.dependencies.queue.complete({
           organizationId,
           deliveryId: claim.deliveryId,
@@ -213,6 +243,10 @@ export class ReportingDeadlineMonitorWorker {
           );
         }
       } catch (error) {
+        // The provider may already have accepted this message. An explicit
+        // fail transition would schedule another send before the lease ends.
+        // Leave the leased row for database reconciliation after this outage.
+        if (providerAccepted) throw error;
         await this.dependencies.queue.fail({
           organizationId,
           deliveryId: claim.deliveryId,
@@ -279,7 +313,17 @@ function isDeliverable(
 }
 
 function safeErrorCode(error: unknown): string {
-  return error instanceof ReportingDeadlineMonitorFailure
+  if (!(error instanceof ReportingDeadlineMonitorFailure)) {
+    return "provider_unavailable";
+  }
+  return [
+    "provider_unavailable",
+    "delivery_failed",
+    "provider_receipt_invalid",
+    "malformed_provider",
+    "malformed_delivery_details",
+    "completion_rejected",
+  ].includes(error.code)
     ? error.code
     : "provider_unavailable";
 }

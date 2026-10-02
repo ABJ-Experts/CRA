@@ -1,6 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
 import { createTransport, type Transporter } from "nodemailer";
 
 export class RequiredMailDeliveryError extends Error {
@@ -10,6 +11,22 @@ export class RequiredMailDeliveryError extends Error {
     super(code);
   }
 }
+
+export type MailDeliveryReceipt = Readonly<{
+  status: "provider_accepted";
+  providerMessageId: string | null;
+  acceptedRecipients: readonly string[];
+  rejectedRecipients: readonly string[];
+  /** SMTP acceptance is not proof that a human inbox received the message. */
+  deliveryConfirmed: false;
+}>;
+
+export type NotificationDigestItem = Readonly<{
+  title: string;
+  href: string;
+  date: string;
+  category: string;
+}>;
 
 const escapeHtml = (value: string): string =>
   value.replace(/[&<>"']/g, (character) => {
@@ -52,6 +69,15 @@ export class MailService {
     const port = this.config.get<number>("SMTP_PORT");
     const user = this.config.get<string>("SMTP_USER");
     const pass = this.config.get<string>("SMTP_PASS");
+    const tlsMode =
+      this.config.get<"mailpit" | "starttls" | "tls">("SMTP_TLS_MODE") ??
+      "mailpit";
+    const connectionTimeout =
+      this.config.get<number>("SMTP_CONNECTION_TIMEOUT_MS") ?? 10_000;
+    const greetingTimeout =
+      this.config.get<number>("SMTP_GREETING_TIMEOUT_MS") ?? 10_000;
+    const socketTimeout =
+      this.config.get<number>("SMTP_SOCKET_TIMEOUT_MS") ?? 30_000;
 
     this.from = this.config.getOrThrow<string>("SMTP_FROM");
     this.appUrl = this.config.getOrThrow<string>("APP_URL").replace(/\/+$/, "");
@@ -61,19 +87,34 @@ export class MailService {
       this.logger.warn("SMTP_HOST is not set — email is disabled.");
     } else {
       const effectivePort = port ?? 587;
+      const caPath = this.config.get<string>("SMTP_CA_CERT_PATH");
+      const ca = caPath ? readFileSync(caPath, "utf8") : undefined;
+      const servername = this.config.get<string>("SMTP_TLS_SERVERNAME") ?? host;
+      const secure = tlsMode === "tls";
+      const requireTLS = tlsMode === "starttls";
       this.transporter = createTransport({
         host,
         port: effectivePort,
-        // Mailpit speaks plain SMTP on 54325. `secure: true` would attempt TLS
-        // on connect and hang.
-        secure: false,
+        secure,
+        requireTLS,
+        connectionTimeout,
+        greetingTimeout,
+        socketTimeout,
         // Auth only when credentials exist. Passing `auth: { user: undefined }`
         // makes nodemailer attempt AUTH against a server that has none.
         ...(user && pass ? { auth: { user, pass } } : {}),
-        // Mailpit presents a self-signed certificate if STARTTLS is negotiated.
-        tls: { rejectUnauthorized: false },
+        tls:
+          tlsMode === "mailpit"
+            ? { rejectUnauthorized: false }
+            : {
+                rejectUnauthorized: true,
+                servername,
+                ...(ca ? { ca } : {}),
+              },
       });
-      this.logger.log(`Mail transport ready: ${host}:${effectivePort}`);
+      this.logger.log(
+        `Mail transport ready: ${host}:${effectivePort} tls=${tlsMode}`,
+      );
     }
   }
 
@@ -83,9 +124,9 @@ export class MailService {
     html: string,
     required = false,
     idempotencyKey?: string,
-  ): Promise<void> {
+  ): Promise<MailDeliveryReceipt | undefined> {
     if (!this.transporter) {
-      this.logger.warn(`Email suppressed (no transport): "${subject}"`);
+      this.logger.warn("Mail delivery suppressed");
       if (required) throw new RequiredMailDeliveryError("provider_unavailable");
       return;
     }
@@ -94,7 +135,7 @@ export class MailService {
       const idempotencyDigest = idempotencyKey
         ? createHash("sha256").update(idempotencyKey).digest("hex")
         : undefined;
-      await this.transporter.sendMail({
+      const result: unknown = await this.transporter.sendMail({
         from: this.from,
         to,
         subject,
@@ -108,17 +149,28 @@ export class MailService {
             }
           : {}),
       });
-      this.logger.log(`Sent "${subject}"`);
-    } catch (error) {
+      const receipt = {
+        status: "provider_accepted",
+        providerMessageId: stringValue(result, "messageId"),
+        acceptedRecipients: stringArray(result, "accepted"),
+        rejectedRecipients: stringArray(result, "rejected"),
+        deliveryConfirmed: false,
+      } satisfies MailDeliveryReceipt;
+      if (!recipientWasAccepted(to, receipt)) {
+        if (required) throw new RequiredMailDeliveryError("delivery_failed");
+        this.logger.error("Mail delivery failed");
+        return;
+      }
+      this.logger.log("Mail delivery accepted");
+      return receipt;
+    } catch {
       /*
        * Never let a mail failure fail the request that triggered it. A sign-up
        * whose confirmation email bounced is a user who can request a resend; a
        * sign-up that 500s because SMTP was down is a lost account. Logged, not
        * thrown.
        */
-      this.logger.error(
-        `Failed to send "${subject}": ${error instanceof Error ? error.message : String(error)}`,
-      );
+      this.logger.error("Mail delivery failed");
       if (required) throw new RequiredMailDeliveryError("delivery_failed");
     }
   }
@@ -191,9 +243,9 @@ export class MailService {
     to: string,
     token: string,
     idempotencyKey: string,
-  ): Promise<void> {
+  ): Promise<MailDeliveryReceipt> {
     const url = `${this.appUrl}/supplier-evidence#${encodeURIComponent(token)}`;
-    await this.send(
+    return this.required(
       to,
       "Supplier evidence request",
       this.layout(
@@ -202,7 +254,6 @@ export class MailService {
          <p style="margin:24px 0"><a href="${url}" style="background:#4a50d6;color:#fff;padding:12px 20px;border-radius:8px;text-decoration:none;font-size:14px">Open evidence request</a></p>
          <p style="color:#8a8f98;font-size:12px;word-break:break-all">${url}</p>`,
       ),
-      true,
       idempotencyKey,
     );
   }
@@ -221,13 +272,13 @@ export class MailService {
     }>,
     token: string,
     idempotencyKey: string,
-  ): Promise<void> {
+  ): Promise<MailDeliveryReceipt> {
     const url = `${this.appUrl}/supplier-evidence#${encodeURIComponent(token)}`;
     const title = escapeHtml(input.portalTitle);
     const instructions = input.instructions
       ? `<p style="color:#4b5058;font-size:14px">${escapeHtml(input.instructions)}</p>`
       : "";
-    await this.send(
+    return this.required(
       to,
       "Reminder: supplier evidence request",
       this.layout(
@@ -238,7 +289,6 @@ export class MailService {
          <p style="margin:24px 0"><a href="${url}" style="background:#4a50d6;color:#fff;padding:12px 20px;border-radius:8px;text-decoration:none;font-size:14px">Open evidence request</a></p>
          <p style="color:#8a8f98;font-size:12px;word-break:break-all">${url}</p>`,
       ),
-      true,
       idempotencyKey,
     );
   }
@@ -248,8 +298,8 @@ export class MailService {
     to: string,
     input: Readonly<{ portalTitle: string; dueAt: string }>,
     idempotencyKey: string,
-  ): Promise<void> {
-    await this.send(
+  ): Promise<MailDeliveryReceipt> {
+    return this.required(
       to,
       "Overdue supplier evidence escalation",
       this.layout(
@@ -257,7 +307,6 @@ export class MailService {
         `<p style="color:#4b5058;font-size:14px"><strong>${escapeHtml(input.portalTitle)}</strong> is overdue as of <strong>${escapeHtml(input.dueAt)}</strong>.</p>
          <p style="color:#4b5058;font-size:14px">Review the request in CRA and take the appropriate follow-up action.</p>`,
       ),
-      true,
       idempotencyKey,
     );
   }
@@ -275,12 +324,12 @@ export class MailService {
       missed: boolean;
     }>,
     idempotencyKey: string,
-  ): Promise<void> {
+  ): Promise<MailDeliveryReceipt> {
     const productName = escapeHtml(input.productName);
     const timing = input.missed
       ? "This support-period threshold was missed and requires prompt review."
       : "Review the support commitment and any required follow-up action.";
-    await this.send(
+    return this.required(
       to,
       `Support period alert: ${input.productName}`,
       this.layout(
@@ -288,7 +337,6 @@ export class MailService {
         `<p style="color:#4b5058;font-size:14px"><strong>${productName}</strong> reaches its ${input.thresholdDays}-day support-period threshold on <strong>${escapeHtml(input.supportEndsAt)}</strong>.</p>
          <p style="color:#4b5058;font-size:14px">${timing}</p>`,
       ),
-      true,
       idempotencyKey,
     );
   }
@@ -303,7 +351,7 @@ export class MailService {
       kevListingDate: string | null;
     }>,
     idempotencyKey: string,
-  ): Promise<void> {
+  ): Promise<MailDeliveryReceipt> {
     const productName = escapeHtml(input.productName);
     const releaseName = escapeHtml(input.releaseName);
     const advisoryId = escapeHtml(input.advisoryId);
@@ -311,7 +359,7 @@ export class MailService {
     const listing = input.kevListingDate
       ? `CISA KEV listing date: <strong>${escapeHtml(input.kevListingDate)}</strong>.`
       : "CISA KEV listing date is not available.";
-    await this.send(
+    return this.required(
       to,
       `KEV alert: ${input.advisoryId}`,
       this.layout(
@@ -320,7 +368,6 @@ export class MailService {
          <p style="color:#4b5058;font-size:14px">Lifecycle state: <strong>${lifecycleState}</strong>. ${listing}</p>
          <p style="color:#4b5058;font-size:14px">Review the durable alert in CRA before beginning any reporting workflow. No regulatory report has been created or submitted by this notification.</p>`,
       ),
-      true,
       idempotencyKey,
     );
   }
@@ -338,12 +385,12 @@ export class MailService {
       reviewState: string;
     }>,
     idempotencyKey: string,
-  ): Promise<void> {
+  ): Promise<MailDeliveryReceipt> {
     const advisorySubject = input.advisoryId.replace(/[\r\n]+/g, " ").trim();
     const advisoryId = escapeHtml(advisorySubject);
     const transition = escapeHtml(input.transition.replace(/_/g, " "));
     const reviewState = escapeHtml(input.reviewState.replace(/_/g, " "));
-    await this.send(
+    return this.required(
       to,
       `Finding review required: ${advisorySubject}`,
       this.layout(
@@ -351,7 +398,6 @@ export class MailService {
         `<p style="color:#4b5058;font-size:14px">Source status for <strong>${advisoryId}</strong> changed to <strong>${transition}</strong>.</p>
          <p style="color:#4b5058;font-size:14px">Current review state: <strong>${reviewState}</strong>. Review the finding in CRA; this notification does not change the recorded assessment or close the finding.</p>`,
       ),
-      true,
       idempotencyKey,
     );
   }
@@ -369,7 +415,7 @@ export class MailService {
       kind: "suppression_expired" | "internal_sla_breached";
     }>,
     idempotencyKey: string,
-  ): Promise<void> {
+  ): Promise<MailDeliveryReceipt> {
     const advisorySubject = input.advisoryId.replace(/[\r\n]+/g, " ").trim();
     const advisoryId = escapeHtml(advisorySubject);
     const severity = escapeHtml(input.severity.replace(/_/g, " "));
@@ -380,7 +426,7 @@ export class MailService {
     const detail = isSuppressionExpiry
       ? `The finite suppression for <strong>${advisoryId}</strong> expired. The finding is actionable again.`
       : `The internal triage SLA for <strong>${advisoryId}</strong> (${severity}) was breached.`;
-    await this.send(
+    return this.required(
       to,
       `${title}: ${advisorySubject}`,
       this.layout(
@@ -388,7 +434,6 @@ export class MailService {
         `<p style="color:#4b5058;font-size:14px">${detail}</p>
          <p style="color:#4b5058;font-size:14px">This is an internal triage alert. No regulatory deadline, obligation, or report was changed by this notification.</p>`,
       ),
-      true,
       idempotencyKey,
     );
   }
@@ -398,10 +443,10 @@ export class MailService {
     to: string,
     findingId: string,
     idempotencyKey: string,
-  ): Promise<void> {
+  ): Promise<MailDeliveryReceipt> {
     const safeFindingId = findingId.replace(/[^a-f0-9-]/gi, "");
     const href = `${this.appUrl}/findings?findingId=${encodeURIComponent(safeFindingId)}`;
-    await this.send(
+    return this.required(
       to,
       "You were mentioned in a triage note",
       this.layout(
@@ -409,7 +454,6 @@ export class MailService {
         `<p style="color:#4b5058;font-size:14px">You were mentioned in an internal finding triage note.</p>
          <p style="color:#4b5058;font-size:14px"><a href="${escapeHtml(href)}">Open the finding in CRA</a></p>`,
       ),
-      true,
       idempotencyKey,
     );
   }
@@ -422,8 +466,8 @@ export class MailService {
   async sendEvidenceQuarantinedAlert(
     to: string,
     idempotencyKey: string,
-  ): Promise<void> {
-    await this.send(
+  ): Promise<MailDeliveryReceipt> {
+    return this.required(
       to,
       "Evidence upload requires review",
       this.layout(
@@ -431,7 +475,6 @@ export class MailService {
         `<p style="color:#4b5058;font-size:14px">An evidence upload you own could not be cleared by the security scan and has been quarantined.</p>
          <p style="color:#4b5058;font-size:14px">Open CRA to review the safe status details. Do not attempt to retrieve or redistribute the uploaded file.</p>`,
       ),
-      true,
       idempotencyKey,
     );
   }
@@ -441,8 +484,8 @@ export class MailService {
   async sendEvidenceIntegrityFailureAlert(
     to: string,
     idempotencyKey: string,
-  ): Promise<void> {
-    await this.send(
+  ): Promise<MailDeliveryReceipt> {
+    return this.required(
       to,
       "Evidence integrity verification failed",
       this.layout(
@@ -450,7 +493,6 @@ export class MailService {
         `<p style="color:#4b5058;font-size:14px">A previously clean evidence version could not be verified before delivery and has been blocked.</p>
          <p style="color:#4b5058;font-size:14px">Open CRA to review the safe status details. Do not try to retrieve or redistribute the file.</p>`,
       ),
-      true,
       idempotencyKey,
     );
   }
@@ -465,14 +507,14 @@ export class MailService {
       productId: string | null;
     }>,
     idempotencyKey: string,
-  ): Promise<void> {
+  ): Promise<MailDeliveryReceipt> {
     const subjectTitle = input.title.replace(/[\r\n]+/g, " ").trim();
     const title = escapeHtml(subjectTitle);
     const date = escapeHtml(input.validUntil);
     const href = input.productId
       ? `${this.appUrl}/products/${encodeURIComponent(input.productId)}/evidence`
       : null;
-    await this.send(
+    return this.required(
       to,
       `Evidence validity alert: ${subjectTitle}`,
       this.layout(
@@ -481,7 +523,6 @@ export class MailService {
          <p style="color:#4b5058;font-size:14px">Validity expiry does not delete evidence or change its retention requirements.</p>
          ${href ? `<p style="color:#4b5058;font-size:14px"><a href="${escapeHtml(href)}">Open Evidence Library in CRA</a></p>` : ""}`,
       ),
-      true,
       idempotencyKey,
     );
   }
@@ -500,13 +541,13 @@ export class MailService {
       dueAt: string;
     }>,
     idempotencyKey: string,
-  ): Promise<void> {
+  ): Promise<MailDeliveryReceipt> {
     const safeObligationId = input.obligationId.replace(/[^a-f0-9-]/gi, "");
     const href = `${this.appUrl}/reporting?obligationId=${encodeURIComponent(safeObligationId)}`;
     const stage = escapeHtml(input.stage.replace(/_/g, " "));
     const threshold =
       input.thresholdPercent === 100 ? "breach" : `${input.thresholdPercent}%`;
-    await this.send(
+    return this.required(
       to,
       `Reporting deadline ${threshold}`,
       this.layout(
@@ -515,8 +556,86 @@ export class MailService {
          <p style="color:#4b5058;font-size:14px">Due at: <strong>${escapeHtml(input.dueAt)}</strong>.</p>
          <p style="color:#4b5058;font-size:14px"><a href="${escapeHtml(href)}">Open reporting obligations in CRA</a></p>`,
       ),
-      true,
       idempotencyKey,
     );
   }
+
+  async sendNotificationDigest(
+    to: string,
+    items: readonly NotificationDigestItem[],
+    idempotencyKey: string,
+  ): Promise<MailDeliveryReceipt> {
+    if (items.length < 1 || items.length > 100) {
+      throw new RequiredMailDeliveryError("delivery_failed");
+    }
+    const rows = items
+      .map((item) => {
+        const href = item.href.startsWith("/") ? item.href : "/";
+        return `<li style="margin:0 0 12px">
+          <a href="${escapeHtml(`${this.appUrl}${href}`)}" style="color:#4a50d6">${escapeHtml(item.title)}</a>
+          <br><span style="color:#8a8f98;font-size:12px">${escapeHtml(item.category)} · ${escapeHtml(item.date)}</span>
+        </li>`;
+      })
+      .join("");
+    return this.required(
+      to,
+      `CRA notification digest (${items.length})`,
+      this.layout(
+        "Notification digest",
+        `<p style="color:#4b5058;font-size:14px">You have ${items.length} CRA updates ready for review.</p>
+         <ul style="padding-left:20px;margin:24px 0">${rows}</ul>`,
+      ),
+      idempotencyKey,
+    );
+  }
+
+  private async required(
+    to: string,
+    subject: string,
+    html: string,
+    idempotencyKey: string,
+  ): Promise<MailDeliveryReceipt> {
+    const receipt = await this.send(to, subject, html, true, idempotencyKey);
+    if (!receipt) throw new RequiredMailDeliveryError("delivery_failed");
+    return receipt;
+  }
+}
+
+function stringValue(value: unknown, key: string): string | null {
+  if (!value || typeof value !== "object") return null;
+  const field = (value as Record<string, unknown>)[key];
+  return typeof field === "string" && field.length > 0 ? field : null;
+}
+
+function stringArray(value: unknown, key: string): readonly string[] {
+  if (!value || typeof value !== "object") return [];
+  const field = (value as Record<string, unknown>)[key];
+  return Array.isArray(field)
+    ? field.filter((item): item is string => typeof item === "string")
+    : [];
+}
+
+function recipientWasAccepted(
+  to: string,
+  receipt: MailDeliveryReceipt,
+): boolean {
+  const intendedRecipients = to
+    .split(",")
+    .map((recipient) => recipient.trim().toLowerCase())
+    .filter(Boolean);
+  const accepted = new Set(
+    receipt.acceptedRecipients.map((recipient) =>
+      recipient.trim().toLowerCase(),
+    ),
+  );
+  const rejected = new Set(
+    receipt.rejectedRecipients.map((recipient) =>
+      recipient.trim().toLowerCase(),
+    ),
+  );
+  return (
+    intendedRecipients.length > 0 &&
+    intendedRecipients.every((recipient) => accepted.has(recipient)) &&
+    intendedRecipients.every((recipient) => !rejected.has(recipient))
+  );
 }

@@ -253,6 +253,7 @@ export const supportAlertDeliveryStateSchema = z.enum([
   "scheduled",
   "leased",
   "delivered",
+  "provider_accepted",
   "retrying",
   "dead_letter",
   "obsolete",

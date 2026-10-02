@@ -89,6 +89,11 @@ const session = vi.hoisted(() => ({
 
 vi.mock("../../_features/organizations/organizations.queries", () => queries);
 vi.mock("../../_features/organizations/organizations.api", () => api);
+vi.mock("../../_features/notifications/notification-admin-panel", () => ({
+  NotificationAdminPanel: ({ canManage }: { canManage: boolean }) => (
+    <div>Notification admin panel {canManage ? "editable" : "readonly"}</div>
+  ),
+}));
 vi.mock("../../_providers/providers", () => ({
   useMocksReady: () => mocks.ready,
 }));
@@ -459,6 +464,35 @@ describe("OrganizationAdministrationPage", () => {
     expect(
       screen.getByRole("button", { name: "Deactivate tenant" }),
     ).toHaveClass("lg:self-end");
+  });
+
+  it("lets owners with edit permission manage notification critical routes", async () => {
+    render(<OrganizationAdministrationPage />);
+
+    await openOrganizationWorkspace("Organization settings");
+    selectOrganizationWorkspaceTab("Notifications");
+
+    expect(screen.getByText("Notification admin panel editable")).toBeTruthy();
+  });
+
+  it("keeps notification audit list visible without manage permission", async () => {
+    session.value = {
+      ...session.value,
+      permissions: {
+        can_view_organization: true,
+        can_edit_organization: false,
+        can_export_organization: false,
+        can_delete_organization: false,
+      },
+      role: "viewer",
+    };
+
+    render(<OrganizationAdministrationPage />);
+
+    await openOrganizationWorkspace("Organization settings");
+    selectOrganizationWorkspaceTab("Notifications");
+
+    expect(screen.getByText("Notification admin panel readonly")).toBeTruthy();
   });
 
   it("resets to the first tab and closes the organization workbench with Escape", async () => {

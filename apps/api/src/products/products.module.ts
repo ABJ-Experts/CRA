@@ -253,6 +253,7 @@ const complianceMetricsLogger = new Logger(ProductComplianceWorker.name);
           clock: repository.clock,
           queue: repository.queue,
           recipients: repository.recipients,
+          criticalRoute: repository.criticalRoute,
           delivery,
         }),
     },

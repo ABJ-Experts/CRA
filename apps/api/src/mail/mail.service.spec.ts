@@ -9,7 +9,11 @@ interface SentMessage {
   to: string;
   subject: string;
   html: string;
+  messageId?: string;
+  headers?: Readonly<Record<string, string>>;
 }
+
+type TransportWithTls = Readonly<{ tls?: Readonly<{ ca?: unknown }> }>;
 
 const mockSendMail = jest.fn<Promise<unknown>, [SentMessage]>();
 
@@ -47,7 +51,14 @@ describe("MailService", () => {
   let loggerError: jest.SpyInstance;
 
   beforeEach(() => {
-    mockSendMail.mockReset().mockResolvedValue({ messageId: "mail-1" });
+    mockSendMail.mockReset().mockImplementation((message) =>
+      Promise.resolve({
+        messageId: "mail-1",
+        accepted: [message.to],
+        rejected: [],
+        response: "250 queued as mail-1",
+      }),
+    );
     mockedCreateTransport.mockClear();
     loggerLog = jest.spyOn(Logger.prototype, "log").mockImplementation();
     loggerWarn = jest.spyOn(Logger.prototype, "warn").mockImplementation();
@@ -74,9 +85,9 @@ describe("MailService", () => {
       1,
       "SMTP_HOST is not set — email is disabled.",
     );
-    expect(loggerWarn).toHaveBeenNthCalledWith(
-      2,
-      'Email suppressed (no transport): "Your CRA verification code"',
+    expect(loggerWarn).toHaveBeenNthCalledWith(2, "Mail delivery suppressed");
+    expect(loggerWarn).not.toHaveBeenCalledWith(
+      expect.stringContaining("Your CRA verification code"),
     );
   });
 
@@ -87,10 +98,55 @@ describe("MailService", () => {
       host: "127.0.0.1",
       port: 587,
       secure: false,
+      requireTLS: false,
+      connectionTimeout: 10_000,
+      greetingTimeout: 10_000,
+      socketTimeout: 30_000,
       tls: { rejectUnauthorized: false },
     });
     expect(loggerLog).toHaveBeenCalledWith(
-      "Mail transport ready: 127.0.0.1:587",
+      "Mail transport ready: 127.0.0.1:587 tls=mailpit",
+    );
+  });
+
+  it("validates production relay TLS and loads an explicit customer CA", () => {
+    new MailService(
+      enabledConfig({
+        SMTP_HOST: "10.0.0.5",
+        SMTP_PORT: 587,
+        SMTP_USER: "relay-user",
+        SMTP_PASS: "relay-secret",
+        SMTP_TLS_MODE: "starttls",
+        SMTP_TLS_SERVERNAME: "smtp.customer.test",
+        SMTP_CA_CERT_PATH: "package.json",
+        SMTP_CONNECTION_TIMEOUT_MS: 7000,
+        SMTP_GREETING_TIMEOUT_MS: 8000,
+        SMTP_SOCKET_TIMEOUT_MS: 9000,
+      }),
+    );
+
+    const transportOptions = mockedCreateTransport.mock.calls[0]?.[0] as
+      TransportWithTls | undefined;
+    expect(transportOptions).toMatchObject({
+      host: "10.0.0.5",
+      port: 587,
+      secure: false,
+      requireTLS: true,
+      connectionTimeout: 7000,
+      greetingTimeout: 8000,
+      socketTimeout: 9000,
+      auth: { user: "relay-user", pass: "relay-secret" },
+      tls: {
+        rejectUnauthorized: true,
+        servername: "smtp.customer.test",
+      },
+    });
+    expect(String(transportOptions?.tls?.ca)).toContain('"name": "api"');
+    expect(loggerLog).toHaveBeenCalledWith(
+      "Mail transport ready: 10.0.0.5:587 tls=starttls",
+    );
+    expect(loggerLog).not.toHaveBeenCalledWith(
+      expect.stringContaining("relay-secret"),
     );
   });
 
@@ -103,6 +159,10 @@ describe("MailService", () => {
       host: "127.0.0.1",
       port: 54325,
       secure: false,
+      requireTLS: false,
+      connectionTimeout: 10_000,
+      greetingTimeout: 10_000,
+      socketTimeout: 30_000,
       auth: { user: "mailer", pass: "secret" },
       tls: { rejectUnauthorized: false },
     });
@@ -126,7 +186,10 @@ describe("MailService", () => {
     expect(message?.html).toContain("654321");
     expect(message?.html).toContain("Confirm your email");
     expect(message?.html).toContain("If you did not expect this email");
-    expect(loggerLog).toHaveBeenCalledWith('Sent "Your CRA verification code"');
+    expect(loggerLog).toHaveBeenCalledWith("Mail delivery accepted");
+    expect(loggerLog).not.toHaveBeenCalledWith(
+      expect.stringContaining("Your CRA verification code"),
+    );
   });
 
   it("normalizes the app URL and safely encodes password reset tokens", async () => {
@@ -248,8 +311,12 @@ describe("MailService", () => {
       await expect(
         service.sendVerificationCode("member@cra.test", "123456"),
       ).resolves.toBeUndefined();
-      expect(loggerError).toHaveBeenCalledWith(
-        `Failed to send "Your CRA verification code": ${detail}`,
+      expect(loggerError).toHaveBeenCalledWith("Mail delivery failed");
+      expect(loggerError).not.toHaveBeenCalledWith(
+        expect.stringContaining("Your CRA verification code"),
+      );
+      expect(loggerError).not.toHaveBeenCalledWith(
+        expect.stringContaining(detail),
       );
     },
   );
@@ -273,6 +340,63 @@ describe("MailService", () => {
     expect(mockSendMail.mock.calls[0]?.[0]?.html).toContain(
       "Product &lt;one&gt;",
     );
+  });
+
+  it("keeps configured relay credentials out of provider diagnostics", async () => {
+    mockSendMail.mockRejectedValueOnce(
+      new Error("Invalid login for relay-user using relay-secret"),
+    );
+    const service = new MailService(
+      enabledConfig({
+        SMTP_USER: "relay-user",
+        SMTP_PASS: "relay-secret",
+      }),
+    );
+
+    await expect(
+      service.sendSupportPeriodAlert(
+        "owner@cra.test",
+        {
+          productName: "Product one",
+          supportEndsAt: "2036-02-28T00:00:00.000Z",
+          thresholdDays: 30,
+          missed: false,
+        },
+        "support-period:revision-1:30",
+      ),
+    ).rejects.toEqual(new RequiredMailDeliveryError("delivery_failed"));
+
+    const loggerCalls = loggerError.mock.calls as unknown[][];
+    const diagnostic = String(loggerCalls[0]?.[0]);
+    expect(diagnostic).toBe("Mail delivery failed");
+    expect(diagnostic).not.toContain("relay-secret");
+    expect(diagnostic).not.toContain("relay-user");
+  });
+
+  it("does not log required-mail subjects or raw provider errors", async () => {
+    mockSendMail.mockRejectedValueOnce(
+      new Error("550 token=secret-token body=raw recipient=owner@cra.test"),
+    );
+    const service = new MailService(enabledConfig());
+
+    await expect(
+      service.sendSupportPeriodAlert(
+        "owner@cra.test",
+        {
+          productName: "Sensitive Product",
+          supportEndsAt: "2036-02-28T00:00:00.000Z",
+          thresholdDays: 30,
+          missed: false,
+        },
+        "support-period:revision-1:30",
+      ),
+    ).rejects.toEqual(new RequiredMailDeliveryError("delivery_failed"));
+
+    const diagnostic = String((loggerError.mock.calls as unknown[][])[0]?.[0]);
+    expect(diagnostic).toBe("Mail delivery failed");
+    expect(diagnostic).not.toContain("Sensitive Product");
+    expect(diagnostic).not.toContain("secret-token");
+    expect(diagnostic).not.toContain("owner@cra.test");
   });
 
   it("reports a disabled required support alert delivery to its outbox owner", async () => {
@@ -300,7 +424,7 @@ describe("MailService", () => {
   it("uses a stable provider idempotency message identifier for support alerts", async () => {
     const service = new MailService(enabledConfig());
 
-    await service.sendSupportPeriodAlert(
+    const receipt = await service.sendSupportPeriodAlert(
       "owner@cra.test",
       {
         productName: "Product one",
@@ -321,6 +445,154 @@ describe("MailService", () => {
       /^<support-period-[a-f0-9]{64}@cra\.local>$/,
     );
     expect(mail?.headers?.["X-CRA-Idempotency-Key"]).toMatch(/^[a-f0-9]{64}$/);
+    expect(receipt).toEqual({
+      status: "provider_accepted",
+      providerMessageId: "mail-1",
+      acceptedRecipients: ["owner@cra.test"],
+      rejectedRecipients: [],
+      deliveryConfirmed: false,
+    });
+  });
+
+  it("rejects required mail when SMTP resolves without accepting the intended recipient", async () => {
+    mockSendMail.mockResolvedValueOnce({
+      messageId: "mail-2",
+      accepted: [],
+      rejected: ["owner@cra.test"],
+      response: "550 rejected raw detail",
+    });
+    const service = new MailService(enabledConfig());
+
+    await expect(
+      service.sendSupportPeriodAlert(
+        "owner@cra.test",
+        {
+          productName: "Product one",
+          supportEndsAt: "2036-02-28T00:00:00.000Z",
+          thresholdDays: 30,
+          missed: false,
+        },
+        "support-period:revision-1:30",
+      ),
+    ).rejects.toEqual(new RequiredMailDeliveryError("delivery_failed"));
+    expect(loggerError).toHaveBeenCalledWith("Mail delivery failed");
+    expect(loggerError).not.toHaveBeenCalledWith(
+      expect.stringContaining("550 rejected raw detail"),
+    );
+  });
+
+  it("keeps optional account mail non-failing when SMTP rejects the recipient", async () => {
+    mockSendMail.mockResolvedValueOnce({
+      messageId: "mail-2",
+      accepted: ["other@cra.test"],
+      rejected: ["member@cra.test"],
+      response: "550 private provider detail",
+    });
+    const service = new MailService(enabledConfig());
+
+    await expect(
+      service.sendVerificationCode("member@cra.test", "123456"),
+    ).resolves.toBeUndefined();
+    expect(loggerError).toHaveBeenCalledWith("Mail delivery failed");
+    expect(loggerError).not.toHaveBeenCalledWith(
+      expect.stringContaining("550 private provider detail"),
+    );
+  });
+
+  it("requires every intended recipient to be accepted and none rejected", async () => {
+    mockSendMail.mockResolvedValueOnce({
+      messageId: "mail-2",
+      accepted: [" OWNER@CRA.TEST ", "admin@cra.test"],
+      rejected: ["admin@cra.test"],
+    });
+    const service = new MailService(enabledConfig());
+
+    await expect(
+      service.sendEvidenceQuarantinedAlert(
+        "owner@cra.test, admin@cra.test",
+        "evidence:quarantine:1",
+      ),
+    ).rejects.toEqual(new RequiredMailDeliveryError("delivery_failed"));
+  });
+
+  it.each([
+    ["11111111-1111-4111-8111-111111111111", true],
+    [null, false],
+  ])(
+    "renders an evidence library link only when product scope exists",
+    async (productId, hasLink) => {
+      const service = new MailService(enabledConfig());
+
+      const result = await service.sendEvidenceValidityExpiryAlert(
+        "owner@cra.test",
+        {
+          title: "Proof <one>\r\nBcc: somebody@cra.test",
+          validUntil: "2026-10-20T00:00:00Z",
+          thresholdDays: 7,
+          productId,
+        },
+        "evidence:validity:1",
+      );
+
+      const message = mockSendMail.mock.calls[0]?.[0];
+      expect(message?.subject).toBe(
+        "Evidence validity alert: Proof <one> Bcc: somebody@cra.test",
+      );
+      expect(message?.html).toContain("Proof &lt;one&gt;");
+      expect(message?.html.includes("Open Evidence Library in CRA")).toBe(
+        hasLink,
+      );
+      expect(
+        message?.html.includes(
+          "/products/11111111-1111-4111-8111-111111111111/evidence",
+        ),
+      ).toBe(hasLink);
+      expect(result.status).toBe("provider_accepted");
+    },
+  );
+
+  it("sends a bounded required digest with safe source links", async () => {
+    const service = new MailService(enabledConfig());
+
+    const receipt = await service.sendNotificationDigest(
+      "owner@cra.test",
+      [
+        {
+          title: "Review report <draft>",
+          href: "/reporting?obligationId=11111111-1111-4111-8111-111111111111",
+          date: "2026-10-01T09:00:00.000Z",
+          category: "Reporting",
+        },
+      ],
+      "digest:owner:2026-10-01",
+    );
+
+    const message = mockSendMail.mock.calls[0]?.[0];
+    expect(message?.subject).toBe("CRA notification digest (1)");
+    expect(message?.html).toContain("Review report &lt;draft&gt;");
+    expect(message?.html).toContain(
+      "https://cra.test/reporting?obligationId=11111111-1111-4111-8111-111111111111",
+    );
+    expect(receipt.status).toBe("provider_accepted");
+    expect(receipt.deliveryConfirmed).toBe(false);
+  });
+
+  it("rejects oversized digests before sending", async () => {
+    const service = new MailService(enabledConfig());
+
+    await expect(
+      service.sendNotificationDigest(
+        "owner@cra.test",
+        Array.from({ length: 101 }, (_, index) => ({
+          title: `Task ${index}`,
+          href: "/tasks",
+          date: "2026-10-01T09:00:00.000Z",
+          category: "Tasks",
+        })),
+        "digest:oversized",
+      ),
+    ).rejects.toEqual(new RequiredMailDeliveryError("delivery_failed"));
+    expect(mockSendMail).not.toHaveBeenCalled();
   });
 
   it("sends content-minimal required reporting deadline alerts", async () => {

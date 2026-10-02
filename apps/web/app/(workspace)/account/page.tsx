@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 
 import { SectionCard } from "../../dashboard/_components/dashboard-chrome";
 import { accountApi } from "../../_features/account/account.api";
+import { NotificationPreferencesPanel } from "../../_features/notifications/notification-preferences-panel";
 import { sessionKeys } from "../../_features/session/session.keys";
 import { ApiClientError } from "../../_lib/http/api-client";
 import { useSession } from "../../_providers/session-provider";
@@ -140,6 +141,11 @@ export default function AccountPage() {
             ) : null}
           </div>
         </form>
+      </SectionCard>
+      <SectionCard>
+        <div className="p-6">
+          <NotificationPreferencesPanel />
+        </div>
       </SectionCard>
     </div>
   );

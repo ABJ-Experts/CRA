@@ -104,6 +104,19 @@ describe("tenant export source registry architecture", () => {
     );
   });
 
+  it("exports notification preferences and dispatch evidence without digest worker state", () => {
+    const notificationSource = exportSourceRegistry.find(
+      (source) => source.sourceId === "notification_delivery",
+    );
+    expect(notificationSource?.tables).toEqual([
+      "notification_preferences",
+      "notification_dispatches",
+    ]);
+    expect(exportSourceExclusions.notification_digest_batches).toMatch(
+      /lease|worker|replay/i,
+    );
+  });
+
   it("redacts webhook credentials, fingerprints, payload bytes and worker state in SQL", () => {
     // Forward migrations patch the existing materializer via quoted SQL.
     const sql = migrationSql().replaceAll("''", "'");

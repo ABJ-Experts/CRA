@@ -4722,6 +4722,271 @@ export type Database = {
           },
         ]
       }
+      notification_digest_batches: {
+        Row: {
+          attempt_count: number
+          batch_index: number
+          category: string
+          created_at: string
+          dispatch_ids: string[]
+          id: string
+          last_attempt_at: string | null
+          lease_expires_at: string | null
+          lease_owner: string | null
+          next_attempt_at: string
+          organization_id: string
+          preference_version: number
+          provider_message_id: string | null
+          safe_error_code: string | null
+          status: string
+          updated_at: string
+          user_id: string
+          version: number
+          window_end: string
+          window_start: string
+        }
+        Insert: {
+          attempt_count?: number
+          batch_index?: number
+          category: string
+          created_at?: string
+          dispatch_ids: string[]
+          id?: string
+          last_attempt_at?: string | null
+          lease_expires_at?: string | null
+          lease_owner?: string | null
+          next_attempt_at?: string
+          organization_id: string
+          preference_version?: number
+          provider_message_id?: string | null
+          safe_error_code?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+          version?: number
+          window_end: string
+          window_start: string
+        }
+        Update: {
+          attempt_count?: number
+          batch_index?: number
+          category?: string
+          created_at?: string
+          dispatch_ids?: string[]
+          id?: string
+          last_attempt_at?: string | null
+          lease_expires_at?: string | null
+          lease_owner?: string | null
+          next_attempt_at?: string
+          organization_id?: string
+          preference_version?: number
+          provider_message_id?: string | null
+          safe_error_code?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+          version?: number
+          window_end?: string
+          window_start?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_digest_batches_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notification_digest_batches_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notification_dispatches: {
+        Row: {
+          attempt_count: number
+          category: string
+          created_at: string
+          effective_recipient_user_id: string | null
+          id: string
+          last_attempt_at: string | null
+          lease_expires_at: string | null
+          lease_owner: string | null
+          next_attempt_at: string
+          organization_id: string
+          original_recipient_user_id: string
+          provider_message_id: string | null
+          safe_error_code: string | null
+          safe_title: string | null
+          source_id: string
+          source_link: string | null
+          source_subtype: string
+          source_type: string
+          status: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          attempt_count?: number
+          category: string
+          created_at?: string
+          effective_recipient_user_id?: string | null
+          id?: string
+          last_attempt_at?: string | null
+          lease_expires_at?: string | null
+          lease_owner?: string | null
+          next_attempt_at?: string
+          organization_id: string
+          original_recipient_user_id: string
+          provider_message_id?: string | null
+          safe_error_code?: string | null
+          safe_title?: string | null
+          source_id: string
+          source_link?: string | null
+          source_subtype: string
+          source_type: string
+          status?: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          attempt_count?: number
+          category?: string
+          created_at?: string
+          effective_recipient_user_id?: string | null
+          id?: string
+          last_attempt_at?: string | null
+          lease_expires_at?: string | null
+          lease_owner?: string | null
+          next_attempt_at?: string
+          organization_id?: string
+          original_recipient_user_id?: string
+          provider_message_id?: string | null
+          safe_error_code?: string | null
+          safe_title?: string | null
+          source_id?: string
+          source_link?: string | null
+          source_subtype?: string
+          source_type?: string
+          status?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_dispatches_effective_recipient_user_id_fkey"
+            columns: ["effective_recipient_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notification_dispatches_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notification_dispatches_original_recipient_user_id_fkey"
+            columns: ["original_recipient_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notification_preferences: {
+        Row: {
+          created_at: string
+          critical_alternate_user_id: string | null
+          digest_local_time: string
+          id: string
+          modes: Json
+          organization_id: string
+          quiet_end: string | null
+          quiet_start: string | null
+          timezone: string
+          updated_at: string
+          updated_by: string | null
+          user_id: string
+          version: number
+          weekly_day: number
+        }
+        Insert: {
+          created_at?: string
+          critical_alternate_user_id?: string | null
+          digest_local_time?: string
+          id?: string
+          modes?: Json
+          organization_id: string
+          quiet_end?: string | null
+          quiet_start?: string | null
+          timezone?: string
+          updated_at?: string
+          updated_by?: string | null
+          user_id: string
+          version?: number
+          weekly_day?: number
+        }
+        Update: {
+          created_at?: string
+          critical_alternate_user_id?: string | null
+          digest_local_time?: string
+          id?: string
+          modes?: Json
+          organization_id?: string
+          quiet_end?: string | null
+          quiet_start?: string | null
+          timezone?: string
+          updated_at?: string
+          updated_by?: string | null
+          user_id?: string
+          version?: number
+          weekly_day?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_preferences_critical_alternate_user_id_fkey"
+            columns: ["critical_alternate_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notification_preferences_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notification_preferences_organization_id_user_id_fkey"
+            columns: ["organization_id", "user_id"]
+            isOneToOne: true
+            referencedRelation: "organization_members"
+            referencedColumns: ["organization_id", "user_id"]
+          },
+          {
+            foreignKeyName: "notification_preferences_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notification_preferences_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organization_branding_assets: {
         Row: {
           alt_text: string | null
@@ -6593,6 +6858,7 @@ export type Database = {
           maximum_session_age_minutes: number | null
           mfa_enforcement_date: string | null
           notification_channel_ids: string[] | null
+          notification_delivery_mode: string
           organization_id: string
           product_relationship_graph_version: number
           supplier_document_ai_daily_run_limit: number
@@ -6625,6 +6891,7 @@ export type Database = {
           maximum_session_age_minutes?: number | null
           mfa_enforcement_date?: string | null
           notification_channel_ids?: string[] | null
+          notification_delivery_mode?: string
           organization_id: string
           product_relationship_graph_version?: number
           supplier_document_ai_daily_run_limit?: number
@@ -6657,6 +6924,7 @@ export type Database = {
           maximum_session_age_minutes?: number | null
           mfa_enforcement_date?: string | null
           notification_channel_ids?: string[] | null
+          notification_delivery_mode?: string
           organization_id?: string
           product_relationship_graph_version?: number
           supplier_document_ai_daily_run_limit?: number
@@ -7486,6 +7754,7 @@ export type Database = {
           finding_id: string | null
           graph_version: number | null
           id: string
+          last_attempt_at: string | null
           last_delivery_error: string | null
           last_error_code: string | null
           lease_expires_at: string | null
@@ -7494,6 +7763,7 @@ export type Database = {
           obsolete_at: string | null
           occurred_at: string
           organization_id: string
+          original_recipient_user_id: string | null
           payload: Json
           product_id: string
           reintroduced_from_finding_id: string | null
@@ -7501,6 +7771,7 @@ export type Database = {
           remediation_anchor_id: string | null
           support_period_id: string | null
           support_period_revision: number | null
+          updated_at: string
         }
         Insert: {
           alert_threshold_days?: number | null
@@ -7517,6 +7788,7 @@ export type Database = {
           finding_id?: string | null
           graph_version?: number | null
           id?: string
+          last_attempt_at?: string | null
           last_delivery_error?: string | null
           last_error_code?: string | null
           lease_expires_at?: string | null
@@ -7525,6 +7797,7 @@ export type Database = {
           obsolete_at?: string | null
           occurred_at?: string
           organization_id: string
+          original_recipient_user_id?: string | null
           payload: Json
           product_id: string
           reintroduced_from_finding_id?: string | null
@@ -7532,6 +7805,7 @@ export type Database = {
           remediation_anchor_id?: string | null
           support_period_id?: string | null
           support_period_revision?: number | null
+          updated_at?: string
         }
         Update: {
           alert_threshold_days?: number | null
@@ -7548,6 +7822,7 @@ export type Database = {
           finding_id?: string | null
           graph_version?: number | null
           id?: string
+          last_attempt_at?: string | null
           last_delivery_error?: string | null
           last_error_code?: string | null
           lease_expires_at?: string | null
@@ -7556,6 +7831,7 @@ export type Database = {
           obsolete_at?: string | null
           occurred_at?: string
           organization_id?: string
+          original_recipient_user_id?: string | null
           payload?: Json
           product_id?: string
           reintroduced_from_finding_id?: string | null
@@ -7563,6 +7839,7 @@ export type Database = {
           remediation_anchor_id?: string | null
           support_period_id?: string | null
           support_period_revision?: number | null
+          updated_at?: string
         }
         Relationships: [
           {
@@ -7571,6 +7848,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "product_releases"
             referencedColumns: ["organization_id", "product_id", "id"]
+          },
+          {
+            foreignKeyName: "product_regulatory_outbox_event_original_recipient_user_id_fkey"
+            columns: ["original_recipient_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "product_regulatory_outbox_events_delivered_to_user_id_fkey"
@@ -8811,6 +9095,8 @@ export type Database = {
           lease_expires_at: string | null
           lease_owner: string | null
           organization_id: string
+          original_recipient_user_id: string
+          prepared_recipient_user_id: string | null
           recipient_user_id: string
           updated_at: string
         }
@@ -8830,6 +9116,8 @@ export type Database = {
           lease_expires_at?: string | null
           lease_owner?: string | null
           organization_id: string
+          original_recipient_user_id: string
+          prepared_recipient_user_id?: string | null
           recipient_user_id: string
           updated_at?: string
         }
@@ -8849,10 +9137,19 @@ export type Database = {
           lease_expires_at?: string | null
           lease_owner?: string | null
           organization_id?: string
+          original_recipient_user_id?: string
+          prepared_recipient_user_id?: string | null
           recipient_user_id?: string
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "reporting_deadline_alert_delive_prepared_recipient_user_id_fkey"
+            columns: ["prepared_recipient_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "reporting_deadline_alert_deliveri_organization_id_alert_id_fkey"
             columns: ["organization_id", "alert_id"]
@@ -8865,6 +9162,13 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reporting_deadline_alert_deliveries_original_recipient_fkey"
+            columns: ["original_recipient_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
           {
@@ -21967,6 +22271,34 @@ export type Database = {
           run: Json
         }[]
       }
+      bridge_evidence_scan_notification_dispatches_atomic: {
+        Args: { p_limit?: number; p_organization_id: string }
+        Returns: {
+          created: number
+          outcome: string
+        }[]
+      }
+      bridge_evidence_validity_notification_dispatches_atomic: {
+        Args: { p_limit?: number; p_organization_id: string }
+        Returns: {
+          created: number
+          outcome: string
+        }[]
+      }
+      bridge_supplier_owner_notification_dispatches_atomic: {
+        Args: { p_limit?: number; p_organization_id: string }
+        Returns: {
+          created: number
+          outcome: string
+        }[]
+      }
+      bridge_vulnerability_triage_notification_dispatches_atomic: {
+        Args: { p_limit?: number; p_organization_id: string }
+        Returns: {
+          created: number
+          outcome: string
+        }[]
+      }
       bump_session_epoch: { Args: { p_user_id: string }; Returns: undefined }
       cancel_evidence_bulk_intake_item_atomic: {
         Args: {
@@ -22205,6 +22537,28 @@ export type Database = {
           operation_id: string | null
           outcome: string
           status: string | null
+        }[]
+      }
+      claim_notification_digest_batch_atomic: {
+        Args: {
+          p_lease_seconds: number
+          p_organization_id: string
+          p_worker_id: string
+        }
+        Returns: {
+          batch: Json
+          outcome: string
+        }[]
+      }
+      claim_notification_dispatch_atomic: {
+        Args: {
+          p_lease_seconds: number
+          p_organization_id: string
+          p_worker_id: string
+        }
+        Returns: {
+          dispatch: Json
+          outcome: string
         }[]
       }
       claim_organization_deletion_artifact_work_atomic: {
@@ -22695,6 +23049,34 @@ export type Database = {
       complete_mfa_recovery: {
         Args: { p_operation_id: string; p_user_id: string }
         Returns: string
+      }
+      complete_notification_digest_batch_atomic: {
+        Args: {
+          p_batch_id: string
+          p_error_code?: string
+          p_expected_version: number
+          p_message_id_hash?: string
+          p_organization_id: string
+          p_outcome: string
+          p_worker_id: string
+        }
+        Returns: {
+          outcome: string
+        }[]
+      }
+      complete_notification_dispatch_atomic: {
+        Args: {
+          p_dispatch_id: string
+          p_error_code?: string
+          p_expected_version: number
+          p_message_id_hash?: string
+          p_organization_id: string
+          p_outcome: string
+          p_worker_id: string
+        }
+        Returns: {
+          outcome: string
+        }[]
       }
       complete_organization_deletion_artifact_work_atomic: {
         Args: { p_lease_owner: string; p_work_id: string }
@@ -24159,6 +24541,32 @@ export type Database = {
         }
         Returns: string
       }
+      fail_notification_digest_batch_atomic: {
+        Args: {
+          p_batch_id: string
+          p_error_code: string
+          p_expected_version: number
+          p_organization_id: string
+          p_retryable: boolean
+          p_worker_id: string
+        }
+        Returns: {
+          outcome: string
+        }[]
+      }
+      fail_notification_dispatch_atomic: {
+        Args: {
+          p_dispatch_id: string
+          p_error_code: string
+          p_expected_version: number
+          p_organization_id: string
+          p_retryable: boolean
+          p_worker_id: string
+        }
+        Returns: {
+          outcome: string
+        }[]
+      }
       fail_organization_branding_asset_upload_atomic: {
         Args: {
           p_actor_user_id: string
@@ -24803,6 +25211,17 @@ export type Database = {
           review: Json
         }[]
       }
+      get_critical_notification_route_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_organization_id: string
+          p_user_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
       get_current_user_id: { Args: never; Returns: string }
       get_evidence_bulk_intake_batch_atomic: {
         Args: {
@@ -24983,6 +25402,17 @@ export type Database = {
       get_mfa_recovery_status: {
         Args: { p_operation_id: string; p_user_id: string }
         Returns: string
+      }
+      get_notification_preferences_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_organization_id: string
+          p_user_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
       }
       get_organization_branding: {
         Args: { p_actor_user_id: string; p_organization_id: string }
@@ -26090,6 +26520,18 @@ export type Database = {
           organization_id: string
         }[]
       }
+      list_due_notification_digest_organizations_atomic: {
+        Args: { p_after_organization_id?: string; p_limit?: number }
+        Returns: {
+          organization_id: string
+        }[]
+      }
+      list_due_notification_dispatch_organizations_atomic: {
+        Args: { p_after_organization_id?: string; p_limit?: number }
+        Returns: {
+          organization_id: string
+        }[]
+      }
       list_due_product_import_organizations: {
         Args: { p_limit: number }
         Returns: {
@@ -26375,6 +26817,21 @@ export type Database = {
       }
       list_m6_remediation_outbox_events: {
         Args: { p_cursor?: string; p_limit?: number; p_organization_id: string }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      list_notification_dispatches_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_category?: string
+          p_cursor?: string
+          p_limit?: number
+          p_organization_id: string
+          p_recipient_user_id?: string
+          p_status?: string
+        }
         Returns: {
           outcome: string
           result: Json
@@ -28176,6 +28633,189 @@ export type Database = {
         }[]
       }
       m1106_valid_envelope: { Args: { p_value: Json }; Returns: boolean }
+      m12_03_actor_can_manage_critical_route: {
+        Args: {
+          p_actor_user_id: string
+          p_organization_id: string
+          p_user_id: string
+        }
+        Returns: boolean
+      }
+      m12_03_actor_can_manage_notification_user: {
+        Args: {
+          p_actor_user_id: string
+          p_organization_id: string
+          p_user_id: string
+        }
+        Returns: boolean
+      }
+      m12_03_actor_has_effective_permission: {
+        Args: {
+          p_actor_user_id: string
+          p_organization_id: string
+          p_permission_key: string
+        }
+        Returns: boolean
+      }
+      m12_03_claim_vulnerability_triage_alert_legacy: {
+        Args: {
+          p_lease_seconds?: number
+          p_organization_id: string
+          p_worker_id: string
+        }
+        Returns: {
+          alert_event: Json
+          outcome: string
+        }[]
+      }
+      m12_03_critical_delivery_row_json: {
+        Args: {
+          p_category: string
+          p_delivery_id: string
+          p_organization_id: string
+        }
+        Returns: Json
+      }
+      m12_03_digest_window: {
+        Args: {
+          p_local_time: string
+          p_mode: string
+          p_now: string
+          p_timezone: string
+          p_weekly_day: number
+        }
+        Returns: {
+          due_local: string
+          is_due: boolean
+          window_end: string
+          window_start: string
+        }[]
+      }
+      m12_03_dispatch_row_json: {
+        Args: {
+          p_dispatch: Database["public"]["Tables"]["notification_dispatches"]["Row"]
+        }
+        Returns: Json
+      }
+      m12_03_dispatch_source_valid: {
+        Args: { p_dispatch_id: string; p_organization_id: string }
+        Returns: boolean
+      }
+      m12_03_ensure_notification_preference: {
+        Args: { p_organization_id: string; p_user_id: string }
+        Returns: undefined
+      }
+      m12_03_evidence_dispatch_source_valid: {
+        Args: { p_dispatch_id: string; p_organization_id: string }
+        Returns: boolean
+      }
+      m12_03_evidence_scan_dispatch_source_valid: {
+        Args: { p_dispatch_id: string; p_organization_id: string }
+        Returns: boolean
+      }
+      m12_03_first_local_occurrence: {
+        Args: { p_local_due: string; p_timezone: string }
+        Returns: string
+      }
+      m12_03_local_time_in_quiet: {
+        Args: {
+          p_local_time: string
+          p_quiet_end: string
+          p_quiet_start: string
+        }
+        Returns: boolean
+      }
+      m12_03_mark_dispatch_sources_provider_accepted: {
+        Args: { p_dispatch_ids: string[]; p_organization_id: string }
+        Returns: number
+      }
+      m12_03_notification_mode_has_active_leases: {
+        Args: { p_organization_id: string }
+        Returns: boolean
+      }
+      m12_03_notification_mode_has_unsafe_rollback: {
+        Args: { p_allow_unattempted_queue: boolean; p_organization_id: string }
+        Returns: boolean
+      }
+      m12_03_notification_modes_valid: {
+        Args: { p_modes: Json }
+        Returns: boolean
+      }
+      m12_03_preferences_json: {
+        Args: { p_organization_id: string; p_user_id: string }
+        Returns: Json
+      }
+      m12_03_prepare_evidence_dispatch_base: {
+        Args: {
+          p_dispatch_id: string
+          p_expected_version: number
+          p_organization_id: string
+          p_worker_id: string
+        }
+        Returns: {
+          delivery: Json
+          outcome: string
+        }[]
+      }
+      m12_03_prepare_evidence_validity_base: {
+        Args: {
+          p_dispatch_id: string
+          p_expected_version: number
+          p_organization_id: string
+          p_worker_id: string
+        }
+        Returns: {
+          delivery: Json
+          outcome: string
+        }[]
+      }
+      m12_03_retry_notification_dispatch_base: {
+        Args: {
+          p_actor_user_id: string
+          p_delivery_ref: string
+          p_expected_version: number
+          p_idempotency_key: string
+          p_organization_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      m12_03_retry_notification_dispatch_optional: {
+        Args: {
+          p_actor_user_id: string
+          p_delivery_ref: string
+          p_expected_version: number
+          p_idempotency_key: string
+          p_organization_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      m12_03_route_json: {
+        Args: { p_organization_id: string; p_user_id: string }
+        Returns: Json
+      }
+      m12_03_supplier_owner_dispatch_source_valid: {
+        Args: { p_dispatch_id: string; p_organization_id: string }
+        Returns: boolean
+      }
+      m12_03_triage_dispatch_source_valid: {
+        Args: { p_dispatch_id: string; p_organization_id: string }
+        Returns: boolean
+      }
+      m12_03_user_can_receive_critical: {
+        Args: {
+          p_category: string
+          p_organization_id: string
+          p_product_id: string
+          p_user_id: string
+        }
+        Returns: boolean
+      }
       m1201_absence_json: {
         Args: { p_absence_id: string; p_organization_id: string }
         Returns: Json
@@ -30004,6 +30644,18 @@ export type Database = {
           review_required_count: number
         }[]
       }
+      pin_product_support_alert_original_recipient_atomic: {
+        Args: {
+          p_delivery_id: string
+          p_expected_checkpoint_version: number
+          p_lease_owner: string
+          p_organization_id: string
+          p_original_user_id: string
+        }
+        Returns: {
+          outcome: string
+        }[]
+      }
       place_evidence_document_legal_hold_atomic: {
         Args: {
           p_actor_user_id: string
@@ -30033,6 +30685,30 @@ export type Database = {
         }
         Returns: {
           import: Json
+          outcome: string
+        }[]
+      }
+      prepare_notification_digest_batch_atomic: {
+        Args: {
+          p_batch_id: string
+          p_expected_version: number
+          p_organization_id: string
+          p_worker_id: string
+        }
+        Returns: {
+          delivery: Json
+          outcome: string
+        }[]
+      }
+      prepare_notification_dispatch_atomic: {
+        Args: {
+          p_dispatch_id: string
+          p_expected_version: number
+          p_organization_id: string
+          p_worker_id: string
+        }
+        Returns: {
+          delivery: Json
           outcome: string
         }[]
       }
@@ -30326,6 +31002,14 @@ export type Database = {
       reconcile_evidence_validity_alerts_atomic: {
         Args: { p_organization_id: string; p_worker_id: string }
         Returns: Json
+      }
+      reconcile_notification_ambiguous_leases_atomic: {
+        Args: { p_limit?: number; p_now?: string }
+        Returns: {
+          digests: number
+          dispatches: number
+          outcome: string
+        }[]
       }
       reconcile_organization_legal_entity_dependencies_atomic: {
         Args: {
@@ -31605,6 +32289,18 @@ export type Database = {
         Args: { p_organization_id: string }
         Returns: string
       }
+      resolve_critical_notification_recipient: {
+        Args: {
+          p_category: string
+          p_organization_id: string
+          p_original_user_id: string
+          p_product_id: string
+        }
+        Returns: {
+          outcome: string
+          recipient: Json
+        }[]
+      }
       resolve_sbom_ci_credential: {
         Args: { p_credential_id: string; p_organization_id: string }
         Returns: {
@@ -31727,6 +32423,19 @@ export type Database = {
           p_organization_id: string
           p_product_id: string
           p_version_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      retry_notification_dispatch_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_delivery_ref: string
+          p_expected_version: number
+          p_idempotency_key: string
+          p_organization_id: string
         }
         Returns: {
           outcome: string
@@ -32168,6 +32877,15 @@ export type Database = {
         Args: { p_organization_id: string; p_source_id: string }
         Returns: Json
       }
+      schedule_notification_digest_batches_atomic: {
+        Args: { p_limit?: number; p_now?: string; p_organization_id: string }
+        Returns: {
+          cancelled: number
+          created: number
+          deferred: number
+          outcome: string
+        }[]
+      }
       schedule_organization_purge_atomic: {
         Args: {
           p_actor_user_id: string
@@ -32264,6 +32982,14 @@ export type Database = {
         Returns: {
           outcome: string
           result: Json
+        }[]
+      }
+      set_notification_delivery_mode_atomic: {
+        Args: { p_mode: string; p_organization_id: string }
+        Returns: {
+          current_mode: string
+          outcome: string
+          previous_mode: string
         }[]
       }
       set_vulnerability_assessment_approval_policy_atomic: {
@@ -32547,6 +33273,20 @@ export type Database = {
           outcome: string
         }[]
       }
+      update_critical_notification_route_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_alternate_user_id: string
+          p_expected_version: number
+          p_idempotency_key: string
+          p_organization_id: string
+          p_user_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
       update_evidence_expiry_alert_intervals_atomic: {
         Args: {
           p_actor_user_id: string
@@ -32612,6 +33352,22 @@ export type Database = {
           p_mention_recipient_ids: string[]
           p_note_id: string
           p_organization_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      update_notification_preferences_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_expected_version: number
+          p_idempotency_key: string
+          p_modes: Json
+          p_organization_id: string
+          p_reason?: string
+          p_schedule: Json
+          p_user_id: string
         }
         Returns: {
           outcome: string

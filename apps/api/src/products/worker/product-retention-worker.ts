@@ -145,14 +145,35 @@ export interface ProductRetentionWorkerDependencies {
       input: Readonly<{ organizationId: string }>,
     ): Promise<ProductRetentionRecipient | null>;
   }>;
+  criticalRoute?: Readonly<{
+    /** Persists the accountable recipient before any routed SMTP attempt. */
+    pinOriginal?(
+      input: Readonly<{
+        organizationId: string;
+        deliveryId: string;
+        leaseOwner: string;
+        checkpointVersion: number;
+        originalUserId: string;
+      }>,
+    ): Promise<Readonly<{ outcome: "pinned" | "conflict" | "invalid" }>>;
+    /** Revalidates the original and substitute against current tenant scope. */
+    resolve(
+      input: Readonly<{
+        organizationId: string;
+        originalUserId: string;
+        productId: string;
+        eventKey: string;
+      }>,
+    ): Promise<ProductRetentionRecipient | null>;
+  }>;
   delivery: ProductRetentionDeliveryPort;
 }
 
 /**
  * Stateless durable outbox processor for M2 regulatory retention signals.
  * Claims, attempts, catch-up state, and completion all belong to the database;
- * a restart can therefore repeat a provider request only with its stable event
- * key, allowing the required-delivery adapter to deduplicate it safely.
+ * a restart preserves a stable message identity. An expired lease with an
+ * uncertain SMTP result requires operator review before any resend.
  */
 export class ProductRetentionWorker {
   constructor(
@@ -207,8 +228,43 @@ export class ProductRetentionWorker {
             false,
           );
         }
-        const recipient = await this.recipientFor(claim.event);
-        if (!recipient) {
+        const accountableRecipient = await this.recipientFor(claim.event);
+        if (!accountableRecipient) {
+          throw new ProductRetentionWorkerFailure(
+            "recipient_unavailable",
+            true,
+          );
+        }
+        if (this.dependencies.criticalRoute?.pinOriginal) {
+          const pin = await this.dependencies.criticalRoute.pinOriginal({
+            organizationId,
+            deliveryId: claim.deliveryId,
+            leaseOwner: claim.leaseOwner,
+            checkpointVersion: claim.checkpointVersion,
+            originalUserId: accountableRecipient.userId,
+          });
+          if (pin.outcome === "conflict") {
+            throw new ProductRetentionWorkerFailure(
+              "original_recipient_changed",
+              false,
+            );
+          }
+          if (pin.outcome !== "pinned") {
+            throw new ProductRetentionWorkerFailure(
+              "original_recipient_invalid",
+              true,
+            );
+          }
+        }
+        const recipient = this.dependencies.criticalRoute
+          ? await this.dependencies.criticalRoute.resolve({
+              organizationId,
+              originalUserId: accountableRecipient.userId,
+              productId: claim.event.productId,
+              eventKey: claim.event.eventKey,
+            })
+          : accountableRecipient;
+        if (!this.isRecipient(recipient)) {
           throw new ProductRetentionWorkerFailure(
             "recipient_unavailable",
             true,
@@ -219,19 +275,26 @@ export class ProductRetentionWorker {
           recipient,
           event: claim.event,
         });
-        const completion = await this.dependencies.queue.complete({
-          organizationId,
-          deliveryId: claim.deliveryId,
-          leaseOwner: claim.leaseOwner,
-          checkpointVersion: claim.checkpointVersion,
-          recipientId: recipient.userId,
-          databaseNow,
-        });
-        if (
-          completion.outcome !== "completed" &&
-          !isCompletionConflict(completion.outcome)
-        ) {
-          throw new ProductRetentionWorkerFailure("completion_rejected", false);
+        try {
+          const completion = await this.dependencies.queue.complete({
+            organizationId,
+            deliveryId: claim.deliveryId,
+            leaseOwner: claim.leaseOwner,
+            checkpointVersion: claim.checkpointVersion,
+            recipientId: recipient.userId,
+            databaseNow,
+          });
+          if (
+            completion.outcome !== "completed" &&
+            !isCompletionConflict(completion.outcome)
+          ) {
+            // The relay may have accepted the message. The lease must remain
+            // ambiguous for database reconciliation and explicit admin retry.
+            continue;
+          }
+        } catch {
+          // Do not schedule an automatic resend after SMTP acceptance.
+          continue;
         }
       } catch (error) {
         await this.dependencies.queue.fail({
