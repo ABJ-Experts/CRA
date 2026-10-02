@@ -20,11 +20,19 @@ import {
   notificationDeliveryMutationResponseSchema,
   notificationDeliveryParamsSchema,
   notificationPreferencesResponseSchema,
+  notificationFeedQuerySchema,
+  notificationFeedResponseSchema,
+  notificationFeedUnreadCountResponseSchema,
+  notificationFeedDestinationParamsSchema,
+  notificationFeedDestinationResponseSchema,
+  markNotificationFeedReadInputSchema,
+  markNotificationFeedReadResponseSchema,
   retryNotificationDeliveryInputSchema,
   updateNotificationCriticalRouteInputSchema,
   updateNotificationPreferencesInputSchema,
   type NotificationCriticalRouteParams,
   type NotificationDeliveryParams,
+  type NotificationFeedDestinationParams,
 } from "@repo/contracts/notifications";
 import {
   CurrentUser,
@@ -45,6 +53,8 @@ import type {
   RetryNotificationDeliveryInput,
   UpdateNotificationCriticalRouteInput,
   UpdateNotificationPreferencesInput,
+  NotificationFeedQuery,
+  MarkNotificationFeedReadInput,
 } from "./application/notification.port";
 import { NotificationsUseCases } from "./application/notifications-use-cases";
 
@@ -52,6 +62,65 @@ import { NotificationsUseCases } from "./application/notifications-use-cases";
 @Controller("notifications")
 export class NotificationsController {
   constructor(private readonly notifications: NotificationsUseCases) {}
+
+  @SelfScoped(
+    "A member reads only notification feed entries currently accessible to them.",
+  )
+  @Get("feed")
+  @ZodResponse(notificationFeedResponseSchema)
+  feed(
+    @Query(zodQuery(notificationFeedQuerySchema)) query: NotificationFeedQuery,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return unwrapNotification(
+      this.notifications.listFeed(organizationId(user), user.id, query),
+    );
+  }
+
+  @SelfScoped(
+    "A member counts only their currently accessible unread notifications.",
+  )
+  @Get("feed/unread-count")
+  @ZodResponse(notificationFeedUnreadCountResponseSchema)
+  feedUnreadCount(@CurrentUser() user: RequestUser) {
+    return unwrapNotification(
+      this.notifications.countFeedUnread(organizationId(user), user.id),
+    );
+  }
+
+  @SelfScoped(
+    "A member resolves only their own currently accessible source destination.",
+  )
+  @Get("feed/:ref/destination")
+  @ZodResponse(notificationFeedDestinationResponseSchema)
+  feedDestination(
+    @Param(zodParams(notificationFeedDestinationParamsSchema))
+    params: NotificationFeedDestinationParams,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return unwrapNotification(
+      this.notifications.resolveFeedDestination(
+        organizationId(user),
+        user.id,
+        params.ref,
+      ),
+    );
+  }
+
+  @SelfScoped(
+    "A member marks only an explicit selection from their accessible feed as read.",
+  )
+  @Post("feed/mark-read")
+  @ZodResponse(markNotificationFeedReadResponseSchema)
+  markFeedRead(
+    @Body(zodBody(markNotificationFeedReadInputSchema))
+    input: MarkNotificationFeedReadInput,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return unwrapNotification(
+      this.notifications.markFeedRead(organizationId(user), user.id, input),
+    );
+  }
 
   @SelfScoped("A member reads only their own notification preferences.")
   @Get("preferences")

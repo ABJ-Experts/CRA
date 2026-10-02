@@ -70,6 +70,7 @@ describe("organization query helpers", () => {
   it("publishes stable, frozen organization query keys", () => {
     expect(organizationKeys).toEqual({
       all: ["organizations"],
+      switchMutation: ["organizations", "switch"],
       current: ["organizations", "current"],
       onboarding: ["organizations", "current", "onboarding"],
       settings: ["organizations", "current", "settings"],

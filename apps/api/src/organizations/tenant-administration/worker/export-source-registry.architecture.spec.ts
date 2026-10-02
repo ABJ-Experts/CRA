@@ -73,7 +73,7 @@ const dynamicSnapshotLockAdditions = (sql: string): readonly string[] =>
     [
       ...[
         ...sql.matchAll(
-          /(?:v_new(?:_lock)? text := |execute replace\(v_def,v_anchor,)'([^']+)'/g,
+          /(?:v_new(?:_lock)? text := |execute replace\((?:v_def|v_definition),v_anchor,)'([^']+)'/g,
         ),
       ].flatMap((match) => [
         ...(match[1] ?? "").matchAll(/public\.([a-z_]+)/g),
@@ -104,13 +104,14 @@ describe("tenant export source registry architecture", () => {
     );
   });
 
-  it("exports notification preferences and dispatch evidence without digest worker state", () => {
+  it("exports notification preferences, dispatch evidence, and per-user read state without digest worker state", () => {
     const notificationSource = exportSourceRegistry.find(
       (source) => source.sourceId === "notification_delivery",
     );
     expect(notificationSource?.tables).toEqual([
       "notification_preferences",
       "notification_dispatches",
+      "notification_feed_reads",
     ]);
     expect(exportSourceExclusions.notification_digest_batches).toMatch(
       /lease|worker|replay/i,

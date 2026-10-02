@@ -4900,6 +4900,51 @@ export type Database = {
           },
         ]
       }
+      notification_feed_reads: {
+        Row: {
+          created_at: string
+          event_occurred_at: string
+          fingerprint: string
+          organization_id: string
+          read_at: string
+          ref: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_occurred_at: string
+          fingerprint: string
+          organization_id: string
+          read_at?: string
+          ref: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          event_occurred_at?: string
+          fingerprint?: string
+          organization_id?: string
+          read_at?: string
+          ref?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_feed_reads_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notification_feed_reads_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notification_preferences: {
         Row: {
           created_at: string
@@ -6859,6 +6904,7 @@ export type Database = {
           mfa_enforcement_date: string | null
           notification_channel_ids: string[] | null
           notification_delivery_mode: string
+          notification_feed_started_at: string
           organization_id: string
           product_relationship_graph_version: number
           supplier_document_ai_daily_run_limit: number
@@ -6892,6 +6938,7 @@ export type Database = {
           mfa_enforcement_date?: string | null
           notification_channel_ids?: string[] | null
           notification_delivery_mode?: string
+          notification_feed_started_at?: string
           organization_id: string
           product_relationship_graph_version?: number
           supplier_document_ai_daily_run_limit?: number
@@ -6925,6 +6972,7 @@ export type Database = {
           mfa_enforcement_date?: string | null
           notification_channel_ids?: string[] | null
           notification_delivery_mode?: string
+          notification_feed_started_at?: string
           organization_id?: string
           product_relationship_graph_version?: number
           supplier_document_ai_daily_run_limit?: number
@@ -22879,6 +22927,12 @@ export type Database = {
           result: Json
         }[]
       }
+      cleanup_notification_feed_reads_atomic: {
+        Args: { p_limit: number; p_organization_id: string }
+        Returns: {
+          deleted_count: number
+        }[]
+      }
       clear_login_attempts: { Args: { p_email: string }; Returns: undefined }
       close_supplier_evidence_request_atomic: {
         Args: {
@@ -23458,6 +23512,13 @@ export type Database = {
           p_organization_id: string
           p_reason: string
         }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      count_notification_feed_unread_atomic: {
+        Args: { p_actor_user_id: string; p_organization_id: string }
         Returns: {
           outcome: string
           result: Json
@@ -26837,6 +26898,27 @@ export type Database = {
           result: Json
         }[]
       }
+      list_notification_feed_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_category?: string
+          p_cursor?: string
+          p_limit?: number
+          p_organization_id: string
+          p_read?: string
+          p_severity?: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      list_notification_feed_cleanup_organizations_atomic: {
+        Args: { p_limit: number }
+        Returns: {
+          organization_id: string
+        }[]
+      }
       list_product_import_jobs: {
         Args: {
           p_actor_user_id: string
@@ -29047,6 +29129,22 @@ export type Database = {
         }
         Returns: Json
       }
+      m1204_feed_rows: {
+        Args: { p_actor_user_id: string; p_organization_id: string }
+        Returns: {
+          category: string
+          fingerprint: string
+          notice_kind: string
+          occurred_at: string
+          ref: string
+          severity: string
+          source_created_at: string
+          source_state: string
+          summary: string
+          title: string
+          url: string
+        }[]
+      }
       m2_active_member: {
         Args: { p_actor_user_id: string; p_organization_id: string }
         Returns: boolean
@@ -30311,6 +30409,18 @@ export type Database = {
       mark_mfa_factors_removed: {
         Args: { p_operation_id: string; p_user_id: string }
         Returns: string
+      }
+      mark_notification_feed_read_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_idempotency_key: string
+          p_items: Json
+          p_organization_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
       }
       mark_product_import_objects_deleted: {
         Args: {
@@ -32299,6 +32409,17 @@ export type Database = {
         Returns: {
           outcome: string
           recipient: Json
+        }[]
+      }
+      resolve_notification_feed_destination_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_organization_id: string
+          p_ref: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
         }[]
       }
       resolve_sbom_ci_credential: {

@@ -10,6 +10,45 @@ const exportId = "22222222-2222-4222-8222-222222222222";
 const leaseOwner = "33333333-3333-4333-8333-333333333333";
 
 describe("TenantLifecycleWorker", () => {
+  it("removes expired notification read state in bounded existing worker cycles", async () => {
+    const dueOrganizationIds = jest
+      .fn()
+      .mockResolvedValue([organizationId, organizationId]);
+    const removeExpired = jest.fn().mockResolvedValue(100);
+    const worker = new TenantLifecycleWorker({
+      ...dependencies(),
+      feedCleanup: { dueOrganizationIds, removeExpired },
+    });
+
+    await worker.runOnce();
+
+    expect(dueOrganizationIds).toHaveBeenCalledWith(20);
+    expect(removeExpired).toHaveBeenCalledTimes(1);
+    expect(removeExpired).toHaveBeenCalledWith(organizationId, 100);
+  });
+
+  it("tries other organizations and reports a safe cleanup failure", async () => {
+    const secondOrganizationId = "00000000-0000-4000-8000-000000000099";
+    const removeExpired = jest
+      .fn()
+      .mockRejectedValueOnce(new Error("provider details"))
+      .mockResolvedValueOnce(0);
+    const worker = new TenantLifecycleWorker({
+      ...dependencies(),
+      feedCleanup: {
+        dueOrganizationIds: jest
+          .fn()
+          .mockResolvedValue([organizationId, secondOrganizationId]),
+        removeExpired,
+      },
+    });
+
+    await expect(worker.runOnce()).rejects.toMatchObject({
+      code: "feed_cleanup_unavailable",
+    });
+    expect(removeExpired).toHaveBeenCalledWith(organizationId, 100);
+    expect(removeExpired).toHaveBeenCalledWith(secondOrganizationId, 100);
+  });
   it("never completes an archive when the artifact snapshot authority is unavailable", async () => {
     const complete = jest.fn();
     const fail = jest.fn();
@@ -821,6 +860,10 @@ function dependencies(
       claim: jest.fn().mockResolvedValue({ outcome: "none_available" }),
       complete: jest.fn(),
       fail: jest.fn(),
+    },
+    feedCleanup: {
+      dueOrganizationIds: jest.fn().mockResolvedValue([]),
+      removeExpired: jest.fn().mockResolvedValue(0),
     },
     purge: {
       dueOrganizationIds: jest.fn().mockResolvedValue([]),

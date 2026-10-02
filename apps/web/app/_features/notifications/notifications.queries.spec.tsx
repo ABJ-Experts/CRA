@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 
 import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
+import { notificationFeedRefSchema } from "@repo/contracts/notifications";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -10,6 +11,9 @@ import {
   useNotificationCriticalRouteQuery,
   useNotificationDeliveriesQuery,
   useNotificationPreferencesQuery,
+  useNotificationFeedQuery,
+  useNotificationUnreadCountQuery,
+  useMarkNotificationReadMutation,
   useRetryNotificationDeliveryMutation,
   useUpdateNotificationCriticalRouteMutation,
   useUpdateNotificationPreferencesMutation,
@@ -23,6 +27,8 @@ const scope = vi.hoisted(() => ({
   organizationId: "org-a" as string | null,
   userId: "user-a" as string | null,
   permissions: { can_view_audit: true },
+  isLoading: false,
+  isError: false,
 }));
 
 const api = vi.hoisted(() => ({
@@ -32,6 +38,9 @@ const api = vi.hoisted(() => ({
   updatePreferences: vi.fn(async () => ({ preferences: { version: 2 } })),
   updateCriticalRoute: vi.fn(async () => ({ route: { version: 2 } })),
   retryDelivery: vi.fn(async () => ({ delivery: { version: 2 } })),
+  feed: vi.fn(async () => ({ items: [] as unknown[], nextCursor: null })),
+  unreadCount: vi.fn(async () => ({ count: 0 })),
+  markRead: vi.fn(async () => ({ items: [], replayed: false })),
 }));
 
 vi.mock("../../_providers/session-provider", () => ({
@@ -44,6 +53,8 @@ vi.mock("../../_providers/session-provider", () => ({
           }
         : null,
     permissions: scope.permissions,
+    isLoading: scope.isLoading,
+    isError: scope.isError,
   }),
 }));
 
@@ -68,6 +79,8 @@ beforeEach(() => {
   scope.organizationId = "org-a";
   scope.userId = "user-a";
   scope.permissions = { can_view_audit: true };
+  scope.isLoading = false;
+  scope.isError = false;
 });
 
 describe("notification query scope", () => {
@@ -239,6 +252,117 @@ describe("notification mutation invalidation", () => {
       queryKey: notificationKeys.all,
     });
     expect(Object.isFrozen(notificationKeys.all)).toBe(true);
+    client.clear();
+  });
+});
+
+describe("in-app feed scope", () => {
+  it("does not fetch while identity is missing, keeps tenant caches separate, and does not leak the previous feed on switch", async () => {
+    const { client, wrapper } = setup();
+    scope.organizationId = null;
+    scope.userId = null;
+    const view = renderHook(
+      () => ({
+        feed: useNotificationFeedQuery({ read: "all", limit: 25 }),
+        count: useNotificationUnreadCountQuery(),
+      }),
+      { wrapper },
+    );
+    expect(api.feed).not.toHaveBeenCalled();
+    expect(api.unreadCount).not.toHaveBeenCalled();
+
+    scope.organizationId = "org-a";
+    scope.userId = "user-a";
+    view.rerender();
+    await waitFor(() => expect(view.result.current.feed.isSuccess).toBe(true));
+    expect(api.feed).toHaveBeenCalledWith(
+      { read: "all", limit: 25 },
+      expect.any(AbortSignal),
+    );
+
+    scope.organizationId = "org-b";
+    view.rerender();
+    expect(view.result.current.feed.data).toBeUndefined();
+    await waitFor(() => expect(api.feed).toHaveBeenCalledTimes(2));
+    expect(
+      client
+        .getQueryCache()
+        .getAll()
+        .map((entry) => entry.queryKey),
+    ).toEqual(
+      expect.arrayContaining([
+        [
+          "notifications",
+          "org-a",
+          "user-a",
+          scope.permissions,
+          "feed",
+          { read: "all", limit: 25 },
+        ],
+        [
+          "notifications",
+          "org-b",
+          "user-a",
+          scope.permissions,
+          "feed",
+          { read: "all", limit: 25 },
+        ],
+      ]),
+    );
+    client.clear();
+  });
+
+  it("invalidates only the active feed scope after an explicit idempotent mark-read", async () => {
+    const { client, wrapper } = setup();
+    const invalidate = vi.spyOn(client, "invalidateQueries");
+    const view = renderHook(() => useMarkNotificationReadMutation(), {
+      wrapper,
+    });
+    const input = {
+      items: [
+        {
+          ref: notificationFeedRefSchema.parse(
+            "m6_11111111-1111-4111-8111-111111111111_event",
+          ),
+          expectedFingerprint: "a".repeat(64),
+        },
+      ],
+      idempotencyKey: commandId,
+    };
+    await act(async () => {
+      await view.result.current.mutateAsync(input);
+    });
+    expect(api.markRead).toHaveBeenCalledWith(input);
+    expect(invalidate).toHaveBeenCalledWith({
+      queryKey: ["notifications", "org-a", "user-a"],
+    });
+    client.clear();
+  });
+
+  it("masks cached feed and count while session verification fails", async () => {
+    api.unreadCount.mockResolvedValue({ count: 3 });
+    api.feed.mockResolvedValue({
+      items: [{ ref: "old-tenant" }],
+      nextCursor: null,
+    });
+    const { client, wrapper } = setup();
+    const view = renderHook(
+      () => ({
+        feed: useNotificationFeedQuery({ read: "all", limit: 25 }),
+        count: useNotificationUnreadCountQuery(),
+      }),
+      { wrapper },
+    );
+    await waitFor(() => expect(view.result.current.count.data?.count).toBe(3));
+    scope.isError = true;
+    view.rerender();
+    expect(view.result.current.feed.data).toBeUndefined();
+    expect(view.result.current.count.data).toBeUndefined();
+    scope.isError = false;
+    scope.isLoading = true;
+    view.rerender();
+    expect(view.result.current.feed.data).toBeUndefined();
+    expect(view.result.current.count.data).toBeUndefined();
     client.clear();
   });
 });

@@ -11,14 +11,15 @@ select pg_temp.check('notification export contains durable records only',
   (select array_agg(table_name order by table_sort)
      from public.organization_export_source_tables
     where source_id='notification_delivery')
-    = array['notification_preferences','notification_dispatches']::text[]
+    = array['notification_preferences','notification_dispatches','notification_feed_reads']::text[]
   and exists(select 1 from public.organization_export_sources
     where source_id='notification_delivery' and enabled)
 );
 
-select pg_temp.check('notification export locks both physical tables',
+select pg_temp.check('notification export locks all physical tables',
   (select position('public.notification_preferences' in definition)>0
       and position('public.notification_dispatches' in definition)>0
+      and position('public.notification_feed_reads' in definition)>0
    from (
      select split_part(split_part(pg_get_functiondef(
        'public.materialize_organization_export_snapshot_atomic(uuid,uuid,uuid,integer)'::regprocedure
@@ -57,6 +58,12 @@ begin
     v_organization_id,'evidence','evidence_validity',gen_random_uuid(),'expiring',
     v_user_id,v_user_id,'provider_accepted','notification-export-test-message'
   );
+  insert into public.notification_feed_reads(
+    organization_id,user_id,ref,fingerprint,event_occurred_at
+  ) values (
+    v_organization_id,v_user_id,
+    'm2_00000000-0000-4000-8000-000000120498_event',repeat('a',64),clock_timestamp()
+  );
   insert into public.organization_export_jobs(
     organization_id,actor_user_id,request_digest,status,lease_owner,lease_expires_at
   ) values (
@@ -70,10 +77,14 @@ begin
   select * into v_result from public.materialize_organization_export_snapshot_atomic(
     v_organization_id,v_job_id,v_lease_owner,0
   );
-  perform pg_temp.check('atomic export snapshots both notification record types',
+  perform pg_temp.check('atomic export snapshots all notification record types',
     v_result.outcome='materialized'
-    and (select count(*)=2 from public.organization_export_snapshot_records
+    and (select count(*)=3 from public.organization_export_snapshot_records
       where organization_id=v_organization_id and export_job_id=v_job_id)
+    and exists(select 1 from public.organization_export_snapshot_records
+      where organization_id=v_organization_id and export_job_id=v_job_id
+        and table_name='notification_feed_reads'
+        and record_payload->>'ref'='m2_00000000-0000-4000-8000-000000120498_event')
     and exists(select 1 from public.organization_export_snapshot_records
       where organization_id=v_organization_id and export_job_id=v_job_id
         and table_name='notification_dispatches'

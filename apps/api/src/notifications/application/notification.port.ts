@@ -8,6 +8,13 @@ import type {
   retryNotificationDeliveryInputSchema,
   updateNotificationCriticalRouteInputSchema,
   updateNotificationPreferencesInputSchema,
+  notificationFeedRefSchema,
+  notificationFeedQuerySchema,
+  notificationFeedResponseSchema,
+  notificationFeedUnreadCountResponseSchema,
+  notificationFeedDestinationResponseSchema,
+  markNotificationFeedReadInputSchema,
+  markNotificationFeedReadResponseSchema,
 } from "@repo/contracts/notifications";
 
 export const NOTIFICATION_REPOSITORY = Symbol("NOTIFICATION_REPOSITORY");
@@ -35,6 +42,25 @@ export type UpdateNotificationCriticalRouteInput = z.output<
 >;
 export type RetryNotificationDeliveryInput = z.output<
   typeof retryNotificationDeliveryInputSchema
+>;
+export type NotificationFeedRef = z.output<typeof notificationFeedRefSchema>;
+export type NotificationFeedQuery = z.output<
+  typeof notificationFeedQuerySchema
+>;
+export type NotificationFeedResponse = z.output<
+  typeof notificationFeedResponseSchema
+>;
+export type NotificationFeedUnreadCountResponse = z.output<
+  typeof notificationFeedUnreadCountResponseSchema
+>;
+export type NotificationFeedDestinationResponse = z.output<
+  typeof notificationFeedDestinationResponseSchema
+>;
+export type MarkNotificationFeedReadInput = z.output<
+  typeof markNotificationFeedReadInputSchema
+>;
+export type MarkNotificationFeedReadResponse = z.output<
+  typeof markNotificationFeedReadResponseSchema
 >;
 
 export type NotificationResult<T> = Readonly<
@@ -76,4 +102,23 @@ export interface NotificationRepository {
     deliveryRef: string,
     input: RetryNotificationDeliveryInput,
   ): Promise<NotificationResult<NotificationDeliveryMutationResponse>>;
+  listFeed(
+    organizationId: string,
+    actorId: string,
+    query: NotificationFeedQuery,
+  ): Promise<NotificationResult<NotificationFeedResponse>>;
+  countFeedUnread(
+    organizationId: string,
+    actorId: string,
+  ): Promise<NotificationResult<NotificationFeedUnreadCountResponse>>;
+  resolveFeedDestination(
+    organizationId: string,
+    actorId: string,
+    ref: NotificationFeedRef,
+  ): Promise<NotificationResult<NotificationFeedDestinationResponse>>;
+  markFeedRead(
+    organizationId: string,
+    actorId: string,
+    input: MarkNotificationFeedReadInput,
+  ): Promise<NotificationResult<MarkNotificationFeedReadResponse>>;
 }

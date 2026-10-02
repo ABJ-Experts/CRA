@@ -245,6 +245,7 @@ import { TenantAdministrationService } from "./tenant-administration/tenant-admi
           storage,
           export: repository.export,
           cleanup: repository.cleanup,
+          feedCleanup: repository.feedCleanup,
           purge: repository.purge,
           artifactWork: repository.artifactWork,
           evidenceCleanup,

@@ -4,6 +4,8 @@ const organizationId = "11111111-1111-4111-8111-111111111111";
 const actorId = "22222222-2222-4222-8222-222222222222";
 const userId = "33333333-3333-4333-8333-333333333333";
 const idempotencyKey = "44444444-4444-4444-8444-444444444444";
+const feedRef = `m6_${organizationId}_event`;
+const fingerprint = "a".repeat(64);
 
 const preferences = {
   preferences: {
@@ -326,5 +328,124 @@ describe("Supabase notification repository", () => {
     await expect(
       repository.getPreferences(organizationId, actorId),
     ).rejects.toThrow("Notification storage returned an invalid response");
+  });
+
+  it("passes session scope to feed RPCs and parses only safe payloads", async () => {
+    const item = {
+      ref: feedRef,
+      category: "reporting_deadline",
+      severity: "critical",
+      occurredAt: "2026-10-02T00:00:00Z",
+      title: "Reporting deadline",
+      summary: "A reporting deadline needs attention.",
+      read: false,
+      fingerprint,
+      sourceState: "available",
+      noticeKind: "event",
+    };
+    rpc.mockResolvedValue({
+      data: [{ outcome: "found", result: { items: [item], nextCursor: null } }],
+      error: null,
+    });
+    expect(
+      await repository.listFeed(organizationId, actorId, {
+        limit: 25,
+        read: "all",
+      }),
+    ).toEqual({
+      outcome: "found",
+      data: { items: [item], nextCursor: null },
+    });
+    expect(rpc).toHaveBeenLastCalledWith("list_notification_feed_atomic", {
+      p_organization_id: organizationId,
+      p_actor_user_id: actorId,
+      p_category: null,
+      p_severity: null,
+      p_read: "all",
+      p_cursor: null,
+      p_limit: 25,
+    });
+
+    rpc.mockResolvedValue({
+      data: [{ outcome: "found", result: { count: 3 } }],
+      error: null,
+    });
+    expect(await repository.countFeedUnread(organizationId, actorId)).toEqual({
+      outcome: "found",
+      data: { count: 3 },
+    });
+    expect(rpc).toHaveBeenLastCalledWith(
+      "count_notification_feed_unread_atomic",
+      {
+        p_organization_id: organizationId,
+        p_actor_user_id: actorId,
+      },
+    );
+
+    rpc.mockResolvedValue({
+      data: [
+        {
+          outcome: "found",
+          result: { state: "available", url: `/products/${organizationId}` },
+        },
+      ],
+      error: null,
+    });
+    expect(
+      await repository.resolveFeedDestination(
+        organizationId,
+        actorId,
+        feedRef as never,
+      ),
+    ).toEqual({
+      outcome: "found",
+      data: { state: "available", url: `/products/${organizationId}` },
+    });
+    expect(rpc).toHaveBeenLastCalledWith(
+      "resolve_notification_feed_destination_atomic",
+      {
+        p_organization_id: organizationId,
+        p_actor_user_id: actorId,
+        p_ref: feedRef,
+      },
+    );
+    rpc.mockResolvedValue({
+      data: [
+        {
+          outcome: "found",
+          result: { state: "available", url: "https://evil.test" },
+        },
+      ],
+      error: null,
+    });
+    await expect(
+      repository.resolveFeedDestination(
+        organizationId,
+        actorId,
+        feedRef as never,
+      ),
+    ).rejects.toThrow();
+
+    const input = {
+      items: [{ ref: feedRef, expectedFingerprint: fingerprint }],
+      idempotencyKey,
+    };
+    const result = {
+      items: [{ ref: feedRef, fingerprint, readAt: "2026-10-02T00:00:00Z" }],
+      replayed: false,
+    };
+    rpc.mockResolvedValue({
+      data: [{ outcome: "updated", result }],
+      error: null,
+    });
+    expect(
+      await repository.markFeedRead(organizationId, actorId, input as never),
+    ).toEqual({ outcome: "updated", data: result });
+    expect(rpc).toHaveBeenLastCalledWith("mark_notification_feed_read_atomic", {
+      p_organization_id: organizationId,
+      p_actor_user_id: actorId,
+      p_items: input.items,
+      p_idempotency_key: idempotencyKey,
+    });
   });
 });

@@ -5,6 +5,13 @@ import {
   notificationDeliveriesResponseSchema,
   notificationDeliveryMutationResponseSchema,
   notificationDeliveryParamsSchema,
+  notificationFeedDestinationParamsSchema,
+  notificationFeedDestinationResponseSchema,
+  notificationFeedQuerySchema,
+  notificationFeedResponseSchema,
+  notificationFeedUnreadCountResponseSchema,
+  markNotificationFeedReadInputSchema,
+  markNotificationFeedReadResponseSchema,
   notificationPreferencesResponseSchema,
   retryNotificationDeliveryInputSchema,
   updateNotificationCriticalRouteInputSchema,
@@ -12,6 +19,8 @@ import {
 } from "@repo/contracts/notifications";
 import type {
   NotificationDeliveriesQuery,
+  NotificationFeedQuery,
+  MarkNotificationFeedReadInput,
   RetryNotificationDeliveryInput,
   UpdateNotificationCriticalRouteInput,
   UpdateNotificationPreferencesInput,
@@ -45,8 +54,58 @@ function deliveryPath(deliveryRef: string): `/${string}` {
   return `/api/v1/notifications/deliveries/${parsed.deliveryRef}/retry`;
 }
 
+function feedPath(query: Partial<NotificationFeedQuery> = {}): `/${string}` {
+  const parsed = apiClient.parseInput(notificationFeedQuerySchema, query);
+  const search = new URLSearchParams();
+  for (const [key, value] of Object.entries(parsed)) {
+    if (value !== undefined) search.set(key, String(value));
+  }
+  return `/api/v1/notifications/feed?${search.toString()}`;
+}
+
+function feedDestinationPath(ref: string): `/${string}` {
+  const parsed = apiClient.parseInput(notificationFeedDestinationParamsSchema, {
+    ref,
+  });
+  return `/api/v1/notifications/feed/${parsed.ref}/destination`;
+}
+
 /** Browser gateway for durable notification preferences and delivery operations. */
 export class NotificationsApi {
+  feed(query: Partial<NotificationFeedQuery> = {}, signal?: AbortSignal) {
+    return authenticatedRequestJson({
+      path: feedPath(query),
+      schema: notificationFeedResponseSchema,
+      signal,
+    });
+  }
+
+  unreadCount(signal?: AbortSignal) {
+    return authenticatedRequestJson({
+      path: "/api/v1/notifications/feed/unread-count",
+      schema: notificationFeedUnreadCountResponseSchema,
+      signal,
+    });
+  }
+
+  destination(ref: string, signal?: AbortSignal) {
+    return authenticatedRequestJson({
+      path: feedDestinationPath(ref),
+      schema: notificationFeedDestinationResponseSchema,
+      signal,
+    });
+  }
+
+  markRead(input: MarkNotificationFeedReadInput) {
+    return authenticatedRequestJson({
+      path: "/api/v1/notifications/feed/mark-read",
+      method: "POST",
+      body: input,
+      inputSchema: markNotificationFeedReadInputSchema,
+      schema: markNotificationFeedReadResponseSchema,
+    });
+  }
+
   preferences(signal?: AbortSignal) {
     return authenticatedRequestJson({
       path: "/api/v1/notifications/preferences",

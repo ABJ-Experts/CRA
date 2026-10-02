@@ -3,8 +3,9 @@
 import { BreadcrumbItem, Breadcrumbs } from "@repo/ui/breadcrumbs";
 import { TopNav, TopNavTitle } from "@repo/ui/app-shell";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
+import { useNotificationUnreadCountQuery } from "../../_features/notifications/notifications.queries";
 import { ReportingDeadlineHeaderIndicator } from "../../_features/reporting/reporting-deadline-header-indicator";
 
 /**
@@ -53,6 +54,8 @@ function titleise(segment: string) {
 
 export function DashboardTopNav() {
   const pathname = usePathname();
+  const router = useRouter();
+  const unread = useNotificationUnreadCountQuery();
 
   const dashboard = DASHBOARDS[pathname];
   const table = TABLES[pathname];
@@ -89,6 +92,8 @@ export function DashboardTopNav() {
     <TopNav
       user={{ name: "Ada Foster" }}
       centre={<ReportingDeadlineHeaderIndicator />}
+      notificationCount={unread.isError ? undefined : unread.data?.count}
+      onNotificationsClick={() => router.push("/notifications")}
       className="max-lg:pl-20"
     >
       {left}

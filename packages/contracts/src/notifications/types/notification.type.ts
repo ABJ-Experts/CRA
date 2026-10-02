@@ -16,6 +16,18 @@ import type {
   notificationDeliverySchema,
   notificationDeliveryStatusSchema,
   notificationErrorResponseSchema,
+  notificationFeedRefSchema,
+  notificationFeedCursorSchema,
+  notificationFeedSeveritySchema,
+  notificationFeedReadFilterSchema,
+  notificationFeedQuerySchema,
+  notificationFeedDestinationParamsSchema,
+  notificationFeedItemSchema,
+  notificationFeedResponseSchema,
+  notificationFeedUnreadCountResponseSchema,
+  notificationFeedDestinationResponseSchema,
+  markNotificationFeedReadInputSchema,
+  markNotificationFeedReadResponseSchema,
   notificationModeSchema,
   notificationModesSchema,
   notificationOptionalCategorySchema,
@@ -96,4 +108,36 @@ export type RetryNotificationDeliveryInput = z.output<
 >;
 export type NotificationErrorResponse = z.output<
   typeof notificationErrorResponseSchema
+>;
+export type NotificationFeedRef = z.output<typeof notificationFeedRefSchema>;
+export type NotificationFeedCursor = z.output<
+  typeof notificationFeedCursorSchema
+>;
+export type NotificationFeedSeverity = z.output<
+  typeof notificationFeedSeveritySchema
+>;
+export type NotificationFeedReadFilter = z.output<
+  typeof notificationFeedReadFilterSchema
+>;
+export type NotificationFeedQuery = z.output<
+  typeof notificationFeedQuerySchema
+>;
+export type NotificationFeedDestinationParams = z.output<
+  typeof notificationFeedDestinationParamsSchema
+>;
+export type NotificationFeedItem = z.output<typeof notificationFeedItemSchema>;
+export type NotificationFeedResponse = z.output<
+  typeof notificationFeedResponseSchema
+>;
+export type NotificationFeedUnreadCountResponse = z.output<
+  typeof notificationFeedUnreadCountResponseSchema
+>;
+export type NotificationFeedDestinationResponse = z.output<
+  typeof notificationFeedDestinationResponseSchema
+>;
+export type MarkNotificationFeedReadInput = z.output<
+  typeof markNotificationFeedReadInputSchema
+>;
+export type MarkNotificationFeedReadResponse = z.output<
+  typeof markNotificationFeedReadResponseSchema
 >;

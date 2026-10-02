@@ -254,6 +254,39 @@ describe("SupabaseTenantExportSourceAdapter", () => {
 });
 
 describe("SupabaseTenantLifecycleWorkerRepository", () => {
+  it("uses service-only bounded RPCs for notification read-state retention", async () => {
+    const { repository, rpc } = workerRepositoryHarness({
+      rpc: {
+        list_notification_feed_cleanup_organizations_atomic: [
+          { data: [{ organization_id: organizationId }], error: null },
+        ],
+        cleanup_notification_feed_reads_atomic: [
+          { data: [{ deleted_count: 2 }], error: null },
+        ],
+      },
+    });
+    const cleanup = (
+      repository as unknown as {
+        feedCleanup: {
+          dueOrganizationIds(limit: number): Promise<readonly string[]>;
+          removeExpired(organizationId: string, limit: number): Promise<number>;
+        };
+      }
+    ).feedCleanup;
+
+    await expect(cleanup.dueOrganizationIds(20)).resolves.toEqual([
+      organizationId,
+    ]);
+    await expect(cleanup.removeExpired(organizationId, 100)).resolves.toBe(2);
+    expect(rpc).toHaveBeenCalledWith(
+      "list_notification_feed_cleanup_organizations_atomic",
+      { p_limit: 20 },
+    );
+    expect(rpc).toHaveBeenCalledWith("cleanup_notification_feed_reads_atomic", {
+      p_organization_id: organizationId,
+      p_limit: 100,
+    });
+  });
   it("uses org-first RPCs for the complete export job lifecycle and validates durable parts", async () => {
     const { repository, rpc } = workerRepositoryHarness({
       rpc: {

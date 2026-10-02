@@ -4,6 +4,10 @@ import {
   notificationDeliveriesResponseSchema,
   notificationDeliveryMutationResponseSchema,
   notificationPreferencesResponseSchema,
+  notificationFeedResponseSchema,
+  notificationFeedUnreadCountResponseSchema,
+  notificationFeedDestinationResponseSchema,
+  markNotificationFeedReadResponseSchema,
 } from "@repo/contracts/notifications";
 import { SupabaseService } from "../../supabase/supabase.service";
 import type {
@@ -13,6 +17,9 @@ import type {
   RetryNotificationDeliveryInput,
   UpdateNotificationCriticalRouteInput,
   UpdateNotificationPreferencesInput,
+  NotificationFeedRef,
+  NotificationFeedQuery,
+  MarkNotificationFeedReadInput,
 } from "../application/notification.port";
 
 type Rpc = {
@@ -130,6 +137,67 @@ export class SupabaseNotificationRepository implements NotificationRepository {
         p_idempotency_key: input.idempotencyKey,
       },
       notificationDeliveryMutationResponseSchema,
+    );
+  }
+
+  listFeed(
+    organizationId: string,
+    actorId: string,
+    query: NotificationFeedQuery,
+  ) {
+    return this.call(
+      "list_notification_feed_atomic",
+      {
+        p_organization_id: organizationId,
+        p_actor_user_id: actorId,
+        p_category: query.category ?? null,
+        p_severity: query.severity ?? null,
+        p_read: query.read,
+        p_cursor: query.cursor ?? null,
+        p_limit: query.limit,
+      },
+      notificationFeedResponseSchema,
+    );
+  }
+
+  countFeedUnread(organizationId: string, actorId: string) {
+    return this.call(
+      "count_notification_feed_unread_atomic",
+      { p_organization_id: organizationId, p_actor_user_id: actorId },
+      notificationFeedUnreadCountResponseSchema,
+    );
+  }
+
+  resolveFeedDestination(
+    organizationId: string,
+    actorId: string,
+    ref: NotificationFeedRef,
+  ) {
+    return this.call(
+      "resolve_notification_feed_destination_atomic",
+      {
+        p_organization_id: organizationId,
+        p_actor_user_id: actorId,
+        p_ref: ref,
+      },
+      notificationFeedDestinationResponseSchema,
+    );
+  }
+
+  markFeedRead(
+    organizationId: string,
+    actorId: string,
+    input: MarkNotificationFeedReadInput,
+  ) {
+    return this.call(
+      "mark_notification_feed_read_atomic",
+      {
+        p_organization_id: organizationId,
+        p_actor_user_id: actorId,
+        p_items: input.items,
+        p_idempotency_key: input.idempotencyKey,
+      },
+      markNotificationFeedReadResponseSchema,
     );
   }
 

@@ -69,10 +69,15 @@ export const exportSourceRegistry: readonly ExportSourceRegistration[] =
     },
     { sourceId: "organization_settings", tables: ["organization_settings"] },
     {
-      // Preferences and safe dispatch outcomes are durable tenant records.
+      // Preferences, safe dispatch outcomes, and per-user read state are
+      // durable tenant records.
       // Execution leases and frozen digest batches stay deployment-local.
       sourceId: "notification_delivery",
-      tables: ["notification_preferences", "notification_dispatches"],
+      tables: [
+        "notification_preferences",
+        "notification_dispatches",
+        "notification_feed_reads",
+      ],
     },
     {
       sourceId: "organization_lifecycles",

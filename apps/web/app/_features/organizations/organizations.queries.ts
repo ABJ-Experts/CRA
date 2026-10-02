@@ -145,7 +145,9 @@ export function organizationExportQueryOptions(
     },
     queryFn: ({ signal }) => {
       if (exportId === null) {
-        throw new Error("An export identifier is required to check export status.");
+        throw new Error(
+          "An export identifier is required to check export status.",
+        );
       }
       return organizationsApi.exportStatus(exportId, signal);
     },
@@ -245,11 +247,20 @@ export function useCreateOrganizationMutation() {
 
 export function useSwitchOrganizationMutation() {
   const invalidateOrganizationState = useInvalidateOrganizationState();
+  const queryClient = useQueryClient();
 
   return useMutation({
+    mutationKey: organizationKeys.switchMutation,
+    onMutate: async () => {
+      await queryClient.cancelQueries({ queryKey: ["notifications"] });
+      queryClient.removeQueries({ queryKey: ["notifications"] });
+    },
     mutationFn: (organizationId: string) =>
       organizationsApi.switch(organizationId),
-    onSuccess: invalidateOrganizationState,
+    onSuccess: async () => {
+      queryClient.removeQueries({ queryKey: ["notifications"] });
+      await invalidateOrganizationState();
+    },
   });
 }
 
@@ -429,7 +440,8 @@ export function useRecoverOrganizationMutation() {
   const invalidateOrganizationState = useInvalidateOrganizationState();
 
   return useMutation({
-    mutationFn: (input: RecoverOrganizationInput) => organizationsApi.recover(input),
+    mutationFn: (input: RecoverOrganizationInput) =>
+      organizationsApi.recover(input),
     onSuccess: invalidateOrganizationState,
   });
 }

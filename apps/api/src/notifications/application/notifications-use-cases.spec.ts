@@ -14,6 +14,10 @@ describe("notification application boundary", () => {
       updateCriticalRoute: jest.fn().mockResolvedValue({ outcome: "updated" }),
       listDeliveries: jest.fn().mockResolvedValue({ outcome: "found" }),
       retryDelivery: jest.fn().mockResolvedValue({ outcome: "updated" }),
+      listFeed: jest.fn().mockResolvedValue({ outcome: "found" }),
+      countFeedUnread: jest.fn().mockResolvedValue({ outcome: "found" }),
+      resolveFeedDestination: jest.fn().mockResolvedValue({ outcome: "found" }),
+      markFeedRead: jest.fn().mockResolvedValue({ outcome: "updated" }),
     };
     const useCases = new NotificationsUseCases(repository);
     const command = {
@@ -32,6 +36,20 @@ describe("notification application boundary", () => {
       limit: 50,
     });
     await useCases.retryDelivery(organizationId, actorId, deliveryId, command);
+    const feedRef = `m6_${deliveryId}_event`;
+    const feedQuery = { limit: 25, read: "all" as const };
+    const readCommand = {
+      items: [{ ref: feedRef, expectedFingerprint: "a".repeat(64) }],
+      idempotencyKey: command.idempotencyKey,
+    };
+    await useCases.listFeed(organizationId, actorId, feedQuery);
+    await useCases.countFeedUnread(organizationId, actorId);
+    await useCases.resolveFeedDestination(
+      organizationId,
+      actorId,
+      feedRef as never,
+    );
+    await useCases.markFeedRead(organizationId, actorId, readCommand as never);
 
     expect(repository.getPreferences).toHaveBeenCalledWith(
       organizationId,
@@ -63,6 +81,25 @@ describe("notification application boundary", () => {
       actorId,
       deliveryId,
       command,
+    );
+    expect(repository.listFeed).toHaveBeenCalledWith(
+      organizationId,
+      actorId,
+      feedQuery,
+    );
+    expect(repository.countFeedUnread).toHaveBeenCalledWith(
+      organizationId,
+      actorId,
+    );
+    expect(repository.resolveFeedDestination).toHaveBeenCalledWith(
+      organizationId,
+      actorId,
+      feedRef,
+    );
+    expect(repository.markFeedRead).toHaveBeenCalledWith(
+      organizationId,
+      actorId,
+      readCommand,
     );
   });
 });

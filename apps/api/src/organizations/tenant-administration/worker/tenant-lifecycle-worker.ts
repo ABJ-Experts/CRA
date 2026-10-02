@@ -212,6 +212,10 @@ export interface TenantLifecycleWorkerDependencies {
       }>,
     ): Promise<unknown>;
   }>;
+  feedCleanup: Readonly<{
+    dueOrganizationIds(limit: number): Promise<readonly string[]>;
+    removeExpired(organizationId: string, limit: number): Promise<number>;
+  }>;
   purge: Readonly<{
     dueOrganizationIds(): Promise<readonly string[]>;
     claim(
@@ -334,6 +338,23 @@ export class TenantLifecycleWorker {
     await this.processCleanup();
     await this.processPurge();
     await this.processPostDeleteArtifactWork();
+    await this.processNotificationFeedCleanup();
+  }
+
+  private async processNotificationFeedCleanup(): Promise<void> {
+    const organizationIds =
+      await this.dependencies.feedCleanup.dueOrganizationIds(20);
+    let failures = 0;
+    for (const organizationId of this.uniqueIds(organizationIds)) {
+      try {
+        await this.dependencies.feedCleanup.removeExpired(organizationId, 100);
+      } catch {
+        failures += 1;
+      }
+    }
+    if (failures > 0) {
+      throw new WorkerFailure("feed_cleanup_unavailable", true);
+    }
   }
 
   private async processExports(): Promise<void> {

@@ -4,6 +4,9 @@ import type {
   RetryNotificationDeliveryInput,
   UpdateNotificationCriticalRouteInput,
   UpdateNotificationPreferencesInput,
+  NotificationFeedRef,
+  NotificationFeedQuery,
+  MarkNotificationFeedReadInput,
 } from "./notification.port";
 
 /** Requests remain tied to the authenticated organization and actor. */
@@ -60,5 +63,33 @@ export class NotificationsUseCases {
       deliveryRef,
       input,
     );
+  }
+
+  listFeed(
+    organizationId: string,
+    actorId: string,
+    query: NotificationFeedQuery,
+  ) {
+    return this.repository.listFeed(organizationId, actorId, query);
+  }
+
+  countFeedUnread(organizationId: string, actorId: string) {
+    return this.repository.countFeedUnread(organizationId, actorId);
+  }
+
+  resolveFeedDestination(
+    organizationId: string,
+    actorId: string,
+    ref: NotificationFeedRef,
+  ) {
+    return this.repository.resolveFeedDestination(organizationId, actorId, ref);
+  }
+
+  markFeedRead(
+    organizationId: string,
+    actorId: string,
+    input: MarkNotificationFeedReadInput,
+  ) {
+    return this.repository.markFeedRead(organizationId, actorId, input);
   }
 }

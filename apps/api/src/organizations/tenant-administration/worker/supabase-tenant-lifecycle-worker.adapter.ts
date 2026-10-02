@@ -391,6 +391,48 @@ export class SupabaseTenantLifecycleWorkerRepository {
       },
     });
 
+  readonly feedCleanup: TenantLifecycleWorkerDependencies["feedCleanup"] =
+    Object.freeze({
+      dueOrganizationIds: async (limit) => {
+        const result = await this.query(
+          (
+            this.supabase.admin() as unknown as {
+              rpc(
+                name: string,
+                args: Readonly<Record<string, unknown>>,
+              ): Promise<ProviderResult>;
+            }
+          ).rpc("list_notification_feed_cleanup_organizations_atomic", {
+            p_limit: limit,
+          }),
+        );
+        if (!Array.isArray(result.data))
+          throw new WorkerFailure("malformed_provider", false);
+        return Object.freeze(
+          result.data.map((value) => {
+            const parsed = uuidSchema.safeParse(record(value).organization_id);
+            if (!parsed.success)
+              throw new WorkerFailure("malformed_provider", false);
+            return parsed.data;
+          }),
+        );
+      },
+      removeExpired: async (organizationId, limit) => {
+        const row = await this.rpc("cleanup_notification_feed_reads_atomic", {
+          p_organization_id: organizationId,
+          p_limit: limit,
+        });
+        if (
+          !Number.isInteger(row.deleted_count) ||
+          (row.deleted_count as number) < 0 ||
+          (row.deleted_count as number) > limit
+        ) {
+          throw new WorkerFailure("malformed_provider", false);
+        }
+        return row.deleted_count as number;
+      },
+    });
+
   readonly purge: TenantLifecycleWorkerDependencies["purge"] = Object.freeze({
     dueOrganizationIds: async () =>
       this.dueOrganizations("organization_purge_jobs", [

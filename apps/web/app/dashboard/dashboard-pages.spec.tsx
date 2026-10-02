@@ -2,12 +2,13 @@
 
 import "@testing-library/jest-dom/vitest";
 
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const navigation = vi.hoisted(() => ({
   pathname: "/dashboard",
   replace: vi.fn(),
+  push: vi.fn(),
 }));
 const table = vi.hoisted(() => ({
   refetch: vi.fn(),
@@ -19,7 +20,13 @@ const table = vi.hoisted(() => ({
 
 vi.mock("next/navigation", () => ({
   usePathname: () => navigation.pathname,
-  useRouter: () => ({ replace: navigation.replace }),
+  useRouter: () => ({ replace: navigation.replace, push: navigation.push }),
+}));
+vi.mock("../_features/notifications/notifications.queries", () => ({
+  useNotificationUnreadCountQuery: () => ({
+    data: { count: 3 },
+    isError: false,
+  }),
 }));
 vi.mock("./_components/dashboard-onboarding-resume", () => ({
   DashboardOnboardingResume: () => null,
@@ -256,6 +263,14 @@ describe("dashboard pages", () => {
     render(<DashboardTopNav />);
 
     expect(screen.getByText(label)).toBeVisible();
+  });
+
+  it("opens the in-app notification centre from the existing bell", () => {
+    render(<DashboardTopNav />);
+    fireEvent.click(
+      screen.getByRole("button", { name: /Notifications, 3 unread/ }),
+    );
+    expect(navigation.push).toHaveBeenCalledWith("/notifications");
   });
 
   it("wraps page content in the dashboard shell", () => {

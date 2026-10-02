@@ -1,25 +1,82 @@
 "use client";
 
 import type {
+  MarkNotificationFeedReadInput,
   NotificationDeliveriesQuery,
+  NotificationFeedQuery,
   RetryNotificationDeliveryInput,
   UpdateNotificationCriticalRouteInput,
   UpdateNotificationPreferencesInput,
 } from "@repo/contracts/notifications";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useIsMutating,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 
 import { useSession } from "../../_providers/session-provider";
+import { organizationKeys } from "../organizations/organizations.keys";
 import { notificationsApi } from "./notifications.api";
 
 const all = Object.freeze(["notifications"] as const);
 
 function useNotificationScope() {
-  const { session, permissions } = useSession();
+  const { session, permissions, isLoading, isError } = useSession();
+  const switchingOrganization =
+    useIsMutating({ mutationKey: organizationKeys.switchMutation }) > 0;
   return {
     orgId: session?.organization?.id,
     userId: session?.user.id,
     permissions,
+    feedReady:
+      !isLoading &&
+      !isError &&
+      !switchingOrganization &&
+      Boolean(session?.organization?.id && session?.user.id),
   };
+}
+
+export function useNotificationFeedQuery(
+  query: Partial<NotificationFeedQuery>,
+  enabled = true,
+) {
+  const { orgId, userId, permissions, feedReady } = useNotificationScope();
+  const result = useQuery({
+    queryKey: ["notifications", orgId, userId, permissions, "feed", query],
+    enabled: enabled && feedReady,
+    retry: false,
+    refetchInterval: 30_000,
+    queryFn: ({ signal }) => notificationsApi.feed(query, signal),
+  });
+  return feedReady ? result : { ...result, data: undefined };
+}
+
+export function useNotificationUnreadCountQuery(enabled = true) {
+  const { orgId, userId, permissions, feedReady } = useNotificationScope();
+  const result = useQuery({
+    queryKey: ["notifications", orgId, userId, permissions, "unread-count"],
+    enabled: enabled && feedReady,
+    retry: false,
+    refetchInterval: 30_000,
+    queryFn: ({ signal }) => notificationsApi.unreadCount(signal),
+  });
+  return feedReady ? result : { ...result, data: undefined };
+}
+
+export function useMarkNotificationReadMutation() {
+  const { orgId, userId } = useNotificationScope();
+  const client = useQueryClient();
+  return useMutation({
+    retry: false,
+    mutationFn: (input: MarkNotificationFeedReadInput) =>
+      notificationsApi.markRead(input),
+    onSuccess: () => {
+      void client.invalidateQueries({
+        queryKey: ["notifications", orgId, userId],
+      });
+    },
+  });
 }
 
 export function useNotificationPreferencesQuery(enabled = true) {

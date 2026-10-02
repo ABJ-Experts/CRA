@@ -5,7 +5,10 @@ import {
   NotFoundException,
   ServiceUnavailableException,
 } from "@nestjs/common";
-import { notificationDeliveryRefSchema } from "@repo/contracts/notifications";
+import {
+  notificationDeliveryRefSchema,
+  notificationFeedRefSchema,
+} from "@repo/contracts/notifications";
 import {
   REQUIRE_PERMISSIONS_KEY,
   REQUIRE_ROLE_KEY,
@@ -21,6 +24,7 @@ const organizationId = "11111111-1111-4111-8111-111111111111";
 const actorId = "22222222-2222-4222-8222-222222222222";
 const userId = "33333333-3333-4333-8333-333333333333";
 const deliveryRef = notificationDeliveryRefSchema.parse("opaque_delivery_ref");
+const feedRef = notificationFeedRefSchema.parse(`m6_${organizationId}_event`);
 const user = { id: actorId, organizationId, role: "admin" } as RequestUser;
 
 function metadata(key: string, method: string): unknown {
@@ -47,6 +51,14 @@ describe("notification HTTP policy", () => {
     expect(metadata(REQUIRE_PERMISSIONS_KEY, "retry")).toEqual([
       "can_edit_organization",
     ]);
+    for (const method of [
+      "feed",
+      "feedUnreadCount",
+      "feedDestination",
+      "markFeedRead",
+    ]) {
+      expect(metadata(SELF_SCOPED_KEY, method)).toBeTruthy();
+    }
   });
 
   it("passes only verified organization and actor to application commands", async () => {
@@ -69,6 +81,16 @@ describe("notification HTTP policy", () => {
       retryDelivery: jest
         .fn()
         .mockResolvedValue({ outcome: "updated", data: {} }),
+      listFeed: jest.fn().mockResolvedValue({ outcome: "found", data: {} }),
+      countFeedUnread: jest
+        .fn()
+        .mockResolvedValue({ outcome: "found", data: {} }),
+      resolveFeedDestination: jest
+        .fn()
+        .mockResolvedValue({ outcome: "found", data: {} }),
+      markFeedRead: jest
+        .fn()
+        .mockResolvedValue({ outcome: "updated", data: {} }),
     };
     const controller = new NotificationsController(useCases as never);
     const revision = {
@@ -86,6 +108,15 @@ describe("notification HTTP policy", () => {
     );
     await controller.deliveries({ limit: 50 }, user);
     await controller.retry({ deliveryRef }, revision, user);
+    const query = { limit: 25, read: "all" as const };
+    const command = {
+      items: [{ ref: feedRef, expectedFingerprint: "a".repeat(64) }],
+      idempotencyKey: revision.idempotencyKey,
+    };
+    await controller.feed(query, user);
+    await controller.feedUnreadCount(user);
+    await controller.feedDestination({ ref: feedRef }, user);
+    await controller.markFeedRead(command, user);
 
     expect(useCases.getPreferences).toHaveBeenCalledWith(
       organizationId,
@@ -117,6 +148,25 @@ describe("notification HTTP policy", () => {
       actorId,
       deliveryRef,
       revision,
+    );
+    expect(useCases.listFeed).toHaveBeenCalledWith(
+      organizationId,
+      actorId,
+      query,
+    );
+    expect(useCases.countFeedUnread).toHaveBeenCalledWith(
+      organizationId,
+      actorId,
+    );
+    expect(useCases.resolveFeedDestination).toHaveBeenCalledWith(
+      organizationId,
+      actorId,
+      feedRef,
+    );
+    expect(useCases.markFeedRead).toHaveBeenCalledWith(
+      organizationId,
+      actorId,
+      command,
     );
   });
 
