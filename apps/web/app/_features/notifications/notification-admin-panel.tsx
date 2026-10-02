@@ -7,6 +7,7 @@ import type {
   NotificationDeliveryStatus,
 } from "@repo/contracts/notifications";
 import { Button } from "@repo/ui/button";
+import { cn } from "@repo/ui/cn";
 import { Input } from "@repo/ui/input";
 import { Tag, type TagProps } from "@repo/ui/tag";
 import { useEffect, useMemo, useState } from "react";
@@ -163,8 +164,9 @@ export function NotificationAdminPanel({
   const deliveryRecipientValid =
     !normalizedDeliveryRecipientUserId ||
     uuidPattern.test(normalizedDeliveryRecipientUserId);
-  const { session } = useSession();
-  const scopeKey = `${session?.organization?.id ?? "none"}:${status}:${category}:${deliveryRecipientUserId}`;
+  const { session, permissions } = useSession();
+  const canViewDeliveries = permissions.can_view_audit === true;
+  const scopeKey = `${session?.organization?.id ?? "none"}:${canViewDeliveries}:${status}:${category}:${deliveryRecipientUserId}`;
   const [deliveryCursor, setDeliveryCursor] = useState<ScopedCursor | null>(
     null,
   );
@@ -193,7 +195,7 @@ export function NotificationAdminPanel({
       cursor: activeCursor ?? undefined,
       limit: 25,
     },
-    deliveryRecipientValid,
+    canViewDeliveries && deliveryRecipientValid,
   );
   const updateRoute = useUpdateNotificationCriticalRouteMutation();
   const retry = useRetryNotificationDeliveryMutation();
@@ -215,7 +217,12 @@ export function NotificationAdminPanel({
   }, [scopeKey]);
 
   useEffect(() => {
-    if (!deliveryRecipientValid || !deliveries.data || deliveries.isError)
+    if (
+      !canViewDeliveries ||
+      !deliveryRecipientValid ||
+      !deliveries.data ||
+      deliveries.isError
+    )
       return;
 
     const currentCursor = activeCursor;
@@ -240,13 +247,14 @@ export function NotificationAdminPanel({
     activeCursor,
     deliveries.data,
     deliveries.isError,
+    canViewDeliveries,
     deliveryRecipientValid,
     scopeKey,
   ]);
 
   const currentRoute = route.data?.route;
   const visibleRows = useMemo(() => {
-    if (!deliveryRecipientValid) return [];
+    if (!canViewDeliveries || !deliveryRecipientValid) return [];
     const seen = new Set<string>();
     const rows: NotificationDelivery[] = [];
     for (const page of deliveryPages) {
@@ -258,7 +266,7 @@ export function NotificationAdminPanel({
       }
     }
     return rows;
-  }, [deliveryPages, deliveryRecipientValid, scopeKey]);
+  }, [canViewDeliveries, deliveryPages, deliveryRecipientValid, scopeKey]);
 
   async function saveRoute(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -394,7 +402,12 @@ export function NotificationAdminPanel({
           </div>
         ) : null}
       </form>
-      <div className="grid gap-3 rounded-xl border border-border bg-surface-subtle p-3">
+      <div
+        className={cn(
+          "grid gap-3 rounded-xl border border-border bg-surface-subtle p-3",
+          !canViewDeliveries && "hidden",
+        )}
+      >
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="space-y-1 text-caption-1-regular text-fg">
             Delivery status
@@ -500,6 +513,11 @@ export function NotificationAdminPanel({
           </div>
         ) : null}
       </div>
+      {!canViewDeliveries ? (
+        <p className="rounded-xl border border-border bg-surface-subtle p-3 text-caption-1-regular text-fg-muted">
+          You do not have permission to view notification delivery history.
+        </p>
+      ) : null}
       {error ? (
         <p role="alert" className="text-caption-1-regular text-danger">
           {error}

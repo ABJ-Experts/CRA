@@ -91,4 +91,22 @@ describe("Notification HTTP boundary (local stack)", () => {
       .query({ status: "unknown" })
       .expect(400);
   }, 30_000);
+
+  it("keeps self preferences available without audit access but rejects delivery history", async () => {
+    const viewer = request.agent(app.getHttpServer());
+    await viewer
+      .post(`/${API_PREFIX}/auth/sign-in`)
+      .send({
+        email: "viewer@cra.test",
+        password: "Password123",
+        remember: false,
+      })
+      .expect(200);
+
+    notificationPreferencesResponseSchema.parse(
+      (await viewer.get(`/${API_PREFIX}/notifications/preferences`).expect(200))
+        .body,
+    );
+    await viewer.get(`/${API_PREFIX}/notifications/deliveries`).expect(403);
+  }, 30_000);
 });

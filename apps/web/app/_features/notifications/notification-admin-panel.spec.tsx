@@ -75,11 +75,13 @@ const mutations = vi.hoisted(() => ({
 
 const sessionScope = vi.hoisted(() => ({
   organizationId: "33333333-3333-4333-8333-333333333333",
+  canViewAudit: true,
 }));
 
 vi.mock("../../_providers/session-provider", () => ({
   useSession: () => ({
     session: { organization: { id: sessionScope.organizationId } },
+    permissions: { can_view_audit: sessionScope.canViewAudit },
   }),
 }));
 
@@ -104,6 +106,7 @@ vi.mock("./notifications.queries", () => ({
 describe("NotificationAdminPanel", () => {
   beforeEach(() => {
     sessionScope.organizationId = "33333333-3333-4333-8333-333333333333";
+    sessionScope.canViewAudit = true;
     queries.deliveries = {
       data: { rows: [delivery], nextCursor: null },
       isLoading: false,
@@ -369,6 +372,34 @@ describe("NotificationAdminPanel", () => {
     expect(
       screen.queryByRole("button", { name: "Save critical route" }),
     ).toBeNull();
+  });
+
+  it("hides delivery history when audit access is revoked, without hiding route management", () => {
+    const view = render(<NotificationAdminPanel canManage />);
+    expect(screen.getByText("Delivery delivery_123")).toBeVisible();
+
+    sessionScope.canViewAudit = false;
+    view.rerender(<NotificationAdminPanel canManage />);
+
+    expect(queries.deliveryEnabledArgs.at(-1)).toBe(false);
+    expect(screen.queryByText("Delivery delivery_123")).toBeNull();
+    expect(
+      screen.getByText(/permission to view notification delivery history/),
+    ).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: "Save critical route" }),
+    ).toBeVisible();
+  });
+
+  it("shows delivery history to an audit-only reader without offering mutation controls", () => {
+    render(<NotificationAdminPanel canManage={false} />);
+
+    expect(queries.deliveryEnabledArgs.at(-1)).toBe(true);
+    expect(screen.getByText("Delivery delivery_123")).toBeVisible();
+    expect(
+      screen.queryByRole("button", { name: "Save critical route" }),
+    ).toBeNull();
+    expect(screen.queryByRole("button", { name: /Retry delivery/ })).toBeNull();
   });
 
   it("shows delivery loading, empty, and retry states", () => {

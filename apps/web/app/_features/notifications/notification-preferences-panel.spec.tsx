@@ -117,6 +117,26 @@ describe("NotificationPreferencesPanel", () => {
     expect(quietHours).toHaveValue("22:00-");
   });
 
+  it.each([
+    ["99:99-88:88", "valid 24-hour times"],
+    ["22:00-22:00", "different start and end times"],
+  ])(
+    "rejects invalid quiet hours %s without losing the draft",
+    async (value, message) => {
+      render(<NotificationPreferencesPanel />);
+
+      const quietHours = screen.getByLabelText("Quiet hours");
+      fireEvent.change(quietHours, { target: { value } });
+      fireEvent.click(
+        screen.getByRole("button", { name: "Save notification preferences" }),
+      );
+
+      expect(await screen.findByRole("alert")).toHaveTextContent(message);
+      expect(update.mutateAsync).not.toHaveBeenCalled();
+      expect(quietHours).toHaveValue(value);
+    },
+  );
+
   it("saves completed quiet-hours text as schedule data", async () => {
     update.mutateAsync.mockResolvedValue({
       preferences: {

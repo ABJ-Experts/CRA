@@ -169,7 +169,8 @@ describe("notification query scope", () => {
     await waitFor(() => expect(api.deliveries).toHaveBeenCalledTimes(3));
     scope.permissions = { can_view_audit: false };
     view.rerender();
-    await waitFor(() => expect(api.deliveries).toHaveBeenCalledTimes(4));
+    expect(view.result.current.deliveries.data).toBeUndefined();
+    expect(api.deliveries).toHaveBeenCalledTimes(3);
     expect(
       client
         .getQueryCache()

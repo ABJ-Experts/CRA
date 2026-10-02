@@ -5,6 +5,7 @@ import type {
   NotificationPreferences,
   NotificationSchedule,
 } from "@repo/contracts/notifications";
+import { notificationQuietHoursSchema } from "@repo/contracts/notifications";
 import { Button } from "@repo/ui/button";
 import { Input } from "@repo/ui/input";
 import { useEffect, useState } from "react";
@@ -70,7 +71,15 @@ function parseQuietHoursText(
   if (!start || !end) {
     throw new Error("Quiet hours must use HH:MM-HH:MM, or be left blank.");
   }
-  return { start, end };
+  const parsed = notificationQuietHoursSchema.safeParse({ start, end });
+  if (!parsed.success) {
+    throw new Error(
+      parsed.error.issues.some((issue) => issue.code !== "custom")
+        ? "Quiet hours must use valid 24-hour times (00:00-23:59)."
+        : "Quiet hours must have different start and end times.",
+    );
+  }
+  return parsed.data;
 }
 
 export function NotificationPreferencesPanel() {

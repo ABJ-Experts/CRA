@@ -60,7 +60,7 @@ export function useNotificationDeliveriesQuery(
       "deliveries",
       query,
     ],
-    enabled: enabled && Boolean(orgId),
+    enabled: enabled && Boolean(orgId) && permissions.can_view_audit === true,
     retry: false,
     refetchInterval: 30_000,
     queryFn: ({ signal }) => notificationsApi.deliveries(query, signal),

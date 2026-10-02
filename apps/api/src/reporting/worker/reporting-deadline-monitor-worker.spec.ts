@@ -70,7 +70,7 @@ describe("ReportingDeadlineMonitorWorker", () => {
     expect(claim).toHaveBeenCalledTimes(3);
   });
 
-  it("does not email a delivery cancelled by the current permission recheck", async () => {
+  it("does not email a delivery cancelled by source revalidation", async () => {
     const deliver = jest.fn();
     const complete = jest.fn();
     const fail = jest.fn();
@@ -81,6 +81,30 @@ describe("ReportingDeadlineMonitorWorker", () => {
           deliveryDetails: jest
             .fn()
             .mockResolvedValue({ outcome: "cancelled" }),
+          complete,
+          fail,
+        },
+      }),
+    );
+
+    await worker.runOnce();
+
+    expect(deliver).not.toHaveBeenCalled();
+    expect(complete).not.toHaveBeenCalled();
+    expect(fail).not.toHaveBeenCalled();
+  });
+
+  it("does not email or fail a delivery finalized as recipient unavailable", async () => {
+    const deliver = jest.fn();
+    const complete = jest.fn();
+    const fail = jest.fn();
+    const worker = new ReportingDeadlineMonitorWorker(
+      dependencies({
+        delivery: { deliver },
+        queue: {
+          deliveryDetails: jest
+            .fn()
+            .mockResolvedValue({ outcome: "recipient_unavailable" }),
           complete,
           fail,
         },

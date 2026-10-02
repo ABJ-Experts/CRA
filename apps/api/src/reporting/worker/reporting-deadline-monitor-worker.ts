@@ -32,7 +32,9 @@ export type ReportingDeadlineDeliveryDetails =
         idempotencyKey: string;
       }>;
     }>
-  | Readonly<{ outcome: "cancelled" | "conflict" | "not_found" }>;
+  | Readonly<{
+      outcome: "cancelled" | "recipient_unavailable" | "conflict" | "not_found";
+    }>;
 
 export type ReportingDeadlineDeliveryClaim =
   | Readonly<{
@@ -201,8 +203,8 @@ export class ReportingDeadlineMonitorWorker {
           leaseOwner: claim.leaseOwner,
           checkpointVersion: claim.checkpointVersion,
         });
-        // The SQL details RPC cancels an ineligible delivery before returning
-        // this outcome. Do not complete or retry a deliberately cancelled row.
+        // The SQL details RPC finalizes non-deliverable rows before returning
+        // this outcome. Do not complete or retry an already-finalized row.
         if (details.outcome !== "deliverable") continue;
         if (!isDeliverable(details)) {
           throw new ReportingDeadlineMonitorFailure(

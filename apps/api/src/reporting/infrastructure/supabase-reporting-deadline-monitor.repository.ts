@@ -213,7 +213,14 @@ export class SupabaseReportingDeadlineMonitorRepository implements ReportingDead
         );
         const value = outcome(row);
         if (value !== "found") {
-          if (!["cancelled", "conflict", "not_found"].includes(value)) {
+          if (
+            ![
+              "cancelled",
+              "recipient_unavailable",
+              "conflict",
+              "not_found",
+            ].includes(value)
+          ) {
             throw new ReportingDeadlineMonitorFailure(
               "malformed_provider",
               false,
