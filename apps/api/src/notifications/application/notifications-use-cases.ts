@@ -15,6 +15,8 @@ import type {
   EnableNotificationChatChannelInput,
   NotificationChatDeliveriesQuery,
   RetryNotificationChatDeliveryInput,
+  UpdateNotificationBurstPolicyInput,
+  NotificationBurstBatchesQuery,
 } from "./notification.port";
 
 /** Requests remain tied to the authenticated organization and actor. */
@@ -23,6 +25,26 @@ export class NotificationsUseCases {
     private readonly repository: NotificationRepository,
     private readonly chatRepository: NotificationChatRepository,
   ) {}
+
+  listBurstBatches(
+    organizationId: string,
+    actorId: string,
+    query: NotificationBurstBatchesQuery,
+  ) {
+    return this.repository.listBurstBatches(organizationId, actorId, query);
+  }
+
+  getBurstPolicy(organizationId: string, actorId: string) {
+    return this.repository.getBurstPolicy(organizationId, actorId);
+  }
+
+  updateBurstPolicy(
+    organizationId: string,
+    actorId: string,
+    input: UpdateNotificationBurstPolicyInput,
+  ) {
+    return this.repository.updateBurstPolicy(organizationId, actorId, input);
+  }
 
   getPreferences(organizationId: string, actorId: string) {
     return this.repository.getPreferences(organizationId, actorId);

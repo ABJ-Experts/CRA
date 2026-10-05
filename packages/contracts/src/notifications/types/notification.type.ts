@@ -1,6 +1,13 @@
 import type { z } from "zod";
 
 import type {
+  notificationAnyFeedResponseSchema,
+  notificationBurstEventClassSchema,
+  notificationBurstPolicyResponseSchema,
+  notificationBurstPolicySchema,
+  notificationBurstBatchSchema,
+  notificationBurstBatchesQuerySchema,
+  notificationBurstBatchesResponseSchema,
   notificationCategorySchema,
   notificationCriticalCategorySchema,
   notificationCriticalRouteMutationResponseSchema,
@@ -24,6 +31,10 @@ import type {
   notificationFeedDestinationParamsSchema,
   notificationFeedItemSchema,
   notificationFeedResponseSchema,
+  notificationFeedViewSchema,
+  notificationGroupedFeedBatchItemSchema,
+  notificationGroupedFeedItemSchema,
+  notificationGroupedFeedResponseSchema,
   notificationFeedUnreadCountResponseSchema,
   notificationFeedDestinationResponseSchema,
   markNotificationFeedReadInputSchema,
@@ -39,6 +50,8 @@ import type {
   retryNotificationDeliveryInputSchema,
   updateNotificationCriticalRouteInputSchema,
   updateNotificationPreferencesInputSchema,
+  updateNotificationBurstPolicyInputSchema,
+  trustedNotificationInboxUrlSchema,
 } from "../schemas/index.js";
 
 export type NotificationOptionalCategory = z.output<
@@ -65,6 +78,24 @@ export type NotificationPreferencesResponse = z.output<
 >;
 export type NotificationPreferencesMutationResponse = z.output<
   typeof notificationPreferencesMutationResponseSchema
+>;
+export type NotificationBurstPolicy = z.output<
+  typeof notificationBurstPolicySchema
+>;
+export type NotificationBurstBatch = z.output<
+  typeof notificationBurstBatchSchema
+>;
+export type NotificationBurstBatchesQuery = z.output<
+  typeof notificationBurstBatchesQuerySchema
+>;
+export type NotificationBurstBatchesResponse = z.output<
+  typeof notificationBurstBatchesResponseSchema
+>;
+export type NotificationBurstPolicyResponse = z.output<
+  typeof notificationBurstPolicyResponseSchema
+>;
+export type UpdateNotificationBurstPolicyInput = z.output<
+  typeof updateNotificationBurstPolicyInputSchema
 >;
 export type UpdateNotificationPreferencesInput = z.output<
   typeof updateNotificationPreferencesInputSchema
@@ -110,6 +141,13 @@ export type NotificationErrorResponse = z.output<
   typeof notificationErrorResponseSchema
 >;
 export type NotificationFeedRef = z.output<typeof notificationFeedRefSchema>;
+export type NotificationBurstEventClass = z.output<
+  typeof notificationBurstEventClassSchema
+>;
+export type NotificationFeedView = z.output<typeof notificationFeedViewSchema>;
+export type TrustedNotificationInboxUrl = z.output<
+  typeof trustedNotificationInboxUrlSchema
+>;
 export type NotificationFeedCursor = z.output<
   typeof notificationFeedCursorSchema
 >;
@@ -128,6 +166,18 @@ export type NotificationFeedDestinationParams = z.output<
 export type NotificationFeedItem = z.output<typeof notificationFeedItemSchema>;
 export type NotificationFeedResponse = z.output<
   typeof notificationFeedResponseSchema
+>;
+export type NotificationGroupedFeedBatchItem = z.output<
+  typeof notificationGroupedFeedBatchItemSchema
+>;
+export type NotificationGroupedFeedItem = z.output<
+  typeof notificationGroupedFeedItemSchema
+>;
+export type NotificationGroupedFeedResponse = z.output<
+  typeof notificationGroupedFeedResponseSchema
+>;
+export type NotificationAnyFeedResponse = z.output<
+  typeof notificationAnyFeedResponseSchema
 >;
 export type NotificationFeedUnreadCountResponse = z.output<
   typeof notificationFeedUnreadCountResponseSchema

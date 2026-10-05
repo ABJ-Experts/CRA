@@ -116,6 +116,83 @@ afterEach(() => {
 });
 
 describe("NotificationCentre", () => {
+  it("shows a bounded grouped summary and opens its permission-checked filtered inbox", () => {
+    state.feed = {
+      items: [
+        {
+          kind: "batch",
+          eventClass: "finding_sla_breached",
+          windowStartsAt: "2026-10-05T10:00:00.000Z",
+          windowEndsAt: "2026-10-05T10:02:00.000Z",
+          category: "finding_triage",
+          severity: "warning",
+          occurredAt: "2026-10-05T10:01:00.000Z",
+          title: "Finding triage updates",
+          summary: "Eligible finding updates need review.",
+          visibleCount: 125,
+          unreadCount: 123,
+          previewCount: 3,
+          previewTruncated: true,
+          previewItems: [
+            {
+              ref: "m5_11111111-1111-4111-8111-111111111111_event",
+              title: "Finding A",
+            },
+            {
+              ref: "m5_22222222-2222-4222-8222-222222222222_event",
+              title: "Finding B",
+            },
+            {
+              ref: "m5_33333333-3333-4333-8333-333333333333_event",
+              title: "Finding C",
+            },
+          ],
+          url: "/notifications?eventClass=finding_sla_breached&windowStart=2026-10-05T10:00:00.000Z",
+        },
+      ],
+      nextCursor: null,
+    };
+    render(<NotificationCentre />);
+    fireEvent.change(screen.getByLabelText("Feed view"), {
+      target: { value: "grouped" },
+    });
+    expect(actions.feed).toHaveBeenLastCalledWith(
+      expect.objectContaining({ view: "grouped", limit: 25 }),
+    );
+    expect(screen.getByText(/125 visible events; 123 unread/i)).toBeVisible();
+    expect(screen.getByText(/Showing 3 of 125/i)).toBeVisible();
+    expect(
+      screen.getByRole("list", { name: /Representative events/ }),
+    ).toHaveTextContent("Finding A");
+    expect(
+      screen.getByRole("link", { name: /Open Finding triage updates/ }),
+    ).toHaveAttribute(
+      "href",
+      "/notifications?eventClass=finding_sla_breached&windowStart=2026-10-05T10:00:00.000Z",
+    );
+    expect(
+      screen.queryByRole("checkbox", { name: /Select Finding triage updates/ }),
+    ).toBeNull();
+  });
+
+  it("passes a validated batch filter to the event feed and offers a clear link", () => {
+    state.feed = { items: [item], nextCursor: null };
+    render(
+      <NotificationCentre
+        initialFilter={{ batchId: "11111111-1111-4111-8111-111111111111" }}
+      />,
+    );
+    expect(actions.feed).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        view: "events",
+        batchId: "11111111-1111-4111-8111-111111111111",
+      }),
+    );
+    expect(
+      screen.getByRole("link", { name: "Clear batch filter" }),
+    ).toHaveAttribute("href", "/notifications");
+  });
+
   it("shows non-colour unread state, filters, preferences and bounded explicit mark-read", async () => {
     render(<NotificationCentre />);
     expect(

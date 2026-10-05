@@ -5,6 +5,7 @@ import type {
   NotificationCategory,
   NotificationFeedCursor,
   NotificationFeedItem,
+  NotificationFeedQuery,
   NotificationFeedReadFilter,
   NotificationFeedRef,
   NotificationFeedSeverity,
@@ -85,7 +86,13 @@ function safeDestination(value: unknown): string | null {
     : null;
 }
 
-export function NotificationCentre() {
+export function NotificationCentre({
+  initialFilter = {},
+  invalidFilter = false,
+}: Readonly<{
+  initialFilter?: Partial<NotificationFeedQuery>;
+  invalidFilter?: boolean;
+}>) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const {
@@ -100,6 +107,7 @@ export function NotificationCentre() {
   const [category, setCategory] = useState<NotificationCategory | "">("");
   const [severity, setSeverity] = useState<NotificationFeedSeverity | "">("");
   const [read, setRead] = useState<NotificationFeedReadFilter>("all");
+  const [view, setView] = useState<"events" | "grouped">("events");
   const [cursors, setCursors] = useState<
     readonly (NotificationFeedCursor | undefined)[]
   >([undefined]);
@@ -128,13 +136,27 @@ export function NotificationCentre() {
 
   const query = useMemo(
     () => ({
+      view,
+      batchId: initialFilter.batchId,
+      eventClass: initialFilter.eventClass,
+      windowStart: initialFilter.windowStart,
       category: category || undefined,
       severity: severity || undefined,
       read,
       cursor: cursors[pageIndex],
       limit: 25,
     }),
-    [category, severity, read, cursors, pageIndex],
+    [
+      view,
+      initialFilter.batchId,
+      initialFilter.eventClass,
+      initialFilter.windowStart,
+      category,
+      severity,
+      read,
+      cursors,
+      pageIndex,
+    ],
   );
   const feed = useNotificationFeedQuery(
     query,
@@ -150,7 +172,12 @@ export function NotificationCentre() {
       ? []
       : (feed.data?.items ?? []);
   const unreadSelected = items.filter(
-    (item) => selected.has(item.ref) && !item.read,
+    (entry): entry is NotificationFeedItem =>
+      !("kind" in entry) && selected.has(entry.ref) && !entry.read,
+  );
+  const filteredInbox = Boolean(
+    initialFilter.batchId ||
+    (initialFilter.eventClass && initialFilter.windowStart),
   );
 
   function resetPage() {
@@ -238,15 +265,54 @@ export function NotificationCentre() {
           </Link>
         }
       />
+      {invalidFilter ? (
+        <p
+          role="alert"
+          className="rounded-xl border border-danger bg-canvas p-3 text-caption-1-regular text-danger"
+        >
+          This notification batch link is invalid. Showing your current
+          notifications instead.
+        </p>
+      ) : null}
+      {filteredInbox ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-surface-subtle p-3 text-caption-1-regular text-fg">
+          <span>
+            Showing source events in this notification batch. Access and counts
+            are checked again when the feed loads.
+          </span>
+          <Link
+            className="text-caption-1-semibold text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+            href="/notifications"
+          >
+            Clear batch filter
+          </Link>
+        </div>
+      ) : null}
       <section
         aria-label="Notification filters"
-        className="grid gap-3 rounded-xl border border-border bg-surface-subtle p-4 sm:grid-cols-3"
+        className="grid gap-3 rounded-xl border border-border bg-surface-subtle p-4 sm:grid-cols-4"
       >
+        <label className="space-y-1 text-caption-1-regular text-fg">
+          Feed view
+          <select
+            className={cn(fieldClass)}
+            value={view}
+            disabled={filteredInbox}
+            onChange={(event) => {
+              setView(event.target.value as "events" | "grouped");
+              resetPage();
+            }}
+          >
+            <option value="events">All events</option>
+            <option value="grouped">Grouped bursts</option>
+          </select>
+        </label>
         <label className="space-y-1 text-caption-1-regular text-fg">
           Category
           <select
             className={cn(fieldClass)}
             value={category}
+            disabled={filteredInbox}
             onChange={(event) => {
               setCategory(event.target.value as NotificationCategory | "");
               resetPage();
@@ -264,6 +330,7 @@ export function NotificationCentre() {
           <select
             className={cn(fieldClass)}
             value={severity}
+            disabled={filteredInbox}
             onChange={(event) => {
               setSeverity(event.target.value as NotificationFeedSeverity | "");
               resetPage();
@@ -281,6 +348,7 @@ export function NotificationCentre() {
           <select
             className={cn(fieldClass)}
             value={read}
+            disabled={filteredInbox}
             onChange={(event) => {
               setRead(event.target.value as NotificationFeedReadFilter);
               resetPage();
@@ -357,7 +425,11 @@ export function NotificationCentre() {
       !scopeChanged ? (
         <div className="rounded-xl border border-border bg-canvas p-8 text-center">
           <h2 className="text-subhead-semibold text-fg">
-            {read === "unread" ? "You're all caught up" : "No notifications"}
+            {read === "unread"
+              ? "You're all caught up"
+              : view === "grouped"
+                ? "No grouped notifications"
+                : "No notifications"}
           </h2>
           <p className="mt-1 text-caption-1-regular text-fg-muted">
             {read === "unread"
@@ -374,7 +446,7 @@ export function NotificationCentre() {
               aria-live="polite"
               className="text-caption-1-regular text-fg-muted"
             >
-              {items.length} notification{items.length === 1 ? "" : "s"} on this
+              {items.length} entr{items.length === 1 ? "y" : "ies"} on this
               page.
             </p>
             <Button
@@ -387,81 +459,137 @@ export function NotificationCentre() {
             </Button>
           </div>
           <ul className="space-y-2">
-            {items.map((item) => (
-              <li
-                key={item.ref}
-                className={cn(
-                  "rounded-xl border border-border bg-canvas p-4",
-                  !item.read && "border-primary",
-                )}
-              >
-                <div className="flex items-start gap-3">
-                  <input
-                    type="checkbox"
-                    className="mt-1 size-4 accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
-                    checked={selected.has(item.ref)}
-                    onChange={(event) => select(item.ref, event.target.checked)}
-                    aria-label={`Select ${item.title}`}
-                  />
-                  <div className="min-w-0 flex-1">
+            {items.map((item) =>
+              "kind" in item ? (
+                <li
+                  key={`${item.eventClass}:${item.windowStartsAt}`}
+                  className="rounded-xl border border-border bg-canvas p-4"
+                >
+                  <div className="space-y-2">
                     <div className="flex flex-wrap items-center gap-2">
                       <h2 className="text-subhead-semibold text-fg">
                         {item.title}
                       </h2>
                       <span className="rounded-full border border-border px-2 py-0.5 text-caption-2-semibold text-fg">
-                        {item.read ? "Read" : "Unread"}
+                        Grouped burst
                       </span>
-                      <span className="text-caption-1-regular text-fg-muted">
-                        {item.severity === "info"
-                          ? "Information"
-                          : item.severity[0]?.toUpperCase() +
-                            item.severity.slice(1)}
-                      </span>
-                      {item.noticeKind === "failure" ? (
-                        <span className="text-caption-1-semibold text-danger">
-                          Delivery issue
-                        </span>
-                      ) : null}
                     </div>
-                    <p className="mt-1 text-caption-1-regular text-fg-muted">
+                    <p className="text-caption-1-regular text-fg">
                       {item.summary}
                     </p>
-                    <p className="mt-2 text-caption-2-regular text-fg-subtle">
-                      {formatDate(item.occurredAt)}
+                    <p className="text-caption-1-regular text-fg">
+                      {item.visibleCount} visible event
+                      {item.visibleCount === 1 ? "" : "s"}; {item.unreadCount}{" "}
+                      unread.
                     </p>
-                    {item.sourceState === "unavailable" ? (
-                      <p className="mt-2 text-caption-1-regular text-fg-muted">
-                        Source unavailable
+                    {item.previewItems.length > 0 ? (
+                      <ul
+                        aria-label={`Representative events in ${item.title}`}
+                        className="list-disc space-y-1 pl-5 text-caption-1-regular text-fg"
+                      >
+                        {item.previewItems.map((preview) => (
+                          <li key={preview.ref}>{preview.title}</li>
+                        ))}
+                      </ul>
+                    ) : null}
+                    {item.previewTruncated ? (
+                      <p className="text-caption-1-regular text-fg">
+                        Showing {item.previewCount} of {item.visibleCount}{" "}
+                        visible events. Open the filtered inbox for all
+                        authorized items.
                       </p>
                     ) : null}
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {item.sourceState === "available" ? (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          disabled={opening === item.ref}
-                          onClick={() => void open(item)}
-                          aria-label={`Open ${item.title}`}
-                        >
-                          Open source
-                        </Button>
+                    <p className="text-caption-2-regular text-fg-muted">
+                      {formatDate(item.windowStartsAt)} to{" "}
+                      {formatDate(item.windowEndsAt)}
+                    </p>
+                    <Link
+                      className="inline-flex min-h-10 items-center rounded-xl border border-border px-3 text-caption-1-semibold text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+                      href={item.url}
+                      aria-label={`Open ${item.title} filtered inbox`}
+                    >
+                      Open filtered inbox
+                    </Link>
+                  </div>
+                </li>
+              ) : (
+                <li
+                  key={item.ref}
+                  className={cn(
+                    "rounded-xl border border-border bg-canvas p-4",
+                    !item.read && "border-primary",
+                  )}
+                >
+                  <div className="flex items-start gap-3">
+                    <input
+                      type="checkbox"
+                      className="mt-1 size-4 accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+                      checked={selected.has(item.ref)}
+                      onChange={(event) =>
+                        select(item.ref, event.target.checked)
+                      }
+                      aria-label={`Select ${item.title}`}
+                    />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h2 className="text-subhead-semibold text-fg">
+                          {item.title}
+                        </h2>
+                        <span className="rounded-full border border-border px-2 py-0.5 text-caption-2-semibold text-fg">
+                          {item.read ? "Read" : "Unread"}
+                        </span>
+                        <span className="text-caption-1-regular text-fg-muted">
+                          {item.severity === "info"
+                            ? "Information"
+                            : item.severity[0]?.toUpperCase() +
+                              item.severity.slice(1)}
+                        </span>
+                        {item.noticeKind === "failure" ? (
+                          <span className="text-caption-1-semibold text-danger">
+                            Delivery issue
+                          </span>
+                        ) : null}
+                      </div>
+                      <p className="mt-1 text-caption-1-regular text-fg-muted">
+                        {item.summary}
+                      </p>
+                      <p className="mt-2 text-caption-2-regular text-fg-subtle">
+                        {formatDate(item.occurredAt)}
+                      </p>
+                      {item.sourceState === "unavailable" ? (
+                        <p className="mt-2 text-caption-1-regular text-fg-muted">
+                          Source unavailable
+                        </p>
                       ) : null}
-                      {!item.read ? (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          disabled={markRead.isPending}
-                          onClick={() => void mark([item])}
-                          aria-label={`Mark ${item.title} as read`}
-                        >
-                          Mark as read
-                        </Button>
-                      ) : null}
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {item.sourceState === "available" ? (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={opening === item.ref}
+                            onClick={() => void open(item)}
+                            aria-label={`Open ${item.title}`}
+                          >
+                            Open source
+                          </Button>
+                        ) : null}
+                        {!item.read ? (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={markRead.isPending}
+                            onClick={() => void mark([item])}
+                            aria-label={`Mark ${item.title} as read`}
+                          >
+                            Mark as read
+                          </Button>
+                        ) : null}
+                      </div>
                     </div>
                   </div>
-                </div>
-              </li>
-            ))}
+                </li>
+              ),
+            )}
           </ul>
           <nav
             aria-label="Notification pages"

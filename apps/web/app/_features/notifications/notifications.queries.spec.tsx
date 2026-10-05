@@ -23,6 +23,9 @@ import {
   useConfirmChatChannelMutation,
   useUpdateNotificationCriticalRouteMutation,
   useUpdateNotificationPreferencesMutation,
+  useNotificationBurstPolicyQuery,
+  useUpdateNotificationBurstPolicyMutation,
+  useNotificationBurstBatchesQuery,
 } from "./notifications.queries";
 
 const userId = "11111111-1111-4111-8111-111111111111";
@@ -51,6 +54,11 @@ const api = vi.hoisted(() => ({
   feed: vi.fn(async () => ({ items: [] as unknown[], nextCursor: null })),
   unreadCount: vi.fn(async () => ({ count: 0 })),
   markRead: vi.fn(async () => ({ items: [], replayed: false })),
+  burstPolicy: vi.fn(async () => ({ policy: { enabled: false, version: 1 } })),
+  updateBurstPolicy: vi.fn(async () => ({
+    policy: { enabled: true, version: 2 },
+  })),
+  burstBatches: vi.fn(async () => ({ rows: [], nextCursor: null })),
   chatChannels: vi.fn(async () => ({ channels: [] })),
   chatDeliveries: vi.fn(async () => ({ rows: [], nextCursor: null })),
   createChatChannel: vi.fn(async () => ({ channel: { id: "channel-a" } })),
@@ -223,6 +231,68 @@ describe("chat notification query scope", () => {
 });
 
 describe("notification query scope", () => {
+  it("gates burst history to audit permission and isolates organization caches", async () => {
+    const { client, wrapper } = setup();
+    const view = renderHook(
+      () => useNotificationBurstBatchesQuery({ limit: 25 }),
+      { wrapper },
+    );
+    await waitFor(() => expect(view.result.current.isSuccess).toBe(true));
+    expect(api.burstBatches).toHaveBeenCalledWith(
+      { limit: 25 },
+      expect.any(AbortSignal),
+    );
+    scope.organizationId = "org-b";
+    view.rerender();
+    expect(view.result.current.data).toBeUndefined();
+    await waitFor(() => expect(api.burstBatches).toHaveBeenCalledTimes(2));
+    scope.permissions = { can_view_audit: false };
+    view.rerender();
+    expect(view.result.current.data).toBeUndefined();
+    expect(api.burstBatches).toHaveBeenCalledTimes(2);
+    client.clear();
+  });
+
+  it("gates burst policy to tenant managers and clears cached data on organization switch", async () => {
+    const { client, wrapper } = setup();
+    scope.permissions = { can_view_audit: true, can_edit_organization: true };
+    const view = renderHook(() => useNotificationBurstPolicyQuery(), {
+      wrapper,
+    });
+    await waitFor(() => expect(view.result.current.isSuccess).toBe(true));
+    expect(api.burstPolicy).toHaveBeenCalledTimes(1);
+    scope.organizationId = "org-b";
+    view.rerender();
+    expect(view.result.current.data).toBeUndefined();
+    await waitFor(() => expect(api.burstPolicy).toHaveBeenCalledTimes(2));
+    scope.role = "viewer";
+    view.rerender();
+    expect(view.result.current.data).toBeUndefined();
+    expect(api.burstPolicy).toHaveBeenCalledTimes(2);
+    client.clear();
+  });
+
+  it("invalidates organization notification reads after a versioned burst update", async () => {
+    const { client, wrapper } = setup();
+    const invalidate = vi.spyOn(client, "invalidateQueries");
+    const view = renderHook(() => useUpdateNotificationBurstPolicyMutation(), {
+      wrapper,
+    });
+    const input = {
+      enabled: true,
+      expectedVersion: 1,
+      idempotencyKey: commandId,
+    };
+    await act(async () => {
+      await view.result.current.mutateAsync(input);
+    });
+    expect(api.updateBurstPolicy).toHaveBeenCalledWith(input);
+    expect(invalidate).toHaveBeenCalledWith({
+      queryKey: ["notifications", "org-a"],
+    });
+    client.clear();
+  });
+
   it("does not fetch without session scope or when the caller disables a query", () => {
     const { client, wrapper } = setup();
     scope.organizationId = null;

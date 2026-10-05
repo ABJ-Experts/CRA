@@ -50,6 +50,9 @@ describe("notification HTTP policy", () => {
     expect(metadata(REQUIRE_PERMISSIONS_KEY, "deliveries")).toEqual([
       "can_view_audit",
     ]);
+    expect(metadata(REQUIRE_PERMISSIONS_KEY, "burstBatches")).toEqual([
+      "can_view_audit",
+    ]);
     expect(metadata(REQUIRE_PERMISSIONS_KEY, "retry")).toEqual([
       "can_edit_organization",
     ]);
@@ -70,6 +73,12 @@ describe("notification HTTP policy", () => {
     expect(metadata(REQUIRE_PERMISSIONS_KEY, "chatDeliveries")).toEqual([
       "can_view_audit",
     ]);
+    for (const method of ["burstPolicy", "updateBurstPolicy"]) {
+      expect(metadata(REQUIRE_ROLE_KEY, method)).toBe("admin");
+      expect(metadata(REQUIRE_PERMISSIONS_KEY, method)).toEqual([
+        "can_edit_organization",
+      ]);
+    }
     for (const method of [
       "feed",
       "feedUnreadCount",
@@ -95,6 +104,9 @@ describe("notification HTTP policy", () => {
         .fn()
         .mockResolvedValue({ outcome: "updated", data: {} }),
       listDeliveries: jest
+        .fn()
+        .mockResolvedValue({ outcome: "found", data: {} }),
+      listBurstBatches: jest
         .fn()
         .mockResolvedValue({ outcome: "found", data: {} }),
       retryDelivery: jest
@@ -134,6 +146,12 @@ describe("notification HTTP policy", () => {
       retryChatDelivery: jest
         .fn()
         .mockResolvedValue({ outcome: "updated", data: {} }),
+      getBurstPolicy: jest
+        .fn()
+        .mockResolvedValue({ outcome: "found", data: {} }),
+      updateBurstPolicy: jest
+        .fn()
+        .mockResolvedValue({ outcome: "updated", data: {} }),
     };
     const controller = new NotificationsController(useCases as never);
     const revision = {
@@ -150,6 +168,7 @@ describe("notification HTTP policy", () => {
       user,
     );
     await controller.deliveries({ limit: 50 }, user);
+    await controller.burstBatches({ limit: 25 }, user);
     await controller.retry({ deliveryRef }, revision, user);
     const query = { limit: 25, read: "all" as const };
     const command = {
@@ -215,6 +234,8 @@ describe("notification HTTP policy", () => {
       revision,
       user,
     );
+    await controller.burstPolicy(user);
+    await controller.updateBurstPolicy({ ...revision, enabled: true }, user);
 
     expect(useCases.getPreferences).toHaveBeenCalledWith(
       organizationId,
@@ -240,6 +261,11 @@ describe("notification HTTP policy", () => {
       organizationId,
       actorId,
       { limit: 50 },
+    );
+    expect(useCases.listBurstBatches).toHaveBeenCalledWith(
+      organizationId,
+      actorId,
+      { limit: 25 },
     );
     expect(useCases.retryDelivery).toHaveBeenCalledWith(
       organizationId,
@@ -309,6 +335,15 @@ describe("notification HTTP policy", () => {
       actorId,
       chatDeliveryId,
       revision,
+    );
+    expect(useCases.getBurstPolicy).toHaveBeenCalledWith(
+      organizationId,
+      actorId,
+    );
+    expect(useCases.updateBurstPolicy).toHaveBeenCalledWith(
+      organizationId,
+      actorId,
+      { ...revision, enabled: true },
     );
   });
 

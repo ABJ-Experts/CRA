@@ -34,6 +34,17 @@ export type NotificationPayload =
         date: string;
         category: string;
       }>[];
+    }>
+  | Readonly<{
+      kind: "burst";
+      count: number;
+      href: string;
+      items: readonly Readonly<{
+        title: string;
+        href: string;
+        date: string;
+        category: string;
+      }>[];
     }>;
 
 export type NotificationDispatchClaim =

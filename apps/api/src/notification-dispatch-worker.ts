@@ -5,12 +5,14 @@ import { randomUUID } from "node:crypto";
 import { AppModule } from "./app.module";
 import { AesGcmConnectorVault } from "./connectors/infrastructure/connector-vault";
 import { MailService } from "./mail/mail.service";
+import { BurstNotificationDispatchWorker } from "./notifications/worker/burst-notification-dispatch-worker";
 import { ChatNotificationWorker } from "./notifications/worker/chat-notification-worker";
 import { ChatProviderDeliveryAdapter } from "./notifications/worker/chat-provider-delivery.adapter";
 import { MailNotificationDispatchDeliveryAdapter } from "./notifications/worker/mail-notification-dispatch-delivery.adapter";
 import { DigestNotificationDispatchWorker } from "./notifications/worker/digest-notification-dispatch-worker";
 import { NotificationDispatchWorker } from "./notifications/worker/notification-dispatch-worker";
 import { SupabaseNotificationDigestQueueAdapter } from "./notifications/worker/supabase-notification-digest-queue.adapter";
+import { SupabaseNotificationBurstQueueAdapter } from "./notifications/worker/supabase-notification-burst-queue.adapter";
 import { SupabaseNotificationDispatchQueueAdapter } from "./notifications/worker/supabase-notification-dispatch-queue.adapter";
 import { SupabaseChatNotificationQueueAdapter } from "./notifications/worker/supabase-chat-notification-queue.adapter";
 import { SupabaseService } from "./supabase/supabase.service";
@@ -33,6 +35,9 @@ export async function bootstrapNotificationDispatchWorker(
     createDigestWorker?: (
       context: WorkerApplicationContext,
     ) => DigestNotificationDispatchWorker;
+    createBurstWorker?: (
+      context: WorkerApplicationContext,
+    ) => BurstNotificationDispatchWorker;
     createChatWorker?: (
       context: WorkerApplicationContext,
     ) => ChatNotificationWorker;
@@ -45,6 +50,12 @@ export async function bootstrapNotificationDispatchWorker(
   try {
     const worker = options.createWorker(context);
     const digestWorker = options.createDigestWorker?.(context);
+    let burstWorker: BurstNotificationDispatchWorker | undefined;
+    try {
+      burstWorker = options.createBurstWorker?.(context);
+    } catch {
+      options.logger.error("Notification burst worker unavailable");
+    }
     let chatWorker: ChatNotificationWorker | undefined;
     try {
       chatWorker = options.createChatWorker?.(context);
@@ -72,6 +83,12 @@ export async function bootstrapNotificationDispatchWorker(
             "Notification digest cycle failed safely",
           )
         : undefined,
+      burstWorker
+        ? runLoop(
+            () => burstWorker.runOnce(),
+            "Notification burst cycle failed safely",
+          )
+        : undefined,
       chatWorker
         ? runLoop(
             () => chatWorker.runOnce(),
@@ -82,6 +99,24 @@ export async function bootstrapNotificationDispatchWorker(
   } finally {
     await context.close();
   }
+}
+
+export function burstWorkerFromContext(
+  context: WorkerApplicationContext,
+): BurstNotificationDispatchWorker {
+  const mail = new MailNotificationDispatchDeliveryAdapter(
+    context.get(MailService) as MailService,
+  );
+  return new BurstNotificationDispatchWorker({
+    workerId: randomUUID(),
+    leaseSeconds: 120,
+    queue: new SupabaseNotificationBurstQueueAdapter(
+      context.get(SupabaseService) as SupabaseService,
+    ),
+    delivery: {
+      send: (input) => mail.send({ ...input, dispatchId: input.batchId }),
+    },
+  });
 }
 
 export function digestWorkerFromContext(
@@ -141,6 +176,7 @@ if (require.main === module) {
       NestFactory.createApplicationContext(AppModule, { bufferLogs: false }),
     createWorker: workerFromContext,
     createDigestWorker: digestWorkerFromContext,
+    createBurstWorker: burstWorkerFromContext,
     createChatWorker: chatWorkerFromContext,
     logger: new Logger("NotificationDispatchWorker"),
     sleep,

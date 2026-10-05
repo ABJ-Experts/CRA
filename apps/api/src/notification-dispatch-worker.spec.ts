@@ -78,6 +78,55 @@ describe("notification dispatch process", () => {
     expect(close).toHaveBeenCalledTimes(1);
   });
 
+  it("runs burst work independently of direct and digest email failures", async () => {
+    const burstRunOnce = jest.fn().mockResolvedValue(undefined);
+    const error = jest.fn();
+    await bootstrapNotificationDispatchWorker({
+      argv: ["--once"],
+      createApplicationContext: () =>
+        Promise.resolve({ get: jest.fn(), close: jest.fn() }),
+      createWorker: () =>
+        ({
+          runOnce: jest.fn().mockRejectedValue(new Error("outage")),
+        }) as never,
+      createDigestWorker: () =>
+        ({
+          runOnce: jest.fn().mockRejectedValue(new Error("outage")),
+        }) as never,
+      createBurstWorker: () => ({ runOnce: burstRunOnce }) as never,
+      logger: { error },
+      sleep: jest.fn(),
+    });
+    expect(burstRunOnce).toHaveBeenCalledTimes(1);
+    expect(error).toHaveBeenCalledWith(
+      "Notification dispatch cycle failed safely",
+    );
+    expect(error).toHaveBeenCalledWith(
+      "Notification digest cycle failed safely",
+    );
+  });
+
+  it("keeps existing delivery loops alive when burst configuration is unavailable", async () => {
+    const directRunOnce = jest.fn().mockResolvedValue(undefined);
+    const digestRunOnce = jest.fn().mockResolvedValue(undefined);
+    const error = jest.fn();
+    await bootstrapNotificationDispatchWorker({
+      argv: ["--once"],
+      createApplicationContext: () =>
+        Promise.resolve({ get: jest.fn(), close: jest.fn() }),
+      createWorker: () => ({ runOnce: directRunOnce }) as never,
+      createDigestWorker: () => ({ runOnce: digestRunOnce }) as never,
+      createBurstWorker: () => {
+        throw new Error("private burst configuration");
+      },
+      logger: { error },
+      sleep: jest.fn(),
+    });
+    expect(directRunOnce).toHaveBeenCalledTimes(1);
+    expect(digestRunOnce).toHaveBeenCalledTimes(1);
+    expect(error).toHaveBeenCalledWith("Notification burst worker unavailable");
+  });
+
   it("runs chat delivery when email dispatch fails, without blocking other delivery", async () => {
     const chatRunOnce = jest.fn().mockResolvedValue(undefined);
     const digestRunOnce = jest.fn().mockResolvedValue(undefined);

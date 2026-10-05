@@ -21,7 +21,6 @@ import {
   notificationDeliveryParamsSchema,
   notificationPreferencesResponseSchema,
   notificationFeedQuerySchema,
-  notificationFeedResponseSchema,
   notificationFeedUnreadCountResponseSchema,
   notificationFeedDestinationParamsSchema,
   notificationFeedDestinationResponseSchema,
@@ -44,6 +43,11 @@ import {
   retryNotificationDeliveryInputSchema,
   updateNotificationCriticalRouteInputSchema,
   updateNotificationPreferencesInputSchema,
+  notificationBurstPolicyResponseSchema,
+  updateNotificationBurstPolicyInputSchema,
+  notificationAnyFeedResponseSchema,
+  notificationBurstBatchesQuerySchema,
+  notificationBurstBatchesResponseSchema,
   type NotificationCriticalRouteParams,
   type NotificationDeliveryParams,
   type NotificationFeedDestinationParams,
@@ -78,6 +82,8 @@ import type {
   NotificationChatDeliveriesQuery,
   NotificationChatDeliveryParams,
   RetryNotificationChatDeliveryInput,
+  UpdateNotificationBurstPolicyInput,
+  NotificationBurstBatchesQuery,
 } from "./application/notification.port";
 import { NotificationsUseCases } from "./application/notifications-use-cases";
 
@@ -86,11 +92,39 @@ import { NotificationsUseCases } from "./application/notifications-use-cases";
 export class NotificationsController {
   constructor(private readonly notifications: NotificationsUseCases) {}
 
+  @RequireRole("admin")
+  @RequirePermissions("can_edit_organization")
+  @Get("burst-policy")
+  @ZodResponse(notificationBurstPolicyResponseSchema)
+  burstPolicy(@CurrentUser() user: RequestUser) {
+    return unwrapNotification(
+      this.notifications.getBurstPolicy(organizationId(user), user.id),
+    );
+  }
+
+  @RequireRole("admin")
+  @RequirePermissions("can_edit_organization")
+  @Patch("burst-policy")
+  @ZodResponse(notificationBurstPolicyResponseSchema)
+  updateBurstPolicy(
+    @Body(zodBody(updateNotificationBurstPolicyInputSchema))
+    input: UpdateNotificationBurstPolicyInput,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return unwrapNotification(
+      this.notifications.updateBurstPolicy(
+        organizationId(user),
+        user.id,
+        input,
+      ),
+    );
+  }
+
   @SelfScoped(
     "A member reads only notification feed entries currently accessible to them.",
   )
   @Get("feed")
-  @ZodResponse(notificationFeedResponseSchema)
+  @ZodResponse(notificationAnyFeedResponseSchema)
   feed(
     @Query(zodQuery(notificationFeedQuerySchema)) query: NotificationFeedQuery,
     @CurrentUser() user: RequestUser,
@@ -357,6 +391,19 @@ export class NotificationsController {
         params.deliveryId,
         input,
       ),
+    );
+  }
+
+  @RequirePermissions("can_view_audit")
+  @Get("burst-batches")
+  @ZodResponse(notificationBurstBatchesResponseSchema)
+  burstBatches(
+    @Query(zodQuery(notificationBurstBatchesQuerySchema))
+    query: NotificationBurstBatchesQuery,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return unwrapNotification(
+      this.notifications.listBurstBatches(organizationId(user), user.id, query),
     );
   }
 

@@ -18,11 +18,15 @@ import {
   notificationFeedDestinationParamsSchema,
   notificationFeedDestinationResponseSchema,
   notificationFeedQuerySchema,
-  notificationFeedResponseSchema,
   notificationFeedUnreadCountResponseSchema,
   markNotificationFeedReadInputSchema,
   markNotificationFeedReadResponseSchema,
   notificationPreferencesResponseSchema,
+  notificationBurstPolicyResponseSchema,
+  notificationBurstBatchesQuerySchema,
+  notificationBurstBatchesResponseSchema,
+  updateNotificationBurstPolicyInputSchema,
+  notificationAnyFeedResponseSchema,
   retryNotificationDeliveryInputSchema,
   retryChatDeliveryInputSchema,
   setChatChannelEnabledInputSchema,
@@ -45,6 +49,8 @@ import type {
   UpdateChatChannelInput,
   UpdateNotificationCriticalRouteInput,
   UpdateNotificationPreferencesInput,
+  UpdateNotificationBurstPolicyInput,
+  NotificationBurstBatchesQuery,
 } from "@repo/contracts/notifications";
 
 import { authenticatedRequestJson } from "../../_lib/http/authenticated-request";
@@ -82,6 +88,20 @@ function feedPath(query: Partial<NotificationFeedQuery> = {}): `/${string}` {
     if (value !== undefined) search.set(key, String(value));
   }
   return `/api/v1/notifications/feed?${search.toString()}`;
+}
+
+function burstBatchesPath(
+  query: Partial<NotificationBurstBatchesQuery> = {},
+): `/${string}` {
+  const parsed = apiClient.parseInput(
+    notificationBurstBatchesQuerySchema,
+    query,
+  );
+  const search = new URLSearchParams();
+  for (const [key, value] of Object.entries(parsed)) {
+    if (value !== undefined) search.set(key, String(value));
+  }
+  return `/api/v1/notifications/burst-batches?${search.toString()}`;
 }
 
 function feedDestinationPath(ref: string): `/${string}` {
@@ -194,8 +214,37 @@ export class NotificationsApi {
   feed(query: Partial<NotificationFeedQuery> = {}, signal?: AbortSignal) {
     return authenticatedRequestJson({
       path: feedPath(query),
-      schema: notificationFeedResponseSchema,
+      schema: notificationAnyFeedResponseSchema,
       signal,
+    });
+  }
+
+  burstPolicy(signal?: AbortSignal) {
+    return authenticatedRequestJson({
+      path: "/api/v1/notifications/burst-policy",
+      schema: notificationBurstPolicyResponseSchema,
+      signal,
+    });
+  }
+
+  burstBatches(
+    query: Partial<NotificationBurstBatchesQuery> = {},
+    signal?: AbortSignal,
+  ) {
+    return authenticatedRequestJson({
+      path: burstBatchesPath(query),
+      schema: notificationBurstBatchesResponseSchema,
+      signal,
+    });
+  }
+
+  updateBurstPolicy(input: UpdateNotificationBurstPolicyInput) {
+    return authenticatedRequestJson({
+      path: "/api/v1/notifications/burst-policy",
+      method: "PATCH",
+      body: input,
+      inputSchema: updateNotificationBurstPolicyInputSchema,
+      schema: notificationBurstPolicyResponseSchema,
     });
   }
 

@@ -14,6 +14,8 @@ import type {
   UpdateChatChannelInput,
   UpdateNotificationCriticalRouteInput,
   UpdateNotificationPreferencesInput,
+  UpdateNotificationBurstPolicyInput,
+  NotificationBurstBatchesQuery,
 } from "@repo/contracts/notifications";
 import {
   useIsMutating,
@@ -230,6 +232,65 @@ export function useNotificationFeedQuery(
     queryFn: ({ signal }) => notificationsApi.feed(query, signal),
   });
   return feedReady ? result : { ...result, data: undefined };
+}
+
+export function useNotificationBurstPolicyQuery(enabled = true) {
+  const scope = useNotificationScope();
+  const canManage =
+    scope.permissions.can_edit_organization === true &&
+    (scope.role === "owner" || scope.role === "admin");
+  const result = useQuery({
+    queryKey: [
+      "notifications",
+      scope.orgId,
+      scope.userId,
+      scope.permissions,
+      scope.role,
+      "burst-policy",
+    ],
+    enabled: enabled && scope.scopeReady && canManage,
+    retry: false,
+    queryFn: ({ signal }) => notificationsApi.burstPolicy(signal),
+  });
+  return scope.scopeReady && canManage
+    ? result
+    : { ...result, data: undefined };
+}
+
+export function useNotificationBurstBatchesQuery(
+  query: Partial<NotificationBurstBatchesQuery> = {},
+  enabled = true,
+) {
+  const scope = useNotificationScope();
+  const canView = scope.permissions.can_view_audit === true;
+  const result = useQuery({
+    queryKey: [
+      "notifications",
+      scope.orgId,
+      scope.userId,
+      scope.permissions,
+      "burst-batches",
+      query,
+    ],
+    enabled: enabled && scope.scopeReady && canView,
+    retry: false,
+    refetchInterval: 30_000,
+    queryFn: ({ signal }) => notificationsApi.burstBatches(query, signal),
+  });
+  return scope.scopeReady && canView ? result : { ...result, data: undefined };
+}
+
+export function useUpdateNotificationBurstPolicyMutation() {
+  const { orgId } = useNotificationScope();
+  const client = useQueryClient();
+  return useMutation({
+    retry: false,
+    mutationFn: (input: UpdateNotificationBurstPolicyInput) =>
+      notificationsApi.updateBurstPolicy(input),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: ["notifications", orgId] });
+    },
+  });
 }
 
 export function useNotificationUnreadCountQuery(enabled = true) {

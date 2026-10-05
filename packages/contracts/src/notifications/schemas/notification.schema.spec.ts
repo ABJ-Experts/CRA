@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  notificationAnyFeedResponseSchema,
+  notificationBurstPolicyResponseSchema,
+  notificationBurstBatchesQuerySchema,
+  notificationBurstBatchesResponseSchema,
   notificationCriticalRouteParamsSchema,
   notificationCriticalRouteResponseSchema,
   notificationDeliveriesQuerySchema,
@@ -10,6 +14,7 @@ import {
   notificationPreferencesResponseSchema,
   notificationFeedQuerySchema,
   notificationFeedResponseSchema,
+  notificationGroupedFeedResponseSchema,
   notificationFeedUnreadCountResponseSchema,
   notificationFeedDestinationParamsSchema,
   notificationFeedDestinationResponseSchema,
@@ -18,6 +23,8 @@ import {
   retryNotificationDeliveryInputSchema,
   updateNotificationCriticalRouteInputSchema,
   updateNotificationPreferencesInputSchema,
+  updateNotificationBurstPolicyInputSchema,
+  trustedNotificationInboxUrlSchema,
 } from "./notification.schema.js";
 
 const orgId = "00000000-0000-4000-8000-000000000001";
@@ -37,6 +44,274 @@ const schedule = {
 };
 
 describe("notification wire contracts", () => {
+  it("bounds and parses the authorized burst delivery ledger", () => {
+    expect(notificationBurstBatchesQuerySchema.parse({})).toEqual({
+      limit: 25,
+    });
+    expect(
+      notificationBurstBatchesQuerySchema.safeParse({ limit: 51 }).success,
+    ).toBe(false);
+    const row = {
+      batchId: orgId,
+      category: "evidence",
+      eventClass: "evidence_validity_expiring",
+      status: "exhausted",
+      windowStartsAt: "2026-10-03T10:00:00Z",
+      windowEndsAt: "2026-10-03T10:02:00Z",
+      memberCount: 100,
+      preparedCount: 95,
+      attemptCount: 1,
+      lastAttemptAt: "2026-10-03T10:02:01Z",
+      nextAttemptAt: null,
+      safeErrorCode: "lease_expired_ambiguous",
+      createdAt: "2026-10-03T10:02:00Z",
+    };
+    expect(
+      notificationBurstBatchesResponseSchema.safeParse({
+        rows: [row],
+        nextCursor: null,
+      }).success,
+    ).toBe(true);
+    expect(
+      notificationBurstBatchesResponseSchema.safeParse({
+        rows: [{ ...row, preparedCount: 101 }],
+        nextCursor: null,
+      }).success,
+    ).toBe(false);
+    expect(
+      notificationBurstBatchesResponseSchema.safeParse({
+        rows: [{ ...row, eventClass: "reporting_deadline" }],
+        nextCursor: null,
+      }).success,
+    ).toBe(false);
+  });
+  it("requires a versioned organization burst policy and idempotent update", () => {
+    const policy = {
+      organizationId: orgId,
+      enabled: true,
+      version: 2,
+      enabledAt: "2026-10-03T10:00:00Z",
+      updatedAt: "2026-10-03T10:00:00Z",
+      windowSeconds: 120,
+      maxEmailMembers: 100,
+    };
+    expect(
+      notificationBurstPolicyResponseSchema.safeParse({ policy }).success,
+    ).toBe(true);
+    expect(
+      notificationBurstPolicyResponseSchema.safeParse({
+        policy: { ...policy, windowSeconds: 86_400 },
+      }).success,
+    ).toBe(false);
+    expect(
+      notificationBurstPolicyResponseSchema.safeParse({
+        policy: { ...policy, enabled: false, enabledAt: null },
+      }).success,
+    ).toBe(true);
+    expect(
+      notificationBurstPolicyResponseSchema.safeParse({
+        policy: { ...policy, enabled: false },
+      }).success,
+    ).toBe(false);
+
+    const input = { enabled: false, expectedVersion: 2, idempotencyKey };
+    expect(
+      updateNotificationBurstPolicyInputSchema.safeParse(input).success,
+    ).toBe(true);
+    expect(
+      updateNotificationBurstPolicyInputSchema.safeParse({
+        ...input,
+        expectedVersion: 0,
+      }).success,
+    ).toBe(false);
+    expect(
+      updateNotificationBurstPolicyInputSchema.safeParse({
+        ...input,
+        enabled: "false",
+      }).success,
+    ).toBe(false);
+    expect(
+      updateNotificationBurstPolicyInputSchema.safeParse({
+        ...input,
+        unexpected: true,
+      }).success,
+    ).toBe(false);
+  });
+
+  it("keeps the event feed wire unchanged and validates grouped or filtered views", () => {
+    const windowStart = "2026-10-03T10:00:00Z";
+    const eventClass = "finding_suppression_expired";
+    expect(notificationFeedQuerySchema.parse({})).toEqual({
+      read: "all",
+      limit: 25,
+    });
+    expect(notificationFeedQuerySchema.parse({ view: "grouped" }).view).toBe(
+      "grouped",
+    );
+    expect(
+      notificationFeedQuerySchema.parse({ eventClass, windowStart }).eventClass,
+    ).toBe(eventClass);
+    expect(notificationFeedQuerySchema.parse({ batchId: orgId }).batchId).toBe(
+      orgId,
+    );
+    expect(
+      notificationFeedQuerySchema.safeParse({
+        view: "grouped",
+        eventClass,
+        windowStart,
+      }).success,
+    ).toBe(false);
+    expect(notificationFeedQuerySchema.safeParse({ eventClass }).success).toBe(
+      false,
+    );
+    expect(notificationFeedQuerySchema.safeParse({ windowStart }).success).toBe(
+      false,
+    );
+    expect(
+      notificationFeedQuerySchema.safeParse({
+        batchId: orgId,
+        eventClass,
+        windowStart,
+      }).success,
+    ).toBe(false);
+    expect(
+      notificationFeedQuerySchema.safeParse({
+        batchId: orgId,
+        read: "unread",
+      }).success,
+    ).toBe(false);
+    expect(
+      notificationFeedQuerySchema.safeParse({
+        eventClass,
+        windowStart,
+        category: "finding_triage",
+      }).success,
+    ).toBe(false);
+    for (const badBatchId of ["../admin", "https://evil.test"])
+      expect(
+        notificationFeedQuerySchema.safeParse({ batchId: badBatchId }).success,
+      ).toBe(false);
+    expect(
+      trustedNotificationInboxUrlSchema.safeParse(
+        `/notifications?batchId=${orgId}`,
+      ).success,
+    ).toBe(true);
+    expect(
+      trustedNotificationInboxUrlSchema.safeParse(
+        `/notifications?batchId=${orgId}&redirect=https://evil.test`,
+      ).success,
+    ).toBe(false);
+
+    const event = {
+      ref: `m5_${orgId}_event`,
+      category: "finding_triage",
+      severity: "warning",
+      occurredAt: "2026-10-03T10:01:00Z",
+      title: "Finding updated",
+      summary: "Review the changed finding.",
+      read: false,
+      fingerprint: "a".repeat(64),
+      sourceState: "available",
+      noticeKind: "event",
+    };
+    const batch = {
+      kind: "batch",
+      eventClass,
+      category: "finding_triage",
+      severity: "warning",
+      occurredAt: "2026-10-03T10:01:00Z",
+      windowStartsAt: windowStart,
+      windowEndsAt: "2026-10-03T10:02:00Z",
+      title: "Finding updates",
+      summary: "Three updates need review.",
+      visibleCount: 3,
+      unreadCount: 2,
+      previewCount: 3,
+      previewTruncated: false,
+      previewItems: [
+        { ref: `m5_${orgId}_event`, title: "Finding A" },
+        { ref: `m5_${userId}_event`, title: "Finding B" },
+        { ref: `m5_${alternateUserId}_event`, title: "Finding C" },
+      ],
+      url: `/notifications?eventClass=${eventClass}&windowStart=${windowStart}`,
+    };
+    expect(
+      notificationGroupedFeedResponseSchema.safeParse({
+        items: [event, batch],
+        nextCursor: null,
+      }).success,
+    ).toBe(true);
+    expect(
+      notificationAnyFeedResponseSchema.safeParse({
+        items: [event],
+        nextCursor: null,
+      }).success,
+    ).toBe(true);
+    expect(
+      notificationFeedResponseSchema.safeParse({
+        items: [event, batch],
+        nextCursor: null,
+      }).success,
+    ).toBe(false);
+    for (const badBatch of [
+      { ...batch, url: "https://evil.test" },
+      { ...batch, url: "/logout" },
+      { ...batch, visibleCount: 2 },
+      { ...batch, unreadCount: 4 },
+      { ...batch, previewTruncated: true },
+      { ...batch, previewCount: 2 },
+      { ...batch, previewItems: batch.previewItems.slice(0, 2) },
+      {
+        ...batch,
+        previewCount: 2,
+        previewTruncated: true,
+        previewItems: [batch.previewItems[0], batch.previewItems[0]],
+      },
+      {
+        ...batch,
+        previewCount: 1,
+        previewTruncated: true,
+        previewItems: [{ ...batch.previewItems[0], title: " " }],
+      },
+      {
+        ...batch,
+        previewItems: [...batch.previewItems, ...batch.previewItems],
+      },
+      {
+        ...batch,
+        previewItems: [{ ref: "../admin", title: "Bad" }],
+      },
+      { ...batch, severity: "critical" },
+    ]) {
+      expect(
+        notificationGroupedFeedResponseSchema.safeParse({
+          items: [badBatch],
+          nextCursor: null,
+        }).success,
+      ).toBe(false);
+    }
+    expect(
+      notificationGroupedFeedResponseSchema.safeParse({
+        items: [
+          {
+            ...batch,
+            visibleCount: 6,
+            previewCount: 5,
+            previewTruncated: true,
+            previewItems: [
+              ...batch.previewItems,
+              { ref: `m5_${idempotencyKey}_event`, title: "Finding D" },
+              {
+                ref: "m5_00000000-0000-4000-8000-000000000005_event",
+                title: "Finding E",
+              },
+            ],
+          },
+        ],
+        nextCursor: null,
+      }).success,
+    ).toBe(true);
+  });
   it("bounds and validates the personal feed query and item", () => {
     expect(notificationFeedQuerySchema.parse({})).toEqual({
       read: "all",

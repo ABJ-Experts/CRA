@@ -106,6 +106,12 @@ vi.mock("./notifications.queries", () => ({
 vi.mock("./chat-channel-panel", () => ({
   ChatChannelPanel: () => <div>Chat channel settings</div>,
 }));
+vi.mock("./burst-policy-panel", () => ({
+  BurstPolicyPanel: () => <div>Burst policy settings</div>,
+}));
+vi.mock("./burst-batch-history-panel", () => ({
+  BurstBatchHistoryPanel: () => <div>Burst delivery history</div>,
+}));
 
 describe("NotificationAdminPanel", () => {
   beforeEach(() => {

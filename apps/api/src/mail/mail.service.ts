@@ -12,6 +12,16 @@ export class RequiredMailDeliveryError extends Error {
   }
 }
 
+/** The SMTP request may have reached the relay; never auto-replay this send. */
+export class UncertainMailDeliveryError extends Error {
+  readonly name = "UncertainMailDeliveryError";
+  readonly code = "delivery_uncertain";
+
+  constructor() {
+    super("delivery_uncertain");
+  }
+}
+
 export type MailDeliveryReceipt = Readonly<{
   status: "provider_accepted";
   providerMessageId: string | null;
@@ -124,6 +134,7 @@ export class MailService {
     html: string,
     required = false,
     idempotencyKey?: string,
+    uncertainOnTransportError = false,
   ): Promise<MailDeliveryReceipt | undefined> {
     if (!this.transporter) {
       this.logger.warn("Mail delivery suppressed");
@@ -131,11 +142,12 @@ export class MailService {
       return;
     }
 
+    const idempotencyDigest = idempotencyKey
+      ? createHash("sha256").update(idempotencyKey).digest("hex")
+      : undefined;
+    let result: unknown;
     try {
-      const idempotencyDigest = idempotencyKey
-        ? createHash("sha256").update(idempotencyKey).digest("hex")
-        : undefined;
-      const result: unknown = await this.transporter.sendMail({
+      result = await this.transporter.sendMail({
         from: this.from,
         to,
         subject,
@@ -149,21 +161,7 @@ export class MailService {
             }
           : {}),
       });
-      const receipt = {
-        status: "provider_accepted",
-        providerMessageId: stringValue(result, "messageId"),
-        acceptedRecipients: stringArray(result, "accepted"),
-        rejectedRecipients: stringArray(result, "rejected"),
-        deliveryConfirmed: false,
-      } satisfies MailDeliveryReceipt;
-      if (!recipientWasAccepted(to, receipt)) {
-        if (required) throw new RequiredMailDeliveryError("delivery_failed");
-        this.logger.error("Mail delivery failed");
-        return;
-      }
-      this.logger.log("Mail delivery accepted");
-      return receipt;
-    } catch {
+    } catch (error) {
       /*
        * Never let a mail failure fail the request that triggered it. A sign-up
        * whose confirmation email bounced is a user who can request a resend; a
@@ -171,8 +169,45 @@ export class MailService {
        * thrown.
        */
       this.logger.error("Mail delivery failed");
-      if (required) throw new RequiredMailDeliveryError("delivery_failed");
+      if (required) {
+        if (
+          uncertainOnTransportError &&
+          !isExplicitSmtpPreDataRejection(error)
+        ) {
+          throw new UncertainMailDeliveryError();
+        }
+        throw new RequiredMailDeliveryError("delivery_failed");
+      }
+      return;
     }
+    const receipt = {
+      status: "provider_accepted",
+      providerMessageId: stringValue(result, "messageId"),
+      acceptedRecipients: stringArray(result, "accepted"),
+      rejectedRecipients: stringArray(result, "rejected"),
+      deliveryConfirmed: false,
+    } satisfies MailDeliveryReceipt;
+    if (!recipientWasAccepted(to, receipt)) {
+      this.logger.error("Mail delivery failed");
+      if (required) {
+        const explicitlyRejected = receipt.rejectedRecipients.some(
+          (address) => address.trim().toLowerCase() === to.trim().toLowerCase(),
+        );
+        const possiblyAccepted = receipt.acceptedRecipients.some(
+          (address) => address.trim().toLowerCase() === to.trim().toLowerCase(),
+        );
+        if (
+          uncertainOnTransportError &&
+          (!explicitlyRejected || possiblyAccepted)
+        ) {
+          throw new UncertainMailDeliveryError();
+        }
+        throw new RequiredMailDeliveryError("delivery_failed");
+      }
+      return;
+    }
+    this.logger.log("Mail delivery accepted");
+    return receipt;
   }
 
   private layout(title: string, body: string): string {
@@ -589,13 +624,68 @@ export class MailService {
     );
   }
 
+  async sendNotificationBurst(
+    to: string,
+    input: Readonly<{
+      count: number;
+      href: string;
+      items: readonly NotificationDigestItem[];
+    }>,
+    idempotencyKey: string,
+  ): Promise<MailDeliveryReceipt> {
+    if (
+      !Number.isInteger(input.count) ||
+      input.count < 2 ||
+      input.count > 100 ||
+      input.items.length < 1 ||
+      input.items.length > 5 ||
+      input.items.length > input.count ||
+      !/^\/notifications\?batchId=[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(
+        input.href,
+      ) ||
+      input.items.some((item) => !/^\/(?!\/)[^\r\n]*$/.test(item.href))
+    ) {
+      throw new RequiredMailDeliveryError("delivery_failed");
+    }
+    const rows = input.items
+      .map(
+        (item) =>
+          `<li style="margin:0 0 12px">${escapeHtml(item.title)}<br><span style="color:#8a8f98;font-size:12px">${escapeHtml(item.category)} · ${escapeHtml(item.date)}</span></li>`,
+      )
+      .join("");
+    const preview =
+      input.count > input.items.length
+        ? `Showing ${input.items.length} of ${input.count} updates.`
+        : `Showing all ${input.count} updates.`;
+    return this.required(
+      to,
+      `CRA notification updates (${input.count})`,
+      this.layout(
+        "Notification updates",
+        `<p style="color:#4b5058;font-size:14px">${preview}</p>
+         <ul style="padding-left:20px;margin:24px 0">${rows}</ul>
+         <p style="color:#4b5058;font-size:14px"><a href="${escapeHtml(`${this.appUrl}${input.href}`)}">Open these updates in CRA</a></p>`,
+      ),
+      idempotencyKey,
+      true,
+    );
+  }
+
   private async required(
     to: string,
     subject: string,
     html: string,
     idempotencyKey: string,
+    uncertainOnTransportError = false,
   ): Promise<MailDeliveryReceipt> {
-    const receipt = await this.send(to, subject, html, true, idempotencyKey);
+    const receipt = await this.send(
+      to,
+      subject,
+      html,
+      true,
+      idempotencyKey,
+      uncertainOnTransportError,
+    );
     if (!receipt) throw new RequiredMailDeliveryError("delivery_failed");
     return receipt;
   }
@@ -637,5 +727,17 @@ function recipientWasAccepted(
     intendedRecipients.length > 0 &&
     intendedRecipients.every((recipient) => accepted.has(recipient)) &&
     intendedRecipients.every((recipient) => !rejected.has(recipient))
+  );
+}
+
+function isExplicitSmtpPreDataRejection(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const details = error as Readonly<Record<string, unknown>>;
+  return (
+    typeof details.responseCode === "number" &&
+    Number.isInteger(details.responseCode) &&
+    details.responseCode >= 400 &&
+    details.responseCode <= 599 &&
+    (details.command === "MAIL FROM" || details.command === "RCPT TO")
   );
 }

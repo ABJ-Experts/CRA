@@ -4,6 +4,7 @@ import { createHash } from "node:crypto";
 import {
   MailService,
   RequiredMailDeliveryError,
+  UncertainMailDeliveryError,
   type MailDeliveryReceipt,
 } from "../../mail/mail.service";
 import {
@@ -33,10 +34,18 @@ export class MailNotificationDispatchDeliveryAdapter {
         input.idempotencyKey,
       );
     } catch (error) {
+      if (error instanceof UncertainMailDeliveryError) {
+        throw new NotificationDispatchFailure("delivery_uncertain", false);
+      }
       if (error instanceof RequiredMailDeliveryError) {
         throw new NotificationDispatchFailure(error.code, true);
       }
-      throw new NotificationDispatchFailure("provider_unavailable", true);
+      throw new NotificationDispatchFailure(
+        input.payload.kind === "burst"
+          ? "delivery_uncertain"
+          : "provider_unavailable",
+        input.payload.kind !== "burst",
+      );
     }
 
     const intended = input.recipient.email.trim().toLowerCase();
@@ -104,6 +113,16 @@ export class MailNotificationDispatchDeliveryAdapter {
         return this.mail.sendNotificationDigest(
           to,
           payload.items,
+          idempotencyKey,
+        );
+      case "burst":
+        return this.mail.sendNotificationBurst(
+          to,
+          {
+            count: payload.count,
+            href: payload.href,
+            items: payload.items,
+          },
           idempotencyKey,
         );
     }

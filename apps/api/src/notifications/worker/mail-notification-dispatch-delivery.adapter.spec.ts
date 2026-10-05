@@ -1,6 +1,9 @@
 import { createHash } from "node:crypto";
 
-import { RequiredMailDeliveryError } from "../../mail/mail.service";
+import {
+  RequiredMailDeliveryError,
+  UncertainMailDeliveryError,
+} from "../../mail/mail.service";
 import { MailNotificationDispatchDeliveryAdapter } from "./mail-notification-dispatch-delivery.adapter";
 import { NotificationDispatchFailure } from "./notification-dispatch-worker";
 
@@ -91,6 +94,39 @@ describe("MailNotificationDispatchDeliveryAdapter", () => {
       recipient.email,
       items,
       "notification:digest:1",
+    );
+  });
+
+  it("sends a frozen burst through the distinct required mail template", async () => {
+    const sendNotificationBurst = jest.fn().mockResolvedValue(receipt);
+    const adapter = new MailNotificationDispatchDeliveryAdapter({
+      sendNotificationBurst,
+    } as never);
+    const batchId = "44444444-4444-4444-8444-444444444444";
+    const payload = {
+      kind: "burst" as const,
+      count: 7,
+      href: `/notifications?batchId=${batchId}`,
+      items: [
+        {
+          title: "Finding update",
+          href: "/findings",
+          date: "2026-10-05",
+          category: "finding_triage",
+        },
+      ],
+    };
+
+    await adapter.send({
+      ...input(payload),
+      dispatchId: batchId,
+      idempotencyKey: `notification-burst:${batchId}`,
+    });
+
+    expect(sendNotificationBurst).toHaveBeenCalledWith(
+      recipient.email,
+      { count: 7, href: payload.href, items: payload.items },
+      `notification-burst:${batchId}`,
     );
   });
 
@@ -204,6 +240,67 @@ describe("MailNotificationDispatchDeliveryAdapter", () => {
       } satisfies Partial<NotificationDispatchFailure>);
     },
   );
+
+  it("marks an in-flight burst timeout uncertain while retaining pre-send outage retry", async () => {
+    const batchId = "44444444-4444-4444-8444-444444444444";
+    const payload = {
+      kind: "burst" as const,
+      count: 2,
+      href: `/notifications?batchId=${batchId}`,
+      items: [
+        {
+          title: "Finding",
+          href: "/findings",
+          date: "2026-10-05",
+          category: "finding_triage",
+        },
+      ],
+    };
+    const sendNotificationBurst = jest
+      .fn()
+      .mockRejectedValueOnce(new UncertainMailDeliveryError())
+      .mockRejectedValueOnce(
+        new RequiredMailDeliveryError("provider_unavailable"),
+      );
+    const adapter = new MailNotificationDispatchDeliveryAdapter({
+      sendNotificationBurst,
+    } as never);
+
+    await expect(adapter.send(input(payload))).rejects.toMatchObject({
+      code: "delivery_uncertain",
+      retryable: false,
+    });
+    await expect(adapter.send(input(payload))).rejects.toMatchObject({
+      code: "provider_unavailable",
+      retryable: true,
+    });
+  });
+
+  it("treats an unknown burst mail exception conservatively as uncertain", async () => {
+    const batchId = "44444444-4444-4444-8444-444444444444";
+    const adapter = new MailNotificationDispatchDeliveryAdapter({
+      sendNotificationBurst: jest
+        .fn()
+        .mockRejectedValue(new Error("private SMTP result")),
+    } as never);
+    await expect(
+      adapter.send(
+        input({
+          kind: "burst",
+          count: 2,
+          href: `/notifications?batchId=${batchId}`,
+          items: [
+            {
+              title: "Finding",
+              href: "/findings",
+              date: "2026-10-05",
+              category: "finding_triage",
+            },
+          ],
+        }),
+      ),
+    ).rejects.toMatchObject({ code: "delivery_uncertain", retryable: false });
+  });
 
   it.each([null, "x".repeat(513)])(
     "discards absent or oversized SMTP message identity",

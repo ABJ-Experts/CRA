@@ -51,6 +51,134 @@ const delivery = {
 describe("notificationsApi", () => {
   afterEach(() => vi.unstubAllGlobals());
 
+  it("parses burst policy and validates optimistic updates before transport", async () => {
+    const policy = {
+      organizationId: preferences.organizationId,
+      enabled: false,
+      version: 1,
+      enabledAt: null,
+      updatedAt: "2026-10-05T00:00:00.000Z",
+      windowSeconds: 120,
+      maxEmailMembers: 100,
+    };
+    const fetcher = vi.fn(
+      async (_url: string, init?: RequestInit) =>
+        new Response(
+          JSON.stringify({
+            policy:
+              init?.method === "PATCH"
+                ? {
+                    ...policy,
+                    enabled: true,
+                    enabledAt: "2026-10-05T01:00:00.000Z",
+                    version: 2,
+                  }
+                : policy,
+          }),
+          { status: 200 },
+        ),
+    );
+    vi.stubGlobal("fetch", fetcher);
+    await expect(notificationsApi.burstPolicy()).resolves.toEqual({ policy });
+    await expect(
+      notificationsApi.updateBurstPolicy({
+        enabled: true,
+        expectedVersion: 1,
+        idempotencyKey,
+      }),
+    ).resolves.toMatchObject({ policy: { enabled: true, version: 2 } });
+    expect(fetcher.mock.calls.map(([url]) => url)).toEqual([
+      "/api/v1/notifications/burst-policy",
+      "/api/v1/notifications/burst-policy",
+    ]);
+    await expect(
+      notificationsApi.updateBurstPolicy({
+        enabled: true,
+        expectedVersion: 1,
+        idempotencyKey: "invalid",
+      }),
+    ).rejects.toThrow();
+    expect(fetcher).toHaveBeenCalledTimes(2);
+  });
+
+  it("parses grouped summaries and rejects an unsafe filtered inbox link", async () => {
+    const batch = {
+      kind: "batch",
+      eventClass: "finding_sla_breached",
+      category: "finding_triage",
+      severity: "warning",
+      occurredAt: "2026-10-05T10:01:00.000Z",
+      windowStartsAt: "2026-10-05T10:00:00.000Z",
+      windowEndsAt: "2026-10-05T10:02:00.000Z",
+      title: "Finding triage updates",
+      summary: "Two findings need review.",
+      visibleCount: 2,
+      unreadCount: 1,
+      previewCount: 1,
+      previewTruncated: true,
+      previewItems: [
+        {
+          ref: "m5_11111111-1111-4111-8111-111111111111_event",
+          title: "Finding A",
+        },
+      ],
+      url: "/notifications?eventClass=finding_sla_breached&windowStart=2026-10-05T10:00:00.000Z",
+    };
+    const fetcher = vi.fn(
+      async () =>
+        new Response(JSON.stringify({ items: [batch], nextCursor: null })),
+    );
+    vi.stubGlobal("fetch", fetcher);
+    await expect(
+      notificationsApi.feed({ view: "grouped" }),
+    ).resolves.toMatchObject({
+      items: [{ title: "Finding triage updates", visibleCount: 2 }],
+    });
+    fetcher.mockImplementationOnce(
+      async () =>
+        new Response(
+          JSON.stringify({
+            items: [{ ...batch, url: "https://other.example/" }],
+            nextCursor: null,
+          }),
+        ),
+    );
+    await expect(notificationsApi.feed({ view: "grouped" })).rejects.toThrow();
+  });
+
+  it("parses bounded burst history and validates cursors before transport", async () => {
+    const batch = {
+      batchId: "11111111-1111-4111-8111-111111111111",
+      category: "finding_triage",
+      eventClass: "finding_sla_breached",
+      status: "provider_accepted",
+      windowStartsAt: "2026-10-05T10:00:00.000Z",
+      windowEndsAt: "2026-10-05T10:02:00.000Z",
+      memberCount: 4,
+      preparedCount: 4,
+      attemptCount: 1,
+      lastAttemptAt: "2026-10-05T10:03:00.000Z",
+      nextAttemptAt: null,
+      safeErrorCode: null,
+      createdAt: "2026-10-05T10:02:00.000Z",
+    };
+    const fetcher = vi.fn(async (url: RequestInfo | URL) => {
+      void url;
+      return new Response(JSON.stringify({ rows: [batch], nextCursor: null }));
+    });
+    vi.stubGlobal("fetch", fetcher);
+    await expect(
+      notificationsApi.burstBatches({ limit: 25 }),
+    ).resolves.toMatchObject({ rows: [{ preparedCount: 4 }] });
+    expect(fetcher.mock.calls[0]?.[0]).toBe(
+      "/api/v1/notifications/burst-batches?limit=25",
+    );
+    expect(() =>
+      notificationsApi.burstBatches({ cursor: "../invalid" as never }),
+    ).toThrow();
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  });
+
   it("uses parsed preference and critical-route boundaries", async () => {
     const fetcher = vi.fn(async (url: string, init?: RequestInit) => {
       if (url.endsWith("/preferences")) {

@@ -2,7 +2,11 @@ import { Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { createTransport } from "nodemailer";
 
-import { MailService, RequiredMailDeliveryError } from "./mail.service";
+import {
+  MailService,
+  RequiredMailDeliveryError,
+  UncertainMailDeliveryError,
+} from "./mail.service";
 
 interface SentMessage {
   from: string;
@@ -593,6 +597,197 @@ describe("MailService", () => {
       ),
     ).rejects.toEqual(new RequiredMailDeliveryError("delivery_failed"));
     expect(mockSendMail).not.toHaveBeenCalled();
+  });
+
+  it("sends a bounded burst with an exact filtered inbox link and explicit preview count", async () => {
+    const service = new MailService(enabledConfig());
+    const batchId = "11111111-1111-4111-8111-111111111111";
+
+    const receipt = await service.sendNotificationBurst(
+      "owner@cra.test",
+      {
+        count: 7,
+        href: `/notifications?batchId=${batchId}`,
+        items: [
+          {
+            title: "Finding <update>",
+            href: "/findings",
+            date: "2026-10-05",
+            category: "finding_triage",
+          },
+        ],
+      },
+      `notification-burst:${batchId}`,
+    );
+
+    const message = mockSendMail.mock.calls[0]?.[0];
+    expect(message?.subject).toBe("CRA notification updates (7)");
+    expect(message?.html).toContain("Finding &lt;update&gt;");
+    expect(message?.html).toContain("Showing 1 of 7 updates");
+    expect(message?.html).toContain(
+      `https://cra.test/notifications?batchId=${batchId}`,
+    );
+    expect(receipt.deliveryConfirmed).toBe(false);
+  });
+
+  it.each([
+    {
+      count: 1,
+      href: "/notifications?batchId=11111111-1111-4111-8111-111111111111",
+    },
+    {
+      count: 101,
+      href: "/notifications?batchId=11111111-1111-4111-8111-111111111111",
+    },
+    { count: 2, href: "//evil.test" },
+    { count: 2, href: "/notifications?batchId=not-a-uuid" },
+  ])("rejects an unsafe burst before SMTP: %j", async ({ count, href }) => {
+    const service = new MailService(enabledConfig());
+    await expect(
+      service.sendNotificationBurst(
+        "owner@cra.test",
+        {
+          count,
+          href,
+          items: [
+            {
+              title: "Finding",
+              href: "/findings",
+              date: "2026-10-05",
+              category: "finding_triage",
+            },
+          ],
+        },
+        "notification-burst:test",
+      ),
+    ).rejects.toEqual(new RequiredMailDeliveryError("delivery_failed"));
+    expect(mockSendMail).not.toHaveBeenCalled();
+  });
+
+  it("classifies an in-flight burst SMTP rejection as uncertain without changing digest retries", async () => {
+    const service = new MailService(enabledConfig());
+    mockSendMail.mockRejectedValue(new Error("private timeout after DATA"));
+    const burst = {
+      count: 2,
+      href: "/notifications?batchId=11111111-1111-4111-8111-111111111111",
+      items: [
+        {
+          title: "Finding",
+          href: "/findings",
+          date: "2026-10-05",
+          category: "finding_triage",
+        },
+      ],
+    };
+
+    await expect(
+      service.sendNotificationBurst(
+        "owner@cra.test",
+        burst,
+        "notification-burst:fixture",
+      ),
+    ).rejects.toEqual(new UncertainMailDeliveryError());
+    await expect(
+      service.sendNotificationDigest(
+        "owner@cra.test",
+        burst.items,
+        "notification-digest:fixture",
+      ),
+    ).rejects.toEqual(new RequiredMailDeliveryError("delivery_failed"));
+  });
+
+  it("parks an unconfirmed burst receipt but retries an explicit recipient rejection", async () => {
+    const service = new MailService(enabledConfig());
+    const burst = {
+      count: 2,
+      href: "/notifications?batchId=11111111-1111-4111-8111-111111111111",
+      items: [
+        {
+          title: "Finding",
+          href: "/findings",
+          date: "2026-10-05",
+          category: "finding_triage",
+        },
+      ],
+    };
+    mockSendMail
+      .mockResolvedValueOnce({ messageId: "maybe", accepted: [], rejected: [] })
+      .mockResolvedValueOnce({
+        messageId: "rejected",
+        accepted: [],
+        rejected: ["owner@cra.test"],
+      })
+      .mockResolvedValueOnce({
+        messageId: "contradictory",
+        accepted: ["owner@cra.test"],
+        rejected: ["owner@cra.test"],
+      });
+
+    await expect(
+      service.sendNotificationBurst("owner@cra.test", burst, "burst:maybe"),
+    ).rejects.toEqual(new UncertainMailDeliveryError());
+    await expect(
+      service.sendNotificationBurst("owner@cra.test", burst, "burst:rejected"),
+    ).rejects.toEqual(new RequiredMailDeliveryError("delivery_failed"));
+    await expect(
+      service.sendNotificationBurst("owner@cra.test", burst, "burst:conflict"),
+    ).rejects.toEqual(new UncertainMailDeliveryError());
+  });
+
+  it("reports a missing SMTP transport as a provably pre-send burst outage", async () => {
+    const service = new MailService(
+      config({
+        SMTP_FROM: "CRA <no-reply@cra.test>",
+        APP_URL: "https://cra.test",
+      }),
+    );
+    await expect(
+      service.sendNotificationBurst(
+        "owner@cra.test",
+        {
+          count: 2,
+          href: "/notifications?batchId=11111111-1111-4111-8111-111111111111",
+          items: [
+            {
+              title: "Finding",
+              href: "/findings",
+              date: "2026-10-05",
+              category: "finding_triage",
+            },
+          ],
+        },
+        "notification-burst:fixture",
+      ),
+    ).rejects.toEqual(new RequiredMailDeliveryError("provider_unavailable"));
+    expect(mockSendMail).not.toHaveBeenCalled();
+  });
+
+  it("retries an explicit SMTP throttle before message data is sent", async () => {
+    const service = new MailService(enabledConfig());
+    mockSendMail.mockRejectedValue(
+      Object.assign(new Error("private relay response"), {
+        responseCode: 452,
+        command: "RCPT TO",
+      }),
+    );
+    await expect(
+      service.sendNotificationBurst(
+        "owner@cra.test",
+        {
+          count: 2,
+          href: "/notifications?batchId=11111111-1111-4111-8111-111111111111",
+          items: [
+            {
+              title: "Finding",
+              href: "/findings",
+              date: "2026-10-05",
+              category: "finding_triage",
+            },
+          ],
+        },
+        "notification-burst:throttled",
+      ),
+    ).rejects.toEqual(new RequiredMailDeliveryError("delivery_failed"));
   });
 
   it("sends content-minimal required reporting deadline alerts", async () => {

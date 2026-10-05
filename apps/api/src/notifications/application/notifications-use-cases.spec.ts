@@ -15,11 +15,14 @@ describe("notification application boundary", () => {
       getCriticalRoute: jest.fn().mockResolvedValue({ outcome: "found" }),
       updateCriticalRoute: jest.fn().mockResolvedValue({ outcome: "updated" }),
       listDeliveries: jest.fn().mockResolvedValue({ outcome: "found" }),
+      listBurstBatches: jest.fn().mockResolvedValue({ outcome: "found" }),
       retryDelivery: jest.fn().mockResolvedValue({ outcome: "updated" }),
       listFeed: jest.fn().mockResolvedValue({ outcome: "found" }),
       countFeedUnread: jest.fn().mockResolvedValue({ outcome: "found" }),
       resolveFeedDestination: jest.fn().mockResolvedValue({ outcome: "found" }),
       markFeedRead: jest.fn().mockResolvedValue({ outcome: "updated" }),
+      getBurstPolicy: jest.fn().mockResolvedValue({ outcome: "found" }),
+      updateBurstPolicy: jest.fn().mockResolvedValue({ outcome: "updated" }),
     };
     const chatRepository = {
       listChatChannels: jest.fn().mockResolvedValue({ outcome: "found" }),
@@ -47,6 +50,7 @@ describe("notification application boundary", () => {
     await useCases.listDeliveries(organizationId, actorId, {
       limit: 50,
     });
+    await useCases.listBurstBatches(organizationId, actorId, { limit: 25 });
     await useCases.retryDelivery(organizationId, actorId, deliveryId, command);
     const feedRef = `m6_${deliveryId}_event`;
     const feedQuery = { limit: 25, read: "all" as const };
@@ -62,6 +66,11 @@ describe("notification application boundary", () => {
       feedRef as never,
     );
     await useCases.markFeedRead(organizationId, actorId, readCommand as never);
+    await useCases.getBurstPolicy(organizationId, actorId);
+    await useCases.updateBurstPolicy(organizationId, actorId, {
+      ...command,
+      enabled: true,
+    });
     const chatChannelInput = {
       displayName: "Security alerts",
       eventClasses: ["high_severity_alert"],
@@ -145,6 +154,11 @@ describe("notification application boundary", () => {
       actorId,
       { limit: 50 },
     );
+    expect(repository.listBurstBatches).toHaveBeenCalledWith(
+      organizationId,
+      actorId,
+      { limit: 25 },
+    );
     expect(repository.retryDelivery).toHaveBeenCalledWith(
       organizationId,
       actorId,
@@ -169,6 +183,15 @@ describe("notification application boundary", () => {
       organizationId,
       actorId,
       readCommand,
+    );
+    expect(repository.getBurstPolicy).toHaveBeenCalledWith(
+      organizationId,
+      actorId,
+    );
+    expect(repository.updateBurstPolicy).toHaveBeenCalledWith(
+      organizationId,
+      actorId,
+      { ...command, enabled: true },
     );
     expect(chatRepository.listChatChannels).toHaveBeenCalledWith(
       organizationId,

@@ -101,6 +101,33 @@ export const updateNotificationPreferencesInputSchema = z
   })
   .strict();
 
+/** The organization opt-in is independently versioned from user preferences. */
+export const notificationBurstPolicySchema = z
+  .object({
+    organizationId: z.uuid(),
+    enabled: z.boolean(),
+    version: versionSchema,
+    enabledAt: utcZDateTimeSchema.nullable(),
+    updatedAt: utcZDateTimeSchema,
+    windowSeconds: z.literal(120),
+    maxEmailMembers: z.literal(100),
+  })
+  .strict()
+  .refine(({ enabled, enabledAt }) => enabled === (enabledAt !== null), {
+    path: ["enabledAt"],
+    message: "The enabled timestamp must match the current policy state",
+  });
+export const notificationBurstPolicyResponseSchema = z
+  .object({ policy: notificationBurstPolicySchema })
+  .strict();
+export const updateNotificationBurstPolicyInputSchema = z
+  .object({
+    enabled: z.boolean(),
+    expectedVersion: versionSchema,
+    idempotencyKey: idempotencyKeySchema,
+  })
+  .strict();
+
 /** Critical routes keep the original accountable user and one alternate. */
 export const notificationCriticalRouteSchema = z
   .object({
@@ -178,6 +205,55 @@ export const notificationDeliveriesResponseSchema = z
 export const notificationDeliveryMutationResponseSchema = z
   .object({ delivery: notificationDeliverySchema })
   .strict();
+export const notificationBurstBatchesQuerySchema = z
+  .object({
+    cursor: notificationDeliveryCursorSchema.optional(),
+    limit: z.coerce.number().int().min(1).max(50).default(25),
+  })
+  .strict();
+export const notificationBurstBatchSchema = z
+  .object({
+    batchId: z.uuid(),
+    category: notificationOptionalCategorySchema,
+    eventClass: z.enum([
+      "finding_suppression_expired",
+      "finding_sla_breached",
+      "evidence_validity_expiring",
+      "supplier_owner_escalation",
+    ]),
+    status: notificationDeliveryStatusSchema,
+    windowStartsAt: utcZDateTimeSchema,
+    windowEndsAt: utcZDateTimeSchema,
+    memberCount: z.number().int().min(2).max(100),
+    preparedCount: z.number().int().min(0).max(100),
+    attemptCount: z.number().int().nonnegative(),
+    lastAttemptAt: utcZDateTimeSchema.nullable(),
+    nextAttemptAt: utcZDateTimeSchema.nullable(),
+    safeErrorCode: z
+      .string()
+      .min(1)
+      .max(64)
+      .regex(/^[a-z][a-z0-9_]*$/)
+      .nullable(),
+    createdAt: utcZDateTimeSchema,
+  })
+  .strict()
+  .refine((batch) => batch.preparedCount <= batch.memberCount, {
+    path: ["preparedCount"],
+  })
+  .refine(
+    (batch) =>
+      new Date(batch.windowEndsAt).getTime() -
+        new Date(batch.windowStartsAt).getTime() ===
+      120_000,
+    { path: ["windowEndsAt"] },
+  );
+export const notificationBurstBatchesResponseSchema = z
+  .object({
+    rows: z.array(notificationBurstBatchSchema).max(50),
+    nextCursor: notificationDeliveryCursorSchema.nullable(),
+  })
+  .strict();
 export const retryNotificationDeliveryInputSchema = z
   .object({
     expectedVersion: versionSchema,
@@ -215,15 +291,81 @@ export const notificationFeedReadFilterSchema = z.enum([
   "read",
   "unread",
 ]);
+export const notificationBurstEventClassSchema = z.enum([
+  "finding_suppression_expired",
+  "finding_sla_breached",
+  "evidence_validity_expiring",
+  "supplier_owner_escalation",
+]);
+export const notificationFeedViewSchema = z.enum(["events", "grouped"]);
 export const notificationFeedQuerySchema = z
   .object({
+    view: notificationFeedViewSchema.optional(),
+    batchId: z.uuid().optional(),
+    eventClass: notificationBurstEventClassSchema.optional(),
+    windowStart: utcZDateTimeSchema.optional(),
     category: notificationCategorySchema.optional(),
     severity: notificationFeedSeveritySchema.optional(),
     read: notificationFeedReadFilterSchema.default("all"),
     cursor: notificationFeedCursorSchema.optional(),
     limit: z.coerce.number().int().min(1).max(50).default(25),
   })
-  .strict();
+  .strict()
+  .superRefine(
+    (
+      { view, batchId, eventClass, windowStart, category, severity, read },
+      context,
+    ) => {
+      if (view === "grouped" && (batchId || eventClass || windowStart)) {
+        context.addIssue({
+          code: "custom",
+          path: ["view"],
+          message: "Grouped view cannot be filtered to a single batch",
+        });
+      }
+      if ((eventClass === undefined) !== (windowStart === undefined)) {
+        context.addIssue({
+          code: "custom",
+          path: [eventClass === undefined ? "eventClass" : "windowStart"],
+          message: "Event class and window start must be provided together",
+        });
+      }
+      if (batchId && (eventClass || windowStart)) {
+        context.addIssue({
+          code: "custom",
+          path: ["batchId"],
+          message: "Choose a batch ID or an event window",
+        });
+      }
+      if (
+        (batchId || eventClass || windowStart) &&
+        (category || severity || read !== "all")
+      ) {
+        context.addIssue({
+          code: "custom",
+          message: "Filtered cohorts cannot use additional feed filters",
+        });
+      }
+    },
+  );
+
+/** Only scoped inbox cohort URLs may be emitted by a summary or email batch. */
+export const trustedNotificationInboxUrlSchema = z
+  .string()
+  .max(2_048)
+  .refine((value) => {
+    const batchMatch = /^\/notifications\?batchId=([0-9a-f-]+)$/.exec(value);
+    if (batchMatch) return z.uuid().safeParse(batchMatch[1]).success;
+    const groupMatch =
+      /^\/notifications\?eventClass=([a-z_]+)&windowStart=([0-9TZ:.-]+)$/.exec(
+        value,
+      );
+    return Boolean(
+      groupMatch &&
+      notificationBurstEventClassSchema.safeParse(groupMatch[1]).success &&
+      utcZDateTimeSchema.safeParse(groupMatch[2]).success,
+    );
+  }, "Use a filtered notification inbox URL");
 export const notificationFeedDestinationParamsSchema = z
   .object({ ref: notificationFeedRefSchema })
   .strict();
@@ -247,6 +389,78 @@ export const notificationFeedResponseSchema = z
     nextCursor: notificationFeedCursorSchema.nullable(),
   })
   .strict();
+export const notificationGroupedFeedBatchItemSchema = z
+  .object({
+    kind: z.literal("batch"),
+    eventClass: notificationBurstEventClassSchema,
+    category: notificationOptionalCategorySchema,
+    severity: z.enum(["info", "warning"]),
+    occurredAt: utcZDateTimeSchema,
+    windowStartsAt: utcZDateTimeSchema,
+    windowEndsAt: utcZDateTimeSchema,
+    title: z.string().trim().min(1).max(500),
+    summary: z.string().trim().min(1).max(1_000),
+    visibleCount: z.number().int().positive(),
+    unreadCount: z.number().int().nonnegative(),
+    previewCount: z.number().int().min(0).max(5),
+    previewTruncated: z.boolean(),
+    previewItems: z
+      .array(
+        z
+          .object({
+            ref: notificationFeedRefSchema,
+            title: z.string().trim().min(1).max(500),
+          })
+          .strict(),
+      )
+      .max(5),
+    url: trustedNotificationInboxUrlSchema,
+  })
+  .strict()
+  .superRefine((item, context) => {
+    if (
+      Date.parse(item.windowEndsAt) <= Date.parse(item.windowStartsAt) ||
+      item.unreadCount > item.visibleCount ||
+      item.previewCount !== item.previewItems.length ||
+      item.previewCount > item.visibleCount ||
+      item.previewTruncated !== item.previewItems.length < item.visibleCount ||
+      new Set(item.previewItems.map((preview) => preview.ref)).size !==
+        item.previewItems.length
+    ) {
+      context.addIssue({
+        code: "custom",
+        message: "Batch window and visible counts must be consistent",
+      });
+    }
+    const groupMatch =
+      /^\/notifications\?eventClass=([a-z_]+)&windowStart=([0-9TZ:.-]+)$/.exec(
+        item.url,
+      );
+    if (
+      groupMatch?.[1] !== item.eventClass ||
+      groupMatch?.[2] !== item.windowStartsAt
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["url"],
+        message: "Batch link must match the visible event window",
+      });
+    }
+  });
+export const notificationGroupedFeedItemSchema = z.union([
+  notificationFeedItemSchema,
+  notificationGroupedFeedBatchItemSchema,
+]);
+export const notificationGroupedFeedResponseSchema = z
+  .object({
+    items: z.array(notificationGroupedFeedItemSchema).max(50),
+    nextCursor: notificationFeedCursorSchema.nullable(),
+  })
+  .strict();
+export const notificationAnyFeedResponseSchema = z.union([
+  notificationFeedResponseSchema,
+  notificationGroupedFeedResponseSchema,
+]);
 export const notificationFeedUnreadCountResponseSchema = z
   .object({ count: z.number().int().nonnegative() })
   .strict();

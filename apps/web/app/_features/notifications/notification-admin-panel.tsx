@@ -15,6 +15,8 @@ import { useEffect, useMemo, useState } from "react";
 import { ApiClientError } from "../../_lib/http/api-client";
 import { useSession } from "../../_providers/session-provider";
 import { ChatChannelPanel } from "./chat-channel-panel";
+import { BurstPolicyPanel } from "./burst-policy-panel";
+import { BurstBatchHistoryPanel } from "./burst-batch-history-panel";
 import {
   useNotificationCriticalRouteQuery,
   useNotificationDeliveriesQuery,
@@ -529,6 +531,14 @@ export function NotificationAdminPanel({
           {message}
         </p>
       ) : null}
+      <BurstPolicyPanel
+        key={`${session?.organization?.id ?? "none"}:burst`}
+        canManage={canManage}
+      />
+      <BurstBatchHistoryPanel
+        key={`${session?.organization?.id ?? "none"}:burst-history`}
+        canViewAudit={canViewDeliveries}
+      />
       <ChatChannelPanel
         key={`${session?.organization?.id ?? "none"}:${session?.user?.id ?? "none"}`}
         canManage={canManage}

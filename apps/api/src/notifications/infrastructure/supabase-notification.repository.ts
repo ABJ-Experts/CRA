@@ -5,6 +5,9 @@ import {
   notificationDeliveryMutationResponseSchema,
   notificationPreferencesResponseSchema,
   notificationFeedResponseSchema,
+  notificationGroupedFeedResponseSchema,
+  notificationBurstPolicyResponseSchema,
+  notificationBurstBatchesResponseSchema,
   notificationFeedUnreadCountResponseSchema,
   notificationFeedDestinationResponseSchema,
   markNotificationFeedReadResponseSchema,
@@ -20,6 +23,8 @@ import type {
   NotificationFeedRef,
   NotificationFeedQuery,
   MarkNotificationFeedReadInput,
+  UpdateNotificationBurstPolicyInput,
+  NotificationBurstBatchesQuery,
 } from "../application/notification.port";
 
 type Rpc = {
@@ -35,6 +40,49 @@ type Schema<T> = { parse(value: unknown): T };
 @Injectable()
 export class SupabaseNotificationRepository implements NotificationRepository {
   constructor(private readonly supabase: SupabaseService) {}
+
+  listBurstBatches(
+    organizationId: string,
+    actorId: string,
+    query: NotificationBurstBatchesQuery,
+  ) {
+    return this.call(
+      "list_notification_burst_batches_atomic",
+      {
+        p_organization_id: organizationId,
+        p_actor_user_id: actorId,
+        p_cursor: query.cursor ?? null,
+        p_limit: query.limit,
+      },
+      notificationBurstBatchesResponseSchema,
+    );
+  }
+
+  getBurstPolicy(organizationId: string, actorId: string) {
+    return this.call(
+      "get_notification_burst_policy_atomic",
+      { p_organization_id: organizationId, p_actor_user_id: actorId },
+      notificationBurstPolicyResponseSchema,
+    );
+  }
+
+  updateBurstPolicy(
+    organizationId: string,
+    actorId: string,
+    input: UpdateNotificationBurstPolicyInput,
+  ) {
+    return this.call(
+      "update_notification_burst_policy_atomic",
+      {
+        p_organization_id: organizationId,
+        p_actor_user_id: actorId,
+        p_expected_version: input.expectedVersion,
+        p_enabled: input.enabled,
+        p_idempotency_key: input.idempotencyKey,
+      },
+      notificationBurstPolicyResponseSchema,
+    );
+  }
 
   getPreferences(organizationId: string, actorId: string) {
     return this.call(
@@ -145,6 +193,48 @@ export class SupabaseNotificationRepository implements NotificationRepository {
     actorId: string,
     query: NotificationFeedQuery,
   ) {
+    if (query.view === "grouped") {
+      return this.call(
+        "list_notification_feed_grouped_atomic",
+        {
+          p_organization_id: organizationId,
+          p_actor_user_id: actorId,
+          p_category: query.category ?? null,
+          p_severity: query.severity ?? null,
+          p_read: query.read,
+          p_cursor: query.cursor ?? null,
+          p_limit: query.limit,
+        },
+        notificationGroupedFeedResponseSchema,
+      );
+    }
+    if (query.batchId) {
+      return this.call(
+        "list_notification_feed_batch_atomic",
+        {
+          p_organization_id: organizationId,
+          p_actor_user_id: actorId,
+          p_batch_id: query.batchId,
+          p_cursor: query.cursor ?? null,
+          p_limit: query.limit,
+        },
+        notificationFeedResponseSchema,
+      );
+    }
+    if (query.eventClass && query.windowStart) {
+      return this.call(
+        "list_notification_feed_cohort_atomic",
+        {
+          p_organization_id: organizationId,
+          p_actor_user_id: actorId,
+          p_event_class: query.eventClass,
+          p_window_start: query.windowStart,
+          p_cursor: query.cursor ?? null,
+          p_limit: query.limit,
+        },
+        notificationFeedResponseSchema,
+      );
+    }
     return this.call(
       "list_notification_feed_atomic",
       {

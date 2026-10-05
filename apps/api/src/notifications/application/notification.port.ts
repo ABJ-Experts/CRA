@@ -29,6 +29,11 @@ import type {
   chatDeliveryParamsSchema,
   retryChatDeliveryInputSchema,
   chatDeliveryMutationResponseSchema,
+  notificationBurstPolicyResponseSchema,
+  updateNotificationBurstPolicyInputSchema,
+  notificationGroupedFeedResponseSchema,
+  notificationBurstBatchesQuerySchema,
+  notificationBurstBatchesResponseSchema,
 } from "@repo/contracts/notifications";
 
 export const NOTIFICATION_REPOSITORY = Symbol("NOTIFICATION_REPOSITORY");
@@ -48,6 +53,18 @@ export type NotificationDeliveriesResponse = z.output<
 export type NotificationDeliveryMutationResponse = z.output<
   typeof notificationDeliveryMutationResponseSchema
 >;
+export type NotificationBurstPolicyResponse = z.output<
+  typeof notificationBurstPolicyResponseSchema
+>;
+export type NotificationBurstBatchesQuery = z.output<
+  typeof notificationBurstBatchesQuerySchema
+>;
+export type NotificationBurstBatchesResponse = z.output<
+  typeof notificationBurstBatchesResponseSchema
+>;
+export type UpdateNotificationBurstPolicyInput = z.output<
+  typeof updateNotificationBurstPolicyInputSchema
+>;
 export type UpdateNotificationPreferencesInput = z.output<
   typeof updateNotificationPreferencesInputSchema
 >;
@@ -63,6 +80,9 @@ export type NotificationFeedQuery = z.output<
 >;
 export type NotificationFeedResponse = z.output<
   typeof notificationFeedResponseSchema
+>;
+export type NotificationGroupedFeedResponse = z.output<
+  typeof notificationGroupedFeedResponseSchema
 >;
 export type NotificationFeedUnreadCountResponse = z.output<
   typeof notificationFeedUnreadCountResponseSchema
@@ -127,6 +147,20 @@ export type NotificationResult<T> = Readonly<
 >;
 
 export interface NotificationRepository {
+  listBurstBatches(
+    organizationId: string,
+    actorId: string,
+    query: NotificationBurstBatchesQuery,
+  ): Promise<NotificationResult<NotificationBurstBatchesResponse>>;
+  getBurstPolicy(
+    organizationId: string,
+    actorId: string,
+  ): Promise<NotificationResult<NotificationBurstPolicyResponse>>;
+  updateBurstPolicy(
+    organizationId: string,
+    actorId: string,
+    input: UpdateNotificationBurstPolicyInput,
+  ): Promise<NotificationResult<NotificationBurstPolicyResponse>>;
   getPreferences(
     organizationId: string,
     actorId: string,
@@ -162,7 +196,11 @@ export interface NotificationRepository {
     organizationId: string,
     actorId: string,
     query: NotificationFeedQuery,
-  ): Promise<NotificationResult<NotificationFeedResponse>>;
+  ): Promise<
+    NotificationResult<
+      NotificationFeedResponse | NotificationGroupedFeedResponse
+    >
+  >;
   countFeedUnread(
     organizationId: string,
     actorId: string,
