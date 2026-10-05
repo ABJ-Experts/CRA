@@ -14,6 +14,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { ApiClientError } from "../../_lib/http/api-client";
 import { useSession } from "../../_providers/session-provider";
+import { ChatChannelPanel } from "./chat-channel-panel";
 import {
   useNotificationCriticalRouteQuery,
   useNotificationDeliveriesQuery,
@@ -528,6 +529,11 @@ export function NotificationAdminPanel({
           {message}
         </p>
       ) : null}
+      <ChatChannelPanel
+        key={`${session?.organization?.id ?? "none"}:${session?.user?.id ?? "none"}`}
+        canManage={canManage}
+        canViewAudit={canViewDeliveries}
+      />
     </section>
   );
 }

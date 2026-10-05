@@ -1245,7 +1245,8 @@ select pg_temp.check(
   (select array_agg(table_name order by table_sort)
      from public.organization_export_source_tables
     where source_id = 'notification_delivery')
-    = array['notification_preferences', 'notification_dispatches', 'notification_feed_reads']::text[]
+    = array['notification_preferences', 'notification_dispatches', 'notification_feed_reads',
+      'notification_chat_channels', 'notification_chat_deliveries']::text[]
   and not exists (
     select 1 from public.organization_export_source_tables
      where table_name = 'notification_digest_batches'

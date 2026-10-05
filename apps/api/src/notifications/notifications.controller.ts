@@ -27,6 +27,20 @@ import {
   notificationFeedDestinationResponseSchema,
   markNotificationFeedReadInputSchema,
   markNotificationFeedReadResponseSchema,
+  chatChannelParamsSchema,
+  chatChannelMutationResponseSchema,
+  chatChannelsResponseSchema,
+  createChatChannelInputSchema,
+  updateChatChannelInputSchema,
+  testChatChannelInputSchema,
+  chatChannelTestResponseSchema,
+  confirmChatChannelInputSchema,
+  setChatChannelEnabledInputSchema,
+  chatDeliveriesQuerySchema,
+  chatDeliveriesResponseSchema,
+  chatDeliveryParamsSchema,
+  retryChatDeliveryInputSchema,
+  chatDeliveryMutationResponseSchema,
   retryNotificationDeliveryInputSchema,
   updateNotificationCriticalRouteInputSchema,
   updateNotificationPreferencesInputSchema,
@@ -55,6 +69,15 @@ import type {
   UpdateNotificationPreferencesInput,
   NotificationFeedQuery,
   MarkNotificationFeedReadInput,
+  NotificationChatChannelParams,
+  CreateNotificationChatChannelInput,
+  UpdateNotificationChatChannelInput,
+  TestNotificationChatChannelInput,
+  ConfirmNotificationChatChannelInput,
+  EnableNotificationChatChannelInput,
+  NotificationChatDeliveriesQuery,
+  NotificationChatDeliveryParams,
+  RetryNotificationChatDeliveryInput,
 } from "./application/notification.port";
 import { NotificationsUseCases } from "./application/notifications-use-cases";
 
@@ -182,6 +205,156 @@ export class NotificationsController {
         organizationId(user),
         user.id,
         params.userId,
+        input,
+      ),
+    );
+  }
+
+  @RequireRole("admin")
+  @RequirePermissions("can_edit_organization")
+  @Get("chat-channels")
+  @ZodResponse(chatChannelsResponseSchema)
+  chatChannels(@CurrentUser() user: RequestUser) {
+    return unwrapNotification(
+      this.notifications.listChatChannels(organizationId(user), user.id),
+    );
+  }
+
+  @RequireRole("admin")
+  @RequirePermissions("can_edit_organization")
+  @Post("chat-channels")
+  @ZodResponse(chatChannelMutationResponseSchema)
+  createChatChannel(
+    @Body(zodBody(createChatChannelInputSchema))
+    input: CreateNotificationChatChannelInput,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return unwrapNotification(
+      this.notifications.createChatChannel(
+        organizationId(user),
+        user.id,
+        input,
+      ),
+    );
+  }
+
+  @RequireRole("admin")
+  @RequirePermissions("can_edit_organization")
+  @Patch("chat-channels/:channelId")
+  @ZodResponse(chatChannelMutationResponseSchema)
+  updateChatChannel(
+    @Param(zodParams(chatChannelParamsSchema))
+    params: NotificationChatChannelParams,
+    @Body(zodBody(updateChatChannelInputSchema))
+    input: UpdateNotificationChatChannelInput,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return unwrapNotification(
+      this.notifications.updateChatChannel(
+        organizationId(user),
+        user.id,
+        params.channelId,
+        input,
+      ),
+    );
+  }
+
+  @RequireRole("admin")
+  @RequirePermissions("can_edit_organization")
+  @Post("chat-channels/:channelId/test")
+  @ZodResponse(chatChannelTestResponseSchema)
+  testChatChannel(
+    @Param(zodParams(chatChannelParamsSchema))
+    params: NotificationChatChannelParams,
+    @Body(zodBody(testChatChannelInputSchema))
+    input: TestNotificationChatChannelInput,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return unwrapNotification(
+      this.notifications.testChatChannel(
+        organizationId(user),
+        user.id,
+        params.channelId,
+        input,
+      ),
+    );
+  }
+
+  @RequireRole("admin")
+  @RequirePermissions("can_edit_organization")
+  @Post("chat-channels/:channelId/confirm")
+  @ZodResponse(chatChannelMutationResponseSchema)
+  confirmChatChannel(
+    @Param(zodParams(chatChannelParamsSchema))
+    params: NotificationChatChannelParams,
+    @Body(zodBody(confirmChatChannelInputSchema))
+    input: ConfirmNotificationChatChannelInput,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return unwrapNotification(
+      this.notifications.confirmChatChannel(
+        organizationId(user),
+        user.id,
+        params.channelId,
+        input,
+      ),
+    );
+  }
+
+  @RequireRole("admin")
+  @RequirePermissions("can_edit_organization")
+  @Patch("chat-channels/:channelId/enable")
+  @ZodResponse(chatChannelMutationResponseSchema)
+  enableChatChannel(
+    @Param(zodParams(chatChannelParamsSchema))
+    params: NotificationChatChannelParams,
+    @Body(zodBody(setChatChannelEnabledInputSchema))
+    input: EnableNotificationChatChannelInput,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return unwrapNotification(
+      this.notifications.enableChatChannel(
+        organizationId(user),
+        user.id,
+        params.channelId,
+        input,
+      ),
+    );
+  }
+
+  @RequirePermissions("can_view_audit")
+  @Get("chat-deliveries")
+  @ZodResponse(chatDeliveriesResponseSchema)
+  chatDeliveries(
+    @Query(zodQuery(chatDeliveriesQuerySchema))
+    query: NotificationChatDeliveriesQuery,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return unwrapNotification(
+      this.notifications.listChatDeliveries(
+        organizationId(user),
+        user.id,
+        query,
+      ),
+    );
+  }
+
+  @RequireRole("admin")
+  @RequirePermissions("can_edit_organization")
+  @Post("chat-deliveries/:deliveryId/retry")
+  @ZodResponse(chatDeliveryMutationResponseSchema)
+  retryChatDelivery(
+    @Param(zodParams(chatDeliveryParamsSchema))
+    params: NotificationChatDeliveryParams,
+    @Body(zodBody(retryChatDeliveryInputSchema))
+    input: RetryNotificationChatDeliveryInput,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return unwrapNotification(
+      this.notifications.retryChatDelivery(
+        organizationId(user),
+        user.id,
+        params.deliveryId,
         input,
       ),
     );

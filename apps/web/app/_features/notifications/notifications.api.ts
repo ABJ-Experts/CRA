@@ -1,4 +1,14 @@
 import {
+  chatChannelMutationResponseSchema,
+  chatChannelParamsSchema,
+  chatChannelTestResponseSchema,
+  chatChannelsResponseSchema,
+  chatDeliveriesQuerySchema,
+  chatDeliveriesResponseSchema,
+  chatDeliveryMutationResponseSchema,
+  chatDeliveryParamsSchema,
+  confirmChatChannelInputSchema,
+  createChatChannelInputSchema,
   notificationCriticalRouteParamsSchema,
   notificationCriticalRouteResponseSchema,
   notificationDeliveriesQuerySchema,
@@ -14,14 +24,25 @@ import {
   markNotificationFeedReadResponseSchema,
   notificationPreferencesResponseSchema,
   retryNotificationDeliveryInputSchema,
+  retryChatDeliveryInputSchema,
+  setChatChannelEnabledInputSchema,
+  testChatChannelInputSchema,
+  updateChatChannelInputSchema,
   updateNotificationCriticalRouteInputSchema,
   updateNotificationPreferencesInputSchema,
 } from "@repo/contracts/notifications";
 import type {
+  ChatDeliveriesQuery,
+  ConfirmChatChannelInput,
+  CreateChatChannelInput,
   NotificationDeliveriesQuery,
   NotificationFeedQuery,
   MarkNotificationFeedReadInput,
   RetryNotificationDeliveryInput,
+  RetryChatDeliveryInput,
+  SetChatChannelEnabledInput,
+  TestChatChannelInput,
+  UpdateChatChannelInput,
   UpdateNotificationCriticalRouteInput,
   UpdateNotificationPreferencesInput,
 } from "@repo/contracts/notifications";
@@ -70,8 +91,106 @@ function feedDestinationPath(ref: string): `/${string}` {
   return `/api/v1/notifications/feed/${parsed.ref}/destination`;
 }
 
+function chatChannelPath(channelId: string): `/${string}` {
+  const parsed = apiClient.parseInput(chatChannelParamsSchema, { channelId });
+  return `/api/v1/notifications/chat-channels/${parsed.channelId}`;
+}
+
+function chatDeliveryPath(deliveryId: string): `/${string}` {
+  const parsed = apiClient.parseInput(chatDeliveryParamsSchema, { deliveryId });
+  return `/api/v1/notifications/chat-deliveries/${parsed.deliveryId}`;
+}
+
+function chatDeliveriesPath(query: Partial<ChatDeliveriesQuery>): `/${string}` {
+  const parsed = apiClient.parseInput(chatDeliveriesQuerySchema, query);
+  const search = new URLSearchParams();
+  for (const [key, value] of Object.entries(parsed)) {
+    if (value !== undefined) search.set(key, String(value));
+  }
+  return `/api/v1/notifications/chat-deliveries?${search.toString()}`;
+}
+
 /** Browser gateway for durable notification preferences and delivery operations. */
 export class NotificationsApi {
+  chatChannels(signal?: AbortSignal) {
+    return authenticatedRequestJson({
+      path: "/api/v1/notifications/chat-channels",
+      schema: chatChannelsResponseSchema,
+      signal,
+    });
+  }
+
+  createChatChannel(input: CreateChatChannelInput) {
+    return authenticatedRequestJson({
+      path: "/api/v1/notifications/chat-channels",
+      method: "POST",
+      body: input,
+      inputSchema: createChatChannelInputSchema,
+      schema: chatChannelMutationResponseSchema,
+    });
+  }
+
+  updateChatChannel(channelId: string, input: UpdateChatChannelInput) {
+    return authenticatedRequestJson({
+      path: chatChannelPath(channelId),
+      method: "PATCH",
+      body: input,
+      inputSchema: updateChatChannelInputSchema,
+      schema: chatChannelMutationResponseSchema,
+    });
+  }
+
+  testChatChannel(channelId: string, input: TestChatChannelInput) {
+    return authenticatedRequestJson({
+      path: `${chatChannelPath(channelId)}/test`,
+      method: "POST",
+      body: input,
+      inputSchema: testChatChannelInputSchema,
+      schema: chatChannelTestResponseSchema,
+    });
+  }
+
+  confirmChatChannel(channelId: string, input: ConfirmChatChannelInput) {
+    return authenticatedRequestJson({
+      path: `${chatChannelPath(channelId)}/confirm`,
+      method: "POST",
+      body: input,
+      inputSchema: confirmChatChannelInputSchema,
+      schema: chatChannelMutationResponseSchema,
+    });
+  }
+
+  setChatChannelEnabled(channelId: string, input: SetChatChannelEnabledInput) {
+    return authenticatedRequestJson({
+      path: `${chatChannelPath(channelId)}/enable`,
+      method: "PATCH",
+      body: input,
+      inputSchema: setChatChannelEnabledInputSchema,
+      schema: chatChannelMutationResponseSchema,
+    });
+  }
+
+  chatDeliveries(
+    query: Partial<ChatDeliveriesQuery> = {},
+    signal?: AbortSignal,
+  ) {
+    return authenticatedRequestJson({
+      path: chatDeliveriesPath(query),
+      schema: chatDeliveriesResponseSchema,
+      signal,
+    });
+  }
+
+  retryChatDelivery(deliveryId: string, input: RetryChatDeliveryInput) {
+    return authenticatedRequestJson({
+      path: `${chatDeliveryPath(deliveryId)}/retry`,
+      method: "POST",
+      body: input,
+      inputSchema: retryChatDeliveryInputSchema,
+      schema: chatDeliveryMutationResponseSchema,
+    });
+  }
+
   feed(query: Partial<NotificationFeedQuery> = {}, signal?: AbortSignal) {
     return authenticatedRequestJson({
       path: feedPath(query),

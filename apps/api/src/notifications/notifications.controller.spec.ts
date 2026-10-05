@@ -24,6 +24,8 @@ const organizationId = "11111111-1111-4111-8111-111111111111";
 const actorId = "22222222-2222-4222-8222-222222222222";
 const userId = "33333333-3333-4333-8333-333333333333";
 const deliveryRef = notificationDeliveryRefSchema.parse("opaque_delivery_ref");
+const chatChannelId = "44444444-4444-4444-8444-444444444444";
+const chatDeliveryId = "55555555-5555-4555-8555-555555555555";
 const feedRef = notificationFeedRefSchema.parse(`m6_${organizationId}_event`);
 const user = { id: actorId, organizationId, role: "admin" } as RequestUser;
 
@@ -50,6 +52,23 @@ describe("notification HTTP policy", () => {
     ]);
     expect(metadata(REQUIRE_PERMISSIONS_KEY, "retry")).toEqual([
       "can_edit_organization",
+    ]);
+    for (const method of [
+      "chatChannels",
+      "createChatChannel",
+      "updateChatChannel",
+      "testChatChannel",
+      "confirmChatChannel",
+      "enableChatChannel",
+      "retryChatDelivery",
+    ]) {
+      expect(metadata(REQUIRE_ROLE_KEY, method)).toBe("admin");
+      expect(metadata(REQUIRE_PERMISSIONS_KEY, method)).toEqual([
+        "can_edit_organization",
+      ]);
+    }
+    expect(metadata(REQUIRE_PERMISSIONS_KEY, "chatDeliveries")).toEqual([
+      "can_view_audit",
     ]);
     for (const method of [
       "feed",
@@ -91,6 +110,30 @@ describe("notification HTTP policy", () => {
       markFeedRead: jest
         .fn()
         .mockResolvedValue({ outcome: "updated", data: {} }),
+      listChatChannels: jest
+        .fn()
+        .mockResolvedValue({ outcome: "found", data: {} }),
+      createChatChannel: jest
+        .fn()
+        .mockResolvedValue({ outcome: "updated", data: {} }),
+      updateChatChannel: jest
+        .fn()
+        .mockResolvedValue({ outcome: "updated", data: {} }),
+      testChatChannel: jest
+        .fn()
+        .mockResolvedValue({ outcome: "updated", data: {} }),
+      confirmChatChannel: jest
+        .fn()
+        .mockResolvedValue({ outcome: "updated", data: {} }),
+      enableChatChannel: jest
+        .fn()
+        .mockResolvedValue({ outcome: "updated", data: {} }),
+      listChatDeliveries: jest
+        .fn()
+        .mockResolvedValue({ outcome: "found", data: {} }),
+      retryChatDelivery: jest
+        .fn()
+        .mockResolvedValue({ outcome: "updated", data: {} }),
     };
     const controller = new NotificationsController(useCases as never);
     const revision = {
@@ -117,6 +160,61 @@ describe("notification HTTP policy", () => {
     await controller.feedUnreadCount(user);
     await controller.feedDestination({ ref: feedRef }, user);
     await controller.markFeedRead(command, user);
+    const chatChannelInput = {
+      name: "Security alerts",
+      provider: "slack",
+      target: { url: "https://hooks.slack.test/services/abc" },
+      idempotencyKey: revision.idempotencyKey,
+    };
+    const chatChannelPatch = {
+      expectedVersion: 1,
+      name: "Security alerts",
+      target: { url: "https://hooks.slack.test/services/def" },
+      idempotencyKey: revision.idempotencyKey,
+    };
+    const testInput = {
+      expectedVersion: 1,
+      idempotencyKey: revision.idempotencyKey,
+    };
+    const confirmInput = {
+      expectedVersion: 1,
+      testId: chatDeliveryId,
+      code: "123456",
+      idempotencyKey: revision.idempotencyKey,
+    };
+    const enableInput = {
+      expectedVersion: 1,
+      enabled: true,
+      idempotencyKey: revision.idempotencyKey,
+    };
+    await controller.chatChannels(user);
+    await controller.createChatChannel(chatChannelInput as never, user);
+    await controller.updateChatChannel(
+      { channelId: chatChannelId },
+      chatChannelPatch as never,
+      user,
+    );
+    await controller.testChatChannel(
+      { channelId: chatChannelId },
+      testInput,
+      user,
+    );
+    await controller.confirmChatChannel(
+      { channelId: chatChannelId },
+      confirmInput,
+      user,
+    );
+    await controller.enableChatChannel(
+      { channelId: chatChannelId },
+      enableInput,
+      user,
+    );
+    await controller.chatDeliveries({ limit: 20 }, user);
+    await controller.retryChatDelivery(
+      { deliveryId: chatDeliveryId },
+      revision,
+      user,
+    );
 
     expect(useCases.getPreferences).toHaveBeenCalledWith(
       organizationId,
@@ -167,6 +265,50 @@ describe("notification HTTP policy", () => {
       organizationId,
       actorId,
       command,
+    );
+    expect(useCases.listChatChannels).toHaveBeenCalledWith(
+      organizationId,
+      actorId,
+    );
+    expect(useCases.createChatChannel).toHaveBeenCalledWith(
+      organizationId,
+      actorId,
+      chatChannelInput,
+    );
+    expect(useCases.updateChatChannel).toHaveBeenCalledWith(
+      organizationId,
+      actorId,
+      chatChannelId,
+      chatChannelPatch,
+    );
+    expect(useCases.testChatChannel).toHaveBeenCalledWith(
+      organizationId,
+      actorId,
+      chatChannelId,
+      testInput,
+    );
+    expect(useCases.confirmChatChannel).toHaveBeenCalledWith(
+      organizationId,
+      actorId,
+      chatChannelId,
+      confirmInput,
+    );
+    expect(useCases.enableChatChannel).toHaveBeenCalledWith(
+      organizationId,
+      actorId,
+      chatChannelId,
+      enableInput,
+    );
+    expect(useCases.listChatDeliveries).toHaveBeenCalledWith(
+      organizationId,
+      actorId,
+      { limit: 20 },
+    );
+    expect(useCases.retryChatDelivery).toHaveBeenCalledWith(
+      organizationId,
+      actorId,
+      chatDeliveryId,
+      revision,
     );
   });
 

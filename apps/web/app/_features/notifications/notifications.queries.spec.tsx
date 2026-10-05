@@ -15,6 +15,12 @@ import {
   useNotificationUnreadCountQuery,
   useMarkNotificationReadMutation,
   useRetryNotificationDeliveryMutation,
+  useChatChannelsQuery,
+  useChatDeliveriesQuery,
+  useChatProductsQuery,
+  useCreateChatChannelMutation,
+  useUpdateChatChannelMutation,
+  useConfirmChatChannelMutation,
   useUpdateNotificationCriticalRouteMutation,
   useUpdateNotificationPreferencesMutation,
 } from "./notifications.queries";
@@ -26,7 +32,11 @@ const commandId = "33333333-3333-4333-8333-333333333333";
 const scope = vi.hoisted(() => ({
   organizationId: "org-a" as string | null,
   userId: "user-a" as string | null,
-  permissions: { can_view_audit: true },
+  permissions: { can_view_audit: true } as {
+    can_view_audit: boolean;
+    can_edit_organization?: boolean;
+  },
+  role: "admin" as "admin" | "viewer",
   isLoading: false,
   isError: false,
 }));
@@ -41,7 +51,18 @@ const api = vi.hoisted(() => ({
   feed: vi.fn(async () => ({ items: [] as unknown[], nextCursor: null })),
   unreadCount: vi.fn(async () => ({ count: 0 })),
   markRead: vi.fn(async () => ({ items: [], replayed: false })),
+  chatChannels: vi.fn(async () => ({ channels: [] })),
+  chatDeliveries: vi.fn(async () => ({ rows: [], nextCursor: null })),
+  createChatChannel: vi.fn(async () => ({ channel: { id: "channel-a" } })),
+  updateChatChannel: vi.fn(async () => ({ channel: { id: "channel-a" } })),
+  confirmChatChannel: vi.fn(async () => ({ channel: { id: "channel-a" } })),
 }));
+
+const productApi = vi.hoisted(() => ({
+  list: vi.fn(async () => ({ products: { rows: [], total: 0 } })),
+}));
+
+vi.mock("../products/products.api", () => ({ productsApi: productApi }));
 
 vi.mock("../../_providers/session-provider", () => ({
   useSession: () => ({
@@ -53,6 +74,7 @@ vi.mock("../../_providers/session-provider", () => ({
           }
         : null,
     permissions: scope.permissions,
+    role: scope.role,
     isLoading: scope.isLoading,
     isError: scope.isError,
   }),
@@ -79,8 +101,125 @@ beforeEach(() => {
   scope.organizationId = "org-a";
   scope.userId = "user-a";
   scope.permissions = { can_view_audit: true };
+  scope.role = "admin";
   scope.isLoading = false;
   scope.isError = false;
+});
+
+describe("chat notification query scope", () => {
+  it("gates channel and product reads to tenant admins and history to audit viewers", async () => {
+    const { client, wrapper } = setup();
+    scope.permissions = { can_view_audit: true, can_edit_organization: true };
+    const view = renderHook(
+      () => ({
+        channels: useChatChannelsQuery(),
+        products: useChatProductsQuery("device"),
+        deliveries: useChatDeliveriesQuery({ status: "failed", limit: 25 }),
+      }),
+      { wrapper },
+    );
+    await waitFor(() =>
+      expect(view.result.current.channels.isSuccess).toBe(true),
+    );
+    expect(api.chatChannels).toHaveBeenCalledTimes(1);
+    expect(productApi.list).toHaveBeenCalledWith(
+      { page: 1, pageSize: 25, archived: false, q: "device" },
+      expect.any(AbortSignal),
+    );
+    expect(api.chatDeliveries).toHaveBeenCalledWith(
+      { status: "failed", limit: 25 },
+      expect.any(AbortSignal),
+    );
+
+    scope.organizationId = "org-b";
+    view.rerender();
+    expect(view.result.current.channels.data).toBeUndefined();
+    expect(view.result.current.products.data).toBeUndefined();
+    expect(view.result.current.deliveries.data).toBeUndefined();
+
+    scope.role = "viewer";
+    scope.permissions = { can_view_audit: true, can_edit_organization: true };
+    view.rerender();
+    expect(view.result.current.channels.data).toBeUndefined();
+    expect(view.result.current.products.data).toBeUndefined();
+    await waitFor(() =>
+      expect(view.result.current.deliveries.isSuccess).toBe(true),
+    );
+
+    scope.permissions = { can_view_audit: false, can_edit_organization: false };
+    view.rerender();
+    expect(view.result.current.deliveries.data).toBeUndefined();
+    client.clear();
+  });
+
+  it("does not retain credential-bearing create and update inputs in MutationCache", async () => {
+    const { client, wrapper } = setup();
+    scope.permissions = { can_view_audit: true, can_edit_organization: true };
+    const view = renderHook(
+      () => ({
+        create: useCreateChatChannelMutation(),
+        update: useUpdateChatChannelMutation(),
+        confirm: useConfirmChatChannelMutation(),
+      }),
+      { wrapper },
+    );
+    const createInput = {
+      displayName: "Operations",
+      eventClasses: ["high_severity_alert" as const],
+      productIds: ["11111111-1111-4111-8111-111111111111"],
+      includeOrganizationWide: false,
+      destination: {
+        mode: "slack_webhook" as const,
+        webhookUrl: "https://hooks.slack.com/services/test/secret",
+      },
+      idempotencyKey: commandId,
+    };
+    await act(async () => {
+      await view.result.current.create.mutateAsync(createInput);
+      await view.result.current.update.mutateAsync({
+        channelId: "22222222-2222-4222-8222-222222222222",
+        input: {
+          ...createInput,
+          expectedVersion: 1,
+        },
+      });
+      await view.result.current.confirm.mutateAsync({
+        channelId: "22222222-2222-4222-8222-222222222222",
+        input: {
+          expectedVersion: 2,
+          idempotencyKey: commandId,
+          testId: "33333333-3333-4333-8333-333333333333",
+          code: "123456",
+        },
+      });
+    });
+    expect(api.createChatChannel).toHaveBeenCalledWith(createInput);
+    expect(api.updateChatChannel).toHaveBeenCalledWith(
+      "22222222-2222-4222-8222-222222222222",
+      expect.objectContaining({ destination: createInput.destination }),
+    );
+    expect(api.confirmChatChannel).toHaveBeenCalledWith(
+      "22222222-2222-4222-8222-222222222222",
+      expect.objectContaining({ code: "123456" }),
+    );
+    expect(client.getMutationCache().getAll()).toHaveLength(0);
+
+    let release: ((value: { channel: { id: string } }) => void) | undefined;
+    api.createChatChannel.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          release = resolve;
+        }),
+    );
+    const first = view.result.current.create.mutateAsync(createInput);
+    await expect(
+      view.result.current.create.mutateAsync(createInput),
+    ).rejects.toThrow(/already being submitted/);
+    release?.({ channel: { id: "channel-a" } });
+    await first;
+    expect(client.getMutationCache().getAll()).toHaveLength(0);
+    client.clear();
+  });
 });
 
 describe("notification query scope", () => {

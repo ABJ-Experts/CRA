@@ -1,0 +1,82 @@
+- region [ref=f9e314]:
+  - generic [ref=f9e315]:
+    - heading "Chat alerts" [level=3] [ref=f9e316]
+    - paragraph [ref=f9e317]: Slack and Microsoft Teams add a channel for urgent alerts. Critical email and in-app notices remain active if chat delivery fails.
+  - generic [ref=f9e318]:
+    - heading "Add a chat channel" [level=4] [ref=f9e393]
+    - generic [ref=f9e320]:
+      - generic [ref=f9e321]:
+        - generic [ref=f9e322]:
+          - text: Channel name
+          - generic [aria-hidden] [ref=f9e323]: "*"
+        - textbox "Channel name" [ref=f9e325]
+      - generic [ref=f9e326]:
+        - text: Delivery mode
+        - combobox "Delivery mode" [ref=f9e327] [cursor=pointer]:
+          - option "Slack incoming webhook" [selected]
+          - option "Slack bot"
+          - option "Microsoft Teams Workflow webhook"
+          - option "Microsoft Teams proactive bot"
+    - paragraph [ref=f9e328]: Create an incoming webhook in the customer-installed Slack app. Its URL is bound to one channel.
+    - generic [ref=f9e329]:
+      - generic [ref=f9e330]: Webhook URL
+      - textbox "Webhook URL" [ref=f9e332]
+      - paragraph [ref=f9e333]: Stored encrypted. The URL is never shown again.
+    - group "Permitted event classes" [ref=f9e334]:
+      - generic [ref=f9e337]:
+        - checkbox "High-severity alerts" [checked] [ref=f9e338] [cursor=pointer]
+        - checkbox [checked] [aria-hidden]
+        - generic [ref=f9e339] [cursor=pointer]: High-severity alerts
+      - generic [ref=f9e341]:
+        - checkbox "Countdown warnings" [ref=f9e342] [cursor=pointer]
+        - checkbox [aria-hidden]
+        - generic [ref=f9e343] [cursor=pointer]: Countdown warnings
+      - generic [ref=f9e345]:
+        - checkbox "Approval prompts" [ref=f9e346] [cursor=pointer]
+        - checkbox [aria-hidden]
+        - generic [ref=f9e347] [cursor=pointer]: Approval prompts
+    - group "Permitted products" [ref=f9e348]:
+      - generic [ref=f9e350]:
+        - generic [ref=f9e351]: Search products
+        - textbox "Search products" [ref=f9e353]
+        - paragraph [ref=f9e354]: Choose each product this channel may receive alerts about.
+      - generic [ref=f9e355]:
+        - generic [ref=f9e356]:
+          - checkbox "Include organization-wide deadline alerts" [ref=f9e357] [cursor=pointer]
+          - checkbox [aria-hidden]
+          - generic [ref=f9e358] [cursor=pointer]: Include organization-wide deadline alerts
+        - paragraph [ref=f9e359]: Only source events without a product scope, such as organization-wide M6 deadlines.
+    - generic [ref=f9e360]:
+      - paragraph [ref=f9e361]: Test message disclosure preview
+      - generic [ref=f9e362]: "CRA Sentinel test notification Channel: <channel name> Confirmation code: <six-digit code> No record data is included."
+      - paragraph [ref=f9e363]: Live alert disclosure example
+      - generic [ref=f9e364]: "CRA Sentinel High-severity alert · High Event time: <UTC event time> Open in CRA: <trusted application link>"
+      - paragraph [ref=f9e365]: Event class, severity, time, and link vary per alert. No source titles, findings, drafts, or evidence are included. The link requires sign-in; approval is always completed in the application.
+    - button "Create chat channel" [ref=f9e394] [cursor=pointer]
+  - list "Chat channels" [ref=f9e375]:
+    - listitem [ref=f9e376]:
+      - generic [ref=f9e377]:
+        - generic [ref=f9e378]:
+          - paragraph [ref=f9e379]: M12-05 Browser Route Updated
+          - paragraph [ref=f9e380]: Slack incoming webhook · 0 products · organization-wide deadlines
+        - generic [ref=f9e381]: Needs test
+      - paragraph [ref=f9e384]: "Events: countdown warning"
+      - generic [ref=f9e385]:
+        - button "Edit M12-05 Browser Route Updated" [ref=f9e395] [cursor=pointer]
+        - button "Send test to M12-05 Browser Route Updated" [ref=f9e396] [cursor=pointer]
+        - button "Enable M12-05 Browser Route Updated" [disabled] [ref=f9e397]
+  - generic [ref=f9e369]:
+    - heading "Chat delivery history" [level=4] [ref=f9e370]
+    - generic [ref=f9e371]:
+      - text: Delivery state
+      - combobox "Delivery state" [ref=f9e372] [cursor=pointer]:
+        - option "All delivery states" [selected]
+        - option "Queued"
+        - option "Attempted"
+        - option "Failed"
+        - option "Exhausted"
+        - option "Provider accepted"
+        - option "Uncertain"
+        - option "Cancelled"
+    - paragraph [ref=f9e373]: No chat deliveries match this state.
+  - status [ref=f9e398]: Chat channel saved. A changed destination needs a new test before enabling.

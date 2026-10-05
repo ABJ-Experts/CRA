@@ -3,12 +3,16 @@ import { NestFactory } from "@nestjs/core";
 import { randomUUID } from "node:crypto";
 
 import { AppModule } from "./app.module";
+import { AesGcmConnectorVault } from "./connectors/infrastructure/connector-vault";
 import { MailService } from "./mail/mail.service";
+import { ChatNotificationWorker } from "./notifications/worker/chat-notification-worker";
+import { ChatProviderDeliveryAdapter } from "./notifications/worker/chat-provider-delivery.adapter";
 import { MailNotificationDispatchDeliveryAdapter } from "./notifications/worker/mail-notification-dispatch-delivery.adapter";
 import { DigestNotificationDispatchWorker } from "./notifications/worker/digest-notification-dispatch-worker";
 import { NotificationDispatchWorker } from "./notifications/worker/notification-dispatch-worker";
 import { SupabaseNotificationDigestQueueAdapter } from "./notifications/worker/supabase-notification-digest-queue.adapter";
 import { SupabaseNotificationDispatchQueueAdapter } from "./notifications/worker/supabase-notification-dispatch-queue.adapter";
+import { SupabaseChatNotificationQueueAdapter } from "./notifications/worker/supabase-chat-notification-queue.adapter";
 import { SupabaseService } from "./supabase/supabase.service";
 
 type WorkerApplicationContext = Readonly<{
@@ -29,6 +33,9 @@ export async function bootstrapNotificationDispatchWorker(
     createDigestWorker?: (
       context: WorkerApplicationContext,
     ) => DigestNotificationDispatchWorker;
+    createChatWorker?: (
+      context: WorkerApplicationContext,
+    ) => ChatNotificationWorker;
     logger: Pick<Logger, "error">;
     sleep: (milliseconds: number) => Promise<void>;
   }>,
@@ -38,17 +45,40 @@ export async function bootstrapNotificationDispatchWorker(
   try {
     const worker = options.createWorker(context);
     const digestWorker = options.createDigestWorker?.(context);
-    do {
-      await Promise.all([
-        worker.runOnce().catch(() => {
-          options.logger.error("Notification dispatch cycle failed safely");
-        }),
-        digestWorker?.runOnce().catch(() => {
-          options.logger.error("Notification digest cycle failed safely");
-        }),
-      ]);
-      if (!once) await options.sleep(30_000);
-    } while (!once);
+    let chatWorker: ChatNotificationWorker | undefined;
+    try {
+      chatWorker = options.createChatWorker?.(context);
+    } catch {
+      options.logger.error("Chat notification worker unavailable");
+    }
+    const runLoop = async (runOnce: () => Promise<void>, error: string) => {
+      do {
+        try {
+          await runOnce();
+        } catch {
+          options.logger.error(error);
+        }
+        if (!once) await options.sleep(30_000);
+      } while (!once);
+    };
+    await Promise.all([
+      runLoop(
+        () => worker.runOnce(),
+        "Notification dispatch cycle failed safely",
+      ),
+      digestWorker
+        ? runLoop(
+            () => digestWorker.runOnce(),
+            "Notification digest cycle failed safely",
+          )
+        : undefined,
+      chatWorker
+        ? runLoop(
+            () => chatWorker.runOnce(),
+            "Chat notification cycle failed safely",
+          )
+        : undefined,
+    ]);
   } finally {
     await context.close();
   }
@@ -87,6 +117,22 @@ export function workerFromContext(
   });
 }
 
+export function chatWorkerFromContext(
+  context: WorkerApplicationContext,
+): ChatNotificationWorker {
+  const appUrl = process.env.APP_URL ?? "http://localhost:3000";
+  return new ChatNotificationWorker({
+    workerId: randomUUID(),
+    leaseSeconds: 120,
+    queue: new SupabaseChatNotificationQueueAdapter(
+      context.get(SupabaseService) as SupabaseService,
+      new AesGcmConnectorVault(process.env.CONNECTOR_VAULT_KEYRING),
+      appUrl,
+    ),
+    delivery: new ChatProviderDeliveryAdapter(undefined, appUrl),
+  });
+}
+
 /* istanbul ignore next -- the process entry guard is exercised by the runtime. */
 if (require.main === module) {
   void bootstrapNotificationDispatchWorker({
@@ -95,6 +141,7 @@ if (require.main === module) {
       NestFactory.createApplicationContext(AppModule, { bufferLogs: false }),
     createWorker: workerFromContext,
     createDigestWorker: digestWorkerFromContext,
+    createChatWorker: chatWorkerFromContext,
     logger: new Logger("NotificationDispatchWorker"),
     sleep,
   });

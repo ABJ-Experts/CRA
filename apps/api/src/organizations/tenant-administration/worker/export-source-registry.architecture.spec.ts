@@ -78,6 +78,11 @@ const dynamicSnapshotLockAdditions = (sql: string): readonly string[] =>
       ].flatMap((match) => [
         ...(match[1] ?? "").matchAll(/public\.([a-z_]+)/g),
       ]),
+      ...[
+        ...sql.matchAll(
+          /replace\(v_definition,v_anchor,', public\.([a-z_]+)'\|\|v_anchor\)/g,
+        ),
+      ].map((match) => ["", match[1]]),
     ]
       .map((match) => match[1])
       .filter((table): table is string => Boolean(table)),
@@ -104,7 +109,7 @@ describe("tenant export source registry architecture", () => {
     );
   });
 
-  it("exports notification preferences, dispatch evidence, and per-user read state without digest worker state", () => {
+  it("exports durable notification and chat records without digest worker state", () => {
     const notificationSource = exportSourceRegistry.find(
       (source) => source.sourceId === "notification_delivery",
     );
@@ -112,6 +117,8 @@ describe("tenant export source registry architecture", () => {
       "notification_preferences",
       "notification_dispatches",
       "notification_feed_reads",
+      "notification_chat_channels",
+      "notification_chat_deliveries",
     ]);
     expect(exportSourceExclusions.notification_digest_batches).toMatch(
       /lease|worker|replay/i,

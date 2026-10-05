@@ -206,4 +206,177 @@ describe("notificationsApi", () => {
     ).rejects.toThrow();
     expect(fetcher).toHaveBeenCalledTimes(4);
   });
+
+  it("validates chat channel commands before sending and parses safe channel responses", async () => {
+    const channel = {
+      id: "77777777-7777-4777-8777-777777777777",
+      organizationId: preferences.organizationId,
+      mode: "slack_webhook",
+      displayName: "Operations",
+      eventClasses: ["high_severity_alert"],
+      productIds: ["88888888-8888-4888-8888-888888888888"],
+      includeOrganizationWide: false,
+      enabled: false,
+      verified: false,
+      safeErrorCode: null,
+      version: 1,
+      createdAt: "2026-10-02T10:00:00.000Z",
+      updatedAt: "2026-10-02T10:00:00.000Z",
+    } as const;
+    const fetcher = vi.fn(
+      async (url: string) =>
+        new Response(
+          JSON.stringify(
+            url.endsWith("/chat-channels") && !url.includes("?")
+              ? { channel }
+              : { channels: [channel] },
+          ),
+        ),
+    );
+    vi.stubGlobal("fetch", fetcher);
+
+    await expect(
+      notificationsApi.createChatChannel({
+        displayName: "Operations",
+        eventClasses: ["high_severity_alert"],
+        productIds: [...channel.productIds],
+        includeOrganizationWide: false,
+        destination: {
+          mode: "slack_webhook",
+          webhookUrl: "https://hooks.slack.com/services/T/B/SECRET",
+        },
+        idempotencyKey,
+      }),
+    ).resolves.toMatchObject({ channel: { id: channel.id } });
+    await expect(notificationsApi.chatChannels()).rejects.toThrow();
+    expect(() =>
+      notificationsApi.testChatChannel("../escape", {
+        expectedVersion: 1,
+        idempotencyKey,
+      }),
+    ).toThrow();
+    await expect(
+      notificationsApi.createChatChannel({
+        displayName: "Operations",
+        eventClasses: ["high_severity_alert"],
+        productIds: [...channel.productIds],
+        includeOrganizationWide: false,
+        destination: {
+          mode: "slack_webhook",
+          webhookUrl: "http://127.0.0.1/private",
+        },
+        idempotencyKey,
+      }),
+    ).rejects.toThrow();
+    expect(fetcher).toHaveBeenCalledTimes(2);
+  });
+
+  it("uses parsed chat test, confirmation, enable, history, and retry boundaries", async () => {
+    const channelId = "77777777-7777-4777-8777-777777777777";
+    const chatDeliveryId = "88888888-8888-4888-8888-888888888888";
+    const productId = "99999999-9999-4999-8999-999999999999";
+    const testId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+    const channel = {
+      id: channelId,
+      organizationId: preferences.organizationId,
+      mode: "slack_webhook",
+      displayName: "Operations",
+      eventClasses: ["high_severity_alert"],
+      productIds: [productId],
+      includeOrganizationWide: false,
+      enabled: false,
+      verified: true,
+      safeErrorCode: null,
+      version: 2,
+      createdAt: "2026-10-02T10:00:00.000Z",
+      updatedAt: "2026-10-02T10:00:00.000Z",
+    };
+    const chatDelivery = {
+      id: chatDeliveryId,
+      channelId,
+      eventClass: "high_severity_alert",
+      status: "exhausted",
+      sourceType: "finding_assessment",
+      sourceId: productId,
+      sourceRevision: "2",
+      attemptCount: 6,
+      lastAttemptAt: "2026-10-02T10:00:00.000Z",
+      nextAttemptAt: null,
+      safeErrorCode: "vendor_unavailable",
+      createdAt: "2026-10-02T09:00:00.000Z",
+      updatedAt: "2026-10-02T10:00:00.000Z",
+      version: 3,
+    };
+    const fetcher = vi.fn(async (url: string, init?: RequestInit) => {
+      const path = String(url);
+      const body = path.endsWith("/test")
+        ? {
+            testId,
+            expiresAt: "2026-10-02T10:15:00.000Z",
+            status: "provider_accepted",
+          }
+        : path.startsWith("/api/v1/notifications/chat-deliveries?")
+          ? { rows: [chatDelivery], nextCursor: null }
+          : path.endsWith("/retry")
+            ? { delivery: chatDelivery }
+            : path.endsWith("/chat-channels") && init?.method === "GET"
+              ? { channels: [channel] }
+              : { channel };
+      return new Response(JSON.stringify(body));
+    });
+    vi.stubGlobal("fetch", fetcher);
+
+    await expect(notificationsApi.chatChannels()).resolves.toEqual({
+      channels: [channel],
+    });
+    await expect(
+      notificationsApi.updateChatChannel(channelId, {
+        expectedVersion: 1,
+        idempotencyKey,
+        displayName: "Operations",
+        eventClasses: ["high_severity_alert"],
+        productIds: [productId],
+        includeOrganizationWide: false,
+      }),
+    ).resolves.toEqual({ channel });
+    await expect(
+      notificationsApi.testChatChannel(channelId, {
+        expectedVersion: 2,
+        idempotencyKey,
+      }),
+    ).resolves.toMatchObject({ testId, status: "provider_accepted" });
+    await expect(
+      notificationsApi.confirmChatChannel(channelId, {
+        expectedVersion: 2,
+        idempotencyKey,
+        testId,
+        code: "123456",
+      }),
+    ).resolves.toEqual({ channel });
+    await expect(
+      notificationsApi.setChatChannelEnabled(channelId, {
+        expectedVersion: 2,
+        idempotencyKey,
+        enabled: true,
+      }),
+    ).resolves.toEqual({ channel });
+    await expect(
+      notificationsApi.chatDeliveries({ status: "exhausted", limit: 25 }),
+    ).resolves.toMatchObject({ rows: [chatDelivery] });
+    await expect(
+      notificationsApi.retryChatDelivery(chatDeliveryId, {
+        expectedVersion: 3,
+        idempotencyKey,
+      }),
+    ).resolves.toEqual({ delivery: chatDelivery });
+    expect(fetcher.mock.calls.map(([url]) => String(url))).toEqual([
+      "/api/v1/notifications/chat-channels",
+      `/api/v1/notifications/chat-channels/${channelId}`,
+      `/api/v1/notifications/chat-channels/${channelId}/test`,
+      `/api/v1/notifications/chat-channels/${channelId}/confirm`,
+      `/api/v1/notifications/chat-channels/${channelId}/enable`,
+      "/api/v1/notifications/chat-deliveries?limit=25&status=exhausted",
+      `/api/v1/notifications/chat-deliveries/${chatDeliveryId}/retry`,
+    ]);
+  });
 });

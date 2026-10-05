@@ -4724,6 +4724,246 @@ export type Database = {
           },
         ]
       }
+      notification_chat_channels: {
+        Row: {
+          active_from: string | null
+          created_at: string
+          created_by_user_id: string
+          credential_envelope: Json
+          credential_revision: number
+          display_name: string
+          enabled: boolean
+          event_classes: string[]
+          id: string
+          include_organization_wide: boolean
+          last_claimed_at: string | null
+          last_command_actor: string | null
+          last_command_digest: string | null
+          last_command_key: string | null
+          mode: string
+          organization_id: string
+          product_ids: string[]
+          safe_error_code: string | null
+          target_metadata: Json
+          test_accepted_at: string | null
+          test_attempt_count: number
+          test_code_hash: string | null
+          test_expires_at: string | null
+          test_id: string | null
+          updated_at: string
+          updated_by_user_id: string
+          verified_at: string | null
+          verified_version: number | null
+          version: number
+        }
+        Insert: {
+          active_from?: string | null
+          created_at?: string
+          created_by_user_id: string
+          credential_envelope: Json
+          credential_revision?: number
+          display_name: string
+          enabled?: boolean
+          event_classes: string[]
+          id: string
+          include_organization_wide?: boolean
+          last_claimed_at?: string | null
+          last_command_actor?: string | null
+          last_command_digest?: string | null
+          last_command_key?: string | null
+          mode: string
+          organization_id: string
+          product_ids?: string[]
+          safe_error_code?: string | null
+          target_metadata: Json
+          test_accepted_at?: string | null
+          test_attempt_count?: number
+          test_code_hash?: string | null
+          test_expires_at?: string | null
+          test_id?: string | null
+          updated_at?: string
+          updated_by_user_id: string
+          verified_at?: string | null
+          verified_version?: number | null
+          version?: number
+        }
+        Update: {
+          active_from?: string | null
+          created_at?: string
+          created_by_user_id?: string
+          credential_envelope?: Json
+          credential_revision?: number
+          display_name?: string
+          enabled?: boolean
+          event_classes?: string[]
+          id?: string
+          include_organization_wide?: boolean
+          last_claimed_at?: string | null
+          last_command_actor?: string | null
+          last_command_digest?: string | null
+          last_command_key?: string | null
+          mode?: string
+          organization_id?: string
+          product_ids?: string[]
+          safe_error_code?: string | null
+          target_metadata?: Json
+          test_accepted_at?: string | null
+          test_attempt_count?: number
+          test_code_hash?: string | null
+          test_expires_at?: string | null
+          test_id?: string | null
+          updated_at?: string
+          updated_by_user_id?: string
+          verified_at?: string | null
+          verified_version?: number | null
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_chat_channels_created_by_user_id_fkey"
+            columns: ["created_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notification_chat_channels_last_command_actor_fkey"
+            columns: ["last_command_actor"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notification_chat_channels_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notification_chat_channels_updated_by_user_id_fkey"
+            columns: ["updated_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notification_chat_deliveries: {
+        Row: {
+          attempt_count: number
+          attempted_at: string | null
+          channel_id: string
+          created_at: string
+          effective_at: string
+          event_class: string
+          id: string
+          last_retry_actor: string | null
+          last_retry_expected_version: number | null
+          last_retry_key: string | null
+          lease_expires_at: string | null
+          lease_owner: string | null
+          manual_retry_count: number
+          next_attempt_at: string
+          organization_id: string
+          provider_accepted_at: string | null
+          provider_message_id_hash: string | null
+          route_version: number
+          safe_error_code: string | null
+          severity: string
+          source_id: string
+          source_kind: string
+          source_product_id: string | null
+          source_revision: string
+          status: string
+          total_attempt_count: number
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          attempt_count?: number
+          attempted_at?: string | null
+          channel_id: string
+          created_at?: string
+          effective_at: string
+          event_class: string
+          id?: string
+          last_retry_actor?: string | null
+          last_retry_expected_version?: number | null
+          last_retry_key?: string | null
+          lease_expires_at?: string | null
+          lease_owner?: string | null
+          manual_retry_count?: number
+          next_attempt_at: string
+          organization_id: string
+          provider_accepted_at?: string | null
+          provider_message_id_hash?: string | null
+          route_version: number
+          safe_error_code?: string | null
+          severity: string
+          source_id: string
+          source_kind: string
+          source_product_id?: string | null
+          source_revision: string
+          status?: string
+          total_attempt_count?: number
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          attempt_count?: number
+          attempted_at?: string | null
+          channel_id?: string
+          created_at?: string
+          effective_at?: string
+          event_class?: string
+          id?: string
+          last_retry_actor?: string | null
+          last_retry_expected_version?: number | null
+          last_retry_key?: string | null
+          lease_expires_at?: string | null
+          lease_owner?: string | null
+          manual_retry_count?: number
+          next_attempt_at?: string
+          organization_id?: string
+          provider_accepted_at?: string | null
+          provider_message_id_hash?: string | null
+          route_version?: number
+          safe_error_code?: string | null
+          severity?: string
+          source_id?: string
+          source_kind?: string
+          source_product_id?: string | null
+          source_revision?: string
+          status?: string
+          total_attempt_count?: number
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_chat_deliveries_last_retry_actor_fkey"
+            columns: ["last_retry_actor"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notification_chat_deliveries_organization_id_channel_id_fkey"
+            columns: ["organization_id", "channel_id"]
+            isOneToOne: false
+            referencedRelation: "notification_chat_channels"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "notification_chat_deliveries_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notification_digest_batches: {
         Row: {
           attempt_count: number
@@ -28899,6 +29139,268 @@ export type Database = {
           p_user_id: string
         }
         Returns: boolean
+      }
+      m12_05_begin_chat_channel_test_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_channel_id: string
+          p_expected_version: number
+          p_idempotency_key: string
+          p_organization_id: string
+          p_test_code_hash: string
+        }
+        Returns: Json
+      }
+      m12_05_bridge_chat_deliveries_atomic: {
+        Args: { p_limit: number; p_organization_id: string }
+        Returns: number
+      }
+      m12_05_chat_admin: {
+        Args: { p_actor_user_id: string; p_organization_id: string }
+        Returns: boolean
+      }
+      m12_05_chat_auditor: {
+        Args: { p_actor_user_id: string; p_organization_id: string }
+        Returns: boolean
+      }
+      m12_05_chat_channel_public: {
+        Args: {
+          p_channel: Database["public"]["Tables"]["notification_chat_channels"]["Row"]
+        }
+        Returns: Json
+      }
+      m12_05_chat_configuration_valid: {
+        Args: {
+          p_actor_user_id: string
+          p_configuration: Json
+          p_organization_id: string
+        }
+        Returns: boolean
+      }
+      m12_05_chat_delivery_public: {
+        Args: {
+          p_delivery: Database["public"]["Tables"]["notification_chat_deliveries"]["Row"]
+        }
+        Returns: Json
+      }
+      m12_05_chat_delivery_still_authorized: {
+        Args: {
+          p_channel: Database["public"]["Tables"]["notification_chat_channels"]["Row"]
+          p_delivery: Database["public"]["Tables"]["notification_chat_deliveries"]["Row"]
+          p_organization_id: string
+        }
+        Returns: Json
+      }
+      m12_05_chat_digest: {
+        Args: { p_operation: string; p_payload: Json }
+        Returns: string
+      }
+      m12_05_chat_envelope_valid: {
+        Args: { p_envelope: Json }
+        Returns: boolean
+      }
+      m12_05_chat_source_current: {
+        Args: {
+          p_actor_user_id: string
+          p_organization_id: string
+          p_product_ids: string[]
+          p_source_id: string
+          p_source_kind: string
+        }
+        Returns: Json
+      }
+      m12_05_chat_utc: { Args: { p_value: string }; Returns: string }
+      m12_05_claim_chat_delivery_atomic: {
+        Args: {
+          p_lease_owner: string
+          p_lease_seconds: number
+          p_organization_id: string
+        }
+        Returns: Json
+      }
+      m12_05_cleanup_chat_deliveries_atomic: {
+        Args: { p_limit: number; p_organization_id: string }
+        Returns: number
+      }
+      m12_05_complete_chat_channel_test_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_channel_id: string
+          p_organization_id: string
+          p_provider_message_id_hash: string
+          p_safe_error_code: string
+          p_status: string
+          p_test_id: string
+        }
+        Returns: Json
+      }
+      m12_05_complete_chat_delivery_atomic: {
+        Args: {
+          p_checkpoint_version: number
+          p_delivery_id: string
+          p_lease_owner: string
+          p_organization_id: string
+          p_provider_message_id_hash: string
+          p_retry_after_seconds: number
+          p_safe_error_code: string
+          p_status: string
+        }
+        Returns: Json
+      }
+      m12_05_confirm_chat_channel_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_channel_id: string
+          p_code_hash: string
+          p_expected_version: number
+          p_idempotency_key: string
+          p_organization_id: string
+          p_test_id: string
+        }
+        Returns: Json
+      }
+      m12_05_create_chat_channel_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_channel_id: string
+          p_configuration: Json
+          p_credential_envelope: Json
+          p_credential_revision: number
+          p_idempotency_key: string
+          p_organization_id: string
+          p_request_fingerprint: string
+        }
+        Returns: Json
+      }
+      m12_05_disable_revoked_chat_channels_atomic: {
+        Args: { p_organization_id: string }
+        Returns: number
+      }
+      m12_05_due_chat_organizations: {
+        Args: { p_after_org: string; p_limit: number }
+        Returns: {
+          organization_id: string
+        }[]
+      }
+      m12_05_emit_report_approval_requested: {
+        Args: { p_organization_id: string; p_stage_id: string }
+        Returns: undefined
+      }
+      m12_05_list_chat_channels: {
+        Args: {
+          p_actor_user_id: string
+          p_after_id: string
+          p_limit: number
+          p_mode: string
+          p_organization_id: string
+        }
+        Returns: Json
+      }
+      m12_05_list_chat_channels_atomic: {
+        Args: { p_actor_user_id: string; p_organization_id: string }
+        Returns: Json
+      }
+      m12_05_list_chat_cleanup_organizations: {
+        Args: { p_limit: number }
+        Returns: {
+          organization_id: string
+        }[]
+      }
+      m12_05_list_chat_deliveries: {
+        Args: {
+          p_actor_user_id: string
+          p_before_created_at: string
+          p_before_id: string
+          p_channel_id: string
+          p_event_class: string
+          p_limit: number
+          p_organization_id: string
+          p_status: string
+        }
+        Returns: Json
+      }
+      m12_05_list_chat_deliveries_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_channel_id: string
+          p_cursor: string
+          p_event_class: string
+          p_limit: number
+          p_organization_id: string
+          p_status: string
+        }
+        Returns: Json
+      }
+      m12_05_list_chat_envelopes: {
+        Args: { p_after_id: string; p_limit: number; p_organization_id: string }
+        Returns: {
+          channel_id: string
+          credential_envelope: Json
+          credential_revision: number
+        }[]
+      }
+      m12_05_prepare_chat_delivery_atomic: {
+        Args: {
+          p_checkpoint_version: number
+          p_delivery_id: string
+          p_lease_owner: string
+          p_organization_id: string
+        }
+        Returns: Json
+      }
+      m12_05_retry_chat_delivery_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_delivery_id: string
+          p_expected_version: number
+          p_idempotency_key: string
+          p_organization_id: string
+        }
+        Returns: Json
+      }
+      m12_05_revalidate_chat_delivery_atomic: {
+        Args: {
+          p_checkpoint_version: number
+          p_delivery_id: string
+          p_lease_owner: string
+          p_organization_id: string
+        }
+        Returns: boolean
+      }
+      m12_05_rewrap_chat_envelope_atomic: {
+        Args: {
+          p_channel_id: string
+          p_expected_credential_revision: number
+          p_expected_envelope: Json
+          p_new_envelope: Json
+          p_organization_id: string
+        }
+        Returns: boolean
+      }
+      m12_05_set_chat_channel_enabled_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_channel_id: string
+          p_enabled: boolean
+          p_expected_version: number
+          p_idempotency_key: string
+          p_organization_id: string
+        }
+        Returns: Json
+      }
+      m12_05_update_chat_channel_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_channel_id: string
+          p_configuration: Json
+          p_credential_envelope: Json
+          p_credential_revision: number
+          p_expected_version: number
+          p_idempotency_key: string
+          p_organization_id: string
+          p_request_fingerprint: string
+        }
+        Returns: Json
       }
       m1201_absence_json: {
         Args: { p_absence_id: string; p_organization_id: string }

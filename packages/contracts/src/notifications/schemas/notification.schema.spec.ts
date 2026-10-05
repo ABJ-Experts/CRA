@@ -116,6 +116,12 @@ describe("notification wire contracts", () => {
     expect(
       notificationFeedDestinationResponseSchema.safeParse({
         state: "available",
+        url: `/findings?findingId=${orgId}&assessmentId=${userId}`,
+      }).success,
+    ).toBe(true);
+    expect(
+      notificationFeedDestinationResponseSchema.safeParse({
+        state: "available",
         url: "https://evil.test",
       }).success,
     ).toBe(false);

@@ -15,6 +15,20 @@ import type {
   notificationFeedDestinationResponseSchema,
   markNotificationFeedReadInputSchema,
   markNotificationFeedReadResponseSchema,
+  chatChannelParamsSchema,
+  chatChannelMutationResponseSchema,
+  chatChannelsResponseSchema,
+  createChatChannelInputSchema,
+  updateChatChannelInputSchema,
+  testChatChannelInputSchema,
+  chatChannelTestResponseSchema,
+  confirmChatChannelInputSchema,
+  setChatChannelEnabledInputSchema,
+  chatDeliveriesQuerySchema,
+  chatDeliveriesResponseSchema,
+  chatDeliveryParamsSchema,
+  retryChatDeliveryInputSchema,
+  chatDeliveryMutationResponseSchema,
 } from "@repo/contracts/notifications";
 
 export const NOTIFICATION_REPOSITORY = Symbol("NOTIFICATION_REPOSITORY");
@@ -61,6 +75,48 @@ export type MarkNotificationFeedReadInput = z.output<
 >;
 export type MarkNotificationFeedReadResponse = z.output<
   typeof markNotificationFeedReadResponseSchema
+>;
+export type NotificationChatChannelParams = z.output<
+  typeof chatChannelParamsSchema
+>;
+export type NotificationChatChannelsResponse = z.output<
+  typeof chatChannelsResponseSchema
+>;
+export type NotificationChatChannelResponse = z.output<
+  typeof chatChannelMutationResponseSchema
+>;
+export type CreateNotificationChatChannelInput = z.output<
+  typeof createChatChannelInputSchema
+>;
+export type UpdateNotificationChatChannelInput = z.output<
+  typeof updateChatChannelInputSchema
+>;
+export type TestNotificationChatChannelInput = z.output<
+  typeof testChatChannelInputSchema
+>;
+export type NotificationChatChannelTestResponse = z.output<
+  typeof chatChannelTestResponseSchema
+>;
+export type ConfirmNotificationChatChannelInput = z.output<
+  typeof confirmChatChannelInputSchema
+>;
+export type EnableNotificationChatChannelInput = z.output<
+  typeof setChatChannelEnabledInputSchema
+>;
+export type NotificationChatDeliveriesQuery = z.output<
+  typeof chatDeliveriesQuerySchema
+>;
+export type NotificationChatDeliveriesResponse = z.output<
+  typeof chatDeliveriesResponseSchema
+>;
+export type NotificationChatDeliveryParams = z.output<
+  typeof chatDeliveryParamsSchema
+>;
+export type RetryNotificationChatDeliveryInput = z.output<
+  typeof retryChatDeliveryInputSchema
+>;
+export type NotificationChatDeliveryMutationResponse = z.output<
+  typeof chatDeliveryMutationResponseSchema
 >;
 
 export type NotificationResult<T> = Readonly<
@@ -122,3 +178,53 @@ export interface NotificationRepository {
     input: MarkNotificationFeedReadInput,
   ): Promise<NotificationResult<MarkNotificationFeedReadResponse>>;
 }
+
+export interface NotificationChatRepository {
+  listChatChannels(
+    organizationId: string,
+    actorId: string,
+  ): Promise<NotificationResult<NotificationChatChannelsResponse>>;
+  createChatChannel(
+    organizationId: string,
+    actorId: string,
+    input: CreateNotificationChatChannelInput,
+  ): Promise<NotificationResult<NotificationChatChannelResponse>>;
+  updateChatChannel(
+    organizationId: string,
+    actorId: string,
+    channelId: string,
+    input: UpdateNotificationChatChannelInput,
+  ): Promise<NotificationResult<NotificationChatChannelResponse>>;
+  testChatChannel(
+    organizationId: string,
+    actorId: string,
+    channelId: string,
+    input: TestNotificationChatChannelInput,
+  ): Promise<NotificationResult<NotificationChatChannelTestResponse>>;
+  confirmChatChannel(
+    organizationId: string,
+    actorId: string,
+    channelId: string,
+    input: ConfirmNotificationChatChannelInput,
+  ): Promise<NotificationResult<NotificationChatChannelResponse>>;
+  enableChatChannel(
+    organizationId: string,
+    actorId: string,
+    channelId: string,
+    input: EnableNotificationChatChannelInput,
+  ): Promise<NotificationResult<NotificationChatChannelResponse>>;
+  listChatDeliveries(
+    organizationId: string,
+    actorId: string,
+    query: NotificationChatDeliveriesQuery,
+  ): Promise<NotificationResult<NotificationChatDeliveriesResponse>>;
+  retryChatDelivery(
+    organizationId: string,
+    actorId: string,
+    deliveryId: string,
+    input: RetryNotificationChatDeliveryInput,
+  ): Promise<NotificationResult<NotificationChatDeliveryMutationResponse>>;
+}
+
+export type NotificationDataRepository = NotificationRepository &
+  NotificationChatRepository;

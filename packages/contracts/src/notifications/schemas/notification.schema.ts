@@ -191,9 +191,10 @@ const fingerprintSchema = z.string().regex(/^[0-9a-f]{64}$/);
 const feedUuidPattern =
   "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";
 const trustedFeedRoutePattern = new RegExp(
-  `^/(?:products/${feedUuidPattern}(?:/evidence\\?documentId=${feedUuidPattern}&versionId=${feedUuidPattern})?|findings\\?findingId=${feedUuidPattern}|reporting\\?obligationId=${feedUuidPattern}&stageId=${feedUuidPattern}|suppliers/${feedUuidPattern}\\?requestId=${feedUuidPattern})$`,
+  `^/(?:products/${feedUuidPattern}(?:/evidence\\?documentId=${feedUuidPattern}&versionId=${feedUuidPattern})?|findings\\?findingId=${feedUuidPattern}(?:&assessmentId=${feedUuidPattern})?|reporting\\?obligationId=${feedUuidPattern}&stageId=${feedUuidPattern}|suppliers/${feedUuidPattern}\\?requestId=${feedUuidPattern})$`,
 );
 const localAppUrlSchema = z.string().max(2_048).regex(trustedFeedRoutePattern);
+export const trustedNotificationRouteSchema = localAppUrlSchema;
 
 export const notificationFeedRefSchema = z
   .string()

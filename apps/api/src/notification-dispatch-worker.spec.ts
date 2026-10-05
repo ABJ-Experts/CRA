@@ -1,15 +1,18 @@
 import {
   bootstrapNotificationDispatchWorker,
   digestWorkerFromContext,
+  chatWorkerFromContext,
   sleep,
   workerFromContext,
 } from "./notification-dispatch-worker";
 import { MailService } from "./mail/mail.service";
 import { MailNotificationDispatchDeliveryAdapter } from "./notifications/worker/mail-notification-dispatch-delivery.adapter";
 import { DigestNotificationDispatchWorker } from "./notifications/worker/digest-notification-dispatch-worker";
+import { ChatNotificationWorker } from "./notifications/worker/chat-notification-worker";
 import { NotificationDispatchWorker } from "./notifications/worker/notification-dispatch-worker";
 import { SupabaseNotificationDigestQueueAdapter } from "./notifications/worker/supabase-notification-digest-queue.adapter";
 import { SupabaseNotificationDispatchQueueAdapter } from "./notifications/worker/supabase-notification-dispatch-queue.adapter";
+import { SupabaseChatNotificationQueueAdapter } from "./notifications/worker/supabase-chat-notification-queue.adapter";
 import { SupabaseService } from "./supabase/supabase.service";
 
 describe("notification dispatch process", () => {
@@ -73,6 +76,82 @@ describe("notification dispatch process", () => {
       "Notification dispatch cycle failed safely",
     );
     expect(close).toHaveBeenCalledTimes(1);
+  });
+
+  it("runs chat delivery when email dispatch fails, without blocking other delivery", async () => {
+    const chatRunOnce = jest.fn().mockResolvedValue(undefined);
+    const digestRunOnce = jest.fn().mockResolvedValue(undefined);
+    const error = jest.fn();
+
+    await bootstrapNotificationDispatchWorker({
+      argv: ["--once"],
+      createApplicationContext: () =>
+        Promise.resolve({ get: jest.fn(), close: jest.fn() }),
+      createWorker: () =>
+        ({
+          runOnce: jest.fn().mockRejectedValue(new Error("mail outage")),
+        }) as never,
+      createDigestWorker: () => ({ runOnce: digestRunOnce }) as never,
+      createChatWorker: () => ({ runOnce: chatRunOnce }) as never,
+      logger: { error },
+      sleep: jest.fn(),
+    });
+
+    expect(chatRunOnce).toHaveBeenCalledTimes(1);
+    expect(digestRunOnce).toHaveBeenCalledTimes(1);
+    expect(error).toHaveBeenCalledWith(
+      "Notification dispatch cycle failed safely",
+    );
+  });
+
+  it("starts the next email cycle while a chat send is still pending", async () => {
+    let finishChat: (() => void) | undefined;
+    const pendingChat = new Promise<void>((resolve) => {
+      finishChat = resolve;
+    });
+    const mailRunOnce = jest.fn().mockResolvedValue(undefined);
+    const stopped = new Error("stop test loops");
+    const sleep = jest
+      .fn()
+      .mockResolvedValueOnce(undefined)
+      .mockRejectedValue(stopped);
+    const running = bootstrapNotificationDispatchWorker({
+      argv: [],
+      createApplicationContext: () =>
+        Promise.resolve({ get: jest.fn(), close: jest.fn() }),
+      createWorker: () => ({ runOnce: mailRunOnce }) as never,
+      createChatWorker: () => ({ runOnce: () => pendingChat }) as never,
+      logger: { error: jest.fn() },
+      sleep,
+    });
+    const observed = expect(running).rejects.toBe(stopped);
+    await new Promise((resolve) => setImmediate(resolve));
+    expect(mailRunOnce).toHaveBeenCalledTimes(2);
+    finishChat?.();
+    await observed;
+  });
+
+  it("keeps email and digest work running if chat worker configuration is unavailable", async () => {
+    const mailRunOnce = jest.fn().mockResolvedValue(undefined);
+    const digestRunOnce = jest.fn().mockResolvedValue(undefined);
+    const error = jest.fn();
+
+    await bootstrapNotificationDispatchWorker({
+      argv: ["--once"],
+      createApplicationContext: () =>
+        Promise.resolve({ get: jest.fn(), close: jest.fn() }),
+      createWorker: () => ({ runOnce: mailRunOnce }) as never,
+      createDigestWorker: () => ({ runOnce: digestRunOnce }) as never,
+      createChatWorker: () => {
+        throw new Error("bad chat origin");
+      },
+      logger: { error },
+      sleep: jest.fn(),
+    });
+
+    expect(mailRunOnce).toHaveBeenCalledTimes(1);
+    expect(digestRunOnce).toHaveBeenCalledTimes(1);
+    expect(error).toHaveBeenCalledWith("Chat notification worker unavailable");
   });
 
   it("closes the context if worker construction fails", async () => {
@@ -200,6 +279,7 @@ describe("notification dispatch process", () => {
 
     const immediate = workerFromContext(context);
     const digest = digestWorkerFromContext(context);
+    const chat = chatWorkerFromContext(context);
     const immediateDependencies = (
       immediate as unknown as {
         dependencies: { queue: unknown; delivery: unknown };
@@ -222,6 +302,11 @@ describe("notification dispatch process", () => {
       MailNotificationDispatchDeliveryAdapter,
     );
     expect(digest).toBeInstanceOf(DigestNotificationDispatchWorker);
+    expect(chat).toBeInstanceOf(ChatNotificationWorker);
+    expect(
+      (chat as unknown as { dependencies: { queue: unknown } }).dependencies
+        .queue,
+    ).toBeInstanceOf(SupabaseChatNotificationQueueAdapter);
     expect(digestDependencies.queue).toBeInstanceOf(
       SupabaseNotificationDigestQueueAdapter,
     );

@@ -11,7 +11,8 @@ select pg_temp.check('notification export contains durable records only',
   (select array_agg(table_name order by table_sort)
      from public.organization_export_source_tables
     where source_id='notification_delivery')
-    = array['notification_preferences','notification_dispatches','notification_feed_reads']::text[]
+    = array['notification_preferences','notification_dispatches','notification_feed_reads',
+      'notification_chat_channels','notification_chat_deliveries']::text[]
   and exists(select 1 from public.organization_export_sources
     where source_id='notification_delivery' and enabled)
 );
@@ -20,6 +21,8 @@ select pg_temp.check('notification export locks all physical tables',
   (select position('public.notification_preferences' in definition)>0
       and position('public.notification_dispatches' in definition)>0
       and position('public.notification_feed_reads' in definition)>0
+      and position('public.notification_chat_channels' in definition)>0
+      and position('public.notification_chat_deliveries' in definition)>0
    from (
      select split_part(split_part(pg_get_functiondef(
        'public.materialize_organization_export_snapshot_atomic(uuid,uuid,uuid,integer)'::regprocedure
