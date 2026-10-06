@@ -15,6 +15,7 @@ select pg_temp.check('critical operations exist and are service-only',
 );
 
 do $$
+<<critical_delivery_case>>
 declare
   org_id uuid := '00000000-0000-4000-8000-0000000000ca';
   actor_id uuid;
@@ -190,7 +191,7 @@ begin
     and (select original_recipient_user_id=admin_id from public.product_regulatory_outbox_events where id=historic_m2_id)
     and exists(select 1 from public.audit_logs a where a.organization_id=org_id
       and a.action='notification.critical_delivery_retry_requested' and a.entity_id=historic_m2_id::text
-      and a.changes->>'previousOriginalRecipientUserId'=actor_id::text));
+      and a.changes->>'previousOriginalRecipientUserId'=critical_delivery_case.actor_id::text));
 
   select * into obligation_result from public.create_reporting_obligation_atomic(
     org_id,actor_id,'severe_incident',null,date_trunc('second',clock_timestamp()),

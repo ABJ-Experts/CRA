@@ -1,0 +1,104 @@
+- generic [active] [ref=f14e1]:
+  - generic [ref=f14e3]:
+    - button "Open navigation" [ref=f14e4] [cursor=pointer]
+    - generic [ref=f14e7]:
+      - banner [ref=f14e8]:
+        - navigation "Breadcrumb" [ref=f14e10]:
+          - list [ref=f14e11]:
+            - listitem [ref=f14e12]:
+              - link "Dashboard" [ref=f14e13] [cursor=pointer]:
+                - /url: /dashboard
+            - listitem [aria-hidden] [ref=f14e14]
+            - listitem [ref=f14e17]:
+              - generic [ref=f14e18]: Management
+        - generic [ref=f14e19]:
+          - button "Search" [ref=f14e20] [cursor=pointer]
+          - button "Notifications, 1 unread" [ref=f14e167] [cursor=pointer]
+          - generic [ref=f14e28]:
+            - generic [ref=f14e29]: AF
+            - 'img "Ada Foster: online" [ref=f14e30]'
+      - main [ref=f14e31]:
+        - generic [ref=f14e32]:
+          - generic [ref=f14e33]:
+            - searchbox "Search members" [ref=f14e38]
+            - button "Filters" [ref=f14e40] [cursor=pointer]
+          - generic [ref=f14e42]:
+            - table "Organization members" [ref=f14e44]:
+              - rowgroup [ref=f14e45]:
+                - row [ref=f14e46]:
+                  - columnheader "Member" [ref=f14e47]
+                  - columnheader "Job title" [ref=f14e48]
+                  - columnheader "Role" [ref=f14e49]
+                  - columnheader "Status" [ref=f14e50]
+              - rowgroup [ref=f14e51]:
+                - row [ref=f14e170]:
+                  - cell "OA Owner Account owner@cra.test" [ref=f14e171]:
+                    - generic [ref=f14e276]:
+                      - generic [ref=f14e277]: OA
+                      - generic [ref=f14e280]:
+                        - generic [ref=f14e281]: Owner Account
+                        - generic [ref=f14e282]: owner@cra.test
+                  - cell "— owner" [ref=f14e179]:
+                    - generic [ref=f14e283]:
+                      - generic [ref=f14e284]: —
+                      - generic [ref=f14e285]: owner
+                  - cell [ref=f14e183]:
+                    - combobox [ref=f14e287] [cursor=pointer]:
+                      - generic [ref=f14e288]: Owner
+                  - cell "Active" [ref=f14e189]
+                - row [ref=f14e193]:
+                  - cell "AA Admin Account admin@cra.test" [ref=f14e194]:
+                    - generic [ref=f14e294]:
+                      - generic [ref=f14e295]: AA
+                      - generic [ref=f14e298]:
+                        - generic [ref=f14e299]: Admin Account
+                        - generic [ref=f14e300]: admin@cra.test
+                  - cell "— admin" [ref=f14e202]:
+                    - generic [ref=f14e301]:
+                      - generic [ref=f14e302]: —
+                      - generic [ref=f14e303]: admin
+                  - cell [ref=f14e206]:
+                    - combobox [ref=f14e305] [cursor=pointer]:
+                      - generic [ref=f14e306]: Admin
+                  - cell "Active" [ref=f14e212]
+                - row [ref=f14e239]:
+                  - cell "VA Viewer Account viewer@cra.test" [ref=f14e240]:
+                    - generic [ref=f14e312]:
+                      - generic [ref=f14e313]: VA
+                      - generic [ref=f14e316]:
+                        - generic [ref=f14e317]: Viewer Account
+                        - generic [ref=f14e318]: viewer@cra.test
+                  - cell "— viewer" [ref=f14e248]:
+                    - generic [ref=f14e319]:
+                      - generic [ref=f14e320]: —
+                      - generic [ref=f14e321]: viewer
+                  - cell [ref=f14e252]:
+                    - combobox [ref=f14e323] [cursor=pointer]:
+                      - generic [ref=f14e324]: Viewer
+                  - cell "Active" [ref=f14e258]
+                - row [ref=f14e216]:
+                  - cell "MA Member Account member@cra.test" [ref=f14e217]:
+                    - generic [ref=f14e330]:
+                      - generic [ref=f14e331]: MA
+                      - generic [ref=f14e334]:
+                        - generic [ref=f14e335]: Member Account
+                        - generic [ref=f14e336]: member@cra.test
+                  - cell "— member" [ref=f14e225]:
+                    - generic [ref=f14e337]:
+                      - generic [ref=f14e338]: —
+                      - generic [ref=f14e339]: member
+                  - cell [ref=f14e229]:
+                    - combobox [ref=f14e341] [cursor=pointer]:
+                      - generic [ref=f14e342]: Admin
+                  - cell "Active" [ref=f14e235]
+            - navigation "Pagination" [ref=f14e142]:
+              - generic [ref=f14e143]:
+                - combobox "Rows per page" [ref=f14e145] [cursor=pointer]:
+                  - generic [ref=f14e262]: "15"
+                - generic [ref=f14e149]: 1-4 of 4
+              - generic [ref=f14e150]:
+                - button "Previous page" [disabled] [ref=f14e151]
+                - generic [ref=f14e154]: Page 1
+                - button "Next page" [disabled] [ref=f14e155]
+  - button "Open Next.js Dev Tools" [ref=f14e163] [cursor=pointer]
+  - alert [ref=f14e263]

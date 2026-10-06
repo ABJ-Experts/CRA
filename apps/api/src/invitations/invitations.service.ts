@@ -7,7 +7,6 @@ import {
   Logger,
   NotFoundException,
 } from "@nestjs/common";
-import { normalizeEmail } from "@repo/contracts/auth";
 import type {
   AcceptInvitationResponse,
   Invitation,
@@ -15,7 +14,6 @@ import type {
 } from "@repo/contracts/invitations";
 import type { BaseRole } from "@repo/contracts/permissions";
 
-import { AuditService } from "../audit/audit.service";
 import {
   AcceptInvitationUseCase,
   type AcceptInvitationError,
@@ -41,9 +39,9 @@ export type AcceptResult = AcceptInvitationResponse;
  * Stable Nest compatibility facade.
  *
  * HTTP callers keep the original methods and exception bodies while the
- * workflow itself stays framework-free. Acceptance and revocation audit inside
- * their atomic database RPCs; only creation is audited here, after notification
- * succeeds, matching the existing timing.
+ * workflow itself stays framework-free. Creation, acceptance and revocation
+ * audit inside their atomic database RPCs. Notification and onboarding evidence
+ * retain their existing best-effort ordering after creation.
  */
 @Injectable()
 export class InvitationsService {
@@ -55,7 +53,6 @@ export class InvitationsService {
     private readonly acceptInvitation: AcceptInvitationUseCase,
     private readonly revokeInvitation: RevokeInvitationUseCase,
     private readonly listInvitations: ListInvitationsQuery,
-    private readonly audit: AuditService,
   ) {}
 
   async create(
@@ -67,19 +64,16 @@ export class InvitationsService {
       firstName?: string;
       lastName?: string;
     },
+    sourceIp?: string,
   ): Promise<{ id: string }> {
-    const result = await this.createInvitation.execute({ orgId, actor, input });
-    if (!result.ok) this.throwCreateError(result.error);
-
-    this.audit.log({
-      organizationId: orgId,
-      userId: actor.id,
-      actorEmail: actor.email,
-      action: "invitation.created",
-      entityType: "invitation",
-      entityId: result.value.id,
-      changes: { email: normalizeEmail(input.email), role: input.role },
+    const result = await this.createInvitation.execute({
+      orgId,
+      actor,
+      input,
+      correlationId: randomUUID(),
+      sourceIp: sourceIp && isIP(sourceIp) ? sourceIp : null,
     });
+    if (!result.ok) this.throwCreateError(result.error);
 
     return { id: result.value.id };
   }
@@ -155,7 +149,7 @@ export class InvitationsService {
         });
       case "notification_failed":
         this.logger.error(
-          `Invitation notification failed after creating ${error.invitationId}`,
+          `Invitation notification failed after creating ${error.invitationId}; recovery=${error.recovery}`,
         );
         throw new InternalServerErrorException({
           statusCode: 500,
@@ -277,3 +271,5 @@ export class InvitationsService {
     }
   }
 }
+import { randomUUID } from "node:crypto";
+import { isIP } from "node:net";

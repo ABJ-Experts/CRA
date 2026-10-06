@@ -7,11 +7,15 @@ import { Tag } from "@repo/ui/tag";
 import type { ColumnDef } from "@repo/ui/data-table";
 import { BASE_ROLES, type BaseRole } from "@repo/contracts/permissions";
 import { useQueryClient } from "@tanstack/react-query";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 
-import { useHasPermission } from "../../_providers/session-provider";
+import {
+  useHasPermission,
+  useSession,
+} from "../../_providers/session-provider";
 import { membersApi } from "../../_features/members/members.api";
 import { ApiClientError } from "../../_lib/http/api-client";
+import { MutationRequestIdentity } from "../../_lib/http/mutation-request-identity";
 import { Stacked } from "../../dashboard/tables/_components/cells";
 import { TablePage } from "../../dashboard/tables/_components/table-page";
 
@@ -45,8 +49,10 @@ function fullName(row: MemberRow): string {
 
 export default function ManagementPage() {
   const canEdit = useHasPermission("can_edit_users");
+  const { session } = useSession();
   const queryClient = useQueryClient();
   const [busy, setBusy] = useState<string | null>(null);
+  const requestIdentity = useRef(new MutationRequestIdentity());
 
   /**
    * Changing a role invalidates BOTH the member list and the permission
@@ -57,7 +63,14 @@ export default function ManagementPage() {
     async (userId: string, role: BaseRole) => {
       setBusy(userId);
       try {
-        await membersApi.changeRole(userId, role);
+        await membersApi.changeRole(
+          userId,
+          role,
+          requestIdentity.current.forAction(
+            `${session?.user.id ?? "anonymous"}:${session?.organization?.id ?? "none"}:${userId}:${role}`,
+          ),
+        );
+        requestIdentity.current.clear();
         await queryClient.invalidateQueries();
       } catch (error) {
         // Surfaces the server's own wording — including the last-owner rule,
@@ -71,7 +84,7 @@ export default function ManagementPage() {
         setBusy(null);
       }
     },
-    [queryClient],
+    [queryClient, session?.user.id, session?.organization?.id],
   );
 
   const columns = useMemo<ColumnDef<MemberRow, unknown>[]>(

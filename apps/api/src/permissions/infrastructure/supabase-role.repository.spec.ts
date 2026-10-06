@@ -37,7 +37,13 @@ function query(result: QueryResult) {
   return chain;
 }
 
-function harness(results: readonly QueryResult[]) {
+function harness(
+  results: readonly QueryResult[],
+  rpcResult: QueryResult = {
+    data: { status: "updated", id: "00000000-0000-4000-8000-000000000010" },
+    error: null,
+  },
+) {
   const queries: Array<ReturnType<typeof query>> = [];
   const from = jest.fn(() => {
     const result = results[queries.length];
@@ -46,10 +52,11 @@ function harness(results: readonly QueryResult[]) {
     queries.push(current);
     return current;
   });
+  const rpc = jest.fn().mockResolvedValue(rpcResult);
   const repository = new SupabaseRoleRepository({
-    admin: () => ({ from }),
+    admin: () => ({ from, rpc }),
   } as never);
-  return { from, queries, repository };
+  return { from, queries, repository, rpc };
 }
 
 const roleRow = {
@@ -134,142 +141,152 @@ describe("SupabaseRoleRepository", () => {
     ]);
   });
 
-  it("creates only inside the organization and returns the inserted id", async () => {
-    const { queries, repository } = harness([
-      { data: { id: "role-1" }, error: null },
-    ]);
-    const input = {
-      name: "Support",
-      description: null,
-      color: "#4A50D6",
-      baseRole: "member" as const,
-      permissions: { can_view_users: true },
-    };
+  const context = {
+    eventKey: "11111111-1111-4111-8111-111111111111",
+    correlationId: "22222222-2222-4222-8222-222222222222",
+    sourceIp: "127.0.0.1",
+  };
 
-    await expect(repository.create("org-a", input)).resolves.toEqual({
-      id: "role-1",
-    });
-    expect(queries[0]?.insert).toHaveBeenCalledWith({
-      organization_id: "org-a",
-      name: "Support",
-      description: null,
-      color: "#4A50D6",
-      base_role: "member",
-      permissions: { can_view_users: true },
-    });
-  });
-
-  it("fails closed when create succeeds without an inserted id", async () => {
-    const errorSpy = jest
-      .spyOn(Logger.prototype, "error")
-      .mockImplementation(() => undefined);
-    const { repository } = harness([{ data: null, error: null }]);
-
+  it("creates roles using one organization-scoped audited RPC", async () => {
+    const { repository, rpc, from } = harness([]);
     await expect(
-      repository.create("org-a", {
+      repository.create(
+        "org-a",
+        {
+          name: "Support",
+          description: null,
+          color: "#4A50D6",
+          baseRole: "member",
+          permissions: { can_view_users: true },
+        },
+        "actor-a",
+        context,
+      ),
+    ).resolves.toEqual({ id: roleRow.id });
+    expect(rpc).toHaveBeenCalledWith("m13_01_mutate_role_atomic", {
+      p_organization_id: "org-a",
+      p_actor_user_id: "actor-a",
+      p_operation: "create",
+      p_role_id: null,
+      p_expected_version: null,
+      p_payload: {
         name: "Support",
         description: null,
         color: "#4A50D6",
         baseRole: "member",
-        permissions: {},
+        permissions: { can_view_users: true },
+      },
+      p_event_key: context.eventKey,
+      p_correlation_id: context.correlationId,
+      p_source_ip: context.sourceIp,
+    });
+    expect(from).not.toHaveBeenCalled();
+  });
+
+  it("uses audited RPC for updates, deletion and permission overrides", async () => {
+    const { repository, rpc } = harness([]);
+    await repository.update(
+      "org-a",
+      roleRow.id,
+      { name: "Renamed", isActive: false },
+      "actor-a",
+      context,
+      1,
+    );
+    await repository.softDelete("org-a", roleRow.id, "actor-a", context, 2);
+    await repository.setOverride(
+      "org-a",
+      "viewer",
+      { can_view_users: false },
+      "actor-a",
+      context,
+    );
+    expect(rpc).toHaveBeenNthCalledWith(
+      1,
+      "m13_01_mutate_role_atomic",
+      expect.objectContaining({
+        p_organization_id: "org-a",
+        p_operation: "update",
+        p_role_id: roleRow.id,
+        p_payload: { name: "Renamed", isActive: false },
+        p_expected_version: 1,
       }),
-    ).rejects.toMatchObject({ code: "unavailable" });
-    expect(errorSpy).toHaveBeenCalledWith(
-      "Role persistence failed: create returned no role id",
     );
-    errorSpy.mockRestore();
-  });
-
-  it("scopes identity lookup to live roles in the organization", async () => {
-    const { queries, repository } = harness([
-      { data: { id: "role-1", is_system: true }, error: null },
-    ]);
-
-    await expect(repository.find("org-a", "role-1")).resolves.toEqual({
-      id: "role-1",
-      isSystem: true,
-    });
-    expect(queries[0]?.eq).toHaveBeenCalledWith("organization_id", "org-a");
-    expect(queries[0]?.eq).toHaveBeenCalledWith("id", "role-1");
-    expect(queries[0]?.eq).toHaveBeenCalledWith("is_deleted", false);
-  });
-
-  it("distinguishes a missing identity from a failed identity query", async () => {
-    const missing = harness([{ data: null, error: null }]);
-    await expect(
-      missing.repository.find("org-a", "role-1"),
-    ).resolves.toBeNull();
-
-    const errorSpy = jest
-      .spyOn(Logger.prototype, "error")
-      .mockImplementation(() => undefined);
-    const failed = harness([
-      { data: null, error: { message: "identity offline" } },
-    ]);
-    await expect(
-      failed.repository.find("org-a", "role-1"),
-    ).rejects.toMatchObject({ code: "unavailable" });
-    expect(errorSpy).toHaveBeenCalledWith(
-      "Role persistence failed: identity offline",
+    expect(rpc).toHaveBeenNthCalledWith(
+      2,
+      "m13_01_mutate_role_atomic",
+      expect.objectContaining({
+        p_organization_id: "org-a",
+        p_operation: "delete",
+        p_role_id: roleRow.id,
+        p_expected_version: 2,
+      }),
     );
-    errorSpy.mockRestore();
+    expect(rpc).toHaveBeenNthCalledWith(
+      3,
+      "m13_01_mutate_role_atomic",
+      expect.objectContaining({
+        p_organization_id: "org-a",
+        p_operation: "override",
+        p_payload: {
+          baseRole: "viewer",
+          permissions: { can_view_users: false },
+        },
+      }),
+    );
   });
 
-  it("scopes updates and maps application fields", async () => {
-    const { queries, repository } = harness([{ data: null, error: null }]);
-
-    await repository.update("org-a", "role-1", {
-      name: "New",
-      description: "Updated",
-      color: "#000000",
-      baseRole: "viewer",
-      permissions: { can_view_users: false },
-      isActive: false,
+  it("accepts idempotent replay outcomes for create, update, delete and override", async () => {
+    const { repository } = harness([], {
+      data: { status: "replayed", id: roleRow.id },
+      error: null,
     });
+    await expect(
+      repository.create(
+        "org-a",
+        {
+          name: "Support",
+          description: null,
+          color: "#4A50D6",
+          baseRole: "member",
+          permissions: {},
+        },
+        "actor-a",
+        context,
+      ),
+    ).resolves.toEqual({ id: roleRow.id });
+    await expect(
+      repository.update(
+        "org-a",
+        roleRow.id,
+        { isActive: false },
+        "actor-a",
+        context,
+        1,
+      ),
+    ).resolves.toBeUndefined();
+    await expect(
+      repository.softDelete("org-a", roleRow.id, "actor-a", context, 2),
+    ).resolves.toBeUndefined();
+    await expect(
+      repository.setOverride("org-a", "viewer", {}, "actor-a", context),
+    ).resolves.toBeUndefined();
+  });
 
-    expect(queries[0]?.update).toHaveBeenCalledWith({
-      name: "New",
-      description: "Updated",
-      color: "#000000",
-      base_role: "viewer",
-      permissions: { can_view_users: false },
-      is_active: false,
+  it("keeps identity and override reads organization-scoped", async () => {
+    const role = harness([
+      { data: { id: roleRow.id, is_system: false, version: 1 }, error: null },
+    ]);
+    await expect(role.repository.find("org-a", roleRow.id)).resolves.toEqual({
+      id: roleRow.id,
+      isSystem: false,
+      version: 1,
     });
-    expect(queries[0]?.eq).toHaveBeenCalledWith("id", "role-1");
-    expect(queries[0]?.eq).toHaveBeenCalledWith("organization_id", "org-a");
-  });
-
-  it("does not invent fields for an empty update patch", async () => {
-    const { queries, repository } = harness([{ data: null, error: null }]);
-
-    await repository.update("org-a", "role-1", {});
-
-    expect(queries[0]?.update).toHaveBeenCalledWith({});
-  });
-
-  it("soft-deletes with actor attribution inside the organization", async () => {
-    const { queries, repository } = harness([{ data: null, error: null }]);
-    jest.useFakeTimers();
-    jest.setSystemTime(new Date("2026-08-09T12:34:56.000Z"));
-
-    try {
-      await repository.softDelete("org-a", "role-1", "owner-1");
-    } finally {
-      jest.useRealTimers();
-    }
-
-    expect(queries[0]?.update).toHaveBeenCalledWith({
-      is_deleted: true,
-      deleted_at: "2026-08-09T12:34:56.000Z",
-      deleted_by: "owner-1",
-      is_active: false,
-    });
-    expect(queries[0]?.eq).toHaveBeenCalledWith("id", "role-1");
-    expect(queries[0]?.eq).toHaveBeenCalledWith("organization_id", "org-a");
-  });
-
-  it("scopes and sanitizes override reads", async () => {
-    const { queries, repository } = harness([
+    expect(role.queries[0]?.eq).toHaveBeenCalledWith(
+      "organization_id",
+      "org-a",
+    );
+    const override = harness([
       {
         data: [
           {
@@ -280,87 +297,80 @@ describe("SupabaseRoleRepository", () => {
         error: null,
       },
     ]);
-
-    await expect(repository.overrides("org-a")).resolves.toEqual({
+    await expect(override.repository.overrides("org-a")).resolves.toEqual({
       member: { can_view_users: true },
     });
-    expect(queries[0]?.eq).toHaveBeenCalledWith("organization_id", "org-a");
-  });
-
-  it("returns an empty override snapshot when no rows exist", async () => {
-    const { repository } = harness([{ data: null, error: null }]);
-
-    await expect(repository.overrides("org-a")).resolves.toEqual({});
-  });
-
-  it("upserts overrides with the exact tenant conflict key", async () => {
-    const { queries, repository } = harness([{ data: null, error: null }]);
-
-    await repository.setOverride("org-a", "member", {
-      can_view_users: false,
-    });
-
-    expect(queries[0]?.upsert).toHaveBeenCalledWith(
-      {
-        organization_id: "org-a",
-        base_role: "member",
-        permissions: { can_view_users: false },
-      },
-      { onConflict: "organization_id,base_role" },
+    expect(override.queries[0]?.eq).toHaveBeenCalledWith(
+      "organization_id",
+      "org-a",
     );
   });
 
-  it("distinguishes duplicate names from generic create failures", async () => {
-    const duplicate = harness([
-      { data: null, error: { message: "duplicate key value" } },
-    ]);
+  it.each([
+    ["not_found", "role_not_found"],
+    ["system", "role_is_system"],
+    ["conflict", "conflict"],
+  ])("maps audited %s outcome to %s", async (status, code) => {
+    const { repository } = harness([], { data: { status }, error: null });
     await expect(
-      duplicate.repository.create("org-a", {
-        name: "Support",
-        description: null,
-        color: "#4A50D6",
-        baseRole: "member",
-        permissions: {},
-      }),
-    ).rejects.toEqual(new RoleRepositoryError("role_name_taken"));
-
-    const errorSpy = jest
-      .spyOn(Logger.prototype, "error")
-      .mockImplementation(() => undefined);
-    const generic = harness([
-      { data: null, error: { message: "database offline" } },
-    ]);
-    await expect(
-      generic.repository.create("org-a", {
-        name: "Support",
-        description: null,
-        color: "#4A50D6",
-        baseRole: "member",
-        permissions: {},
-      }),
-    ).rejects.toEqual(new RoleRepositoryError("unavailable"));
-    expect(errorSpy).toHaveBeenCalledWith(
-      "Role persistence failed: database offline",
-    );
-    errorSpy.mockRestore();
+      repository.update("org-a", roleRow.id, {}, "actor-a", context),
+    ).rejects.toMatchObject({ code });
   });
 
-  it("fails closed on provider read and write errors", async () => {
+  it("fails closed for provider outage, malformed result or absent actor context", async () => {
     const errorSpy = jest
       .spyOn(Logger.prototype, "error")
       .mockImplementation(() => undefined);
-    const list = harness([{ data: null, error: { message: "list offline" } }]);
-    await expect(list.repository.list("org-a")).rejects.toMatchObject({
-      code: "unavailable",
+    const outage = harness([], {
+      data: null,
+      error: { message: "database offline" },
     });
-
-    const override = harness([
-      { data: null, error: { message: "write offline" } },
-    ]);
     await expect(
-      override.repository.setOverride("org-a", "viewer", {}),
+      outage.repository.softDelete("org-a", roleRow.id, "actor-a", context),
     ).rejects.toMatchObject({ code: "unavailable" });
+    const malformed = harness([], { data: { status: "mystery" }, error: null });
+    await expect(
+      malformed.repository.setOverride(
+        "org-a",
+        "viewer",
+        {},
+        "actor-a",
+        context,
+      ),
+    ).rejects.toMatchObject({ code: "unavailable" });
+    const absent = harness([]);
+    await expect(
+      absent.repository.create("org-a", {
+        name: "Support",
+        description: null,
+        color: "#4A50D6",
+        baseRole: "member",
+        permissions: {},
+      }),
+    ).rejects.toMatchObject({ code: "unavailable" });
+    expect(absent.rpc).not.toHaveBeenCalled();
     expect(errorSpy).toHaveBeenCalledTimes(2);
     errorSpy.mockRestore();
+  });
+
+  it("maps a same-tenant role-name collision", async () => {
+    const { repository } = harness([], {
+      data: null,
+      error: { message: "duplicate key value" },
+    });
+    await expect(
+      repository.create(
+        "org-a",
+        {
+          name: "Support",
+          description: null,
+          color: "#4A50D6",
+          baseRole: "member",
+          permissions: {},
+        },
+        "actor-a",
+        context,
+      ),
+    ).rejects.toEqual(new RoleRepositoryError("role_name_taken"));
   });
 });

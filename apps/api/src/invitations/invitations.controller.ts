@@ -8,7 +8,9 @@ import {
   HttpStatus,
   Param,
   Post,
+  Req,
 } from "@nestjs/common";
+import type { Request } from "express";
 import {
   acceptInvitationInputSchema,
   acceptInvitationResponseSchema,
@@ -73,6 +75,7 @@ export class InvitationsController {
   async create(
     @Body(zodBody(createInvitationInputSchema)) dto: CreateInvitationInput,
     @CurrentUser() user: RequestUser,
+    @Req() request?: Request,
   ): Promise<IdResponse> {
     return this.invitations.create(
       this.orgOf(user),
@@ -83,6 +86,7 @@ export class InvitationsController {
         firstName: dto.firstName,
         lastName: dto.lastName,
       },
+      request?.ip,
     );
   }
 

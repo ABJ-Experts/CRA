@@ -84,17 +84,12 @@ describe("AuditService", () => {
     service.log(completeEntry);
     await flushWrites();
 
-    expect(loggerError).toHaveBeenCalledWith(
-      "Audit write failed: write denied",
-    );
+    expect(loggerError).toHaveBeenCalledWith("Audit write failed");
   });
 
-  it.each([
-    [new Error("connection lost"), "connection lost"],
-    ["connection lost", "connection lost"],
-  ])(
+  it.each([new Error("connection lost"), "connection lost"])(
     "logs a thrown write failure without rejecting",
-    async (failure, message) => {
+    async (failure) => {
       const insert = jest.fn().mockRejectedValue(failure);
       const service = new AuditService({
         admin: () => ({ from: () => ({ insert }) }),
@@ -103,7 +98,42 @@ describe("AuditService", () => {
       service.log(completeEntry);
       await flushWrites();
 
-      expect(loggerError).toHaveBeenCalledWith(`Audit write threw: ${message}`);
+      expect(loggerError).toHaveBeenCalledWith("Audit write failed");
+      expect(loggerError).not.toHaveBeenCalledWith(
+        expect.stringContaining("connection lost"),
+      );
     },
   );
+
+  it("reports a healthy audit store after a successful scoped read", async () => {
+    const limit = jest.fn().mockResolvedValue({ error: null });
+    const select = jest.fn().mockReturnValue({ limit });
+    const from = jest.fn().mockReturnValue({ select });
+    const service = new AuditService({ admin: () => ({ from }) } as never);
+
+    await expect(service.isReady()).resolves.toBe(true);
+    expect(from).toHaveBeenCalledWith("audit_logs");
+    expect(select).toHaveBeenCalledWith("id");
+    expect(limit).toHaveBeenCalledWith(1);
+  });
+
+  it("reports an audit read error or exception as degraded", async () => {
+    const errorService = new AuditService({
+      admin: () => ({
+        from: () => ({
+          select: () => ({
+            limit: () => Promise.resolve({ error: { message: "denied" } }),
+          }),
+        }),
+      }),
+    } as never);
+    const exceptionService = new AuditService({
+      admin: () => {
+        throw new Error("unavailable");
+      },
+    } as never);
+
+    await expect(errorService.isReady()).resolves.toBe(false);
+    await expect(exceptionService.isReady()).resolves.toBe(false);
+  });
 });

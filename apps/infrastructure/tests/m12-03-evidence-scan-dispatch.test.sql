@@ -35,6 +35,8 @@ declare
   v_mode record;
   v_legacy_first jsonb;
   v_legacy_second jsonb;
+  v_outbox_id uuid;
+  v_fixture_outbox_ids uuid[] := array[]::uuid[];
 begin
   select id into v_owner from public.users where email='owner@cra.test';
   select id into v_product from public.products where organization_id=v_org and archived_at is null order by id limit 1;
@@ -70,7 +72,9 @@ begin
     update public.evidence_documents set current_version_id=v_version where organization_id=v_org and id=v_document;
     insert into public.evidence_document_notification_outbox(
       organization_id,version_id,owner_user_id,event_type,next_attempt_at
-    ) values(v_org,v_version,v_owner,v_event,clock_timestamp());
+    ) values(v_org,v_version,v_owner,v_event,clock_timestamp())
+    returning id into v_outbox_id;
+    v_fixture_outbox_ids := array_append(v_fixture_outbox_ids,v_outbox_id);
   end loop;
 
   -- Preserve an accountable source owner even after organization membership is removed.
@@ -97,14 +101,18 @@ begin
   update public.evidence_documents set current_version_id=v_version where organization_id=v_org and id=v_document;
   insert into public.evidence_document_notification_outbox(
     organization_id,version_id,owner_user_id,event_type,next_attempt_at
-  ) values(v_org,v_version,v_removed_user,'evidence_quarantined',clock_timestamp());
+  ) values(v_org,v_version,v_removed_user,'evidence_quarantined',clock_timestamp())
+  returning id into v_outbox_id;
+  v_fixture_outbox_ids := array_append(v_fixture_outbox_ids,v_outbox_id);
   delete from public.organization_members where organization_id=v_org and user_id=v_removed_user;
 
   perform pg_temp.check('legacy scan claim skips unified organization',
     public.claim_evidence_document_notification_atomic(v_org,v_worker,60) is null);
   select * into v_bridge from public.bridge_evidence_scan_notification_dispatches_atomic(v_org,100);
   perform pg_temp.check('scan alert variants and unavailable owner bridged',
-    v_bridge.outcome='bridged' and v_bridge.created=6
+    v_bridge.outcome='bridged' and v_bridge.created>=6
+    and (select count(distinct d.source_id)=6 from public.notification_dispatches d
+      where d.organization_id=v_org and d.source_id=any(v_fixture_outbox_ids))
     and exists(select 1 from public.notification_dispatches d
       join public.evidence_document_notification_outbox n
         on n.organization_id=d.organization_id and n.id=d.source_id

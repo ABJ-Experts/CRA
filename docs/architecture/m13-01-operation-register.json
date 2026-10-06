@@ -1,0 +1,3646 @@
+{
+  "description": "M13-01 operation-to-authority register. Each mutating route and semantic worker maps to one inspected transactional audit writer, durable source ledger, explicit compatibility exception, or read-only command. Branch and delegated-source notes identify conditional paths.",
+  "routes": [
+    {
+      "id": "apps/api/src/auth/auth.controller.ts#AuthController.forgotPassword:POST:auth/forgot-password",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261005105044_m13_01_auth_audit.sql",
+          "symbol": "m13_01_audit_auth_state_change"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/auth/auth.controller.ts#AuthController.refreshJson:POST:auth/refresh",
+      "authority": [
+        {
+          "kind": "best-effort",
+          "evidence": "apps/api/src/auth/application/auth-security-audit.ts",
+          "symbol": "recordBestEffort",
+          "note": "Approved availability exception: auth response can succeed during audit outage; readiness reports degradation."
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/auth/auth.controller.ts#AuthController.resendCode:POST:auth/resend-code",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261005105044_m13_01_auth_audit.sql",
+          "symbol": "m13_01_audit_auth_state_change"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/auth/auth.controller.ts#AuthController.resetPassword:POST:auth/reset-password",
+      "authority": [
+        {
+          "kind": "external-intent",
+          "evidence": "apps/api/src/auth/auth.service.ts",
+          "symbol": "resetPassword"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/auth/auth.controller.ts#AuthController.signIn:POST:auth/sign-in",
+      "authority": [
+        {
+          "kind": "best-effort",
+          "evidence": "apps/api/src/auth/application/auth-security-audit.ts",
+          "symbol": "recordBestEffort",
+          "note": "Approved availability exception: auth response can succeed during audit outage; readiness reports degradation."
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/auth/auth.controller.ts#AuthController.signOut:POST:auth/sign-out",
+      "authority": [
+        {
+          "kind": "external-intent",
+          "evidence": "apps/api/src/auth/auth.service.ts",
+          "symbol": "signOutEverywhere"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/auth/auth.controller.ts#AuthController.signUp:POST:auth/sign-up",
+      "authority": [
+        {
+          "kind": "external-intent",
+          "evidence": "apps/api/src/auth/auth.service.ts",
+          "symbol": "signUp"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/auth/auth.controller.ts#AuthController.unlock:POST:auth/unlock",
+      "authority": [
+        {
+          "kind": "best-effort",
+          "evidence": "apps/api/src/auth/application/auth-security-audit.ts",
+          "symbol": "recordBestEffort",
+          "note": "Password reauthentication outcome is best-effort for auth availability; login-attempt state writes are transactionally audited by m13_01_audit_auth_state_change."
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/auth/auth.controller.ts#AuthController.verifyEmail:POST:auth/verify-email",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261005105044_m13_01_auth_audit.sql",
+          "symbol": "m13_01_audit_auth_user_security_change"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/auth/mfa/mfa.controller.ts#MfaController.confirm:POST:auth/mfa/enroll/confirm",
+      "authority": [
+        {
+          "kind": "external-intent",
+          "evidence": "apps/api/src/auth/mfa/mfa.service.ts",
+          "symbol": "confirmEnrollment"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/auth/mfa/mfa.controller.ts#MfaController.enroll:POST:auth/mfa/enroll",
+      "authority": [
+        {
+          "kind": "external-intent",
+          "evidence": "apps/api/src/auth/mfa/mfa.service.ts",
+          "symbol": "enroll"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/auth/mfa/mfa.controller.ts#MfaController.unenroll:DELETE:auth/mfa/factors/:id",
+      "authority": [
+        {
+          "kind": "external-intent",
+          "evidence": "apps/api/src/auth/mfa/mfa.service.ts",
+          "symbol": "unenroll"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/auth/mfa/mfa.controller.ts#MfaController.verifyTwoFactor:POST:auth/two-factor/verify",
+      "authority": [
+        {
+          "kind": "best-effort",
+          "evidence": "apps/api/src/auth/mfa/mfa.controller.ts",
+          "symbol": "verifyTwoFactor",
+          "note": "OTP branch records a best-effort auth.mfa_challenge decision; recovery-code branch uses required auth.mfa_recovery intent and outcome. Exactly one branch runs per request."
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/connectors/agent/agent-ingress.controller.ts#AgentIngressController.enroll:POST:agent/enroll",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261001072256_m11_06_on_prem_agent.sql",
+          "symbol": "m1106_redeem_agent_enrollment"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/connectors/agent/agent-ingress.controller.ts#AgentIngressController.frames:POST:agent/frames",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261001072256_m11_06_on_prem_agent.sql",
+          "symbol": "m1106_stage_agent_batch"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/connectors/agent/agent-management.controller.ts#AgentManagementController.issue:POST:connectors/:connectorId/agents/enrollments",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261001075940_m11_06_pending_revoke_fence.sql",
+          "symbol": "m1106_issue_agent_enrollment"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/connectors/agent/agent-management.controller.ts#AgentManagementController.revoke:POST:connectors/:connectorId/agents/:agentId/revoke",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261001072256_m11_06_on_prem_agent.sql",
+          "symbol": "m1106_revoke_agent"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/connectors/connectors-sync-operations.controller.ts#ConnectorsSyncOperationsController.previewMapping:POST:connectors/:connectorId/field-mapping/preview",
+      "authority": [
+        {
+          "kind": "read-only-command",
+          "evidence": "apps/api/src/connectors/application/connector-sync-operations-use-cases.ts",
+          "symbol": "previewMapping"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/connectors/connectors-sync-operations.controller.ts#ConnectorsSyncOperationsController.replay:POST:connectors/:connectorId/sync-runs/:syncRunId/replay",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260929083706_m11_02_durable_sync_history.sql",
+          "symbol": "m1102_replay_sync_run"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/connectors/connectors-sync-operations.controller.ts#ConnectorsSyncOperationsController.replayPreview:POST:connectors/:connectorId/sync-runs/:syncRunId/replay/preview",
+      "authority": [
+        {
+          "kind": "read-only-command",
+          "evidence": "apps/infrastructure/supabase/migrations/20260929083706_m11_02_durable_sync_history.sql",
+          "symbol": "m1102_replay_preview"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/connectors/connectors-sync-operations.controller.ts#ConnectorsSyncOperationsController.saveMapping:POST:connectors/:connectorId/field-mapping",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260929083706_m11_02_durable_sync_history.sql",
+          "symbol": "m1102_save_field_mapping"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/connectors/connectors-webhooks.controller.ts#ConnectorsWebhooksController.create:POST:connectors/webhooks",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260929114854_m11_03_signed_webhooks.sql",
+          "symbol": "m1103_execute_webhook_endpoint_command_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/connectors/connectors-webhooks.controller.ts#ConnectorsWebhooksController.disable:POST:connectors/webhooks/:endpointId/disable",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260929114854_m11_03_signed_webhooks.sql",
+          "symbol": "m1103_execute_webhook_endpoint_command_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/connectors/connectors-webhooks.controller.ts#ConnectorsWebhooksController.enable:POST:connectors/webhooks/:endpointId/enable",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260929114854_m11_03_signed_webhooks.sql",
+          "symbol": "m1103_execute_webhook_endpoint_command_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/connectors/connectors-webhooks.controller.ts#ConnectorsWebhooksController.replay:POST:connectors/webhooks/:endpointId/deliveries/:deliveryId/replay",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260929114854_m11_03_signed_webhooks.sql",
+          "symbol": "m1103_execute_webhook_endpoint_command_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/connectors/connectors-webhooks.controller.ts#ConnectorsWebhooksController.replayPreview:POST:connectors/webhooks/:endpointId/deliveries/:deliveryId/replay/preview",
+      "authority": [
+        {
+          "kind": "read-only-command",
+          "evidence": "apps/infrastructure/supabase/migrations/20260929114854_m11_03_signed_webhooks.sql",
+          "symbol": "m1103_preview_webhook_replay"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/connectors/connectors-webhooks.controller.ts#ConnectorsWebhooksController.revoke:POST:connectors/webhooks/:endpointId/secret/revoke",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260929114854_m11_03_signed_webhooks.sql",
+          "symbol": "m1103_execute_webhook_endpoint_command_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/connectors/connectors-webhooks.controller.ts#ConnectorsWebhooksController.rotate:POST:connectors/webhooks/:endpointId/secret",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260929114854_m11_03_signed_webhooks.sql",
+          "symbol": "m1103_execute_webhook_endpoint_command_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/connectors/connectors-webhooks.controller.ts#ConnectorsWebhooksController.test:POST:connectors/webhooks/:endpointId/test",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260929114854_m11_03_signed_webhooks.sql",
+          "symbol": "m1103_execute_webhook_endpoint_command_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/connectors/connectors-webhooks.controller.ts#ConnectorsWebhooksController.update:PATCH:connectors/webhooks/:endpointId",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260929114854_m11_03_signed_webhooks.sql",
+          "symbol": "m1103_execute_webhook_endpoint_command_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/connectors/connectors.controller.ts#ConnectorsController.archive:POST:connectors/:connectorId/archive",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260820100000_m2_v2_connector_sync_foundation.sql",
+          "symbol": "archive_connector_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/connectors/connectors.controller.ts#ConnectorsController.beginRun:POST:connectors/:connectorId/sync-runs",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261001072256_m11_06_on_prem_agent.sql",
+          "symbol": "m11_begin_sync_run_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/connectors/connectors.controller.ts#ConnectorsController.cancel:POST:connectors/:connectorId/sync-runs/:syncRunId/cancel",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260820100000_m2_v2_connector_sync_foundation.sql",
+          "symbol": "cancel_sync_run_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/connectors/connectors.controller.ts#ConnectorsController.create:POST:connectors",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260930120000_m11_04_ci_sbom_gate_contracts.sql",
+          "symbol": "m11_create_connector_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/connectors/connectors.controller.ts#ConnectorsController.disconnect:POST:connectors/:connectorId/disconnect",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260930120000_m11_04_ci_sbom_gate_contracts.sql",
+          "symbol": "m11_execute_connector_command_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/connectors/connectors.controller.ts#ConnectorsController.exportDiagnostics:POST:connectors/:connectorId/diagnostics/export",
+      "authority": [
+        {
+          "kind": "read-only-command",
+          "evidence": "apps/api/src/connectors/infrastructure/supabase-connector.repository.ts",
+          "symbol": "diagnosticsExport"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/connectors/connectors.controller.ts#ConnectorsController.link:POST:connectors/:connectorId/identities/link",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260820100000_m2_v2_connector_sync_foundation.sql",
+          "symbol": "link_external_identity_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/connectors/connectors.controller.ts#ConnectorsController.merge:POST:connectors/:connectorId/identities/merge",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260820100000_m2_v2_connector_sync_foundation.sql",
+          "symbol": "merge_external_identities_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/connectors/connectors.controller.ts#ConnectorsController.previewPolicy:POST:connectors/:connectorId/mapping/preview",
+      "authority": [
+        {
+          "kind": "read-only-command",
+          "evidence": "apps/infrastructure/supabase/migrations/20260820120000_m2_v2_connector_sync_hardening.sql",
+          "symbol": "preview_field_authority_policy"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/connectors/connectors.controller.ts#ConnectorsController.reconnect:POST:connectors/:connectorId/reconnect",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260930120000_m11_04_ci_sbom_gate_contracts.sql",
+          "symbol": "m11_execute_connector_command_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/connectors/connectors.controller.ts#ConnectorsController.requestCommit:POST:connectors/:connectorId/sync-runs/:syncRunId/request-commit",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260928125859_m11_01_integration_catalogue_vault.sql",
+          "symbol": "m11_request_sync_run_commit_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/connectors/connectors.controller.ts#ConnectorsController.resolveConflict:POST:connectors/conflicts/:conflictId/resolve",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260820120000_m2_v2_connector_sync_hardening.sql",
+          "symbol": "resolve_sync_conflict_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/connectors/connectors.controller.ts#ConnectorsController.retry:POST:connectors/:connectorId/sync-runs/:syncRunId/retry",
+      "authority": [
+        {
+          "kind": "read-only-command",
+          "evidence": "apps/infrastructure/supabase/migrations/20260929083706_m11_02_durable_sync_history.sql",
+          "symbol": "retry_sync_run_atomic",
+          "note": "The final function returns preview_required without a state change."
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/connectors/connectors.controller.ts#ConnectorsController.revokeSecret:POST:connectors/:connectorId/secret/revoke",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260930120000_m11_04_ci_sbom_gate_contracts.sql",
+          "symbol": "m11_execute_connector_command_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/connectors/connectors.controller.ts#ConnectorsController.setSecret:POST:connectors/:connectorId/secret",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260930120000_m11_04_ci_sbom_gate_contracts.sql",
+          "symbol": "m11_execute_connector_command_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/connectors/connectors.controller.ts#ConnectorsController.test:POST:connectors/:connectorId/test",
+      "authority": [
+        {
+          "kind": "external-intent",
+          "evidence": "apps/infrastructure/supabase/migrations/20260930120000_m11_04_ci_sbom_gate_contracts.sql",
+          "symbol": "m11_begin_connector_test_atomic",
+          "note": "Begin stores durable intent and the finalizer records provider outcome."
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/connectors/connectors.controller.ts#ConnectorsController.unlink:POST:connectors/:connectorId/identities/:mappingId/unlink",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260820100000_m2_v2_connector_sync_foundation.sql",
+          "symbol": "unlink_external_identity_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/connectors/connectors.controller.ts#ConnectorsController.update:PATCH:connectors/:connectorId",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260930120000_m11_04_ci_sbom_gate_contracts.sql",
+          "symbol": "m11_execute_connector_command_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/connectors/connectors.controller.ts#ConnectorsController.upsertPolicy:POST:connectors/:connectorId/mapping",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260820120000_m2_v2_connector_sync_hardening.sql",
+          "symbol": "upsert_field_authority_policy_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/evidence/evidence.controller.ts#EvidenceController.authorizeAccess:POST:products/:productId/evidence-documents/:documentId/versions/:versionId/access",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260917110000_m8_evidence_versions_verified_delivery.sql",
+          "symbol": "authorize_evidence_document_access_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/evidence/evidence.controller.ts#EvidenceController.cancelBulkIntakeItem:POST:products/:productId/evidence-bulk-intake-batches/:batchId/items/:itemId/cancel",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260921134000_m8_06_bulk_rpc_body_alignment.sql",
+          "symbol": "cancel_evidence_bulk_intake_item_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/evidence/evidence.controller.ts#EvidenceController.complete:POST:evidence-uploads/:versionId/complete",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260917110000_m8_evidence_versions_verified_delivery.sql",
+          "symbol": "finalize_evidence_document_upload_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/evidence/evidence.controller.ts#EvidenceController.completeBulkIntakeItem:POST:products/:productId/evidence-bulk-intake-batches/:batchId/items/:itemId/complete",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260921150000_m8_06_bulk_completion_failure_code.sql",
+          "symbol": "complete_evidence_bulk_intake_item_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/evidence/evidence.controller.ts#EvidenceController.confirmDeletion:POST:evidence/:documentId/deletion-intents",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260921123000_m8_05_retention_rpc_contract_alignment.sql",
+          "symbol": "confirm_evidence_document_deletion_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/evidence/evidence.controller.ts#EvidenceController.createBulkIntakeBatch:POST:products/:productId/evidence-bulk-intake-batches",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260921138000_m8_06_bulk_owner_scope_hardening.sql",
+          "symbol": "create_evidence_bulk_intake_batch_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/evidence/evidence.controller.ts#EvidenceController.createWatermarkExport:POST:products/:productId/evidence-documents/:documentId/versions/:versionId/watermark-exports",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260921140000_m8_06_watermark_digest_alignment.sql",
+          "symbol": "create_evidence_document_watermark_export_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/evidence/evidence.controller.ts#EvidenceController.deliverWatermarkExport:POST:products/:productId/evidence-documents/:documentId/versions/:versionId/watermark-exports/:exportId/delivery",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260921140000_m8_06_watermark_digest_alignment.sql",
+          "symbol": "create_evidence_document_watermark_export_delivery_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/evidence/evidence.controller.ts#EvidenceController.initialize:POST:evidence-uploads",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260916110000_m8_evidence_intake_foundation.sql",
+          "symbol": "reserve_evidence_document_upload_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/evidence/evidence.controller.ts#EvidenceController.initializeBulkIntakeItem:POST:products/:productId/evidence-bulk-intake-batches/:batchId/items/:itemId/initialize",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260921134000_m8_06_bulk_rpc_body_alignment.sql",
+          "symbol": "initialize_evidence_bulk_intake_item_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/evidence/evidence.controller.ts#EvidenceController.placeLegalHold:POST:evidence/:documentId/legal-holds",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260921123000_m8_05_retention_rpc_contract_alignment.sql",
+          "symbol": "place_evidence_document_legal_hold_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/evidence/evidence.controller.ts#EvidenceController.previewWatermarkExport:POST:products/:productId/evidence-documents/:documentId/versions/:versionId/watermark-exports/:exportId/preview",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260921140000_m8_06_watermark_digest_alignment.sql",
+          "symbol": "preview_evidence_document_watermark_export_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/evidence/evidence.controller.ts#EvidenceController.releaseLegalHold:POST:evidence/:documentId/legal-holds/:holdId/release",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260921123000_m8_05_retention_rpc_contract_alignment.sql",
+          "symbol": "release_evidence_document_legal_hold_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/evidence/evidence.controller.ts#EvidenceController.replace:POST:evidence-documents/:documentId/versions",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260917110000_m8_evidence_versions_verified_delivery.sql",
+          "symbol": "reserve_evidence_document_replacement_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/evidence/evidence.controller.ts#EvidenceController.retryBulkIntakeItem:POST:products/:productId/evidence-bulk-intake-batches/:batchId/items/:itemId/retry",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260921132000_m8_06_retry_scope_alignment.sql",
+          "symbol": "retry_evidence_bulk_intake_item_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/evidence/evidence.controller.ts#EvidenceController.retryExtraction:POST:products/:productId/evidence-documents/:documentId/versions/:versionId/extraction/retry",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260918100000_m8_evidence_ocr_search.sql",
+          "symbol": "retry_evidence_text_extraction_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/evidence/evidence.controller.ts#EvidenceController.updateExpiryAlertIntervals:PATCH:evidence-expiry-alert-intervals",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260918110000_m8_04_evidence_validity_reuse_alerts.sql",
+          "symbol": "update_evidence_expiry_alert_intervals_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/findings/assessments/bulk/vulnerability-assessment-bulk.controller.ts#VulnerabilityAssessmentBulkController.createBulkPreview:POST:findings/assessment-bulk/previews",
+      "authority": [
+        {
+          "kind": "job-history",
+          "evidence": "apps/infrastructure/supabase/migrations/20260907130251_m5_bulk_preview_fresh_install_alignment.sql",
+          "symbol": "create_vulnerability_assessment_bulk_preview_atomic",
+          "note": "Preview persists a bounded operation and command ledger; execution is a separate audited action."
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/findings/assessments/bulk/vulnerability-assessment-bulk.controller.ts#VulnerabilityAssessmentBulkController.createPropagationPreview:POST:findings/assessment-propagation/previews",
+      "authority": [
+        {
+          "kind": "job-history",
+          "evidence": "apps/infrastructure/supabase/migrations/20260907130251_m5_bulk_preview_fresh_install_alignment.sql",
+          "symbol": "create_vulnerability_assessment_bulk_preview_atomic",
+          "note": "Preview persists a bounded operation and command ledger; execution is a separate audited action."
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/findings/assessments/bulk/vulnerability-assessment-bulk.controller.ts#VulnerabilityAssessmentBulkController.execute:POST:findings/assessment-bulk/:operationId/execute",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260907123848_m5_bulk_assessment_propagation.sql",
+          "symbol": "execute_vulnerability_assessment_bulk_operation_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/findings/assessments/bulk/vulnerability-assessment-bulk.controller.ts#VulnerabilityAssessmentBulkController.retry:POST:findings/assessment-bulk/:operationId/retry",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260907130000_m5_bulk_assessment_retry_command_repair.sql",
+          "symbol": "retry_vulnerability_assessment_bulk_operation_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/findings/assessments/bulk/vulnerability-assessment-bulk.controller.ts#VulnerabilityAssessmentBulkController.undo:POST:findings/assessment-bulk/:operationId/undo",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260907123848_m5_bulk_assessment_propagation.sql",
+          "symbol": "undo_vulnerability_assessment_bulk_operation_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/findings/assessments/vulnerability-assessment.controller.ts#VulnerabilityAssessmentController.approveAssessment:POST:findings/:findingId/assessment/:assessmentId/approve",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260907095929_m5_vex_assessments_approval.sql",
+          "symbol": "approve_vulnerability_finding_vex_assessment_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/findings/assessments/vulnerability-assessment.controller.ts#VulnerabilityAssessmentController.rejectAssessment:POST:findings/:findingId/assessment/:assessmentId/reject",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260907095929_m5_vex_assessments_approval.sql",
+          "symbol": "reject_vulnerability_finding_vex_assessment_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/findings/assessments/vulnerability-assessment.controller.ts#VulnerabilityAssessmentController.submitAssessment:POST:findings/:findingId/assessment",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260907095929_m5_vex_assessments_approval.sql",
+          "symbol": "submit_vulnerability_finding_vex_assessment_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/findings/assessments/vulnerability-assessment.controller.ts#VulnerabilityAssessmentController.updateApprovalPolicy:PUT:findings/assessment-approval-policy/:severity",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260907095929_m5_vex_assessments_approval.sql",
+          "symbol": "set_vulnerability_assessment_approval_policy_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/findings/exports/vulnerability-vex-export.controller.ts#VulnerabilityVexExportController.create:POST:findings/vex-exports",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260908122058_m5_vex_export_publication.sql",
+          "symbol": "create_vulnerability_vex_export_snapshot_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/findings/exports/vulnerability-vex-export.controller.ts#VulnerabilityVexExportController.enqueuePublication:POST:findings/vex-exports/:exportId/publications",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260908122058_m5_vex_export_publication.sql",
+          "symbol": "enqueue_vulnerability_vex_publication_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/findings/exports/vulnerability-vex-export.controller.ts#VulnerabilityVexExportController.retryPublication:POST:findings/vex-exports/publications/:publicationId/retry",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260909054115_m5_vex_publication_manual_retry_attempt_reset.sql",
+          "symbol": "retry_vulnerability_vex_publication_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/findings/exports/vulnerability-vex-export.controller.ts#VulnerabilityVexExportController.updatePublicationTarget:PUT:findings/vex-exports/publication-targets/:targetKey",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260908122058_m5_vex_export_publication.sql",
+          "symbol": "set_vulnerability_vex_publication_target_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/findings/exports/vulnerability-vex-export.controller.ts#VulnerabilityVexExportController.withdrawPublication:POST:findings/vex-exports/publications/:publicationId/withdraw",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260908122058_m5_vex_export_publication.sql",
+          "symbol": "withdraw_vulnerability_vex_publication_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/findings/findings.controller.ts#FindingPropagationSourcesController.register:POST:findings/propagation-sources",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260814105337_m2_v1_finding_propagation_commands.sql",
+          "symbol": "register_finding_propagation_source_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/findings/findings.controller.ts#FindingPropagationSourcesController.update:PATCH:findings/propagation-sources/:sourceId",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260814111734_m2_v1_finding_source_update.sql",
+          "symbol": "update_finding_propagation_source_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/findings/findings.controller.ts#ProductFindingImpactSummaryController.createOverride:POST:products/:productId/finding-propagation-sources/:sourceId/overrides",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260814105837_m2_v1_finding_impact_api_commands.sql",
+          "symbol": "create_finding_product_impact_override_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/findings/findings.controller.ts#ProductFindingImpactSummaryController.endOverride:POST:products/:productId/finding-propagation-sources/:sourceId/overrides/:overrideId/end",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260814111416_m2_v1_finding_override_end.sql",
+          "symbol": "end_finding_product_impact_override_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/findings/triage/vulnerability-triage.controller.ts#JiraRemediationWebhookController.receive:POST:jira/remediation-webhooks/:bindingId",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260930153600_m11_05_verified_event_move_conflict.sql",
+          "symbol": "record_verified_vulnerability_ticket_event_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/findings/triage/vulnerability-triage.controller.ts#VulnerabilityTriageController.assign:PATCH:findings/:findingId/assignee",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260908090000_m5_suppression_sla.sql",
+          "symbol": "assign_finding_triage_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/findings/triage/vulnerability-triage.controller.ts#VulnerabilityTriageController.correctRemediation:PATCH:findings/:findingId/remediation",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260908095440_m5_remediation_anchor_outbox_contract_repair.sql",
+          "symbol": "record_finding_remediation_anchor_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/findings/triage/vulnerability-triage.controller.ts#VulnerabilityTriageController.createNote:POST:findings/:findingId/notes",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260909070833_m5_triage_notes_mentions.sql",
+          "symbol": "create_finding_triage_note_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/findings/triage/vulnerability-triage.controller.ts#VulnerabilityTriageController.createSavedView:POST:findings/saved-views",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260907075911_m5_triage_queue_runtime_repair.sql",
+          "symbol": "create_finding_saved_view_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/findings/triage/vulnerability-triage.controller.ts#VulnerabilityTriageController.deleteNote:DELETE:findings/:findingId/notes/:noteId",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260909070833_m5_triage_notes_mentions.sql",
+          "symbol": "delete_finding_triage_note_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/findings/triage/vulnerability-triage.controller.ts#VulnerabilityTriageController.deleteSavedView:DELETE:findings/saved-views/:viewId",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260907075911_m5_triage_queue_runtime_repair.sql",
+          "symbol": "delete_finding_saved_view_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/findings/triage/vulnerability-triage.controller.ts#VulnerabilityTriageController.dryRunRemediationTicketBinding:POST:findings/remediation-ticket-bindings/dry-run",
+      "authority": [
+        {
+          "kind": "read-only-command",
+          "evidence": "apps/api/src/findings/triage/application/vulnerability-triage-use-cases.ts",
+          "symbol": "dryRunRemediationTicketBinding"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/findings/triage/vulnerability-triage.controller.ts#VulnerabilityTriageController.previewRemediationTicket:POST:findings/:findingId/remediation-tickets/preview",
+      "authority": [
+        {
+          "kind": "read-only-command",
+          "evidence": "apps/api/src/findings/triage/application/vulnerability-triage-use-cases.ts",
+          "symbol": "previewRemediationTicket"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/findings/triage/vulnerability-triage.controller.ts#VulnerabilityTriageController.recordRemediation:POST:findings/:findingId/remediation",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260908095440_m5_remediation_anchor_outbox_contract_repair.sql",
+          "symbol": "record_finding_remediation_anchor_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/findings/triage/vulnerability-triage.controller.ts#VulnerabilityTriageController.replayRemediationTicket:POST:findings/:findingId/remediation-tickets/:ticketId/replay",
+      "authority": [
+        {
+          "kind": "external-intent",
+          "evidence": "apps/infrastructure/supabase/migrations/20261001055853_m11_05_operation_timestamp_context.sql",
+          "symbol": "reserve_vulnerability_remediation_ticket_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/findings/triage/vulnerability-triage.controller.ts#VulnerabilityTriageController.requestRemediationTicketTransition:POST:findings/:findingId/remediation-tickets/:ticketId/transition",
+      "authority": [
+        {
+          "kind": "external-intent",
+          "evidence": "apps/infrastructure/supabase/migrations/20260930153200_m11_05_webhook_binding_correlation.sql",
+          "symbol": "reserve_vulnerability_remediation_ticket_transition_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/findings/triage/vulnerability-triage.controller.ts#VulnerabilityTriageController.setDefaultSavedView:PUT:findings/saved-views/default",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260907075911_m5_triage_queue_runtime_repair.sql",
+          "symbol": "set_finding_saved_view_default_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/findings/triage/vulnerability-triage.controller.ts#VulnerabilityTriageController.suppress:POST:findings/:findingId/suppression",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260908090002_m5_suppression_revision_history.sql",
+          "symbol": "suppress_finding_triage_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/findings/triage/vulnerability-triage.controller.ts#VulnerabilityTriageController.syncRemediationTicket:POST:findings/:findingId/remediation-tickets/sync",
+      "authority": [
+        {
+          "kind": "external-intent",
+          "evidence": "apps/infrastructure/supabase/migrations/20261001055853_m11_05_operation_timestamp_context.sql",
+          "symbol": "reserve_vulnerability_remediation_ticket_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/findings/triage/vulnerability-triage.controller.ts#VulnerabilityTriageController.updateNote:PATCH:findings/:findingId/notes/:noteId",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260909070833_m5_triage_notes_mentions.sql",
+          "symbol": "update_finding_triage_note_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/findings/triage/vulnerability-triage.controller.ts#VulnerabilityTriageController.updateSavedView:PATCH:findings/saved-views/:viewId",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260907075911_m5_triage_queue_runtime_repair.sql",
+          "symbol": "update_finding_saved_view_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/findings/triage/vulnerability-triage.controller.ts#VulnerabilityTriageController.updateSlaPolicy:PUT:findings/triage-sla-policies",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260908090000_m5_suppression_sla.sql",
+          "symbol": "set_vulnerability_triage_sla_policy_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/findings/triage/vulnerability-triage.controller.ts#VulnerabilityTriageController.upsertRemediationTicketBinding:POST:findings/remediation-ticket-bindings",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260930153100_m11_05_remediation_ticket_sync_repair.sql",
+          "symbol": "upsert_vulnerability_remediation_ticket_binding_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/frameworks/controls.controller.ts#ControlsController.archive:POST:frameworks/controls/:controlId/archive",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260924070000_m10_02_control_library.sql",
+          "symbol": "m10_control_command",
+          "note": "Current published wrapper delegates to renamed m10_control_command_impl."
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/frameworks/controls.controller.ts#ControlsController.create:POST:frameworks/controls",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260924070000_m10_02_control_library.sql",
+          "symbol": "m10_control_command",
+          "note": "Current published wrapper delegates to renamed m10_control_command_impl."
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/frameworks/controls.controller.ts#ControlsController.createMapping:POST:frameworks/controls/:controlId/mappings",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260924070000_m10_02_control_library.sql",
+          "symbol": "m10_control_command",
+          "note": "Current published wrapper delegates to renamed m10_control_command_impl."
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/frameworks/controls.controller.ts#ControlsController.endMapping:DELETE:frameworks/controls/:controlId/mappings/:mappingId",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260924070000_m10_02_control_library.sql",
+          "symbol": "m10_control_command",
+          "note": "Current published wrapper delegates to renamed m10_control_command_impl."
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/frameworks/controls.controller.ts#ControlsController.linkEvidence:POST:frameworks/controls/:controlId/evidence-links",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260924070000_m10_02_control_library.sql",
+          "symbol": "m10_control_command",
+          "note": "Current published wrapper delegates to renamed m10_control_command_impl."
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/frameworks/controls.controller.ts#ControlsController.setApplicability:PUT:frameworks/:packKey/versions/:versionKey/requirements/:requirementKey/applicability",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260924101931_m10_03_coverage_gaps.sql",
+          "symbol": "m10_set_framework_applicability"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/frameworks/controls.controller.ts#ControlsController.unlinkEvidence:DELETE:frameworks/controls/:controlId/evidence-links/:linkId",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260924070000_m10_02_control_library.sql",
+          "symbol": "m10_control_command",
+          "note": "Current published wrapper delegates to renamed m10_control_command_impl."
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/frameworks/controls.controller.ts#ControlsController.update:PUT:frameworks/controls/:controlId",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260924070000_m10_02_control_library.sql",
+          "symbol": "m10_control_command",
+          "note": "Current published wrapper delegates to renamed m10_control_command_impl."
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/frameworks/controls.controller.ts#ControlsController.updateMapping:PUT:frameworks/controls/:controlId/mappings/:mappingId",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260924070000_m10_02_control_library.sql",
+          "symbol": "m10_control_command",
+          "note": "Current published wrapper delegates to renamed m10_control_command_impl."
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/frameworks/custom-frameworks.controller.ts#CustomFrameworksController.create:POST:frameworks/custom",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260925160000_m10_05_customer_packs.sql",
+          "symbol": "m10_custom_pack_command"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/frameworks/custom-frameworks.controller.ts#CustomFrameworksController.update:PUT:frameworks/custom/:draftId",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260925160000_m10_05_customer_packs.sql",
+          "symbol": "m10_custom_pack_command"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/frameworks/custom-frameworks.controller.ts#CustomFrameworksController.validate:POST:frameworks/custom/validate",
+      "authority": [
+        {
+          "kind": "read-only-command",
+          "evidence": "apps/infrastructure/supabase/migrations/20260925160300_m10_05_custom_validation_paths.sql",
+          "symbol": "m10_custom_pack_validate"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/frameworks/frameworks.controller.ts#FrameworksController.select:PUT:frameworks/:packKey/selection",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260925160000_m10_05_customer_packs.sql",
+          "symbol": "m10_select_framework_version"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/frameworks/upgrades.controller.ts#UpgradesController.commit:POST:frameworks/:packKey/upgrade-reviews/:reviewId/commit",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260925160100_m10_05_archive_upgrade_guard.sql",
+          "symbol": "m10_commit_upgrade"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/frameworks/upgrades.controller.ts#UpgradesController.createReview:POST:frameworks/:packKey/upgrade-reviews",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260925120000_m10_04_curated_crosswalk_upgrades.sql",
+          "symbol": "m10_create_upgrade_review"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/frameworks/upgrades.controller.ts#UpgradesController.decide:PUT:frameworks/:packKey/upgrade-reviews/:reviewId/decisions/:mappingId",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260925120000_m10_04_curated_crosswalk_upgrades.sql",
+          "symbol": "m10_set_upgrade_decision"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/invitations/invitations.controller.ts#InvitationsController.accept:POST:invitations/accept",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260809103430_accept_invitation_atomic.sql",
+          "symbol": "accept_invitation_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/invitations/invitations.controller.ts#InvitationsController.create:POST:invitations",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261005105656_m13_01_invitation_creation_audit.sql",
+          "symbol": "m13_01_create_invitation_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/invitations/invitations.controller.ts#InvitationsController.resend:POST:invitations/:id/resend",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260810120000_m1_organization_profile_onboarding.sql",
+          "symbol": "resend_invitation_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/invitations/invitations.controller.ts#InvitationsController.revoke:DELETE:invitations/:id",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260809103430_accept_invitation_atomic.sql",
+          "symbol": "revoke_invitation_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/notifications/notifications.controller.ts#NotificationsController.confirmChatChannel:POST:notifications/chat-channels/:channelId/confirm",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261005125332_m13_01_chat_test_security_audit.sql",
+          "symbol": "m12_05_confirm_chat_channel_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/notifications/notifications.controller.ts#NotificationsController.createChatChannel:POST:notifications/chat-channels",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261002110041_m12_05_chat_delivery.sql",
+          "symbol": "m12_05_create_chat_channel_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/notifications/notifications.controller.ts#NotificationsController.enableChatChannel:PATCH:notifications/chat-channels/:channelId/enable",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261002110041_m12_05_chat_delivery.sql",
+          "symbol": "m12_05_set_chat_channel_enabled_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/notifications/notifications.controller.ts#NotificationsController.markFeedRead:POST:notifications/feed/mark-read",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261002090300_m12_04_unified_failure_notices.sql",
+          "symbol": "mark_notification_feed_read_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/notifications/notifications.controller.ts#NotificationsController.retry:POST:notifications/deliveries/:deliveryRef/retry",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261001152000_m12_03_critical_delivery_operations.sql",
+          "symbol": "retry_notification_dispatch_atomic",
+          "note": "M2/M6 critical branches audit directly; optional branches delegate to the prior audited function."
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/notifications/notifications.controller.ts#NotificationsController.retryChatDelivery:POST:notifications/chat-deliveries/:deliveryId/retry",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261002115749_m12_05_retry_idempotency_payload.sql",
+          "symbol": "m12_05_retry_chat_delivery_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/notifications/notifications.controller.ts#NotificationsController.testChatChannel:POST:notifications/chat-channels/:channelId/test",
+      "authority": [
+        {
+          "kind": "external-intent",
+          "evidence": "apps/infrastructure/supabase/migrations/20261005125332_m13_01_chat_test_security_audit.sql",
+          "symbol": "m12_05_begin_chat_channel_test_atomic",
+          "note": "The begin function records intent before provider test; m12_05_complete_chat_channel_test_atomic records its result."
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/notifications/notifications.controller.ts#NotificationsController.updateBurstPolicy:PATCH:notifications/burst-policy",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261005055356_m12_06_notification_bursts.sql",
+          "symbol": "update_notification_burst_policy_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/notifications/notifications.controller.ts#NotificationsController.updateChatChannel:PATCH:notifications/chat-channels/:channelId",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261002110041_m12_05_chat_delivery.sql",
+          "symbol": "m12_05_update_chat_channel_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/notifications/notifications.controller.ts#NotificationsController.updateCriticalRoute:PATCH:notifications/critical-routes/:userId",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261001143000_m12_03_notification_delivery_foundation.sql",
+          "symbol": "update_critical_notification_route_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/notifications/notifications.controller.ts#NotificationsController.updatePreferences:PATCH:notifications/preferences",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261001143000_m12_03_notification_delivery_foundation.sql",
+          "symbol": "update_notification_preferences_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/organizations/branding/branding.controller.ts#BrandingController.publish:POST:organizations/current/branding/publish",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260811100000_m1_v2_multi_entity_branding.sql",
+          "symbol": "publish_organization_branding_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/organizations/branding/branding.controller.ts#BrandingController.removeLogo:DELETE:organizations/current/branding/logo",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260811100000_m1_v2_multi_entity_branding.sql",
+          "symbol": "remove_organization_branding_logo_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/organizations/branding/branding.controller.ts#BrandingController.saveDraft:PATCH:organizations/current/branding",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260811100000_m1_v2_multi_entity_branding.sql",
+          "symbol": "save_organization_branding_draft_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/organizations/branding/branding.controller.ts#BrandingController.uploadLogo:POST:organizations/current/branding/logo",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260811120000_m1_v2_branding_draft_logo_preview_fix.sql",
+          "symbol": "finalize_organization_branding_asset_upload_atomic",
+          "note": "The reserve_organization_branding_asset_upload_atomic stage has its own transactional event."
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/organizations/legal-entities/legal-entities.controller.ts#LegalEntitiesController.activate:POST:organizations/current/legal-entities/:legalEntityId/activate",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260811100000_m1_v2_multi_entity_branding.sql",
+          "symbol": "transition_organization_legal_entity_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/organizations/legal-entities/legal-entities.controller.ts#LegalEntitiesController.create:POST:organizations/current/legal-entities",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260811100000_m1_v2_multi_entity_branding.sql",
+          "symbol": "create_organization_legal_entity_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/organizations/legal-entities/legal-entities.controller.ts#LegalEntitiesController.deactivate:POST:organizations/current/legal-entities/:legalEntityId/deactivate",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260811100000_m1_v2_multi_entity_branding.sql",
+          "symbol": "transition_organization_legal_entity_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/organizations/legal-entities/legal-entities.controller.ts#LegalEntitiesController.softDelete:POST:organizations/current/legal-entities/:legalEntityId/delete",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260811100000_m1_v2_multi_entity_branding.sql",
+          "symbol": "transition_organization_legal_entity_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/organizations/legal-entities/legal-entities.controller.ts#LegalEntitiesController.update:PATCH:organizations/current/legal-entities/:legalEntityId",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260811100000_m1_v2_multi_entity_branding.sql",
+          "symbol": "update_organization_legal_entity_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/organizations/organizations.controller.ts#OrganizationsController.create:POST:organizations",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260810120000_m1_organization_profile_onboarding.sql",
+          "symbol": "create_organization_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/organizations/organizations.controller.ts#OrganizationsController.switch:POST:organizations/switch",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260810120000_m1_organization_profile_onboarding.sql",
+          "symbol": "switch_organization_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/organizations/organizations.controller.ts#OrganizationsController.updateLegalProfile:PATCH:organizations/current/legal-profile",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260810120000_m1_organization_profile_onboarding.sql",
+          "symbol": "update_organization_legal_profile_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/organizations/tenant-administration/tenant-administration.controller.ts#TenantAdministrationController.deactivate:POST:organizations/current/lifecycle/deactivate",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260810131500_m1_tenant_administration_lifecycle_contract.sql",
+          "symbol": "deactivate_organization_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/organizations/tenant-administration/tenant-administration.controller.ts#TenantAdministrationController.reauthenticate:POST:organizations/current/lifecycle/reauthentication",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260810124500_m1_tenant_administration_foundation.sql",
+          "symbol": "create_destructive_reauth_grant_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/organizations/tenant-administration/tenant-administration.controller.ts#TenantAdministrationController.recover:POST:organizations/current/lifecycle/recover",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260810131500_m1_tenant_administration_lifecycle_contract.sql",
+          "symbol": "recover_organization_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/organizations/tenant-administration/tenant-administration.controller.ts#TenantAdministrationController.requestExport:POST:organizations/current/exports",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260810124500_m1_tenant_administration_foundation.sql",
+          "symbol": "request_organization_export_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/organizations/tenant-administration/tenant-administration.controller.ts#TenantAdministrationController.schedulePurge:POST:organizations/current/lifecycle/purge",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260810131500_m1_tenant_administration_lifecycle_contract.sql",
+          "symbol": "schedule_organization_purge_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/organizations/tenant-administration/tenant-administration.controller.ts#TenantAdministrationController.updateRetention:PATCH:organizations/current/retention",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260810124500_m1_tenant_administration_foundation.sql",
+          "symbol": "update_organization_retention_policy_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/organizations/tenant-administration/tenant-administration.controller.ts#TenantAdministrationController.updateSettings:PATCH:organizations/current/settings",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260810124500_m1_tenant_administration_foundation.sql",
+          "symbol": "update_organization_settings_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/permissions/custom-roles.controller.ts#CustomRolesController.create:POST:roles",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261005104258_m13_01_identity_mutations.sql",
+          "symbol": "m13_01_mutate_role_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/permissions/custom-roles.controller.ts#CustomRolesController.remove:DELETE:roles/:id",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261005104258_m13_01_identity_mutations.sql",
+          "symbol": "m13_01_mutate_role_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/permissions/custom-roles.controller.ts#CustomRolesController.setOverride:PUT:roles/overrides",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261005104258_m13_01_identity_mutations.sql",
+          "symbol": "m13_01_mutate_role_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/permissions/custom-roles.controller.ts#CustomRolesController.update:PATCH:roles/:id",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261005104258_m13_01_identity_mutations.sql",
+          "symbol": "m13_01_mutate_role_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/permissions/permissions.controller.ts#PermissionsController.check:POST:permissions/check",
+      "authority": [
+        {
+          "kind": "read-only-command",
+          "evidence": "apps/api/src/permissions/permissions.controller.ts",
+          "symbol": "check"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/products/imports/product-imports.controller.ts#ProductImportsController.cancel:POST:products/imports/:importId/cancel",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260817120521_m2_v1_product_release_csv_import.sql",
+          "symbol": "cancel_product_import_job"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/products/imports/product-imports.controller.ts#ProductImportsController.commit:POST:products/imports/:importId/commit",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260817124750_m2_v1_product_import_concurrency_revalidation.sql",
+          "symbol": "commit_product_import_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/products/imports/product-imports.controller.ts#ProductImportsController.dryRun:POST:products/imports",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260817124750_m2_v1_product_import_concurrency_revalidation.sql",
+          "symbol": "create_product_import_job",
+          "note": "Dry run creates a durable import job and transactional audit."
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/products/product-classifications.controller.ts#ProductClassificationsController.save:POST:products/:productId/classifications",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260928070538_m2_product_classification_commands.sql",
+          "symbol": "save_product_classification_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/products/products.controller.ts#ProductsController.addReleaseMarketAvailability:POST:products/:productId/releases/:releaseId/market-availability",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260813100000_m2_v1_minimize_regulatory_history.sql",
+          "symbol": "add_product_release_market_availability_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/products/products.controller.ts#ProductsController.appendSoftwareBaselineRevision:POST:products/baselines/:baselineId/revisions",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260813130000_m2_v1_product_relationships.sql",
+          "symbol": "append_software_baseline_revision_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/products/products.controller.ts#ProductsController.archive:POST:products/:productId/archive",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260813130000_m2_v1_product_relationships.sql",
+          "symbol": "archive_product_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/products/products.controller.ts#ProductsController.archiveRelease:POST:products/:productId/releases/:releaseId/archive",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260813130000_m2_v1_product_relationships.sql",
+          "symbol": "archive_product_release_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/products/products.controller.ts#ProductsController.archiveSoftwareBaseline:POST:products/baselines/:baselineId/archive",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260817093818_m2_v1_propagation_scale_and_lifecycle_consolidation.sql",
+          "symbol": "archive_software_baseline_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/products/products.controller.ts#ProductsController.assignLegalEntity:POST:products/:productId/legal-entity-assignment",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260812142000_m2_product_registry_sql_safety.sql",
+          "symbol": "assign_product_legal_entity_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/products/products.controller.ts#ProductsController.assignSoftwareBaselineMembership:POST:products/:productId/baseline-memberships",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260813130000_m2_v1_product_relationships.sql",
+          "symbol": "assign_software_baseline_membership_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/products/products.controller.ts#ProductsController.correctPlacedOnMarketDate:POST:products/:productId/releases/:releaseId/placed-on-market-date-corrections",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260813100000_m2_v1_minimize_regulatory_history.sql",
+          "symbol": "correct_product_release_placed_on_market_at_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/products/products.controller.ts#ProductsController.correctReleaseMarketAvailability:POST:products/:productId/releases/:releaseId/market-availability/corrections",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260813102000_m2_v1_retired_availability_commands.sql",
+          "symbol": "correct_product_release_market_availability_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/products/products.controller.ts#ProductsController.create:POST:products",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260812142000_m2_product_registry_sql_safety.sql",
+          "symbol": "create_product_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/products/products.controller.ts#ProductsController.createProductComponentLink:POST:products/:productId/component-links",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260813130000_m2_v1_product_relationships.sql",
+          "symbol": "create_product_component_link_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/products/products.controller.ts#ProductsController.createProductVariantRelationship:POST:products/:productId/variant-relationships",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260813133000_m2_v1_variant_function_lint_cleanup.sql",
+          "symbol": "create_product_variant_relationship_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/products/products.controller.ts#ProductsController.createRelease:POST:products/:productId/releases",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260812151000_m2_v1_release_regulatory_foundation.sql",
+          "symbol": "create_product_release_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/products/products.controller.ts#ProductsController.createSoftwareBaseline:POST:products/baselines",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260813130000_m2_v1_product_relationships.sql",
+          "symbol": "create_software_baseline_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/products/products.controller.ts#ProductsController.createSubstantialModificationAssessment:POST:products/:productId/modification-assessments",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260817151835_m2_v2_substantial_modification_security_update_artifacts.sql",
+          "symbol": "create_product_substantial_modification_assessment_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/products/products.controller.ts#ProductsController.createSubstantialModificationAssessmentDraft:POST:products/:productId/modification-assessments/draft",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260817151835_m2_v2_substantial_modification_security_update_artifacts.sql",
+          "symbol": "create_product_substantial_modification_assessment_draft_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/products/products.controller.ts#ProductsController.createSupportPeriod:POST:products/:productId/support-periods",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260813125800_m2_v1_support_period_command_idempotency.sql",
+          "symbol": "create_product_support_period_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/products/products.controller.ts#ProductsController.endProductComponentLink:POST:products/:productId/component-links/:relationshipId/end",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260813130000_m2_v1_product_relationships.sql",
+          "symbol": "end_product_component_link_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/products/products.controller.ts#ProductsController.endProductVariantRelationship:POST:products/:productId/variant-relationships/:relationshipId/end",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260813130000_m2_v1_product_relationships.sql",
+          "symbol": "end_product_variant_relationship_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/products/products.controller.ts#ProductsController.endSoftwareBaselineMembership:POST:products/:productId/baseline-memberships/:membershipId/end",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260813130000_m2_v1_product_relationships.sql",
+          "symbol": "end_software_baseline_membership_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/products/products.controller.ts#ProductsController.finalizeSecurityUpdateArtifact:POST:products/:productId/security-update-artifacts/:artifactId/finalize",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260817160813_m2_v2_external_artifact_worker_hardening.sql",
+          "symbol": "finalize_product_security_update_artifact_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/products/products.controller.ts#ProductsController.previewProductComponentLink:POST:products/:productId/component-links/preview",
+      "authority": [
+        {
+          "kind": "read-only-command",
+          "evidence": "apps/infrastructure/supabase/migrations/20260814100000_m2_v1_relationship_correctness.sql",
+          "symbol": "preview_product_component_link"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/products/products.controller.ts#ProductsController.previewSupportPeriodChange:POST:products/:productId/support-period-preview",
+      "authority": [
+        {
+          "kind": "read-only-command",
+          "evidence": "apps/infrastructure/supabase/migrations/20260813120000_m2_v1_product_support_periods.sql",
+          "symbol": "preview_product_support_period_change"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/products/products.controller.ts#ProductsController.publishSecurityUpdateArtifact:POST:products/:productId/security-update-artifacts/:artifactId/publish",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260819100000_m2_v2_close_implementation_gaps.sql",
+          "symbol": "publish_product_security_update_artifact_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/products/products.controller.ts#ProductsController.reassessSubstantialModificationAssessment:POST:products/:productId/modification-assessments/:assessmentId/reassess",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260819100000_m2_v2_close_implementation_gaps.sql",
+          "symbol": "reassess_product_substantial_modification_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/products/products.controller.ts#ProductsController.removeReleaseMarketAvailability:DELETE:products/:productId/releases/:releaseId/market-availability/:countryCode",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260813102000_m2_v1_retired_availability_commands.sql",
+          "symbol": "remove_product_release_market_availability_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/products/products.controller.ts#ProductsController.replaceSecurityUpdateArtifact:POST:products/:productId/security-update-artifacts/:artifactId/replace",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260817151835_m2_v2_substantial_modification_security_update_artifacts.sql",
+          "symbol": "replace_product_security_update_artifact_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/products/products.controller.ts#ProductsController.requestRelationshipReevaluation:POST:products/:productId/relationship-reevaluations",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260813130000_m2_v1_product_relationships.sql",
+          "symbol": "request_product_relationship_reevaluation_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/products/products.controller.ts#ProductsController.reserveSecurityUpdateArtifact:POST:products/:productId/security-update-artifacts/reserve",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260818100000_m2_v2_finalize_rpc_surface.sql",
+          "symbol": "reserve_product_security_update_artifact_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/products/products.controller.ts#ProductsController.reviewSecurityUpdateArtifact:POST:products/:productId/security-update-artifacts/:artifactId/review",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260817160813_m2_v2_external_artifact_worker_hardening.sql",
+          "symbol": "review_product_security_update_artifact_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/products/products.controller.ts#ProductsController.reviewSubstantialModificationAssessment:POST:products/:productId/modification-assessments/:assessmentId/review",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260819100000_m2_v2_close_implementation_gaps.sql",
+          "symbol": "review_product_substantial_modification_assessment_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/products/products.controller.ts#ProductsController.supersedeProductComponentLink:POST:products/:productId/component-links/:relationshipId/supersessions",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260813130000_m2_v1_product_relationships.sql",
+          "symbol": "supersede_product_component_link_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/products/products.controller.ts#ProductsController.supersedeSupportPeriod:POST:products/:productId/support-periods/:supportPeriodId/supersessions",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260813125800_m2_v1_support_period_command_idempotency.sql",
+          "symbol": "supersede_product_support_period_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/products/products.controller.ts#ProductsController.transitionReleaseLifecycle:POST:products/:productId/releases/:releaseId/lifecycle-transitions",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260813101000_m2_v1_active_placement_availability.sql",
+          "symbol": "transition_product_release_lifecycle_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/products/products.controller.ts#ProductsController.update:PATCH:products/:productId",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260812141000_m2_product_registry_correctness.sql",
+          "symbol": "update_product_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/products/products.controller.ts#ProductsController.updateRelease:PATCH:products/:productId/releases/:releaseId",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260812151000_m2_v1_release_regulatory_foundation.sql",
+          "symbol": "update_product_release_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/products/products.controller.ts#ProductsController.updateSecurityUpdateArtifactMetadata:PATCH:products/:productId/security-update-artifacts/:artifactId/metadata",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260819100000_m2_v2_close_implementation_gaps.sql",
+          "symbol": "update_product_security_update_artifact_metadata_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/products/products.controller.ts#ProductsController.updateSupportAlertIntervals:PATCH:products/support-alert-intervals",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260813120000_m2_v1_product_support_periods.sql",
+          "symbol": "update_organization_support_alert_intervals_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/products/products.controller.ts#ProductsController.withdrawSecurityUpdateArtifact:POST:products/:productId/security-update-artifacts/:artifactId/withdraw",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260817151835_m2_v2_substantial_modification_security_update_artifacts.sql",
+          "symbol": "withdraw_product_security_update_artifact_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/reporting/reporting-obligation.controller.ts#ReportingObligationController.acquireStageDraftLock:POST:reporting/obligations/:obligationId/stages/:stageId/draft/lock",
+      "authority": [
+        {
+          "kind": "job-history",
+          "evidence": "apps/infrastructure/supabase/migrations/20260910130000_m6_stage_draft_runtime_alignment.sql",
+          "symbol": "acquire_reporting_stage_draft_lock_atomic",
+          "note": "The transient draft lock is recorded in m6_reporting_draft_commands by m6_reporting_draft_command_store."
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/reporting/reporting-obligation.controller.ts#ReportingObligationController.appendStageAcknowledgement:POST:reporting/obligations/:obligationId/submissions/:submissionId/acknowledgements",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260910180000_m6_manual_submission_evidence.sql",
+          "symbol": "append_reporting_stage_acknowledgement_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/reporting/reporting-obligation.controller.ts#ReportingObligationController.applyTemplate:POST:reporting/obligations/:obligationId/stages/:stageId/draft/templates/apply",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260910130000_m6_stage_draft_runtime_alignment.sql",
+          "symbol": "apply_reporting_family_template_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/reporting/reporting-obligation.controller.ts#ReportingObligationController.approveStageDraft:POST:reporting/obligations/:obligationId/stages/:stageId/draft/approve",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260910180000_m6_manual_submission_evidence.sql",
+          "symbol": "approve_reporting_stage_draft_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/reporting/reporting-obligation.controller.ts#ReportingObligationController.cancel:POST:reporting/obligations/:obligationId/cancellation",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260909093001_m6_reporting_obligations.sql",
+          "symbol": "cancel_reporting_obligation_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/reporting/reporting-obligation.controller.ts#ReportingObligationController.correctAnchor:PATCH:reporting/obligations/:obligationId/anchors",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260909093001_m6_reporting_obligations.sql",
+          "symbol": "correct_reporting_obligation_anchor_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/reporting/reporting-obligation.controller.ts#ReportingObligationController.create:POST:reporting/obligations",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260909093001_m6_reporting_obligations.sql",
+          "symbol": "create_reporting_obligation_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/reporting/reporting-obligation.controller.ts#ReportingObligationController.createStageDraft:POST:reporting/obligations/:obligationId/stages/:stageId/draft",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260910160000_m6_stage_draft_submission_integrity.sql",
+          "symbol": "create_reporting_stage_draft_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/reporting/reporting-obligation.controller.ts#ReportingObligationController.createTemplate:POST:reporting/obligations/templates",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260910130000_m6_stage_draft_runtime_alignment.sql",
+          "symbol": "create_reporting_family_template_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/reporting/reporting-obligation.controller.ts#ReportingObligationController.createTemplateVersion:POST:reporting/obligations/templates/:templateId/versions",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260910130000_m6_stage_draft_runtime_alignment.sql",
+          "symbol": "update_reporting_family_template_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/reporting/reporting-obligation.controller.ts#ReportingObligationController.generateEvidencePack:POST:reporting/obligations/:obligationId/evidence-packs",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261005124622_m13_01_reporting_pack_audit.sql",
+          "symbol": "finalize_reporting_obligation_evidence_pack_atomic",
+          "note": "Reserve and finalize are each audited in this migration."
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/reporting/reporting-obligation.controller.ts#ReportingObligationController.generateStagePackage:POST:reporting/obligations/:obligationId/stages/:stageId/draft/packages",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260910180000_m6_manual_submission_evidence.sql",
+          "symbol": "finalize_reporting_stage_package_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/reporting/reporting-obligation.controller.ts#ReportingObligationController.reauthenticateStageApproval:POST:reporting/obligations/:obligationId/stages/:stageId/draft/reauthentication",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260910170000_m6_report_approval_reauthentication.sql",
+          "symbol": "create_reporting_stage_approval_proof_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/reporting/reporting-obligation.controller.ts#ReportingObligationController.reauthenticateStageFiling:POST:reporting/obligations/:obligationId/stages/:stageId/draft/filing-reauthentication",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260910180000_m6_manual_submission_evidence.sql",
+          "symbol": "create_reporting_stage_filing_proof_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/reporting/reporting-obligation.controller.ts#ReportingObligationController.recordStageExternalFiling:POST:reporting/obligations/:obligationId/stages/:stageId/draft/filings",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260910180000_m6_manual_submission_evidence.sql",
+          "symbol": "record_reporting_stage_filing_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/reporting/reporting-obligation.controller.ts#ReportingObligationController.recordSubmission:POST:reporting/obligations/:obligationId/stage-submissions",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260910171000_m6_report_approval_close_legacy_bypass.sql",
+          "symbol": "record_reporting_obligation_stage_submission_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/reporting/reporting-obligation.controller.ts#ReportingObligationController.saveStageDraft:PATCH:reporting/obligations/:obligationId/stages/:stageId/draft/save",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260910160000_m6_stage_draft_submission_integrity.sql",
+          "symbol": "save_reporting_stage_draft_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/reporting/reporting-obligation.controller.ts#ReportingObligationController.submitStageDraft:POST:reporting/obligations/:obligationId/stages/:stageId/draft/submit",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260910170000_m6_report_approval_reauthentication.sql",
+          "symbol": "submit_reporting_stage_draft_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/reporting/reporting-rehearsal.controller.ts#ReportingRehearsalController.create:POST:reporting/rehearsals",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260911110000_m6_reporting_rehearsals.sql",
+          "symbol": "create_reporting_rehearsal_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/reporting/reporting-rehearsal.controller.ts#ReportingRehearsalController.recordSyntheticFiling:POST:reporting/rehearsals/:obligationId/stages/:stageId/filings",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260911110000_m6_reporting_rehearsals.sql",
+          "symbol": "record_reporting_stage_rehearsal_filing_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/reporting/reporting-rehearsal.controller.ts#ReportingRehearsalController.replay:POST:reporting/rehearsals/:obligationId/replay",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260911110000_m6_reporting_rehearsals.sql",
+          "symbol": "replay_reporting_rehearsal_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/sboms/ci-providers/ci-provider-webhook.controller.ts#CiProviderWebhookController.receive:POST:ci/provider-events/:provider/:organizationId/:bindingId",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260930120000_m11_04_ci_sbom_gate_contracts.sql",
+          "symbol": "record_ci_provider_webhook_event_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/sboms/sbom-ci-credentials.controller.ts#SbomCiCredentialsController.create:POST:organizations/current/sbom-ci-credentials",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261005124710_m13_01_sbom_audit_gaps.sql",
+          "symbol": "m13_01_audit_sbom_ci_credential"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/sboms/sbom-ci-credentials.controller.ts#SbomCiCredentialsController.revoke:POST:organizations/current/sbom-ci-credentials/:credentialId/revoke",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261005124710_m13_01_sbom_audit_gaps.sql",
+          "symbol": "m13_01_audit_sbom_ci_credential"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/sboms/sbom-ci-integrations.controller.ts#SbomCiBuildController.complete:POST:ci/sbom-build-uploads/:sourceId/complete",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260930120000_m11_04_ci_sbom_gate_contracts.sql",
+          "symbol": "finalize_ci_build_sbom_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/sboms/sbom-ci-integrations.controller.ts#SbomCiBuildController.initialize:POST:ci/sbom-build-uploads",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260930120000_m11_04_ci_sbom_gate_contracts.sql",
+          "symbol": "reserve_ci_build_sbom_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/sboms/sbom-ci-integrations.controller.ts#SbomCiReleaseBindingsController.revoke:POST:sbom-ci-bindings/:bindingId/revoke",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260930120000_m11_04_ci_sbom_gate_contracts.sql",
+          "symbol": "revoke_ci_provider_release_binding_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/sboms/sbom-ci-integrations.controller.ts#SbomCiReleaseBindingsController.upsert:POST:sbom-ci-bindings",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260930122000_m11_04_binding_revision_fence.sql",
+          "symbol": "upsert_ci_provider_release_binding_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/sboms/sbom-composite.controller.ts#ProductReleaseSbomCompositeController.create:POST:products/:productId/releases/:releaseId/sbom-composite-reviews",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260825121000_m3_sbom_composite_supplier_lint_repair.sql",
+          "symbol": "create_sbom_composite_review_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/sboms/sbom-composite.controller.ts#SbomCompositeReviewsController.generate:POST:sbom-composite-reviews/:reviewId/generate",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260825124000_m3_sbom_composite_security_repair.sql",
+          "symbol": "generate_sbom_composite_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/sboms/sbom-composite.controller.ts#SbomCompositeReviewsController.resolveConflict:POST:sbom-composite-reviews/:reviewId/conflicts/:conflictId/resolve",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261005124710_m13_01_sbom_audit_gaps.sql",
+          "symbol": "m13_01_audit_sbom_composite_conflict"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/sboms/sbom-composite.controller.ts#SbomCompositeReviewsController.resolveRelationship:POST:sbom-composite-reviews/:reviewId/relationships/:relationshipId/resolve",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261005124710_m13_01_sbom_audit_gaps.sql",
+          "symbol": "m13_01_audit_sbom_composite_relationship"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/sboms/sbom.controller.ts#ProductReleaseSbomController.initialize:POST:products/:productId/releases/:releaseId/sbom-uploads",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260821070557_m3_sbom_validation_persistence.sql",
+          "symbol": "reserve_sbom_source_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/sboms/sbom.controller.ts#SbomCiController.complete:POST:ci/sbom-uploads/:sourceId/complete",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260825092000_m3_sbom_lineage_alias_race_guards.sql",
+          "symbol": "finalize_sbom_source_deduplicated_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/sboms/sbom.controller.ts#SbomCiController.initialize:POST:ci/sbom-uploads",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260821070557_m3_sbom_validation_persistence.sql",
+          "symbol": "reserve_sbom_source_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/sboms/sbom.controller.ts#SbomDiffsController.retry:POST:sbom-diffs/:diffId/retry",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260824121517_m3_sbom_lineage_diff.sql",
+          "symbol": "retry_sbom_diff_report_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/sboms/sbom.controller.ts#SbomJobsController.replay:POST:sbom-jobs/:jobId/replay",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260820174000_m3_sbom_completion_access_and_replay_idempotency.sql",
+          "symbol": "replay_sbom_ingest_job_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/sboms/sbom.controller.ts#SbomQualitySettingsController.updateSettings:PATCH:sbom-quality-settings",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261005124710_m13_01_sbom_audit_gaps.sql",
+          "symbol": "m13_01_audit_sbom_quality_settings"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/sboms/sbom.controller.ts#SbomSourcesController.createDiff:POST:sbom-sources/:sourceId/diff",
+      "authority": [
+        {
+          "kind": "job-history",
+          "evidence": "apps/infrastructure/supabase/migrations/20260928084351_m3_lineage_installed_version_comparators.sql",
+          "symbol": "enqueue_sbom_diff_report_atomic",
+          "note": "The enqueue RPC atomically creates or reuses sbom_diff_reports; the job ledger is the durable source event."
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/sboms/sbom.controller.ts#SbomUploadsController.complete:POST:sbom-uploads/:sourceId/complete",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260825092000_m3_sbom_lineage_alias_race_guards.sql",
+          "symbol": "finalize_sbom_source_deduplicated_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/sboms/supplier-sbom.controller.ts#ProductReleaseSupplierSbomController.createRequest:POST:products/:productId/releases/:releaseId/supplier-sbom-requests",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260825120000_m3_sbom_composite_supplier_intake.sql",
+          "symbol": "create_supplier_sbom_request_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/sboms/supplier-sbom.controller.ts#SupplierSbomPortalController.complete:POST:supplier-sbom-portal/submissions/:sourceId/complete",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260923123908_m9_06_supplier_sbom_bridge.sql",
+          "symbol": "finalize_supplier_sbom_submission_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/sboms/supplier-sbom.controller.ts#SupplierSbomPortalController.initialize:POST:supplier-sbom-portal/submissions",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260923123908_m9_06_supplier_sbom_bridge.sql",
+          "symbol": "reserve_supplier_sbom_submission_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/sboms/supplier-sbom.controller.ts#SupplierSbomPortalController.session:POST:supplier-sbom-portal/sessions",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261005124632_m13_01_supplier_session_audit.sql",
+          "symbol": "m13_01_audit_supplier_sbom_invitation"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/sboms/supplier-sbom.controller.ts#SupplierSbomRequestsController.invite:POST:supplier-sbom-requests/:requestId/invitations",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260825120000_m3_sbom_composite_supplier_intake.sql",
+          "symbol": "create_supplier_sbom_invitation_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/sboms/supplier-sbom.controller.ts#SupplierSbomSubmissionsController.review:POST:supplier-sbom-submissions/:submissionId/review",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260825120000_m3_sbom_composite_supplier_intake.sql",
+          "symbol": "review_supplier_sbom_submission_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/supplier-evidence/supplier-document-extraction.controller.ts#SupplierDocumentExtractionController.decide:POST:supplier-evidence-requests/:requestId/submissions/:submissionId/fields/:fieldId/decision",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260923114524_m9_05_field_decision_row_lock_fix.sql",
+          "symbol": "m9_05_decide_supplier_document_field_core"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/supplier-evidence/supplier-document-extraction.controller.ts#SupplierDocumentExtractionController.manual:POST:supplier-evidence-requests/:requestId/submissions/:submissionId/fields/manual",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260923102149_m9_05_supplier_document_extraction.sql",
+          "symbol": "add_supplier_document_field_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/supplier-evidence/supplier-document-extraction.controller.ts#SupplierDocumentExtractionController.start:POST:supplier-evidence-requests/:requestId/submissions/:submissionId/extraction-runs",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260923102149_m9_05_supplier_document_extraction.sql",
+          "symbol": "start_supplier_document_extraction_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/supplier-evidence/supplier-evidence-sbom.controller.ts#SupplierEvidenceSbomPortalController.complete:POST:supplier-evidence-portal/sbom-items/:checklistItemId/submissions/:sourceId/complete",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260923123908_m9_06_supplier_sbom_bridge.sql",
+          "symbol": "finalize_supplier_sbom_submission_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/supplier-evidence/supplier-evidence-sbom.controller.ts#SupplierEvidenceSbomPortalController.initialize:POST:supplier-evidence-portal/sbom-items/:checklistItemId/submissions",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261005124632_m13_01_supplier_session_audit.sql",
+          "symbol": "m13_01_audit_supplier_sbom_invitation",
+          "note": "Session activation is audited by trigger; upload reservation has its own transactional source event."
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/supplier-evidence/supplier-evidence.controller.ts#SupplierEvidencePortalController.complete:POST:supplier-evidence-portal/submissions/:versionId/complete",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260922053503_m9_02_supplier_evidence_queued_completion_replay.sql",
+          "symbol": "finalize_supplier_evidence_submission_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/supplier-evidence/supplier-evidence.controller.ts#SupplierEvidencePortalController.redeem:POST:supplier-evidence-portal/sessions",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261005124632_m13_01_supplier_session_audit.sql",
+          "symbol": "m13_01_audit_supplier_evidence_invitation"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/supplier-evidence/supplier-evidence.controller.ts#SupplierEvidencePortalController.reserve:POST:supplier-evidence-portal/submissions",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260923123908_m9_06_supplier_sbom_bridge.sql",
+          "symbol": "reserve_supplier_evidence_submission_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/supplier-evidence/supplier-evidence.controller.ts#SupplierEvidenceRequestsController.close:POST:supplier-evidence-requests/:requestId/close",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260921171000_m9_02_supplier_evidence_portal.sql",
+          "symbol": "close_supplier_evidence_request_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/supplier-evidence/supplier-evidence.controller.ts#SupplierEvidenceRequestsController.create:POST:supplier-evidence-requests",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260921171000_m9_02_supplier_evidence_portal.sql",
+          "symbol": "create_supplier_evidence_request_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/supplier-evidence/supplier-evidence.controller.ts#SupplierEvidenceRequestsController.issue:POST:supplier-evidence-requests/:requestId/issue",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260921171000_m9_02_supplier_evidence_portal.sql",
+          "symbol": "issue_supplier_evidence_request_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/supplier-evidence/supplier-evidence.controller.ts#SupplierEvidenceRequestsController.preview:POST:supplier-evidence-requests/preview",
+      "authority": [
+        {
+          "kind": "read-only-command",
+          "evidence": "apps/infrastructure/supabase/migrations/20260923123908_m9_06_supplier_sbom_bridge.sql",
+          "symbol": "preview_supplier_evidence_request_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/supplier-evidence/supplier-evidence.controller.ts#SupplierEvidenceRequestsController.reRequest:POST:supplier-evidence-requests/:requestId/re-request",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260922100200_m9_03_review_boundary_fixes.sql",
+          "symbol": "re_request_supplier_evidence_request_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/supplier-evidence/supplier-evidence.controller.ts#SupplierEvidenceRequestsController.reissue:POST:supplier-evidence-requests/:requestId/reissue",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260921171000_m9_02_supplier_evidence_portal.sql",
+          "symbol": "reissue_supplier_evidence_request_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/supplier-evidence/supplier-evidence.controller.ts#SupplierEvidenceRequestsController.retryReminderDelivery:POST:supplier-evidence-requests/:requestId/reminder-deliveries/:deliveryId/retry",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260922110000_m9_04_supplier_evidence_reminders_metrics.sql",
+          "symbol": "retry_supplier_evidence_reminder_delivery_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/supplier-evidence/supplier-evidence.controller.ts#SupplierEvidenceRequestsController.review:POST:supplier-evidence-requests/:requestId/submissions/:submissionId/review",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260922100000_m9_03_supplier_evidence_review.sql",
+          "symbol": "review_supplier_evidence_submission_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/supplier-evidence/supplier-evidence.controller.ts#SupplierEvidenceRequestsController.revise:POST:supplier-evidence-requests/:requestId/revise",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260921172000_m9_02_supplier_evidence_runtime_alignment.sql",
+          "symbol": "revise_supplier_evidence_request_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/supplier-evidence/supplier-evidence.controller.ts#SupplierEvidenceRequestsController.revoke:POST:supplier-evidence-requests/:requestId/revoke",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260921171000_m9_02_supplier_evidence_portal.sql",
+          "symbol": "revoke_supplier_evidence_invitation_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/supplier-evidence/supplier-evidence.controller.ts#SupplierEvidenceRequestsController.updateReminderSettings:PATCH:supplier-evidence-requests/reminder-settings",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260922110000_m9_04_supplier_evidence_reminders_metrics.sql",
+          "symbol": "update_supplier_evidence_reminder_settings_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/suppliers/supplier-registry.controller.ts#SupplierRegistryController.archive:POST:suppliers/:supplierId/archive",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260921170000_m9_supplier_registry.sql",
+          "symbol": "archive_supplier_organization_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/suppliers/supplier-registry.controller.ts#SupplierRegistryController.archiveContact:POST:suppliers/:supplierId/contacts/:contactId/archive",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260921170000_m9_supplier_registry.sql",
+          "symbol": "archive_supplier_contact_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/suppliers/supplier-registry.controller.ts#SupplierRegistryController.associateRequest:POST:suppliers/:supplierId/requests/:requestId",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260921170000_m9_supplier_registry.sql",
+          "symbol": "associate_supplier_sbom_request_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/suppliers/supplier-registry.controller.ts#SupplierRegistryController.create:POST:suppliers",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260921170000_m9_supplier_registry.sql",
+          "symbol": "create_supplier_organization_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/suppliers/supplier-registry.controller.ts#SupplierRegistryController.createContact:POST:suppliers/:supplierId/contacts",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260921170000_m9_supplier_registry.sql",
+          "symbol": "create_supplier_contact_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/suppliers/supplier-registry.controller.ts#SupplierRegistryController.createResponsibility:POST:suppliers/:supplierId/responsibilities",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260921170000_m9_supplier_registry.sql",
+          "symbol": "create_supplier_component_responsibility_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/suppliers/supplier-registry.controller.ts#SupplierRegistryController.endResponsibility:POST:suppliers/:supplierId/responsibilities/:responsibilityId/end",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260921170000_m9_supplier_registry.sql",
+          "symbol": "end_supplier_component_responsibility_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/suppliers/supplier-registry.controller.ts#SupplierRegistryController.update:PATCH:suppliers/:supplierId",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260921170000_m9_supplier_registry.sql",
+          "symbol": "update_supplier_organization_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/suppliers/supplier-registry.controller.ts#SupplierRegistryController.updateContact:PATCH:suppliers/:supplierId/contacts/:contactId",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260921170000_m9_supplier_registry.sql",
+          "symbol": "update_supplier_contact_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/tasks/task-absences.controller.ts#TaskAbsencesController.create:POST:task-absences",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261001094753_m12_01_task_inbox.sql",
+          "symbol": "m1201_manage_absence"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/tasks/task-absences.controller.ts#TaskAbsencesController.delete:DELETE:task-absences/:absenceId",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261001094753_m12_01_task_inbox.sql",
+          "symbol": "m1201_manage_absence"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/tasks/task-groups.controller.ts#TaskGroupsController.addMember:POST:task-groups/:groupId/members",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261001094753_m12_01_task_inbox.sql",
+          "symbol": "m1201_manage_group"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/tasks/task-groups.controller.ts#TaskGroupsController.create:POST:task-groups",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261001094753_m12_01_task_inbox.sql",
+          "symbol": "m1201_manage_group"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/tasks/task-groups.controller.ts#TaskGroupsController.removeMember:DELETE:task-groups/:groupId/members/:userId",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261001094753_m12_01_task_inbox.sql",
+          "symbol": "m1201_manage_group"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/tasks/task-groups.controller.ts#TaskGroupsController.update:PATCH:task-groups/:groupId",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261001094753_m12_01_task_inbox.sql",
+          "symbol": "m1201_manage_group"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/tasks/tasks.controller.ts#TasksController.assign:POST:tasks/:taskType/:sourceId/assign",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261001095845_m12_01_task_routing_commands.sql",
+          "symbol": "m1201_route_task"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/tasks/tasks.controller.ts#TasksController.claim:POST:tasks/:taskType/:sourceId/claim",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261001095845_m12_01_task_routing_commands.sql",
+          "symbol": "m1201_route_task"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/tasks/tasks.controller.ts#TasksController.delegate:POST:tasks/:taskType/:sourceId/delegate",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261001095845_m12_01_task_routing_commands.sql",
+          "symbol": "m1201_route_task"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/tasks/tasks.controller.ts#TasksController.release:POST:tasks/:taskType/:sourceId/release",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261001095845_m12_01_task_routing_commands.sql",
+          "symbol": "m1201_route_task"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/tasks/tasks.controller.ts#TasksController.revokeDelegation:POST:tasks/:taskType/:sourceId/revoke-delegation",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261001095845_m12_01_task_routing_commands.sql",
+          "symbol": "m1201_route_task"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/technical-files/technical-file-auditor-access.controller.ts#TechnicalFileAuditorAccessController.redeem:POST:auditor/redeem",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260916055119_m7_auditor_redemption_version_repair.sql",
+          "symbol": "redeem_technical_file_auditor_snapshot_grant_atomic",
+          "note": "Authoritative append-only technical_file_auditor_access_events ledger records redemption outcome."
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/technical-files/technical-file-auditor-access.controller.ts#TechnicalFileAuditorGrantsController.create:POST:products/:productId/technical-file/snapshots/:snapshotId/auditor-grants",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260915092904_m7_auditor_permission_key_repair.sql",
+          "symbol": "create_technical_file_auditor_snapshot_grant_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/technical-files/technical-file-auditor-access.controller.ts#TechnicalFileAuditorGrantsController.revoke:POST:products/:productId/technical-file/snapshots/:snapshotId/auditor-grants/:grantId/revoke",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260915092904_m7_auditor_permission_key_repair.sql",
+          "symbol": "revoke_technical_file_auditor_snapshot_grant_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/technical-files/technical-files.controller.ts#TechnicalFilesController.acceptResidualRisk:POST:products/:productId/technical-file/risk-register/risks/:riskId/accept-residual-risk",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260914130000_m7_structured_cybersecurity_risk_register.sql",
+          "symbol": "accept_technical_file_residual_risk_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/technical-files/technical-files.controller.ts#TechnicalFilesController.addSource:POST:products/:productId/technical-file/sections/:sectionKey/sources",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260916110000_m8_evidence_intake_foundation.sql",
+          "symbol": "add_technical_file_section_source_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/technical-files/technical-files.controller.ts#TechnicalFilesController.archiveRisk:DELETE:products/:productId/technical-file/risk-register/risks/:riskId",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260914130000_m7_structured_cybersecurity_risk_register.sql",
+          "symbol": "archive_technical_file_risk_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/technical-files/technical-files.controller.ts#TechnicalFilesController.cancelSnapshotExport:DELETE:products/:productId/technical-file/snapshots/:snapshotId/exports/:exportId",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260914147300_m7_snapshot_alias_repair.sql",
+          "symbol": "cancel_technical_file_snapshot_export_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/technical-files/technical-files.controller.ts#TechnicalFilesController.create:POST:products/:productId/technical-file",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260914120000_m7_annex_vii_technical_files.sql",
+          "symbol": "create_technical_file_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/technical-files/technical-files.controller.ts#TechnicalFilesController.createRisk:POST:products/:productId/technical-file/risk-register/risks",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260914130000_m7_structured_cybersecurity_risk_register.sql",
+          "symbol": "create_technical_file_risk_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/technical-files/technical-files.controller.ts#TechnicalFilesController.createSnapshot:POST:products/:productId/technical-file/snapshots",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260914147620_m7_snapshot_review_lock_column_repair.sql",
+          "symbol": "create_technical_file_snapshot_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/technical-files/technical-files.controller.ts#TechnicalFilesController.createSnapshotExport:POST:products/:productId/technical-file/snapshots/:snapshotId/exports",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260914147200_m7_snapshot_integrity_repair.sql",
+          "symbol": "create_technical_file_snapshot_export_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/technical-files/technical-files.controller.ts#TechnicalFilesController.issueDeclaration:POST:products/:productId/technical-file/declarations/:declarationId/issue",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260915010000_m7_versioned_declarations_of_conformity.sql",
+          "symbol": "issue_technical_file_declaration_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/technical-files/technical-files.controller.ts#TechnicalFilesController.recalculateReadiness:POST:products/:productId/technical-file/readiness/recalculate",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260914140000_m7_version_pinned_evidence_readiness.sql",
+          "symbol": "recalculate_technical_file_readiness_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/technical-files/technical-files.controller.ts#TechnicalFilesController.reissueDeclaration:POST:products/:productId/technical-file/declarations/:declarationId/reissue",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260915083006_m7_declaration_contract_reissue_fix.sql",
+          "symbol": "reissue_technical_file_declaration_contract_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/technical-files/technical-files.controller.ts#TechnicalFilesController.removeSource:DELETE:products/:productId/technical-file/sections/:sectionKey/sources/:sourceId",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260914120000_m7_annex_vii_technical_files.sql",
+          "symbol": "remove_technical_file_section_source_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/technical-files/technical-files.controller.ts#TechnicalFilesController.reviewSource:POST:products/:productId/technical-file/sections/:sectionKey/sources/:sourceId/review",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260914144000_m7_evidence_idempotency_lock.sql",
+          "symbol": "review_technical_file_section_source_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/technical-files/technical-files.controller.ts#TechnicalFilesController.saveDeclarationDraft:POST:products/:productId/technical-file/declarations",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260915085128_m7_declaration_reissue_only_after_issue.sql",
+          "symbol": "upsert_technical_file_declaration_draft_contract_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/technical-files/technical-files.controller.ts#TechnicalFilesController.signalMaterialChange:POST:products/:productId/technical-file/sections/:sectionKey/sources/:sourceId/material-change",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260914144000_m7_evidence_idempotency_lock.sql",
+          "symbol": "mark_technical_file_section_source_material_change_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/technical-files/technical-files.controller.ts#TechnicalFilesController.updateDeclarationDraft:PATCH:products/:productId/technical-file/declarations/:declarationId",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260915085128_m7_declaration_reissue_only_after_issue.sql",
+          "symbol": "upsert_technical_file_declaration_draft_contract_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/technical-files/technical-files.controller.ts#TechnicalFilesController.updateRisk:PATCH:products/:productId/technical-file/risk-register/risks/:riskId",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260914130000_m7_structured_cybersecurity_risk_register.sql",
+          "symbol": "update_technical_file_risk_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/technical-files/technical-files.controller.ts#TechnicalFilesController.updateSection:PATCH:products/:productId/technical-file/sections/:sectionKey",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260914120000_m7_annex_vii_technical_files.sql",
+          "symbol": "update_technical_file_section_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/users/users.controller.ts#UsersController.changeRole:PATCH:users/:id/role",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261005104258_m13_01_identity_mutations.sql",
+          "symbol": "m13_01_mutate_member_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/users/users.controller.ts#UsersController.remove:DELETE:users/:id",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261005104258_m13_01_identity_mutations.sql",
+          "symbol": "m13_01_mutate_member_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/users/users.controller.ts#UsersController.setActive:PATCH:users/:id/active",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261005104258_m13_01_identity_mutations.sql",
+          "symbol": "m13_01_mutate_member_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/users/users.controller.ts#UsersController.updateMe:PATCH:users/me",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261005133028_m13_01_profile_retry_replay.sql",
+          "symbol": "m13_01_update_profile_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/vulnerabilities/offline-bundle-imports.controller.ts#OfflineBundleImportsController.confirm:POST:vulnerability-feeds/offline-bundles/:importId/confirm",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260827150000_m4_06_offline_bundles_and_csaf.sql",
+          "symbol": "confirm_vulnerability_offline_bundle_import"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/vulnerabilities/offline-bundle-imports.controller.ts#OfflineBundleImportsController.preflightBundle:POST:vulnerability-feeds/offline-bundles/preflight",
+      "authority": [
+        {
+          "kind": "read-only-command",
+          "evidence": "apps/api/src/vulnerabilities/offline-bundle-imports.controller.ts",
+          "symbol": "preflightBundle"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/vulnerabilities/vulnerabilities.controller.ts#VulnerabilityFeedsController.replay:POST:vulnerability-feeds/:feedKey/sync-runs/:runId/replay",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261005124457_m13_01_vulnerability_feed_manual_audit.sql",
+          "symbol": "m13_01_audit_manual_vulnerability_feed_event"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/vulnerabilities/vulnerabilities.controller.ts#VulnerabilityFeedsController.requestSync:POST:vulnerability-feeds/:feedKey/sync",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261005124457_m13_01_vulnerability_feed_manual_audit.sql",
+          "symbol": "m13_01_audit_manual_vulnerability_feed_event"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/vulnerabilities/vulnerability-enrichment.controller.ts#VulnerabilityEnrichmentController.acknowledge:POST:sbom-documents/:documentId/vulnerability-kev-alerts/:alertId/acknowledgements",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260826133647_m4_03_enrichment_kev_alerts_projection_repair.sql",
+          "symbol": "acknowledge_vulnerability_kev_alert_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/vulnerabilities/vulnerability-enrichment.controller.ts#VulnerabilityEnrichmentController.openReportingObligation:POST:sbom-documents/:documentId/vulnerability-kev-alerts/:alertId/reporting-obligation-intents",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260826134030_m4_03_reporting_intent_idempotency.sql",
+          "symbol": "record_vulnerability_kev_reporting_intent_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/vulnerabilities/vulnerability-manual-findings.controller.ts#VulnerabilityManualFindingsController.create:POST:vulnerability-manual-findings",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260902121956_m4_manual_vulnerability_findings.sql",
+          "symbol": "create_vulnerability_manual_finding_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/vulnerabilities/vulnerability-matching.controller.ts#VulnerabilityMatchingController.recordHumanVerdict:POST:sbom-documents/:documentId/vulnerability-findings/:findingId/human-verdict",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260827130000_m4_04_human_verdict_evidence_repair.sql",
+          "symbol": "record_vulnerability_finding_human_verdict_atomic"
+        }
+      ]
+    }
+  ],
+  "workers": [
+    {
+      "id": "apps/api/src/ai/supplier-document-extraction.worker.ts",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260923102149_m9_05_supplier_document_extraction.sql",
+          "symbol": "complete_supplier_document_extraction_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/connectors/worker/connector-sync-worker.ts",
+      "authority": [
+        {
+          "kind": "job-history",
+          "evidence": "apps/api/src/connectors/infrastructure/supabase-connector.repository.ts",
+          "symbol": "m1102_claim_sync_run",
+          "note": "The worker claim is a transient lease; the tenant-scoped job or delivery ledger records durable state and outcomes."
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/connectors/worker/webhook-delivery-worker.ts",
+      "authority": [
+        {
+          "kind": "job-history",
+          "evidence": "apps/api/src/connectors/infrastructure/supabase-webhook.repository.ts",
+          "symbol": "m1103_claim_webhook_delivery",
+          "note": "The worker claim is a transient lease; the tenant-scoped job or delivery ledger records durable state and outcomes."
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/evidence/worker/evidence-deletion-cleanup-worker.ts",
+      "authority": [
+        {
+          "kind": "job-history",
+          "evidence": "apps/api/src/evidence/infrastructure/supabase-evidence-deletion-cleanup.queue.ts",
+          "symbol": "claim_evidence_document_deletion_cleanup_atomic",
+          "note": "The worker claim is a transient lease; the tenant-scoped job or delivery ledger records durable state and outcomes."
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/evidence/worker/evidence-scan-worker.ts",
+      "authority": [
+        {
+          "kind": "job-history",
+          "evidence": "apps/api/src/evidence/worker/evidence-scan-worker.ts",
+          "symbol": "claim_evidence_scan_job_atomic",
+          "note": "The worker claim is a transient lease; the tenant-scoped job or delivery ledger records durable state and outcomes."
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/evidence/worker/evidence-text-extraction-worker.ts",
+      "authority": [
+        {
+          "kind": "job-history",
+          "evidence": "apps/api/src/evidence/worker/evidence-text-extraction-worker.ts",
+          "symbol": "claim_evidence_text_extraction_job_atomic",
+          "note": "The worker claim is a transient lease; the tenant-scoped job or delivery ledger records durable state and outcomes."
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/evidence/worker/evidence-validity-alert-worker.ts",
+      "authority": [
+        {
+          "kind": "job-history",
+          "evidence": "apps/api/src/evidence/infrastructure/supabase-evidence-validity-alert-queue.ts",
+          "symbol": "claim_evidence_validity_notification_atomic",
+          "note": "The worker claim is a transient lease; the tenant-scoped job or delivery ledger records durable state and outcomes."
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/evidence/worker/evidence-watermark-export-worker.ts",
+      "authority": [
+        {
+          "kind": "job-history",
+          "evidence": "apps/api/src/evidence/infrastructure/supabase-evidence.repository.ts",
+          "symbol": "claim_evidence_document_watermark_export",
+          "note": "The worker claim is a transient lease; the tenant-scoped job or delivery ledger records durable state and outcomes."
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/findings/exports/worker/vulnerability-vex-publication-worker.ts",
+      "authority": [
+        {
+          "kind": "job-history",
+          "evidence": "apps/api/src/findings/exports/infrastructure/supabase-vulnerability-vex-publication-queue.ts",
+          "symbol": "claim_vulnerability_vex_publication_job",
+          "note": "The worker claim is a transient lease; the tenant-scoped job or delivery ledger records durable state and outcomes."
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/findings/triage/worker/vulnerability-remediation-ticket-operation-worker.ts",
+      "authority": [
+        {
+          "kind": "job-history",
+          "evidence": "apps/api/src/findings/triage/infrastructure/supabase-vulnerability-triage.repository.ts",
+          "symbol": "claim_vulnerability_remediation_ticket_operation_atomic",
+          "note": "The worker claim is a transient lease; the tenant-scoped job or delivery ledger records durable state and outcomes."
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/findings/triage/worker/vulnerability-triage-note-mention-worker.ts",
+      "authority": [
+        {
+          "kind": "job-history",
+          "evidence": "apps/api/src/findings/triage/infrastructure/supabase-vulnerability-triage-note-mention-queue.ts",
+          "symbol": "claim_finding_triage_note_mention",
+          "note": "The worker claim is a transient lease; the tenant-scoped job or delivery ledger records durable state and outcomes."
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/findings/worker/finding-propagation-worker.ts",
+      "authority": [
+        {
+          "kind": "job-history",
+          "evidence": "apps/api/src/findings/infrastructure/supabase-finding-propagation.repository.ts",
+          "symbol": "claim_finding_propagation_job_atomic",
+          "note": "The worker claim is a transient lease; the tenant-scoped job or delivery ledger records durable state and outcomes."
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/frameworks/application/coverage-recalculation-worker.ts",
+      "authority": [
+        {
+          "kind": "job-history",
+          "evidence": "apps/api/src/frameworks/infrastructure/supabase-coverage-work.queue.ts",
+          "symbol": "m10_claim_coverage_scope",
+          "note": "The worker claim is a transient lease; the tenant-scoped job or delivery ledger records durable state and outcomes."
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/notifications/worker/burst-notification-dispatch-worker.ts",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261005055356_m12_06_notification_bursts.sql",
+          "symbol": "claim_notification_burst_batch_atomic"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/notifications/worker/chat-notification-worker.ts",
+      "authority": [
+        {
+          "kind": "job-history",
+          "evidence": "apps/api/src/notifications/worker/supabase-chat-notification-queue.adapter.ts",
+          "symbol": "m12_05_claim_chat_delivery_atomic",
+          "note": "The worker claim is a transient lease; the tenant-scoped job or delivery ledger records durable state and outcomes."
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/notifications/worker/digest-notification-dispatch-worker.ts",
+      "authority": [
+        {
+          "kind": "job-history",
+          "evidence": "apps/api/src/notifications/worker/supabase-notification-digest-queue.adapter.ts",
+          "symbol": "claim_notification_digest_batch_atomic",
+          "note": "The worker claim is a transient lease; the tenant-scoped job or delivery ledger records durable state and outcomes."
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/notifications/worker/notification-dispatch-worker.ts",
+      "authority": [
+        {
+          "kind": "job-history",
+          "evidence": "apps/api/src/notifications/worker/supabase-notification-dispatch-queue.adapter.ts",
+          "symbol": "claim_notification_dispatch_atomic",
+          "note": "The worker claim is a transient lease; the tenant-scoped job or delivery ledger records durable state and outcomes."
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/organizations/tenant-administration/worker/tenant-lifecycle-worker.ts",
+      "authority": [
+        {
+          "kind": "job-history",
+          "evidence": "apps/api/src/organizations/tenant-administration/worker/supabase-tenant-lifecycle-worker.adapter.ts",
+          "symbol": "claim_organization_export_atomic",
+          "note": "The worker claim is a transient lease; the tenant-scoped job or delivery ledger records durable state and outcomes."
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/products/worker/product-compliance-worker.ts",
+      "authority": [
+        {
+          "kind": "job-history",
+          "evidence": "apps/api/src/products/worker/supabase-product-compliance-worker.adapter.ts",
+          "symbol": "claim_product_security_update_artifact_work_atomic",
+          "note": "The worker claim is a transient lease; the tenant-scoped job or delivery ledger records durable state and outcomes."
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/products/worker/product-retention-worker.ts",
+      "authority": [
+        {
+          "kind": "job-history",
+          "evidence": "apps/api/src/products/worker/supabase-product-retention-worker.adapter.ts",
+          "symbol": "claim_product_support_alert_atomic",
+          "note": "The worker claim is a transient lease; the tenant-scoped job or delivery ledger records durable state and outcomes."
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/reporting/worker/reporting-deadline-monitor-worker.ts",
+      "authority": [
+        {
+          "kind": "job-history",
+          "evidence": "apps/api/src/reporting/infrastructure/supabase-reporting-deadline-monitor.repository.ts",
+          "symbol": "claim_reporting_deadline_alert_delivery_atomic",
+          "note": "The worker claim is a transient lease; the tenant-scoped job or delivery ledger records durable state and outcomes."
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/sboms/worker/sbom-composite-worker.ts",
+      "authority": [
+        {
+          "kind": "job-history",
+          "evidence": "apps/api/src/sboms/infrastructure/supabase-sbom.repository.ts",
+          "symbol": "claim_sbom_composite_generation",
+          "note": "The worker claim is a transient lease; the tenant-scoped job or delivery ledger records durable state and outcomes."
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/sboms/worker/sbom-diff-worker.ts",
+      "authority": [
+        {
+          "kind": "job-history",
+          "evidence": "apps/api/src/sboms/infrastructure/supabase-sbom.repository.ts",
+          "symbol": "claim_sbom_diff_report",
+          "note": "The worker claim is a transient lease; the tenant-scoped job or delivery ledger records durable state and outcomes."
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/sboms/worker/sbom-ingest-worker.ts",
+      "authority": [
+        {
+          "kind": "job-history",
+          "evidence": "apps/api/src/sboms/infrastructure/supabase-sbom.repository.ts",
+          "symbol": "claim_sbom_ingest_job",
+          "note": "The worker claim is a transient lease; the tenant-scoped job or delivery ledger records durable state and outcomes."
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/sboms/worker/sbom-quality-worker.ts",
+      "authority": [
+        {
+          "kind": "job-history",
+          "evidence": "apps/api/src/sboms/infrastructure/supabase-sbom.repository.ts",
+          "symbol": "claim_sbom_quality_report",
+          "note": "The worker claim is a transient lease; the tenant-scoped job or delivery ledger records durable state and outcomes."
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/supplier-evidence/worker/supplier-evidence-reminder-worker.ts",
+      "authority": [
+        {
+          "kind": "job-history",
+          "evidence": "apps/api/src/supplier-evidence/infrastructure/supabase-supplier-evidence-reminder-queue.ts",
+          "symbol": "claim_supplier_evidence_reminder_delivery_atomic",
+          "note": "The worker claim is a transient lease; the tenant-scoped job or delivery ledger records durable state and outcomes."
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/technical-files/worker/technical-file-declaration-worker.ts",
+      "authority": [
+        {
+          "kind": "job-history",
+          "evidence": "apps/api/src/technical-files/worker/technical-file-declaration-worker.ts",
+          "symbol": "claim_technical_file_declaration",
+          "note": "The worker claim is a transient lease; the tenant-scoped job or delivery ledger records durable state and outcomes."
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/technical-files/worker/technical-file-snapshot-export-worker.ts",
+      "authority": [
+        {
+          "kind": "job-history",
+          "evidence": "apps/api/src/technical-files/worker/technical-file-snapshot-export-worker.ts",
+          "symbol": "claim_technical_file_snapshot_export",
+          "note": "The worker claim is a transient lease; the tenant-scoped job or delivery ledger records durable state and outcomes."
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/vulnerabilities/matching/worker/vulnerability-matching-worker.ts",
+      "authority": [
+        {
+          "kind": "job-history",
+          "evidence": "apps/api/src/vulnerabilities/infrastructure/supabase-vulnerability-matching.repository.ts",
+          "symbol": "claim_vulnerability_match_job_atomic",
+          "note": "The worker claim is a transient lease; the tenant-scoped job or delivery ledger records durable state and outcomes."
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/vulnerabilities/worker/vulnerability-feed-worker.ts",
+      "authority": [
+        {
+          "kind": "job-history",
+          "evidence": "apps/api/src/vulnerabilities/infrastructure/supabase-vulnerability-feed.repository.ts",
+          "symbol": "claim_vulnerability_feed_sync",
+          "note": "The worker claim is a transient lease; the tenant-scoped job or delivery ledger records durable state and outcomes."
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/vulnerabilities/worker/vulnerability-finding-review-notification-worker.ts",
+      "authority": [
+        {
+          "kind": "job-history",
+          "evidence": "apps/api/src/vulnerabilities/infrastructure/supabase-vulnerability-finding-review-notification-queue.ts",
+          "symbol": "claim_vulnerability_finding_review_notification",
+          "note": "The worker claim is a transient lease; the tenant-scoped job or delivery ledger records durable state and outcomes."
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/vulnerabilities/worker/vulnerability-kev-alert-worker.ts",
+      "authority": [
+        {
+          "kind": "job-history",
+          "evidence": "apps/api/src/vulnerabilities/infrastructure/supabase-vulnerability-kev-alert-queue.ts",
+          "symbol": "claim_vulnerability_kev_alert_delivery",
+          "note": "The worker claim is a transient lease; the tenant-scoped job or delivery ledger records durable state and outcomes."
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/vulnerabilities/worker/vulnerability-reevaluation-worker.ts",
+      "authority": [
+        {
+          "kind": "job-history",
+          "evidence": "apps/api/src/vulnerabilities/infrastructure/supabase-vulnerability-reevaluation.repository.ts",
+          "symbol": "claim_vulnerability_reevaluation_job_atomic",
+          "note": "The worker claim is a transient lease; the tenant-scoped job or delivery ledger records durable state and outcomes."
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/vulnerabilities/worker/vulnerability-triage-alert-worker.ts",
+      "authority": [
+        {
+          "kind": "job-history",
+          "evidence": "apps/api/src/vulnerabilities/infrastructure/supabase-vulnerability-triage-alert-queue.ts",
+          "symbol": "claim_vulnerability_triage_alert",
+          "note": "The worker claim is a transient lease; the tenant-scoped job or delivery ledger records durable state and outcomes."
+        }
+      ]
+    }
+  ],
+  "rpcs": [
+    {
+      "id": "supplier-document-extraction",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260923102149_m9_05_supplier_document_extraction.sql",
+          "symbol": "start_supplier_document_extraction_atomic"
+        }
+      ]
+    },
+    {
+      "id": "supplier-document-field-decision",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20260923114524_m9_05_field_decision_row_lock_fix.sql",
+          "symbol": "m9_05_decide_supplier_document_field_core"
+        }
+      ]
+    },
+    {
+      "id": "notification-burst",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261005055356_m12_06_notification_bursts.sql",
+          "symbol": "claim_notification_burst_batch_atomic"
+        }
+      ]
+    },
+    {
+      "id": "m13_01_create_invitation_atomic",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261005105656_m13_01_invitation_creation_audit.sql",
+          "symbol": "m13_01_create_invitation_atomic"
+        }
+      ]
+    },
+    {
+      "id": "m13_01_cancel_failed_invitation_delivery_atomic",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261005110937_m13_01_invitation_failed_delivery_recovery.sql",
+          "symbol": "m13_01_cancel_failed_invitation_delivery_atomic"
+        }
+      ]
+    }
+  ]
+}

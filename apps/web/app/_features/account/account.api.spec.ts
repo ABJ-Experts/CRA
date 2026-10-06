@@ -2,6 +2,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { accountApi } from "./account.api";
 
+const identity = {
+  idempotencyKey: "11111111-1111-4111-8111-111111111111",
+  correlationId: "22222222-2222-4222-8222-222222222222",
+} as const;
+
 describe("accountApi", () => {
   afterEach(() => vi.unstubAllGlobals());
 
@@ -15,6 +20,7 @@ describe("accountApi", () => {
     await expect(
       accountApi.updateProfile(
         { firstName: "Ada", lastName: "Lovelace", jobTitle: "Engineer" },
+        identity,
         signal,
       ),
     ).resolves.toEqual({ ok: true });
@@ -24,7 +30,11 @@ describe("accountApi", () => {
       credentials: "same-origin",
       cache: "no-store",
       signal,
-      headers: { "content-type": "application/json" },
+      headers: {
+        "content-type": "application/json",
+        "idempotency-key": identity.idempotencyKey,
+        "x-correlation-id": identity.correlationId,
+      },
       body: JSON.stringify({
         firstName: "Ada",
         lastName: "Lovelace",
@@ -44,10 +54,10 @@ describe("accountApi", () => {
       );
     vi.stubGlobal("fetch", fetcher);
 
-    await expect(accountApi.updateProfile({})).rejects.toMatchObject({
+    await expect(accountApi.updateProfile({}, identity)).rejects.toMatchObject({
       kind: "invalid_response",
     });
-    await expect(accountApi.updateProfile({})).rejects.toMatchObject({
+    await expect(accountApi.updateProfile({}, identity)).rejects.toMatchObject({
       kind: "api",
       status: 401,
     });

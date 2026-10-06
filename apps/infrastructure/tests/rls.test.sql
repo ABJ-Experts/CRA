@@ -175,8 +175,9 @@ begin
   select count(*) into n from public.organizations;
   perform pg_temp.check('own organization visible', n = 1);
 
-  select count(*) into n from public.custom_roles;
-  perform pg_temp.check('custom roles visible to a member', n = 1);
+  select count(*) into n from public.custom_roles
+  where id = 'b9783c95-7a38-449e-a923-49a3449734bf';
+  perform pg_temp.check('seeded custom role visible to a member', n = 1);
 
   reset role;
 exception

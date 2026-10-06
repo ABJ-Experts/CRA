@@ -55,6 +55,10 @@ describe("CustomRolesController", () => {
       "org-1",
       { id: "user-1", email: "owner@cra.test" },
       input,
+      expect.objectContaining({
+        eventKey: expect.any(String) as string,
+        correlationId: expect.any(String) as string,
+      }),
     );
   });
 
@@ -75,11 +79,19 @@ describe("CustomRolesController", () => {
       { id: "user-1", email: "owner@cra.test" },
       roleId,
       patch,
+      expect.objectContaining({
+        eventKey: expect.any(String) as string,
+        correlationId: expect.any(String) as string,
+      }),
     );
     expect(roles.remove).toHaveBeenCalledWith(
       "org-1",
       { id: "user-1", email: "owner@cra.test" },
       roleId,
+      expect.objectContaining({
+        eventKey: expect.any(String) as string,
+        correlationId: expect.any(String) as string,
+      }),
     );
   });
 
@@ -104,7 +116,32 @@ describe("CustomRolesController", () => {
       { id: "user-1", email: "owner@cra.test" },
       "member",
       { can_view_users: false },
+      expect.objectContaining({
+        eventKey: expect.any(String) as string,
+        correlationId: expect.any(String) as string,
+      }),
     );
+  });
+
+  it("rejects malformed idempotency and correlation headers before role creation", async () => {
+    const { controller, roles } = fixture();
+    const input = {
+      name: "Support",
+      baseRole: "member" as const,
+      permissions: {},
+    };
+    await expect(
+      controller.create(input, user, "invalid"),
+    ).rejects.toMatchObject({ response: { code: "invalid_audit_identity" } });
+    await expect(
+      controller.create(
+        input,
+        user,
+        "11111111-1111-4111-8111-111111111111",
+        "invalid",
+      ),
+    ).rejects.toMatchObject({ response: { code: "invalid_audit_identity" } });
+    expect(roles.create).not.toHaveBeenCalled();
   });
 
   it("rejects every operation when no organization is active", async () => {

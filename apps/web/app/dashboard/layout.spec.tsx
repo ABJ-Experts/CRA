@@ -31,6 +31,7 @@ const identity = {
     username: "fresh",
     firstName: "Fresh",
     lastName: "User",
+    jobTitle: null,
     avatarUrl: null,
     isActive: true,
   },

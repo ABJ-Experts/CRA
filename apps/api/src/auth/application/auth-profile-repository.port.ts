@@ -20,6 +20,7 @@ export type AuthUserProfile = Readonly<{
   username: string | null;
   firstName: string | null;
   lastName: string | null;
+  jobTitle: string | null;
   avatarUrl: string | null;
   isActive: boolean;
   emailVerifiedAt: string | null;

@@ -79,8 +79,12 @@ class MemberRepositoryFake implements MemberRepository {
     return Promise.resolve();
   }
 
-  updateOwnProfile(userId: string, patch: ProfilePatch): Promise<void> {
-    this.record("updateOwnProfile", userId, patch);
+  updateOwnProfile(
+    orgId: string | null,
+    userId: string,
+    patch: ProfilePatch,
+  ): Promise<void> {
+    this.record("updateOwnProfile", orgId, userId, patch);
     this.fail();
     return Promise.resolve();
   }
@@ -132,6 +136,18 @@ function assertTenantArgumentPosition(repository: MemberRepository): void {
 void assertTenantArgumentPosition;
 
 describe("MemberUseCases", () => {
+  it("does not emit a second best-effort event after an audited role mutation", async () => {
+    const { audit, useCases } = fixture();
+
+    await useCases.changeRole({
+      orgId: "org-a",
+      actor,
+      targetUserId: "member-1",
+      role: "admin",
+    });
+
+    expect(audit.entries).toEqual([]);
+  });
   it("keeps organization scope first for list queries", async () => {
     const { repository, useCases } = fixture();
 
@@ -215,7 +231,7 @@ describe("MemberUseCases", () => {
     expect(audit.entries).toEqual([]);
   });
 
-  it("changes a role and preserves the exact audit payload", async () => {
+  it("changes a role without a duplicate best-effort audit write", async () => {
     const { audit, repository, useCases } = fixture();
 
     await expect(
@@ -230,19 +246,7 @@ describe("MemberUseCases", () => {
       { operation: "findMembership", args: ["org-a", "member-1"] },
       { operation: "changeRole", args: ["org-a", "member-1", "admin"] },
     ]);
-    expect(audit.entries).toEqual([
-      {
-        organizationId: "org-a",
-        userId: actor.id,
-        actorEmail: actor.email,
-        action: "member.role_changed",
-        entityType: "user",
-        entityId: "member-1",
-        changes: { from: "member", to: "admin" },
-      },
-    ]);
-    expect(Object.isFrozen(audit.entries[0])).toBe(true);
-    expect(Object.isFrozen(audit.entries[0]?.changes)).toBe(true);
+    expect(audit.entries).toEqual([]);
   });
 
   it("translates the database last-owner invariant semantically", async () => {
@@ -261,7 +265,7 @@ describe("MemberUseCases", () => {
     expect(audit.entries).toEqual([]);
   });
 
-  it("rejects self removal and audits successful removal", async () => {
+  it("rejects self removal and delegates successful removal to audited persistence", async () => {
     const { audit, repository, useCases } = fixture();
 
     await expect(
@@ -284,16 +288,7 @@ describe("MemberUseCases", () => {
     expect(repository.calls).toEqual([
       { operation: "remove", args: ["org-a", "member-1"] },
     ]);
-    expect(audit.entries).toEqual([
-      {
-        organizationId: "org-a",
-        userId: actor.id,
-        actorEmail: actor.email,
-        action: "member.removed",
-        entityType: "user",
-        entityId: "member-1",
-      },
-    ]);
+    expect(audit.entries).toEqual([]);
   });
 
   it("blocks self-deactivation but permits self-reactivation", async () => {
@@ -321,14 +316,7 @@ describe("MemberUseCases", () => {
     expect(repository.calls).toEqual([
       { operation: "setActive", args: ["org-a", actor.id, true] },
     ]);
-    expect(audit.entries[0]).toEqual({
-      organizationId: "org-a",
-      userId: actor.id,
-      actorEmail: actor.email,
-      action: "member.reactivated",
-      entityType: "user",
-      entityId: actor.id,
-    });
+    expect(audit.entries).toEqual([]);
   });
 
   it("preserves a repository membership failure during activation", async () => {
@@ -372,6 +360,7 @@ describe("MemberUseCases", () => {
     ).resolves.toEqual({ ok: true, value: undefined });
     expect(repository.calls).toHaveLength(1);
     expect(repository.calls[0]?.args).toEqual([
+      null,
       "actor-1",
       { firstName: "Ada", language: "en" },
     ]);

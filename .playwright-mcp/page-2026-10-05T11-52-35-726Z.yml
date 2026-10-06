@@ -1,0 +1,257 @@
+- generic [ref=f12e1]:
+  - generic [ref=f12e3]:
+    - button "Open navigation" [expanded] [active] [ref=f12e4] [cursor=pointer]
+    - generic [ref=f12e269]:
+      - button "Close navigation" [ref=f12e270] [cursor=pointer]
+      - generic [ref=f12e272]:
+        - generic [ref=f12e273]:
+          - link "CRA Sentinel" [ref=f12e274] [cursor=pointer]:
+            - /url: /dashboard
+            - generic [aria-hidden] [ref=f12e275]: C
+            - text: CRA Sentinel
+          - button "Close navigation" [ref=f12e276] [cursor=pointer]
+        - navigation "Main" [ref=f12e280]:
+          - generic [ref=f12e281]:
+            - list [ref=f12e283]:
+              - listitem [ref=f12e284]:
+                - link "Dashboard" [ref=f12e285] [cursor=pointer]:
+                  - /url: /dashboard
+              - listitem [ref=f12e293]:
+                - link "Management" [ref=f12e294] [cursor=pointer]:
+                  - /url: /management
+              - listitem [ref=f12e300]:
+                - link "Organization" [ref=f12e301] [cursor=pointer]:
+                  - /url: /organization
+              - listitem [ref=f12e308]:
+                - link "Products" [ref=f12e309] [cursor=pointer]:
+                  - /url: /products
+              - listitem [ref=f12e316]:
+                - link "Suppliers" [ref=f12e317] [cursor=pointer]:
+                  - /url: /suppliers
+              - listitem [ref=f12e322]:
+                - link "Frameworks" [ref=f12e323] [cursor=pointer]:
+                  - /url: /frameworks
+              - listitem [ref=f12e328]:
+                - link "Findings" [ref=f12e329] [cursor=pointer]:
+                  - /url: /findings
+              - listitem [ref=f12e334]:
+                - link "Reporting" [ref=f12e335] [cursor=pointer]:
+                  - /url: /reporting
+              - listitem [ref=f12e341]:
+                - link "Tasks" [ref=f12e342] [cursor=pointer]:
+                  - /url: /tasks
+              - listitem [ref=f12e348]:
+                - link "Connectors" [ref=f12e349] [cursor=pointer]:
+                  - /url: /connectors
+            - generic [ref=f12e356]:
+              - paragraph [ref=f12e357]: Account & access
+              - list [ref=f12e358]:
+                - listitem [ref=f12e359]:
+                  - button "Profile" [expanded] [ref=f12e360] [cursor=pointer]
+                  - list [ref=f12e369]:
+                    - listitem [ref=f12e370]:
+                      - link "Account" [ref=f12e371] [cursor=pointer]:
+                        - /url: /account
+                    - listitem [ref=f12e373]:
+                      - link "Security" [ref=f12e374] [cursor=pointer]:
+                        - /url: /security
+                - listitem [ref=f12e376]:
+                  - button "Authorization" [ref=f12e377] [cursor=pointer]
+                  - generic:
+                    - list:
+                      - listitem [ref=f12e385]:
+                        - link "Roles" [ref=f12e386] [cursor=pointer]:
+                          - /url: /roles
+                      - listitem [ref=f12e388]:
+                        - link "Permissions" [ref=f12e389] [cursor=pointer]:
+                          - /url: /permissions
+        - button "Sign out" [ref=f12e393] [cursor=pointer]
+    - generic [ref=f12e7]:
+      - banner [ref=f12e8]:
+        - navigation "Breadcrumb" [ref=f12e10]:
+          - list [ref=f12e11]:
+            - listitem [ref=f12e12]:
+              - link "Dashboard" [ref=f12e13] [cursor=pointer]:
+                - /url: /dashboard
+            - listitem [aria-hidden] [ref=f12e14]
+            - listitem [ref=f12e17]:
+              - generic [ref=f12e18]: Security
+        - generic [ref=f12e19]:
+          - button "Search" [ref=f12e20] [cursor=pointer]
+          - button "Notifications, 1 unread" [ref=f12e62] [cursor=pointer]
+          - generic [ref=f12e28]:
+            - generic [ref=f12e29]: AF
+            - 'img "Ada Foster: online" [ref=f12e30]'
+      - main [ref=f12e31]:
+        - generic [ref=f12e32]:
+          - generic [ref=f12e33]:
+            - heading "Security" [level=1] [ref=f12e34]
+            - paragraph [ref=f12e35]: Add a second step to sign-in using an authenticator app.
+          - generic [ref=f12e39]:
+            - generic [ref=f12e40]:
+              - paragraph [ref=f12e41]: Two-factor authentication
+              - paragraph [ref=f12e42]: Required at every sign-in.
+            - generic [ref=f12e43]: "On"
+          - generic [ref=f12e48]:
+            - heading "Vulnerability intelligence" [level=2] [ref=f12e50]
+            - generic [ref=f12e65]:
+              - paragraph [ref=f12e66]: Observed 5 Oct 2026, 17:15
+              - paragraph [ref=f12e67]: Application workflows read these deployment-local mirrors, even when an upstream provider is unavailable.
+              - list "Vulnerability feed health" [ref=f12e68]:
+                - listitem [ref=f12e69]:
+                  - generic [ref=f12e70]:
+                    - generic [ref=f12e71]:
+                      - heading "CISA KEV" [level=3] [ref=f12e72]
+                      - generic [ref=f12e73]: Never synced
+                    - paragraph [ref=f12e76]: "Provenance: deployment-local CISA KEV mirror. Last complete source snapshot: Not available."
+                    - generic [ref=f12e77]:
+                      - generic [ref=f12e78]:
+                        - term [ref=f12e79]: Mirror age
+                        - definition [ref=f12e80]: Not available
+                      - generic [ref=f12e81]:
+                        - term [ref=f12e82]: Records
+                        - definition [ref=f12e83]: "0"
+                      - generic [ref=f12e84]:
+                        - term [ref=f12e85]: Next scheduled run
+                        - definition [ref=f12e86]: 15 Sept 2026, 13:17
+                      - generic [ref=f12e87]:
+                        - term [ref=f12e88]: Queue / dead letters
+                        - definition [ref=f12e89]: 0 / 0
+                      - generic [ref=f12e90]:
+                        - term [ref=f12e91]: Confidence
+                        - definition [ref=f12e92]: No complete snapshot yet
+                  - button "Sync now" [ref=f12e94] [cursor=pointer]
+                - listitem [ref=f12e95]:
+                  - generic [ref=f12e96]:
+                    - generic [ref=f12e97]:
+                      - heading "EPSS" [level=3] [ref=f12e98]
+                      - generic [ref=f12e99]: Never synced
+                    - paragraph [ref=f12e102]: "Provenance: deployment-local EPSS mirror. Last complete source snapshot: Not available."
+                    - generic [ref=f12e103]:
+                      - generic [ref=f12e104]:
+                        - term [ref=f12e105]: Mirror age
+                        - definition [ref=f12e106]: Not available
+                      - generic [ref=f12e107]:
+                        - term [ref=f12e108]: Records
+                        - definition [ref=f12e109]: "0"
+                      - generic [ref=f12e110]:
+                        - term [ref=f12e111]: Next scheduled run
+                        - definition [ref=f12e112]: 15 Sept 2026, 13:17
+                      - generic [ref=f12e113]:
+                        - term [ref=f12e114]: Queue / dead letters
+                        - definition [ref=f12e115]: 0 / 0
+                      - generic [ref=f12e116]:
+                        - term [ref=f12e117]: Confidence
+                        - definition [ref=f12e118]: No complete snapshot yet
+                  - button "Sync now" [ref=f12e120] [cursor=pointer]
+                - listitem [ref=f12e121]:
+                  - generic [ref=f12e122]:
+                    - generic [ref=f12e123]:
+                      - heading "GitHub Security Advisories" [level=3] [ref=f12e124]
+                      - generic [ref=f12e125]: Disabled
+                    - paragraph [ref=f12e127]: "Provenance: deployment-local GitHub Security Advisories mirror. Last complete source snapshot: Not available."
+                    - generic [ref=f12e128]:
+                      - generic [ref=f12e129]:
+                        - term [ref=f12e130]: Mirror age
+                        - definition [ref=f12e131]: Not available
+                      - generic [ref=f12e132]:
+                        - term [ref=f12e133]: Records
+                        - definition [ref=f12e134]: "0"
+                      - generic [ref=f12e135]:
+                        - term [ref=f12e136]: Next scheduled run
+                        - definition [ref=f12e137]: 15 Sept 2026, 13:17
+                      - generic [ref=f12e138]:
+                        - term [ref=f12e139]: Queue / dead letters
+                        - definition [ref=f12e140]: 0 / 0
+                      - generic [ref=f12e141]:
+                        - term [ref=f12e142]: Confidence
+                        - definition [ref=f12e143]: No complete snapshot yet
+                  - button "Sync now" [disabled] [ref=f12e145]
+                - listitem [ref=f12e146]:
+                  - generic [ref=f12e147]:
+                    - generic [ref=f12e148]:
+                      - heading "NVD/CVE" [level=3] [ref=f12e149]
+                      - generic [ref=f12e150]: Never synced
+                    - paragraph [ref=f12e153]: "Provenance: deployment-local NVD/CVE mirror. Last complete source snapshot: Not available."
+                    - generic [ref=f12e154]:
+                      - generic [ref=f12e155]:
+                        - term [ref=f12e156]: Mirror age
+                        - definition [ref=f12e157]: Not available
+                      - generic [ref=f12e158]:
+                        - term [ref=f12e159]: Records
+                        - definition [ref=f12e160]: "0"
+                      - generic [ref=f12e161]:
+                        - term [ref=f12e162]: Next scheduled run
+                        - definition [ref=f12e163]: 15 Sept 2026, 13:17
+                      - generic [ref=f12e164]:
+                        - term [ref=f12e165]: Queue / dead letters
+                        - definition [ref=f12e166]: 0 / 0
+                      - generic [ref=f12e167]:
+                        - term [ref=f12e168]: Confidence
+                        - definition [ref=f12e169]: No complete snapshot yet
+                  - button "Sync now" [ref=f12e171] [cursor=pointer]
+                - listitem [ref=f12e172]:
+                  - generic [ref=f12e173]:
+                    - generic [ref=f12e174]:
+                      - heading "OSV.dev" [level=3] [ref=f12e175]
+                      - generic [ref=f12e176]: Never synced
+                    - paragraph [ref=f12e179]: "Provenance: deployment-local OSV.dev mirror. Last complete source snapshot: Not available."
+                    - generic [ref=f12e180]:
+                      - generic [ref=f12e181]:
+                        - term [ref=f12e182]: Mirror age
+                        - definition [ref=f12e183]: Not available
+                      - generic [ref=f12e184]:
+                        - term [ref=f12e185]: Records
+                        - definition [ref=f12e186]: "0"
+                      - generic [ref=f12e187]:
+                        - term [ref=f12e188]: Next scheduled run
+                        - definition [ref=f12e189]: 15 Sept 2026, 13:17
+                      - generic [ref=f12e190]:
+                        - term [ref=f12e191]: Queue / dead letters
+                        - definition [ref=f12e192]: 0 / 0
+                      - generic [ref=f12e193]:
+                        - term [ref=f12e194]: Confidence
+                        - definition [ref=f12e195]: No complete snapshot yet
+                  - button "Sync now" [ref=f12e197] [cursor=pointer]
+                - listitem [ref=f12e198]:
+                  - generic [ref=f12e199]:
+                    - generic [ref=f12e200]:
+                      - heading "Vendor CSAF 2.0" [level=3] [ref=f12e201]
+                      - generic [ref=f12e202]: Disabled
+                    - paragraph [ref=f12e204]: "Provenance: deployment-local Vendor CSAF 2.0 mirror. Last complete source snapshot: Not available."
+                    - generic [ref=f12e205]:
+                      - generic [ref=f12e206]:
+                        - term [ref=f12e207]: Mirror age
+                        - definition [ref=f12e208]: Not available
+                      - generic [ref=f12e209]:
+                        - term [ref=f12e210]: Records
+                        - definition [ref=f12e211]: "0"
+                      - generic [ref=f12e212]:
+                        - term [ref=f12e213]: Next scheduled run
+                        - definition [ref=f12e214]: 15 Sept 2026, 13:17
+                      - generic [ref=f12e215]:
+                        - term [ref=f12e216]: Queue / dead letters
+                        - definition [ref=f12e217]: 0 / 0
+                      - generic [ref=f12e218]:
+                        - term [ref=f12e219]: Confidence
+                        - definition [ref=f12e220]: No complete snapshot yet
+                  - button "Sync now" [disabled] [ref=f12e222]
+              - region [ref=f12e223]:
+                - generic [ref=f12e225]:
+                  - heading "Signed offline bundle" [level=3] [ref=f12e226]
+                  - paragraph [ref=f12e227]: Stage a signed feed snapshot for verification before it can change the local mirror. This import does not use an online provider.
+                - group "Offline bundle files" [ref=f12e228]:
+                  - generic [ref=f12e230]:
+                    - text: Canonical manifest
+                    - generic [ref=f12e231]: One JSON manifest. It identifies every feed payload and signing key ID.
+                    - button "Canonical manifest One JSON manifest. It identifies every feed payload and signing key ID." [ref=f12e232] [cursor=pointer]
+                  - generic [ref=f12e233]:
+                    - text: Detached Ed25519 signature
+                    - button "Detached Ed25519 signature" [ref=f12e234] [cursor=pointer]
+                  - generic [ref=f12e235]:
+                    - text: Manifest payloads
+                    - generic [ref=f12e236]: Select every payload named by the manifest. File names must match exactly.
+                    - button "Manifest payloads Select every payload named by the manifest. File names must match exactly." [ref=f12e237] [cursor=pointer]
+                - button "Verify bundle" [disabled] [ref=f12e239]
+  - button "Open Next.js Dev Tools" [ref=f12e58] [cursor=pointer]
+  - alert [ref=f12e240]

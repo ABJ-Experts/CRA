@@ -36,7 +36,8 @@ type PasswordRecoveryErrorCode =
   | "password_reset_unavailable"
   | "password_update_failed";
 
-type MfaRecoveryErrorCode = "mfa_recovery_invalid" | "auth_unavailable";
+type MfaRecoveryErrorCode =
+  "mfa_recovery_invalid" | "mfa_recovery_uncertain" | "auth_unavailable";
 
 const success = (): Result<void, never> =>
   Object.freeze({ ok: true, value: undefined });
@@ -64,18 +65,6 @@ const isAuthUnavailableError = (
 export interface AuthNotifierPort {
   sendVerificationCode(email: string, code: string): Promise<void>;
   sendPasswordReset(email: string, token: string): Promise<void>;
-}
-
-export interface AuthAuditPort {
-  log(
-    event: Readonly<{
-      organizationId: null;
-      userId: string;
-      action: "mfa.enrolled" | "mfa.verified" | "mfa.unenrolled";
-      entityType: "user";
-      entityId: string;
-    }>,
-  ): void;
 }
 
 export interface AuthRandomPort {
@@ -343,6 +332,7 @@ export class ReadSessionQuery {
           username: profile.username,
           firstName: profile.firstName,
           lastName: profile.lastName,
+          jobTitle: profile.jobTitle,
           avatarUrl: profile.avatarUrl,
           isActive: profile.isActive,
         }),
@@ -435,7 +425,6 @@ export class ConfirmMfaEnrollmentUseCase {
     private readonly profiles: AuthProfileRepository,
     private readonly hashes: SecretHashPort,
     private readonly random: AuthRandomPort,
-    private readonly audit: AuthAuditPort,
     private readonly recoveryCodeCount = 10,
   ) {}
 
@@ -476,13 +465,6 @@ export class ConfirmMfaEnrollmentUseCase {
       if (isAuthUnavailableError(error)) return failure("auth_unavailable");
       return failure("mfa_recovery_generate_failed");
     }
-    this.audit.log({
-      organizationId: null,
-      userId: command.userId,
-      action: "mfa.enrolled",
-      entityType: "user",
-      entityId: command.userId,
-    });
     return valueSuccess(
       Object.freeze({
         recoveryCodes: Object.freeze(
@@ -495,10 +477,7 @@ export class ConfirmMfaEnrollmentUseCase {
 }
 
 export class VerifyMfaUseCase {
-  constructor(
-    private readonly identity: AuthIdentityProvider,
-    private readonly audit: AuthAuditPort,
-  ) {}
+  constructor(private readonly identity: AuthIdentityProvider) {}
   async execute(
     command: Readonly<{ accessToken: string; userId: string; code: string }>,
   ) {
@@ -529,13 +508,6 @@ export class VerifyMfaUseCase {
           ? "mfa_challenge_failed"
           : "mfa_invalid_code",
       );
-    this.audit.log({
-      organizationId: null,
-      userId: command.userId,
-      action: "mfa.verified",
-      entityType: "user",
-      entityId: command.userId,
-    });
     return valueSuccess(verified.tokens);
   }
 }
@@ -558,7 +530,6 @@ export class UnenrollMfaUseCase {
   constructor(
     private readonly identity: AuthIdentityProvider,
     private readonly profiles: AuthProfileRepository,
-    private readonly audit: AuthAuditPort,
   ) {}
   async execute(
     command: Readonly<{
@@ -583,13 +554,6 @@ export class UnenrollMfaUseCase {
       if (isAuthUnavailableError(error)) return failure("auth_unavailable");
       throw error;
     }
-    this.audit.log({
-      organizationId: null,
-      userId: command.userId,
-      action: "mfa.unenrolled",
-      entityType: "user",
-      entityId: command.userId,
-    });
     return success();
   }
 }
@@ -708,14 +672,14 @@ export class RecoverMfaUseCase {
 
     if (claim.status !== "factors_removed") {
       const removed = await this.removeFactors(claim, command.userId);
-      if (!removed) return failure("auth_unavailable");
+      if (removed !== "removed") return failure(removed);
       try {
         await this.recovery.markFactorsRemoved(
           claim.operationId,
           command.userId,
         );
       } catch {
-        return failure("auth_unavailable");
+        return failure("mfa_recovery_uncertain");
       }
     }
 
@@ -723,35 +687,35 @@ export class RecoverMfaUseCase {
       await this.recovery.complete(claim.operationId, command.userId);
       return success();
     } catch {
-      return failure("auth_unavailable");
+      return failure("mfa_recovery_uncertain");
     }
   }
 
   private async waitForCompletion(
     claim: ActiveRecoveryClaim,
     userId: string,
-  ): Promise<Result<void, Readonly<{ code: "auth_unavailable" }>>> {
+  ): Promise<Result<void, Readonly<{ code: "mfa_recovery_uncertain" }>>> {
     for (let attempt = 0; attempt < this.pollAttempts; attempt += 1) {
       try {
         const status = await this.recovery.status(claim.operationId, userId);
         if (status === "completed") return success();
-        if (status === "failed") return failure("auth_unavailable");
+        if (status === "failed") return failure("mfa_recovery_uncertain");
       } catch {
-        return failure("auth_unavailable");
+        return failure("mfa_recovery_uncertain");
       }
       try {
         await this.delay.wait(this.pollDelayMs);
       } catch {
-        return failure("auth_unavailable");
+        return failure("mfa_recovery_uncertain");
       }
     }
-    return failure("auth_unavailable");
+    return failure("mfa_recovery_uncertain");
   }
 
   private async removeFactors(
     claim: ActiveRecoveryClaim,
     userId: string,
-  ): Promise<boolean> {
+  ): Promise<"removed" | "auth_unavailable" | "mfa_recovery_uncertain"> {
     let factors: readonly Readonly<{ id: string }>[];
     try {
       factors = await this.identity.listMfaFactors(claim.authUserId);
@@ -761,9 +725,10 @@ export class RecoverMfaUseCase {
         userId,
         "list_factors_failed",
       );
-      return false;
+      return "auth_unavailable";
     }
 
+    let providerEffectPossible = false;
     for (const factor of factors) {
       if (!factor.id) {
         await this.persistProviderFailure(
@@ -771,9 +736,14 @@ export class RecoverMfaUseCase {
           userId,
           "list_factors_failed",
         );
-        return false;
+        return providerEffectPossible
+          ? "mfa_recovery_uncertain"
+          : "auth_unavailable";
       }
       try {
+        // A provider timeout can follow acceptance, so even the first attempt
+        // makes its outcome uncertain until reconciliation.
+        providerEffectPossible = true;
         await this.identity.deleteMfaFactor(claim.authUserId, factor.id);
       } catch {
         await this.persistProviderFailure(
@@ -781,10 +751,10 @@ export class RecoverMfaUseCase {
           userId,
           "delete_factor_failed",
         );
-        return false;
+        return "mfa_recovery_uncertain";
       }
     }
-    return true;
+    return "removed";
   }
 
   private async persistProviderFailure(

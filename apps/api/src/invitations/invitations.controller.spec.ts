@@ -51,13 +51,16 @@ describe("InvitationsController", () => {
       lastName: "Member",
     };
 
-    await expect(controller.create(input, user)).resolves.toEqual({
+    await expect(
+      controller.create(input, user, { ip: "203.0.113.7" } as never),
+    ).resolves.toEqual({
       id: "invitation-2",
     });
     expect(invitations.create).toHaveBeenCalledWith(
       "org-1",
       { id: "owner-1", email: "owner@cra.test" },
       input,
+      "203.0.113.7",
     );
   });
 

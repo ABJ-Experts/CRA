@@ -5,6 +5,7 @@ import type {
 
 import type {
   AcceptInvitationAtomicOutcome,
+  CreateInvitationAtomicOutcome,
   InsertInvitationInput,
   InvitationRepository,
   RevokeInvitationAtomicOutcome,
@@ -27,6 +28,19 @@ class CreateRepositoryFake implements InvitationRepository {
     input: InsertInvitationInput;
   }> | null = null;
   failOn: string | null = null;
+  insertOutcome: CreateInvitationAtomicOutcome = {
+    outcome: "created",
+    invitationId: "invitation-1",
+  };
+  cancellationOutcome: "cancelled" | "changed" | "not_found" = "cancelled";
+  readonly cancelled: Array<
+    Readonly<{
+      orgId: string;
+      invitationId: string;
+      actorId: string;
+      tokenHash: string;
+    }>
+  > = [];
 
   findExistingUser(email: string): Promise<{ id: string } | null> {
     this.calls.push(`find:${email}`);
@@ -46,14 +60,17 @@ class CreateRepositoryFake implements InvitationRepository {
     return Promise.resolve(this.pending);
   }
 
-  insert(orgId: string, input: InsertInvitationInput): Promise<{ id: string }> {
+  insert(
+    orgId: string,
+    input: InsertInvitationInput,
+  ): Promise<CreateInvitationAtomicOutcome> {
     this.calls.push(`insert:${orgId}`);
     this.failIf("insert");
     this.lastInsert = Object.freeze({
       orgId,
       input: Object.freeze({ ...input }),
     });
-    return Promise.resolve({ id: "invitation-1" });
+    return Promise.resolve(this.insertOutcome);
   }
 
   organization(orgId: string): Promise<OrganizationSummary | null> {
@@ -68,6 +85,19 @@ class CreateRepositoryFake implements InvitationRepository {
 
   revokeAtomic(): Promise<RevokeInvitationAtomicOutcome> {
     return Promise.reject(new Error("not used"));
+  }
+
+  cancelFailedDeliveryAtomic(
+    orgId: string,
+    invitationId: string,
+    actorId: string,
+    tokenHash: string,
+  ): Promise<"cancelled" | "changed" | "not_found"> {
+    this.failIf("cancelFailedDeliveryAtomic");
+    this.cancelled.push(
+      Object.freeze({ orgId, invitationId, actorId, tokenHash }),
+    );
+    return Promise.resolve(this.cancellationOutcome);
   }
 
   resendAtomic(): Promise<never> {
@@ -160,6 +190,23 @@ function fixture(overrides: { ttlDays?: number } = {}) {
 }
 
 describe("CreateInvitationUseCase", () => {
+  it.each([
+    ["already_member", "already_member"],
+    ["invitation_pending", "invitation_pending"],
+    ["cannot_invite_self", "cannot_invite_self"],
+    ["organization_not_found", "organization_not_found"],
+  ] as const)(
+    "maps concurrent database %s without sending mail",
+    async (outcome, code) => {
+      const { repository, notifier, useCase } = fixture();
+      repository.insertOutcome = { outcome };
+      await expect(
+        useCase.execute({ orgId: "org-1", actor, input: baseInput }),
+      ).resolves.toEqual({ ok: false, error: { code } });
+      expect(notifier.sent).toEqual([]);
+    },
+  );
+
   it("rejects a normalized self-invitation before using any port", async () => {
     const { repository, tokens, useCase } = fixture();
 
@@ -295,10 +342,59 @@ describe("CreateInvitationUseCase", () => {
       useCase.execute({ orgId: "org-1", actor, input: baseInput }),
     ).resolves.toEqual({
       ok: false,
-      error: { code: "notification_failed", invitationId: "invitation-1" },
+      error: {
+        code: "notification_failed",
+        invitationId: "invitation-1",
+        recovery: "cancelled",
+      },
     });
     expect(repository.lastInsert?.input.email).toBe("member@cra.test");
+    expect(repository.cancelled).toEqual([
+      {
+        orgId: "org-1",
+        invitationId: "invitation-1",
+        actorId: "owner-1",
+        tokenHash: "hashed-token",
+      },
+    ]);
     expect(evidence.calls).toEqual([]);
+  });
+
+  it.each(["changed", "not_found"] as const)(
+    "preserves the %s recovery result when the invitation changed during mail failure",
+    async (recovery) => {
+      const { notifier, repository, useCase } = fixture();
+      notifier.failure = new Error("mail unavailable");
+      repository.cancellationOutcome = recovery;
+
+      await expect(
+        useCase.execute({ orgId: "org-1", actor, input: baseInput }),
+      ).resolves.toEqual({
+        ok: false,
+        error: {
+          code: "notification_failed",
+          invitationId: "invitation-1",
+          recovery,
+        },
+      });
+    },
+  );
+
+  it("reports compensation failure without exposing the mail or database error", async () => {
+    const { notifier, repository, useCase } = fixture();
+    notifier.failure = new Error("mail secret canary");
+    repository.failOn = "cancelFailedDeliveryAtomic";
+
+    await expect(
+      useCase.execute({ orgId: "org-1", actor, input: baseInput }),
+    ).resolves.toEqual({
+      ok: false,
+      error: {
+        code: "notification_failed",
+        invitationId: "invitation-1",
+        recovery: "failed",
+      },
+    });
   });
 
   it("records invitation evidence only after successful email delivery", async () => {
@@ -391,6 +487,10 @@ describe("CreateInvitationUseCase", () => {
       lastName: null,
       invitedBy: "owner-1",
       role: "member",
+      sourceIp: null,
     });
+    expect(repository.lastInsert?.input.correlationId).toEqual(
+      expect.stringMatching(/^[0-9a-f-]{36}$/),
+    );
   });
 });

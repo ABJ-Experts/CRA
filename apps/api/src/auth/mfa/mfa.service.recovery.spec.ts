@@ -96,6 +96,12 @@ function createService(input?: {
     new NodeSecretHashAdapter(),
     new SystemDelayAdapter(),
   );
+  const securityAudit = {
+    beginCritical: jest
+      .fn()
+      .mockResolvedValue({ operationId: "audit-operation" }),
+    finishCritical: jest.fn().mockResolvedValue(undefined),
+  };
   const service = new MfaService(
     {} as never,
     {} as never,
@@ -103,9 +109,10 @@ function createService(input?: {
     recoverMfa,
     {} as never,
     {} as never,
+    securityAudit as never,
   );
 
-  return { service, rpc, listFactors, deleteFactor, auditLog };
+  return { service, rpc, listFactors, deleteFactor, auditLog, securityAudit };
 }
 
 async function captureError(work: Promise<unknown>): Promise<unknown> {
@@ -533,7 +540,7 @@ describe("MfaService.redeemRecoveryCode", () => {
   });
 
   it("persists a thrown factor-deletion failure", async () => {
-    const { service, rpc } = createService({
+    const { service, rpc, securityAudit } = createService({
       listFactors: () =>
         Promise.resolve({
           data: { factors: [{ id: "factor-1" }] },
@@ -544,7 +551,11 @@ describe("MfaService.redeemRecoveryCode", () => {
 
     await expect(
       service.redeemRecoveryCode(USER_ID, AUTH_USER_ID, RAW_CODE),
-    ).rejects.toBeInstanceOf(ServiceUnavailableException);
+    ).rejects.toMatchObject({
+      status: 503,
+      response: { code: "audit_outcome_uncertain" },
+    });
+    expect(securityAudit.finishCritical).not.toHaveBeenCalled();
     expect(rpc).toHaveBeenLastCalledWith("fail_mfa_recovery", {
       p_operation_id: OPERATION_ID,
       p_user_id: USER_ID,
@@ -569,7 +580,7 @@ describe("MfaService.redeemRecoveryCode", () => {
   });
 
   it("returns 503 if factor-removal persistence fails after provider cleanup", async () => {
-    const { service, rpc } = createService({
+    const { service, rpc, securityAudit } = createService({
       rpc: (name) =>
         name === "mark_mfa_factors_removed"
           ? Promise.resolve({ data: null, error: { message: "db down" } })
@@ -578,7 +589,11 @@ describe("MfaService.redeemRecoveryCode", () => {
 
     await expect(
       service.redeemRecoveryCode(USER_ID, AUTH_USER_ID, RAW_CODE),
-    ).rejects.toBeInstanceOf(ServiceUnavailableException);
+    ).rejects.toMatchObject({
+      status: 503,
+      response: { code: "audit_outcome_uncertain" },
+    });
+    expect(securityAudit.finishCritical).not.toHaveBeenCalled();
     expect(rpc).not.toHaveBeenCalledWith(
       "complete_mfa_recovery",
       expect.anything(),
@@ -649,7 +664,7 @@ describe("MfaService.redeemRecoveryCode", () => {
     ],
     ["thrown failure", () => Promise.reject(new Error("db down"))],
   ])("fails closed when completion has %s", async (_name, complete) => {
-    const { service } = createService({
+    const { service, securityAudit } = createService({
       rpc: (name) => {
         if (name === "claim_mfa_recovery") {
           return Promise.resolve(claimResult("factors_removed"));
@@ -660,7 +675,11 @@ describe("MfaService.redeemRecoveryCode", () => {
 
     await expect(
       service.redeemRecoveryCode(USER_ID, AUTH_USER_ID, RAW_CODE),
-    ).rejects.toBeInstanceOf(ServiceUnavailableException);
+    ).rejects.toMatchObject({
+      status: 503,
+      response: { code: "audit_outcome_uncertain" },
+    });
+    expect(securityAudit.finishCritical).not.toHaveBeenCalled();
   });
 
   it.each([

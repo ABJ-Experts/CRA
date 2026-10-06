@@ -1,8 +1,6 @@
 import { Module } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 
-import { AuditModule } from "../audit/audit.module";
-import { AuditService } from "../audit/audit.service";
 import { MailModule } from "../mail/mail.module";
 import { OnboardingEvidenceRecorder } from "../organizations/application/onboarding-evidence-recorder.port";
 import { OrganizationsModule } from "../organizations/organizations.module";
@@ -19,7 +17,7 @@ import { SupabaseInvitationRepository } from "./infrastructure/supabase-invitati
 import { InvitationsService } from "./invitations.service";
 
 @Module({
-  imports: [AuditModule, SupabaseModule, MailModule, OrganizationsModule],
+  imports: [SupabaseModule, MailModule, OrganizationsModule],
   controllers: [InvitationsController],
   providers: [
     SupabaseInvitationRepository,
@@ -103,15 +101,13 @@ import { InvitationsService } from "./invitations.service";
         accept: AcceptInvitationUseCase,
         revoke: RevokeInvitationUseCase,
         list: ListInvitationsQuery,
-        audit: AuditService,
-      ) => new InvitationsService(create, resend, accept, revoke, list, audit),
+      ) => new InvitationsService(create, resend, accept, revoke, list),
       inject: [
         CreateInvitationUseCase,
         ResendInvitationUseCase,
         AcceptInvitationUseCase,
         RevokeInvitationUseCase,
         ListInvitationsQuery,
-        AuditService,
       ],
     },
   ],

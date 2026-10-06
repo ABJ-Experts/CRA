@@ -1,0 +1,52 @@
+- generic [active] [ref=f1e1]:
+  - generic [ref=f1e2]:
+    - generic [ref=f1e3]:
+      - banner [ref=f1e4]:
+        - link "CRA" [ref=f1e5] [cursor=pointer]:
+          - /url: /
+          - generic [aria-hidden] [ref=f1e6]: C
+      - main [ref=f1e8]:
+        - generic [ref=f1e10]:
+          - generic [ref=f1e11]:
+            - heading "Welcome Back" [level=1] [ref=f1e12]
+            - paragraph [ref=f1e13]: Please, sign in to continue
+          - generic [ref=f1e14]:
+            - alert [ref=f1e94]: Something went wrong. Please try again.
+            - generic [ref=f1e15]:
+              - generic [ref=f1e16]:
+                - generic [ref=f1e17]:
+                  - generic [ref=f1e18]:
+                    - text: Email or User Name
+                    - generic [aria-hidden] [ref=f1e19]: "*"
+                  - textbox "Email or User Name" [ref=f1e25]: owner@cra.test
+                - generic [ref=f1e26]:
+                  - generic [ref=f1e27]:
+                    - text: Password
+                    - generic [aria-hidden] [ref=f1e28]: "*"
+                  - generic [ref=f1e29]:
+                    - textbox "Password" [ref=f1e34]: Password123
+                    - button "Show password" [ref=f1e36] [cursor=pointer]
+              - generic [ref=f1e42]:
+                - generic [ref=f1e44]:
+                  - checkbox "Remember me" [checked] [ref=f1e45] [cursor=pointer]
+                  - checkbox [checked] [aria-hidden]
+                  - generic [ref=f1e46] [cursor=pointer]: Remember me
+                - link "Forgot Password?" [ref=f1e47] [cursor=pointer]:
+                  - /url: /forgot-password
+            - button "Sign In" [ref=f1e48] [cursor=pointer]
+            - generic [ref=f1e49]: or sign in with
+            - generic [ref=f1e53]:
+              - button "Sign In with Google" [ref=f1e54] [cursor=pointer]
+              - button "Sign In with SSO" [ref=f1e62] [cursor=pointer]
+      - generic [ref=f1e69]:
+        - generic [ref=f1e70]: Don’t have an account?
+        - link "Sign Up" [ref=f1e71] [cursor=pointer]:
+          - /url: /sign-up
+    - figure [ref=f1e75]:
+      - blockquote [ref=f1e79]: One token layer drives both themes, which is why every screen re-themes from a single attribute
+      - generic [ref=f1e80]:
+        - button "Show quote 1 of 3" [ref=f1e81] [cursor=pointer]
+        - button "Show quote 2 of 3" [ref=f1e82] [cursor=pointer]
+        - button "Show quote 3 of 3" [ref=f1e83] [cursor=pointer]
+  - button "Open Next.js Dev Tools" [ref=f1e89] [cursor=pointer]
+  - alert [ref=f1e93]

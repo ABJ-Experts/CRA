@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isIP } from "node:net";
 
 /**
  * Environment schema. Validated once at boot so a missing or malformed value
@@ -73,6 +74,18 @@ export const envSchema = z.object({
     .enum(["development", "test", "production"])
     .default("development"),
   PORT: int(3333),
+  /** Exact addresses of ingress proxies. Empty means forwarded headers are ignored. */
+  TRUSTED_PROXY_ADDRESSES: z
+    .string()
+    .optional()
+    .default("")
+    .transform((value) =>
+      value === "" ? [] : value.split(",").map((address) => address.trim()),
+    )
+    .refine(
+      (addresses) => addresses.every((address) => isIP(address) !== 0),
+      "TRUSTED_PROXY_ADDRESSES must contain only IP addresses",
+    ),
 
   // --- Supabase ---------------------------------------------------------
   SUPABASE_URL: z.string().url(),

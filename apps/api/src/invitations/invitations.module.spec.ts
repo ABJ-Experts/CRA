@@ -1,6 +1,5 @@
 import { MODULE_METADATA } from "@nestjs/common/constants";
 
-import { AuditService } from "../audit/audit.service";
 import { OnboardingEvidenceRecorder } from "../organizations/application/onboarding-evidence-recorder.port";
 import { OrganizationsModule } from "../organizations/organizations.module";
 import { AcceptInvitationUseCase } from "./application/accept-invitation.use-case";
@@ -85,17 +84,16 @@ describe("InvitationsModule composition", () => {
     ).toBeInstanceOf(ListInvitationsQuery);
   });
 
-  it("wires the compatibility facade with audit as an observer", () => {
+  it("wires the compatibility facade without a duplicate audit observer", () => {
     const create = {} as CreateInvitationUseCase;
     const accept = {} as AcceptInvitationUseCase;
     const resend = {} as ResendInvitationUseCase;
     const revoke = {} as RevokeInvitationUseCase;
     const list = {} as ListInvitationsQuery;
-    const audit = {} as AuditService;
     const provider = factoryFor(InvitationsService);
 
     expect(
-      provider.useFactory(create, resend, accept, revoke, list, audit),
+      provider.useFactory(create, resend, accept, revoke, list),
     ).toBeInstanceOf(InvitationsService);
     expect(provider.inject).toEqual([
       CreateInvitationUseCase,
@@ -103,7 +101,6 @@ describe("InvitationsModule composition", () => {
       AcceptInvitationUseCase,
       RevokeInvitationUseCase,
       ListInvitationsQuery,
-      AuditService,
     ]);
   });
 });

@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 import { normalizeEmail } from "@repo/contracts/auth";
 import type { BaseRole } from "@repo/contracts/permissions";
 
@@ -20,6 +22,8 @@ export interface ClockPort {
 export type CreateInvitationCommand = Readonly<{
   orgId: string;
   actor: InvitationActor;
+  correlationId?: string;
+  sourceIp?: string | null;
   input: Readonly<{
     email: string;
     role: BaseRole;
@@ -37,6 +41,7 @@ export type CreateInvitationError =
   | Readonly<{
       code: "notification_failed";
       invitationId: string;
+      recovery: "cancelled" | "changed" | "not_found" | "failed";
     }>
   | Readonly<{
       code: "evidence_failed";
@@ -68,6 +73,7 @@ export class CreateInvitationUseCase {
       slug: string;
     }> | null;
     let rawToken: string;
+    let tokenHash: string;
 
     try {
       const existingUser = await this.repository.findExistingUser(email);
@@ -87,11 +93,12 @@ export class CreateInvitationUseCase {
         throw new Error("Invitation token port returned an unsafe token pair");
       }
       rawToken = token.raw;
+      tokenHash = token.hash;
       const expiresAt = new Date(
         this.clock.now().getTime() + this.ttlDays * DAY_IN_MILLISECONDS,
       ).toISOString();
 
-      invitation = await this.repository.insert(
+      const created = await this.repository.insert(
         command.orgId,
         Object.freeze({
           invitedBy: command.actor.id,
@@ -101,8 +108,21 @@ export class CreateInvitationUseCase {
           lastName: command.input.lastName ?? null,
           tokenHash: token.hash,
           expiresAt,
+          correlationId: command.correlationId ?? randomUUID(),
+          sourceIp: command.sourceIp ?? null,
         }),
       );
+      if (created.outcome !== "created") {
+        return failure(
+          Object.freeze({
+            code:
+              created.outcome === "forbidden"
+                ? ("invitation_failed" as const)
+                : created.outcome,
+          }),
+        );
+      }
+      invitation = Object.freeze({ id: created.invitationId });
       organization = await this.repository.organization(command.orgId);
     } catch {
       return failure(Object.freeze({ code: "invitation_failed" as const }));
@@ -122,10 +142,22 @@ export class CreateInvitationUseCase {
         command.actor.email,
       );
     } catch {
+      let recovery: "cancelled" | "changed" | "not_found" | "failed";
+      try {
+        recovery = await this.repository.cancelFailedDeliveryAtomic(
+          command.orgId,
+          invitation.id,
+          command.actor.id,
+          tokenHash,
+        );
+      } catch {
+        recovery = "failed";
+      }
       return failure(
         Object.freeze({
           code: "notification_failed" as const,
           invitationId: invitation.id,
+          recovery,
         }),
       );
     }

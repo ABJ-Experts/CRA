@@ -47,6 +47,7 @@ describe("AuthService.verifyPassword lockout", () => {
       {} as never,
       {} as never,
       reauthenticate,
+      { recordBestEffort: jest.fn().mockResolvedValue(true) } as never,
     );
 
     return { service, rpc, signInWithPassword };
@@ -144,6 +145,7 @@ describe("AuthService.verifyPassword lockout", () => {
       {} as never,
       {} as never,
       reauthenticate,
+      { recordBestEffort: jest.fn().mockResolvedValue(true) } as never,
     );
 
     const pending = service.verifyPassword("USER@CRA.TEST", "password");

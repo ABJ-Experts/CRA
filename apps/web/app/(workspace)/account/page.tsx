@@ -4,13 +4,14 @@ import { Button } from "@repo/ui/button";
 import { Input } from "@repo/ui/input";
 import { Avatar } from "@repo/ui/avatar";
 import { useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { SectionCard } from "../../dashboard/_components/dashboard-chrome";
 import { accountApi } from "../../_features/account/account.api";
 import { NotificationPreferencesPanel } from "../../_features/notifications/notification-preferences-panel";
 import { sessionKeys } from "../../_features/session/session.keys";
 import { ApiClientError } from "../../_lib/http/api-client";
+import { MutationRequestIdentity } from "../../_lib/http/mutation-request-identity";
 import { useSession } from "../../_providers/session-provider";
 
 /**
@@ -32,6 +33,7 @@ export default function AccountPage() {
     "idle",
   );
   const [message, setMessage] = useState<string | null>(null);
+  const requestIdentity = useRef(new MutationRequestIdentity());
 
   /*
    * Seeded from the session once it arrives rather than held as defaultValue:
@@ -42,6 +44,7 @@ export default function AccountPage() {
     if (!session) return;
     setFirstName(session.user.firstName ?? "");
     setLastName(session.user.lastName ?? "");
+    setJobTitle(session.user.jobTitle ?? "");
   }, [session]);
 
   async function save(event: React.FormEvent) {
@@ -50,11 +53,22 @@ export default function AccountPage() {
     setMessage(null);
 
     try {
-      await accountApi.updateProfile({
+      const profile = {
         firstName,
         lastName,
         jobTitle,
-      });
+      };
+      await accountApi.updateProfile(
+        profile,
+        requestIdentity.current.forAction(
+          JSON.stringify([
+            session?.user.id ?? null,
+            session?.organization?.id ?? null,
+            profile,
+          ]),
+        ),
+      );
+      requestIdentity.current.clear();
 
       await queryClient.invalidateQueries({ queryKey: sessionKeys.all });
       setStatus("saved");
@@ -104,13 +118,19 @@ export default function AccountPage() {
             <Input
               label="First name"
               value={firstName}
-              onChange={(e) => setFirstName(e.target.value)}
+              onChange={(e) => {
+                requestIdentity.current.clear();
+                setFirstName(e.target.value);
+              }}
               data-testid="account-first-name"
             />
             <Input
               label="Last name"
               value={lastName}
-              onChange={(e) => setLastName(e.target.value)}
+              onChange={(e) => {
+                requestIdentity.current.clear();
+                setLastName(e.target.value);
+              }}
               data-testid="account-last-name"
             />
           </div>
@@ -118,7 +138,10 @@ export default function AccountPage() {
           <Input
             label="Job title"
             value={jobTitle}
-            onChange={(e) => setJobTitle(e.target.value)}
+            onChange={(e) => {
+              requestIdentity.current.clear();
+              setJobTitle(e.target.value);
+            }}
             helperText="Shown next to your name in the member list."
             data-testid="account-job-title"
           />

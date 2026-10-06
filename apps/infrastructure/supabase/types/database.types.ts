@@ -105,39 +105,72 @@ export type Database = {
         Row: {
           action: string
           actor_email: string | null
+          actor_id: string | null
+          actor_type: string | null
+          after_redacted: Json | null
+          before_redacted: Json | null
           changes: Json | null
+          correlation_id: string | null
           created_at: string
           entity_id: string | null
           entity_type: string | null
+          event_key: string | null
+          event_scope: string | null
           id: string
           ip_address: unknown
           organization_id: string | null
+          outcome: string | null
+          reason: string | null
+          redaction_version: number | null
+          schema_version: number
           user_agent: string | null
           user_id: string | null
         }
         Insert: {
           action: string
           actor_email?: string | null
+          actor_id?: string | null
+          actor_type?: string | null
+          after_redacted?: Json | null
+          before_redacted?: Json | null
           changes?: Json | null
+          correlation_id?: string | null
           created_at?: string
           entity_id?: string | null
           entity_type?: string | null
+          event_key?: string | null
+          event_scope?: string | null
           id?: string
           ip_address?: unknown
           organization_id?: string | null
+          outcome?: string | null
+          reason?: string | null
+          redaction_version?: number | null
+          schema_version?: number
           user_agent?: string | null
           user_id?: string | null
         }
         Update: {
           action?: string
           actor_email?: string | null
+          actor_id?: string | null
+          actor_type?: string | null
+          after_redacted?: Json | null
+          before_redacted?: Json | null
           changes?: Json | null
+          correlation_id?: string | null
           created_at?: string
           entity_id?: string | null
           entity_type?: string | null
+          event_key?: string | null
+          event_scope?: string | null
           id?: string
           ip_address?: unknown
           organization_id?: string | null
+          outcome?: string | null
+          reason?: string | null
+          redaction_version?: number | null
+          schema_version?: number
           user_agent?: string | null
           user_id?: string | null
         }
@@ -207,6 +240,7 @@ export type Database = {
       }
       auth_login_attempts: {
         Row: {
+          audit_ref: string
           email: string
           failed_count: number
           first_failed_at: string | null
@@ -214,6 +248,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          audit_ref?: string
           email: string
           failed_count?: number
           first_failed_at?: string | null
@@ -221,6 +256,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          audit_ref?: string
           email?: string
           failed_count?: number
           first_failed_at?: string | null
@@ -307,6 +343,7 @@ export type Database = {
           organization_id: string
           permissions: Json
           updated_at: string
+          version: number
         }
         Insert: {
           base_role: string
@@ -315,6 +352,7 @@ export type Database = {
           organization_id: string
           permissions?: Json
           updated_at?: string
+          version?: number
         }
         Update: {
           base_role?: string
@@ -323,6 +361,7 @@ export type Database = {
           organization_id?: string
           permissions?: Json
           updated_at?: string
+          version?: number
         }
         Relationships: [
           {
@@ -1289,6 +1328,7 @@ export type Database = {
           organization_id: string
           permissions: Json
           updated_at: string
+          version: number
         }
         Insert: {
           base_role?: string
@@ -1306,6 +1346,7 @@ export type Database = {
           organization_id: string
           permissions?: Json
           updated_at?: string
+          version?: number
         }
         Update: {
           base_role?: string
@@ -1323,6 +1364,7 @@ export type Database = {
           organization_id?: string
           permissions?: Json
           updated_at?: string
+          version?: number
         }
         Relationships: [
           {
@@ -16814,6 +16856,7 @@ export type Database = {
           job_title: string | null
           language: string
           last_name: string | null
+          profile_audit_version: number
           session_epoch_at: string
           updated_at: string
           username: string | null
@@ -16831,6 +16874,7 @@ export type Database = {
           job_title?: string | null
           language?: string
           last_name?: string | null
+          profile_audit_version?: number
           session_epoch_at?: string
           updated_at?: string
           username?: string | null
@@ -16848,6 +16892,7 @@ export type Database = {
           job_title?: string | null
           language?: string
           last_name?: string | null
+          profile_audit_version?: number
           session_epoch_at?: string
           updated_at?: string
           username?: string | null
@@ -29532,6 +29577,10 @@ export type Database = {
         }
         Returns: Json
       }
+      m12_06_burst_dispatch_delivery_valid: {
+        Args: { p_dispatch_id: string; p_organization_id: string }
+        Returns: boolean
+      }
       m12_06_burst_dispatch_eligible: {
         Args: { p_dispatch_id: string; p_organization_id: string }
         Returns: boolean
@@ -29548,6 +29597,22 @@ export type Database = {
         Args: { p_ref: string; p_summary: string }
         Returns: string
       }
+      m12_06_feed_rows: {
+        Args: { p_actor_user_id: string; p_organization_id: string }
+        Returns: {
+          category: string
+          fingerprint: string
+          notice_kind: string
+          occurred_at: string
+          ref: string
+          severity: string
+          source_created_at: string
+          source_state: string
+          summary: string
+          title: string
+          url: string
+        }[]
+      }
       m12_06_list_filtered_feed_atomic: {
         Args: {
           p_actor_user_id: string
@@ -29562,6 +29627,14 @@ export type Database = {
           outcome: string
           result: Json
         }[]
+      }
+      m12_06_source_created_at: {
+        Args: {
+          p_organization_id: string
+          p_source_id: string
+          p_source_type: string
+        }
+        Returns: string
       }
       m1201_absence_json: {
         Args: { p_absence_id: string; p_organization_id: string }
@@ -29809,6 +29882,134 @@ export type Database = {
           title: string
           url: string
         }[]
+      }
+      m1206_burst_batch_validation: {
+        Args: { p_dispatch_ids: string[]; p_organization_id: string }
+        Returns: {
+          dispatch_id: string
+          mode: string
+          source_valid: boolean
+          valid: boolean
+        }[]
+      }
+      m1206_burst_candidates: {
+        Args: { p_organization_id: string }
+        Returns: {
+          category: string
+          created_at: string
+          eligible: boolean
+          event_class: string
+          id: string
+          mode: string
+          organization_id: string
+          preference_version: number
+          user_id: string
+        }[]
+      }
+      m13_01_append_audit_event: {
+        Args: {
+          p_action: string
+          p_actor_id: string
+          p_actor_type: string
+          p_after_redacted: Json
+          p_before_redacted: Json
+          p_correlation_id: string
+          p_entity_id: string
+          p_entity_type: string
+          p_event_key: string
+          p_ip_address: unknown
+          p_organization_id: string
+          p_outcome: string
+          p_reason: string
+          p_scope: string
+          p_user_agent: string
+          p_user_id?: string
+        }
+        Returns: {
+          audit_id: string
+          outcome: string
+        }[]
+      }
+      m13_01_cancel_failed_invitation_delivery_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_invitation_id: string
+          p_organization_id: string
+          p_token_hash: string
+        }
+        Returns: string
+      }
+      m13_01_create_invitation_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_correlation_id: string
+          p_email: string
+          p_expires_at: string
+          p_first_name: string
+          p_last_name: string
+          p_organization_id: string
+          p_role: string
+          p_source_ip: unknown
+          p_token_hash: string
+        }
+        Returns: {
+          invitation_id: string
+          outcome: string
+        }[]
+      }
+      m13_01_identity_actor_has_permission: {
+        Args: {
+          p_actor_user_id: string
+          p_organization_id: string
+          p_permission_key: string
+        }
+        Returns: boolean
+      }
+      m13_01_mutate_member_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_correlation_id: string
+          p_event_key: string
+          p_expected_role: string
+          p_operation: string
+          p_organization_id: string
+          p_payload: Json
+          p_source_ip: unknown
+          p_target_user_id: string
+        }
+        Returns: Json
+      }
+      m13_01_mutate_role_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_correlation_id: string
+          p_event_key: string
+          p_expected_version: number
+          p_operation: string
+          p_organization_id: string
+          p_payload: Json
+          p_role_id: string
+          p_source_ip: unknown
+        }
+        Returns: Json
+      }
+      m13_01_project_v2_audit_json: { Args: { p_value: Json }; Returns: Json }
+      m13_01_project_v2_reason: { Args: { p_reason: string }; Returns: string }
+      m13_01_redact_audit_json: {
+        Args: { p_key?: string; p_value: Json }
+        Returns: Json
+      }
+      m13_01_redact_audit_text: { Args: { p_value: string }; Returns: string }
+      m13_01_update_profile_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_correlation_id: string
+          p_event_key: string
+          p_organization_id: string
+          p_patch: Json
+          p_source_ip: unknown
+        }
+        Returns: Json
       }
       m2_active_member: {
         Args: { p_actor_user_id: string; p_organization_id: string }

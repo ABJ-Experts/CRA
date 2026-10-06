@@ -6,10 +6,13 @@ import {
   type PermissionSet,
 } from "@repo/contracts/permissions";
 import { customRoleSchema, type CustomRole } from "@repo/contracts/roles";
+import { z } from "zod";
 
 import { SupabaseService } from "../../supabase/supabase.service";
+import type { Json } from "../../supabase/database.types";
 import {
   RoleRepositoryError,
+  type AuditMutationContext,
   type CreateRoleRecord,
   type CustomRoleIdentity,
   type RoleRepository,
@@ -18,6 +21,17 @@ import {
 
 const ROLE_SELECT =
   "id, name, description, color, base_role, permissions, is_system, is_active, user_role_assignments(count)";
+const mutationResultSchema = z.object({
+  status: z.enum([
+    "updated",
+    "unchanged",
+    "replayed",
+    "not_found",
+    "system",
+    "conflict",
+  ]),
+  id: z.string().uuid().nullish(),
+});
 
 @Injectable()
 export class SupabaseRoleRepository implements RoleRepository {
@@ -41,26 +55,25 @@ export class SupabaseRoleRepository implements RoleRepository {
   async create(
     orgId: string,
     input: CreateRoleRecord,
+    actorId?: string,
+    context?: AuditMutationContext,
   ): Promise<{ id: string }> {
-    const { data, error } = await this.supabase
-      .admin()
-      .from("custom_roles")
-      .insert({
-        organization_id: orgId,
+    const result = await this.mutateRole(
+      orgId,
+      actorId,
+      "create",
+      null,
+      {
         name: input.name,
         description: input.description,
         color: input.color,
-        base_role: input.baseRole,
+        baseRole: input.baseRole,
         permissions: input.permissions,
-      })
-      .select("id")
-      .single();
-    if (error?.message.includes("duplicate key")) {
-      throw new RoleRepositoryError("role_name_taken");
-    }
-    if (error) this.fail(error.message);
-    if (!data) this.fail("create returned no role id");
-    return Object.freeze({ id: data.id });
+      },
+      context,
+    );
+    if (!result.id) this.fail("create returned no role id");
+    return Object.freeze({ id: result.id });
   }
 
   async find(
@@ -70,58 +83,66 @@ export class SupabaseRoleRepository implements RoleRepository {
     const { data, error } = await this.supabase
       .admin()
       .from("custom_roles")
-      .select("id, is_system")
+      .select("id, is_system, version")
       .eq("id", roleId)
       .eq("organization_id", orgId)
       .eq("is_deleted", false)
       .maybeSingle();
     if (error) this.fail(error.message);
     if (!data) return null;
-    return Object.freeze({ id: data.id, isSystem: data.is_system });
+    return Object.freeze({
+      id: data.id,
+      isSystem: data.is_system,
+      version: data.version,
+    });
   }
 
   async update(
     orgId: string,
     roleId: string,
     patch: UpdateRoleRecord,
+    actorId?: string,
+    context?: AuditMutationContext,
+    expectedVersion?: number,
   ): Promise<void> {
-    const { error } = await this.supabase
-      .admin()
-      .from("custom_roles")
-      .update({
+    await this.mutateRole(
+      orgId,
+      actorId,
+      "update",
+      roleId,
+      {
         ...(patch.name !== undefined ? { name: patch.name } : {}),
         ...(patch.description !== undefined
           ? { description: patch.description }
           : {}),
         ...(patch.color !== undefined ? { color: patch.color } : {}),
-        ...(patch.baseRole !== undefined ? { base_role: patch.baseRole } : {}),
+        ...(patch.baseRole !== undefined ? { baseRole: patch.baseRole } : {}),
         ...(patch.permissions !== undefined
           ? { permissions: patch.permissions }
           : {}),
-        ...(patch.isActive !== undefined ? { is_active: patch.isActive } : {}),
-      })
-      .eq("id", roleId)
-      .eq("organization_id", orgId);
-    if (error) this.fail(error.message);
+        ...(patch.isActive !== undefined ? { isActive: patch.isActive } : {}),
+      },
+      context,
+      expectedVersion ?? null,
+    );
   }
 
   async softDelete(
     orgId: string,
     roleId: string,
     actorId: string,
+    context?: AuditMutationContext,
+    expectedVersion?: number,
   ): Promise<void> {
-    const { error } = await this.supabase
-      .admin()
-      .from("custom_roles")
-      .update({
-        is_deleted: true,
-        deleted_at: new Date().toISOString(),
-        deleted_by: actorId,
-        is_active: false,
-      })
-      .eq("id", roleId)
-      .eq("organization_id", orgId);
-    if (error) this.fail(error.message);
+    await this.mutateRole(
+      orgId,
+      actorId,
+      "delete",
+      roleId,
+      {},
+      context,
+      expectedVersion ?? null,
+    );
   }
 
   async overrides(
@@ -146,15 +167,55 @@ export class SupabaseRoleRepository implements RoleRepository {
     orgId: string,
     baseRole: BaseRole,
     permissions: PermissionSet,
+    actorId?: string,
+    context?: AuditMutationContext,
   ): Promise<void> {
-    const { error } = await this.supabase
+    await this.mutateRole(
+      orgId,
+      actorId,
+      "override",
+      null,
+      { baseRole, permissions },
+      context,
+    );
+  }
+
+  private async mutateRole(
+    orgId: string,
+    actorId: string | undefined,
+    operation: "create" | "update" | "delete" | "override",
+    roleId: string | null,
+    payload: Record<string, unknown>,
+    context: AuditMutationContext | undefined,
+    expectedVersion: number | null = null,
+  ): Promise<z.output<typeof mutationResultSchema>> {
+    if (!actorId || !context) throw new RoleRepositoryError("unavailable");
+    const { data, error } = await this.supabase
       .admin()
-      .from("base_role_permission_overrides")
-      .upsert(
-        { organization_id: orgId, base_role: baseRole, permissions },
-        { onConflict: "organization_id,base_role" },
-      );
+      .rpc("m13_01_mutate_role_atomic", {
+        p_organization_id: orgId,
+        p_actor_user_id: actorId,
+        p_operation: operation,
+        // Generated RPC types omit SQL argument nullability; PostgREST accepts null.
+        p_role_id: roleId as string,
+        p_payload: payload as Json,
+        p_expected_version: expectedVersion as number,
+        p_event_key: context.eventKey,
+        p_correlation_id: context.correlationId,
+        p_source_ip: context.sourceIp,
+      });
+    if (error?.message.includes("duplicate key"))
+      throw new RoleRepositoryError("role_name_taken");
     if (error) this.fail(error.message);
+    const parsed = mutationResultSchema.safeParse(data);
+    if (!parsed.success) this.fail("invalid audited mutation result");
+    if (parsed.data.status === "not_found")
+      throw new RoleRepositoryError("role_not_found");
+    if (parsed.data.status === "system")
+      throw new RoleRepositoryError("role_is_system");
+    if (parsed.data.status === "conflict")
+      throw new RoleRepositoryError("conflict");
+    return parsed.data;
   }
 
   private fail(message: string): never {

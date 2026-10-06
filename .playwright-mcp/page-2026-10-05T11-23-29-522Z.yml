@@ -1,0 +1,24 @@
+- generic [active] [ref=f7e1]:
+  - generic [ref=f7e3]:
+    - button "Open navigation" [ref=f7e4] [cursor=pointer]
+    - generic [ref=f7e7]:
+      - banner [ref=f7e8]:
+        - navigation "Breadcrumb" [ref=f7e10]:
+          - list [ref=f7e11]:
+            - listitem [ref=f7e12]:
+              - link "Dashboard" [ref=f7e13] [cursor=pointer]:
+                - /url: /dashboard
+            - listitem [aria-hidden] [ref=f7e14]
+            - listitem [ref=f7e17]:
+              - generic [ref=f7e18]: Organization
+        - generic [ref=f7e19]:
+          - button "Search" [ref=f7e20] [cursor=pointer]
+          - button "Notifications" [ref=f7e24] [cursor=pointer]
+          - 'img "Ada Foster: online" [ref=f7e30]'
+      - main [ref=f7e31]:
+        - generic [ref=f7e32]:
+          - generic [ref=f7e34]:
+            - heading "Organization administration" [level=1] [ref=f7e35]
+            - paragraph [ref=f7e36]: Settings, retention, export, and tenant data lifecycle controls.
+          - paragraph [ref=f7e38]: Create or join an organization before managing tenant settings.
+  - button "Open Next.js Dev Tools" [ref=f7e44] [cursor=pointer]

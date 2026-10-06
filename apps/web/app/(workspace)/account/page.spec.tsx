@@ -33,6 +33,7 @@ vi.mock("../../_providers/session-provider", () => {
         email: "ada@example.com",
         firstName: "Ada",
         lastName: "Lovelace",
+        jobTitle: "Mathematician",
       },
     },
     isLoading: false,
@@ -54,6 +55,9 @@ describe("AccountPage", () => {
       "account-first-name",
     ) as HTMLInputElement;
     await waitFor(() => expect(firstName.value).toBe("Ada"));
+    expect(screen.getByTestId("account-job-title")).toHaveValue(
+      "Mathematician",
+    );
     fireEvent.change(firstName, {
       target: { value: "Augusta" },
     });
@@ -63,14 +67,63 @@ describe("AccountPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
 
     await waitFor(() =>
-      expect(accountApi.updateProfile).toHaveBeenCalledWith({
-        firstName: "Augusta",
-        lastName: "Lovelace",
-        jobTitle: "Programmer",
-      }),
+      expect(accountApi.updateProfile).toHaveBeenCalledWith(
+        {
+          firstName: "Augusta",
+          lastName: "Lovelace",
+          jobTitle: "Programmer",
+        },
+        expect.objectContaining({
+          idempotencyKey: expect.any(String),
+          correlationId: expect.any(String),
+        }),
+      ),
     );
     expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ["session"] });
     expect(screen.getByRole("status").textContent).toContain("Saved.");
+  });
+
+  it("keeps a key for explicit retry and rotates it after an edited profile", async () => {
+    vi.mocked(accountApi.updateProfile)
+      .mockRejectedValueOnce(new ApiClientError("network", "Connection lost"))
+      .mockResolvedValue({ ok: true });
+    render(<AccountPage />);
+    const firstName = screen.getByTestId(
+      "account-first-name",
+    ) as HTMLInputElement;
+    await waitFor(() => expect(firstName.value).toBe("Ada"));
+    fireEvent.change(firstName, { target: { value: "Augusta" } });
+
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+    await waitFor(() =>
+      expect(accountApi.updateProfile).toHaveBeenCalledTimes(1),
+    );
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: "Save changes" }),
+      ).not.toBeDisabled(),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+    await waitFor(() =>
+      expect(accountApi.updateProfile).toHaveBeenCalledTimes(2),
+    );
+
+    const first = vi.mocked(accountApi.updateProfile).mock.calls[0]?.[1];
+    expect(vi.mocked(accountApi.updateProfile).mock.calls[1]?.[1]).toEqual(
+      first,
+    );
+    await waitFor(() =>
+      expect(screen.getByRole("status").textContent).toContain("Saved."),
+    );
+
+    fireEvent.change(firstName, { target: { value: "Ada" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+    await waitFor(() =>
+      expect(accountApi.updateProfile).toHaveBeenCalledTimes(3),
+    );
+    expect(
+      vi.mocked(accountApi.updateProfile).mock.calls[2]?.[1]?.idempotencyKey,
+    ).not.toBe(first?.idempotencyKey);
   });
 
   it("preserves a server-provided profile error", async () => {

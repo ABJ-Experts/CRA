@@ -61,7 +61,20 @@ export type InsertInvitationInput = Readonly<{
   lastName: string | null;
   tokenHash: string;
   expiresAt: string;
+  correlationId: string;
+  sourceIp: string | null;
 }>;
+
+export type CreateInvitationAtomicOutcome =
+  | Readonly<{ outcome: "created"; invitationId: string }>
+  | Readonly<{
+      outcome:
+        | "cannot_invite_self"
+        | "already_member"
+        | "invitation_pending"
+        | "organization_not_found"
+        | "forbidden";
+    }>;
 
 export interface InvitationRepository {
   findExistingUser(email: string): Promise<Readonly<{ id: string }> | null>;
@@ -70,7 +83,13 @@ export interface InvitationRepository {
   insert(
     orgId: string,
     input: InsertInvitationInput,
-  ): Promise<Readonly<{ id: string }>>;
+  ): Promise<CreateInvitationAtomicOutcome>;
+  cancelFailedDeliveryAtomic(
+    orgId: string,
+    invitationId: string,
+    actorId: string,
+    tokenHash: string,
+  ): Promise<"cancelled" | "changed" | "not_found">;
   acceptAtomic(
     tokenHash: string,
     user: InvitationActor,

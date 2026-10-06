@@ -13,12 +13,16 @@ import {
   type PermissionSet,
 } from "@repo/contracts/permissions";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Fragment, useState } from "react";
+import { Fragment, useRef, useState } from "react";
 
 import { SectionCard } from "../../dashboard/_components/dashboard-chrome";
 import { rolesApi, rolesQueryKeys } from "../../_features/roles/roles.api";
 import { ApiClientError } from "../../_lib/http/api-client";
-import { useHasPermission } from "../../_providers/session-provider";
+import { MutationRequestIdentity } from "../../_lib/http/mutation-request-identity";
+import {
+  useHasPermission,
+  useSession,
+} from "../../_providers/session-provider";
 
 /**
  * The base-role permission matrix.
@@ -47,8 +51,10 @@ function effectiveValue(
 
 export default function PermissionsMatrixPage() {
   const canEdit = useHasPermission("can_edit_organization");
+  const { session } = useSession();
   const queryClient = useQueryClient();
   const [saving, setSaving] = useState<BaseRole | null>(null);
+  const requestIdentity = useRef(new MutationRequestIdentity());
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: rolesQueryKeys.overrides,
@@ -67,7 +73,20 @@ export default function PermissionsMatrixPage() {
        */
       const permissions = { ...current, [key]: next };
 
-      await rolesApi.setOverride(role, permissions);
+      const action = JSON.stringify([
+        session?.user.id ?? null,
+        session?.organization?.id ?? null,
+        role,
+        Object.entries(permissions).sort(([left], [right]) =>
+          left.localeCompare(right),
+        ),
+      ]);
+      await rolesApi.setOverride(
+        role,
+        permissions,
+        requestIdentity.current.forAction(action),
+      );
+      requestIdentity.current.clear();
 
       // Invalidate broadly: an override changes the caller's own effective
       // permissions and therefore the sidebar.

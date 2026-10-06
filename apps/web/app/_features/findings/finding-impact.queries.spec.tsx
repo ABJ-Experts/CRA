@@ -76,13 +76,12 @@ describe("finding impact summary query", () => {
       defaultOptions: { queries: { retry: false } },
     });
 
-    renderHook(() => useFindingImpactSummaryQuery(PRODUCT_ID, {}, true), {
+    const { result } = renderHook(() => useFindingImpactSummaryQuery(PRODUCT_ID, {}, true), {
       wrapper: wrapper(queryClient),
     });
 
-    await waitFor(() =>
-      expect(findingImpactApi.getProductSummary).toHaveBeenCalledOnce(),
-    );
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(findingImpactApi.getProductSummary).toHaveBeenCalledOnce();
     expect(findingImpactApi.getProductSummary).toHaveBeenCalledWith(
       PRODUCT_ID,
       {},

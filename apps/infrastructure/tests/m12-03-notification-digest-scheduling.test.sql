@@ -56,6 +56,8 @@ declare
   v_complete record;
   v_batch uuid;
   v_fallback record;
+  v_daily_one uuid;
+  v_daily_two uuid;
 begin
   select id into v_owner from public.users where email='owner@cra.test';
   select id into v_admin from public.users where email='admin@cra.test';
@@ -67,8 +69,8 @@ begin
       timezone='Europe/Berlin',digest_local_time=time '09:00',weekly_day=1,quiet_start=null,quiet_end=null,version=version+1
   where organization_id=v_org and user_id=v_owner;
 
-  perform pg_temp.create_validity_event(v_org,v_owner,v_product,'daily-one');
-  perform pg_temp.create_validity_event(v_org,v_owner,v_product,'daily-two');
+  v_daily_one := pg_temp.create_validity_event(v_org,v_owner,v_product,'daily-one');
+  v_daily_two := pg_temp.create_validity_event(v_org,v_owner,v_product,'daily-two');
   select * into v_bridge from public.bridge_evidence_validity_notification_dispatches_atomic(v_org,100);
   perform pg_temp.check(
     'pending digest work enumerates its organization before any batch exists',
@@ -100,7 +102,8 @@ begin
         or nullif(item->>'date','') is null or nullif(item->>'category','') is null
     )
     and v_complete.outcome='completed'
-    and not exists(select 1 from public.evidence_document_notification_outbox where organization_id=v_org and status<>'sent')
+    and not exists(select 1 from public.evidence_document_notification_outbox
+      where organization_id=v_org and version_id in (v_daily_one,v_daily_two) and status<>'sent')
   );
 
   perform pg_temp.create_validity_event(v_org,v_owner,v_product,'late-one');

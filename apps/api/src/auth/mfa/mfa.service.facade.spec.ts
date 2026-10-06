@@ -10,8 +10,15 @@ const execute = (result: unknown) => ({
 const create = (index: number, result: unknown) => {
   const dependencies = Array.from({ length: 6 }, () => execute(success()));
   dependencies[index] = execute(result);
+  const securityAudit = {
+    beginCritical: jest.fn().mockResolvedValue({}),
+    finishCritical: jest.fn().mockResolvedValue(undefined),
+    recordBestEffort: jest.fn().mockResolvedValue(true),
+  };
   return new MfaService(
-    ...(dependencies as unknown as ConstructorParameters<typeof MfaService>),
+    ...([...dependencies, securityAudit] as unknown as ConstructorParameters<
+      typeof MfaService
+    >),
   );
 };
 const response = async (work: Promise<unknown>) => {
@@ -29,7 +36,7 @@ describe("MfaService compatibility facade", () => {
       create(
         0,
         success({ factorId: "f", qrCode: "q", secret: "s", uri: "u" }),
-      ).enroll("raw"),
+      ).enroll("raw", "u"),
     ).resolves.toMatchObject({ factorId: "f" });
     await expect(
       create(
@@ -85,10 +92,10 @@ describe("MfaService compatibility facade", () => {
 
   it("maps enroll, factor lookup, and unenroll failures", async () => {
     expect(
-      await response(create(0, failed("mfa_enroll_failed")).enroll("raw")),
+      await response(create(0, failed("mfa_enroll_failed")).enroll("raw", "u")),
     ).toMatchObject({ code: "mfa_enroll_failed" });
     expect(
-      await response(create(0, failed("auth_unavailable")).enroll("raw")),
+      await response(create(0, failed("auth_unavailable")).enroll("raw", "u")),
     ).toMatchObject({ code: "auth_unavailable" });
     expect(
       await response(

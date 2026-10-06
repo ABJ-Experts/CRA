@@ -19,6 +19,7 @@ export const sessionUserSchema = z
     username: z.string().nullable(),
     firstName: z.string().nullable(),
     lastName: z.string().nullable(),
+    jobTitle: z.string().nullable(),
     avatarUrl: z.string().nullable(),
     isActive: z.boolean(),
   })

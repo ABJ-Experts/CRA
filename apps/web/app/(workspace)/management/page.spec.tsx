@@ -27,6 +27,12 @@ vi.mock("../../_features/members/members.api", () => ({
 }));
 vi.mock("../../_providers/session-provider", () => ({
   useHasPermission: () => permission.canEdit,
+  useSession: () => ({
+    session: {
+      user: { id: "11111111-1111-4111-8111-111111111111" },
+      organization: { id: "22222222-2222-4222-8222-222222222222" },
+    },
+  }),
 }));
 vi.mock("@repo/ui/select", () => ({
   Select: ({
@@ -113,6 +119,10 @@ describe("ManagementPage", () => {
       expect(membersApi.changeRole).toHaveBeenCalledWith(
         "a05570d6-aa75-4b6a-9688-b5a82eb3a774",
         "admin",
+        expect.objectContaining({
+          idempotencyKey: expect.any(String),
+          correlationId: expect.any(String),
+        }),
       ),
     );
     expect(invalidateQueries).toHaveBeenCalledOnce();
@@ -145,6 +155,26 @@ describe("ManagementPage", () => {
     await waitFor(() =>
       expect(alert).toHaveBeenCalledWith("We could not change that role."),
     );
+  });
+
+  it("keeps one identity across an explicit role-change retry", async () => {
+    vi.spyOn(window, "alert").mockImplementation(() => undefined);
+    vi.mocked(membersApi.changeRole)
+      .mockRejectedValueOnce(new ApiClientError("network", "Connection lost"))
+      .mockResolvedValueOnce({ ok: true });
+    render(<ManagementPage />);
+
+    fireEvent.click(screen.getByRole("button"));
+    await waitFor(() => expect(membersApi.changeRole).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(screen.getByRole("button")).not.toBeDisabled());
+    fireEvent.click(screen.getByRole("button"));
+
+    await waitFor(() => expect(membersApi.changeRole).toHaveBeenCalledTimes(2));
+    const first = vi.mocked(membersApi.changeRole).mock.calls[0]?.[2];
+    const retry = vi.mocked(membersApi.changeRole).mock.calls[1]?.[2];
+    expect(retry).toEqual(first);
+    expect(first?.correlationId).toBe(first?.idempotencyKey);
+    await waitFor(() => expect(invalidateQueries).toHaveBeenCalledOnce());
   });
 
   it("still renders a role tag when the caller cannot edit", () => {

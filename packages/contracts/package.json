@@ -286,6 +286,14 @@
     "./system/types": {
       "types": "./dist/system/types/index.d.ts",
       "default": "./dist/system/types/index.js"
+    },
+    "./audit/schemas": {
+      "types": "./dist/audit/schemas/index.d.ts",
+      "default": "./dist/audit/schemas/index.js"
+    },
+    "./audit/types": {
+      "types": "./dist/audit/types/index.d.ts",
+      "default": "./dist/audit/types/index.js"
     }
   },
   "files": [

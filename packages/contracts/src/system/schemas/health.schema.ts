@@ -11,5 +11,6 @@ export const readinessResponseSchema = z
   .object({
     status: z.enum(["ok", "degraded"]),
     database: z.boolean(),
+    audit: z.boolean(),
   })
   .strict();

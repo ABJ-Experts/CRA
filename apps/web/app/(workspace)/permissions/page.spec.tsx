@@ -26,6 +26,12 @@ vi.mock("../../_features/roles/roles.api", async () => {
 });
 vi.mock("../../_providers/session-provider", () => ({
   useHasPermission: () => true,
+  useSession: () => ({
+    session: {
+      user: { id: "11111111-1111-4111-8111-111111111111" },
+      organization: { id: "22222222-2222-4222-8222-222222222222" },
+    },
+  }),
 }));
 
 function renderPage() {
@@ -62,11 +68,42 @@ describe("PermissionsMatrixPage", () => {
     fireEvent.click(checkbox);
 
     await waitFor(() =>
-      expect(rolesApi.setOverride).toHaveBeenCalledWith("owner", {
-        can_view_users: false,
-      }),
+      expect(rolesApi.setOverride).toHaveBeenCalledWith(
+        "owner",
+        {
+          can_view_users: false,
+        },
+        expect.objectContaining({
+          idempotencyKey: expect.any(String),
+          correlationId: expect.any(String),
+        }),
+      ),
     );
     expect(rolesApi.getOverrides).toHaveBeenCalled();
     expect(invalidate).toHaveBeenCalled();
+  });
+
+  it("reuses a permission-change identity after a network timeout", async () => {
+    vi.spyOn(window, "alert").mockImplementation(() => undefined);
+    vi.mocked(rolesApi.getOverrides).mockResolvedValue({
+      overrides: { owner: { can_view_users: true } },
+    });
+    vi.mocked(rolesApi.setOverride)
+      .mockRejectedValueOnce(new Error("Connection lost"))
+      .mockResolvedValueOnce({ ok: true });
+    renderPage();
+
+    const checkbox = await screen.findByRole("checkbox", {
+      name: "view users for owner",
+    });
+    fireEvent.click(checkbox);
+    await waitFor(() => expect(rolesApi.setOverride).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(checkbox).not.toBeDisabled());
+    fireEvent.click(checkbox);
+    await waitFor(() => expect(rolesApi.setOverride).toHaveBeenCalledTimes(2));
+
+    expect(vi.mocked(rolesApi.setOverride).mock.calls[1]?.[2]).toEqual(
+      vi.mocked(rolesApi.setOverride).mock.calls[0]?.[2],
+    );
   });
 });

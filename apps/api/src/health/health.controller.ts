@@ -12,6 +12,7 @@ import { Public } from "../auth/auth.types";
 import { ZodResponse } from "../common/http/zod-response.interceptor";
 import { ReportingDeadlineMonitorHealthUseCases } from "../reporting/application/reporting-deadline-monitor-health.port";
 import { SupabaseService } from "../supabase/supabase.service";
+import { AuditService } from "../audit/audit.service";
 
 /**
  * Liveness and readiness.
@@ -30,6 +31,7 @@ export class HealthController {
   constructor(
     private readonly supabase: SupabaseService,
     private readonly reportingDeadlineMonitor: ReportingDeadlineMonitorHealthUseCases,
+    private readonly audit: AuditService,
   ) {}
 
   @Get()
@@ -45,9 +47,13 @@ export class HealthController {
     const reportingMonitor = database
       ? await this.reportingDeadlineMonitor.isReady().catch(() => false)
       : false;
+    const audit = database
+      ? await this.audit.isReady().catch(() => false)
+      : false;
     return {
-      status: database && reportingMonitor ? "ok" : "degraded",
+      status: database && reportingMonitor && audit ? "ok" : "degraded",
       database,
+      audit,
     };
   }
 }

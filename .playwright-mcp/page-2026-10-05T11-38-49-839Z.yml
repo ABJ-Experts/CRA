@@ -1,0 +1,33 @@
+- generic [active] [ref=f11e1]:
+  - generic [ref=f11e3]:
+    - button "Open navigation" [ref=f11e4] [cursor=pointer]
+    - generic [ref=f11e7]:
+      - banner [ref=f11e8]:
+        - navigation "Breadcrumb" [ref=f11e10]:
+          - list [ref=f11e11]:
+            - listitem [ref=f11e12]:
+              - link "Dashboard" [ref=f11e13] [cursor=pointer]:
+                - /url: /dashboard
+            - listitem [aria-hidden] [ref=f11e14]
+            - listitem [ref=f11e17]:
+              - generic [ref=f11e18]: Security
+        - generic [ref=f11e19]:
+          - button "Search" [ref=f11e20] [cursor=pointer]
+          - button "Notifications" [ref=f11e24] [cursor=pointer]
+          - 'img "Ada Foster: online" [ref=f11e30]'
+      - main [ref=f11e31]:
+        - generic [ref=f11e32]:
+          - generic [ref=f11e33]:
+            - heading "Security" [level=1] [ref=f11e34]
+            - paragraph [ref=f11e35]: Add a second step to sign-in using an authenticator app.
+          - generic [ref=f11e38]:
+            - generic [ref=f11e39]:
+              - generic [ref=f11e40]:
+                - paragraph [ref=f11e41]: Two-factor authentication
+                - paragraph [ref=f11e42]: Checking…
+              - generic [ref=f11e43]: "Off"
+            - button "Set up two-factor" [ref=f11e47] [cursor=pointer]
+          - generic [ref=f11e48]:
+            - heading "Vulnerability intelligence" [level=2] [ref=f11e50]
+            - status [ref=f11e52]: Checking access to vulnerability intelligence…
+  - button "Open Next.js Dev Tools" [ref=f11e58] [cursor=pointer]

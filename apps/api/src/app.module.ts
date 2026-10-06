@@ -3,6 +3,7 @@ import { ConfigModule } from "@nestjs/config";
 import { ThrottlerModule } from "@nestjs/throttler";
 
 import { AuthModule } from "./auth/auth.module";
+import { AuditModule } from "./audit/audit.module";
 import { HttpBoundaryModule } from "./common/http/http-boundary.module";
 import { ConnectorsModule } from "./connectors/connectors.module";
 import { SecurityModule } from "./common/security/security.module";
@@ -54,6 +55,7 @@ import { NotificationsModule } from "./notifications/notifications.module";
     SupabaseModule,
     MailModule,
     AuthModule,
+    AuditModule,
     PermissionsModule,
     ProductsModule,
     ReportingModule,

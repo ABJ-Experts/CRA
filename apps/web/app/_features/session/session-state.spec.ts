@@ -110,6 +110,7 @@ describe("deriveSessionState", () => {
         username: null,
         firstName: null,
         lastName: null,
+        jobTitle: null,
         avatarUrl: null,
         isActive: true,
       },

@@ -35,7 +35,6 @@ function fixture() {
     accept as never,
     revoke as never,
     list as never,
-    { log: auditLog } as never,
   );
   return { accept, auditLog, create, list, resend, revoke, service };
 }

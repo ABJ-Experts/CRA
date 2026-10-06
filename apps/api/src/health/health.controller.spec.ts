@@ -10,6 +10,7 @@ describe("HealthController", () => {
     const controller = new HealthController(
       { ping: jest.fn() } as never,
       { isReady: jest.fn().mockResolvedValue(true) } as never,
+      { isReady: jest.fn().mockResolvedValue(true) } as never,
     );
 
     expect(controller.liveness()).toEqual({ status: "ok", uptime: 43 });
@@ -23,9 +24,14 @@ describe("HealthController", () => {
     const controller = new HealthController(
       { ping } as never,
       { isReady: jest.fn().mockResolvedValue(true) } as never,
+      { isReady: jest.fn().mockResolvedValue(true) } as never,
     );
 
-    await expect(controller.readiness()).resolves.toEqual({ status, database });
+    await expect(controller.readiness()).resolves.toEqual({
+      status,
+      database,
+      audit: database,
+    });
     expect(ping).toHaveBeenCalledTimes(1);
   });
 
@@ -33,11 +39,27 @@ describe("HealthController", () => {
     const controller = new HealthController(
       { ping: jest.fn().mockResolvedValue(true) } as never,
       { isReady: jest.fn().mockResolvedValue(false) } as never,
+      { isReady: jest.fn().mockResolvedValue(true) } as never,
     );
 
     await expect(controller.readiness()).resolves.toEqual({
       status: "degraded",
       database: true,
+      audit: true,
+    });
+  });
+
+  it("degrades readiness when audit capture is unavailable", async () => {
+    const controller = new HealthController(
+      { ping: jest.fn().mockResolvedValue(true) } as never,
+      { isReady: jest.fn().mockResolvedValue(true) } as never,
+      { isReady: jest.fn().mockResolvedValue(false) } as never,
+    );
+
+    await expect(controller.readiness()).resolves.toEqual({
+      status: "degraded",
+      database: true,
+      audit: false,
     });
   });
 });

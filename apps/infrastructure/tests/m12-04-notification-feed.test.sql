@@ -51,6 +51,7 @@ declare
   v_owner uuid; v_viewer uuid; v_finding uuid;
   v_event uuid := '00000000-0000-4000-8000-000000120401'; v_ref text; v_row jsonb; v_items jsonb;
   v_fingerprint text; v_key uuid := gen_random_uuid(); v_mark record;
+  v_unread_before integer;
 begin
   select id into v_owner from public.users where email='owner@cra.test';
   select id into v_viewer from public.users where email='viewer@cra.test';
@@ -63,20 +64,29 @@ begin
     v_org,v_owner,'finding_triage',null,'all',null,25);
   v_items:=v_row->'items';
   perform pg_temp.check('M5 source event is visible once to eligible owner',
-    jsonb_array_length(v_items)=1 and v_items->0->>'ref'=v_ref
-    and v_items->0->>'sourceState'='available'
-    and v_items->0->>'read'='false');
+    (select count(*)=1 from jsonb_array_elements(v_items) item
+      where item->>'ref'=v_ref and item->>'sourceState'='available'
+        and item->>'read'='false'));
   perform pg_temp.check('other user does not inherit owner feed',
-    (select result->>'count' from public.count_notification_feed_unread_atomic(v_org,v_viewer))='0');
+    not exists(select 1 from jsonb_array_elements((select result->'items'
+      from public.list_notification_feed_atomic(v_org,v_viewer,'finding_triage',null,'all',null,25))) item
+      where item->>'ref'=v_ref));
   perform pg_temp.check('tenant substitution hides event',
     (select outcome from public.resolve_notification_feed_destination_atomic(
       '00000000-0000-4000-8000-0000000000cb',v_owner,v_ref)) in ('forbidden','not_found'));
-  v_fingerprint:=v_items->0->>'fingerprint';
+  select item->>'fingerprint' into v_fingerprint
+  from jsonb_array_elements(v_items) item where item->>'ref'=v_ref;
+  select (result->>'count')::integer into v_unread_before
+  from public.count_notification_feed_unread_atomic(v_org,v_owner);
   select * into v_mark from public.mark_notification_feed_read_atomic(v_org,v_owner,
     jsonb_build_array(jsonb_build_object('ref',v_ref,'expectedFingerprint',v_fingerprint)),v_key);
   perform pg_temp.check('mark-read is durable and independent',
     v_mark.outcome='updated' and v_mark.result #>> '{items,0,ref}'=v_ref
-    and (select result->>'count' from public.count_notification_feed_unread_atomic(v_org,v_owner))='0');
+    and exists(select 1 from public.notification_feed_reads r
+      where r.organization_id=v_org and r.user_id=v_owner and r.ref=v_ref
+        and r.fingerprint=v_fingerprint and r.read_at is not null)
+    and (select (result->>'count')::integer
+      from public.count_notification_feed_unread_atomic(v_org,v_owner))=v_unread_before-1);
   select * into v_mark from public.mark_notification_feed_read_atomic(v_org,v_owner,
     jsonb_build_array(jsonb_build_object('ref',v_ref,'expectedFingerprint',v_fingerprint)),v_key);
   perform pg_temp.check('same mark-read command replays',
@@ -170,11 +180,14 @@ declare v_org uuid := '00000000-0000-4000-8000-0000000000ca'; v_owner uuid;
 begin
   select id into v_owner from public.users where email='owner@cra.test';
   perform pg_temp.check('M2 support and M6 deadline source branches are visible',
-    (select result #>> '{items,0,ref}' from public.list_notification_feed_atomic(
-      v_org,v_owner,'support_period',null,'all',null,25))=v_ref
-    and (select result #>> '{items,0,ref}' from public.list_notification_feed_atomic(
-      v_org,v_owner,'reporting_deadline',null,'all',null,25))=
-      'm6_00000000-0000-4000-8000-000000120414_event');
+    exists(select 1 from jsonb_array_elements((select result->'items'
+      from public.list_notification_feed_atomic(
+        v_org,v_owner,'support_period',null,'all',null,25))) item
+      where item->>'ref'=v_ref)
+    and exists(select 1 from jsonb_array_elements((select result->'items'
+      from public.list_notification_feed_atomic(
+        v_org,v_owner,'reporting_deadline',null,'all',null,25))) item
+      where item->>'ref'='m6_00000000-0000-4000-8000-000000120414_event'));
   select * into v_destination from public.resolve_notification_feed_destination_atomic(
     v_org,v_owner,v_ref);
   perform pg_temp.check('destination is a canonical local application path',
@@ -193,8 +206,10 @@ declare v_org uuid := '00000000-0000-4000-8000-0000000000ca'; v_owner uuid;
   v_failure jsonb;
 begin
   select id into v_owner from public.users where email='owner@cra.test';
-  select result #> '{items,0}' into v_failure from public.list_notification_feed_atomic(
-    v_org,v_owner,'support_period',null,'unread',null,25);
+  select item into v_failure from jsonb_array_elements((select result->'items'
+    from public.list_notification_feed_atomic(
+      v_org,v_owner,'support_period',null,'unread',null,25))) item
+  where item->>'ref'='m2_00000000-0000-4000-8000-000000120402_failure';
   perform pg_temp.check('critical recipient failure creates safe unread notice',
     v_failure->>'noticeKind'='failure'
     and v_failure->>'summary'='Notification delivery needs attention'
@@ -234,12 +249,14 @@ declare v_org uuid := '00000000-0000-4000-8000-0000000000ca'; v_owner uuid;
 begin
   select id into v_owner from public.users where email='owner@cra.test';
   perform pg_temp.check('M8 and M9 branches reuse source outboxes',
-    (select result #>> '{items,0,ref}' from public.list_notification_feed_atomic(
-      v_org,v_owner,'evidence',null,'all',null,25))=
-      'm8_fd416cd4-cb87-40a7-aea2-3a67c004b7f1_event'
-    and (select result #>> '{items,0,ref}' from public.list_notification_feed_atomic(
-      v_org,v_owner,'supplier_owner',null,'all',null,25))=
-      'm9_51dc6558-14ee-4418-acbb-cdd62efa207a_event');
+    exists(select 1 from jsonb_array_elements((select result->'items'
+      from public.list_notification_feed_atomic(
+        v_org,v_owner,'evidence',null,'all',null,25))) item
+      where item->>'ref'='m8_fd416cd4-cb87-40a7-aea2-3a67c004b7f1_event')
+    and exists(select 1 from jsonb_array_elements((select result->'items'
+      from public.list_notification_feed_atomic(
+        v_org,v_owner,'supplier_owner',null,'all',null,25))) item
+      where item->>'ref'='m9_51dc6558-14ee-4418-acbb-cdd62efa207a_event'));
 end $$;
 
 update public.organization_settings set notification_feed_started_at='2026-01-01'

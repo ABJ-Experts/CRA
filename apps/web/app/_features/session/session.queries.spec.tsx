@@ -22,6 +22,7 @@ const session = {
     username: "person",
     firstName: "Pat",
     lastName: "Example",
+    jobTitle: "Engineer",
     avatarUrl: null,
     isActive: true,
   },

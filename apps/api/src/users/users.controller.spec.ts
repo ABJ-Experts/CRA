@@ -58,10 +58,18 @@ describe("UsersController", () => {
     const { controller, users } = fixture();
     const patch = { firstName: "Ada", language: "en" };
 
-    await expect(controller.updateMe(patch, "owner-1")).resolves.toEqual({
+    await expect(controller.updateMe(patch, user)).resolves.toEqual({
       ok: true,
     });
-    expect(users.updateProfile).toHaveBeenCalledWith("owner-1", patch);
+    expect(users.updateProfile).toHaveBeenCalledWith(
+      "owner-1",
+      patch,
+      "org-1",
+      expect.objectContaining({
+        eventKey: expect.any(String) as string,
+        correlationId: expect.any(String) as string,
+      }),
+    );
   });
 
   it("changes role and active state for a validated member id", async () => {
@@ -78,12 +86,20 @@ describe("UsersController", () => {
       { id: "owner-1", email: "owner@cra.test" },
       memberId,
       "admin",
+      expect.objectContaining({
+        eventKey: expect.any(String) as string,
+        correlationId: expect.any(String) as string,
+      }),
     );
     expect(users.setActive).toHaveBeenCalledWith(
       "org-1",
       { id: "owner-1", email: "owner@cra.test" },
       memberId,
       false,
+      expect.objectContaining({
+        eventKey: expect.any(String) as string,
+        correlationId: expect.any(String) as string,
+      }),
     );
   });
 
@@ -97,6 +113,50 @@ describe("UsersController", () => {
       "org-1",
       { id: "owner-1", email: "owner@cra.test" },
       memberId,
+      expect.objectContaining({
+        eventKey: expect.any(String) as string,
+        correlationId: expect.any(String) as string,
+      }),
+    );
+  });
+
+  it("validates request identity headers and records the trusted request address", async () => {
+    const { controller, users } = fixture();
+    const eventKey = "11111111-1111-4111-8111-111111111111";
+    const correlationId = "22222222-2222-4222-8222-222222222222";
+    await expect(
+      controller.changeRole(
+        { id: memberId },
+        { role: "admin" },
+        user,
+        "invalid",
+        correlationId,
+      ),
+    ).rejects.toMatchObject({ response: { code: "invalid_audit_identity" } });
+    await expect(
+      controller.changeRole(
+        { id: memberId },
+        { role: "admin" },
+        user,
+        eventKey,
+        "invalid",
+      ),
+    ).rejects.toMatchObject({ response: { code: "invalid_audit_identity" } });
+    expect(users.changeRole).not.toHaveBeenCalled();
+    await controller.changeRole(
+      { id: memberId },
+      { role: "admin" },
+      user,
+      eventKey,
+      correlationId,
+      { ip: "127.0.0.1" } as never,
+    );
+    expect(users.changeRole).toHaveBeenCalledWith(
+      "org-1",
+      { id: "owner-1", email: "owner@cra.test" },
+      memberId,
+      "admin",
+      { eventKey, correlationId, sourceIp: "127.0.0.1" },
     );
   });
 

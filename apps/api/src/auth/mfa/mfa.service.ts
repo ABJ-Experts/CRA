@@ -14,6 +14,12 @@ import {
   UnenrollMfaUseCase,
   VerifyMfaUseCase,
 } from "../application/auth-use-cases";
+import {
+  AuthSecurityAudit,
+  type AuthAuditContext,
+} from "../application/auth-security-audit";
+
+class MfaRecoveryOutcomeUncertainError extends Error {}
 
 @Injectable()
 export class MfaService {
@@ -26,9 +32,79 @@ export class MfaService {
     private readonly recoverMfa: RecoverMfaUseCase,
     private readonly hasMfa: HasVerifiedMfaQuery,
     private readonly unenrollMfa: UnenrollMfaUseCase,
+    private readonly securityAudit: AuthSecurityAudit,
   ) {}
 
-  async enroll(accessToken: string): Promise<{
+  private async critical<T>(
+    action: string,
+    userId: string,
+    context: AuthAuditContext | undefined,
+    work: () => Promise<T>,
+  ): Promise<T> {
+    let attempt;
+    try {
+      attempt = await this.securityAudit.beginCritical(action, userId, context);
+    } catch {
+      throw new ServiceUnavailableException({
+        message:
+          "This security action is temporarily unavailable. Please try again.",
+        code: "audit_unavailable",
+      });
+    }
+    let result: T;
+    try {
+      result = await work();
+    } catch (error) {
+      if (error instanceof MfaRecoveryOutcomeUncertainError) {
+        throw new ServiceUnavailableException({
+          message:
+            "The security action outcome needs review. Please contact support.",
+          code: "audit_outcome_uncertain",
+        });
+      }
+      try {
+        await this.securityAudit.finishCritical(
+          attempt,
+          "failed",
+          "operation_failed",
+        );
+      } catch {
+        throw new ServiceUnavailableException({
+          message:
+            "The security action outcome needs review. Please contact support.",
+          code: "audit_outcome_uncertain",
+        });
+      }
+      throw error;
+    }
+    try {
+      await this.securityAudit.finishCritical(attempt, "completed", null);
+    } catch {
+      throw new ServiceUnavailableException({
+        message:
+          "The security action outcome needs review. Please contact support.",
+        code: "audit_outcome_uncertain",
+      });
+    }
+    return result;
+  }
+
+  async enroll(
+    accessToken: string,
+    userId: string,
+    context?: AuthAuditContext,
+  ): Promise<{
+    factorId: string;
+    qrCode: string;
+    secret: string;
+    uri: string;
+  }> {
+    return this.critical("auth.mfa_enroll", userId, context, () =>
+      this.enrollCore(accessToken),
+    );
+  }
+
+  private async enrollCore(accessToken: string): Promise<{
     factorId: string;
     qrCode: string;
     secret: string;
@@ -48,6 +124,21 @@ export class MfaService {
   }
 
   async confirmEnrollment(
+    accessToken: string,
+    userId: string,
+    factorId: string,
+    code: string,
+    context?: AuthAuditContext,
+  ): Promise<{
+    recoveryCodes: string[];
+    tokens: { access_token: string; refresh_token: string };
+  }> {
+    return this.critical("auth.mfa_confirm", userId, context, () =>
+      this.confirmCore(accessToken, userId, factorId, code),
+    );
+  }
+
+  private async confirmCore(
     accessToken: string,
     userId: string,
     factorId: string,
@@ -95,8 +186,16 @@ export class MfaService {
     accessToken: string,
     userId: string,
     code: string,
+    context?: AuthAuditContext,
   ): Promise<{ access_token: string; refresh_token: string }> {
     const result = await this.verifyMfa.execute({ accessToken, userId, code });
+    void this.securityAudit.recordBestEffort(
+      "auth.mfa_challenge",
+      result.ok ? "completed" : "denied",
+      userId,
+      context,
+      result.ok ? null : result.error.code,
+    );
     if (result.ok)
       return {
         access_token: result.value.accessToken,
@@ -132,6 +231,17 @@ export class MfaService {
     userId: string,
     authUserId: string,
     code: string,
+    context?: AuthAuditContext,
+  ): Promise<void> {
+    return this.critical("auth.mfa_recovery", userId, context, () =>
+      this.redeemRecoveryCodeCore(userId, authUserId, code),
+    );
+  }
+
+  private async redeemRecoveryCodeCore(
+    userId: string,
+    authUserId: string,
+    code: string,
   ): Promise<void> {
     const result = await this.recoverMfa.execute({ userId, authUserId, code });
     if (result.ok) return;
@@ -140,6 +250,8 @@ export class MfaService {
         message: "That recovery code is not valid.",
         code: result.error.code,
       });
+    if (result.error.code === "mfa_recovery_uncertain")
+      throw new MfaRecoveryOutcomeUncertainError();
     this.logger.error(
       `MFA recovery failed for user ${userId} with sanitized code auth_unavailable`,
     );
@@ -160,6 +272,17 @@ export class MfaService {
   }
 
   async unenroll(
+    accessToken: string,
+    userId: string,
+    factorId: string,
+    context?: AuthAuditContext,
+  ): Promise<void> {
+    return this.critical("auth.mfa_unenroll", userId, context, () =>
+      this.unenrollCore(accessToken, userId, factorId),
+    );
+  }
+
+  private async unenrollCore(
     accessToken: string,
     userId: string,
     factorId: string,

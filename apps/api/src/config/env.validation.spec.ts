@@ -59,7 +59,23 @@ describe("environment validation", () => {
       VULNERABILITY_VEX_PUBLICATION_LEASE_SECONDS: 120,
       BRANDING_SCANNER_STRICT: false,
       AI_OLLAMA_TIMEOUT_MS: 30_000,
+      TRUSTED_PROXY_ADDRESSES: [],
     });
+  });
+
+  it("accepts only explicit proxy IP addresses", () => {
+    expect(
+      validateEnv({
+        ...required,
+        TRUSTED_PROXY_ADDRESSES: "127.0.0.1, ::1",
+      }).TRUSTED_PROXY_ADDRESSES,
+    ).toEqual(["127.0.0.1", "::1"]);
+    expect(() =>
+      validateEnv({ ...required, TRUSTED_PROXY_ADDRESSES: "0.0.0.0/0" }),
+    ).toThrow("TRUSTED_PROXY_ADDRESSES");
+    expect(() =>
+      validateEnv({ ...required, TRUSTED_PROXY_ADDRESSES: "localhost" }),
+    ).toThrow("TRUSTED_PROXY_ADDRESSES");
   });
 
   it("keeps AI unavailable by default and accepts only a versioned loopback provider", () => {
