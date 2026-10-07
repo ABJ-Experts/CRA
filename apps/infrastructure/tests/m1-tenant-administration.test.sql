@@ -899,6 +899,14 @@ begin
   update public.organization_purge_jobs set purge_after = now() - interval '1 second',
     available_at = now() - interval '1 second' where organization_id = v_org;
   select * into v_job from public.claim_organization_purge_atomic(v_org, gen_random_uuid(), 60);
+  perform pg_temp.check('M13 archival protection blocks new purge claims', v_job.outcome='blocked');
+  -- Simulate a lease acquired before chain activation. The completion path must
+  -- still preserve all newly observed controlling reasons, not just archival.
+  update public.organization_purge_jobs set status='running',
+    lease_owner=v_session,lease_expires_at=now()+interval '1 minute'
+    where id=v_job.purge_job_id;
+  update public.organization_lifecycles set status='purging' where organization_id=v_org;
+  v_job.lease_owner:=v_session;
   perform public.reconcile_organization_retention_atomic(
     v_org, v_owner, 'legal_hold', true,
     jsonb_build_array(jsonb_build_object(
@@ -941,12 +949,14 @@ end
 $$;
 rollback;
 
--- Deletion-proof survival needs an organization that is actually deleted. The
--- whole block is still rolled back after proving the proof/work rows outlive it.
+-- New physical purges are blocked by M13. Preserve coverage of legacy
+-- post-deletion artifact queues using a historical proof fixture, without
+-- deleting the newly created tenant or bypassing its append-only ledger.
 begin;
 do $$
 declare
   v_owner uuid;
+  v_deleted_org uuid:=gen_random_uuid();
   v_org uuid;
   v_session uuid := '24000000-0000-4000-8000-000000000001';
   v_grant record;
@@ -978,7 +988,12 @@ begin
   update public.organization_purge_jobs set purge_after = now() - interval '1 second',
     available_at = now() - interval '1 second' where organization_id = v_org;
   select * into v_job from public.claim_organization_purge_atomic(v_org, gen_random_uuid(), 60);
-  perform pg_temp.check('purge claim rechecks authoritative retention and leases eligible work', v_job.outcome = 'claimed');
+  perform pg_temp.check('purge claim requires archival even with complete retention authorities',
+    v_job.outcome='blocked' and v_job.blocked_reasons @> '[{"kind":"audit_archival","code":"audit_archival_required"}]'::jsonb);
+  -- Legacy lease fixture independently checks expiry fencing and completion.
+  update public.organization_purge_jobs set status='running',lease_owner=v_session where id=v_job.purge_job_id;
+  update public.organization_lifecycles set status='purging' where organization_id=v_org;
+  v_job.lease_owner:=v_session;
   update public.organization_purge_jobs set lease_expires_at = now() - interval '1 second'
     where id = v_job.purge_job_id;
   select * into v_fail from public.fail_organization_purge_atomic(
@@ -992,14 +1007,18 @@ begin
   update public.organization_purge_jobs set lease_expires_at = now() + interval '1 minute'
     where id = v_job.purge_job_id;
   select * into v_result from public.complete_organization_purge_atomic(v_org, v_job.purge_job_id, v_job.lease_owner, 0);
-  v_proof := v_result.deletion_proof_id;
   perform pg_temp.check(
-    'purge writes minimal proof and artifact work before deleting tenant rows',
-    v_result.outcome = 'purged'
-    and not exists (select 1 from public.organizations where id = v_org)
-    and exists (select 1 from public.organization_deletion_proofs where id = v_proof and deleted_organization_id = v_org)
-    and exists (select 1 from public.organization_deletion_artifact_work where deletion_proof_id = v_proof)
+    'M13 completion preserves tenant evidence and creates no deletion proof',
+    v_result.outcome='blocked' and v_result.deletion_proof_id is null
+    and exists(select 1 from public.organizations where id=v_org)
+    and not exists(select 1 from public.organization_deletion_proofs where deleted_organization_id=v_org)
   );
+  insert into public.organization_deletion_proofs(deleted_organization_id,organization_slug_digest,
+    purge_job_id,lifecycle_version,database_deleted_at)
+    values(v_deleted_org,repeat('a',64),gen_random_uuid(),1,now()) returning id into v_proof;
+  insert into public.organization_deletion_artifact_work(deletion_proof_id,bucket_id,object_prefix)
+    values(v_proof,'tenant-exports',v_deleted_org::text||'/');
+  -- The existing proof trigger enqueues organization-branding independently.
   select * into v_artifact_work from public.claim_organization_deletion_artifact_work_atomic(
     v_artifact_lease_one, 60
   );
@@ -1049,7 +1068,7 @@ begin
            from public.organization_deletion_artifact_work
           where deletion_proof_id = v_proof)
         = array['organization-branding', 'tenant-exports']::text[]
-    and not exists (select 1 from public.organizations where id = v_org)
+    and not exists (select 1 from public.organizations where id = v_deleted_org)
   );
 end
 $$;

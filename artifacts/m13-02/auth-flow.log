@@ -1,0 +1,47 @@
+auth flow e2e — e2e1791276048@cra.test
+sign up
+  ok   sign-up returns 201
+  ok   sign-up routes to verify
+  ok   access cookie set
+  ok   refresh cookie set
+  ok   pending cookie set
+  ok   refresh cookie path-scoped
+weak password rejected
+  ok   weak password rejected
+duplicate email rejected
+  ok   duplicate email rejected
+email verification
+  ok   otp email delivered
+  ok   wrong otp rejected
+  ok   correct otp accepted
+  ok   otp is single-use
+session
+  ok   session readable
+  ok   session is the right user
+sign in
+  ok   wrong password rejected
+  ok   sign-in succeeds
+  ok   sign-in routes to dashboard
+  ok   sign-in by username works
+lock-screen lockout
+  ok   wrong unlock attempt 1 rejected
+  ok   wrong unlock attempt 2 rejected
+  ok   wrong unlock attempt 3 rejected
+  ok   wrong unlock attempt 4 rejected
+  ok   wrong unlock attempt 5 rejected
+  ok   locked account cannot unlock with correct password
+  ok   unlock reports account_locked
+enumeration resistance
+  ok   forgot-password hides unknown address
+  ok   forgot-password hides known address identically
+auth required
+  ok   session requires auth
+  ok   sign-out requires auth
+sign out revokes the live token
+  ok   sign-out succeeds
+  ok   previously valid token now rejected
+  ok   rejected with session_revoked
+lockout
+  ok   account locked after repeated failures
+
+passed 33, failed 0

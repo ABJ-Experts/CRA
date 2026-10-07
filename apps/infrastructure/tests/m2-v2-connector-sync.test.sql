@@ -476,7 +476,12 @@ begin
   );
   delete from public.organization_members where organization_id = v_other_org and user_id = v_actor;
   delete from public.connectors where organization_id = v_other_org;
-  delete from public.organizations where id = v_other_org;
+  -- Cross-tenant fixture audit evidence survives mutable connector cleanup.
+  begin
+    delete from public.organizations where id = v_other_org;
+    raise exception 'tenant deletion unexpectedly bypassed audit archival';
+  exception when foreign_key_violation then null;
+  end;
 
   -- --- Sync run: begin -> connector-exclusivity -> save plan -> conflict -> resolve -> commit -> cursor advance ---
   select * into v_run from public.begin_sync_run_atomic(v_org, v_connector_id, v_actor, 'incremental', gen_random_uuid(), gen_random_uuid());

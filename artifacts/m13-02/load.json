@@ -1,0 +1,92 @@
+{
+  "database": "m13_test_restore_20261006_v2",
+  "measurement": "PostgreSQL psql execution timing; not end-to-end API latency or process-memory measurement",
+  "payload": "20 legacy-format redacted events per transaction with 256-byte description",
+  "scenarios": [
+    {
+      "name": "same_tenant",
+      "organizations": [
+        "ebc978a0-d9e1-40bd-a410-da9361eb6f58"
+      ],
+      "writers": 12,
+      "transactions": 120,
+      "events": 2400,
+      "events_per_transaction": 20,
+      "elapsed_seconds": 0.975,
+      "events_per_second_including_client_startup": 2460.55,
+      "insert_plus_commit": {
+        "samples": 120,
+        "p50_ms": 71.342,
+        "p95_ms": 127.264,
+        "p99_ms": 142.596,
+        "max_ms": 148.239,
+        "mean_ms": 79.479
+      },
+      "commit_finalizer": {
+        "samples": 120,
+        "p50_ms": 69.9,
+        "p95_ms": 121.763,
+        "p99_ms": 139.227,
+        "max_ms": 140.807,
+        "mean_ms": 76.978
+      },
+      "integrity": "2400|t|t"
+    },
+    {
+      "name": "independent_tenants",
+      "organizations": [
+        "e8ce3f64-a9a0-4141-8a89-0a0f6ca6d36f",
+        "5ccb3330-f3b0-438b-9f33-c81d2e21fcb3",
+        "72ae1591-2977-47f2-bd52-b90cef45d389",
+        "08b7c3ae-c342-47c3-85c1-a0e811a247f3",
+        "098182d9-2b62-4404-97c2-84ba122a477d",
+        "143e10ee-ccea-4c03-97b4-a7eee772bdf6",
+        "7fbadc96-60cc-4f41-896a-1393b41feed1",
+        "7937008a-afbd-4ef8-98c2-4938673d9df7",
+        "5b3e0227-e416-4357-8f61-be9856b884a3",
+        "2e86975e-20f7-4bd3-92ba-2198dc27a70f",
+        "e28beaee-e0f8-484c-bcd8-6a4b73d9c769",
+        "bc486cd3-c625-4a16-9c01-5d3458e49be0"
+      ],
+      "writers": 12,
+      "transactions": 120,
+      "events": 2400,
+      "events_per_transaction": 20,
+      "elapsed_seconds": 0.459,
+      "events_per_second_including_client_startup": 5234.17,
+      "insert_plus_commit": {
+        "samples": 120,
+        "p50_ms": 24.275,
+        "p95_ms": 42.341,
+        "p99_ms": 74.601,
+        "max_ms": 88.042,
+        "mean_ms": 26.567
+      },
+      "commit_finalizer": {
+        "samples": 120,
+        "p50_ms": 19.333,
+        "p95_ms": 33.028,
+        "p99_ms": 47.952,
+        "max_ms": 75.951,
+        "mean_ms": 20.822
+      },
+      "integrity": "2400|t|t"
+    }
+  ],
+  "verification": {
+    "organization_id": "ebc978a0-d9e1-40bd-a410-da9361eb6f58",
+    "page_limit": 1000,
+    "upper_sequence": "2400",
+    "response_bytes": 2154099,
+    "response_cap_bytes": 16777216,
+    "latency": {
+      "samples": 20,
+      "p50_ms": 243.579,
+      "p95_ms": 336.303,
+      "p99_ms": 2762.497,
+      "max_ms": 2762.497,
+      "mean_ms": 375.006
+    }
+  },
+  "cleanup": "No audit rows were deleted. Fixture organizations exist only in the disposable database; drop that database after review."
+}

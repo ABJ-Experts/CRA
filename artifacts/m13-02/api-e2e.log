@@ -1,0 +1,10 @@
+
+> api@0.0.1 test:e2e /Users/abjmac003/Documents/GitHub/CRA/apps/api
+> jest --config ./test/jest-e2e.json
+
+
+Test Suites: 4 passed, 4 total
+Tests:       10 passed, 10 total
+Snapshots:   0 total
+Time:        4.321 s, estimated 6 s
+Ran all test suites.

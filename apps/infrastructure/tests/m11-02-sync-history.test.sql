@@ -103,10 +103,14 @@ begin
  perform pg_temp.check('drift recovery is full and fresh manual dry run',v_result.outcome='queued' and v_result.run->>'reconciliationKind'='full' and v_result.run->>'cursorFrom' is null);
  perform pg_temp.check('replay batch root is flat across generations',(select replay_root_run_id=v_run from public.sync_runs where id=(v_result.run->>'id')::uuid));
  set constraints m1102_record_counts_check immediate;
- delete from public.organizations where id=v_org;
+ begin
+  delete from public.organizations where id=v_org;
+  raise exception 'tenant deletion unexpectedly bypassed audit archival';
+ exception when foreign_key_violation then null;
+ end;
  set constraints all immediate;
- perform pg_temp.check('tenant purge cascades across replay lineage and attempts',not exists(select 1 from public.sync_runs where organization_id=v_org)
- and not exists(select 1 from public.sync_run_attempts where organization_id=v_org));
+ perform pg_temp.check('audit archival protection retains replay lineage and attempts',exists(select 1 from public.sync_runs where organization_id=v_org)
+ and exists(select 1 from public.sync_run_attempts where organization_id=v_org));
 
 end $$;
 rollback;

@@ -42,6 +42,12 @@ export const organizationLifecycleFailureBlockerSchema = z.discriminatedUnion(
 export const organizationLifecycleBlockerSchema = z.union([
   organizationLifecycleControllingBlockerSchema,
   organizationLifecycleFailureBlockerSchema,
+  z
+    .object({
+      kind: z.literal("audit_archival"),
+      code: z.literal("audit_archival_required"),
+    })
+    .strict(),
 ]);
 
 const organizationLifecycleFieldsSchema = z

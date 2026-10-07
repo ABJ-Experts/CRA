@@ -178,7 +178,7 @@ begin
     'completed',gen_random_uuid(),null,null,null,null,null,v_actor);
   delete from public.users where id=v_actor;
   perform pg_temp.check('deleted actor keeps stable pseudonymous identity',
-    (select user_id is null and actor_id=v_actor::text and actor_type='user'
+    (select user_id=v_actor and actor_id=v_actor::text and actor_type='user'
        from public.audit_logs where id=v_event.audit_id));
 end $$;
 

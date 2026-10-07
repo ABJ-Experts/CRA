@@ -1,0 +1,2 @@
+DO
+PASS: isolated restore preserves canonical bytes, links, sequences and heads (m13_test_restore_20261006_v2)

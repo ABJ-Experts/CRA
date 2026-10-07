@@ -13,6 +13,12 @@ import {
 } from "./tenant-export-capacity";
 
 describe("tenant export archive", () => {
+  it("exports tenant chain activation and heads alongside retained audit rows", () => {
+    expect(
+      exportSourceRegistry.find((source) => source.sourceId === "audit_logs")
+        ?.tables,
+    ).toEqual(["audit_logs", "audit_chain_heads"]);
+  });
   it("creates a deterministic stored ZIP and hashes exact file bytes", () => {
     const archive = buildStoredZip([
       {

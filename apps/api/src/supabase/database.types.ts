@@ -103,6 +103,56 @@ export type Database = {
           },
         ]
       }
+      audit_chain_heads: {
+        Row: {
+          activation_at: string
+          last_event_id: string | null
+          last_hash: string
+          last_sequence: number
+          legacy_count: number
+          legal_hold: boolean
+          organization_id: string
+          protected_through: string | null
+          required_retention_days: number
+          retention_checked_at: string | null
+          retention_status: string
+        }
+        Insert: {
+          activation_at?: string
+          last_event_id?: string | null
+          last_hash?: string
+          last_sequence?: number
+          legacy_count: number
+          legal_hold?: boolean
+          organization_id: string
+          protected_through?: string | null
+          required_retention_days?: number
+          retention_checked_at?: string | null
+          retention_status?: string
+        }
+        Update: {
+          activation_at?: string
+          last_event_id?: string | null
+          last_hash?: string
+          last_sequence?: number
+          legacy_count?: number
+          legal_hold?: boolean
+          organization_id?: string
+          protected_through?: string | null
+          required_retention_days?: number
+          retention_checked_at?: string | null
+          retention_status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_chain_heads_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_logs: {
         Row: {
           action: string
@@ -111,7 +161,11 @@ export type Database = {
           actor_type: string | null
           after_redacted: Json | null
           before_redacted: Json | null
+          canonical_content: string | null
+          chain_sequence: number | null
+          chain_version: number | null
           changes: Json | null
+          content_hash: string | null
           correlation_id: string | null
           created_at: string
           entity_id: string | null
@@ -122,6 +176,7 @@ export type Database = {
           ip_address: unknown
           organization_id: string | null
           outcome: string | null
+          previous_hash: string | null
           reason: string | null
           redaction_version: number | null
           schema_version: number
@@ -135,7 +190,11 @@ export type Database = {
           actor_type?: string | null
           after_redacted?: Json | null
           before_redacted?: Json | null
+          canonical_content?: string | null
+          chain_sequence?: number | null
+          chain_version?: number | null
           changes?: Json | null
+          content_hash?: string | null
           correlation_id?: string | null
           created_at?: string
           entity_id?: string | null
@@ -146,6 +205,7 @@ export type Database = {
           ip_address?: unknown
           organization_id?: string | null
           outcome?: string | null
+          previous_hash?: string | null
           reason?: string | null
           redaction_version?: number | null
           schema_version?: number
@@ -159,7 +219,11 @@ export type Database = {
           actor_type?: string | null
           after_redacted?: Json | null
           before_redacted?: Json | null
+          canonical_content?: string | null
+          chain_sequence?: number | null
+          chain_version?: number | null
           changes?: Json | null
+          content_hash?: string | null
           correlation_id?: string | null
           created_at?: string
           entity_id?: string | null
@@ -170,6 +234,7 @@ export type Database = {
           ip_address?: unknown
           organization_id?: string | null
           outcome?: string | null
+          previous_hash?: string | null
           reason?: string | null
           redaction_version?: number | null
           schema_version?: number
@@ -182,13 +247,6 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "audit_logs_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
@@ -30012,6 +30070,47 @@ export type Database = {
           p_source_ip: unknown
         }
         Returns: Json
+      }
+      m13_02_audit_chain_page: {
+        Args: {
+          p_after_sequence: string
+          p_limit: number
+          p_organization_id: string
+          p_upper_sequence: string
+        }
+        Returns: Json
+      }
+      m13_02_audit_chain_snapshot: {
+        Args: { p_organization_id: string }
+        Returns: Json
+      }
+      m13_02_audit_lock_key: {
+        Args: { p_organization_id: string }
+        Returns: number
+      }
+      m13_02_canonical_content: {
+        Args: {
+          p_row: Database["public"]["Tables"]["audit_logs"]["Row"]
+          p_sequence: number
+        }
+        Returns: string
+      }
+      m13_02_canonical_json: { Args: { p_value: Json }; Returns: string }
+      m13_02_refresh_audit_retention_atomic: {
+        Args: { p_organization_id: string }
+        Returns: {
+          outcome: string
+        }[]
+      }
+      m13_02_store_audit_retention: {
+        Args: {
+          p_legal_hold: boolean
+          p_organization_id: string
+          p_protected_through: string
+          p_required_days: number
+          p_status: string
+        }
+        Returns: undefined
       }
       m2_active_member: {
         Args: { p_actor_user_id: string; p_organization_id: string }

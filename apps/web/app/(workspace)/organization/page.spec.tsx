@@ -1131,6 +1131,32 @@ describe("OrganizationAdministrationPage", () => {
     expect(refetch).toHaveBeenCalledOnce();
   });
 
+  it("explains the audit archival blocker without exposing event content", async () => {
+    queries.useOrganizationLifecycleQuery.mockReturnValue(
+      okQuery({
+        lifecycle: {
+          ...LIFECYCLE.lifecycle,
+          status: "purge_blocked",
+          blockers: [
+            { kind: "audit_archival", code: "audit_archival_required" },
+          ],
+        },
+      }),
+    );
+    render(<OrganizationAdministrationPage />);
+    await openOrganizationWorkspace("Tenant lifecycle");
+    expect(
+      screen.getByText(
+        "Audit evidence requires approved archival before organization deletion.",
+      ),
+    ).toBeVisible();
+    expect(
+      screen.getByText(
+        "Purge remains blocked until approved audit archival and all listed protections are resolved.",
+      ),
+    ).toBeVisible();
+  });
+
   it("labels lifecycle instants as UTC when the organization has not configured a timezone", async () => {
     queries.useOrganizationSettingsQuery.mockReturnValue(
       okQuery({

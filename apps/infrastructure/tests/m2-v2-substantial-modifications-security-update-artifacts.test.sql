@@ -982,27 +982,31 @@ begin
   );
   -- This is an existing M1 restrictive relationship, not M2 evidence. The
   -- run-scoped cleanup removes this exact mutable assignment before the
-  -- organization cascade, while M2's append-only rows remain untouched.
+  -- archival-blocked deletion, while M2's append-only rows remain untouched.
   delete from public.product_legal_entity_assignments
   where organization_id = v_org;
   -- Product-import staging remains mutable service-role state. Its restrictive
   -- product/release references must be removed before the exact tenant cascade.
   delete from public.product_import_rows where organization_id = v_org;
   delete from public.product_import_jobs where organization_id = v_org;
-  delete from public.organizations where id = v_org;
+  begin
+    delete from public.organizations where id = v_org;
+    raise exception 'tenant deletion unexpectedly bypassed audit archival';
+  exception when foreign_key_violation then null;
+  end;
   set constraints all immediate;
   perform pg_temp.check(
-    'exact organization deletion atomically cascades M2 evidence after hold clearance',
-    not exists (select 1 from public.organizations where id = v_org)
-    and not exists (
+    'audit archival protection retains M2 evidence after hold clearance',
+    exists (select 1 from public.organizations where id = v_org)
+    and exists (
       select 1 from public.product_substantial_modification_assessments
       where organization_id = v_org
     )
-    and not exists (
+    and exists (
       select 1 from public.product_substantial_modification_releases
       where organization_id = v_org
     )
-    and not exists (
+    and exists (
       select 1 from public.product_security_update_artifacts
       where organization_id = v_org
     )

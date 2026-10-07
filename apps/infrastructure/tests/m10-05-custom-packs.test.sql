@@ -252,8 +252,14 @@ select public.m10_import_framework_pack(pg_temp.document('Purge fixture') || jso
   'sourceKind','customer_defined','organizationId',id)) from m10_purge_ctx;
 insert into public.organization_framework_selections(organization_id,pack_key,version_key,enabled,revision)
 select id,'custom.'||pack_id::text,'v1',true,1 from m10_purge_ctx;
-delete from public.organizations where id=(select id from m10_purge_ctx);
-select ok(not exists(select 1 from public.framework_pack_versions p join m10_purge_ctx c
-  on p.pack_key='custom.'||c.pack_id::text),'tenant purge removes owned immutable content');
+do $$ begin
+ begin
+  delete from public.organizations where id=(select id from m10_purge_ctx);
+  raise exception 'tenant deletion unexpectedly bypassed audit archival';
+ exception when foreign_key_violation then null;
+ end;
+end $$;
+select ok(exists(select 1 from public.framework_pack_versions p join m10_purge_ctx c
+  on p.pack_key='custom.'||c.pack_id::text),'audit archival protection retains owned immutable content');
 select * from finish();
 rollback;

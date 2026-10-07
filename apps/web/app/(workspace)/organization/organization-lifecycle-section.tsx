@@ -29,6 +29,9 @@ function labelize(value: string): string {
 }
 
 function blockerText(blocker: OrganizationLifecycle["blockers"][number]) {
+  if (blocker.kind === "audit_archival") {
+    return "Audit evidence requires approved archival before organization deletion.";
+  }
   if (blocker.kind === "unavailable" || blocker.kind === "worker_failure") {
     return labelize(blocker.code);
   }
@@ -155,8 +158,12 @@ export function OrganizationLifecycleSection({
             Current lifecycle: {labelize(lifecycle.status)}
           </p>
           <p className="text-caption-1-regular text-fg-muted">
-            Version {lifecycle.version}. Changed {" "}
-            {formatOrganizationInstant(lifecycle.changedAt, organizationTimezone)}.
+            Version {lifecycle.version}. Changed{" "}
+            {formatOrganizationInstant(
+              lifecycle.changedAt,
+              organizationTimezone,
+            )}
+            .
           </p>
           {lifecycle.blockers.length > 0 ? (
             <ul className="mt-2 list-disc pl-5 text-caption-1-regular text-danger">
@@ -197,8 +204,8 @@ export function OrganizationLifecycleSection({
             </form>
             <div className="rounded-xl border border-danger p-4">
               <p className="mb-3 text-subhead-regular text-fg">
-                High-friction confirmations are enforced by the server. Type
-                the exact text requested for the action after reauthentication.
+                High-friction confirmations are enforced by the server. Type the
+                exact text requested for the action after reauthentication.
               </p>
               {lifecycle.status === "active" ? (
                 <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto]">
@@ -228,7 +235,9 @@ export function OrganizationLifecycleSection({
                   <Input
                     label="Purge confirmation"
                     value={purgeConfirmation}
-                    onChange={(event) => setPurgeConfirmation(event.target.value)}
+                    onChange={(event) =>
+                      setPurgeConfirmation(event.target.value)
+                    }
                     placeholder={requiredPurgeConfirmation}
                     disabled={busy}
                     autoCapitalize="none"
@@ -274,11 +283,15 @@ export function OrganizationLifecycleSection({
               ) : null}
               {lifecycle.status === "purge_blocked" ? (
                 <p className="text-caption-1-regular text-danger">
-                  Purge remains blocked until every listed retention obligation
-                  or legal hold is resolved.
+                  {lifecycle.blockers.some(
+                    (blocker) => blocker.kind === "audit_archival",
+                  )
+                    ? "Purge remains blocked until approved audit archival and all listed protections are resolved."
+                    : "Purge remains blocked until every listed retention obligation or legal hold is resolved."}
                 </p>
               ) : null}
-              {lifecycle.status === "purging" || lifecycle.status === "purged" ? (
+              {lifecycle.status === "purging" ||
+              lifecycle.status === "purged" ? (
                 <p className="text-caption-1-regular text-fg-muted">
                   Tenant restoration is unavailable after purging begins.
                 </p>
