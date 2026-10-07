@@ -151,6 +151,108 @@ export type Database = {
           },
         ]
       }
+      audit_export_jobs: {
+        Row: {
+          artifact: Json | null
+          attempts: number
+          created_at: string
+          download_expires_at: string | null
+          download_grant_digest: string | null
+          download_grant_version: number
+          download_session_id: string | null
+          expires_at: string | null
+          failure_code: string | null
+          filter_digest: string
+          filters: Json
+          format: string
+          high_water_sequence: number
+          id: string
+          lease_expires_at: string | null
+          organization_id: string
+          request_id: string
+          requester_id: string
+          scope_digest: string
+          scope_version: number
+          selected_event_ids: string[]
+          snapshot_receipt_id: string
+          state: string
+          updated_at: string
+          version: number
+          worker_id: string | null
+        }
+        Insert: {
+          artifact?: Json | null
+          attempts?: number
+          created_at?: string
+          download_expires_at?: string | null
+          download_grant_digest?: string | null
+          download_grant_version?: number
+          download_session_id?: string | null
+          expires_at?: string | null
+          failure_code?: string | null
+          filter_digest: string
+          filters: Json
+          format: string
+          high_water_sequence: number
+          id?: string
+          lease_expires_at?: string | null
+          organization_id: string
+          request_id: string
+          requester_id: string
+          scope_digest: string
+          scope_version: number
+          selected_event_ids?: string[]
+          snapshot_receipt_id: string
+          state?: string
+          updated_at?: string
+          version?: number
+          worker_id?: string | null
+        }
+        Update: {
+          artifact?: Json | null
+          attempts?: number
+          created_at?: string
+          download_expires_at?: string | null
+          download_grant_digest?: string | null
+          download_grant_version?: number
+          download_session_id?: string | null
+          expires_at?: string | null
+          failure_code?: string | null
+          filter_digest?: string
+          filters?: Json
+          format?: string
+          high_water_sequence?: number
+          id?: string
+          lease_expires_at?: string | null
+          organization_id?: string
+          request_id?: string
+          requester_id?: string
+          scope_digest?: string
+          scope_version?: number
+          selected_event_ids?: string[]
+          snapshot_receipt_id?: string
+          state?: string
+          updated_at?: string
+          version?: number
+          worker_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_export_jobs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audit_export_jobs_snapshot_receipt_id_fkey"
+            columns: ["snapshot_receipt_id"]
+            isOneToOne: false
+            referencedRelation: "audit_logs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_logs: {
         Row: {
           action: string
@@ -30109,6 +30211,240 @@ export type Database = {
           p_status: string
         }
         Returns: undefined
+      }
+      m13_03_actor_can: {
+        Args: {
+          p_actor_user_id: string
+          p_organization_id: string
+          p_permission: string
+        }
+        Returns: boolean
+      }
+      m13_03_assert_snapshot: {
+        Args: {
+          p_actor_user_id: string
+          p_filter_digest: string
+          p_filters: Json
+          p_organization_id: string
+          p_receipt_id: string
+          p_scope_digest: string
+        }
+        Returns: {
+          action: string
+          actor_email: string | null
+          actor_id: string | null
+          actor_type: string | null
+          after_redacted: Json | null
+          before_redacted: Json | null
+          canonical_content: string | null
+          chain_sequence: number | null
+          chain_version: number | null
+          changes: Json | null
+          content_hash: string | null
+          correlation_id: string | null
+          created_at: string
+          entity_id: string | null
+          entity_type: string | null
+          event_key: string | null
+          event_scope: string | null
+          id: string
+          ip_address: unknown
+          organization_id: string | null
+          outcome: string | null
+          previous_hash: string | null
+          reason: string | null
+          redaction_version: number | null
+          schema_version: number
+          user_agent: string | null
+          user_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "audit_logs"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      m13_03_claim_export: { Args: { p_worker_id: string }; Returns: Json }
+      m13_03_create_export: {
+        Args: {
+          p_actor_user_id: string
+          p_filter_digest: string
+          p_filters: Json
+          p_format: string
+          p_organization_id: string
+          p_receipt_id: string
+          p_request_id: string
+          p_scope_digest: string
+        }
+        Returns: Json
+      }
+      m13_03_create_snapshot: {
+        Args: {
+          p_actor_user_id: string
+          p_filter_digest: string
+          p_organization_id: string
+          p_request_id: string
+          p_scope_digest: string
+        }
+        Returns: Json
+      }
+      m13_03_event_json: {
+        Args: { p_event: Database["public"]["Tables"]["audit_logs"]["Row"] }
+        Returns: Json
+      }
+      m13_03_event_visible: {
+        Args: {
+          p_actor_user_id: string
+          p_event: Database["public"]["Tables"]["audit_logs"]["Row"]
+          p_organization_id: string
+        }
+        Returns: boolean
+      }
+      m13_03_event_visible_cached: {
+        Args: {
+          p_actor_user_id: string
+          p_event: Database["public"]["Tables"]["audit_logs"]["Row"]
+          p_organization_id: string
+          p_permissions: Json
+        }
+        Returns: boolean
+      }
+      m13_03_export_audit: {
+        Args: {
+          p_action: string
+          p_job: Database["public"]["Tables"]["audit_export_jobs"]["Row"]
+          p_request_id: string
+        }
+        Returns: undefined
+      }
+      m13_03_get_export: {
+        Args: {
+          p_actor_user_id: string
+          p_job_id: string
+          p_organization_id: string
+          p_request_id?: string
+        }
+        Returns: Json
+      }
+      m13_03_issue_download_grant: {
+        Args: {
+          p_actor_user_id: string
+          p_digest: string
+          p_job_id: string
+          p_organization_id: string
+          p_request_id: string
+          p_session_id: string
+        }
+        Returns: Json
+      }
+      m13_03_matches_filters: {
+        Args: {
+          p_event: Database["public"]["Tables"]["audit_logs"]["Row"]
+          p_filters: Json
+        }
+        Returns: boolean
+      }
+      m13_03_permission_snapshot: {
+        Args: { p_actor_user_id: string; p_organization_id: string }
+        Returns: Json
+      }
+      m13_03_read_detail: {
+        Args: {
+          p_actor_user_id: string
+          p_allowed_entity_types: string[]
+          p_event_id: string
+          p_filter_digest: string
+          p_filters: Json
+          p_organization_id: string
+          p_receipt_id: string
+          p_scope_digest: string
+        }
+        Returns: Json
+      }
+      m13_03_read_export_events: {
+        Args: {
+          p_export_job_id: string
+          p_limit: number
+          p_offset: number
+          p_organization_id: string
+          p_worker_id: string
+        }
+        Returns: Json
+      }
+      m13_03_read_page: {
+        Args: {
+          p_actor_user_id: string
+          p_after_created_at: string
+          p_after_id: string
+          p_after_sequence: string
+          p_allowed_entity_types: string[]
+          p_filter_digest: string
+          p_filters: Json
+          p_limit: number
+          p_organization_id: string
+          p_receipt_id: string
+          p_scope_digest: string
+        }
+        Returns: Json
+      }
+      m13_03_read_projection: { Args: { p_value: Json }; Returns: Json }
+      m13_03_record_access: {
+        Args: {
+          p_action: string
+          p_actor_user_id: string
+          p_operation_digest: string
+          p_organization_id: string
+          p_receipt_id: string
+          p_request_id: string
+        }
+        Returns: Json
+      }
+      m13_03_record_denial: {
+        Args: {
+          p_actor_user_id: string
+          p_operation_digest: string
+          p_organization_id: string
+          p_request_id: string
+        }
+        Returns: Json
+      }
+      m13_03_redeem_download_grant: {
+        Args: {
+          p_actor_user_id: string
+          p_digest: string
+          p_job_id: string
+          p_organization_id: string
+          p_request_id: string
+          p_session_id: string
+        }
+        Returns: Json
+      }
+      m13_03_transition_export: {
+        Args: {
+          p_artifact: Json
+          p_expected_version: number
+          p_failure_code: string
+          p_job_id: string
+          p_next_state: string
+          p_organization_id: string
+          p_selected_ids: string[]
+          p_worker_id: string
+        }
+        Returns: Json
+      }
+      m13_03_verify_events: {
+        Args: {
+          p_actor_user_id: string
+          p_allowed_entity_types: string[]
+          p_event_ids: string[]
+          p_filter_digest: string
+          p_filters: Json
+          p_organization_id: string
+          p_receipt_id: string
+          p_scope_digest: string
+        }
+        Returns: Json
       }
       m2_active_member: {
         Args: { p_actor_user_id: string; p_organization_id: string }

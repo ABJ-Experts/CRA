@@ -424,6 +424,8 @@ export const exportSourceExclusions: Readonly<Record<string, string>> =
       "Transient immutable copies of registered sources; exporting them would duplicate and recursively re-export tenant records.",
     organization_export_artifact_snapshots:
       "Internal export copy ledger; the archive includes its source metadata and verified bytes without recursively exporting the ledger.",
+    audit_export_jobs:
+      "Audit export leases, replay identities, private artifacts and delivery grants are deployment-local workflow security state; durable audit evidence exports separately.",
     notification_digest_batches:
       "Frozen digest worker batches contain deployment-local lease and replay state; dispatch evidence exports separately.",
     organization_legal_entity_create_idempotencies:

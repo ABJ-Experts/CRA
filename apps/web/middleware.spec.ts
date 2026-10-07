@@ -291,6 +291,7 @@ describe("middleware integration", () => {
     ["/roles", "/roles"],
     ["/permissions", "/permissions"],
     ["/notifications?read=unread", "/notifications?read=unread"],
+    ["/audit", "/audit"],
     ["/onboarding?stage=organization", "/onboarding?stage=organization"],
   ] as const)(
     "protects the canonical customer path %s",

@@ -12,6 +12,10 @@
       {
         "include": "findings/exports/assets/**/*",
         "outDir": "dist"
+      },
+      {
+        "include": "audit/worker/verify.mjs",
+        "outDir": "dist"
       }
     ]
   }

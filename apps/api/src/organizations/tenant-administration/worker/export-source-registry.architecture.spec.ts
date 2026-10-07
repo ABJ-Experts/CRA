@@ -89,6 +89,16 @@ const dynamicSnapshotLockAdditions = (sql: string): readonly string[] =>
   );
 
 describe("tenant export source registry architecture", () => {
+  it("keeps audit export leases and delivery grants deployment-local", () => {
+    expect(exportSourceExclusions).toHaveProperty("audit_export_jobs");
+    expect(exportSourceExclusions.audit_export_jobs).toMatch(
+      /lease|grant|deployment/i,
+    );
+    expect(
+      exportSourceRegistry.flatMap((source) => source.tables),
+    ).not.toContain("audit_export_jobs");
+  });
+
   it("exports safe connector attempt history with the connector source", () => {
     const connectorSource = exportSourceRegistry.find(
       (source) => source.sourceId === "connector_sync",

@@ -54,7 +54,10 @@ do $$ declare v_org uuid:='00000000-0000-4000-8000-0000000000ca'; v_start bigint
  perform pg_temp.check('actor deletion leaves immutable snapshot',(select user_id=v_actor and chain_sequence is not null from public.audit_logs where organization_id=v_org and action='test.chain.actor_deleted'));
  begin update public.audit_logs set action='forged' where id=v_first.id; raise exception 'update accepted'; exception when insufficient_privilege then null; end;
  begin delete from public.audit_logs where id=v_first.id; raise exception 'delete accepted'; exception when insufficient_privilege then null; end;
- begin truncate public.audit_logs; raise exception 'truncate accepted'; exception when insufficient_privilege then null; end;
+ -- Include the new referencing workflow explicitly so the immutable-audit
+ -- trigger is exercised rather than PostgreSQL's FK precheck. No CASCADE; the
+ -- expected denial and outer rollback preserve all retained rows.
+ begin truncate public.audit_export_jobs, public.audit_logs; raise exception 'truncate accepted'; exception when insufficient_privilege then null; end;
  begin insert into public.audit_logs(organization_id,action,chain_sequence) values(v_org,'forged',999); raise exception 'metadata accepted'; exception when check_violation then null; end;
  begin insert into public.audit_logs(organization_id,action,created_at) values(v_org,'invalid.timestamp','infinity'); raise exception 'infinite accepted'; exception when check_violation then null; end;
  perform pg_temp.check('page bounded and serialized sequence',jsonb_typeof(public.m13_02_audit_chain_page(v_org,v_start::text,(v_start+2)::text,1))='array' and public.m13_02_audit_chain_page(v_org,v_start::text,(v_start+2)::text,1)->0->>'chain_sequence'=(v_start+1)::text);
@@ -67,7 +70,7 @@ set local role service_role;
 do $$ begin
  begin update public.audit_logs set action='forged' where false; raise exception 'service update accepted'; exception when insufficient_privilege then null; end;
  begin delete from public.audit_logs where false; raise exception 'service delete accepted'; exception when insufficient_privilege then null; end;
- begin truncate public.audit_logs; raise exception 'service truncate accepted'; exception when insufficient_privilege then null; end;
+ begin truncate public.audit_export_jobs, public.audit_logs; raise exception 'service truncate accepted'; exception when insufficient_privilege then null; end;
  begin perform public.m13_02_finalize_audit_chain(); raise exception 'indirect finalizer accepted'; exception when insufficient_privilege then null; end;
 end $$;
 reset role;

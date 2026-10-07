@@ -1,0 +1,3 @@
+sequence,event_id,created_at,legacy,actor_type,actor_id,actor_label,action,resource_type,resource_id,correlation_id,outcome,before,after,reason
+"426","385bcbf6-94dd-4c0a-ae77-cdc36d392b9b","2026-10-07T07:24:35.600589Z","false","user","8ac0984e-e236-46a5-9e3d-5b31aa4e6221","","organization.audit_export_verification_fixture","organization","00000000-0000-4000-8000-0000000000ca","5fcd46e7-db35-41be-89ac-dd85548c07ca","completed","","{""count"":3,""enabled"":true}",""
+

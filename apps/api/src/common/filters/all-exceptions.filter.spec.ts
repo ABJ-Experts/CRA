@@ -203,6 +203,31 @@ describe("AllExceptionsFilter", () => {
     },
   );
 
+  it("removes audit opaque path segments and query values from logs", () => {
+    const status = jest.fn().mockReturnThis();
+    const json = jest.fn();
+    const response = { status, json };
+    const host = {
+      switchToHttp: () => ({
+        getRequest: () => ({
+          method: "GET",
+          originalUrl:
+            "/api/v1/audit/searches/opaque.snapshot.token/events?cursor=secret&requestId=44444444-4444-4444-8444-444444444444",
+        }),
+        getResponse: () => response,
+      }),
+    } as unknown as ArgumentsHost;
+
+    new AllExceptionsFilter().catch(
+      new HttpException({ message: "Not found", code: "not_found" }, 404),
+      host,
+    );
+
+    expect(warn).toHaveBeenCalledWith(
+      "GET /api/v1/audit/searches/:snapshotToken/events -> 404 not_found",
+    );
+  });
+
   it("sanitizes and stringifies a non-Error thrown value", () => {
     const { filter, host, json } = fixture();
 

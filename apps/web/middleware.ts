@@ -36,6 +36,7 @@ const PROTECTED = [
   "/roles",
   "/permissions",
   "/notifications",
+  "/audit",
   "/onboarding",
 ];
 

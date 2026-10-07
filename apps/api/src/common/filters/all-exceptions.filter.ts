@@ -49,6 +49,15 @@ function isSafeServerErrorCode(
   return value === "unavailable" || value === "malformed_provider";
 }
 
+function logUrl(request: Request): string {
+  const originalUrl = request.originalUrl ?? request.url ?? "";
+  if (!originalUrl.startsWith("/api/v1/audit")) return originalUrl;
+
+  return originalUrl
+    .split("?", 1)[0]!
+    .replace(/^(\/api\/v1\/audit\/searches\/)[^/]+/, "$1:snapshotToken");
+}
+
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
   private readonly logger = new Logger(AllExceptionsFilter.name);
@@ -97,7 +106,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
     if (status >= HttpStatus.INTERNAL_SERVER_ERROR) {
       const safeServerCode = isSafeServerErrorCode(code) ? code : undefined;
       this.logger.error(
-        `${req.method} ${req.originalUrl} -> ${status}`,
+        `${req.method} ${logUrl(req)} -> ${status}`,
         exception instanceof Error ? exception.stack : String(exception),
       );
       message = "Something went wrong. Please try again.";
@@ -111,7 +120,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
        * typed is a second copy of the credential.
        */
       this.logger.warn(
-        `${req.method} ${req.originalUrl} -> ${status} ${code ?? ""}`,
+        `${req.method} ${logUrl(req)} -> ${status} ${code ?? ""}`,
       );
     }
 

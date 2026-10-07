@@ -23,6 +23,7 @@ export const MENU_KEYS = [
   "authorization",
   "authorization.roles",
   "authorization.permissions",
+  "audit",
 ] as const;
 
 export type MenuKey = (typeof MENU_KEYS)[number];
@@ -56,6 +57,7 @@ export const MENU_PERMISSION_MAP: Readonly<
   authorization: null,
   "authorization.roles": "can_view_roles",
   "authorization.permissions": "can_view_roles",
+  audit: "can_view_audit",
 };
 
 /** Group key -> child keys, used to hide an empty group. */

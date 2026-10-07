@@ -3215,6 +3215,46 @@
           "symbol": "record_vulnerability_finding_human_verdict_atomic"
         }
       ]
+    },
+    {
+      "id": "apps/api/src/audit/audit-explorer.controller.ts#AuditExplorerController.createExport:POST:audit/exports",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261007055032_m13_03_audit_explorer_exports.sql",
+          "symbol": "m13_03_create_export"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/audit/audit-explorer.controller.ts#AuditExplorerController.downloadGrant:POST:audit/exports/:jobId/download-grants",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261007055032_m13_03_audit_explorer_exports.sql",
+          "symbol": "m13_03_issue_download_grant"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/audit/audit-explorer.controller.ts#AuditExplorerController.search:POST:audit/searches",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261007055032_m13_03_audit_explorer_exports.sql",
+          "symbol": "m13_03_create_snapshot"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/audit/audit-explorer.controller.ts#AuditExplorerController.verify:POST:audit/searches/:snapshotToken/verify",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261007055032_m13_03_audit_explorer_exports.sql",
+          "symbol": "m13_03_record_access"
+        }
+      ]
     }
   ],
   "workers": [
@@ -3587,6 +3627,17 @@
           "evidence": "apps/api/src/vulnerabilities/infrastructure/supabase-vulnerability-triage-alert-queue.ts",
           "symbol": "claim_vulnerability_triage_alert",
           "note": "The worker claim is a transient lease; the tenant-scoped job or delivery ledger records durable state and outcomes."
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/audit/worker/audit-export-worker.ts",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261007055032_m13_03_audit_explorer_exports.sql",
+          "symbol": "m13_03_transition_export",
+          "note": "Leased generation is operational; scoped transitions synchronously append durable audit evidence."
         }
       ]
     }
