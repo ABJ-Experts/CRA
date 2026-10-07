@@ -426,6 +426,8 @@ export const exportSourceExclusions: Readonly<Record<string, string>> =
       "Internal export copy ledger; the archive includes its source metadata and verified bytes without recursively exporting the ledger.",
     audit_export_jobs:
       "Audit export leases, replay identities, private artifacts and delivery grants are deployment-local workflow security state; durable audit evidence exports separately.",
+    audit_verification_jobs:
+      "Audit range verification leases, authorization snapshots, dataset identities and cryptographic cursors are deployment-local workflow security state; durable audit evidence exports separately.",
     notification_digest_batches:
       "Frozen digest worker batches contain deployment-local lease and replay state; dispatch evidence exports separately.",
     organization_legal_entity_create_idempotencies:

@@ -198,6 +198,14 @@ test("fails when a semantic worker has no registration", async (t) => {
   );
 });
 
+test("range verification worker requires a durable authority", async (t) => {
+  const root = await fixture(t, { routes: [operation], workers: [], rpcs: [] });
+  const worker = "apps/api/src/audit/range/audit-range-worker.ts";
+  await mkdir(dirname(join(root, worker)), { recursive: true });
+  await writeFile(join(root, worker), "export class AuditRangeWorker {}\n");
+  assert.match((await verifyAuditOperationCoverage(root)).join("\n"), /unregistered worker/);
+});
+
 test("the repository mutation surface is fully registered", async () => {
   assert.deepEqual(await verifyAuditOperationCoverage(process.cwd()), []);
 });

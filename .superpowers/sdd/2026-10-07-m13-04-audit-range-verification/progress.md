@@ -1,0 +1,22 @@
+docs/superpowers/plans/2026-10-07-m13-04-audit-range-verification.md
+
+# Execution ledger
+
+Baseline: milestone-1, cbcb296ea95b8a5d54e12718faf7654348b1f0e2. Changes remain uncommitted; existing audit bytes, unrelated sites and historical migration discrepancies are preserved.
+
+| Slice                | Owner            | Status                                                                     | Evidence                                                                                                                                                                       |
+| -------------------- | ---------------- | -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Contracts            | m13_04_contracts | Complete; independent review and precision corrections                     | Observed RED/GREEN; 17 focused tests; 100/97.91/100/100 coverage; build/lint passed                                                                                            |
+| Database             | m13_04_database  | Five additive migrations applied to confirmed local CRA; reviewed          | One persistent table; 26 live/local function definitions aligned; 109 ledger entries; 440 historic discrepancies untouched; SQL/RLS/transaction fixtures passed                |
+| Engine               | m13_04_engine    | Complete; final limit regression reviewed | 43 worker/entrypoint/CLI tests (23 old CLI); worker100/95.12/100/100; entry100all; kernel19tests100/99.11/100/100                                                 |
+| API                  | m13_04_api       | Complete; integration/review passed                                        | 41focusedtests100/96.92/100/100; four parsed routes; durable denials/replay; HTTP integration three cases; independent nine suites/97 tests                                      |
+| UI                   | m13_04_ui        | Complete; reviewed and browser exercised                                   | 26 tests/five files; 100/97.41/100/100 aggregate coverage; Chromium/Firefox/WebKit local-origin journeys and screenshots                                                       |
+| Integration/evidence | root             | Final full live-stack and repository verification passed              | Live API six suites/18 tests; auth33/0; actual OS egress-blocked HTTP three cases; 10k/100k/1m worker/DB verification; foreground HTTP latency and scheduler fairness recorded |
+
+Independent review findings were fixed: precise checkpoint location, requested/frozen range distinction, diagnostic-cap completeness, missing/behind head, malformed-provider public code, stale replay suppression, hidden checkpoint comparisons, resume/cancel fencing, saved predecessor/cursor mutation, source-stale resume, same-UUID receipt race, PostgreSQL version limits and private marker export projection.
+
+The complete prior `pnpm verify` run passed. The export-worker failure was a real writer/read-stream lifecycle race, now fixed with deterministic RED regressions; 28 worker/archive tests pass and materially changed coverage exceeds80% all metrics. Final live repeat completed successfully: SQL including new limits, six API suites/18 tests and auth33/0 (`/tmp/cra-m13-04-test-live-complete.log`). Final repository repeat exited successfully (`/tmp/cra-m13-04-verify-complete.log`): API407suites/4326tests, web196files/1375tests, contracts72files/645tests, architecture/dependency checks and builds. Do not substitute prior cached success. `docs/architecture/evidence/m13-04/verification.md` is the durable requirement-to-test, screenshots, measurement and deploy/restore/rollback record.
+
+Measured load includes actual database authorization and Node verification through persistent Docker psql, but excludes HTTP/PostgREST transport. Separate foreground HTTP and two-tenant sequential scheduler measurements do not prove production concurrent mixed-tenant capacity. Browser engines do not prove a current/previous-major named-browser matrix or WCAG certification. MCP advisors/logs returned502 and Playwright MCP closed; successful CLI/browser evidence is labelled accordingly. No authenticity, complete-ledger, repair or zero-bug claim is made.
+
+Real SQL batch/byte/event limit and atomicity assertions passed in fresh rollback-only fixtures; no partial progress/version/lease changes persist on a rejected bound.

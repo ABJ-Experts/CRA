@@ -51,7 +51,8 @@
     "worker:webhook-delivery": "node dist/webhook-delivery-worker.js",
     "vault:webhooks": "node dist/webhook-vault-maintenance.js",
     "vault:chat": "node dist/chat-vault-maintenance.js",
-    "worker:vulnerability-remediation-tickets": "node dist/vulnerability-remediation-ticket-operation-worker.js"
+    "worker:vulnerability-remediation-tickets": "node dist/vulnerability-remediation-ticket-operation-worker.js",
+    "worker:audit-range-verification": "node dist/audit-range-verify-worker.js"
   },
   "dependencies": {
     "@cyclonedx/cyclonedx-library": "10.2.0",

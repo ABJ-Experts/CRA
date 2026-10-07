@@ -1,0 +1,88 @@
+{
+  "database": "m13_test_04_range_v2",
+  "fixtureDigest": "479ac37075f4bd66fab63081385faa1c76c3b842933b389aff3a2085e9523aae",
+  "measuredPath": "persistent docker psql -> actual M13-04 RPCs -> real Node worker/kernel; excludes PostgREST/HTTP",
+  "reports": [
+    {
+      "requestedEvents": 1000,
+      "achieved": true,
+      "status": "completed",
+      "outcome": "consistent",
+      "checkedEvents": 1000,
+      "batches": 10,
+      "elapsedMs": 336,
+      "eventsPerSecond": 2973,
+      "peakRssBytes": 100499456,
+      "pollingP95Ms": 1.96,
+      "pollingP99Ms": 1.96,
+      "oldTransactionHeld": true,
+      "budgetReached": false
+    }
+  ],
+  "fairness": {
+    "tenantClaims": [
+      "first",
+      "second",
+      "first",
+      "second",
+      "first",
+      "second",
+      "first",
+      "second"
+    ],
+    "bothCompleted": true,
+    "cancellationMs": 2.05,
+    "staleWorkerFenced": true,
+    "cancelledState": "cancelled",
+    "tenantCount": 2,
+    "limitation": "Sequential batch scheduler exercise; not sustained concurrent tenant load"
+  },
+  "rpcTimings": {
+    "m13_04_create_verification": {
+      "calls": 4,
+      "p95Ms": 12.34,
+      "p99Ms": 12.34
+    },
+    "m13_04_claim_verification": {
+      "calls": 19,
+      "p95Ms": 3.31,
+      "p99Ms": 3.31
+    },
+    "m13_04_authorize_verification": {
+      "calls": 8,
+      "p95Ms": 5.43,
+      "p99Ms": 5.43
+    },
+    "m13_04_checkpoint_verification": {
+      "calls": 16,
+      "p95Ms": 2.87,
+      "p99Ms": 2.87
+    },
+    "m13_04_revalidate_verification": {
+      "calls": 8,
+      "p95Ms": 2.3,
+      "p99Ms": 2.3
+    },
+    "m13_04_page_verification": {
+      "calls": 8,
+      "p95Ms": 41.65,
+      "p99Ms": 41.65
+    },
+    "m13_04_read_verification": {
+      "calls": 4,
+      "p95Ms": 2.58,
+      "p99Ms": 2.58
+    },
+    "m13_04_control_verification": {
+      "calls": 1,
+      "p95Ms": 1.72,
+      "p99Ms": 1.72
+    }
+  },
+  "limitations": [
+    "Fixtures must be synthetic and pre-generated in the named disposable database",
+    "Actual DB authorization and Node hashing included; network delivery excluded",
+    "One-tenant run does not establish mixed-tenant fairness",
+    "Peak RSS is the Node driver/worker process, not PostgreSQL/container memory"
+  ]
+}

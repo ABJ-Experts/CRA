@@ -1,0 +1,43 @@
+-- Synthetic-only privileged tamper fixture. Never run against retained CRA.
+do $$ begin if current_database() not like 'm13_test_%' then raise exception 'refusing retained database'; end if; end $$;
+begin;
+create function pg_temp.check(p_name text,p_ok boolean) returns void language plpgsql as $$ begin if not coalesce(p_ok,false) then raise exception 'check failed: %',p_name; end if; end $$;
+do $$ declare v_org uuid:=gen_random_uuid(); v_user uuid:=gen_random_uuid(); v_job jsonb; v_claim jsonb; v_auth jsonb; v_row public.audit_logs; v_cursor jsonb; v_validation jsonb; v_checkpoint jsonb; v_head public.audit_chain_heads; begin
+ insert into public.organizations(id,name,slug) values(v_org,'M13 restart fixture','m13-restart-'||v_org);
+ insert into public.users(id,email) values(v_user,'m13-restart-'||v_user||'@cra.test');
+ insert into public.organization_members(organization_id,user_id,role) values(v_org,v_user,'owner');
+ insert into public.audit_logs(organization_id,action,entity_type,entity_id) select v_org,'organization.restart_fixture','organization',v_org::text from generate_series(1,260);
+ set constraints m13_02_finalize_audit_chain immediate;
+ select * into v_head from public.audit_chain_heads where organization_id=v_org;
+ v_checkpoint:=jsonb_build_object('organizationId',v_org,'activationAt',v_head.activation_at,'chainVersion',1,'sequence','260','hash',v_head.last_hash);
+ begin
+  perform public.m13_04_create_verification(v_org,v_user,gen_random_uuid(),'1','10',v_checkpoint,repeat('b',64));
+  raise exception 'unsupported checkpoint position accepted';
+ exception when invalid_parameter_value then null; end;
+ v_job:=public.m13_04_create_verification(v_org,v_user,gen_random_uuid(),'2',null,null,repeat('a',64));
+ update public.audit_verification_jobs set scheduled_at='-infinity' where id=(v_job->>'id')::uuid;
+ v_claim:=public.m13_04_claim_verification('checkpoint-test');
+ v_auth:=public.m13_04_authorize_verification(v_org,(v_job->>'id')::uuid,'checkpoint-test',(v_claim->>'lease_token')::uuid,(v_claim->>'version')::integer,250,16777216);
+ v_auth:=public.m13_04_authorize_verification(v_org,(v_job->>'id')::uuid,'checkpoint-test',(v_claim->>'lease_token')::uuid,(v_auth->'job'->>'version')::integer,250,16777216);
+ select * into v_row from public.audit_logs where organization_id=v_org and chain_sequence=250;
+ v_cursor:=jsonb_build_object('nextSequence','251','previousHash',v_row.content_hash,'lastEventId',v_row.id,'checkedCount','249','checkedFrom','2','checkedTo','250','verifiedPrefixTo','250','breaks','[]'::jsonb,'sampleSequences','[]'::jsonb,'exhausted',false);
+ perform public.m13_04_checkpoint_verification(v_org,(v_job->>'id')::uuid,'checkpoint-test',(v_claim->>'lease_token')::uuid,(v_auth->'job'->>'version')::integer,v_cursor,null);
+ perform pg_temp.check('authorized progress explicit incomplete',public.m13_04_read_verification(v_org,v_user,(v_job->>'id')::uuid,gen_random_uuid())->'result'->>'outcome'='incomplete');
+ update public.audit_verification_jobs set scheduled_at='-infinity' where id=(v_job->>'id')::uuid;
+ v_claim:=public.m13_04_claim_verification('checkpoint-test');
+ perform set_config('session_replication_role','replica',true);
+ update public.audit_logs set canonical_content='{}' where id=v_row.id;
+ perform set_config('session_replication_role','origin',true);
+ v_validation:=public.m13_04_revalidate_verification(v_org,(v_job->>'id')::uuid,'checkpoint-test',(v_claim->>'lease_token')::uuid,(v_claim->>'version')::integer);
+ perform pg_temp.check('restart catches canonical checkpoint tamper',exists(select 1 from jsonb_array_elements(v_validation->'job'->'cursor'->'breaks') b where b->>'category'='canonical_mismatch' and b->>'fromSequence'='250'));
+ perform pg_temp.check('restart catches checkpoint hash tamper',exists(select 1 from jsonb_array_elements(v_validation->'job'->'cursor'->'breaks') b where b->>'category'='hash_mismatch' and b->>'fromSequence'='250'));
+ perform pg_temp.check('restart trims unbroken prefix',v_validation->'job'->'cursor'->>'verifiedPrefixTo'='249');
+ perform set_config('session_replication_role','replica',true);
+ update public.audit_logs set canonical_content='{}' where organization_id=v_org and chain_sequence=1;
+ perform set_config('session_replication_role','origin',true);
+ v_validation:=public.m13_04_revalidate_verification(v_org,(v_job->>'id')::uuid,'checkpoint-test',(v_claim->>'lease_token')::uuid,(v_claim->>'version')::integer);
+ perform pg_temp.check('restart catches frozen predecessor tamper',exists(select 1 from jsonb_array_elements(v_validation->'job'->'cursor'->'breaks') b where b->>'category'='predecessor_failure' and b->>'fromSequence'='2'));
+ perform pg_temp.check('predecessor tamper clears verified prefix',v_validation->'job'->'cursor'->'verifiedPrefixTo'='null'::jsonb);
+ perform pg_temp.check('diagnostic stays bounded',jsonb_array_length(v_validation->'job'->'cursor'->'breaks')<=100);
+end $$;
+rollback;

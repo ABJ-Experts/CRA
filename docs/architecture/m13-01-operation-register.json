@@ -3255,6 +3255,39 @@
           "symbol": "m13_03_record_access"
         }
       ]
+    },
+    {
+      "id": "apps/api/src/audit/range/audit-range.controller.ts#AuditRangeController.create:POST:audit/chain-verifications",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261007090257_m13_04_audit_range_verification.sql",
+          "symbol": "m13_04_create_verification",
+          "note": "Verification mutations and organization-less append-only security receipts commit atomically, including when the tenant chain is corrupt."
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/audit/range/audit-range.controller.ts#AuditRangeController.cancel:POST:audit/chain-verifications/:jobId/cancel",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261007090257_m13_04_audit_range_verification.sql",
+          "symbol": "m13_04_control_verification",
+          "note": "Verification mutations and organization-less append-only security receipts commit atomically, including when the tenant chain is corrupt."
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/audit/range/audit-range.controller.ts#AuditRangeController.resume:POST:audit/chain-verifications/:jobId/resume",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261007090257_m13_04_audit_range_verification.sql",
+          "symbol": "m13_04_control_verification",
+          "note": "Verification mutations and organization-less append-only security receipts commit atomically, including when the tenant chain is corrupt."
+        }
+      ]
     }
   ],
   "workers": [
@@ -3638,6 +3671,17 @@
           "evidence": "apps/infrastructure/supabase/migrations/20261007055032_m13_03_audit_explorer_exports.sql",
           "symbol": "m13_03_transition_export",
           "note": "Leased generation is operational; scoped transitions synchronously append durable audit evidence."
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/audit/range/audit-range-worker.ts",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261007090257_m13_04_audit_range_verification.sql",
+          "symbol": "m13_04_checkpoint_verification",
+          "note": "Leased range batches persist progress/results and security-scope audit receipts together; internal checks never invoke public read use cases."
         }
       ]
     }

@@ -105,6 +105,7 @@ export async function collectSemanticWorkers(rootDir) {
     const relativePath = relative(rootDir, path).replaceAll("\\", "/");
     if (
       relativePath.includes("/worker/") ||
+      relativePath.includes("/audit/range/") ||
       relativePath.includes("/ai/") ||
       relativePath.includes("/frameworks/application/")
     ) {

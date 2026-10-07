@@ -1,5 +1,7 @@
 /* eslint-disable @typescript-eslint/require-await, @typescript-eslint/prefer-promise-reject-errors, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument */
 import { createHash } from "node:crypto";
+import fs from "node:fs";
+import { finished } from "node:stream/promises";
 import yauzl from "yauzl";
 
 import {
@@ -112,6 +114,161 @@ describe("AuditExportWorker", () => {
     });
     await expect(worker.runOnce()).resolves.toBe("processed");
     expect(failures).toEqual(["access_changed"]);
+  });
+
+  it("settles every file writer before cleaning up a failed selection", async () => {
+    const original = fs.createWriteStream;
+    const streams: fs.WriteStream[] = [];
+    const spy = jest
+      .spyOn(fs, "createWriteStream")
+      .mockImplementation((path, options) => {
+        const stream = original(path, options);
+        streams.push(stream);
+        return stream;
+      });
+    const closedAtFailure: boolean[][] = [];
+    const failures: string[] = [];
+    try {
+      const worker = new AuditExportWorker({
+        repository: {
+          claim: async () => job,
+          events: async () => [],
+          heartbeat: async (value) => value,
+          complete: async () => "completed",
+          fail: async (command) => {
+            failures.push(command.code);
+            closedAtFailure.push(streams.map((stream) => stream.closed));
+          },
+        },
+        storage: {
+          upload: async () => ({ outcome: "stored" }),
+          verify: async () => ({ outcome: "verified" }),
+        },
+      });
+      await worker.runOnce();
+      expect(streams).toHaveLength(2);
+      expect(closedAtFailure).toEqual([[true, true]]);
+      expect(failures).toEqual(["access_changed"]);
+    } finally {
+      spy.mockRestore();
+      await Promise.all(
+        streams.map(async (stream) => {
+          stream.destroy();
+          await finished(stream).catch(() => undefined);
+        }),
+      );
+    }
+  });
+
+  it("rejects I/O errors while waiting for writer backpressure", async () => {
+    const original = fs.createWriteStream;
+    const streams: fs.WriteStream[] = [];
+    const failures: string[] = [];
+    const spy = jest
+      .spyOn(fs, "createWriteStream")
+      .mockImplementation((path, options) => {
+        const stream = original(path, options);
+        streams.push(stream);
+        if (streams.length === 1) {
+          const write = stream.write.bind(stream);
+          jest.spyOn(stream, "write").mockImplementation((chunk) => {
+            write(chunk);
+            queueMicrotask(() =>
+              stream.destroy(new Error("owned disk failure")),
+            );
+            return false;
+          });
+        }
+        return stream;
+      });
+    let running: Promise<unknown> | undefined;
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+    try {
+      const worker = new AuditExportWorker({
+        repository: {
+          claim: async () => job,
+          events: async () => [event],
+          heartbeat: async (value) => value,
+          complete: async () => "completed",
+          fail: async (command) => {
+            failures.push(command.code);
+          },
+        },
+        storage: {
+          upload: async () => ({ outcome: "stored" }),
+          verify: async () => ({ outcome: "verified" }),
+        },
+      });
+      running = worker.runOnce();
+      const result = await Promise.race([
+        running,
+        new Promise((resolve) => {
+          timeout = setTimeout(() => resolve("hung"), 500);
+        }),
+      ]);
+      expect(result).toBe("processed");
+      expect(failures).toEqual(["generation_failed"]);
+      expect(streams.every((stream) => stream.closed)).toBe(true);
+    } finally {
+      if (timeout) clearTimeout(timeout);
+      spy.mockRestore();
+      for (const stream of streams) {
+        stream.emit("drain");
+        stream.destroy();
+      }
+      const release = setInterval(() => {
+        for (const stream of streams) stream.emit("drain");
+      }, 5);
+      try {
+        await running;
+      } finally {
+        clearInterval(release);
+      }
+    }
+  });
+
+  it("settles archive reader when storage rejects before consuming it", async () => {
+    const original = fs.createReadStream;
+    const readers: fs.ReadStream[] = [];
+    const failures: string[] = [];
+    const closed: boolean[] = [];
+    const spy = jest
+      .spyOn(fs, "createReadStream")
+      .mockImplementation((path, options) => {
+        const stream = original(path, options);
+        if (String(path).endsWith("audit-export.zip")) readers.push(stream);
+        return stream;
+      });
+    try {
+      const worker = new AuditExportWorker({
+        repository: {
+          claim: async () => job,
+          events: async () => [event],
+          heartbeat: async (value) => value,
+          complete: async () => "completed",
+          fail: async (command) => {
+            failures.push(command.code);
+            closed.push(...readers.map((reader) => reader.closed));
+          },
+        },
+        storage: {
+          upload: async () => ({ outcome: "unavailable" }),
+          verify: async () => ({ outcome: "verified" }),
+        },
+      });
+      await worker.runOnce();
+      expect(readers).toHaveLength(1);
+      expect(closed).toEqual([true]);
+      expect(failures).toEqual(["storage_unavailable"]);
+    } finally {
+      spy.mockRestore();
+      await Promise.all(
+        readers.map(async (reader) => {
+          reader.destroy();
+          await finished(reader).catch(() => undefined);
+        }),
+      );
+    }
   });
 
   it("fails integrity breaks before uploading", async () => {

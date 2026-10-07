@@ -1,3 +1,4 @@
+import { once } from "node:events";
 import { createHash, randomUUID } from "node:crypto";
 import { createReadStream, createWriteStream } from "node:fs";
 import { chmod, mkdir, readFile, rm, writeFile } from "node:fs/promises";
@@ -143,11 +144,20 @@ export class AuditExportWorker {
       });
       activeJob = await heartbeat.beat();
       const objectPath = `${activeJob.organizationId}/${activeJob.id}/${zip.sha256}.zip`;
-      const stored = await this.storage.upload({
-        objectPath,
-        contentType: "application/zip",
-        stream: createReadStream(zip.path),
-      });
+      const uploadStream = createReadStream(zip.path);
+      const uploadSettled = finished(uploadStream, { cleanup: true });
+      void uploadSettled.catch(() => undefined);
+      let stored;
+      try {
+        stored = await this.storage.upload({
+          objectPath,
+          contentType: "application/zip",
+          stream: uploadStream,
+        });
+      } finally {
+        uploadStream.destroy();
+        await uploadSettled.catch(() => undefined);
+      }
       if (stored.outcome === "unavailable")
         throw new WorkerFailure("storage_unavailable", true);
       if (stored.outcome === "already_exists") {
@@ -188,67 +198,77 @@ export class AuditExportWorker {
     await writePrivateFile(verifierPath, await importVerifier());
     const eventWriter = createMeasuredWriter(eventsPath, maximumArchiveBytes);
     const proofWriter = createMeasuredWriter(proofsPath, maximumArchiveBytes);
-    let count = 0;
-    let legacyCount = 0;
-    let proofCount = 0;
-    let minSequence: string | null = null;
-    let maxSequence: string | null = null;
-    if (job.format === "csv") await eventWriter.write(csvHeader());
-    else await eventWriter.write("[");
-    for (let offset = 0; offset < job.selectedIds.length; offset += batchSize) {
-      const events = await this.repository.events(job, offset, batchSize);
-      if (offset > 0) {
-        job = await heartbeat();
-      }
-      for (const event of events) {
-        if (event.id !== job.selectedIds[count])
-          throw new WorkerFailure("access_changed", false);
-        if (count >= maximumEvents)
-          throw new WorkerFailure("export_limit", false);
-        verifyEventHash(event);
-        if (job.format === "csv") await eventWriter.write(csvRow(event));
-        else
-          await eventWriter.write(
-            `${count === 0 ? "" : ","}${JSON.stringify(publicEvent(event))}`,
-          );
-        const proof = proofLine(event);
-        if (proof) {
-          proofCount += 1;
-          await proofWriter.write(proof);
+    try {
+      let count = 0;
+      let legacyCount = 0;
+      let proofCount = 0;
+      let minSequence: string | null = null;
+      let maxSequence: string | null = null;
+      if (job.format === "csv") await eventWriter.write(csvHeader());
+      else await eventWriter.write("[");
+      for (
+        let offset = 0;
+        offset < job.selectedIds.length;
+        offset += batchSize
+      ) {
+        const events = await this.repository.events(job, offset, batchSize);
+        if (offset > 0) {
+          job = await heartbeat();
         }
-        if (event.legacy) legacyCount += 1;
-        if (event.sequence) {
-          minSequence =
-            minSequence === null || BigInt(event.sequence) < BigInt(minSequence)
-              ? event.sequence
-              : minSequence;
-          maxSequence =
-            maxSequence === null || BigInt(event.sequence) > BigInt(maxSequence)
-              ? event.sequence
-              : maxSequence;
+        for (const event of events) {
+          if (event.id !== job.selectedIds[count])
+            throw new WorkerFailure("access_changed", false);
+          if (count >= maximumEvents)
+            throw new WorkerFailure("export_limit", false);
+          verifyEventHash(event);
+          if (job.format === "csv") await eventWriter.write(csvRow(event));
+          else
+            await eventWriter.write(
+              `${count === 0 ? "" : ","}${JSON.stringify(publicEvent(event))}`,
+            );
+          const proof = proofLine(event);
+          if (proof) {
+            proofCount += 1;
+            await proofWriter.write(proof);
+          }
+          if (event.legacy) legacyCount += 1;
+          if (event.sequence) {
+            minSequence =
+              minSequence === null ||
+              BigInt(event.sequence) < BigInt(minSequence)
+                ? event.sequence
+                : minSequence;
+            maxSequence =
+              maxSequence === null ||
+              BigInt(event.sequence) > BigInt(maxSequence)
+                ? event.sequence
+                : maxSequence;
+          }
+          count += 1;
         }
-        count += 1;
       }
+      if (count !== job.selectedIds.length)
+        throw new WorkerFailure("access_changed", false);
+      if (job.format === "json") await eventWriter.write("]\n");
+      const eventFile = await eventWriter.close();
+      const proofFile = await proofWriter.close();
+      const verifier = await statHash(verifierPath);
+      return Object.freeze({
+        counts: Object.freeze({ rowCount: count, legacyCount, proofCount }),
+        sequenceRange: Object.freeze({ from: minSequence, to: maxSequence }),
+        files: Object.freeze([
+          {
+            name: `events.${job.format}`,
+            path: eventsPath,
+            ...eventFile,
+          },
+          { name: "proofs.ndjson" as const, path: proofsPath, ...proofFile },
+          { name: "verify.mjs" as const, path: verifierPath, ...verifier },
+        ] satisfies readonly WrittenFile[]),
+      });
+    } finally {
+      await Promise.all([eventWriter.dispose(), proofWriter.dispose()]);
     }
-    if (count !== job.selectedIds.length)
-      throw new WorkerFailure("access_changed", false);
-    if (job.format === "json") await eventWriter.write("]\n");
-    const eventFile = await eventWriter.close();
-    const proofFile = await proofWriter.close();
-    const verifier = await statHash(verifierPath);
-    return Object.freeze({
-      counts: Object.freeze({ rowCount: count, legacyCount, proofCount }),
-      sequenceRange: Object.freeze({ from: minSequence, to: maxSequence }),
-      files: Object.freeze([
-        {
-          name: `events.${job.format}`,
-          path: eventsPath,
-          ...eventFile,
-        },
-        { name: "proofs.ndjson" as const, path: proofsPath, ...proofFile },
-        { name: "verify.mjs" as const, path: verifierPath, ...verifier },
-      ] satisfies readonly WrittenFile[]),
-    });
   }
 
   private manifest(
@@ -413,6 +433,9 @@ async function writePrivateFile(path: string, bytes: Buffer): Promise<void> {
 function createMeasuredWriter(path: string, maximumBytes: number) {
   const stream = createWriteStream(path, { flags: "wx", mode: 0o600 });
   const hash = createHash("sha256");
+  const settled = finished(stream, { cleanup: true });
+  // Observe early I/O failures while provider reads are in flight.
+  void settled.catch(() => undefined);
   let bytes = 0;
   return {
     write: async (value: string | Buffer) => {
@@ -420,16 +443,28 @@ function createMeasuredWriter(path: string, maximumBytes: number) {
       bytes += chunk.byteLength;
       if (bytes > maximumBytes) throw new WorkerFailure("export_limit", false);
       hash.update(chunk);
-      if (!stream.write(chunk))
-        await new Promise<void>((resolve) =>
-          stream.once("drain", () => resolve()),
-        );
+      if (!stream.write(chunk)) {
+        const drain = new AbortController();
+        try {
+          await Promise.race([
+            once(stream, "drain", { signal: drain.signal }),
+            settled,
+          ]);
+        } finally {
+          drain.abort();
+        }
+      }
     },
     close: async () => {
       stream.end();
-      await finished(stream);
+      await settled;
       await chmod(path, 0o600);
       return Object.freeze({ sha256: hash.digest("hex"), bytes });
+    },
+    dispose: async () => {
+      stream.destroy();
+      // Intentional destruction may report premature close; settle before rm.
+      await settled.catch(() => undefined);
     },
   };
 }

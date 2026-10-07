@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { auditCanonicalHash } from "./audit-chain-row-verification";
 import {
   auditChainRequestSchema,
   auditChainResultSchema,
@@ -88,10 +88,10 @@ export class AuditChainVerifier {
           return finish("corrupt", "unsupported_version");
         if (prior.canonical_content !== prior.recomputed_canonical_content)
           return finish("corrupt", "canonical_mismatch");
-        const predecessorHash = createHash("sha256")
-          .update(Buffer.from(prior.previous_hash, "hex"))
-          .update(prior.canonical_content, "utf8")
-          .digest("hex");
+        const predecessorHash = auditCanonicalHash(
+          prior.previous_hash,
+          prior.canonical_content,
+        );
         if (predecessorHash !== prior.content_hash)
           return finish("corrupt", "hash_mismatch");
         previousHash = predecessorHash;
@@ -119,10 +119,7 @@ export class AuditChainVerifier {
             return finish("corrupt", "canonical_mismatch");
           if (row.previous_hash !== previousHash)
             return finish("corrupt", "previous_hash_mismatch");
-          const hash = createHash("sha256")
-            .update(Buffer.from(previousHash, "hex"))
-            .update(row.canonical_content, "utf8")
-            .digest("hex");
+          const hash = auditCanonicalHash(previousHash, row.canonical_content);
           if (hash !== row.content_hash)
             return finish("corrupt", "hash_mismatch");
           previousHash = hash;

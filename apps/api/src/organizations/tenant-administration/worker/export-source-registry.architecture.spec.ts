@@ -89,6 +89,15 @@ const dynamicSnapshotLockAdditions = (sql: string): readonly string[] =>
   );
 
 describe("tenant export source registry architecture", () => {
+  it("keeps range verification leases and authorization snapshots deployment-local", () => {
+    expect(exportSourceExclusions).toHaveProperty("audit_verification_jobs");
+    expect(exportSourceExclusions.audit_verification_jobs).toMatch(
+      /lease|snapshot|deployment/i,
+    );
+    expect(
+      exportSourceRegistry.flatMap((source) => source.tables),
+    ).not.toContain("audit_verification_jobs");
+  });
   it("keeps audit export leases and delivery grants deployment-local", () => {
     expect(exportSourceExclusions).toHaveProperty("audit_export_jobs");
     expect(exportSourceExclusions.audit_export_jobs).toMatch(

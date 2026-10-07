@@ -1,0 +1,6 @@
+{
+  "measuredPath": "Authenticated Nest HTTP status -> PostgREST -> retained CRA development database; 50 sequential samples after 5 warmups within the existing rate limit, separate from million-row disposable benchmark",
+  "samples": 50,
+  "p95Ms": 57.6372080000001,
+  "p99Ms": 120.37199999999939
+}

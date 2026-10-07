@@ -351,6 +351,153 @@ export type Database = {
           },
         ]
       }
+      audit_verification_jobs: {
+        Row: {
+          attempts: number
+          authorization_after_legacy_id: string | null
+          authorization_after_sequence: number
+          authorization_complete: boolean
+          authorization_count: number
+          authorization_snapshot: unknown
+          authorization_xid: unknown
+          completed_at: string | null
+          created_at: string
+          cursor: Json | null
+          database_identity: string
+          dataset_context: string
+          dataset_epoch: string
+          dependency_policy_version: number
+          failure_code: string | null
+          from_sequence: number
+          frozen_boundary: Json | null
+          frozen_head: Json | null
+          high_water_sequence: number
+          id: string
+          lease_expires_at: string | null
+          lease_token: string | null
+          legacy_count: number
+          operation_receipts: Json
+          organization_id: string
+          phase: string
+          predecessor: Json | null
+          prior_checkpoint: Json | null
+          prior_checkpoint_status: string
+          request_digest: string
+          request_id: string
+          requested_to_sequence: number | null
+          requester_id: string
+          result: Json | null
+          scheduled_at: string
+          scope_version: number
+          state: string
+          to_sequence: number
+          updated_at: string
+          version: number
+          worker_id: string | null
+        }
+        Insert: {
+          attempts?: number
+          authorization_after_legacy_id?: string | null
+          authorization_after_sequence?: number
+          authorization_complete?: boolean
+          authorization_count?: number
+          authorization_snapshot: unknown
+          authorization_xid: unknown
+          completed_at?: string | null
+          created_at?: string
+          cursor?: Json | null
+          database_identity: string
+          dataset_context: string
+          dataset_epoch: string
+          dependency_policy_version?: number
+          failure_code?: string | null
+          from_sequence: number
+          frozen_boundary?: Json | null
+          frozen_head?: Json | null
+          high_water_sequence: number
+          id?: string
+          lease_expires_at?: string | null
+          lease_token?: string | null
+          legacy_count?: number
+          operation_receipts?: Json
+          organization_id: string
+          phase?: string
+          predecessor?: Json | null
+          prior_checkpoint?: Json | null
+          prior_checkpoint_status?: string
+          request_digest: string
+          request_id: string
+          requested_to_sequence?: number | null
+          requester_id: string
+          result?: Json | null
+          scheduled_at?: string
+          scope_version: number
+          state?: string
+          to_sequence: number
+          updated_at?: string
+          version?: number
+          worker_id?: string | null
+        }
+        Update: {
+          attempts?: number
+          authorization_after_legacy_id?: string | null
+          authorization_after_sequence?: number
+          authorization_complete?: boolean
+          authorization_count?: number
+          authorization_snapshot?: unknown
+          authorization_xid?: unknown
+          completed_at?: string | null
+          created_at?: string
+          cursor?: Json | null
+          database_identity?: string
+          dataset_context?: string
+          dataset_epoch?: string
+          dependency_policy_version?: number
+          failure_code?: string | null
+          from_sequence?: number
+          frozen_boundary?: Json | null
+          frozen_head?: Json | null
+          high_water_sequence?: number
+          id?: string
+          lease_expires_at?: string | null
+          lease_token?: string | null
+          legacy_count?: number
+          operation_receipts?: Json
+          organization_id?: string
+          phase?: string
+          predecessor?: Json | null
+          prior_checkpoint?: Json | null
+          prior_checkpoint_status?: string
+          request_digest?: string
+          request_id?: string
+          requested_to_sequence?: number | null
+          requester_id?: string
+          result?: Json | null
+          scheduled_at?: string
+          scope_version?: number
+          state?: string
+          to_sequence?: number
+          updated_at?: string
+          version?: number
+          worker_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_verification_jobs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audit_verification_jobs_requester_id_fkey"
+            columns: ["requester_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       auth_email_verifications: {
         Row: {
           attempts: number
@@ -7501,6 +7648,8 @@ export type Database = {
       }
       organizations: {
         Row: {
+          audit_dataset_context: string
+          audit_dataset_epoch: string
           created_at: string
           id: string
           is_active: boolean
@@ -7511,6 +7660,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          audit_dataset_context?: string
+          audit_dataset_epoch?: string
           created_at?: string
           id?: string
           is_active?: boolean
@@ -7521,6 +7672,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          audit_dataset_context?: string
+          audit_dataset_epoch?: string
           created_at?: string
           id?: string
           is_active?: boolean
@@ -30443,6 +30596,233 @@ export type Database = {
           p_organization_id: string
           p_receipt_id: string
           p_scope_digest: string
+        }
+        Returns: Json
+      }
+      m13_04_assert_lease: {
+        Args: {
+          p_expected_version: number
+          p_job_id: string
+          p_lease_token: string
+          p_organization_id: string
+          p_worker_id: string
+        }
+        Returns: {
+          attempts: number
+          authorization_after_legacy_id: string | null
+          authorization_after_sequence: number
+          authorization_complete: boolean
+          authorization_count: number
+          authorization_snapshot: unknown
+          authorization_xid: unknown
+          completed_at: string | null
+          created_at: string
+          cursor: Json | null
+          database_identity: string
+          dataset_context: string
+          dataset_epoch: string
+          dependency_policy_version: number
+          failure_code: string | null
+          from_sequence: number
+          frozen_boundary: Json | null
+          frozen_head: Json | null
+          high_water_sequence: number
+          id: string
+          lease_expires_at: string | null
+          lease_token: string | null
+          legacy_count: number
+          operation_receipts: Json
+          organization_id: string
+          phase: string
+          predecessor: Json | null
+          prior_checkpoint: Json | null
+          prior_checkpoint_status: string
+          request_digest: string
+          request_id: string
+          requested_to_sequence: number | null
+          requester_id: string
+          result: Json | null
+          scheduled_at: string
+          scope_version: number
+          state: string
+          to_sequence: number
+          updated_at: string
+          version: number
+          worker_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "audit_verification_jobs"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      m13_04_authorize_verification: {
+        Args: {
+          p_expected_version: number
+          p_job_id: string
+          p_lease_token: string
+          p_limit: number
+          p_maximum_bytes: number
+          p_organization_id: string
+          p_worker_id: string
+        }
+        Returns: Json
+      }
+      m13_04_checkpoint_verification: {
+        Args: {
+          p_cursor: Json
+          p_expected_version: number
+          p_job_id: string
+          p_lease_token: string
+          p_organization_id: string
+          p_result: Json
+          p_worker_id: string
+        }
+        Returns: Json
+      }
+      m13_04_claim_verification: {
+        Args: { p_worker_id: string }
+        Returns: Json
+      }
+      m13_04_control_verification: {
+        Args: {
+          p_actor_user_id: string
+          p_expected_version: number
+          p_job_id: string
+          p_operation: string
+          p_organization_id: string
+          p_request_id: string
+        }
+        Returns: Json
+      }
+      m13_04_create_verification: {
+        Args: {
+          p_actor_user_id: string
+          p_checkpoint: Json
+          p_from_sequence: string
+          p_organization_id: string
+          p_request_digest: string
+          p_request_id: string
+          p_to_sequence: string
+        }
+        Returns: Json
+      }
+      m13_04_current_scope: {
+        Args: {
+          p_job: Database["public"]["Tables"]["audit_verification_jobs"]["Row"]
+        }
+        Returns: string
+      }
+      m13_04_database_identity: { Args: never; Returns: string }
+      m13_04_dependency_fingerprints: { Args: never; Returns: Json }
+      m13_04_fail_verification: {
+        Args: {
+          p_code: string
+          p_expected_version: number
+          p_job_id: string
+          p_lease_token: string
+          p_organization_id: string
+          p_retryable: boolean
+          p_worker_id: string
+        }
+        Returns: Json
+      }
+      m13_04_finish_unavailable_verification: {
+        Args: {
+          p_expected_version: number
+          p_job_id: string
+          p_lease_token: string
+          p_organization_id: string
+          p_outcome: string
+          p_worker_id: string
+        }
+        Returns: Json
+      }
+      m13_04_page_verification: {
+        Args: {
+          p_after_sequence: string
+          p_expected_version: number
+          p_job_id: string
+          p_lease_token: string
+          p_limit: number
+          p_maximum_bytes: number
+          p_organization_id: string
+          p_upper_sequence: string
+          p_worker_id: string
+        }
+        Returns: Json
+      }
+      m13_04_private_job: {
+        Args: {
+          p_job: Database["public"]["Tables"]["audit_verification_jobs"]["Row"]
+        }
+        Returns: Json
+      }
+      m13_04_public_job: {
+        Args: {
+          p_job: Database["public"]["Tables"]["audit_verification_jobs"]["Row"]
+        }
+        Returns: Json
+      }
+      m13_04_read_verification: {
+        Args: {
+          p_actor_user_id: string
+          p_job_id: string
+          p_organization_id: string
+          p_request_id: string
+        }
+        Returns: Json
+      }
+      m13_04_record_denial: {
+        Args: {
+          p_actor_user_id: string
+          p_operation_digest: string
+          p_organization_id: string
+          p_request_id: string
+        }
+        Returns: Json
+      }
+      m13_04_revalidate_verification: {
+        Args: {
+          p_expected_version: number
+          p_job_id: string
+          p_lease_token: string
+          p_organization_id: string
+          p_worker_id: string
+        }
+        Returns: Json
+      }
+      m13_04_rotate_dataset_marker: {
+        Args: {
+          p_context: string
+          p_expected_epoch: string
+          p_organization_id: string
+          p_request_id: string
+        }
+        Returns: Json
+      }
+      m13_04_row_json: {
+        Args: { p_row: Database["public"]["Tables"]["audit_logs"]["Row"] }
+        Returns: Json
+      }
+      m13_04_scope_dependencies: { Args: never; Returns: string[] }
+      m13_04_security_receipt: {
+        Args: {
+          p_action: string
+          p_actor: string
+          p_digest: string
+          p_entity: string
+          p_extra?: Json
+          p_org: string
+          p_request: string
+        }
+        Returns: string
+      }
+      m13_04_unavailable_result: {
+        Args: {
+          p_job: Database["public"]["Tables"]["audit_verification_jobs"]["Row"]
+          p_outcome: string
         }
         Returns: Json
       }
