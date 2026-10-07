@@ -3,6 +3,7 @@ import type {
   ConnectorCatalogueEntry,
   ConnectorType,
 } from "@repo/contracts/connectors/types";
+import Link from "next/link";
 import { Button } from "@repo/ui/button";
 import { cn } from "@repo/ui/cn";
 import { SectionCard } from "../../dashboard/_components/dashboard-chrome";
@@ -71,19 +72,30 @@ export function ConnectorCatalogueSection({
                   </details>
                 </th>
                 <td className="px-3 py-4">
-                  {entry.implementation === "reference"
-                    ? "Reference/test adapter"
-                    : entry.implementation === "ci"
-                      ? "CI run verification"
-                      : entry.implementation === "agent"
-                        ? "Outbound agent"
-                        : "Planned integration"}
+                  {entry.id === "siem" && entry.canConfigure
+                    ? "SIEM audit forwarding"
+                    : entry.implementation === "reference"
+                      ? "Reference/test adapter"
+                      : entry.implementation === "ci"
+                        ? "CI run verification"
+                        : entry.implementation === "agent"
+                          ? "Outbound agent"
+                          : "Planned integration"}
                 </td>
                 <td className="whitespace-nowrap px-3 py-4">
                   {entry.phase} / {entry.priority}
                 </td>
                 <td className="px-3 py-4">
-                  {entry.canConfigure && canCreate ? (
+                  {entry.id === "siem" && entry.canConfigure ? (
+                    <Link
+                      href="/connectors/siem"
+                      className={cn(
+                        "text-subhead-regular text-active-500 underline underline-offset-4",
+                      )}
+                    >
+                      Manage SIEM forwarding
+                    </Link>
+                  ) : entry.canConfigure && canCreate ? (
                     <Button
                       type="button"
                       variant="outline"

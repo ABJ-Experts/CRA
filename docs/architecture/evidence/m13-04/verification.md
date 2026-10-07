@@ -42,11 +42,11 @@ Installed Playwright journeys passed on Chromium `151.0.7922.34`, Firefox `153.0
 
 | Evidence | Screenshot |
 | --- | --- |
-| Actual consistent range | [Chromium panel](/Users/abjmac003/Documents/GitHub/CRA/docs/architecture/evidence/m13-04/screenshots/range-consistent-panel-chromium.png), [Firefox panel](/Users/abjmac003/Documents/GitHub/CRA/docs/architecture/evidence/m13-04/screenshots/range-consistent-panel-firefox.png), [WebKit panel](/Users/abjmac003/Documents/GitHub/CRA/docs/architecture/evidence/m13-04/screenshots/range-consistent-panel-webkit.png) |
-| Cancellation | [Chromium cancelled](/Users/abjmac003/Documents/GitHub/CRA/docs/architecture/evidence/m13-04/screenshots/range-cancelled-chromium.png) |
-| Restricted access | [Firefox denied](/Users/abjmac003/Documents/GitHub/CRA/docs/architecture/evidence/m13-04/screenshots/range-denied-firefox.png) |
-| Tenant switching | [WebKit organization switch](/Users/abjmac003/Documents/GitHub/CRA/docs/architecture/evidence/m13-04/screenshots/range-org-switched-webkit.png) |
-| Integrity presentation, **injected response fixture** | [Chromium integrity fixture](/Users/abjmac003/Documents/GitHub/CRA/docs/architecture/evidence/m13-04/screenshots/range-integrity-fixture-panel-chromium.png) |
+| Actual consistent range | Chromium panel (generated artifact removed during repository cleanup), Firefox panel (generated artifact removed during repository cleanup), WebKit panel (generated artifact removed during repository cleanup) |
+| Cancellation | Chromium cancelled (generated artifact removed during repository cleanup) |
+| Restricted access | Firefox denied (generated artifact removed during repository cleanup) |
+| Tenant switching | WebKit organization switch (generated artifact removed during repository cleanup) |
+| Integrity presentation, **injected response fixture** | Chromium integrity fixture (generated artifact removed during repository cleanup) |
 
 Sanitized per-engine results are [Chromium](/Users/abjmac003/Documents/GitHub/CRA/docs/architecture/evidence/m13-04/screenshots/range-journey-chromium.json), [Firefox](/Users/abjmac003/Documents/GitHub/CRA/docs/architecture/evidence/m13-04/screenshots/range-journey-firefox.json), and [WebKit](/Users/abjmac003/Documents/GitHub/CRA/docs/architecture/evidence/m13-04/screenshots/range-journey-webkit.json). The integrity screenshot is a labelled UI fixture, not a claim that development audit records were corrupted. Real corruption checks ran only in disposable SQL fixtures.
 

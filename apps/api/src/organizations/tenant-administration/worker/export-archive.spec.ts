@@ -13,6 +13,25 @@ import {
 } from "./tenant-export-capacity";
 
 describe("tenant export archive", () => {
+  it("keeps SIEM transport security state deployment local", () => {
+    for (const table of [
+      "siem_destinations",
+      "siem_deliveries",
+      "siem_delivery_attempts",
+    ]) {
+      expect(exportSourceExclusions[table]).toMatch(/deployment-local/);
+      expect(
+        exportSourceRegistry.flatMap((source) => source.tables),
+      ).not.toContain(table);
+    }
+    expect(() =>
+      validateExportRegistryCoverage([
+        "siem_destinations",
+        "siem_deliveries",
+        "siem_delivery_attempts",
+      ]),
+    ).not.toThrow();
+  });
   it("exports tenant chain activation and heads alongside retained audit rows", () => {
     expect(
       exportSourceRegistry.find((source) => source.sourceId === "audit_logs")

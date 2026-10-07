@@ -333,3 +333,10 @@ describe("middleware integration", () => {
     );
   });
 });
+it("protects the SIEM integration route through the existing connector prefix", async () => {
+  const { middleware } = await loadMiddleware();
+  const result = await middleware(
+    new NextRequest("http://localhost:3000/connectors/siem"),
+  );
+  expect(result.headers.get("location")).toContain("/sign-in");
+});

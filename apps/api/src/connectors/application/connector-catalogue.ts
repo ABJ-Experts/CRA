@@ -228,14 +228,21 @@ export const CONNECTOR_CATALOGUE: readonly Readonly<ConnectorCatalogueEntry>[] =
       "Planned product structure, versions and lifecycle ingestion with compliance status export.",
       "Use the approved on-premises agent and minimum read permissions only after validating the customer schema. This catalogue does not duplicate the existing PLM integration ownership or offer writeback.",
     ),
-    planned(
-      "siem",
-      "SIEM",
-      "V2",
-      "P2",
-      "Planned redacted audit/security event export through syslog or an HTTP collector.",
-      "Use a delivery-only identity and approved collector targets. Do not export credentials or unrestricted provider payloads.",
-    ),
+    Object.freeze({
+      id: "siem",
+      name: "SIEM",
+      implementation: "siem",
+      phase: "V2",
+      priority: "P2",
+      canConfigure: true,
+      description:
+        "Forward selected structural tenant audit events using authenticated HTTPS or TLS syslog in JSON or CEF.",
+      guidance:
+        "Configure through the dedicated SIEM surface with audit/export permissions and approved public collectors. Global security evidence and source contents are excluded.",
+      scopePolicyVersion: CONNECTOR_SCOPE_POLICY_VERSION,
+      requiredScopes: Object.freeze([]) as unknown as string[],
+      scopeIntrospection: "unavailable",
+    } as const),
     planned(
       "enisa",
       "ENISA Single Reporting Platform",

@@ -144,6 +144,7 @@ export const envSchema = z.object({
    * Validated inside the vault adapter, so missing/malformed keys disable
    * credential operations without taking core reporting or evidence offline.
    */
+  SIEM_APPROVED_TARGETS_JSON: z.string().optional(),
   CONNECTOR_VAULT_KEYRING: z.string().optional(),
   CONNECTOR_VAULT_GPG_BINARY: z.string().optional(),
   CONNECTOR_ALLOWED_HOSTS: z.string().optional().default(""),

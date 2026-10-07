@@ -426,6 +426,12 @@ export const exportSourceExclusions: Readonly<Record<string, string>> =
       "Internal export copy ledger; the archive includes its source metadata and verified bytes without recursively exporting the ledger.",
     audit_export_jobs:
       "Audit export leases, replay identities, private artifacts and delivery grants are deployment-local workflow security state; durable audit evidence exports separately.",
+    siem_destinations:
+      "SIEM credentials, authority and scan cursors are deployment-local security state.",
+    siem_deliveries:
+      "SIEM outbox payloads and replay leases are deployment-local security state.",
+    siem_delivery_attempts:
+      "SIEM transport attempts are deployment-local delivery evidence; source audit evidence exports separately.",
     audit_verification_jobs:
       "Audit range verification leases, authorization snapshots, dataset identities and cryptographic cursors are deployment-local workflow security state; durable audit evidence exports separately.",
     notification_digest_batches:

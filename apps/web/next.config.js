@@ -26,6 +26,9 @@ const API_ORIGIN = process.env.API_ORIGIN ?? "http://localhost:3333";
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Isolate live browser verification from an already-running CRA dev server.
+  // Normal development and production retain Next's default output directory.
+  distDir: process.env.CRA_E2E_DIST_DIR ?? ".next",
   async redirects() {
     return [
       {

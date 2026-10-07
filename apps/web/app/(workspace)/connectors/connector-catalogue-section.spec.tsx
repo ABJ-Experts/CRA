@@ -38,6 +38,29 @@ const entries: ConnectorCatalogueEntry[] = [
 ];
 describe("connector catalogue availability", () => {
   afterEach(cleanup);
+  it("links SIEM to its dedicated authorized workflow without generic setup", () => {
+    const onConfigure = vi.fn();
+    render(
+      <ConnectorCatalogueSection
+        entries={[
+          {
+            ...base,
+            id: "siem",
+            name: "SIEM",
+            implementation: "siem",
+            canConfigure: true,
+          },
+        ]}
+        canCreate={false}
+        onConfigure={onConfigure}
+      />,
+    );
+    expect(
+      screen.getByRole("link", { name: "Manage SIEM forwarding" }),
+    ).toHaveAttribute("href", "/connectors/siem");
+    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+    expect(onConfigure).not.toHaveBeenCalled();
+  });
   it("offers configuration only for the registered reference fixture", () => {
     render(
       <ConnectorCatalogueSection

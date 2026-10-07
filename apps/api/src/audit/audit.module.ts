@@ -1,3 +1,4 @@
+import { SiemModule } from "./siem/siem.module";
 import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
 
@@ -17,7 +18,7 @@ import { SupabaseAuditExportStorageAdapter } from "./infrastructure/audit-export
 import { SupabaseAuditExplorerRepository } from "./supabase-audit-explorer.repository";
 
 @Module({
-  imports: [ConfigModule, SupabaseModule],
+  imports: [ConfigModule, SupabaseModule, SiemModule],
   controllers: [AuditExplorerController, AuditRangeController],
   providers: [
     AuditService,

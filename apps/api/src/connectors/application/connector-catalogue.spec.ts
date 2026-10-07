@@ -10,7 +10,7 @@ import {
 import { parseConnectorConfiguration } from "./connector-config-policy";
 
 describe("connector catalogue", () => {
-  it("publishes the BRD catalogue with CI configuration and keeps other vendors planned", () => {
+  it("publishes configured integrations including SIEM and keeps remaining vendors planned", () => {
     expect(
       connectorCatalogueResponseSchema.parse({ catalogue: CONNECTOR_CATALOGUE })
         .catalogue,
@@ -26,6 +26,7 @@ describe("connector catalogue", () => {
       "azure_devops",
       "jira",
       "on_prem_agent",
+      "siem",
     ]);
     expect(findConnectorCatalogueEntry("jira")).toMatchObject({
       implementation: "ticketing",
@@ -65,6 +66,11 @@ describe("connector catalogue", () => {
       phase: "V2",
       canConfigure: true,
       scopeIntrospection: "unavailable",
+    });
+    expect(findConnectorCatalogueEntry("siem")).toMatchObject({
+      implementation: "siem",
+      phase: "V2",
+      canConfigure: true,
     });
     expect(findConnectorCatalogueEntry("teamcenter")).toMatchObject({
       canConfigure: false,

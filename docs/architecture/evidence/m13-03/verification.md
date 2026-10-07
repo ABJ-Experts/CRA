@@ -175,10 +175,10 @@ package corruption failed verification. These are installed-engine development
 checks, not certification of every current/previous vendor version. Firefox and
 WebKit results: two passed in 24.9 seconds; Chromium: one passed.
 
-- [Explorer screenshot](../../../../artifacts/m13-03/m13-audit-search-results.png)
-- [Detail screenshot](../../../../artifacts/m13-03/m13-audit-detail-panel.png)
-- [CSV ready screenshot](../../../../artifacts/m13-03/m13-audit-csv-ready.png)
-- [JSON ready screenshot](../../../../artifacts/m13-03/m13-audit-json-ready.png)
+- Explorer screenshot (generated artifact removed during repository cleanup)
+- Detail screenshot (generated artifact removed during repository cleanup)
+- CSV ready screenshot (generated artifact removed during repository cleanup)
+- JSON ready screenshot (generated artifact removed during repository cleanup)
 - [Independent API download verification](../../../../artifacts/m13-03/api-proof-results.json)
 
 The independently downloaded CSV and JSON packages each checked one canonical

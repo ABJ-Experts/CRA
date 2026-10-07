@@ -52,7 +52,9 @@
     "vault:webhooks": "node dist/webhook-vault-maintenance.js",
     "vault:chat": "node dist/chat-vault-maintenance.js",
     "worker:vulnerability-remediation-tickets": "node dist/vulnerability-remediation-ticket-operation-worker.js",
-    "worker:audit-range-verification": "node dist/audit-range-verify-worker.js"
+    "worker:audit-range-verification": "node dist/audit-range-verify-worker.js",
+    "worker:audit-siem": "node dist/audit-siem-worker.js",
+    "vault:siem": "node dist/siem-vault-maintenance.js"
   },
   "dependencies": {
     "@cyclonedx/cyclonedx-library": "10.2.0",

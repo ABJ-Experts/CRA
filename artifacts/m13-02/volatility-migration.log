@@ -1,6 +1,0 @@
-Connecting to local database...
-Do you want to push these migrations to the local database?
- • [1m20261006084112_m13_02_canonical_volatility.sql[22m
- [Y/n] y
-Applying migration 20261006084112_m13_02_canonical_volatility.sql...
-{"upToDate":false,"dryRun":false,"migrations":["20261006084112_m13_02_canonical_volatility.sql"],"seeds":[],"roles":[],"message":"Finished supabase db push."}

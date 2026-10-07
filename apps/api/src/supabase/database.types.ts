@@ -13530,6 +13530,237 @@ export type Database = {
           },
         ]
       }
+      siem_deliveries: {
+        Row: {
+          attempt_count: number
+          created_at: string
+          destination_id: string
+          destination_revision: number
+          event_id: string
+          event_sequence: number
+          failure_code: string | null
+          first_attempt_at: string | null
+          id: string
+          lease_expires_at: string | null
+          lease_token: string | null
+          next_attempt_at: string
+          organization_id: string
+          payload: Json
+          replay_of: string | null
+          state: string
+          updated_at: string
+          version: number
+          worker_id: string | null
+        }
+        Insert: {
+          attempt_count?: number
+          created_at?: string
+          destination_id: string
+          destination_revision: number
+          event_id: string
+          event_sequence: number
+          failure_code?: string | null
+          first_attempt_at?: string | null
+          id?: string
+          lease_expires_at?: string | null
+          lease_token?: string | null
+          next_attempt_at?: string
+          organization_id: string
+          payload: Json
+          replay_of?: string | null
+          state?: string
+          updated_at?: string
+          version?: number
+          worker_id?: string | null
+        }
+        Update: {
+          attempt_count?: number
+          created_at?: string
+          destination_id?: string
+          destination_revision?: number
+          event_id?: string
+          event_sequence?: number
+          failure_code?: string | null
+          first_attempt_at?: string | null
+          id?: string
+          lease_expires_at?: string | null
+          lease_token?: string | null
+          next_attempt_at?: string
+          organization_id?: string
+          payload?: Json
+          replay_of?: string | null
+          state?: string
+          updated_at?: string
+          version?: number
+          worker_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "siem_deliveries_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "audit_logs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "siem_deliveries_organization_id_destination_id_fkey"
+            columns: ["organization_id", "destination_id"]
+            isOneToOne: false
+            referencedRelation: "siem_destinations"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "siem_deliveries_replay_of_fkey"
+            columns: ["replay_of"]
+            isOneToOne: false
+            referencedRelation: "siem_deliveries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      siem_delivery_attempts: {
+        Row: {
+          attempt_number: number
+          code: string
+          created_at: string
+          delivery_id: string
+          duration_ms: number | null
+          http_status: number | null
+          id: string
+          lease_token: string
+          organization_id: string
+          state: string
+        }
+        Insert: {
+          attempt_number: number
+          code: string
+          created_at?: string
+          delivery_id: string
+          duration_ms?: number | null
+          http_status?: number | null
+          id?: string
+          lease_token: string
+          organization_id: string
+          state: string
+        }
+        Update: {
+          attempt_number?: number
+          code?: string
+          created_at?: string
+          delivery_id?: string
+          duration_ms?: number | null
+          http_status?: number | null
+          id?: string
+          lease_token?: string
+          organization_id?: string
+          state?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "siem_delivery_attempts_organization_id_delivery_id_fkey"
+            columns: ["organization_id", "delivery_id"]
+            isOneToOne: false
+            referencedRelation: "siem_deliveries"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      siem_destinations: {
+        Row: {
+          authority_user_id: string
+          created_at: string
+          credential_id: string | null
+          credential_revision: number
+          credentials: Json | null
+          database_identity: string
+          dataset_epoch: string
+          destination_revision: number
+          display_name: string
+          endpoint: string
+          event_classes: string[]
+          failure_code: string | null
+          format: string
+          id: string
+          last_accepted_at: string | null
+          organization_id: string
+          product_ids: string[]
+          scan_sequence: number
+          scheduled_at: string
+          state: string
+          tested_revision: number | null
+          transport: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          authority_user_id: string
+          created_at?: string
+          credential_id?: string | null
+          credential_revision?: number
+          credentials?: Json | null
+          database_identity: string
+          dataset_epoch: string
+          destination_revision?: number
+          display_name: string
+          endpoint: string
+          event_classes: string[]
+          failure_code?: string | null
+          format: string
+          id: string
+          last_accepted_at?: string | null
+          organization_id: string
+          product_ids?: string[]
+          scan_sequence?: number
+          scheduled_at?: string
+          state?: string
+          tested_revision?: number | null
+          transport: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          authority_user_id?: string
+          created_at?: string
+          credential_id?: string | null
+          credential_revision?: number
+          credentials?: Json | null
+          database_identity?: string
+          dataset_epoch?: string
+          destination_revision?: number
+          display_name?: string
+          endpoint?: string
+          event_classes?: string[]
+          failure_code?: string | null
+          format?: string
+          id?: string
+          last_accepted_at?: string | null
+          organization_id?: string
+          product_ids?: string[]
+          scan_sequence?: number
+          scheduled_at?: string
+          state?: string
+          tested_revision?: number | null
+          transport?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "siem_destinations_authority_user_id_fkey"
+            columns: ["authority_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "siem_destinations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       software_baseline_release_memberships: {
         Row: {
           assigned_at: string
@@ -30826,6 +31057,124 @@ export type Database = {
           p_job: Database["public"]["Tables"]["audit_verification_jobs"]["Row"]
           p_outcome: string
         }
+        Returns: Json
+      }
+      m13_05_actor_can: {
+        Args: { p_actor: string; p_org: string; p_permission: string }
+        Returns: boolean
+      }
+      m13_05_authority_valid: {
+        Args: {
+          p_dest: Database["public"]["Tables"]["siem_destinations"]["Row"]
+        }
+        Returns: boolean
+      }
+      m13_05_event_class: {
+        Args: { p_event: Database["public"]["Tables"]["audit_logs"]["Row"] }
+        Returns: string
+      }
+      m13_05_event_projection: {
+        Args: { p_event: Database["public"]["Tables"]["audit_logs"]["Row"] }
+        Returns: Json
+      }
+      m13_05_event_selected: {
+        Args: {
+          p_actor_user_id: string
+          p_event: Database["public"]["Tables"]["audit_logs"]["Row"]
+          p_organization_id: string
+          p_products: string[]
+        }
+        Returns: boolean
+      }
+      m13_05_event_selected_cached: {
+        Args: {
+          p_actor_user_id: string
+          p_event: Database["public"]["Tables"]["audit_logs"]["Row"]
+          p_organization_id: string
+          p_permissions: Json
+          p_products: string[]
+        }
+        Returns: boolean
+      }
+      m13_05_private_claim: {
+        Args: {
+          p_delivery: Database["public"]["Tables"]["siem_deliveries"]["Row"]
+          p_dest: Database["public"]["Tables"]["siem_destinations"]["Row"]
+        }
+        Returns: Json
+      }
+      m13_05_public_delivery: {
+        Args: {
+          p_delivery: Database["public"]["Tables"]["siem_deliveries"]["Row"]
+        }
+        Returns: Json
+      }
+      m13_05_public_destination: {
+        Args: {
+          p_actor?: string
+          p_dest: Database["public"]["Tables"]["siem_destinations"]["Row"]
+        }
+        Returns: Json
+      }
+      m13_05_receipt: {
+        Args: {
+          p_actor: string
+          p_digest: string
+          p_entity: string
+          p_key_id?: string
+          p_operation: string
+          p_org: string
+          p_request: string
+          p_result?: Json
+        }
+        Returns: undefined
+      }
+      m13_05_scope_can: {
+        Args: {
+          p_actor: string
+          p_classes: string[]
+          p_org: string
+          p_products: string[]
+        }
+        Returns: boolean
+      }
+      m13_05_siem_authorize_delivery: {
+        Args: {
+          p_delivery_id: string
+          p_lease_token: string
+          p_organization_id: string
+          p_version: number
+          p_worker_id: string
+        }
+        Returns: Json
+      }
+      m13_05_siem_claim: { Args: { p_worker_id: string }; Returns: Json }
+      m13_05_siem_command: {
+        Args: {
+          p_actor_user_id: string
+          p_destination_id: string
+          p_expected_version: number
+          p_input?: Json
+          p_operation: string
+          p_organization_id: string
+          p_request_id: string
+        }
+        Returns: Json
+      }
+      m13_05_siem_complete: {
+        Args: {
+          p_delivery_id: string
+          p_lease_token: string
+          p_organization_id: string
+          p_outcome: Json
+          p_version: number
+          p_worker_id: string
+        }
+        Returns: Json
+      }
+      m13_05_siem_stage: { Args: { p_worker_id: string }; Returns: Json }
+      m13_05_siem_vault: {
+        Args: { p_action: string; p_input?: Json; p_organization_id: string }
         Returns: Json
       }
       m2_active_member: {

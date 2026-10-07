@@ -1,2 +1,0 @@
-pg_restore: error: could not execute query: ERROR:  relation "public.user_table_preferences" does not exist
-Command was: DROP POLICY IF EXISTS utp_own_all ON public.user_table_preferences;

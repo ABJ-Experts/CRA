@@ -3288,6 +3288,105 @@
           "note": "Verification mutations and organization-less append-only security receipts commit atomically, including when the tenant chain is corrupt."
         }
       ]
+    },
+    {
+      "id": "apps/api/src/audit/siem/siem.controller.ts#SiemController.create:POST:audit/siem/destinations",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261007104830_m13_05_siem_forwarding.sql",
+          "symbol": "m13_05_siem_command",
+          "note": "Tenant-scoped commands persist action-specific security receipts with workflow transitions; collector tests persist intent before external dispatch."
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/audit/siem/siem.controller.ts#SiemController.disable:POST:audit/siem/destinations/:id/disable",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261007104830_m13_05_siem_forwarding.sql",
+          "symbol": "m13_05_siem_command",
+          "note": "Tenant-scoped commands persist action-specific security receipts with workflow transitions; collector tests persist intent before external dispatch."
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/audit/siem/siem.controller.ts#SiemController.enable:POST:audit/siem/destinations/:id/enable",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261007104830_m13_05_siem_forwarding.sql",
+          "symbol": "m13_05_siem_command",
+          "note": "Tenant-scoped commands persist action-specific security receipts with workflow transitions; collector tests persist intent before external dispatch."
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/audit/siem/siem.controller.ts#SiemController.replay:POST:audit/siem/destinations/:id/deliveries/:deliveryId/replay",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261007104830_m13_05_siem_forwarding.sql",
+          "symbol": "m13_05_siem_command",
+          "note": "Tenant-scoped commands persist action-specific security receipts with workflow transitions; collector tests persist intent before external dispatch."
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/audit/siem/siem.controller.ts#SiemController.replay_preview:POST:audit/siem/destinations/:id/deliveries/:deliveryId/replay-preview",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261007104830_m13_05_siem_forwarding.sql",
+          "symbol": "m13_05_siem_command",
+          "note": "Tenant-scoped commands persist action-specific security receipts with workflow transitions; collector tests persist intent before external dispatch."
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/audit/siem/siem.controller.ts#SiemController.revoke_credentials:POST:audit/siem/destinations/:id/credentials/revoke",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261007104830_m13_05_siem_forwarding.sql",
+          "symbol": "m13_05_siem_command",
+          "note": "Tenant-scoped commands persist action-specific security receipts with workflow transitions; collector tests persist intent before external dispatch."
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/audit/siem/siem.controller.ts#SiemController.rotate_credentials:POST:audit/siem/destinations/:id/credentials",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261007104830_m13_05_siem_forwarding.sql",
+          "symbol": "m13_05_siem_command",
+          "note": "Tenant-scoped commands persist action-specific security receipts with workflow transitions; collector tests persist intent before external dispatch."
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/audit/siem/siem.controller.ts#SiemController.test:POST:audit/siem/destinations/:id/test",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261007104830_m13_05_siem_forwarding.sql",
+          "symbol": "m13_05_siem_command",
+          "note": "Tenant-scoped commands persist action-specific security receipts with workflow transitions; collector tests persist intent before external dispatch."
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/audit/siem/siem.controller.ts#SiemController.update:PATCH:audit/siem/destinations/:id",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261007104830_m13_05_siem_forwarding.sql",
+          "symbol": "m13_05_siem_command",
+          "note": "Tenant-scoped commands persist action-specific security receipts with workflow transitions; collector tests persist intent before external dispatch."
+        }
+      ]
     }
   ],
   "workers": [
@@ -3682,6 +3781,17 @@
           "evidence": "apps/infrastructure/supabase/migrations/20261007090257_m13_04_audit_range_verification.sql",
           "symbol": "m13_04_checkpoint_verification",
           "note": "Leased range batches persist progress/results and security-scope audit receipts together; internal checks never invoke public read use cases."
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/audit/siem/worker/siem-worker.ts",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261007104830_m13_05_siem_forwarding.sql",
+          "symbol": "m13_05_siem_complete",
+          "note": "Staging, claim, authorization and fenced completion persist durable security receipts; forwarding never alters original ledger events."
         }
       ]
     }

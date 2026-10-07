@@ -29,7 +29,7 @@ export const connectorCatalogueEntrySchema = z
       "enisa",
     ]),
     name: text(100),
-    implementation: z.enum(["reference", "ci", "ticketing", "agent", "planned"]),
+    implementation: z.enum(["reference", "ci", "ticketing", "agent", "siem", "planned"]),
     phase: z.enum(["MVP", "V1", "V2"]),
     priority: z.enum(["P0", "P1", "P2"]),
     canConfigure: z.boolean(),
@@ -46,11 +46,14 @@ export const connectorCatalogueEntrySchema = z
     );
     const ticketing = entry.id === "jira";
     const agent = entry.id === "on_prem_agent";
+    const siem = entry.id === "siem";
     return (
       entry.canConfigure ===
-        (entry.id === "reference_conformance" || ci || ticketing || agent) &&
+        (entry.id === "reference_conformance" || ci || ticketing || agent || siem) &&
       entry.implementation ===
-        (ticketing
+        (siem
+          ? "siem"
+          : ticketing
           ? "ticketing"
           : agent
             ? "agent"
