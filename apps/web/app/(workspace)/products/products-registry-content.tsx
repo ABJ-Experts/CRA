@@ -314,9 +314,11 @@ function ProductRow({
   classification,
   loadingClassification,
   classificationUnavailable,
+  onPosture,
 }: {
   product: Product;
   onOpen: (id: string) => void;
+  onPosture?: (id: string) => void;
   classification?: ProductClassificationSummary | null;
   loadingClassification?: boolean;
   classificationUnavailable?: boolean;
@@ -352,6 +354,16 @@ function ProductRow({
           {product.releaseCount}{" "}
           {product.releaseCount === 1 ? "release" : "releases"}
         </span>
+        {onPosture ? (
+          <Button
+            variant="outline"
+            tone="grey"
+            onClick={() => onPosture(product.id)}
+            aria-label={`View posture for ${product.name}`}
+          >
+            Posture
+          </Button>
+        ) : null}
         <Button
           type="button"
           variant="outline"
@@ -531,6 +543,11 @@ export function ProductsRegistryContent() {
                       }
                       loadingClassification={classifications.isPending}
                       classificationUnavailable={classifications.isError}
+                      onPosture={
+                        permissions.can_view_dashboards === true
+                          ? (id) => router.push(`/products/${id}/posture`)
+                          : undefined
+                      }
                       onOpen={(id) => router.push(`/products/${id}`)}
                     />
                   ))}

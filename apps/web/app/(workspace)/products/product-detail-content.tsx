@@ -865,6 +865,15 @@ export function ProductDetailContent({ productId }: { productId: string }) {
         subtitle="Product identity, release history, and lifecycle state."
         actions={
           <div className="flex flex-wrap gap-3">
+            {permissions.can_view_dashboards === true ? (
+              <Button
+                variant="outline"
+                tone="grey"
+                onClick={() => router.push(`/products/${productId}/posture`)}
+              >
+                Product posture
+              </Button>
+            ) : null}
             {canViewTechnicalFiles ? (
               <Button
                 type="button"

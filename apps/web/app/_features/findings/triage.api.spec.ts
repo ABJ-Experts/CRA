@@ -22,6 +22,7 @@ describe("vulnerabilityTriageApi", () => {
 
     await expect(
       vulnerabilityTriageApi.list({
+        openOnly: true,
         productIds: ["11111111-1111-4111-8111-111111111111"],
         severities: ["critical", "high"],
         vexStatuses: ["not_affected"],
@@ -45,6 +46,7 @@ describe("vulnerabilityTriageApi", () => {
     );
     const path = String(fetcher.mock.calls[0]?.[0]);
     expect(path).toContain("productIds=11111111-1111-4111-8111-111111111111");
+    expect(path).toContain("openOnly=true");
     expect(path).toContain("severities=critical");
     expect(path).toContain("severities=high");
     expect(path).toContain("vexStatuses=not_affected");

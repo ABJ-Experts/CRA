@@ -262,6 +262,8 @@ function queuePath(query: VulnerabilityTriageQueueQuery): `/${string}` {
     order: query.order,
   });
   if (query.cursor) search.set("cursor", query.cursor);
+  if (query.openOnly !== undefined)
+    search.set("openOnly", String(query.openOnly));
   appendMany(search, "productIds", query.productIds);
   appendMany(search, "releaseIds", query.releaseIds);
   appendMany(search, "severities", query.severities);

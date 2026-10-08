@@ -31,6 +31,7 @@ import {
   useVulnerabilityTriageDetailQuery,
   useVulnerabilityTriageQueueQuery,
 } from "./triage.queries";
+import { readDashboardTriageLink } from "./dashboard-triage-deep-link";
 import { FindingBulkAssessmentAction } from "./finding-bulk-assessment";
 
 const FindingTriageDetail = dynamic(
@@ -51,7 +52,10 @@ const VIEWPORT_HEIGHT = 448;
 const OVERSCAN = 6;
 
 type QueueRow = VulnerabilityTriageQueueResponse["rows"][number];
-type QueueFilters = Omit<VulnerabilityTriageQueueQuery, "cursor" | "limit">;
+type QueueFilters = Omit<
+  VulnerabilityTriageQueueQuery,
+  "cursor" | "limit" | "openOnly"
+> & { openOnly?: boolean };
 
 function requestMessage(error: unknown): string {
   if (error instanceof ApiClientError && error.status === 403)
@@ -185,6 +189,15 @@ function TriageFilters({
           ["unknown", "Unknown"],
         ]}
       />
+      <label className="flex items-center gap-2 text-subhead-regular text-fg">
+        <Checkbox
+          checked={filters.openOnly === true}
+          onCheckedChange={(value) =>
+            onChange({ ...filters, openOnly: value === true })
+          }
+        />
+        Unresolved open findings only
+      </label>
       <label className="flex flex-col gap-1 text-caption-1-regular text-fg">
         Product IDs
         <input
@@ -639,10 +652,12 @@ function FilterSelect({
 function SavedViews({
   filters,
   organizationId,
+  applyDefault,
   onApply,
 }: Readonly<{
   filters: QueueFilters;
   organizationId: string | null;
+  applyDefault: boolean;
   onApply: (view: {
     filters: QueueFilters;
     sort: QueueFilters["sort"];
@@ -666,6 +681,10 @@ function SavedViews({
   const savedViewData = scopeChanged ? undefined : savedViews.data;
   const defaultId = savedViewData?.defaultViewId ?? null;
   useEffect(() => {
+    if (!applyDefault) {
+      appliedDefaultScope.current = organizationId;
+      return;
+    }
     if (appliedDefaultScope.current === organizationId || !savedViewData)
       return;
     appliedDefaultScope.current = organizationId;
@@ -678,7 +697,7 @@ function SavedViews({
       sort: view.sort,
       order: view.order,
     });
-  }, [onApply, organizationId, savedViewData]);
+  }, [applyDefault, onApply, organizationId, savedViewData]);
   async function createView() {
     if (name.trim() === "") {
       setMessage("Give this saved view a name.");
@@ -896,10 +915,20 @@ export function FindingTriageContent() {
   const organizationId = session?.organization?.id ?? null;
   const canView = useHasPermission("can_view_findings");
   const canEdit = useHasPermission("can_edit_findings");
-  const [filters, setFilters] = useState<QueueFilters>({
+  const linkedFilters = useMemo(
+    () => readDashboardTriageLink(searchParams),
+    [searchParams],
+  );
+  const linkedFilterIdentity = JSON.stringify(linkedFilters);
+  const appliedLinkIdentity = useRef(linkedFilterIdentity);
+  const hasDashboardLink = ["productId", "severity", "openOnly"].some(
+    (key) => searchParams.getAll(key).length > 0,
+  );
+  const [filters, setFilters] = useState<QueueFilters>(() => ({
+    ...linkedFilters,
     sort: "lastEvaluatedAt",
     order: "desc",
-  });
+  }));
   const [cursor, setCursor] = useState<
     Exclude<VulnerabilityTriageQueueResponse["nextCursor"], null> | undefined
   >();
@@ -950,6 +979,18 @@ export function FindingTriageContent() {
     setScrollTop(0);
     setSelectedFindingIds([]);
   }, []);
+  useEffect(() => {
+    // Only navigation to a different validated filter set changes local drafts.
+    // Unrelated URL parameters and invalid links must not reset manual edits.
+    if (hasDashboardLink && !linkedFilters) return;
+    if (appliedLinkIdentity.current === linkedFilterIdentity) return;
+    appliedLinkIdentity.current = linkedFilterIdentity;
+    updateFilters({
+      ...linkedFilters,
+      sort: "lastEvaluatedAt",
+      order: "desc",
+    });
+  }, [hasDashboardLink, linkedFilterIdentity, linkedFilters, updateFilters]);
   const toggleFindingSelection = useCallback((findingId: string) => {
     setSelectedFindingIds((current) =>
       current.includes(findingId)
@@ -1012,6 +1053,7 @@ export function FindingTriageContent() {
       <SavedViews
         filters={filters}
         organizationId={organizationId}
+        applyDefault={linkedFilters === null}
         onApply={(view) =>
           updateFilters({ ...view.filters, sort: view.sort, order: view.order })
         }

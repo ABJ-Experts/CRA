@@ -55,7 +55,7 @@ begin
  perform pg_temp.check('Enrollment consumes token into active identity',v_result.outcome='enrolled' and v_result.agent->>'status'='active');
  perform pg_temp.check('Active agent is reported as connected',
   (select active_agent from public.m1106_agent_connection_summaries(v_org,array[v_connector])));
- update public.connector_agents set current_expires_at=clock_timestamp()-interval '1 second' where id=v_agent;
+ update public.connector_agents set current_expires_at=now()-interval '1 second' where id=v_agent;
  perform pg_temp.check('Expired certificate is reported disconnected',
   (select not active_agent from public.m1106_agent_connection_summaries(v_org,array[v_connector])));
  update public.connector_agents set current_expires_at=clock_timestamp()+interval '90 days' where id=v_agent;
@@ -137,7 +137,7 @@ begin
  v_connector:=(v_result.connector->>'id')::uuid;
  select * into v_result from public.m1106_issue_agent_enrollment(v_org,v_connector,v_owner,v_epoch,gen_random_uuid(),repeat('8',64),v_env);
  v_agent:=(v_result.agent->>'id')::uuid;
- update public.connector_agents set enrollment_expires_at=clock_timestamp()-interval '1 second' where id=v_agent;
+ update public.connector_agents set enrollment_expires_at=now()-interval '1 second' where id=v_agent;
  select * into v_result from public.m1106_issue_agent_enrollment(v_org,v_connector,v_owner,v_epoch,gen_random_uuid(),repeat('9',64),v_env);
  perform pg_temp.check('Naturally expired pending token can be reissued',v_result.outcome='issued');
 end $$;

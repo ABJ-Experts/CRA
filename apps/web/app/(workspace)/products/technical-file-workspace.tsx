@@ -7,7 +7,8 @@ import {
 } from "@repo/contracts/technical-files";
 import type { ProductRetentionCalculation } from "@repo/contracts/products";
 import { Button } from "@repo/ui/button";
-import { useRouter } from "next/navigation";
+import { readTechnicalFileSectionLink } from "../../_features/technical-files/technical-file-deep-link";
+import { useSearchParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import {
@@ -912,20 +913,37 @@ function TechnicalFileOverview({
   canShare: boolean;
   enabled: boolean;
 }) {
+  const searchParams = useSearchParams();
+  const requestedKey = readTechnicalFileSectionLink(searchParams);
   const [selectedKey, setSelectedKey] = useState<
     TechnicalFileSection["key"] | null
-  >(null);
+  >(requestedKey);
+  // A later gap link must not unmount an open editor and discard its draft.
+  useEffect(() => {
+    if (requestedKey !== null)
+      setSelectedKey((current) => current ?? requestedKey);
+  }, [requestedKey]);
   const selected =
     technicalFile.sections.find((section) => section.key === selectedKey) ??
     null;
   if (selected)
     return (
-      <SectionEditor
-        productId={productId}
-        section={selected}
-        canEdit={canEdit}
-        onClose={() => setSelectedKey(null)}
-      />
+      <div className="space-y-4">
+        {requestedKey && requestedKey !== selectedKey ? (
+          <p role="status" className="text-subhead-regular text-fg">
+            Another section link is waiting. Save your changes before closing
+            this section to open the requested gap.
+          </p>
+        ) : null}
+        <SectionEditor
+          productId={productId}
+          section={selected}
+          canEdit={canEdit}
+          onClose={() =>
+            setSelectedKey(requestedKey !== selectedKey ? requestedKey : null)
+          }
+        />
+      </div>
     );
   return (
     <SectionCard title="Annex VII technical file">

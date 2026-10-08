@@ -31,7 +31,10 @@ import {
   useUndoVulnerabilityAssessmentBulkOperationMutation,
 } from "./triage.queries";
 
-type QueueFilters = Omit<VulnerabilityTriageQueueQuery, "cursor" | "limit">;
+type QueueFilters = Omit<
+  VulnerabilityTriageQueueQuery,
+  "cursor" | "limit" | "openOnly"
+> & { openOnly?: boolean };
 
 const JUSTIFICATIONS = [
   ["component_not_present", "Component not present"],

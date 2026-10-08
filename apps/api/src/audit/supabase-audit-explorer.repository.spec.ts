@@ -15,6 +15,13 @@ const sha256 = "a".repeat(64);
 const objectPath = `${orgId}/${jobId}/${sha256}.zip`;
 
 describe("SupabaseAuditExplorerRepository", () => {
+  beforeEach(() => {
+    jest
+      .spyOn(Date, "now")
+      .mockReturnValue(Date.parse("2026-10-07T12:00:00.000Z"));
+  });
+  afterEach(() => jest.restoreAllMocks());
+
   it("resolves permissions with orgId as the first scoped boundary", async () => {
     const fromCalls: Array<{
       table: string;

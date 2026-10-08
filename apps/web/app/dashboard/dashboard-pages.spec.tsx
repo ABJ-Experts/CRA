@@ -6,7 +6,7 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const navigation = vi.hoisted(() => ({
-  pathname: "/dashboard",
+  pathname: "/dashboard/ecommerce",
   replace: vi.fn(),
   push: vi.fn(),
 }));
@@ -138,11 +138,11 @@ import { DashboardTopNav } from "./_components/dashboard-top-nav";
 import AnalyticsDashboardPage from "./analytics/page";
 import CryptoDashboardPage from "./crypto/page";
 import DashboardLayout from "./layout";
-import EcommerceDashboardPage from "./page";
+import EcommerceDashboardPage from "./ecommerce/page";
 import ProjectDashboardPage from "./project/page";
 
 beforeEach(() => {
-  navigation.pathname = "/dashboard";
+  navigation.pathname = "/dashboard/ecommerce";
   vi.stubGlobal(
     "matchMedia",
     vi.fn(() => ({
@@ -255,7 +255,8 @@ describe("dashboard pages", () => {
   });
 
   it.each([
-    ["/dashboard", "Welcome, Robert Fox"],
+    ["/dashboard/ecommerce", "Welcome, Robert Fox"],
+    ["/dashboard", "CRA Sentinel"],
     ["/dashboard/tables/striped", "Striped Tables"],
     ["/dashboard/file-manager", "File Manager"],
   ])("orients users on %s", (pathname, label) => {

@@ -26178,6 +26178,23 @@ export type Database = {
         }[]
       }
       get_current_user_id: { Args: never; Returns: string }
+      get_dashboard_permission_context: {
+        Args: {
+          p_actor_user_id: string
+          p_expected_role: string
+          p_organization_id: string
+        }
+        Returns: Json
+      }
+      get_dashboard_projection: {
+        Args: {
+          p_actor_user_id: string
+          p_endpoint: string
+          p_filters?: Json
+          p_organization_id: string
+        }
+        Returns: Json
+      }
       get_evidence_bulk_intake_batch_atomic: {
         Args: {
           p_actor_user_id: string
@@ -31175,6 +31192,14 @@ export type Database = {
         Args: { p_action: string; p_input?: Json; p_organization_id: string }
         Returns: Json
       }
+      m14_actor_can: {
+        Args: { p_actor: string; p_org: string; p_permission: string }
+        Returns: boolean
+      }
+      m14_section: {
+        Args: { p_data?: Json; p_state: string; p_updated?: string }
+        Returns: Json
+      }
       m2_active_member: {
         Args: { p_actor_user_id: string; p_organization_id: string }
         Returns: boolean
@@ -31262,6 +31287,10 @@ export type Database = {
           p_organization_id: string
           p_parent_product_id: string
         }
+        Returns: Json
+      }
+      m2_dashboard_products: {
+        Args: { p_actor: string; p_org: string; p_product?: string }
         Returns: Json
       }
       m2_emit_product_regulatory_event: {
@@ -31563,6 +31592,14 @@ export type Database = {
         Args: { p_values: number[] }
         Returns: boolean
       }
+      m3_dashboard_coverage: {
+        Args: { p_actor: string; p_org: string; p_product?: string }
+        Returns: Json
+      }
+      m3_dashboard_ingestion: {
+        Args: { p_actor: string; p_filters: Json; p_org: string }
+        Returns: Json
+      }
       m4_03_actor_can_edit_findings: {
         Args: { p_actor_user_id: string; p_organization_id: string }
         Returns: boolean
@@ -31574,6 +31611,17 @@ export type Database = {
           material_fingerprint: string
           source_record_id: string
           source_record_version_id: string
+        }[]
+      }
+      m4_03_cvss_rows: {
+        Args: { p_vulnerability_ids: string[] }
+        Returns: {
+          freshness_state: string
+          promoted_at: string
+          source_updated_at: string
+          value: Json
+          version: string
+          vulnerability_id: string
         }[]
       }
       m4_03_intelligence_json: {
@@ -31593,6 +31641,10 @@ export type Database = {
         Returns: Json
       }
       m4_07_review_event_json: { Args: { p_event_id: string }; Returns: Json }
+      m4_dashboard_feed_freshness: {
+        Args: { p_actor: string; p_org: string }
+        Returns: Json
+      }
       m4_manual_finding_json: {
         Args: { p_finding_id: string; p_organization_id: string }
         Returns: Json
@@ -31604,6 +31656,26 @@ export type Database = {
       m5_bulk_operation_json: {
         Args: { p_operation_id: string; p_organization_id: string }
         Returns: Json
+      }
+      m5_cvss_score_severity: { Args: { p_score: number }; Returns: string }
+      m5_dashboard_findings: {
+        Args: { p_actor: string; p_org: string; p_product?: string }
+        Returns: Json
+      }
+      m5_finding_is_open: {
+        Args: { p_finding_id: string; p_organization_id: string }
+        Returns: boolean
+      }
+      m5_finding_open_policy: {
+        Args: {
+          p_approval: string
+          p_closed_at: string
+          p_review: string
+          p_status: string
+          p_superseded_at: string
+          p_vex: string
+        }
+        Returns: boolean
       }
       m5_note_actor_json: {
         Args: {
@@ -31701,6 +31773,10 @@ export type Database = {
         Args: { p_organization_id: string }
         Returns: number
       }
+      m5_triage_observation_severity: {
+        Args: { p_observed_at: string; p_vulnerability_id: string }
+        Returns: string
+      }
       m5_triage_operational_json: {
         Args: { p_finding_id: string; p_organization_id: string }
         Returns: Json
@@ -31796,6 +31872,10 @@ export type Database = {
         Returns: string
       }
       m6_command_digest: { Args: { p_payload: Json }; Returns: string }
+      m6_dashboard_obligations: {
+        Args: { p_actor: string; p_filters: Json; p_org: string }
+        Returns: Json
+      }
       m6_due_at: {
         Args: { p_anchor: string; p_duration: string }
         Returns: string
@@ -31923,6 +32003,24 @@ export type Database = {
         Returns: Json
       }
       m7_auditor_scope_json: { Args: { p_grant_id: string }; Returns: Json }
+      m7_dashboard_readiness: {
+        Args: { p_actor: string; p_filters: Json; p_org: string }
+        Returns: Json
+      }
+      m7_dashboard_source_can: {
+        Args: {
+          p_actor: string
+          p_kind: string
+          p_org: string
+          p_product: string
+          p_record: string
+        }
+        Returns: boolean
+      }
+      m7_dashboard_source_permission: {
+        Args: { p_kind: string }
+        Returns: string
+      }
       m7_declaration_json: {
         Args: {
           p_declaration_id: string

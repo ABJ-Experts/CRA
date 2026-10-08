@@ -294,6 +294,18 @@
     "./audit/types": {
       "types": "./dist/audit/types/index.d.ts",
       "default": "./dist/audit/types/index.js"
+    },
+    "./dashboard": {
+      "types": "./dist/dashboard/index.d.ts",
+      "default": "./dist/dashboard/index.js"
+    },
+    "./dashboard/schemas": {
+      "types": "./dist/dashboard/schemas/index.d.ts",
+      "default": "./dist/dashboard/schemas/index.js"
+    },
+    "./dashboard/types": {
+      "types": "./dist/dashboard/types/index.d.ts",
+      "default": "./dist/dashboard/types/index.js"
     }
   },
   "files": [

@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiClientError } from "../../_lib/http/api-client";
 import { TechnicalFileWorkspace } from "./technical-file-workspace";
 
+const navigation = vi.hoisted(() => ({ search: "" }));
 const query = vi.hoisted(() => ({
   useTechnicalFileQuery: vi.fn(),
   useCreateTechnicalFileMutation: vi.fn(),
@@ -22,7 +23,10 @@ const session = vi.hoisted(() => ({
   useSession: vi.fn(),
 }));
 
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
+vi.mock("next/navigation", () => ({
+  useSearchParams: () => new URLSearchParams(navigation.search),
+  useRouter: () => ({ push: vi.fn() }),
+}));
 vi.mock("../../_providers/providers", () => ({ useMocksReady: () => true }));
 vi.mock("../../_providers/session-provider", () => session);
 vi.mock("../../_features/technical-files/technical-files.queries", () => query);
@@ -147,10 +151,55 @@ afterEach(() => {
 });
 
 beforeEach(() => {
+  navigation.search = "";
   vi.stubEnv("NEXT_PUBLIC_ENABLE_MOCKS", "false");
 });
 
 describe("TechnicalFileWorkspace", () => {
+  it("opens a validated gap and preserves an open draft when another gap link arrives", () => {
+    navigation.search = "section=general_description";
+    prime({
+      data: {
+        technicalFile: {
+          id: "22222222-2222-4222-8222-222222222222",
+          templateVersion: "2024-01",
+          legalSource: "Annex VII",
+          version: 1,
+          sections: [
+            section,
+            {
+              ...section,
+              id: "44444444-4444-4444-8444-444444444444",
+              key: "test_reports",
+            },
+          ],
+        },
+        retention: {
+          status: "incomplete",
+          incompleteReasons: [],
+          legalHoldActive: false,
+        },
+      },
+    });
+    const { rerender } = render(
+      <TechnicalFileWorkspace productId="33333333-3333-4333-8333-333333333333" />,
+    );
+    const narrative = screen.getByLabelText("Narrative");
+    fireEvent.change(narrative, {
+      target: { value: "Unsaved investigation evidence" },
+    });
+    navigation.search = "section=test_reports";
+    rerender(
+      <TechnicalFileWorkspace productId="33333333-3333-4333-8333-333333333333" />,
+    );
+    expect(screen.getByLabelText("Narrative")).toHaveValue(
+      "Unsaved investigation evidence",
+    );
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Save your changes before closing this section",
+    );
+  });
+
   it("shows the explicit V1 attachment boundary and opens a source-linked section", () => {
     prime({
       data: {
