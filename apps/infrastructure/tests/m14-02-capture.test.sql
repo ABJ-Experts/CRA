@@ -1,0 +1,335 @@
+begin;
+create temporary table m14_test_scope(org uuid,actor uuid,product uuid,release uuid,finding uuid);
+create or replace function pg_temp.check(name text,truth boolean)returns void language plpgsql as $$begin if not coalesce(truth,false)then raise exception 'M14-02 check failed: %',name;end if;raise notice 'M14-02 verified: %',name;end$$;
+do $$
+declare org uuid:='00000000-0000-4000-8000-0000000000ca'; actor uuid; finding uuid:='00000000-0000-4000-8000-0000000014ff'; a uuid:=gen_random_uuid(); f public.vulnerability_findings; product uuid:=gen_random_uuid();release uuid:=gen_random_uuid(); vulnerability uuid:=gen_random_uuid();run uuid:=gen_random_uuid();source uuid:=gen_random_uuid();source_version uuid:=gen_random_uuid();affected uuid:=gen_random_uuid(); j jsonb; before_state jsonb; after_state jsonb;
+begin
+ select id into actor from public.users where email='owner@cra.test';
+ perform pg_temp.check('seed owner exists',actor is not null);
+ insert into public.products(id,organization_id,legal_entity_id,legal_entity_version,legal_entity_snapshot,name,internal_code,product_type,responsible_owner_id,created_by,updated_by)
+ select product,org,legal_entity_id,legal_entity_version,legal_entity_snapshot,'M14 synthetic product','m14-'||product,product_type,actor,actor,actor from public.products where organization_id=org limit 1;
+ perform pg_temp.check('own synthetic product exists',exists(select 1 from public.products where id=product));
+ insert into public.product_releases(id,organization_id,product_id,legal_entity_id,legal_entity_version,legal_entity_snapshot,label,release_version,lifecycle,placed_on_market_at,created_by,updated_by)
+ select release,org,product,legal_entity_id,legal_entity_version,legal_entity_snapshot,'M14 release','m14-'||release,'end_of_support',statement_timestamp(),actor,actor from public.products where id=product;
+ insert into m14_test_scope values(org,actor,product,release,finding);
+ insert into public.vulnerabilities(id,canonical_id,title)values(vulnerability,'CVE-M14-'||vulnerability,'Synthetic M14 source');
+ insert into public.vulnerability_feed_sync_runs(id,feed_key,run_kind,correlation_id)values(run,'osv','manual',gen_random_uuid());
+ insert into public.vulnerability_source_records(id,feed_key,source_record_key,vulnerability_id)values(source,'osv','m14-'||source,vulnerability);
+ insert into public.vulnerability_source_record_versions(id,source_record_id,run_id,record_sha256,record_state,raw_payload,normalized_payload)values(source_version,source,run,repeat('a',64),'active','{}','{}');
+ insert into public.vulnerability_affected_ranges(id,vulnerability_id,source_record_version_id,range_value)values(affected,vulnerability,source_version,'{}');
+ insert into public.vulnerability_findings(id,organization_id,release_id,component_identity,canonical_advisory_id,vulnerability_id,source_feed_key,source_record_id,source_record_version_id,affected_range_id,match_method,comparator_name,comparator_version,evaluated_component_value,affected_range,event_sequence,confidence,confidence_table_version,confidence_explanation)values(finding,org,release,'m14-test-'||finding,'CVE-M14-'||vulnerability,vulnerability,'osv',source,source_version,affected,'purl_osv','m14-test','1','1','{}','[]',.9,'m14-test','Synthetic rollback-only test');
+
+ set constraints all immediate;
+ perform pg_temp.check('new finding captured once',(select count(*)=1 from public.vulnerability_finding_lifecycle_facts where finding_id=finding));
+ set constraints all deferred;
+ insert into public.vulnerability_finding_assessments(id,organization_id,finding_id,revision,is_current,vex_status,detail,approval_state,approval_required,policy_severity,policy_version,submitted_at,submitted_by,updated_by)values(a,org,finding,1,true,'fixed','Resolved synthetic finding','approval_not_required',false,'unknown',1,statement_timestamp(),actor,actor);
+ update public.vulnerability_findings set reevaluation_state='review_required'where id=finding;
+ set constraints all immediate;
+ perform pg_temp.check('final state capture does not invent transient closure',(select count(*)=2 from public.vulnerability_finding_lifecycle_facts where finding_id=finding));
+ perform pg_temp.check('first triage retained',(select payload->>'triagedAt' is not null from public.vulnerability_finding_lifecycle_facts where finding_id=finding order by sequence desc limit 1));
+ perform pg_temp.check('fixed assessment retained despite reopening',(select payload->>'fixedAt' is not null and payload->>'open'='true' from public.vulnerability_finding_lifecycle_facts where finding_id=finding order by sequence desc limit 1));
+ set constraints all deferred;
+ update public.vulnerability_findings set last_evaluated_at=clock_timestamp()where id=finding;
+ set constraints all immediate;
+ perform pg_temp.check('irrelevant reevaluation deduplicates',(select count(*)=2 from public.vulnerability_finding_lifecycle_facts where finding_id=finding));
+ set constraints all deferred;
+ update public.vulnerability_findings set reevaluation_state='unchanged'where id=finding;
+ set constraints all immediate;
+ perform pg_temp.check('typed closed observation is not a reopening',(select is_reopening=false from public.vulnerability_finding_lifecycle_facts where finding_id=finding order by sequence desc limit 1));
+ perform pg_temp.check('effective closure captured',(select payload->>'open'='false'from public.vulnerability_finding_lifecycle_facts where finding_id=finding order by sequence desc limit 1));
+ set constraints all deferred;
+ update public.vulnerability_findings set reevaluation_state='review_required'where id=finding;
+ set constraints all immediate;
+ perform pg_temp.check('typed reopening agrees with final locked state',(select is_reopening=true from public.vulnerability_finding_lifecycle_facts where finding_id=finding order by sequence desc limit 1));
+ perform pg_temp.check('reopening captured',(select count(*)=4 from public.vulnerability_finding_lifecycle_facts where finding_id=finding));
+ begin update public.vulnerability_finding_lifecycle_facts set effective_at=clock_timestamp()where finding_id=finding;raise exception 'Expected immutable failure';exception when raise_exception then perform pg_temp.check('facts reject correction by mutation',sqlerrm='source trend facts are immutable');end;
+ perform pg_temp.check('finding facts contain top level xid',(select bool_and(recorded_transaction_id=pg_current_xact_id())from public.vulnerability_finding_lifecycle_facts where finding_id=finding));
+ perform pg_temp.check('typed first eligible observation has unit denominator delta',(select eligible_delta=1 and covered_delta=0 from public.sbom_release_coverage_facts where release_id=release order by sequence desc limit 1));
+ perform pg_temp.check('coverage final state captured',(select count(*)=1 from public.sbom_release_coverage_facts where release_id=release));
+ set constraints all deferred;
+ update public.product_releases set lifecycle='withdrawn'where id=release;
+ set constraints all immediate;
+ perform pg_temp.check('typed eligibility exit decrements denominator',(select eligible_delta=-1 and covered_delta=0 from public.sbom_release_coverage_facts where release_id=release order by sequence desc limit 1));
+ perform pg_temp.check('coverage denominator exit preserved',(select payload->>'eligible'='false'from public.sbom_release_coverage_facts where release_id=release order by sequence desc limit 1));
+ set constraints all deferred;
+ update public.product_releases set updated_at=clock_timestamp()where id=release;
+ update public.product_releases set lifecycle='withdrawn'where id=release;
+ set constraints all immediate;
+ perform pg_temp.check('coverage unchanged final state deduplicates',(select count(*)=2 from public.sbom_release_coverage_facts where release_id=release));
+end$$;
+do $$
+declare scope record; file uuid; snapshot uuid:=gen_random_uuid(); payload jsonb; pin jsonb; filters jsonb; result jsonb;
+begin
+ select *into scope from m14_test_scope;
+ select (r.result->>'id')::uuid into file from public.create_technical_file_atomic(scope.org,scope.actor,scope.product,gen_random_uuid())r;
+ if file is null then select id into file from public.technical_files where organization_id=scope.org and product_id=scope.product;end if;
+ payload:=jsonb_build_object('technicalFile',jsonb_build_object('sections',jsonb_build_array(jsonb_build_object('key','release_sbom','applicability','applicable','sources',jsonb_build_array(jsonb_build_object('kind','finding','recordId',scope.finding))))),'readiness',jsonb_build_object('sections',jsonb_build_array(jsonb_build_object('sectionKey','release_sbom','status','complete'))));
+ insert into public.technical_file_snapshots(id,organization_id,technical_file_id,product_id,release_id,purpose,technical_file_version,template_key,template_version,readiness_status,payload,payload_sha256,payload_byte_length,created_by)select snapshot,scope.org,file,scope.product,scope.release,'release',version,template_key,template_version,'complete',payload,encode(extensions.digest(payload::text,'sha256'),'hex'),octet_length(payload::text),scope.actor from public.technical_files where id=file;
+ perform pg_temp.check('snapshot exact kind source access allows owner',public.m14_02_snapshot_can(scope.org,scope.actor,snapshot));
+ filters:=jsonb_build_object('from',current_date-1,'to',current_date,'timezone','UTC','bucket','day','productId',scope.product);
+ pin:=jsonb_build_object('cutoffAt',public.m7_snapshot_timestamp_utc(clock_timestamp()),'snapshot',(pg_current_xact_id()::text::bigint+1)||':'||(pg_current_xact_id()::text::bigint+1)||':','maxFindingSequence',(select max(sequence)::text from public.vulnerability_finding_lifecycle_facts where organization_id=scope.org),'maxCoverageSequence',(select max(sequence)::text from public.sbom_release_coverage_facts where organization_id=scope.org),'maxSnapshotSequence',(select max(trend_sequence)::text from public.technical_file_snapshots where organization_id=scope.org),'epoch',(public.get_dashboard_trends(scope.org,scope.actor,filters,null)#>>'{snapshot,epoch}'));
+ result:=public.get_dashboard_trends(scope.org,scope.actor,filters,pin);
+ perform pg_temp.check('snapshot numerator uses persisted key',(result#>>'{result,series,readiness,buckets,1,numerator}')::int=1);
+ perform pg_temp.check('snapshot percent uses immutable observations',(result#>>'{result,series,readiness,buckets,1,value}')::numeric=100);
+ result:=public.get_dashboard_trend_sources(scope.org,scope.actor,filters||'{"metric":"readiness","offset":0,"limit":100}',pin);
+ perform pg_temp.check('snapshot source links exact immutable observation',result#>>'{result,items,0,href}'='/products/'||scope.product||'/technical-file#snapshot-'||snapshot);
+ insert into public.base_role_permission_overrides(organization_id,base_role,permissions)values(scope.org,'owner','{"can_view_findings":false}')on conflict(organization_id,base_role)do update set permissions=excluded.permissions;
+ perform pg_temp.check('snapshot hidden finding denies owner',not public.m14_02_snapshot_can(scope.org,scope.actor,snapshot));
+ result:=public.get_dashboard_trends(scope.org,scope.actor,filters,pin);
+ perform pg_temp.check('snapshot hidden record aggregate withheld',result#>>'{result,series,readiness,state}'='restricted'and result#>'{result,series,readiness,buckets}'='[]'::jsonb);
+ update public.base_role_permission_overrides set permissions='{}'where organization_id=scope.org and base_role='owner';
+ result:=public.get_dashboard_trends(scope.org,scope.actor,filters||'{"sourceAccess":{"findings":false}}',pin);
+ perform pg_temp.check('resolved application permission false honored',result#>>'{result,series,activity,state}'='restricted');
+ perform pg_temp.check('source access never serialized',not(result#>'{result,filters}'?'sourceAccess'));
+ begin update public.technical_file_snapshots set recorded_transaction_id='1'::xid8 where id=snapshot;raise exception 'Expected immutable failure';exception when raise_exception then perform pg_temp.check('snapshot visibility metadata immutable',sqlerrm='snapshot transaction visibility metadata is immutable');end;
+ result:=public.get_dashboard_trends(scope.org,scope.actor,filters,pin||jsonb_build_object('epoch',gen_random_uuid()));
+ perform pg_temp.check('different deployment epoch conflicts',result->>'outcome'='conflict');
+end$$;
+do $$
+declare scope record;filters jsonb;pin jsonb;old_result jsonb;j jsonb;page jsonb;original timestamptz;
+begin
+ select *into scope from m14_test_scope;
+ select first_detected_at into original from public.vulnerability_findings where id=scope.finding;
+ filters:=jsonb_build_object('from',current_date-1,'to',current_date,'timezone','UTC','bucket','day','productId',scope.product);
+ j:=public.get_dashboard_trends(scope.org,scope.actor,filters,null);pin:=j->'snapshot';
+ pin:=pin||jsonb_build_object('cutoffAt',public.m7_snapshot_timestamp_utc(clock_timestamp()+interval'1 second'),'snapshot',(pg_current_xact_id()::text::bigint+1)||':'||(pg_current_xact_id()::text::bigint+1)||':');
+ old_result:=public.get_dashboard_trends(scope.org,scope.actor,filters,pin);
+ set constraints all deferred;
+ update public.vulnerability_findings set first_detected_at=current_date::timestamp+interval'2 days'where id=scope.finding;
+ set constraints all immediate;
+ perform pg_temp.check('detection correction leaves old pin unchanged',public.get_dashboard_trends(scope.org,scope.actor,filters,pin)=old_result);
+ pin:=pin||jsonb_build_object('maxFindingSequence',(select max(sequence)::text from public.vulnerability_finding_lifecycle_facts where organization_id=scope.org));
+ j:=public.get_dashboard_trends(scope.org,scope.actor,filters,pin);
+ page:=public.get_dashboard_trend_sources(scope.org,scope.actor,filters||'{"metric":"activity","offset":0,"limit":100}',pin);
+ perform pg_temp.check('corrected detection outside range removes opening',(select sum((b->>'opened')::int)=0 from jsonb_array_elements(j#>'{result,series,activity,buckets}')b)and not exists(select 1 from jsonb_array_elements(page#>'{result,items}')i where i->>'factKind'='opened'));
+ set constraints all deferred;
+ update public.vulnerability_findings set first_detected_at=original where id=scope.finding;
+ set constraints all immediate;
+ pin:=pin||jsonb_build_object('maxFindingSequence',(select max(sequence)::text from public.vulnerability_finding_lifecycle_facts where organization_id=scope.org));
+ j:=public.get_dashboard_trends(scope.org,scope.actor,filters,pin);
+ page:=public.get_dashboard_trend_sources(scope.org,scope.actor,filters||'{"metric":"activity","offset":0,"limit":100}',pin);
+ perform pg_temp.check('corrected detection back inside range restores opening',(select sum((b->>'opened')::int)=1 from jsonb_array_elements(j#>'{result,series,activity,buckets}')b)and(select count(*)=1 from jsonb_array_elements(page#>'{result,items}')i where i->>'factKind'='opened'));
+end$$;
+do $$
+declare scope record;pin jsonb;filters jsonb;old_dataset jsonb;new_dataset jsonb;old_payload jsonb;original_closed_at timestamptz;page jsonb;fast_page jsonb;count_sources bigint;
+begin
+ select *into scope from m14_test_scope;
+ filters:=jsonb_build_object('from',current_date-1,'to',current_date,'timezone','UTC','bucket','day','productId',scope.product);
+ pin:=jsonb_build_object('cutoffAt',public.m7_snapshot_timestamp_utc(clock_timestamp()+interval'1 second'),'snapshot',(pg_current_xact_id()::text::bigint+1)||':'||(pg_current_xact_id()::text::bigint+1)||':','maxFindingSequence',(select max(sequence)::text from public.vulnerability_finding_lifecycle_facts where organization_id=scope.org),'maxCoverageSequence',(select max(sequence)::text from public.sbom_release_coverage_facts where organization_id=scope.org),'maxSnapshotSequence',(select max(trend_sequence)::text from public.technical_file_snapshots where organization_id=scope.org),'epoch',(public.get_dashboard_trends(scope.org,scope.actor,filters,null)#>>'{snapshot,epoch}'));
+ set constraints all deferred;update public.vulnerability_findings set closed_at=statement_timestamp(),closure_reason='advisory_withdrawn'where id=scope.finding;set constraints all immediate;
+ pin:=pin||jsonb_build_object('maxFindingSequence',(select max(sequence)::text from public.vulnerability_finding_lifecycle_facts where organization_id=scope.org));
+ old_dataset:=public.get_dashboard_trends(scope.org,scope.actor,filters,pin);
+ select payload into old_payload from public.vulnerability_finding_lifecycle_facts where finding_id=scope.finding order by sequence desc limit 1;
+ perform pg_temp.check('distinct historical closure episodes',jsonb_array_length(old_payload->'closedEpisodes')=2);
+ original_closed_at:=(old_payload#>>'{closedEpisodes,1,at}')::timestamptz;
+ set constraints all deferred;
+ update public.vulnerability_findings set closed_at=original_closed_at-interval'1 day'where organization_id=scope.org and id=scope.finding;
+ set constraints all immediate;
+ perform pg_temp.check('correction appends episode revision without double count',(select jsonb_array_length(payload->'closedEpisodes')=2 and(payload#>>'{closedEpisodes,1,at}')::timestamptz=original_closed_at-interval'1 day'from public.vulnerability_finding_lifecycle_facts where finding_id=scope.finding order by sequence desc limit 1));
+ perform pg_temp.check('old pin reproduces before correction',public.get_dashboard_trends(scope.org,scope.actor,filters,pin)=old_dataset);
+ pin:=pin||jsonb_build_object('maxFindingSequence',(select max(sequence)::text from public.vulnerability_finding_lifecycle_facts where organization_id=scope.org));
+ new_dataset:=public.get_dashboard_trends(scope.org,scope.actor,filters,pin);
+ set constraints all deferred;
+ update public.vulnerability_findings set first_detected_at=statement_timestamp()+interval'1 hour',closed_at=original_closed_at where organization_id=scope.org and id=scope.finding;
+ set constraints all immediate;
+ pin:=pin||jsonb_build_object('maxFindingSequence',(select max(sequence)::text from public.vulnerability_finding_lifecycle_facts where organization_id=scope.org));
+ new_dataset:=public.get_dashboard_trends(scope.org,scope.actor,filters,pin);
+ perform pg_temp.check('negative duration excluded not zero',new_dataset#>>'{result,series,triage,buckets,1,value}'is null and new_dataset#>>'{result,series,triage,buckets,1,sampleCount}'='0'and new_dataset#>>'{result,series,triage,buckets,1,excludedCount}'='1');
+ page:=public.get_dashboard_trend_sources(scope.org,scope.actor,filters||'{"metric":"triage","offset":0,"limit":100}',pin);
+ perform pg_temp.check('negative exclusion is available as labeled source',jsonb_array_length(page#>'{result,items}')=1 and page#>>'{result,items,0,factKind}'='excluded_negative_triage');
+ set constraints all deferred;
+ update public.vulnerability_findings set first_detected_at=(old_payload->>'firstDetectedAt')::timestamptz where organization_id=scope.org and id=scope.finding;
+ set constraints all immediate;
+ pin:=pin||jsonb_build_object('maxFindingSequence',(select max(sequence)::text from public.vulnerability_finding_lifecycle_facts where organization_id=scope.org));
+ new_dataset:=public.get_dashboard_trends(scope.org,scope.actor,filters,pin);
+ page:=public.get_dashboard_trend_sources(scope.org,scope.actor,filters||'{"metric":"activity","offset":0,"limit":100}',pin);
+ select sum((b->>'sourceCount')::bigint)into count_sources from jsonb_array_elements(new_dataset#>'{result,series,activity,buckets}')b;
+ perform pg_temp.check('activity aggregate/source parity',count_sources=jsonb_array_length(page#>'{result,items}'));
+ fast_page:=public.get_dashboard_trend_sources(scope.org,scope.actor,filters||jsonb_build_object('metric','activity','offset',0,'limit',100,'datasetRevision',new_dataset#>>'{result,datasetRevision}'),pin);
+ perform pg_temp.check('private revision source page equals full projection',fast_page=page);
+ perform pg_temp.check('private revision cannot bypass source permission',public.get_dashboard_trend_sources(scope.org,scope.actor,filters||jsonb_build_object('metric','activity','offset',0,'limit',100,'datasetRevision',new_dataset#>>'{result,datasetRevision}','sourceAccess',jsonb_build_object('findings',false)),pin)->>'outcome'='forbidden');
+ perform pg_temp.check('private revision cannot bypass epoch',public.get_dashboard_trend_sources(scope.org,scope.actor,filters||jsonb_build_object('metric','activity','offset',0,'limit',100,'datasetRevision',new_dataset#>>'{result,datasetRevision}'),pin||jsonb_build_object('epoch',gen_random_uuid()))->>'outcome'='conflict');
+ perform pg_temp.check('source finding route selects exact record',jsonb_array_length(page#>'{result,items}')>0 and not exists(select 1 from jsonb_array_elements(page#>'{result,items}')i where i->>'href'<>'/findings?productId='||(i->>'productId')||'&findingId='||(i->>'sourceId')));
+ perform pg_temp.check('currentday bucket explicitly partial',new_dataset#>>'{result,series,activity,buckets,1,partial}'='true');
+ perform pg_temp.check('replay cutoff fixed',new_dataset#>>'{result,generatedAt}'=pin->>'cutoffAt');
+ perform pg_temp.check('future date unavailable invalid request',public.get_dashboard_trends(scope.org,scope.actor,filters||jsonb_build_object('to',current_date+1),null)->>'outcome'='invalid_request');
+end$$;
+do $$
+declare scope record;pin jsonb;filters jsonb;before_data jsonb;after_data jsonb;
+begin
+ select *into scope from m14_test_scope;
+ insert into public.base_role_permission_overrides(organization_id,base_role,permissions)values(scope.org,'owner','{"can_view_findings":false}')on conflict(organization_id,base_role)do update set permissions=excluded.permissions;
+ filters:=jsonb_build_object('from',current_date-1,'to',current_date,'timezone','UTC','bucket','day','productId',scope.product);
+ pin:=jsonb_build_object('cutoffAt',public.m7_snapshot_timestamp_utc(clock_timestamp()+interval'1 second'),'snapshot',(pg_current_xact_id()::text::bigint+1)||':'||(pg_current_xact_id()::text::bigint+1)||':','maxFindingSequence',(select max(sequence)::text from public.vulnerability_finding_lifecycle_facts where organization_id=scope.org),'maxCoverageSequence',(select max(sequence)::text from public.sbom_release_coverage_facts where organization_id=scope.org),'maxSnapshotSequence',(select max(trend_sequence)::text from public.technical_file_snapshots where organization_id=scope.org),'epoch',(public.get_dashboard_trends(scope.org,scope.actor,filters,null)#>>'{snapshot,epoch}'));
+ before_data:=public.get_dashboard_trends(scope.org,scope.actor,filters,pin);
+ set constraints all deferred;
+ update public.vulnerability_findings set first_detected_at=first_detected_at+interval'1 minute'where id=scope.finding;
+ set constraints all immediate;
+ pin:=pin||jsonb_build_object('maxFindingSequence',(select max(sequence)::text from public.vulnerability_finding_lifecycle_facts where organization_id=scope.org));
+ after_data:=public.get_dashboard_trends(scope.org,scope.actor,filters,pin);
+ perform pg_temp.check('hidden fact correction cannot change public dataset revision',before_data#>>'{result,datasetRevision}'=after_data#>>'{result,datasetRevision}');
+ perform pg_temp.check('hidden fact correction cannot change visible series',before_data#>'{result,series}'=after_data#>'{result,series}');
+ perform pg_temp.check('private revision cannot reveal hidden snapshot sources',public.get_dashboard_trend_sources(scope.org,scope.actor,filters||jsonb_build_object('metric','readiness','offset',0,'limit',100,'datasetRevision',before_data#>>'{result,datasetRevision}'),pin)->>'outcome'='forbidden');
+end$$;
+do $$declare scope record;j jsonb;filters jsonb;begin
+ select *into scope from m14_test_scope;update public.base_role_permission_overrides set permissions='{}'where organization_id=scope.org and base_role='owner';
+ filters:=jsonb_build_object('from','2024-03-09','to','2024-03-11','timezone','America/New_York','bucket','day','productId',scope.product);
+ j:=public.get_dashboard_trends(scope.org,scope.actor,filters,null);
+ perform pg_temp.check('DST spring calendar day has23 elapsed hours',extract(epoch from((j#>>'{result,series,activity,buckets,1,end}')::timestamptz-(j#>>'{result,series,activity,buckets,1,start}')::timestamptz))=23*3600);
+ perform pg_temp.check('prebaseline activity unavailable not zero',j#>>'{result,series,activity,buckets,0,opened}'is null);
+ j:=public.get_dashboard_trends(scope.org,scope.actor,filters||'{"from":"2024-11-02","to":"2024-11-04"}',null);
+ perform pg_temp.check('DST autumn calendar day has25 elapsed hours',extract(epoch from((j#>>'{result,series,activity,buckets,1,end}')::timestamptz-(j#>>'{result,series,activity,buckets,1,start}')::timestamptz))=25*3600);
+ j:=public.get_dashboard_trends(scope.org,scope.actor,filters||'{"from":"2024-02-28","to":"2024-03-01","timezone":"UTC"}',null);
+ perform pg_temp.check('leapday bucket retained',jsonb_array_length(j#>'{result,series,activity,buckets}')=3 and j#>>'{result,series,activity,buckets,1,start}'='2024-02-29T00:00:00.000Z');
+ j:=public.get_dashboard_trends(scope.org,scope.actor,filters||'{"from":"2024-02-28","to":"2024-03-02","timezone":"UTC","bucket":"week"}',null);
+ perform pg_temp.check('Monday aligned week range clips partial boundaries',jsonb_array_length(j#>'{result,series,activity,buckets}')=1 and j#>>'{result,series,activity,buckets,0,start}'='2024-02-28T00:00:00.000Z'and j#>>'{result,series,activity,buckets,0,end}'='2024-03-03T00:00:00.000Z'and j#>>'{result,series,activity,buckets,0,partial}'='true');
+ perform pg_temp.check('zero resolved cohort mean unavailable',j#>>'{result,series,remediation,buckets,0,value}'is null and j#>>'{result,series,remediation,buckets,0,sampleCount}'='0');
+ perform pg_temp.check('invalid timezone rejected',public.get_dashboard_trends(scope.org,scope.actor,filters||'{"timezone":"Not/A_Timezone"}',null)->>'outcome'='invalid_request');
+end$$;
+do $$declare scope record;pin jsonb;filters jsonb;before_count bigint;after_count bigint;j jsonb;begin
+ select *into scope from m14_test_scope;
+ set constraints all deferred;
+ update public.vulnerability_findings set closed_at=null,closure_reason=null,reevaluation_state='review_required'where id=scope.finding;
+ set constraints all immediate;
+ filters:=jsonb_build_object('from',current_date-1,'to',current_date,'timezone','UTC','bucket','day','productId',scope.product);
+ pin:=jsonb_build_object('cutoffAt',public.m7_snapshot_timestamp_utc(clock_timestamp()+interval'1 second'),'snapshot',(pg_current_xact_id()::text::bigint+1)||':'||(pg_current_xact_id()::text::bigint+1)||':','maxFindingSequence',(select max(sequence)::text from public.vulnerability_finding_lifecycle_facts where organization_id=scope.org),'maxCoverageSequence',(select max(sequence)::text from public.sbom_release_coverage_facts where organization_id=scope.org),'maxSnapshotSequence',(select max(trend_sequence)::text from public.technical_file_snapshots where organization_id=scope.org),'epoch',(public.get_dashboard_trends(scope.org,scope.actor,filters,null)#>>'{snapshot,epoch}'));
+ j:=public.get_dashboard_trends(scope.org,scope.actor,filters,pin);select sum((b->>'reopened')::bigint)into before_count from jsonb_array_elements(j#>'{result,series,activity,buckets}')b;
+ set constraints all deferred;update public.vulnerability_findings set status='superseded',superseded_at=statement_timestamp()where id=scope.finding;set constraints all immediate;
+ set constraints all deferred;update public.vulnerability_findings set status='active',superseded_at=null where id=scope.finding;set constraints all immediate;
+ pin:=pin||jsonb_build_object('maxFindingSequence',(select max(sequence)::text from public.vulnerability_finding_lifecycle_facts where organization_id=scope.org),'cutoffAt',public.m7_snapshot_timestamp_utc(clock_timestamp()+interval'1 second'));
+ j:=public.get_dashboard_trends(scope.org,scope.actor,filters,pin);select sum((b->>'reopened')::bigint)into after_count from jsonb_array_elements(j#>'{result,series,activity,buckets}')b;
+ perform pg_temp.check('supersession reentry is not reopening',before_count=after_count);
+ perform pg_temp.check('supersession exit is not closure',(select jsonb_array_length(payload->'closedEpisodes')=2 from public.vulnerability_finding_lifecycle_facts where finding_id=scope.finding order by sequence desc limit 1));
+end$$;
+create function pg_temp.fail_trend_capture()returns trigger language plpgsql as $$begin raise exception 'synthetic capture failure';end$$;
+create trigger m14_02_test_failure before insert on public.vulnerability_finding_lifecycle_facts for each row execute function pg_temp.fail_trend_capture();
+do $$declare scope record;before_detected timestamptz;before_count bigint;begin
+ select *into scope from m14_test_scope;select first_detected_at into before_detected from public.vulnerability_findings where id=scope.finding;select count(*)into before_count from public.vulnerability_finding_lifecycle_facts where finding_id=scope.finding;
+ set constraints all deferred;
+ begin
+ update public.vulnerability_findings set first_detected_at=first_detected_at+interval'1 minute'where id=scope.finding;
+ set constraints all immediate;
+ raise exception 'Expected source transaction failure';
+ exception when raise_exception then perform pg_temp.check('capture failure surfaced',sqlerrm='synthetic capture failure');end;
+ perform pg_temp.check('capture failure rolls back source timestamp',(select first_detected_at=before_detected from public.vulnerability_findings where id=scope.finding));
+ perform pg_temp.check('capture failure preserves prior facts',(select count(*)=before_count from public.vulnerability_finding_lifecycle_facts where finding_id=scope.finding));
+end$$;
+drop trigger m14_02_test_failure on public.vulnerability_finding_lifecycle_facts;
+savepoint index_skip_proofs;
+do $$
+declare scope record;k integer;original timestamptz;filters jsonb;j jsonb;before_result jsonb;pin jsonb;ghost uuid:=gen_random_uuid();source_payload jsonb;
+begin
+ select *into scope from m14_test_scope;
+ select first_detected_at into original from public.vulnerability_findings where id=scope.finding;
+ for k in 1..100 loop
+  set constraints all deferred;
+  update public.vulnerability_findings set first_detected_at=original+interval'1 microsecond'*k where id=scope.finding;
+  set constraints all immediate;
+ end loop;
+ filters:=jsonb_build_object('from',current_date-1,'to',current_date,'timezone','UTC','bucket','day','productId',scope.product);
+ j:=public.get_dashboard_trends(scope.org,scope.actor,filters,null);pin:=j->'snapshot';
+ pin:=pin||jsonb_build_object('cutoffAt',public.m7_snapshot_timestamp_utc(clock_timestamp()+interval'1 second'),'snapshot',(pg_current_xact_id()::text::bigint+1)||':'||(pg_current_xact_id()::text::bigint+1)||':');
+ before_result:=public.get_dashboard_trends(scope.org,scope.actor,filters,pin);
+ perform pg_temp.check('long revision chain never multiplies one finding cohort',(select sum((b->>'sampleCount')::int)<=1 from jsonb_array_elements(before_result#>'{result,series,triage,buckets}')b));
+ set constraints all deferred;
+ insert into public.vulnerability_findings select(jsonb_populate_record(null::public.vulnerability_findings,to_jsonb(f)||jsonb_build_object('id',ghost,'component_identity','m14-invisible-'||ghost))).*from public.vulnerability_findings f where id=scope.finding;
+ select payload into source_payload from public.vulnerability_finding_lifecycle_facts where finding_id=scope.finding order by sequence desc limit 1;
+ -- Candidate ID is under the sequence bound but its writer is outside this pin.
+ insert into public.vulnerability_finding_lifecycle_facts(organization_id,product_id,release_id,finding_id,fact_kind,payload,provenance,recorded_transaction_id)values(scope.org,scope.product,scope.release,ghost,'observation',source_payload,'rollback_only_visibility_proof','18446744073709551614'::xid8);
+ pin:=pin||jsonb_build_object('maxFindingSequence',(select max(sequence)::text from public.vulnerability_finding_lifecycle_facts where organization_id=scope.org));
+ j:=public.get_dashboard_trends(scope.org,scope.actor,filters,pin);
+ perform pg_temp.check('invisible candidate identity cannot change public cohorts',j->'result'=before_result->'result');
+end$$;
+rollback to index_skip_proofs;
+savepoint negative_baseline_proof;
+do $$
+declare scope record;baseline timestamptz;payload jsonb;prior bigint;pin jsonb;filters jsonb;j jsonb;page jsonb;
+begin
+ select *into scope from m14_test_scope;
+ select effective_at into baseline from public.vulnerability_finding_lifecycle_facts where organization_id=scope.org and finding_id is null;
+ select sequence,f.payload into prior,payload from public.vulnerability_finding_lifecycle_facts f where finding_id=scope.finding order by sequence desc limit 1;
+ payload:=payload||jsonb_build_object('triagedAt',baseline-interval'1 second','firstDetectedAt',baseline+interval'1 hour');
+ insert into public.vulnerability_finding_lifecycle_facts(organization_id,product_id,release_id,finding_id,fact_kind,previous_sequence,payload,provenance,is_reopening)values(scope.org,scope.product,scope.release,scope.finding,'observation',prior,payload,'rollback_only_negative_baseline',false);
+ filters:=jsonb_build_object('from',(baseline at time zone'UTC')::date,'to',(clock_timestamp()at time zone'UTC')::date,'timezone','UTC','bucket','day','productId',scope.product);
+ pin:=public.get_dashboard_trends(scope.org,scope.actor,filters,null)->'snapshot';
+ pin:=pin||jsonb_build_object('cutoffAt',public.m7_snapshot_timestamp_utc(clock_timestamp()+interval'1 second'),'snapshot',(pg_current_xact_id()::text::bigint+1)||':'||(pg_current_xact_id()::text::bigint+1)||':');
+ j:=public.get_dashboard_trends(scope.org,scope.actor,filters,pin);
+ perform pg_temp.check('prebaseline negative cohort does not disclose exclusion',(select sum((b->>'excludedCount')::int)=0 from jsonb_array_elements(j#>'{result,series,triage,buckets}')b));
+ page:=public.get_dashboard_trend_sources(scope.org,scope.actor,filters||'{"metric":"triage","offset":0,"limit":100}',pin);
+ perform pg_temp.check('prebaseline negative cohort has no source',jsonb_array_length(page#>'{result,items}')=0);
+end$$;
+rollback to negative_baseline_proof;
+savepoint source_page_merge_proof;
+do $$
+declare scope record;payload jsonb;prior bigint;k integer;at timestamptz:=clock_timestamp();pin jsonb;filters jsonb;j jsonb;page jsonb;seen text[]:='{}';item jsonb;expected integer;offset_count integer:=0;
+begin
+ select *into scope from m14_test_scope;
+ select sequence,f.payload into prior,payload from public.vulnerability_finding_lifecycle_facts f where finding_id=scope.finding order by sequence desc limit 1;
+ payload:=payload||jsonb_build_object('superseded',false,'closedEpisodes','[]'::jsonb);
+ for k in 1..120 loop
+  insert into public.vulnerability_finding_lifecycle_facts(organization_id,product_id,release_id,finding_id,fact_kind,previous_sequence,payload,provenance,is_reopening,effective_at)values(scope.org,scope.product,scope.release,scope.finding,'observation',prior,payload||'{"open":false}','rollback_only_source_page',false,at) returning sequence into prior;
+  insert into public.vulnerability_finding_lifecycle_facts(organization_id,product_id,release_id,finding_id,fact_kind,previous_sequence,payload,provenance,is_reopening,effective_at)values(scope.org,scope.product,scope.release,scope.finding,'observation',prior,payload||'{"open":true}','rollback_only_source_page',case when k%2=0 then true end,at) returning sequence into prior;
+ end loop;
+ filters:=jsonb_build_object('from',(at at time zone'UTC')::date-1,'to',(at at time zone'UTC')::date,'timezone','UTC','bucket','day','productId',scope.product);
+ pin:=public.get_dashboard_trends(scope.org,scope.actor,filters,null)->'snapshot';
+ pin:=pin||jsonb_build_object('cutoffAt',public.m7_snapshot_timestamp_utc(clock_timestamp()+interval'1 second'),'snapshot',(pg_current_xact_id()::text::bigint+1)||':'||(pg_current_xact_id()::text::bigint+1)||':');
+ j:=public.get_dashboard_trends(scope.org,scope.actor,filters,pin);
+ select sum((b->>'sourceCount')::int)::int into expected from jsonb_array_elements(j#>'{result,series,activity,buckets}')b;
+ loop
+  page:=public.get_dashboard_trend_sources(scope.org,scope.actor,filters||jsonb_build_object('metric','activity','offset',offset_count,'limit',7),pin);
+  for item in select *from jsonb_array_elements(page#>'{result,items}')loop
+   if item->>'id'=any(seen)then raise exception 'Repeated source across pages';end if;
+   seen:=array_append(seen,item->>'id');
+  end loop;
+  exit when page#>>'{result,nextOffset}'is null;
+  offset_count:=(page#>>'{result,nextOffset}')::int;
+  if offset_count>200 then raise exception 'Source page did not terminate';end if;
+ end loop;
+ perform pg_temp.check('typed and legacy exact timestamp tie pages contain all chart sources',cardinality(seen)=expected and expected>=120);
+ perform pg_temp.check('typed and legacy source pages do not duplicate rows',cardinality(seen)=(select count(distinct id)from unnest(seen)id));
+end$$;
+rollback to source_page_merge_proof;
+savepoint partial_range_end_proof;
+do $$
+declare scope record;kind text;to_day date;late_at timestamptz;payload jsonb;prior bigint;coverage_prior bigint;coverage_payload jsonb;pin jsonb;filters jsonb;j jsonb;b jsonb;expected_eligible integer;source_page jsonb;coverage_release uuid:=gen_random_uuid();before_reopened integer;
+begin
+ select *into scope from m14_test_scope;
+ set constraints all deferred;
+ insert into public.product_releases(id,organization_id,product_id,legal_entity_id,legal_entity_version,legal_entity_snapshot,label,release_version,lifecycle,placed_on_market_at,created_by,updated_by)select coverage_release,scope.org,scope.product,legal_entity_id,legal_entity_version,legal_entity_snapshot,'M14 range release','range-'||coverage_release,'end_of_support',clock_timestamp(),scope.actor,scope.actor from public.products where id=scope.product;
+ set constraints all immediate;
+ for kind in select unnest(array['week','month'])loop
+ begin
+  to_day:=(clock_timestamp()at time zone'UTC')::date;
+  if date_trunc(kind,(to_day+1)::timestamp)<>date_trunc(kind,to_day::timestamp)then to_day:=to_day-1;end if;
+  late_at:=(to_day+1)::timestamp at time zone'UTC'+interval'1 hour';
+  filters:=jsonb_build_object('from',to_day,'to',to_day,'timezone','UTC','bucket',kind,'productId',scope.product);
+  pin:=public.get_dashboard_trends(scope.org,scope.actor,filters,null)->'snapshot';
+  pin:=pin||jsonb_build_object('cutoffAt',public.m7_snapshot_timestamp_utc(greatest(clock_timestamp()+interval'1 second',late_at+interval'3 hours')),'snapshot',(pg_current_xact_id()::text::bigint+1)||':'||(pg_current_xact_id()::text::bigint+1)||':');
+  j:=public.get_dashboard_trends(scope.org,scope.actor,filters,pin);
+  before_reopened:=coalesce((j#>>'{result,series,activity,buckets,0,reopened}')::int,0);
+  select sequence,f.payload into prior,payload from public.vulnerability_finding_lifecycle_facts f where finding_id=scope.finding order by sequence desc limit 1;
+  payload:=payload||jsonb_build_object('firstDetectedAt',late_at,'triagedAt',late_at+interval'1 hour','fixedAt',late_at+interval'2 hours','closedEpisodes',jsonb_build_array(jsonb_build_object('key','range-end-'||kind,'at',late_at)));
+  insert into public.vulnerability_finding_lifecycle_facts(organization_id,product_id,release_id,finding_id,fact_kind,previous_sequence,payload,provenance,is_reopening,effective_at)values(scope.org,scope.product,scope.release,scope.finding,'observation',prior,payload,'rollback_only_late_terminal_proof',true,late_at);
+  select sequence,f.payload into coverage_prior,coverage_payload from public.sbom_release_coverage_facts f where release_id=coverage_release order by sequence desc limit 1;
+  insert into public.sbom_release_coverage_facts(organization_id,product_id,release_id,fact_kind,previous_sequence,payload,provenance,eligible_delta,covered_delta,effective_at)values(scope.org,scope.product,coverage_release,'observation',coverage_prior,coverage_payload||'{"eligible":false,"covered":false}','rollback_only_late_coverage_proof',-coalesce((coverage_payload->>'eligible')::boolean::int,0),-coalesce(((coverage_payload->>'eligible')::boolean and(coverage_payload->>'covered')::boolean)::int,0),late_at);
+  filters:=jsonb_build_object('from',to_day,'to',to_day,'timezone','UTC','bucket',kind,'productId',scope.product);
+  pin:=public.get_dashboard_trends(scope.org,scope.actor,filters,null)->'snapshot';
+  pin:=pin||jsonb_build_object('cutoffAt',public.m7_snapshot_timestamp_utc(greatest(clock_timestamp()+interval'1 second',late_at+interval'3 hours')),'snapshot',(pg_current_xact_id()::text::bigint+1)||':'||(pg_current_xact_id()::text::bigint+1)||':');
+  j:=public.get_dashboard_trends(scope.org,scope.actor,filters,pin);
+  b:=j#>'{result,series,activity,buckets,0}';
+  perform pg_temp.check(kind||' partial end excludes later openings',coalesce((b->>'opened')::int,0)=0);
+  perform pg_temp.check(kind||' partial end excludes later closures',coalesce((b->>'closed')::int,0)=0);
+  perform pg_temp.check(kind||' partial end excludes later reopenings',coalesce((b->>'reopened')::int,0)=before_reopened);
+  perform pg_temp.check(kind||' partial end excludes later triage cohort',j#>>'{result,series,triage,buckets,0,sampleCount}'='0');
+  perform pg_temp.check(kind||' partial end excludes later remediation cohort',j#>>'{result,series,remediation,buckets,0,sampleCount}'='0');
+  expected_eligible:=case when to_day=(clock_timestamp()at time zone'UTC')::date then 1 else 0 end;
+  perform pg_temp.check(kind||' partial end excludes later coverage exit',coalesce((j#>>'{result,series,sbomCoverage,buckets,0,denominator}')::int,0)=expected_eligible);
+  source_page:=public.get_dashboard_trend_sources(scope.org,scope.actor,filters||'{"metric":"sbomCoverage","limit":100,"offset":0}',pin);
+  perform pg_temp.check(kind||' coverage observation chart and source counts match',(j#>>'{result,series,sbomCoverage,buckets,0,sourceCount}')::int=(select count(*)from jsonb_array_elements(source_page#>'{result,items}')item where item->>'factKind'='coverage_observation'));
+  raise exception 'rollback_only_range_iteration';
+ exception when raise_exception then if sqlerrm<>'rollback_only_range_iteration'then raise;end if;
+ end;
+ end loop;
+end$$;
+rollback to partial_range_end_proof;
+rollback;

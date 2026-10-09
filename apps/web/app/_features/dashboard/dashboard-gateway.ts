@@ -1,4 +1,10 @@
 import {
+  dashboardTrendsQuerySchema,
+  dashboardTrendsResponseSchema,
+  dashboardTrendSourcesQuerySchema,
+  dashboardTrendSourcesResponseSchema,
+  dashboardTrendsExportQuerySchema,
+  dashboardTrendsCsvSchema,
   dashboardOverviewQuerySchema,
   dashboardOverviewResponseSchema,
   dashboardProductPostureParamsSchema,
@@ -11,11 +17,16 @@ import {
   dashboardIngestionResponseSchema,
 } from "@repo/contracts/dashboard/schemas";
 import type {
+  DashboardTrendsQuery,
+  DashboardTrendSourcesQuery,
   DashboardObligationsQuery,
   DashboardReadinessQuery,
   DashboardIngestionQuery,
 } from "@repo/contracts/dashboard/types";
-import { authenticatedRequestJson } from "../../_lib/http/authenticated-request";
+import {
+  authenticatedRequestJson,
+  authenticatedRequestText,
+} from "../../_lib/http/authenticated-request";
 
 function queryPath(
   endpoint: string,
@@ -33,6 +44,38 @@ export class DashboardGateway {
   constructor(
     private readonly transport: typeof authenticatedRequestJson = authenticatedRequestJson,
   ) {}
+  trends(query: Partial<DashboardTrendsQuery>, signal?: AbortSignal) {
+    return this.transport({
+      path: queryPath("trends", dashboardTrendsQuerySchema.parse(query)),
+      schema: dashboardTrendsResponseSchema,
+      signal,
+    });
+  }
+  trendSources(
+    query: Partial<DashboardTrendSourcesQuery>,
+    signal?: AbortSignal,
+  ) {
+    return this.transport({
+      path: queryPath(
+        "trends/sources",
+        dashboardTrendSourcesQuerySchema.parse(query),
+      ),
+      schema: dashboardTrendSourcesResponseSchema,
+      signal,
+    });
+  }
+  trendExport(datasetToken: string, signal?: AbortSignal) {
+    return authenticatedRequestText({
+      path: queryPath(
+        "trends/export",
+        dashboardTrendsExportQuerySchema.parse({ datasetToken }),
+      ),
+      schema: dashboardTrendsCsvSchema,
+      contentType: "text/csv",
+      maxBytes: 4 * 1024 * 1024,
+      signal,
+    });
+  }
   overview(signal?: AbortSignal) {
     dashboardOverviewQuerySchema.parse({});
     return this.transport({

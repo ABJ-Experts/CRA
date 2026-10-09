@@ -40,6 +40,15 @@ export interface RequestJsonOptions<
   readonly credentials?: RequestCredentials;
 }
 
+export interface RequestTextOptions<TSchema extends z.ZodTypeAny> {
+  readonly path: `/${string}`;
+  readonly schema: TSchema;
+  readonly contentType: string;
+  readonly maxBytes: number;
+  readonly signal?: AbortSignal;
+  readonly fetcher?: typeof fetch;
+}
+
 export interface RequestMultipartOptions<
   TResponseSchema extends z.ZodTypeAny,
   TFieldsSchema extends z.ZodTypeAny,
@@ -206,6 +215,63 @@ export class ApiClient {
     });
 
     return parseResponse(response, schema);
+  }
+
+  async requestText<TSchema extends z.ZodTypeAny>({
+    path,
+    schema,
+    contentType,
+    maxBytes,
+    signal,
+    fetcher = fetch,
+  }: RequestTextOptions<TSchema>): Promise<z.output<TSchema>> {
+    assertLocalPath(path);
+    if (
+      !Number.isSafeInteger(maxBytes) ||
+      maxBytes < 1 ||
+      maxBytes > 4 * 1024 * 1024
+    )
+      throw new ApiClientError("invalid_request", INVALID_REQUEST_ERROR);
+    const response = await fetchResponse(fetcher, path, {
+      method: "GET",
+      credentials: "same-origin",
+      cache: "no-store",
+      signal,
+    });
+    if (!response.ok) return parseResponse(response, schema);
+    if (
+      response.headers.get("content-type")?.split(";")[0]?.trim() !==
+      contentType
+    )
+      throw new ApiClientError("invalid_response", INVALID_RESPONSE_ERROR);
+    const reader = response.body?.getReader();
+    if (!reader)
+      throw new ApiClientError("invalid_response", INVALID_RESPONSE_ERROR);
+    const decoder = new TextDecoder();
+    let total = 0;
+    let text = "";
+    try {
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        total += value.byteLength;
+        if (total > maxBytes) {
+          await reader.cancel();
+          throw new ApiClientError("invalid_response", INVALID_RESPONSE_ERROR);
+        }
+        text += decoder.decode(value, { stream: true });
+      }
+      text += decoder.decode();
+    } catch (error) {
+      if (error instanceof ApiClientError || isAbortError(error)) throw error;
+      throw new ApiClientError("network", NETWORK_ERROR);
+    } finally {
+      reader.releaseLock();
+    }
+    const parsed = schema.safeParse(text);
+    if (!parsed.success)
+      throw new ApiClientError("invalid_response", INVALID_RESPONSE_ERROR);
+    return parsed.data;
   }
 
   async requestMultipart<

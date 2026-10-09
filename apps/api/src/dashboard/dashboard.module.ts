@@ -1,3 +1,7 @@
+import { DashboardTrendsController } from "./dashboard-trends.controller";
+import { DashboardTrendsUseCases } from "./application/dashboard-trends-use-cases";
+import { DashboardDatasetCodec } from "./infrastructure/dashboard-dataset-codec";
+import { SupabaseDashboardTrendsRepository } from "./infrastructure/supabase-dashboard-trends.repository";
 import { Logger, Module } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { PermissionsModule } from "../permissions/permissions.module";
@@ -10,8 +14,30 @@ import { SupabaseDashboardRepository } from "./infrastructure/supabase-dashboard
 
 @Module({
   imports: [SupabaseModule, PermissionsModule],
-  controllers: [DashboardController],
+  controllers: [DashboardController, DashboardTrendsController],
   providers: [
+    SupabaseDashboardTrendsRepository,
+    {
+      provide: DashboardDatasetCodec,
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) =>
+        new DashboardDatasetCodec(
+          config.getOrThrow<string>("COOKIE_SIGNING_SECRET"),
+        ),
+    },
+    {
+      provide: DashboardTrendsUseCases,
+      inject: [
+        SupabaseDashboardTrendsRepository,
+        SupabaseDashboardPermissionsRepository,
+        DashboardDatasetCodec,
+      ],
+      useFactory: (
+        repository: SupabaseDashboardTrendsRepository,
+        permissions: SupabaseDashboardPermissionsRepository,
+        tokens: DashboardDatasetCodec,
+      ) => new DashboardTrendsUseCases(repository, permissions, tokens),
+    },
     SupabaseDashboardPermissionsRepository,
     SupabaseDashboardRepository,
     {

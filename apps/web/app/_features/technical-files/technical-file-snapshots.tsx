@@ -1,12 +1,13 @@
 "use client";
 
 import { Button } from "@repo/ui/button";
+import { cn } from "@repo/ui/cn";
 import type {
   TechnicalFileSnapshot,
   TechnicalFileSnapshotExportResponse,
 } from "@repo/contracts/technical-files";
 import type { UseQueryResult } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 
 import { ApiClientError } from "../../_lib/http/api-client";
 import {
@@ -58,8 +59,33 @@ export function TechnicalFileSnapshots({
   canSnapshot: boolean;
   canShare?: boolean;
 }) {
-  const snapshots = useTechnicalFileSnapshotsQuery(productId, enabled && canView);
+  const snapshots = useTechnicalFileSnapshotsQuery(
+    productId,
+    enabled && canView,
+  );
   const createSnapshot = useCreateTechnicalFileSnapshotMutation(productId);
+  const focusedSnapshot = useRef<string | null>(null);
+  useEffect(() => {
+    function focusKnownSnapshot(explicitNavigation = false) {
+      if (!enabled || !canView) return;
+      const snapshot = snapshots.data?.snapshots.find(
+        (item) => window.location.hash === `#snapshot-${item.id}`,
+      );
+      if (!snapshot) return;
+      const key = `${productId}:${snapshot.id}`;
+      if (!explicitNavigation && focusedSnapshot.current === key) return;
+      const row = document.getElementById(`snapshot-${snapshot.id}`);
+      if (!row) return;
+      focusedSnapshot.current = key;
+      row.scrollIntoView?.({ block: "center", behavior: "auto" });
+      row.focus({ preventScroll: true });
+    }
+    focusKnownSnapshot();
+    const onHashChange = () => focusKnownSnapshot(true);
+    window.addEventListener("hashchange", onHashChange);
+    return () => window.removeEventListener("hashchange", onHashChange);
+  }, [snapshots.data, productId, enabled, canView]);
+
   const [purpose, setPurpose] = useState<"audit" | "release">("audit");
   const [releaseId, setReleaseId] = useState("");
   const [auditRationale, setAuditRationale] = useState("");
@@ -89,7 +115,9 @@ export function TechnicalFileSnapshots({
           : { releaseId: releaseId.trim() }),
         idempotencyKey: requestId(),
       });
-      setMessage("Snapshot captured. Its evidence versions and readiness state are immutable.");
+      setMessage(
+        "Snapshot captured. Its evidence versions and readiness state are immutable.",
+      );
     } catch (error) {
       setMessage(messageFor(error, "The snapshot could not be created."));
     }
@@ -122,53 +150,55 @@ export function TechnicalFileSnapshots({
       ) : null}
       {canSnapshot ? (
         <form onSubmit={create} className="mt-4 grid gap-3" noValidate>
-        <label className="flex flex-col gap-1 text-caption-1-semibold text-fg">
-          Snapshot purpose
-          <select
-            value={purpose}
-            disabled={createSnapshot.isPending}
-            onChange={(event) => setPurpose(event.target.value as "audit" | "release")}
-            className="rounded-lg border border-border bg-canvas px-3 py-2 text-subhead-regular text-fg outline-none focus-visible:ring-2 focus-visible:ring-focus"
-          >
-            <option value="audit">Audit</option>
-            <option value="release">Release</option>
-          </select>
-        </label>
-        {purpose === "audit" ? (
           <label className="flex flex-col gap-1 text-caption-1-semibold text-fg">
-            Audit rationale
-            <textarea
-              value={auditRationale}
-              onChange={(event) => setAuditRationale(event.target.value)}
+            Snapshot purpose
+            <select
+              value={purpose}
               disabled={createSnapshot.isPending}
-              maxLength={4_000}
-              rows={3}
-              required
+              onChange={(event) =>
+                setPurpose(event.target.value as "audit" | "release")
+              }
               className="rounded-lg border border-border bg-canvas px-3 py-2 text-subhead-regular text-fg outline-none focus-visible:ring-2 focus-visible:ring-focus"
-            />
+            >
+              <option value="audit">Audit</option>
+              <option value="release">Release</option>
+            </select>
           </label>
-        ) : (
-          <label className="flex flex-col gap-1 text-caption-1-semibold text-fg">
-            Active release ID
-            <input
-              value={releaseId}
-              onChange={(event) => setReleaseId(event.target.value)}
-              disabled={createSnapshot.isPending}
-              inputMode="text"
-              required
-              className="rounded-lg border border-border bg-canvas px-3 py-2 text-subhead-regular text-fg outline-none focus-visible:ring-2 focus-visible:ring-focus"
-            />
-          </label>
-        )}
-        <div>
-          <Button
-            type="submit"
-            loading={createSnapshot.isPending}
-            loadingLabel="Capturing snapshot"
-          >
-            Create snapshot
-          </Button>
-        </div>
+          {purpose === "audit" ? (
+            <label className="flex flex-col gap-1 text-caption-1-semibold text-fg">
+              Audit rationale
+              <textarea
+                value={auditRationale}
+                onChange={(event) => setAuditRationale(event.target.value)}
+                disabled={createSnapshot.isPending}
+                maxLength={4_000}
+                rows={3}
+                required
+                className="rounded-lg border border-border bg-canvas px-3 py-2 text-subhead-regular text-fg outline-none focus-visible:ring-2 focus-visible:ring-focus"
+              />
+            </label>
+          ) : (
+            <label className="flex flex-col gap-1 text-caption-1-semibold text-fg">
+              Active release ID
+              <input
+                value={releaseId}
+                onChange={(event) => setReleaseId(event.target.value)}
+                disabled={createSnapshot.isPending}
+                inputMode="text"
+                required
+                className="rounded-lg border border-border bg-canvas px-3 py-2 text-subhead-regular text-fg outline-none focus-visible:ring-2 focus-visible:ring-focus"
+              />
+            </label>
+          )}
+          <div>
+            <Button
+              type="submit"
+              loading={createSnapshot.isPending}
+              loadingLabel="Capturing snapshot"
+            >
+              Create snapshot
+            </Button>
+          </div>
         </form>
       ) : null}
       {snapshots.isPending ? (
@@ -196,7 +226,10 @@ export function TechnicalFileSnapshots({
           No snapshots have been captured for this technical file.
         </p>
       ) : (
-        <ul className="mt-5 flex flex-col gap-3" aria-label="Technical-file snapshots">
+        <ul
+          className="mt-5 flex flex-col gap-3"
+          aria-label="Technical-file snapshots"
+        >
           {snapshots.data.snapshots.map((snapshot) => (
             <SnapshotRow
               key={snapshot.id}
@@ -232,8 +265,12 @@ function SnapshotRow({
   onSelectExport: (value: { snapshotId: string; exportId: string }) => void;
   onMessage: (value: string) => void;
 }) {
-  const createExport = useCreateTechnicalFileSnapshotExportMutation(productId, snapshot.id);
-  const current = selectedExport?.snapshotId === snapshot.id ? selectedExport : null;
+  const createExport = useCreateTechnicalFileSnapshotExportMutation(
+    productId,
+    snapshot.id,
+  );
+  const current =
+    selectedExport?.snapshotId === snapshot.id ? selectedExport : null;
   const exportStatus = useTechnicalFileSnapshotExportQuery(
     productId,
     current?.snapshotId ?? null,
@@ -243,23 +280,35 @@ function SnapshotRow({
 
   async function exportSnapshot() {
     try {
-      const response = await createExport.mutateAsync({ idempotencyKey: requestId() });
+      const response = await createExport.mutateAsync({
+        idempotencyKey: requestId(),
+      });
       onSelectExport({ snapshotId: snapshot.id, exportId: response.export.id });
       onMessage("Export generation was queued from the immutable snapshot.");
     } catch (error) {
-      onMessage(messageFor(error, "The snapshot export could not be requested."));
+      onMessage(
+        messageFor(error, "The snapshot export could not be requested."),
+      );
     }
   }
 
   return (
-    <li className="rounded-xl border border-border bg-canvas p-3">
+    <li
+      id={`snapshot-${snapshot.id}`}
+      tabIndex={-1}
+      className={cn(
+        "scroll-mt-24 rounded-xl border border-border bg-canvas p-3 outline-none focus-visible:ring-2 focus-visible:ring-focus",
+      )}
+    >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-subhead-semibold text-fg">
-            {label(snapshot.purpose)} snapshot · {label(snapshot.readinessStatus)} readiness
+            {label(snapshot.purpose)} snapshot ·{" "}
+            {label(snapshot.readinessStatus)} readiness
           </p>
           <p className="mt-1 text-caption-1-regular text-fg-muted">
-            Template {snapshot.templateVersion} · file version {snapshot.technicalFileVersion} · {snapshot.status}
+            Template {snapshot.templateVersion} · file version{" "}
+            {snapshot.technicalFileVersion} · {snapshot.status}
           </p>
           {snapshot.auditRationale ? (
             <p className="mt-1 text-caption-1-regular text-fg-muted">
@@ -268,8 +317,8 @@ function SnapshotRow({
           ) : null}
           {snapshot.status === "superseded" ? (
             <p className="mt-1 text-caption-1-regular text-fg-muted">
-              Superseded snapshots remain immutable historical records and cannot
-              be exported again.
+              Superseded snapshots remain immutable historical records and
+              cannot be exported again.
             </p>
           ) : null}
         </div>
@@ -316,16 +365,34 @@ function SnapshotExportStatus({
   canShare: boolean;
   onMessage: (value: string) => void;
 }) {
-  const cancel = useCancelTechnicalFileSnapshotExportMutation(productId, snapshotId, exportId);
+  const cancel = useCancelTechnicalFileSnapshotExportMutation(
+    productId,
+    snapshotId,
+    exportId,
+  );
   const download = useTechnicalFileSnapshotDownloadMutation();
   const [cancelReason, setCancelReason] = useState("");
 
   async function downloadArtifact(artifact: "pdf" | "archive") {
     try {
-      const response = await download.mutateAsync({ productId, snapshotId, exportId, artifact });
-      window.open(response.download.downloadUrl, "_blank", "noopener,noreferrer");
+      const response = await download.mutateAsync({
+        productId,
+        snapshotId,
+        exportId,
+        artifact,
+      });
+      window.open(
+        response.download.downloadUrl,
+        "_blank",
+        "noopener,noreferrer",
+      );
     } catch (error) {
-      onMessage(messageFor(error, "The export artifact could not be prepared for download."));
+      onMessage(
+        messageFor(
+          error,
+          "The export artifact could not be prepared for download.",
+        ),
+      );
     }
   }
 
@@ -335,7 +402,10 @@ function SnapshotExportStatus({
       return;
     }
     try {
-      await cancel.mutateAsync({ reason: cancelReason.trim(), idempotencyKey: requestId() });
+      await cancel.mutateAsync({
+        reason: cancelReason.trim(),
+        idempotencyKey: requestId(),
+      });
       onMessage("The export was cancelled with the recorded reason.");
     } catch (error) {
       onMessage(messageFor(error, "The export could not be cancelled."));
@@ -343,38 +413,82 @@ function SnapshotExportStatus({
   }
 
   if (exportStatus.isPending) {
-    return <p role="status" className="mt-3 text-caption-1-regular text-fg-muted">Loading export status…</p>;
+    return (
+      <p role="status" className="mt-3 text-caption-1-regular text-fg-muted">
+        Loading export status…
+      </p>
+    );
   }
   if (exportStatus.isError || !exportStatus.data) {
-    return <p className="mt-3 text-caption-1-regular text-fg-muted">Export status is temporarily unavailable.</p>;
+    return (
+      <p className="mt-3 text-caption-1-regular text-fg-muted">
+        Export status is temporarily unavailable.
+      </p>
+    );
   }
   const current = exportStatus.data.export;
-  const canCancel = current.status === "queued" || current.status === "generating";
+  const canCancel =
+    current.status === "queued" || current.status === "generating";
   return (
     <div className="mt-3 border-t border-border pt-3">
-      <p className="text-caption-1-semibold text-fg">Export status: {label(current.status)}</p>
-      {current.status === "failed" ? <p className="mt-1 text-caption-1-regular text-fg-muted">Failure: {label(current.failureCode ?? "unknown")}</p> : null}
+      <p className="text-caption-1-semibold text-fg">
+        Export status: {label(current.status)}
+      </p>
+      {current.status === "failed" ? (
+        <p className="mt-1 text-caption-1-regular text-fg-muted">
+          Failure: {label(current.failureCode ?? "unknown")}
+        </p>
+      ) : null}
       {current.status === "ready" ? (
         <>
-        <div className="mt-3 flex flex-wrap gap-2">
-          <Button type="button" variant="outline" tone="grey" loading={download.isPending} onClick={() => void downloadArtifact("pdf")}>Download PDF</Button>
-          <Button type="button" variant="outline" tone="grey" loading={download.isPending} onClick={() => void downloadArtifact("archive")}>Download archive</Button>
-        </div>
-        <TechnicalFileAuditorGrants
-          productId={productId}
-          snapshotId={snapshotId}
-          exportRecord={current}
-          canShare={canShare}
-        />
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              tone="grey"
+              loading={download.isPending}
+              onClick={() => void downloadArtifact("pdf")}
+            >
+              Download PDF
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              tone="grey"
+              loading={download.isPending}
+              onClick={() => void downloadArtifact("archive")}
+            >
+              Download archive
+            </Button>
+          </div>
+          <TechnicalFileAuditorGrants
+            productId={productId}
+            snapshotId={snapshotId}
+            exportRecord={current}
+            canShare={canShare}
+          />
         </>
       ) : null}
       {canCancel ? (
         <div className="mt-3 flex flex-wrap items-end gap-2">
           <label className="flex min-w-60 flex-1 flex-col gap-1 text-caption-1-semibold text-fg">
             Cancellation reason
-            <input value={cancelReason} onChange={(event) => setCancelReason(event.target.value)} maxLength={1_000} className="rounded-lg border border-border bg-canvas px-3 py-2 text-subhead-regular text-fg outline-none focus-visible:ring-2 focus-visible:ring-focus" />
+            <input
+              value={cancelReason}
+              onChange={(event) => setCancelReason(event.target.value)}
+              maxLength={1_000}
+              className="rounded-lg border border-border bg-canvas px-3 py-2 text-subhead-regular text-fg outline-none focus-visible:ring-2 focus-visible:ring-focus"
+            />
           </label>
-          <Button type="button" variant="outline" tone="grey" loading={cancel.isPending} onClick={() => void cancelExport()}>Cancel export</Button>
+          <Button
+            type="button"
+            variant="outline"
+            tone="grey"
+            loading={cancel.isPending}
+            onClick={() => void cancelExport()}
+          >
+            Cancel export
+          </Button>
         </div>
       ) : null}
     </div>

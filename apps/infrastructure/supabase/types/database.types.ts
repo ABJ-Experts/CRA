@@ -13101,6 +13101,90 @@ export type Database = {
           },
         ]
       }
+      sbom_release_coverage_facts: {
+        Row: {
+          covered_delta: number | null
+          effective_at: string
+          eligible_delta: number | null
+          fact_kind: string
+          organization_id: string
+          payload: Json
+          previous_sequence: number | null
+          product_id: string | null
+          provenance: string
+          recorded_at: string
+          recorded_transaction_id: unknown
+          release_id: string | null
+          sequence: number
+        }
+        Insert: {
+          covered_delta?: number | null
+          effective_at?: string
+          eligible_delta?: number | null
+          fact_kind: string
+          organization_id: string
+          payload: Json
+          previous_sequence?: number | null
+          product_id?: string | null
+          provenance?: string
+          recorded_at?: string
+          recorded_transaction_id?: unknown
+          release_id?: string | null
+          sequence?: never
+        }
+        Update: {
+          covered_delta?: number | null
+          effective_at?: string
+          eligible_delta?: number | null
+          fact_kind?: string
+          organization_id?: string
+          payload?: Json
+          previous_sequence?: number | null
+          product_id?: string | null
+          provenance?: string
+          recorded_at?: string
+          recorded_transaction_id?: unknown
+          release_id?: string | null
+          sequence?: never
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sbom_release_coverage_facts_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sbom_release_coverage_facts_organization_id_previous_seque_fkey"
+            columns: ["organization_id", "previous_sequence"]
+            isOneToOne: false
+            referencedRelation: "sbom_release_coverage_facts"
+            referencedColumns: ["organization_id", "sequence"]
+          },
+          {
+            foreignKeyName: "sbom_release_coverage_facts_organization_id_product_id_fkey"
+            columns: ["organization_id", "product_id"]
+            isOneToOne: false
+            referencedRelation: "product_retention_alert_operations"
+            referencedColumns: ["organization_id", "product_id"]
+          },
+          {
+            foreignKeyName: "sbom_release_coverage_facts_organization_id_product_id_fkey"
+            columns: ["organization_id", "product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "sbom_release_coverage_facts_organization_id_release_id_fkey"
+            columns: ["organization_id", "release_id"]
+            isOneToOne: false
+            referencedRelation: "product_releases"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
       sbom_sources: {
         Row: {
           actor_credential_id: string | null
@@ -17047,6 +17131,7 @@ export type Database = {
           product_id: string
           purpose: string
           readiness_status: string
+          recorded_transaction_id: unknown
           release_id: string | null
           status: string
           superseded_by_snapshot_id: string | null
@@ -17054,6 +17139,7 @@ export type Database = {
           technical_file_version: number
           template_key: string
           template_version: string
+          trend_sequence: number
         }
         Insert: {
           audit_rationale?: string | null
@@ -17067,6 +17153,7 @@ export type Database = {
           product_id: string
           purpose: string
           readiness_status: string
+          recorded_transaction_id?: unknown
           release_id?: string | null
           status?: string
           superseded_by_snapshot_id?: string | null
@@ -17074,6 +17161,7 @@ export type Database = {
           technical_file_version: number
           template_key: string
           template_version: string
+          trend_sequence?: never
         }
         Update: {
           audit_rationale?: string | null
@@ -17087,6 +17175,7 @@ export type Database = {
           product_id?: string
           purpose?: string
           readiness_status?: string
+          recorded_transaction_id?: unknown
           release_id?: string | null
           status?: string
           superseded_by_snapshot_id?: string | null
@@ -17094,6 +17183,7 @@ export type Database = {
           technical_file_version?: number
           template_key?: string
           template_version?: string
+          trend_sequence?: never
         }
         Relationships: [
           {
@@ -18851,6 +18941,97 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "vulnerability_component_occurrences"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      vulnerability_finding_lifecycle_facts: {
+        Row: {
+          effective_at: string
+          fact_kind: string
+          finding_id: string | null
+          is_reopening: boolean | null
+          organization_id: string
+          payload: Json
+          previous_sequence: number | null
+          product_id: string | null
+          provenance: string
+          recorded_at: string
+          recorded_transaction_id: unknown
+          release_id: string | null
+          sequence: number
+        }
+        Insert: {
+          effective_at?: string
+          fact_kind: string
+          finding_id?: string | null
+          is_reopening?: boolean | null
+          organization_id: string
+          payload: Json
+          previous_sequence?: number | null
+          product_id?: string | null
+          provenance?: string
+          recorded_at?: string
+          recorded_transaction_id?: unknown
+          release_id?: string | null
+          sequence?: never
+        }
+        Update: {
+          effective_at?: string
+          fact_kind?: string
+          finding_id?: string | null
+          is_reopening?: boolean | null
+          organization_id?: string
+          payload?: Json
+          previous_sequence?: number | null
+          product_id?: string | null
+          provenance?: string
+          recorded_at?: string
+          recorded_transaction_id?: unknown
+          release_id?: string | null
+          sequence?: never
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vulnerability_finding_lifecyc_organization_id_previous_seq_fkey"
+            columns: ["organization_id", "previous_sequence"]
+            isOneToOne: false
+            referencedRelation: "vulnerability_finding_lifecycle_facts"
+            referencedColumns: ["organization_id", "sequence"]
+          },
+          {
+            foreignKeyName: "vulnerability_finding_lifecycle_facts_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vulnerability_finding_lifecycle_organization_id_finding_id_fkey"
+            columns: ["organization_id", "finding_id"]
+            isOneToOne: false
+            referencedRelation: "vulnerability_findings"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "vulnerability_finding_lifecycle_organization_id_product_id_fkey"
+            columns: ["organization_id", "product_id"]
+            isOneToOne: false
+            referencedRelation: "product_retention_alert_operations"
+            referencedColumns: ["organization_id", "product_id"]
+          },
+          {
+            foreignKeyName: "vulnerability_finding_lifecycle_organization_id_product_id_fkey"
+            columns: ["organization_id", "product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "vulnerability_finding_lifecycle_organization_id_release_id_fkey"
+            columns: ["organization_id", "release_id"]
+            isOneToOne: false
+            referencedRelation: "product_releases"
+            referencedColumns: ["organization_id", "id"]
           },
         ]
       }
@@ -26195,6 +26376,24 @@ export type Database = {
         }
         Returns: Json
       }
+      get_dashboard_trend_sources: {
+        Args: {
+          p_actor_user_id: string
+          p_filters: Json
+          p_organization_id: string
+          p_snapshot?: Json
+        }
+        Returns: Json
+      }
+      get_dashboard_trends: {
+        Args: {
+          p_actor_user_id: string
+          p_filters: Json
+          p_organization_id: string
+          p_snapshot?: Json
+        }
+        Returns: Json
+      }
       get_evidence_bulk_intake_batch_atomic: {
         Args: {
           p_actor_user_id: string
@@ -31191,6 +31390,18 @@ export type Database = {
       m13_05_siem_vault: {
         Args: { p_action: string; p_input?: Json; p_organization_id: string }
         Returns: Json
+      }
+      m14_02_capture_finding: {
+        Args: { p_baseline?: boolean; p_finding: string; p_org: string }
+        Returns: undefined
+      }
+      m14_02_capture_release: {
+        Args: { p_baseline?: boolean; p_org: string; p_release: string }
+        Returns: undefined
+      }
+      m14_02_snapshot_can: {
+        Args: { p_actor: string; p_org: string; p_snapshot: string }
+        Returns: boolean
       }
       m14_actor_can: {
         Args: { p_actor: string; p_org: string; p_permission: string }

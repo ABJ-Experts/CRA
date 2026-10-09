@@ -8,6 +8,7 @@ import { PageHeading } from "../../dashboard/_components/dashboard-chrome";
 import { DashboardOnboardingResume } from "../../dashboard/_components/dashboard-onboarding-resume";
 import { dashboardNow } from "./dashboard-clock";
 import { useDashboardQuery } from "./dashboard.queries";
+import { DashboardTrendsPanel } from "./dashboard-trends-panel";
 import { DashboardPagedList } from "./dashboard-pages";
 import {
   DashboardCountdown,
@@ -210,6 +211,13 @@ export function DashboardContent({ productId }: { productId?: string }) {
             <DashboardCoverage section={projection.sbomCoverage} />
             <DashboardFeeds section={projection.feedFreshness} />
           </div>
+          <DashboardTrendsPanel
+            key={`${query.scope}-${productId ?? "overview"}`}
+            scope={query.scope}
+            enabled={query.enabled}
+            productId={productId}
+            canSelectProduct={query.canSelectProduct}
+          />
           <DashboardPagedList
             key={`${query.scope}-ingestion`}
             kind="ingestion"

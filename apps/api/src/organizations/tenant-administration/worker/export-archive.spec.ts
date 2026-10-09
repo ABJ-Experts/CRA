@@ -13,6 +13,35 @@ import {
 } from "./tenant-export-capacity";
 
 describe("tenant export archive", () => {
+  it("exports source-owned trend facts alongside their authoritative sources", () => {
+    expect(
+      exportSourceRegistry.find(
+        (source) => source.sourceId === "vulnerability_detection_records",
+      )?.tables,
+    ).toContain("vulnerability_finding_lifecycle_facts");
+    expect(
+      exportSourceRegistry.find(
+        (source) => source.sourceId === "sbom_normalized_graph",
+      )?.tables,
+    ).toContain("sbom_release_coverage_facts");
+    expect(() =>
+      validateExportRegistryCoverage([
+        "vulnerability_finding_lifecycle_facts",
+        "sbom_release_coverage_facts",
+      ]),
+    ).not.toThrow();
+    for (const table of [
+      "vulnerability_finding_lifecycle_facts",
+      "sbom_release_coverage_facts",
+    ]) {
+      expect(exportSourceExclusions).not.toHaveProperty(table);
+      expect(
+        exportSourceRegistry
+          .flatMap((source) => source.tables)
+          .filter((registered) => registered === table),
+      ).toHaveLength(1);
+    }
+  });
   it("keeps SIEM transport security state deployment local", () => {
     for (const table of [
       "siem_destinations",

@@ -208,6 +208,9 @@ export const exportSourceRegistry: readonly ExportSourceRegistration[] =
       sourceId: "sbom_normalized_graph",
       tables: [
         "sbom_documents",
+        // Immutable release coverage observations are source evidence, not
+        // permission-shaped dashboard aggregates or deployment-local caches.
+        "sbom_release_coverage_facts",
         "sbom_document_sources",
         "sbom_components",
         "sbom_component_identities",
@@ -365,6 +368,7 @@ export const exportSourceRegistry: readonly ExportSourceRegistration[] =
       tables: [
         "vulnerability_component_occurrences",
         "vulnerability_findings",
+        "vulnerability_finding_lifecycle_facts",
         "vulnerability_finding_component_occurrences",
         "vulnerability_match_evaluations",
         "vulnerability_kev_alerts",

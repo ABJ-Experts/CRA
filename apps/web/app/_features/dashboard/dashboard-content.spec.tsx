@@ -15,6 +15,9 @@ vi.mock("../../dashboard/_components/dashboard-onboarding-resume", () => ({
 vi.mock("./dashboard-pages", () => ({
   DashboardPagedList: ({ kind }: { kind: string }) => <div>{kind} page</div>,
 }));
+vi.mock("./dashboard-trends-panel", () => ({
+  DashboardTrendsPanel: () => <div>Trends panel</div>,
+}));
 import { DashboardContent } from "./dashboard-content";
 const hidden = { state: "restricted", observedAt: null, updatedAt: null };
 const timestamp = "2026-10-07T12:00:00Z";

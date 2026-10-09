@@ -97,6 +97,7 @@ export function useDashboardQuery(productId?: string) {
     ...query,
     data: enabled && mayRetain ? query.data : undefined,
     live,
+    canSelectProduct: permissions.can_view_products === true,
     enabled,
     sessionLoading: isLoading,
     scope,

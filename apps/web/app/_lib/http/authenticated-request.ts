@@ -6,6 +6,7 @@ import {
   apiClient,
   type ApiClient,
   type RequestJsonOptions,
+  type RequestTextOptions,
   type RequestMultipartOptions,
 } from "./api-client";
 
@@ -17,8 +18,10 @@ export class AuthenticatedApiClient {
   private refreshInFlight: Promise<void> | null = null;
 
   constructor(
-    private readonly client: Pick<ApiClient, "request" | "requestMultipart"> =
-      apiClient,
+    private readonly client: Pick<
+      ApiClient,
+      "request" | "requestMultipart"
+    > = apiClient,
   ) {}
 
   async request<
@@ -41,6 +44,23 @@ export class AuthenticatedApiClient {
 
       await this.refresh(options.fetcher ?? fetch);
       return this.client.request(options);
+    }
+  }
+
+  async requestText<TSchema extends z.ZodTypeAny>(
+    options: RequestTextOptions<TSchema>,
+  ): Promise<z.output<TSchema>> {
+    const client = this.client as Pick<
+      ApiClient,
+      "request" | "requestMultipart" | "requestText"
+    >;
+    try {
+      return await client.requestText(options);
+    } catch (error) {
+      if (!(error instanceof ApiClientError) || error.status !== 401)
+        throw error;
+      await this.refresh(options.fetcher ?? fetch);
+      return client.requestText(options);
     }
   }
 
@@ -89,4 +109,10 @@ export function authenticatedRequestMultipart<
   options: RequestMultipartOptions<TResponseSchema, TFieldsSchema>,
 ): Promise<z.output<TResponseSchema>> {
   return authenticatedApiClient.requestMultipart(options);
+}
+
+export function authenticatedRequestText<TSchema extends z.ZodTypeAny>(
+  options: RequestTextOptions<TSchema>,
+): Promise<z.output<TSchema>> {
+  return authenticatedApiClient.requestText(options);
 }
