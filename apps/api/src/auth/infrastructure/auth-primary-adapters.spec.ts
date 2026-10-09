@@ -259,6 +259,7 @@ describe("primary Supabase auth profile operations", () => {
     username: "user",
     first_name: null,
     last_name: null,
+    job_title: null,
     avatar_url: null,
     is_active: true,
     email_verified_at: null,

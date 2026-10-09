@@ -62,6 +62,10 @@ function createService(
     passwordRecovery,
     {} as never,
     {} as never,
+    {
+      beginCritical: jest.fn().mockResolvedValue({}),
+      finishCritical: jest.fn().mockResolvedValue(undefined),
+    } as never,
   );
 
   return { service, rpc, updateUserById };

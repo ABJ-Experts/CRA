@@ -1,6 +1,54 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
+import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
 import { createTransport, type Transporter } from "nodemailer";
+
+export class RequiredMailDeliveryError extends Error {
+  readonly name = "RequiredMailDeliveryError";
+
+  constructor(readonly code: "provider_unavailable" | "delivery_failed") {
+    super(code);
+  }
+}
+
+/** The SMTP request may have reached the relay; never auto-replay this send. */
+export class UncertainMailDeliveryError extends Error {
+  readonly name = "UncertainMailDeliveryError";
+  readonly code = "delivery_uncertain";
+
+  constructor() {
+    super("delivery_uncertain");
+  }
+}
+
+export type MailDeliveryReceipt = Readonly<{
+  status: "provider_accepted";
+  providerMessageId: string | null;
+  acceptedRecipients: readonly string[];
+  rejectedRecipients: readonly string[];
+  /** SMTP acceptance is not proof that a human inbox received the message. */
+  deliveryConfirmed: false;
+}>;
+
+export type NotificationDigestItem = Readonly<{
+  title: string;
+  href: string;
+  date: string;
+  category: string;
+}>;
+
+const escapeHtml = (value: string): string =>
+  value.replace(/[&<>"']/g, (character) => {
+    const entities: Readonly<Record<string, string>> = Object.freeze({
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#39;",
+    });
+    return entities[character] ?? character;
+  });
 
 /**
  * Outbound email.
@@ -31,6 +79,15 @@ export class MailService {
     const port = this.config.get<number>("SMTP_PORT");
     const user = this.config.get<string>("SMTP_USER");
     const pass = this.config.get<string>("SMTP_PASS");
+    const tlsMode =
+      this.config.get<"mailpit" | "starttls" | "tls">("SMTP_TLS_MODE") ??
+      "mailpit";
+    const connectionTimeout =
+      this.config.get<number>("SMTP_CONNECTION_TIMEOUT_MS") ?? 10_000;
+    const greetingTimeout =
+      this.config.get<number>("SMTP_GREETING_TIMEOUT_MS") ?? 10_000;
+    const socketTimeout =
+      this.config.get<number>("SMTP_SOCKET_TIMEOUT_MS") ?? 30_000;
 
     this.from = this.config.getOrThrow<string>("SMTP_FROM");
     this.appUrl = this.config.getOrThrow<string>("APP_URL").replace(/\/+$/, "");
@@ -40,31 +97,70 @@ export class MailService {
       this.logger.warn("SMTP_HOST is not set — email is disabled.");
     } else {
       const effectivePort = port ?? 587;
+      const caPath = this.config.get<string>("SMTP_CA_CERT_PATH");
+      const ca = caPath ? readFileSync(caPath, "utf8") : undefined;
+      const servername = this.config.get<string>("SMTP_TLS_SERVERNAME") ?? host;
+      const secure = tlsMode === "tls";
+      const requireTLS = tlsMode === "starttls";
       this.transporter = createTransport({
         host,
         port: effectivePort,
-        // Mailpit speaks plain SMTP on 54325. `secure: true` would attempt TLS
-        // on connect and hang.
-        secure: false,
+        secure,
+        requireTLS,
+        connectionTimeout,
+        greetingTimeout,
+        socketTimeout,
         // Auth only when credentials exist. Passing `auth: { user: undefined }`
         // makes nodemailer attempt AUTH against a server that has none.
         ...(user && pass ? { auth: { user, pass } } : {}),
-        // Mailpit presents a self-signed certificate if STARTTLS is negotiated.
-        tls: { rejectUnauthorized: false },
+        tls:
+          tlsMode === "mailpit"
+            ? { rejectUnauthorized: false }
+            : {
+                rejectUnauthorized: true,
+                servername,
+                ...(ca ? { ca } : {}),
+              },
       });
-      this.logger.log(`Mail transport ready: ${host}:${effectivePort}`);
+      this.logger.log(
+        `Mail transport ready: ${host}:${effectivePort} tls=${tlsMode}`,
+      );
     }
   }
 
-  private async send(to: string, subject: string, html: string): Promise<void> {
+  private async send(
+    to: string,
+    subject: string,
+    html: string,
+    required = false,
+    idempotencyKey?: string,
+    uncertainOnTransportError = false,
+  ): Promise<MailDeliveryReceipt | undefined> {
     if (!this.transporter) {
-      this.logger.warn(`Email suppressed (no transport): "${subject}"`);
+      this.logger.warn("Mail delivery suppressed");
+      if (required) throw new RequiredMailDeliveryError("provider_unavailable");
       return;
     }
 
+    const idempotencyDigest = idempotencyKey
+      ? createHash("sha256").update(idempotencyKey).digest("hex")
+      : undefined;
+    let result: unknown;
     try {
-      await this.transporter.sendMail({ from: this.from, to, subject, html });
-      this.logger.log(`Sent "${subject}"`);
+      result = await this.transporter.sendMail({
+        from: this.from,
+        to,
+        subject,
+        html,
+        ...(idempotencyDigest
+          ? {
+              messageId: `<support-period-${idempotencyDigest}@cra.local>`,
+              headers: {
+                "X-CRA-Idempotency-Key": idempotencyDigest,
+              },
+            }
+          : {}),
+      });
     } catch (error) {
       /*
        * Never let a mail failure fail the request that triggered it. A sign-up
@@ -72,10 +168,46 @@ export class MailService {
        * sign-up that 500s because SMTP was down is a lost account. Logged, not
        * thrown.
        */
-      this.logger.error(
-        `Failed to send "${subject}": ${error instanceof Error ? error.message : String(error)}`,
-      );
+      this.logger.error("Mail delivery failed");
+      if (required) {
+        if (
+          uncertainOnTransportError &&
+          !isExplicitSmtpPreDataRejection(error)
+        ) {
+          throw new UncertainMailDeliveryError();
+        }
+        throw new RequiredMailDeliveryError("delivery_failed");
+      }
+      return;
     }
+    const receipt = {
+      status: "provider_accepted",
+      providerMessageId: stringValue(result, "messageId"),
+      acceptedRecipients: stringArray(result, "accepted"),
+      rejectedRecipients: stringArray(result, "rejected"),
+      deliveryConfirmed: false,
+    } satisfies MailDeliveryReceipt;
+    if (!recipientWasAccepted(to, receipt)) {
+      this.logger.error("Mail delivery failed");
+      if (required) {
+        const explicitlyRejected = receipt.rejectedRecipients.some(
+          (address) => address.trim().toLowerCase() === to.trim().toLowerCase(),
+        );
+        const possiblyAccepted = receipt.acceptedRecipients.some(
+          (address) => address.trim().toLowerCase() === to.trim().toLowerCase(),
+        );
+        if (
+          uncertainOnTransportError &&
+          (!explicitlyRejected || possiblyAccepted)
+        ) {
+          throw new UncertainMailDeliveryError();
+        }
+        throw new RequiredMailDeliveryError("delivery_failed");
+      }
+      return;
+    }
+    this.logger.log("Mail delivery accepted");
+    return receipt;
   }
 
   private layout(title: string, body: string): string {
@@ -136,4 +268,476 @@ export class MailService {
       ),
     );
   }
+
+  /**
+   * Supplier evidence access is an opaque, one-time portal credential, never
+   * an organization membership invitation. The bearer sits in a URL fragment
+   * so reverse proxies and route logs never receive it.
+   */
+  async sendSupplierEvidenceInvitation(
+    to: string,
+    token: string,
+    idempotencyKey: string,
+  ): Promise<MailDeliveryReceipt> {
+    const url = `${this.appUrl}/supplier-evidence#${encodeURIComponent(token)}`;
+    return this.required(
+      to,
+      "Supplier evidence request",
+      this.layout(
+        "Evidence requested",
+        `<p style="color:#4b5058;font-size:14px">You have been asked to provide evidence through the CRA supplier portal.</p>
+         <p style="margin:24px 0"><a href="${url}" style="background:#4a50d6;color:#fff;padding:12px 20px;border-radius:8px;text-decoration:none;font-size:14px">Open evidence request</a></p>
+         <p style="color:#8a8f98;font-size:12px;word-break:break-all">${url}</p>`,
+      ),
+      idempotencyKey,
+    );
+  }
+
+  /**
+   * Reminder content deliberately stays within the supplier portal disclosure
+   * boundary. The worker creates the opaque bearer in memory and this method
+   * places it only in the URL fragment, never in a query string or logs.
+   */
+  async sendSupplierEvidenceReminder(
+    to: string,
+    input: Readonly<{
+      portalTitle: string;
+      instructions: string | null;
+      dueAt: string;
+    }>,
+    token: string,
+    idempotencyKey: string,
+  ): Promise<MailDeliveryReceipt> {
+    const url = `${this.appUrl}/supplier-evidence#${encodeURIComponent(token)}`;
+    const title = escapeHtml(input.portalTitle);
+    const instructions = input.instructions
+      ? `<p style="color:#4b5058;font-size:14px">${escapeHtml(input.instructions)}</p>`
+      : "";
+    return this.required(
+      to,
+      "Reminder: supplier evidence request",
+      this.layout(
+        "Evidence request reminder",
+        `<p style="color:#4b5058;font-size:14px"><strong>${title}</strong> is awaiting your response.</p>
+         ${instructions}
+         <p style="color:#4b5058;font-size:14px">Due date: <strong>${escapeHtml(input.dueAt)}</strong>.</p>
+         <p style="margin:24px 0"><a href="${url}" style="background:#4a50d6;color:#fff;padding:12px 20px;border-radius:8px;text-decoration:none;font-size:14px">Open evidence request</a></p>
+         <p style="color:#8a8f98;font-size:12px;word-break:break-all">${url}</p>`,
+      ),
+      idempotencyKey,
+    );
+  }
+
+  /** Owner escalation never exposes a supplier portal bearer. */
+  async sendSupplierEvidenceReminderEscalation(
+    to: string,
+    input: Readonly<{ portalTitle: string; dueAt: string }>,
+    idempotencyKey: string,
+  ): Promise<MailDeliveryReceipt> {
+    return this.required(
+      to,
+      "Overdue supplier evidence escalation",
+      this.layout(
+        "Supplier evidence overdue",
+        `<p style="color:#4b5058;font-size:14px"><strong>${escapeHtml(input.portalTitle)}</strong> is overdue as of <strong>${escapeHtml(input.dueAt)}</strong>.</p>
+         <p style="color:#4b5058;font-size:14px">Review the request in CRA and take the appropriate follow-up action.</p>`,
+      ),
+      idempotencyKey,
+    );
+  }
+
+  /**
+   * Compliance alerts are an outbox-owned effect. Unlike account mail, a
+   * delivery failure must reach the worker so it can persist retry state.
+   */
+  async sendSupportPeriodAlert(
+    to: string,
+    input: Readonly<{
+      productName: string;
+      supportEndsAt: string;
+      thresholdDays: number;
+      missed: boolean;
+    }>,
+    idempotencyKey: string,
+  ): Promise<MailDeliveryReceipt> {
+    const productName = escapeHtml(input.productName);
+    const timing = input.missed
+      ? "This support-period threshold was missed and requires prompt review."
+      : "Review the support commitment and any required follow-up action.";
+    return this.required(
+      to,
+      `Support period alert: ${input.productName}`,
+      this.layout(
+        "Support period alert",
+        `<p style="color:#4b5058;font-size:14px"><strong>${productName}</strong> reaches its ${input.thresholdDays}-day support-period threshold on <strong>${escapeHtml(input.supportEndsAt)}</strong>.</p>
+         <p style="color:#4b5058;font-size:14px">${timing}</p>`,
+      ),
+      idempotencyKey,
+    );
+  }
+
+  async sendKevAlert(
+    to: string,
+    input: Readonly<{
+      productName: string;
+      releaseName: string;
+      advisoryId: string;
+      lifecycleState: string;
+      kevListingDate: string | null;
+    }>,
+    idempotencyKey: string,
+  ): Promise<MailDeliveryReceipt> {
+    const productName = escapeHtml(input.productName);
+    const releaseName = escapeHtml(input.releaseName);
+    const advisoryId = escapeHtml(input.advisoryId);
+    const lifecycleState = escapeHtml(input.lifecycleState.replace(/_/g, " "));
+    const listing = input.kevListingDate
+      ? `CISA KEV listing date: <strong>${escapeHtml(input.kevListingDate)}</strong>.`
+      : "CISA KEV listing date is not available.";
+    return this.required(
+      to,
+      `KEV alert: ${input.advisoryId}`,
+      this.layout(
+        "Known Exploited Vulnerability alert",
+        `<p style="color:#4b5058;font-size:14px"><strong>${productName}</strong> release <strong>${releaseName}</strong> is affected by <strong>${advisoryId}</strong>.</p>
+         <p style="color:#4b5058;font-size:14px">Lifecycle state: <strong>${lifecycleState}</strong>. ${listing}</p>
+         <p style="color:#4b5058;font-size:14px">Review the durable alert in CRA before beginning any reporting workflow. No regulatory report has been created or submitted by this notification.</p>`,
+      ),
+      idempotencyKey,
+    );
+  }
+
+  /**
+   * The review worker supplies only the material source transition. Evidence
+   * paths, source payloads, and artefact hashes remain in the tenant-scoped
+   * application surface and are never copied into email.
+   */
+  async sendVulnerabilityFindingReviewAlert(
+    to: string,
+    input: Readonly<{
+      advisoryId: string;
+      transition: string;
+      reviewState: string;
+    }>,
+    idempotencyKey: string,
+  ): Promise<MailDeliveryReceipt> {
+    const advisorySubject = input.advisoryId.replace(/[\r\n]+/g, " ").trim();
+    const advisoryId = escapeHtml(advisorySubject);
+    const transition = escapeHtml(input.transition.replace(/_/g, " "));
+    const reviewState = escapeHtml(input.reviewState.replace(/_/g, " "));
+    return this.required(
+      to,
+      `Finding review required: ${advisorySubject}`,
+      this.layout(
+        "Vulnerability finding review required",
+        `<p style="color:#4b5058;font-size:14px">Source status for <strong>${advisoryId}</strong> changed to <strong>${transition}</strong>.</p>
+         <p style="color:#4b5058;font-size:14px">Current review state: <strong>${reviewState}</strong>. Review the finding in CRA; this notification does not change the recorded assessment or close the finding.</p>`,
+      ),
+      idempotencyKey,
+    );
+  }
+
+  /**
+   * Internal triage notifications deliberately state that they are neither a
+   * regulatory clock nor a report update. The database-owned notifier passes
+   * only the advisory, severity, and event kind; evidence remains in CRA.
+   */
+  async sendVulnerabilityTriageAlert(
+    to: string,
+    input: Readonly<{
+      advisoryId: string;
+      severity: string;
+      kind: "suppression_expired" | "internal_sla_breached";
+    }>,
+    idempotencyKey: string,
+  ): Promise<MailDeliveryReceipt> {
+    const advisorySubject = input.advisoryId.replace(/[\r\n]+/g, " ").trim();
+    const advisoryId = escapeHtml(advisorySubject);
+    const severity = escapeHtml(input.severity.replace(/_/g, " "));
+    const isSuppressionExpiry = input.kind === "suppression_expired";
+    const title = isSuppressionExpiry
+      ? "Suppression expired"
+      : "Internal triage SLA breached";
+    const detail = isSuppressionExpiry
+      ? `The finite suppression for <strong>${advisoryId}</strong> expired. The finding is actionable again.`
+      : `The internal triage SLA for <strong>${advisoryId}</strong> (${severity}) was breached.`;
+    return this.required(
+      to,
+      `${title}: ${advisorySubject}`,
+      this.layout(
+        title,
+        `<p style="color:#4b5058;font-size:14px">${detail}</p>
+         <p style="color:#4b5058;font-size:14px">This is an internal triage alert. No regulatory deadline, obligation, or report was changed by this notification.</p>`,
+      ),
+      idempotencyKey,
+    );
+  }
+
+  /** Deliberately content-minimal: no note, author, evidence, or assessment data. */
+  async sendVulnerabilityTriageNoteMention(
+    to: string,
+    findingId: string,
+    idempotencyKey: string,
+  ): Promise<MailDeliveryReceipt> {
+    const safeFindingId = findingId.replace(/[^a-f0-9-]/gi, "");
+    const href = `${this.appUrl}/findings?findingId=${encodeURIComponent(safeFindingId)}`;
+    return this.required(
+      to,
+      "You were mentioned in a triage note",
+      this.layout(
+        "Triage note mention",
+        `<p style="color:#4b5058;font-size:14px">You were mentioned in an internal finding triage note.</p>
+         <p style="color:#4b5058;font-size:14px"><a href="${escapeHtml(href)}">Open the finding in CRA</a></p>`,
+      ),
+      idempotencyKey,
+    );
+  }
+
+  /**
+   * Quarantine notifications deliberately contain no file name, URL, hash, or
+   * malware signature. The authenticated evidence surface rechecks access
+   * before showing any further metadata.
+   */
+  async sendEvidenceQuarantinedAlert(
+    to: string,
+    idempotencyKey: string,
+  ): Promise<MailDeliveryReceipt> {
+    return this.required(
+      to,
+      "Evidence upload requires review",
+      this.layout(
+        "Evidence upload requires review",
+        `<p style="color:#4b5058;font-size:14px">An evidence upload you own could not be cleared by the security scan and has been quarantined.</p>
+         <p style="color:#4b5058;font-size:14px">Open CRA to review the safe status details. Do not attempt to retrieve or redistribute the uploaded file.</p>`,
+      ),
+      idempotencyKey,
+    );
+  }
+
+  /** Integrity failures are distinct from malware quarantine: no bytes were
+   * delivered and the historical version was taken out of the clean state. */
+  async sendEvidenceIntegrityFailureAlert(
+    to: string,
+    idempotencyKey: string,
+  ): Promise<MailDeliveryReceipt> {
+    return this.required(
+      to,
+      "Evidence integrity verification failed",
+      this.layout(
+        "Evidence integrity verification failed",
+        `<p style="color:#4b5058;font-size:14px">A previously clean evidence version could not be verified before delivery and has been blocked.</p>
+         <p style="color:#4b5058;font-size:14px">Open CRA to review the safe status details. Do not try to retrieve or redistribute the file.</p>`,
+      ),
+      idempotencyKey,
+    );
+  }
+
+  /** Validity alerts are an outbox-owned effect and do not change retention. */
+  async sendEvidenceValidityExpiryAlert(
+    to: string,
+    input: Readonly<{
+      title: string;
+      validUntil: string;
+      thresholdDays: number;
+      productId: string | null;
+    }>,
+    idempotencyKey: string,
+  ): Promise<MailDeliveryReceipt> {
+    const subjectTitle = input.title.replace(/[\r\n]+/g, " ").trim();
+    const title = escapeHtml(subjectTitle);
+    const date = escapeHtml(input.validUntil);
+    const href = input.productId
+      ? `${this.appUrl}/products/${encodeURIComponent(input.productId)}/evidence`
+      : null;
+    return this.required(
+      to,
+      `Evidence validity alert: ${subjectTitle}`,
+      this.layout(
+        "Evidence validity alert",
+        `<p style="color:#4b5058;font-size:14px"><strong>${title}</strong> reaches its ${input.thresholdDays}-day validity threshold on <strong>${date}</strong>.</p>
+         <p style="color:#4b5058;font-size:14px">Validity expiry does not delete evidence or change its retention requirements.</p>
+         ${href ? `<p style="color:#4b5058;font-size:14px"><a href="${escapeHtml(href)}">Open Evidence Library in CRA</a></p>` : ""}`,
+      ),
+      idempotencyKey,
+    );
+  }
+
+  /**
+   * Reporting monitors own the outbox and pass no assessment, evidence, or
+   * finding text into this mail boundary. The recipient still receives an
+   * authenticated link; the reporting API rechecks access when it is opened.
+   */
+  async sendReportingDeadlineAlert(
+    to: string,
+    input: Readonly<{
+      obligationId: string;
+      stage: "early_warning" | "notification" | "final_report";
+      thresholdPercent: 50 | 75 | 90 | 100;
+      dueAt: string;
+    }>,
+    idempotencyKey: string,
+  ): Promise<MailDeliveryReceipt> {
+    const safeObligationId = input.obligationId.replace(/[^a-f0-9-]/gi, "");
+    const href = `${this.appUrl}/reporting?obligationId=${encodeURIComponent(safeObligationId)}`;
+    const stage = escapeHtml(input.stage.replace(/_/g, " "));
+    const threshold =
+      input.thresholdPercent === 100 ? "breach" : `${input.thresholdPercent}%`;
+    return this.required(
+      to,
+      `Reporting deadline ${threshold}`,
+      this.layout(
+        "Reporting deadline alert",
+        `<p style="color:#4b5058;font-size:14px">A reporting <strong>${stage}</strong> deadline has reached its <strong>${escapeHtml(threshold)}</strong> threshold.</p>
+         <p style="color:#4b5058;font-size:14px">Due at: <strong>${escapeHtml(input.dueAt)}</strong>.</p>
+         <p style="color:#4b5058;font-size:14px"><a href="${escapeHtml(href)}">Open reporting obligations in CRA</a></p>`,
+      ),
+      idempotencyKey,
+    );
+  }
+
+  async sendNotificationDigest(
+    to: string,
+    items: readonly NotificationDigestItem[],
+    idempotencyKey: string,
+  ): Promise<MailDeliveryReceipt> {
+    if (items.length < 1 || items.length > 100) {
+      throw new RequiredMailDeliveryError("delivery_failed");
+    }
+    const rows = items
+      .map((item) => {
+        const href = item.href.startsWith("/") ? item.href : "/";
+        return `<li style="margin:0 0 12px">
+          <a href="${escapeHtml(`${this.appUrl}${href}`)}" style="color:#4a50d6">${escapeHtml(item.title)}</a>
+          <br><span style="color:#8a8f98;font-size:12px">${escapeHtml(item.category)} · ${escapeHtml(item.date)}</span>
+        </li>`;
+      })
+      .join("");
+    return this.required(
+      to,
+      `CRA notification digest (${items.length})`,
+      this.layout(
+        "Notification digest",
+        `<p style="color:#4b5058;font-size:14px">You have ${items.length} CRA updates ready for review.</p>
+         <ul style="padding-left:20px;margin:24px 0">${rows}</ul>`,
+      ),
+      idempotencyKey,
+    );
+  }
+
+  async sendNotificationBurst(
+    to: string,
+    input: Readonly<{
+      count: number;
+      href: string;
+      items: readonly NotificationDigestItem[];
+    }>,
+    idempotencyKey: string,
+  ): Promise<MailDeliveryReceipt> {
+    if (
+      !Number.isInteger(input.count) ||
+      input.count < 2 ||
+      input.count > 100 ||
+      input.items.length < 1 ||
+      input.items.length > 5 ||
+      input.items.length > input.count ||
+      !/^\/notifications\?batchId=[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(
+        input.href,
+      ) ||
+      input.items.some((item) => !/^\/(?!\/)[^\r\n]*$/.test(item.href))
+    ) {
+      throw new RequiredMailDeliveryError("delivery_failed");
+    }
+    const rows = input.items
+      .map(
+        (item) =>
+          `<li style="margin:0 0 12px">${escapeHtml(item.title)}<br><span style="color:#8a8f98;font-size:12px">${escapeHtml(item.category)} · ${escapeHtml(item.date)}</span></li>`,
+      )
+      .join("");
+    const preview =
+      input.count > input.items.length
+        ? `Showing ${input.items.length} of ${input.count} updates.`
+        : `Showing all ${input.count} updates.`;
+    return this.required(
+      to,
+      `CRA notification updates (${input.count})`,
+      this.layout(
+        "Notification updates",
+        `<p style="color:#4b5058;font-size:14px">${preview}</p>
+         <ul style="padding-left:20px;margin:24px 0">${rows}</ul>
+         <p style="color:#4b5058;font-size:14px"><a href="${escapeHtml(`${this.appUrl}${input.href}`)}">Open these updates in CRA</a></p>`,
+      ),
+      idempotencyKey,
+      true,
+    );
+  }
+
+  private async required(
+    to: string,
+    subject: string,
+    html: string,
+    idempotencyKey: string,
+    uncertainOnTransportError = false,
+  ): Promise<MailDeliveryReceipt> {
+    const receipt = await this.send(
+      to,
+      subject,
+      html,
+      true,
+      idempotencyKey,
+      uncertainOnTransportError,
+    );
+    if (!receipt) throw new RequiredMailDeliveryError("delivery_failed");
+    return receipt;
+  }
+}
+
+function stringValue(value: unknown, key: string): string | null {
+  if (!value || typeof value !== "object") return null;
+  const field = (value as Record<string, unknown>)[key];
+  return typeof field === "string" && field.length > 0 ? field : null;
+}
+
+function stringArray(value: unknown, key: string): readonly string[] {
+  if (!value || typeof value !== "object") return [];
+  const field = (value as Record<string, unknown>)[key];
+  return Array.isArray(field)
+    ? field.filter((item): item is string => typeof item === "string")
+    : [];
+}
+
+function recipientWasAccepted(
+  to: string,
+  receipt: MailDeliveryReceipt,
+): boolean {
+  const intendedRecipients = to
+    .split(",")
+    .map((recipient) => recipient.trim().toLowerCase())
+    .filter(Boolean);
+  const accepted = new Set(
+    receipt.acceptedRecipients.map((recipient) =>
+      recipient.trim().toLowerCase(),
+    ),
+  );
+  const rejected = new Set(
+    receipt.rejectedRecipients.map((recipient) =>
+      recipient.trim().toLowerCase(),
+    ),
+  );
+  return (
+    intendedRecipients.length > 0 &&
+    intendedRecipients.every((recipient) => accepted.has(recipient)) &&
+    intendedRecipients.every((recipient) => !rejected.has(recipient))
+  );
+}
+
+function isExplicitSmtpPreDataRejection(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const details = error as Readonly<Record<string, unknown>>;
+  return (
+    typeof details.responseCode === "number" &&
+    Number.isInteger(details.responseCode) &&
+    details.responseCode >= 400 &&
+    details.responseCode <= 599 &&
+    (details.command === "MAIL FROM" || details.command === "RCPT TO")
+  );
 }

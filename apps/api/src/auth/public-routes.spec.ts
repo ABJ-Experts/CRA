@@ -4,6 +4,7 @@ import { METHOD_METADATA, PATH_METADATA } from "@nestjs/common/constants";
 import { MetadataScanner, ModulesContainer, Reflector } from "@nestjs/core";
 
 import { AppModule } from "../app.module";
+import { AgentIngressModule } from "../connectors/agent/agent-ingress.module";
 import { IS_PUBLIC_KEY } from "./auth.types";
 
 /**
@@ -47,6 +48,46 @@ const ALLOWED_PUBLIC: Record<string, string> = {
   "POST auth/forgot-password":
     "By definition the caller cannot sign in. Always returns ok to avoid account enumeration.",
   "POST auth/reset-password": "The emailed single-use token is the credential.",
+  "POST ci/sbom-uploads":
+    "CI cannot have a browser session; the dedicated SBOM CI credential guard authenticates this narrow intake route.",
+  "POST ci/sbom-uploads/:sourceId/complete":
+    "Continuation of the CI direct-upload protocol, guarded by the same organization-scoped credential.",
+  "POST ci/sbom-build-uploads":
+    "CI build upload uses the dedicated credential plus server-side provider/release binding, not a browser session.",
+  "POST ci/sbom-build-uploads/:sourceId/complete":
+    "Continuation of the bound CI build upload protocol with the same organization-scoped credential and provider identity.",
+  "GET ci/sbom-build-gate":
+    "CI polls the build-correlated SBOM gate with the dedicated credential after upload and processing.",
+  "POST jira/remediation-webhooks/:bindingId":
+    "Jira has no CRA session; this narrow route authenticates the raw body with the bound webhook secret and refetches the issue before ingest.",
+  "POST ci/provider-events/:provider/:organizationId/:bindingId":
+    "Provider delivery is authenticated from the raw-body signature and revalidated against the bound provider run.",
+  "POST supplier-sbom-portal/sessions":
+    "A supplier has no CRA session; the one-time opaque invitation bearer is the only credential accepted here.",
+  "POST supplier-sbom-portal/submissions":
+    "A short-lived opaque supplier session bearer scopes this upload reservation to one invitation and component.",
+  "POST supplier-sbom-portal/submissions/:sourceId/complete":
+    "Continuation of the supplier direct-upload protocol; the opaque session is rechecked and bytes are inspected server-side.",
+  "POST supplier-evidence-portal/sessions":
+    "An evidence recipient has no CRA session; the invitation bearer is exchanged for a short-lived scoped session.",
+  "GET supplier-evidence-portal/request":
+    "The opaque supplier-evidence session is rechecked before revealing only the issued disclosure revision.",
+  "POST supplier-evidence-portal/submissions":
+    "A short-lived opaque supplier-evidence session scopes an upload reservation to one approved checklist item.",
+  "POST supplier-evidence-portal/submissions/:versionId/complete":
+    "Continuation of supplier evidence upload; private bytes are inspected before scan submission.",
+  "POST supplier-evidence-portal/sbom-items/:checklistItemId/submissions":
+    "The M9 session and assigned checklist item activate one linked M3 supplier SBOM grant before private upload.",
+  "POST supplier-evidence-portal/sbom-items/:checklistItemId/submissions/:sourceId/complete":
+    "The linked M9 and M3 grants are rechecked before existing supplier SBOM finalization.",
+  "POST auditor/redeem":
+    "An auditor has no CRA session; the one-time opaque grant token is the only credential accepted here.",
+  "GET auditor/snapshot":
+    "The path-scoped opaque auditor session is rechecked against its grant for every snapshot read.",
+  "GET auditor/snapshot/manifest":
+    "The path-scoped opaque auditor session is rechecked before revealing the frozen manifest only.",
+  "GET auditor/snapshot/artifacts/:artifact":
+    "The path-scoped opaque auditor session is rechecked before streaming only the allowed frozen artifact.",
 };
 
 interface RouteInfo {
@@ -174,8 +215,62 @@ describe("route guard coverage", () => {
     expect(session?.isPublic).toBe(false);
   });
 
+  it("keeps human SBOM routes behind the session guard while CI uses only the credential guard", () => {
+    const sbomRoutes = Object.fromEntries(
+      routes
+        .filter((r) => r.path.includes("sbom"))
+        .map((r) => [`${r.method} ${r.path}`, r.isPublic] as const),
+    );
+
+    expect(sbomRoutes).toMatchObject({
+      "POST products/:productId/releases/:releaseId/sbom-uploads": false,
+      "GET products/:productId/releases/:releaseId/sbom-sources": false,
+      "GET products/:productId/releases/:releaseId/sbom-documents": false,
+      "POST sbom-uploads/:sourceId/complete": false,
+      "GET sbom-jobs/:jobId": false,
+      "POST sbom-jobs/:jobId/replay": false,
+      "GET sbom-sources/:sourceId/download": false,
+      "GET sbom-sources/:sourceId/validation-report": false,
+      "GET sbom-documents/:documentId": false,
+      "GET sbom-documents/:documentId/components": false,
+      "GET sbom-documents/:documentId/dependency-tree": false,
+      "POST sbom-sources/:sourceId/diff": false,
+      "GET sbom-sources/:sourceId/diff": false,
+      "GET sbom-diffs/:diffId": false,
+      "GET sbom-diffs/:diffId/components": false,
+      "GET sbom-diffs/:diffId/findings": false,
+      "POST sbom-diffs/:diffId/retry": false,
+      "POST ci/sbom-uploads": true,
+      "POST ci/sbom-uploads/:sourceId/complete": true,
+      "POST ci/sbom-build-uploads": true,
+      "POST ci/sbom-build-uploads/:sourceId/complete": true,
+      "GET ci/sbom-build-gate": true,
+      "POST supplier-sbom-portal/sessions": true,
+      "POST supplier-sbom-portal/submissions": true,
+      "POST supplier-sbom-portal/submissions/:sourceId/complete": true,
+    });
+  });
+
   it("keeps sign-out authenticated", () => {
     const signOut = routes.find((r) => r.path === "auth/sign-out");
     expect(signOut?.isPublic).toBe(false);
+  });
+});
+
+describe("isolated agent ingress route coverage", () => {
+  it("contains exactly the two credential-authenticated routes", async () => {
+    const moduleRef = await Test.createTestingModule({
+      imports: [AgentIngressModule],
+    }).compile();
+    const app = moduleRef.createNestApplication();
+    try {
+      await app.init();
+      expect(collectRoutes(app)).toEqual([
+        { method: "POST", path: "agent/enroll", isPublic: true },
+        { method: "POST", path: "agent/frames", isPublic: true },
+      ]);
+    } finally {
+      await app.close();
+    }
   });
 });

@@ -90,6 +90,7 @@ describe("API boundary contracts", () => {
           username: "ada",
           firstName: "Ada",
           lastName: null,
+          jobTitle: null,
           avatarUrl: null,
           isActive: true,
         },
@@ -104,7 +105,7 @@ describe("API boundary contracts", () => {
     ],
     [roleListResponseSchema, { rows: [] }],
     [livenessResponseSchema, { status: "ok", uptime: 1 }],
-    [readinessResponseSchema, { status: "ok", database: true }],
+    [readinessResponseSchema, { status: "ok", database: true, audit: true }],
   ] as const)("parses response contract %#", (schema, value) => {
     expect(schema.parse(value)).toEqual(value);
     expect(schema.safeParse({ ...value, unexpected: true }).success).toBe(

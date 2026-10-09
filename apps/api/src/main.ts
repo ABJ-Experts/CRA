@@ -13,6 +13,8 @@ async function bootstrap(): Promise<void> {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     // Our own filter shapes every error; Nest's default would double-log 5xx.
     bufferLogs: false,
+    // Provider signatures cover the exact request bytes, before JSON parsing.
+    rawBody: true,
   });
   const config = app.get(ConfigService);
   const logger = new Logger("Bootstrap");
@@ -27,13 +29,21 @@ async function bootstrap(): Promise<void> {
    */
   app.setGlobalPrefix(API_PREFIX);
 
+  // Customer framework imports are capped at 2 MiB by the shared schema;
+  // allow JSON envelope overhead before the Zod boundary rejects larger input.
+  app.useBodyParser("json", { limit: "2200kb" });
+
   /*
-   * Trust exactly one proxy hop (the Next rewrite in front of us), so
-   * req.ip is the real client address for rate limiting rather than the proxy's.
-   * An integer, never `true`: trusting every hop lets a client spoof
-   * X-Forwarded-For and sidestep per-IP throttling entirely.
+   * Trust only configured ingress addresses. A hop count of one trusts an
+   * arbitrary direct caller's X-Forwarded-For and can bypass IP throttles.
    */
-  app.set("trust proxy", 1);
+  const trustedProxyAddresses = config.getOrThrow<readonly string[]>(
+    "TRUSTED_PROXY_ADDRESSES",
+  );
+  app.set(
+    "trust proxy",
+    trustedProxyAddresses.length > 0 ? [...trustedProxyAddresses] : false,
+  );
 
   app.use(cookieParser());
   app.use(
@@ -60,7 +70,12 @@ async function bootstrap(): Promise<void> {
     origin: [webOrigin],
     credentials: true,
     methods: ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization",
+      "Idempotency-Key",
+      "X-Correlation-Id",
+    ],
   });
 
   app.useGlobalFilters(new AllExceptionsFilter());

@@ -1,0 +1,42 @@
+{
+  "project": "cra",
+  "projectUrl": "http://127.0.0.1:54321",
+  "database": "postgres",
+  "identityChecks": {
+    "repositoryProjectIdMatches": true,
+    "craSeedMarkerExists": true,
+    "classificationMigrationPresent": true
+  },
+  "inspectedPublicTableCount": 247,
+  "newTables": ["product_classification_runs"],
+  "classificationBoundary": {
+    "rlsEnabled": true,
+    "rlsForced": false,
+    "constraintsValidated": true,
+    "historyDirectServiceRoleRead": false,
+    "rpcServiceRoleExecute": true,
+    "rpcAuthenticatedExecute": false,
+    "rpcAnonExecute": false,
+    "rpcSearchPath": "public, pg_temp",
+    "foreignKeysUsePublicUsers": true
+  },
+  "migrations": [
+    "20260928053758",
+    "20260928053905",
+    "20260928070350",
+    "20260928070538",
+    "20260928071542",
+    "20260928072541"
+  ],
+  "advisors": {
+    "securityInfoCount": 211,
+    "securityWarningCount": 31,
+    "securityErrorCount": 0,
+    "newTableSecurityInfo": "RLS enabled with no direct-access policies is intentional deny-all; the API uses permission-checked service-role RPCs.",
+    "newTableUnindexedForeignKeysAfterRepair": 0,
+    "newTableUnusedIndexInfo": "The new created_by FK index had not yet been used at inspection; retained for referential checks.",
+    "securityRemediation": "https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy",
+    "foreignKeyRemediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys"
+  },
+  "scope": "Local metadata, grants, constraints, indexes, migrations and advisors only. No production database or unnecessary user records were inspected."
+}

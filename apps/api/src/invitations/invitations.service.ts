@@ -7,14 +7,13 @@ import {
   Logger,
   NotFoundException,
 } from "@nestjs/common";
-import { normalizeEmail } from "@repo/contracts/auth";
 import type {
   AcceptInvitationResponse,
   Invitation,
+  ResendInvitationResponse,
 } from "@repo/contracts/invitations";
 import type { BaseRole } from "@repo/contracts/permissions";
 
-import { AuditService } from "../audit/audit.service";
 import {
   AcceptInvitationUseCase,
   type AcceptInvitationError,
@@ -24,6 +23,10 @@ import {
   type CreateInvitationError,
 } from "./application/create-invitation.use-case";
 import { ListInvitationsQuery } from "./application/list-invitations.query";
+import {
+  ResendInvitationUseCase,
+  type ResendInvitationError,
+} from "./application/resend-invitation.use-case";
 import {
   RevokeInvitationUseCase,
   type RevokeInvitationError,
@@ -36,9 +39,9 @@ export type AcceptResult = AcceptInvitationResponse;
  * Stable Nest compatibility facade.
  *
  * HTTP callers keep the original methods and exception bodies while the
- * workflow itself stays framework-free. Acceptance and revocation audit inside
- * their atomic database RPCs; only creation is audited here, after notification
- * succeeds, matching the existing timing.
+ * workflow itself stays framework-free. Creation, acceptance and revocation
+ * audit inside their atomic database RPCs. Notification and onboarding evidence
+ * retain their existing best-effort ordering after creation.
  */
 @Injectable()
 export class InvitationsService {
@@ -46,10 +49,10 @@ export class InvitationsService {
 
   constructor(
     private readonly createInvitation: CreateInvitationUseCase,
+    private readonly resendInvitation: ResendInvitationUseCase,
     private readonly acceptInvitation: AcceptInvitationUseCase,
     private readonly revokeInvitation: RevokeInvitationUseCase,
     private readonly listInvitations: ListInvitationsQuery,
-    private readonly audit: AuditService,
   ) {}
 
   async create(
@@ -61,19 +64,16 @@ export class InvitationsService {
       firstName?: string;
       lastName?: string;
     },
+    sourceIp?: string,
   ): Promise<{ id: string }> {
-    const result = await this.createInvitation.execute({ orgId, actor, input });
-    if (!result.ok) this.throwCreateError(result.error);
-
-    this.audit.log({
-      organizationId: orgId,
-      userId: actor.id,
-      actorEmail: actor.email,
-      action: "invitation.created",
-      entityType: "invitation",
-      entityId: result.value.id,
-      changes: { email: normalizeEmail(input.email), role: input.role },
+    const result = await this.createInvitation.execute({
+      orgId,
+      actor,
+      input,
+      correlationId: randomUUID(),
+      sourceIp: sourceIp && isIP(sourceIp) ? sourceIp : null,
     });
+    if (!result.ok) this.throwCreateError(result.error);
 
     return { id: result.value.id };
   }
@@ -84,6 +84,20 @@ export class InvitationsService {
   ): Promise<AcceptResult> {
     const result = await this.acceptInvitation.execute({ token, user });
     if (!result.ok) this.throwAcceptanceError(result.error);
+    return result.value;
+  }
+
+  async resend(
+    orgId: string,
+    actor: { id: string; email: string },
+    invitationId: string,
+  ): Promise<ResendInvitationResponse> {
+    const result = await this.resendInvitation.execute({
+      orgId,
+      actor,
+      invitationId,
+    });
+    if (!result.ok) this.throwResendError(result.error);
     return result.value;
   }
 
@@ -135,8 +149,14 @@ export class InvitationsService {
         });
       case "notification_failed":
         this.logger.error(
-          `Invitation notification failed after creating ${error.invitationId}`,
+          `Invitation notification failed after creating ${error.invitationId}; recovery=${error.recovery}`,
         );
+        throw new InternalServerErrorException({
+          statusCode: 500,
+          message: "Internal server error",
+        });
+      case "evidence_failed":
+        this.logger.error("Invitation delivery confirmation failed");
         throw new InternalServerErrorException({
           statusCode: 500,
           message: "Internal server error",
@@ -184,6 +204,48 @@ export class InvitationsService {
     }
   }
 
+  private throwResendError(error: ResendInvitationError): never {
+    switch (error.code) {
+      case "invitation_not_found":
+        throw new NotFoundException({
+          message: "That invitation no longer exists.",
+          code: "invitation_not_found",
+        });
+      case "invitation_expired":
+        throw new BadRequestException({
+          message: "That invitation has expired.",
+          code: "invitation_expired",
+        });
+      case "invitation_already_accepted":
+        throw new ConflictException({
+          message: "That invitation has already been accepted.",
+          code: "invitation_already_accepted",
+        });
+      case "invitation_not_pending":
+        throw new BadRequestException({
+          message: "That invitation is no longer valid.",
+          code: "invitation_not_pending",
+        });
+      case "invitation_already_member":
+        throw new BadRequestException({
+          message: "That person is already a member of this organization.",
+          code: "invitation_already_member",
+        });
+      case "notification_failed":
+      case "evidence_failed":
+        this.logger.error("Invitation resend delivery confirmation failed");
+        throw new InternalServerErrorException({
+          statusCode: 500,
+          message: "Internal server error",
+        });
+      case "invitation_failed":
+        throw new BadRequestException({
+          message: "We could not resend that invitation.",
+          code: "invitation_failed",
+        });
+    }
+  }
+
   private throwRevocationError(error: RevokeInvitationError): never {
     switch (error.code) {
       case "invitation_not_found":
@@ -209,3 +271,5 @@ export class InvitationsService {
     }
   }
 }
+import { randomUUID } from "node:crypto";
+import { isIP } from "node:net";

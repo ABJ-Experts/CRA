@@ -1,0 +1,4 @@
+-- Reserved during local M10-01 migration development before the completed
+-- repair was written. Kept as a no-op so existing migration history remains
+-- append-only. The completed function repair is 20260924060912 and the
+-- guarded provenance correction is 20260924061258.

@@ -4,7 +4,11 @@ import type { Member } from "@repo/contracts/users";
 
 import type { Result } from "../../common/domain/result";
 import { failure, success } from "../../common/domain/result";
-import type { MemberRepository, ProfilePatch } from "./member-repository.port";
+import type {
+  AuditMutationContext,
+  MemberRepository,
+  ProfilePatch,
+} from "./member-repository.port";
 import { MemberRepositoryError } from "./member-repository.port";
 
 export type MemberActor = Readonly<{ id: string; email: string }>;
@@ -33,12 +37,14 @@ export type ChangeMemberRoleCommand = Readonly<{
   actor: MemberActor;
   targetUserId: string;
   role: BaseRole;
+  context?: AuditMutationContext;
 }>;
 
 export type RemoveMemberCommand = Readonly<{
   orgId: string;
   actor: MemberActor;
   targetUserId: string;
+  context?: AuditMutationContext;
 }>;
 
 export type SetMemberActiveCommand = Readonly<{
@@ -46,12 +52,15 @@ export type SetMemberActiveCommand = Readonly<{
   actor: MemberActor;
   targetUserId: string;
   isActive: boolean;
+  context?: AuditMutationContext;
 }>;
 
 export type UpdateOwnProfileCommand = Readonly<{
   actorUserId: string;
   targetUserId: string;
   patch: ProfilePatch;
+  orgId?: string | null;
+  context?: AuditMutationContext;
 }>;
 
 export type MemberMutationOperation =
@@ -64,6 +73,7 @@ export type MemberUseCaseError =
   | Readonly<{ code: "profile_scope_violation" }>
   | Readonly<{ code: "member_not_found" }>
   | Readonly<{ code: "last_owner" }>
+  | Readonly<{ code: "conflict" }>
   | Readonly<{ code: "member_list_failed" }>
   | Readonly<{ code: "update_failed"; operation: MemberMutationOperation }>;
 
@@ -73,8 +83,11 @@ type MemberResult<T> = Result<T, MemberUseCaseError>;
 export class MemberUseCases {
   constructor(
     private readonly repository: MemberRepository,
-    private readonly audit: MemberAuditPort,
-  ) {}
+    _audit: MemberAuditPort,
+  ) {
+    // Kept for constructor compatibility; audited writes now occur in SQL.
+    void _audit;
+  }
 
   async list(query: ListMembersQuery): Promise<MemberResult<Paged<Member>>> {
     try {
@@ -107,17 +120,9 @@ export class MemberUseCases {
         command.orgId,
         command.targetUserId,
         command.role,
-      );
-      this.audit.log(
-        Object.freeze({
-          organizationId: command.orgId,
-          userId: command.actor.id,
-          actorEmail: command.actor.email,
-          action: "member.role_changed",
-          entityType: "user",
-          entityId: command.targetUserId,
-          changes: Object.freeze({ from: existing.role, to: command.role }),
-        }),
+        command.actor.id,
+        this.context(command.context),
+        existing.role,
       );
       return success(undefined);
     } catch (error) {
@@ -131,16 +136,11 @@ export class MemberUseCases {
     }
 
     try {
-      await this.repository.remove(command.orgId, command.targetUserId);
-      this.audit.log(
-        Object.freeze({
-          organizationId: command.orgId,
-          userId: command.actor.id,
-          actorEmail: command.actor.email,
-          action: "member.removed",
-          entityType: "user",
-          entityId: command.targetUserId,
-        }),
+      await this.repository.remove(
+        command.orgId,
+        command.targetUserId,
+        command.actor.id,
+        this.context(command.context),
       );
       return success(undefined);
     } catch (error) {
@@ -162,18 +162,8 @@ export class MemberUseCases {
         command.orgId,
         command.targetUserId,
         command.isActive,
-      );
-      this.audit.log(
-        Object.freeze({
-          organizationId: command.orgId,
-          userId: command.actor.id,
-          actorEmail: command.actor.email,
-          action: command.isActive
-            ? "member.reactivated"
-            : "member.deactivated",
-          entityType: "user",
-          entityId: command.targetUserId,
-        }),
+        command.actor.id,
+        this.context(command.context),
       );
       return success(undefined);
     } catch (error) {
@@ -192,8 +182,10 @@ export class MemberUseCases {
 
     try {
       await this.repository.updateOwnProfile(
+        command.orgId ?? null,
         command.actorUserId,
         Object.freeze({ ...command.patch }),
+        this.context(command.context),
       );
       return success(undefined);
     } catch (error) {
@@ -212,9 +204,21 @@ export class MemberUseCases {
       if (error.code === "member_not_found") {
         return failure(Object.freeze({ code: "member_not_found" as const }));
       }
+      if (error.code === "conflict") {
+        return failure(Object.freeze({ code: "conflict" as const }));
+      }
     }
     return failure(
       Object.freeze({ code: "update_failed" as const, operation }),
+    );
+  }
+
+  private context(
+    value: AuditMutationContext | undefined,
+  ): AuditMutationContext {
+    const eventKey = randomUUID();
+    return Object.freeze(
+      value ?? { eventKey, correlationId: eventKey, sourceIp: null },
     );
   }
 
@@ -236,3 +240,4 @@ export class MemberUseCases {
     });
   }
 }
+import { randomUUID } from "node:crypto";

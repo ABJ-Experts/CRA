@@ -45,6 +45,7 @@ import {
 } from "../common/http/zod-response.interceptor";
 import { zodBody, zodQuery } from "../common/pipes/zod-validation.pipe";
 import { AuthService } from "./auth.service";
+import { authRequestAuditContext } from "./auth-request-audit-context";
 import { MfaService } from "./mfa/mfa.service";
 import { CurrentUser, Public, type AuthedRequest } from "./auth.types";
 import {
@@ -104,9 +105,13 @@ export class AuthController {
   @ZodResponse(authNextResponseSchema)
   async signUp(
     @Body(zodBody(signUpInputSchema)) dto: SignUpInput,
+    @Req() req: AuthedRequest,
     @Res({ passthrough: true }) res: Response,
   ): Promise<AuthNextResponse> {
-    const { tokens, userId } = await this.auth.signUp(dto);
+    const { tokens, userId } = await this.auth.signUp(
+      dto,
+      authRequestAuditContext(req),
+    );
 
     /*
      * The session is issued immediately — GoTrue has confirmed the account
@@ -129,9 +134,13 @@ export class AuthController {
   @ZodResponse(authNextResponseSchema)
   async signIn(
     @Body(zodBody(signInInputSchema)) dto: SignInInput,
+    @Req() req: AuthedRequest,
     @Res({ passthrough: true }) res: Response,
   ): Promise<AuthNextResponse> {
-    const { tokens, userId, emailVerified } = await this.auth.signIn(dto);
+    const { tokens, userId, emailVerified } = await this.auth.signIn(
+      dto,
+      authRequestAuditContext(req),
+    );
 
     setSessionCookies(res, tokens, this.cookieConfig, {
       rememberMe: dto.remember,
@@ -149,6 +158,7 @@ export class AuthController {
     // The cookie is UX only. The guard checks GoTrue's verified-factor state
     // and the JWT's `aal` claim, so deleting the cookie cannot bypass MFA.
     if (await this.mfa.hasVerifiedFactor(tokens.access_token)) {
+      this.auth.noteMfaChallenge(userId, authRequestAuditContext(req));
       setMfaCookie(res, userId, this.cookieConfig);
       return { next: "two-factor" };
     }
@@ -187,7 +197,10 @@ export class AuthController {
     }
 
     try {
-      const tokens = await this.auth.refresh(refreshToken);
+      const tokens = await this.auth.refresh(
+        refreshToken,
+        authRequestAuditContext(req),
+      );
       setSessionCookies(res, tokens, this.cookieConfig, {
         rememberMe: readRememberMeCookie(cookies, this.cookieConfig),
       });
@@ -217,7 +230,10 @@ export class AuthController {
       });
     }
 
-    const tokens = await this.auth.refresh(refreshToken);
+    const tokens = await this.auth.refresh(
+      refreshToken,
+      authRequestAuditContext(req),
+    );
     setSessionCookies(res, tokens, this.cookieConfig, {
       rememberMe: readRememberMeCookie(cookies, this.cookieConfig),
     });
@@ -230,9 +246,14 @@ export class AuthController {
   async signOut(
     @CurrentUser("id") userId: string,
     @CurrentUser("accessToken") accessToken: string,
+    @Req() req: AuthedRequest,
     @Res({ passthrough: true }) res: Response,
   ): Promise<OkResponse> {
-    await this.auth.signOutEverywhere(userId, accessToken);
+    await this.auth.signOutEverywhere(
+      userId,
+      accessToken,
+      authRequestAuditContext(req),
+    );
     clearSessionCookies(res, this.cookieConfig);
     return { ok: true };
   }
@@ -297,9 +318,10 @@ export class AuthController {
   @ZodResponse(authNextResponseSchema)
   async resetPassword(
     @Body(zodBody(resetPasswordInputSchema)) dto: ResetPasswordInput,
+    @Req() req: AuthedRequest,
     @Res({ passthrough: true }) res: Response,
   ): Promise<AuthNextResponse> {
-    await this.auth.resetPassword(dto);
+    await this.auth.resetPassword(dto, authRequestAuditContext(req));
     // Every session is now invalid, including any this browser held.
     clearSessionCookies(res, this.cookieConfig);
     return { next: "sign-in" };
@@ -313,8 +335,15 @@ export class AuthController {
   async unlock(
     @Body(zodBody(unlockInputSchema)) dto: UnlockInput,
     @CurrentUser("email") email: string,
+    @CurrentUser("id") userId: string,
+    @Req() req: AuthedRequest,
   ): Promise<AuthNextResponse> {
-    const ok = await this.auth.verifyPassword(email, dto.password);
+    const ok = await this.auth.verifyPassword(
+      email,
+      dto.password,
+      authRequestAuditContext(req),
+      userId,
+    );
     if (!ok) {
       throw new UnauthorizedException({
         message: "Wrong password.",

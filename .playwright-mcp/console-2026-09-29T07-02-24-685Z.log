@@ -1,0 +1,7 @@
+[     133ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3010/_next/static/chunks/21a3_next_dist_1zk8tkg._.js:776
+[     147ms] [LOG] [HMR] connected @ http://localhost:3010/_next/static/chunks/21a3_next_dist_1zk8tkg._.js:776
+[     488ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3010/_next/static/chunks/21a3_next_dist_1zk8tkg._.js:776
+[     506ms] [LOG] [Fast Refresh] done in 129ms @ http://localhost:3010/_next/static/chunks/21a3_next_dist_1zk8tkg._.js:776
+[     724ms] [VERBOSE] [DOM] Password forms should have (optionally hidden) username fields for accessibility: (More info: https://goo.gl/9p2vKq) %o @ http://localhost:3010/connectors/3ca7213f-104e-4f2d-8a52-58dabdc8fca0:0
+[   51245ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3010/_next/static/chunks/21a3_next_dist_1zk8tkg._.js:776
+[   51256ms] [LOG] [HMR] connected @ http://localhost:3010/_next/static/chunks/21a3_next_dist_1zk8tkg._.js:776

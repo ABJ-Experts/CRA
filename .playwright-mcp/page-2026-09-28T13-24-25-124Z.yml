@@ -1,0 +1,83 @@
+- generic [ref=e3]:
+  - complementary [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]:
+        - link "CRA Sentinel" [ref=e7] [cursor=pointer]:
+          - /url: /dashboard
+          - generic [aria-hidden] [ref=e8]: C
+          - text: CRA Sentinel
+        - button "Collapse sidebar" [ref=e9] [cursor=pointer]
+      - navigation "Main" [ref=e12]:
+        - generic [ref=e13]:
+          - list [ref=e15]:
+            - listitem [ref=e16]:
+              - link "Dashboard" [ref=e17] [cursor=pointer]:
+                - /url: /dashboard
+            - listitem [ref=e25]:
+              - link "Management" [ref=e26] [cursor=pointer]:
+                - /url: /management
+            - listitem [ref=e32]:
+              - link "Organization" [ref=e33] [cursor=pointer]:
+                - /url: /organization
+            - listitem [ref=e40]:
+              - link "Products" [ref=e41] [cursor=pointer]:
+                - /url: /products
+            - listitem [ref=e48]:
+              - link "Suppliers" [ref=e49] [cursor=pointer]:
+                - /url: /suppliers
+            - listitem [ref=e54]:
+              - link "Frameworks" [ref=e55] [cursor=pointer]:
+                - /url: /frameworks
+            - listitem [ref=e60]:
+              - link "Findings" [ref=e61] [cursor=pointer]:
+                - /url: /findings
+            - listitem [ref=e66]:
+              - link "Reporting" [ref=e67] [cursor=pointer]:
+                - /url: /reporting
+            - listitem [ref=e73]:
+              - link "Connectors" [ref=e74] [cursor=pointer]:
+                - /url: /connectors
+          - generic [ref=e81]:
+            - paragraph [ref=e82]: Account & access
+            - list [ref=e83]:
+              - listitem [ref=e84]:
+                - button "Profile" [ref=e85] [cursor=pointer]
+                - generic:
+                  - list:
+                    - listitem [ref=e93]:
+                      - link "Account" [ref=e94] [cursor=pointer]:
+                        - /url: /account
+                    - listitem [ref=e96]:
+                      - link "Security" [ref=e97] [cursor=pointer]:
+                        - /url: /security
+              - listitem [ref=e99]:
+                - button "Authorization" [ref=e100] [cursor=pointer]
+                - generic:
+                  - list:
+                    - listitem [ref=e108]:
+                      - link "Roles" [ref=e109] [cursor=pointer]:
+                        - /url: /roles
+                    - listitem [ref=e111]:
+                      - link "Permissions" [ref=e112] [cursor=pointer]:
+                        - /url: /permissions
+      - button "Sign out" [ref=e116] [cursor=pointer]
+  - generic [ref=e121]:
+    - banner [ref=e122]:
+      - navigation "Breadcrumb" [ref=e124]:
+        - list [ref=e125]:
+          - listitem [ref=e126]:
+            - link "Dashboard" [ref=e127] [cursor=pointer]:
+              - /url: /dashboard
+          - listitem [aria-hidden] [ref=e128]
+          - listitem [ref=e131]:
+            - generic [ref=e132]: Connectors
+      - generic [ref=e133]:
+        - button "Search" [ref=e134] [cursor=pointer]
+        - button "Notifications" [ref=e138] [cursor=pointer]
+        - 'img "Ada Foster: online" [ref=e144]'
+    - main [ref=e145]:
+      - generic [ref=e146]:
+        - generic [ref=e148]:
+          - heading "Connectors" [level=1] [ref=e149]
+          - paragraph [ref=e150]: Integration availability, configuration and safe connection diagnostics for this organization.
+        - paragraph [ref=e153]: Create or join an organization before managing connectors.

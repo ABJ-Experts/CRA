@@ -11,20 +11,49 @@ export type ProfilePatch = Readonly<{
   language?: string;
 }>;
 
+export type AuditMutationContext = Readonly<{
+  eventKey: string;
+  correlationId: string;
+  sourceIp: string | null;
+}>;
+
 export interface MemberRepository {
   list(orgId: string, params: PageParams): Promise<Paged<Member>>;
   findMembership(
     orgId: string,
     userId: string,
   ): Promise<{ role: BaseRole } | null>;
-  changeRole(orgId: string, userId: string, role: BaseRole): Promise<void>;
-  remove(orgId: string, userId: string): Promise<void>;
-  setActive(orgId: string, userId: string, isActive: boolean): Promise<void>;
-  updateOwnProfile(userId: string, patch: ProfilePatch): Promise<void>;
+  changeRole(
+    orgId: string,
+    userId: string,
+    role: BaseRole,
+    actorId?: string,
+    context?: AuditMutationContext,
+    expectedRole?: BaseRole,
+  ): Promise<void>;
+  remove(
+    orgId: string,
+    userId: string,
+    actorId?: string,
+    context?: AuditMutationContext,
+  ): Promise<void>;
+  setActive(
+    orgId: string,
+    userId: string,
+    isActive: boolean,
+    actorId?: string,
+    context?: AuditMutationContext,
+  ): Promise<void>;
+  updateOwnProfile(
+    orgId: string | null,
+    userId: string,
+    patch: ProfilePatch,
+    context?: AuditMutationContext,
+  ): Promise<void>;
 }
 
 export type MemberRepositoryErrorCode =
-  "last_owner" | "member_not_found" | "unavailable";
+  "last_owner" | "member_not_found" | "conflict" | "unavailable";
 
 /** Stable persistence failure vocabulary; no provider detail crosses the port. */
 export class MemberRepositoryError extends Error {

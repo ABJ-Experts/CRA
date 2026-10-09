@@ -3,7 +3,11 @@
 import { BreadcrumbItem, Breadcrumbs } from "@repo/ui/breadcrumbs";
 import { TopNav, TopNavTitle } from "@repo/ui/app-shell";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+
+import { useSession } from "../../_providers/session-provider";
+import { useNotificationUnreadCountQuery } from "../../_features/notifications/notifications.queries";
+import { ReportingDeadlineHeaderIndicator } from "../../_features/reporting/reporting-deadline-header-indicator";
 
 /**
  * Route-aware TopNav content.
@@ -16,7 +20,7 @@ import { usePathname } from "next/navigation";
  */
 
 const DASHBOARDS: Record<string, { title: string; subtitle: string }> = {
-  "/dashboard": {
+  "/dashboard/ecommerce": {
     title: "Welcome, Robert Fox",
     subtitle: "Overview your store",
   },
@@ -51,8 +55,22 @@ function titleise(segment: string) {
 
 export function DashboardTopNav() {
   const pathname = usePathname();
+  const router = useRouter();
+  const unread = useNotificationUnreadCountQuery();
 
-  const dashboard = DASHBOARDS[pathname];
+  const { session } = useSession();
+  const liveDashboard =
+    pathname === "/dashboard" || /^\/products\/[^/]+\/posture$/.test(pathname);
+  const identity = session?.user;
+  const liveName = identity
+    ? [identity.firstName, identity.lastName].filter(Boolean).join(" ") ||
+      identity.username ||
+      identity.email
+    : "Account";
+  const dashboard =
+    pathname === "/dashboard"
+      ? { title: "CRA Sentinel", subtitle: "Product security operations" }
+      : DASHBOARDS[pathname];
   const table = TABLES[pathname];
 
   let left = null;
@@ -85,8 +103,10 @@ export function DashboardTopNav() {
 
   return (
     <TopNav
-      user={{ name: "Ada Foster" }}
-      notificationCount={7}
+      user={{ name: liveDashboard ? liveName : "Ada Foster" }}
+      centre={liveDashboard ? undefined : <ReportingDeadlineHeaderIndicator />}
+      notificationCount={unread.isError ? undefined : unread.data?.count}
+      onNotificationsClick={() => router.push("/notifications")}
       className="max-lg:pl-20"
     >
       {left}

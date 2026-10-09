@@ -31,6 +31,7 @@ interface HttpExceptionShape {
   message?: unknown;
   code?: unknown;
   fieldErrors?: unknown;
+  details?: unknown;
 }
 
 function isStringRecord(value: unknown): value is Record<string, string> {
@@ -40,6 +41,21 @@ function isStringRecord(value: unknown): value is Record<string, string> {
     !Array.isArray(value) &&
     Object.values(value).every((entry) => typeof entry === "string")
   );
+}
+
+function isSafeServerErrorCode(
+  value: string | undefined,
+): value is "unavailable" | "malformed_provider" {
+  return value === "unavailable" || value === "malformed_provider";
+}
+
+function logUrl(request: Request): string {
+  const originalUrl = request.originalUrl ?? request.url ?? "";
+  if (!originalUrl.startsWith("/api/v1/audit")) return originalUrl;
+
+  return originalUrl
+    .split("?", 1)[0]!
+    .replace(/^(\/api\/v1\/audit\/searches\/)[^/]+/, "$1:snapshotToken");
 }
 
 @Catch()
@@ -55,6 +71,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
     let message = "Something went wrong. Please try again.";
     let code: string | undefined;
     let fieldErrors: Record<string, string> | undefined;
+    let details: unknown;
 
     if (exception instanceof HttpException) {
       status = exception.getStatus();
@@ -76,6 +93,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
         fieldErrors = isStringRecord(shape.fieldErrors)
           ? { ...shape.fieldErrors }
           : undefined;
+        details = shape.details;
       }
     }
 
@@ -86,13 +104,15 @@ export class AllExceptionsFilter implements ExceptionFilter {
      * goes to the log with the request id so it is still diagnosable.
      */
     if (status >= HttpStatus.INTERNAL_SERVER_ERROR) {
+      const safeServerCode = isSafeServerErrorCode(code) ? code : undefined;
       this.logger.error(
-        `${req.method} ${req.originalUrl} -> ${status}`,
+        `${req.method} ${logUrl(req)} -> ${status}`,
         exception instanceof Error ? exception.stack : String(exception),
       );
       message = "Something went wrong. Please try again.";
-      code = undefined;
+      code = safeServerCode;
       fieldErrors = undefined;
+      details = undefined;
     } else {
       /*
        * 4xx bodies are logged with IDs only — never the email, password, token
@@ -100,7 +120,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
        * typed is a second copy of the credential.
        */
       this.logger.warn(
-        `${req.method} ${req.originalUrl} -> ${status} ${code ?? ""}`,
+        `${req.method} ${logUrl(req)} -> ${status} ${code ?? ""}`,
       );
     }
 
@@ -109,6 +129,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
       message,
       ...(code ? { code } : {}),
       ...(fieldErrors ? { fieldErrors } : {}),
+      ...(details === undefined ? {} : { details }),
     });
 
     res.status(status).json(body);

@@ -18,6 +18,7 @@ import {
   type MemberUseCaseError,
 } from "./application/member-use-cases";
 import type { ProfilePatch } from "./application/member-repository.port";
+import type { AuditMutationContext } from "./application/member-repository.port";
 
 /** @deprecated Import `Member` from `@repo/contracts/users` directly. */
 export type MemberRow = Member;
@@ -46,9 +47,16 @@ export class UsersService {
     actor: MemberActor,
     targetUserId: string,
     role: BaseRole,
+    context?: AuditMutationContext,
   ): Promise<void> {
     this.unwrap(
-      await this.useCases.changeRole({ orgId, actor, targetUserId, role }),
+      await this.useCases.changeRole({
+        orgId,
+        actor,
+        targetUserId,
+        role,
+        context,
+      }),
     );
   }
 
@@ -56,8 +64,11 @@ export class UsersService {
     orgId: string,
     actor: MemberActor,
     targetUserId: string,
+    context?: AuditMutationContext,
   ): Promise<void> {
-    this.unwrap(await this.useCases.remove({ orgId, actor, targetUserId }));
+    this.unwrap(
+      await this.useCases.remove({ orgId, actor, targetUserId, context }),
+    );
   }
 
   async setActive(
@@ -65,6 +76,7 @@ export class UsersService {
     actor: MemberActor,
     targetUserId: string,
     isActive: boolean,
+    context?: AuditMutationContext,
   ): Promise<void> {
     this.unwrap(
       await this.useCases.setActive({
@@ -72,16 +84,24 @@ export class UsersService {
         actor,
         targetUserId,
         isActive,
+        context,
       }),
     );
   }
 
-  async updateProfile(userId: string, patch: ProfilePatch): Promise<void> {
+  async updateProfile(
+    userId: string,
+    patch: ProfilePatch,
+    orgId?: string | null,
+    context?: AuditMutationContext,
+  ): Promise<void> {
     this.unwrap(
       await this.useCases.updateOwnProfile({
         actorUserId: userId,
         targetUserId: userId,
         patch,
+        orgId,
+        context,
       }),
     );
   }
@@ -122,6 +142,12 @@ export class UsersService {
         return new ConflictException({
           message:
             "This organization needs at least one owner. Promote someone else first.",
+          code: error.code,
+        });
+      case "conflict":
+        return new ConflictException({
+          message:
+            "This change conflicts with a newer request. Refresh and try again.",
           code: error.code,
         });
       case "member_list_failed":

@@ -1,0 +1,9 @@
+
+> infrastructure@0.0.0 db:types /Users/abjmac003/Documents/GitHub/CRA/apps/infrastructure
+> pnpm run preflight && mkdir -p supabase/types && supabase gen types --local --schema public > supabase/types/database.types.ts && node scripts/normalize-database-types.mjs supabase/types/database.types.ts ../api/src/supabase/database.types.ts
+
+
+> infrastructure@0.0.0 preflight /Users/abjmac003/Documents/GitHub/CRA/apps/infrastructure
+> docker info >/dev/null 2>&1 || (echo 'Docker daemon is not running — start Docker Desktop first.' && exit 1)
+
+Connecting to db 5432

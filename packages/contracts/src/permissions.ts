@@ -48,10 +48,18 @@ export function coerceBaseRole(value: unknown): BaseRole {
 
 export const PERMISSION_ACTIONS = [
   "view",
+  "upload",
+  "review",
   "create",
   "edit",
   "delete",
   "export",
+  "approve",
+  "manage",
+  "submit",
+  "snapshot",
+  "issue",
+  "share",
 ] as const;
 export type PermissionAction = (typeof PERMISSION_ACTIONS)[number];
 
@@ -68,12 +76,34 @@ export const PERMISSION_MATRIX = {
   users: ["view", "create", "edit", "delete", "export"],
   roles: ["view", "create", "edit", "delete"],
   invitations: ["view", "create", "delete"],
-  organization: ["view", "edit"],
+  organization: ["view", "edit", "delete", "export"],
   audit: ["view", "export"],
   // Commerce
-  products: ["view", "create", "edit", "delete", "export"],
+  products: ["view", "create", "edit", "delete", "export", "approve"],
   orders: ["view", "create", "edit", "delete", "export"],
   invoices: ["view", "create", "edit", "delete", "export"],
+  // Finding evidence/triage remains owned by its module. The product detail
+  // receives only a separately-authorized aggregate impact summary.
+  // Export is deliberately distinct from assessment editing: an operator may
+  // assess a finding without being allowed to materialize a portable VEX file.
+  findings: ["view", "edit", "approve", "export"],
+  // Shared triage views are a separate, additive capability. Keeping it out
+  // of `findings.edit` prevents a future assessment-write grant from also
+  // authorizing changes to organization-wide view definitions.
+  finding_views: ["manage"],
+  // Organization-wide VEX approval rules are independent of a user's ability
+  // to submit or approve an individual finding assessment.
+  finding_approval_policy: ["manage"],
+  // Publication controls external delivery of an otherwise private VEX
+  // snapshot. It is intentionally separate from finding export and is only
+  // granted by default to owner/admin presets.
+  finding_publication: ["manage"],
+  // Regulatory reporting submission is intentionally separate from editing a
+  // draft. It is granted only to owner/admin presets unless explicitly added.
+  reporting: ["view", "submit"],
+  // Annex VII technical-file editing is distinct from product editing. It is
+  // intentionally absent from member/viewer presets but assignable by custom roles.
+  technical_files: ["view", "edit", "snapshot", "issue", "share"],
   // Logistics
   fleet: ["view", "create", "edit", "delete"],
   routes: ["view", "create", "edit", "delete"],
@@ -86,6 +116,26 @@ export const PERMISSION_MATRIX = {
   dashboards: ["view", "export"],
   tables: ["view", "export"],
   analytics: ["view", "export"],
+  // Integrations: PLM/ALM connector sync. "approve" gates commit-to-production
+  // and conflict resolution; secret rotation and authority-policy commits are
+  // additionally owner-role-gated in the controller, not by a separate action.
+  connectors: ["view", "create", "edit", "delete", "export", "approve"],
+  // Immutable SBOM evidence is visible to the same roles that may inspect a
+  // release. Upload remains explicit instead of piggybacking on product edit.
+  // Review controls the security-sensitive lifecycle transitions for
+  // supplier evidence and generated composite SBOMs. It is deliberately
+  // distinct from upload: collecting evidence must not authorize accepting
+  // it into an authoritative composition.
+  sboms: ["view", "upload", "review"],
+  // Evidence files are distinct from SBOMs and technical-file links. Uploading
+  // never grants lifecycle control over a quarantined or otherwise immutable
+  // version; that is deliberately reserved for `manage`.
+  evidence: ["view", "upload", "review", "manage"],
+  // Internal supplier registry. These permissions never authorize the public
+  // supplier-SBOM portal, whose opaque invitation/session remains separate.
+  suppliers: ["view", "manage"],
+  // Version selection is organizational; immutable pack loading is deployment-only.
+  frameworks: ["view", "manage"],
 } as const satisfies Record<string, readonly PermissionAction[]>;
 
 export type PermissionModule = keyof typeof PERMISSION_MATRIX;
@@ -195,10 +245,18 @@ export const IMPLICATIONS: Readonly<
   Record<PermissionAction, readonly PermissionAction[]>
 > = {
   view: [],
+  upload: ["view"],
+  review: ["view"],
   create: ["view"],
   edit: ["view"],
   delete: ["view"],
   export: ["view"],
+  approve: ["view"],
+  manage: [],
+  submit: ["view"],
+  snapshot: ["view"],
+  issue: ["view"],
+  share: ["view"],
 };
 
 /** Parse `can_<action>_<module>` back into its parts. */
@@ -206,8 +264,8 @@ export function parsePermissionKey(key: PermissionKey): {
   action: PermissionAction;
   module: PermissionModule;
 } {
-  // Module names contain no underscore, so the last segment is the module and
-  // the middle is the action. Asserted by a spec.
+  // Actions contain no underscore, so the first separator marks the module.
+  // Modules may be multiword (`finding_views`).
   const withoutPrefix = key.slice("can_".length);
   const separator = withoutPrefix.indexOf("_");
   const action = withoutPrefix.slice(0, separator) as PermissionAction;
@@ -305,6 +363,11 @@ const VIEWER_MODULES: readonly PermissionModule[] = [
   "dashboards",
   "tables",
   "analytics",
+  "findings",
+  "connectors",
+  "sboms",
+  "evidence",
+  "frameworks",
 ];
 
 /** Modules a member may also create/edit in — day-to-day operational work. */
@@ -345,6 +408,8 @@ function memberPreset(): PermissionSet {
   ] as const) {
     out[`can_export_${module}` as PermissionKey] = true;
   }
+  out.can_upload_sboms = true;
+  out.can_upload_evidence = true;
   return out;
 }
 
@@ -353,6 +418,8 @@ function adminPreset(): PermissionSet {
   // Organization settings (name, slug, branding, deletion) stay with the owner.
   // Everything else — including user and role administration — is the admin's.
   out.can_edit_organization = false;
+  out.can_delete_organization = false;
+  out.can_export_organization = false;
   return out;
 }
 

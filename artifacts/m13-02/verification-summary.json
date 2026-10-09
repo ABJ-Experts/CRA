@@ -1,0 +1,42 @@
+{
+  "full_verify": "passed",
+  "api_e2e": {
+    "suites": 4,
+    "tests": 10
+  },
+  "auth_checks": 33,
+  "supabase": {
+    "chained_events": 4,
+    "invalid_canonical_or_hash": 0,
+    "service_role_mutation_privileges": false,
+    "forced_rls_tables": 0,
+    "full_chain_cli_status": "verified for both active tenants"
+  },
+  "playwright": {
+    "origin": "http://localhost:3100",
+    "owner_sign_in_sign_out": "passed after own dev server restart",
+    "branding_draft_unchanged_save": "passed",
+    "organization_switch_and_back": "passed",
+    "forged_org_switch_status": 404,
+    "viewer_settings_status": 403,
+    "archival_ui": "intercepted response fixture; actual blocking tested in SQL",
+    "api_read_samples": 50,
+    "api_p50_ms": 80,
+    "api_p95_ms": 113,
+    "api_p99_ms": 142
+  },
+  "isolated_databases_removed": [
+    "m13_test_restore_20261006",
+    "m13_test_restore_20261006_v2",
+    "m13_test_20261006_0830",
+    "m13_test_20261006_0831",
+    "m13_test_20261006_0832",
+    "m13_test_20261006_0833",
+    "m13_test_20261006_0834",
+    "m13_test_20261006_0835",
+    "m13_test_20261006_0836",
+    "m13_test_20261006_0837",
+    "m13_test_20261006_0838"
+  ],
+  "unrelated_sites_or_live_audit_rows_deleted": false
+}

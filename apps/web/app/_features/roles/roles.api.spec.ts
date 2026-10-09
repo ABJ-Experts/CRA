@@ -2,6 +2,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { rolesApi, rolesQueryKeys } from "./roles.api";
 
+const identity = {
+  idempotencyKey: "11111111-1111-4111-8111-111111111111",
+  correlationId: "22222222-2222-4222-8222-222222222222",
+} as const;
+
 const role = {
   id: "a05570d6-aa75-4b6a-9688-b5a82eb3a774",
   name: "Auditor",
@@ -74,7 +79,7 @@ describe("rolesApi", () => {
     vi.stubGlobal("fetch", fetcher);
 
     await expect(
-      rolesApi.setOverride("admin", { can_view_audit: true }, signal),
+      rolesApi.setOverride("admin", { can_view_audit: true }, identity, signal),
     ).resolves.toEqual({ ok: true });
     expect(fetcher).toHaveBeenCalledOnce();
     expect(fetcher).toHaveBeenCalledWith("/api/v1/roles/overrides", {
@@ -82,7 +87,11 @@ describe("rolesApi", () => {
       credentials: "same-origin",
       cache: "no-store",
       signal,
-      headers: { "content-type": "application/json" },
+      headers: {
+        "content-type": "application/json",
+        "idempotency-key": identity.idempotencyKey,
+        "x-correlation-id": identity.correlationId,
+      },
       body: JSON.stringify({
         baseRole: "admin",
         permissions: { can_view_audit: true },
@@ -120,10 +129,14 @@ describe("rolesApi", () => {
     await expect(rolesApi.getOverrides()).rejects.toMatchObject({
       kind: "invalid_response",
     });
-    await expect(rolesApi.setOverride("viewer", {})).rejects.toMatchObject({
+    await expect(
+      rolesApi.setOverride("viewer", {}, identity),
+    ).rejects.toMatchObject({
       kind: "invalid_response",
     });
-    await expect(rolesApi.setOverride("viewer", {})).rejects.toMatchObject({
+    await expect(
+      rolesApi.setOverride("viewer", {}, identity),
+    ).rejects.toMatchObject({
       kind: "api",
       status: 401,
     });

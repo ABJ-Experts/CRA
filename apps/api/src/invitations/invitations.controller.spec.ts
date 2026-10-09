@@ -20,6 +20,9 @@ function fixture() {
     list: jest.fn().mockResolvedValue([{ id: "invitation-1" }]),
     create: jest.fn().mockResolvedValue({ id: "invitation-2" }),
     accept: jest.fn().mockResolvedValue(accepted),
+    resend: jest
+      .fn()
+      .mockResolvedValue({ id: invitationId, delivery: "confirmed" }),
     revoke: jest.fn().mockResolvedValue(undefined),
   };
   return {
@@ -48,13 +51,16 @@ describe("InvitationsController", () => {
       lastName: "Member",
     };
 
-    await expect(controller.create(input, user)).resolves.toEqual({
+    await expect(
+      controller.create(input, user, { ip: "203.0.113.7" } as never),
+    ).resolves.toEqual({
       id: "invitation-2",
     });
     expect(invitations.create).toHaveBeenCalledWith(
       "org-1",
       { id: "owner-1", email: "owner@cra.test" },
       input,
+      "203.0.113.7",
     );
   });
 
@@ -67,6 +73,19 @@ describe("InvitationsController", () => {
       id: "owner-1",
       email: "owner@cra.test",
     });
+  });
+
+  it("resends a scoped invitation with no caller-controlled delivery fields", async () => {
+    const { controller, invitations } = fixture();
+
+    await expect(
+      controller.resend({}, { id: invitationId }, user),
+    ).resolves.toEqual({ id: invitationId, delivery: "confirmed" });
+    expect(invitations.resend).toHaveBeenCalledWith(
+      "org-1",
+      { id: "owner-1", email: "owner@cra.test" },
+      invitationId,
+    );
   });
 
   it("revokes an invitation within the active organization", async () => {

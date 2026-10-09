@@ -7,10 +7,12 @@ import {
 } from "@repo/contracts/pagination";
 import { BASE_ROLES, type BaseRole } from "@repo/contracts/permissions";
 import type { Member } from "@repo/contracts/users";
+import { z } from "zod";
 
 import { SupabaseService } from "../../supabase/supabase.service";
 import {
   MemberRepositoryError,
+  type AuditMutationContext,
   type MemberRepository,
   type ProfilePatch,
 } from "../application/member-repository.port";
@@ -23,6 +25,9 @@ const MEMBER_SEARCH_COLUMNS = [
   "last_name",
   "username",
 ] as const;
+const mutationResultSchema = z.object({
+  status: z.enum(["updated", "unchanged", "replayed", "not_found", "conflict"]),
+});
 
 @Injectable()
 export class SupabaseMemberRepository implements MemberRepository {
@@ -84,57 +89,131 @@ export class SupabaseMemberRepository implements MemberRepository {
     orgId: string,
     userId: string,
     role: BaseRole,
+    actorId?: string,
+    context?: AuditMutationContext,
+    expectedRole?: BaseRole,
   ): Promise<void> {
-    const { error } = await this.supabase
-      .admin()
-      .from("organization_members")
-      .update({ role })
-      .eq("organization_id", orgId)
-      .eq("user_id", userId);
-    if (error) this.fail(error.message);
+    await this.mutateMember(
+      orgId,
+      actorId,
+      userId,
+      "role",
+      { role },
+      expectedRole ?? null,
+      context,
+    );
   }
 
-  async remove(orgId: string, userId: string): Promise<void> {
-    const { error } = await this.supabase
-      .admin()
-      .from("organization_members")
-      .delete()
-      .eq("organization_id", orgId)
-      .eq("user_id", userId);
-    if (error) this.fail(error.message);
+  async remove(
+    orgId: string,
+    userId: string,
+    actorId?: string,
+    context?: AuditMutationContext,
+  ): Promise<void> {
+    await this.mutateMember(
+      orgId,
+      actorId,
+      userId,
+      "remove",
+      {},
+      null,
+      context,
+    );
   }
 
   async setActive(
     orgId: string,
     userId: string,
     isActive: boolean,
+    actorId?: string,
+    context?: AuditMutationContext,
   ): Promise<void> {
-    if (!(await this.findMembership(orgId, userId))) {
-      throw new MemberRepositoryError("member_not_found");
-    }
-
-    const { error } = await this.supabase
-      .admin()
-      .from("users")
-      .update({ is_active: isActive })
-      .eq("id", userId);
-    if (error) this.fail(error.message);
+    await this.mutateMember(
+      orgId,
+      actorId,
+      userId,
+      "active",
+      { isActive },
+      null,
+      context,
+    );
   }
 
-  async updateOwnProfile(userId: string, patch: ProfilePatch): Promise<void> {
-    const { error } = await this.supabase
+  async updateOwnProfile(
+    orgId: string | null,
+    userId: string,
+    patch: ProfilePatch,
+    context?: AuditMutationContext,
+  ): Promise<void> {
+    const audit = this.requiredContext(userId, context);
+    const { data, error } = await this.supabase
       .admin()
-      .from("users")
-      .update({
-        ...(patch.firstName !== undefined
-          ? { first_name: patch.firstName }
-          : {}),
-        ...(patch.lastName !== undefined ? { last_name: patch.lastName } : {}),
-        ...(patch.jobTitle !== undefined ? { job_title: patch.jobTitle } : {}),
-        ...(patch.language !== undefined ? { language: patch.language } : {}),
-      })
-      .eq("id", userId);
+      .rpc("m13_01_update_profile_atomic", {
+        // Generated RPC types omit SQL argument nullability; security scope uses null.
+        p_organization_id: orgId as string,
+        p_actor_user_id: userId,
+        p_patch: {
+          ...(patch.firstName !== undefined
+            ? { first_name: patch.firstName }
+            : {}),
+          ...(patch.lastName !== undefined
+            ? { last_name: patch.lastName }
+            : {}),
+          ...(patch.jobTitle !== undefined
+            ? { job_title: patch.jobTitle }
+            : {}),
+          ...(patch.language !== undefined ? { language: patch.language } : {}),
+        },
+        p_event_key: audit.eventKey,
+        p_correlation_id: audit.correlationId,
+        p_source_ip: audit.sourceIp,
+      });
     if (error) this.fail(error.message);
+    this.assertMutationResult(data);
+  }
+
+  private async mutateMember(
+    orgId: string,
+    actorId: string | undefined,
+    userId: string,
+    operation: "role" | "remove" | "active",
+    payload: Record<string, string | boolean>,
+    expectedRole: BaseRole | null,
+    context: AuditMutationContext | undefined,
+  ): Promise<void> {
+    const audit = this.requiredContext(actorId, context);
+    const { data, error } = await this.supabase
+      .admin()
+      .rpc("m13_01_mutate_member_atomic", {
+        p_organization_id: orgId,
+        p_actor_user_id: actorId!,
+        p_target_user_id: userId,
+        p_operation: operation,
+        p_payload: payload,
+        p_expected_role: expectedRole as string,
+        p_event_key: audit.eventKey,
+        p_correlation_id: audit.correlationId,
+        p_source_ip: audit.sourceIp,
+      });
+    if (error) this.fail(error.message);
+    this.assertMutationResult(data);
+  }
+
+  private requiredContext(
+    actorId: string | undefined,
+    context: AuditMutationContext | undefined,
+  ): AuditMutationContext {
+    if (!actorId || !context) throw new MemberRepositoryError("unavailable");
+    return context;
+  }
+
+  private assertMutationResult(value: unknown): void {
+    const parsed = mutationResultSchema.safeParse(value);
+    if (!parsed.success) this.fail("invalid audited mutation result");
+    if (parsed.data.status === "not_found")
+      throw new MemberRepositoryError("member_not_found");
+    if (parsed.data.status === "conflict")
+      throw new MemberRepositoryError("conflict");
   }
 
   private searchExpression(search: string | undefined): string | null {

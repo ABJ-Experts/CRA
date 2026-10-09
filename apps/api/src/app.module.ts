@@ -2,16 +2,32 @@ import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
 import { ThrottlerModule } from "@nestjs/throttler";
 
+import { DashboardModule } from "./dashboard/dashboard.module";
 import { AuthModule } from "./auth/auth.module";
+import { AuditModule } from "./audit/audit.module";
 import { HttpBoundaryModule } from "./common/http/http-boundary.module";
+import { ConnectorsModule } from "./connectors/connectors.module";
 import { SecurityModule } from "./common/security/security.module";
 import { validateEnv } from "./config/env.validation";
+import { FindingsModule } from "./findings/findings.module";
 import { HealthController } from "./health/health.controller";
 import { MailModule } from "./mail/mail.module";
 import { InvitationsModule } from "./invitations/invitations.module";
+import { OrganizationsModule } from "./organizations/organizations.module";
 import { PermissionsModule } from "./permissions/permissions.module";
+import { ProductsModule } from "./products/products.module";
+import { ReportingModule } from "./reporting/reporting.module";
 import { SupabaseModule } from "./supabase/supabase.module";
+import { SbomModule } from "./sboms/sbom.module";
 import { UsersModule } from "./users/users.module";
+import { VulnerabilitiesModule } from "./vulnerabilities/vulnerabilities.module";
+import { TechnicalFilesModule } from "./technical-files/technical-files.module";
+import { EvidenceModule } from "./evidence/evidence.module";
+import { SuppliersModule } from "./suppliers/suppliers.module";
+import { SupplierEvidenceModule } from "./supplier-evidence/supplier-evidence.module";
+import { FrameworksModule } from "./frameworks/frameworks.module";
+import { TasksModule } from "./tasks/tasks.module";
+import { NotificationsModule } from "./notifications/notifications.module";
 
 @Module({
   imports: [
@@ -40,10 +56,26 @@ import { UsersModule } from "./users/users.module";
     SupabaseModule,
     MailModule,
     AuthModule,
+    AuditModule,
     PermissionsModule,
+    ProductsModule,
+    ReportingModule,
+    ConnectorsModule,
+    FindingsModule,
     SecurityModule,
     UsersModule,
+    OrganizationsModule,
     InvitationsModule,
+    SbomModule,
+    VulnerabilitiesModule,
+    TechnicalFilesModule,
+    EvidenceModule,
+    SuppliersModule,
+    SupplierEvidenceModule,
+    FrameworksModule,
+    TasksModule,
+    NotificationsModule,
+    DashboardModule,
   ],
   controllers: [HealthController],
 })

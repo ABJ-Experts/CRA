@@ -1,0 +1,27 @@
+- generic [ref=f12e1]:
+  - button "Open Next.js Dev Tools" [ref=f12e58] [cursor=pointer]
+  - alert [ref=f12e240]: Two step verification
+  - generic [ref=f12e399]:
+    - banner [ref=f12e400]:
+      - link "CRA" [ref=f12e401] [cursor=pointer]:
+        - /url: /
+        - generic [aria-hidden] [ref=f12e402]: C
+    - main [ref=f12e404]:
+      - generic [ref=f12e468]:
+        - generic [ref=f12e474]:
+          - heading "Two step verification" [level=1] [ref=f12e475]
+          - paragraph [ref=f12e476]: Enter the 6 digit code from your authenticator app.
+        - generic [ref=f12e477]:
+          - group "Authentication code" [ref=f12e479]:
+            - textbox "Digit 1 of 6" [active] [ref=f12e480]
+            - textbox "Digit 2 of 6" [ref=f12e481]
+            - textbox "Digit 3 of 6" [ref=f12e482]
+            - textbox "Digit 4 of 6" [ref=f12e483]
+            - textbox "Digit 5 of 6" [ref=f12e484]
+            - textbox "Digit 6 of 6" [ref=f12e485]
+          - button "Verify" [disabled] [ref=f12e486]
+          - button "Use a recovery code instead" [ref=f12e487] [cursor=pointer]
+    - generic [ref=f12e465]:
+      - generic [ref=f12e466]: Cannot access your app?
+      - link "Sign In" [ref=f12e488] [cursor=pointer]:
+        - /url: /sign-in

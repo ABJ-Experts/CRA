@@ -12,6 +12,7 @@ import {
   sessionMenuQueryOptions,
   sessionPermissionsQueryOptions,
 } from "./session.queries";
+import { ApiClientError } from "../../_lib/http/api-client";
 import { Providers } from "../../_providers/providers";
 
 const session = {
@@ -21,6 +22,7 @@ const session = {
     username: "person",
     firstName: "Pat",
     lastName: "Example",
+    jobTitle: "Engineer",
     avatarUrl: null,
     isActive: true,
   },
@@ -65,7 +67,9 @@ describe("sessionApi", () => {
             permissions: { can_view_orders: true },
           });
         case "/api/v1/permissions/menu":
-          return jsonResponse({ menu: ["dashboard", "ecommerce.orders"] });
+          return jsonResponse({ menu: ["dashboard", "organization"] });
+        case "/api/v1/auth/sign-out":
+          return jsonResponse({ ok: true });
         default:
           throw new Error("unexpected request");
       }
@@ -79,8 +83,16 @@ describe("sessionApi", () => {
     });
     await expect(sessionApi.menu({ fetcher })).resolves.toEqual([
       "dashboard",
-      "ecommerce.orders",
+      "organization",
     ]);
+    await expect(sessionApi.signOut({ fetcher })).resolves.toEqual({
+      ok: true,
+    });
+
+    expect(fetcher).toHaveBeenCalledWith(
+      "/api/v1/auth/sign-out",
+      expect.objectContaining({ method: "POST" }),
+    );
   });
 
   it.each([
@@ -140,13 +152,20 @@ describe("session query option factories", () => {
     [sessionMenuQueryOptions, sessionKeys.menu],
   ] as const)("retains the session cache and retry policy", (factory, key) => {
     const options = factory(false);
+    const retry = options.retry;
 
     expect(options).toMatchObject({
       queryKey: key,
       enabled: false,
-      retry: false,
       staleTime: SESSION_STALE_TIME_MS,
     });
+    expect(retry).toBeTypeOf("function");
+    if (typeof retry !== "function") throw new Error("missing retry policy");
+    expect(retry(0, new ApiClientError("api", "provider unavailable", 503))).toBe(
+      true,
+    );
+    expect(retry(0, new ApiClientError("api", "forbidden", 403))).toBe(false);
+    expect(retry(3, new ApiClientError("network", "network"))).toBe(false);
   });
 
   it("keeps independent clients from sharing cached session identity", async () => {

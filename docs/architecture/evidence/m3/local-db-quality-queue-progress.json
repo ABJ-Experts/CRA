@@ -1,0 +1,20 @@
+{
+  "checkedAt": "2026-09-28T11:10:11.633347+00:00",
+  "projectUrl": "http://127.0.0.1:54321",
+  "migration": "20260928110739_m3_quality_terminal_predecessor_progress.sql",
+  "migrationCount": 12,
+  "behavior": "Exhausted failed predecessors remain readable but stop blocking later quality reports; queued, live processing and eligible failed predecessors preserve ordering. Baselines still use completed reports only.",
+  "newTables": 0,
+  "newColumns": 0,
+  "indexesAddedAcrossM3": 1,
+  "redFailures": 3,
+  "focusedGreenExitCode": 0,
+  "fullSql": {
+    "files": 78,
+    "exitCode": 0,
+    "errorMarkers": 0
+  },
+  "generatedTypesAligned": true,
+  "localSchemaShadowDiff": "passed: exact same four pre-existing function differences as M2 baseline, no M3 drift",
+  "productionAccess": false
+}

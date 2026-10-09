@@ -1,0 +1,15 @@
+{
+  "projectUrl": "http://127.0.0.1:54321",
+  "attempts": [
+    {
+      "outcome": "repository unavailable; exact cleanup succeeded",
+      "cleanupMs": 9758.62
+    },
+    {
+      "outcome": "persist_sbom_normalization_batch_atomic SQL57014 statement timeout HTTP500; exact cleanup succeeded",
+      "cleanupMs": 5139.56,
+      "observedEnvironment": "Local analytics CPU220.15%; Docker2.844GiB; metadata read17s"
+    }
+  ],
+  "resolution": "Root paused only local optional analytics/vector after coordinating browser runs; final50000 pipeline passed. No schema/input weakening or arbitrary timeout increase."
+}

@@ -10,6 +10,7 @@ import type { Type } from "@nestjs/common";
 import type { z } from "zod";
 
 import { AppModule } from "../../app.module";
+import { AgentIngressModule } from "../../connectors/agent/agent-ingress.module";
 import {
   NON_JSON_RESPONSE_KIND,
   ZOD_RESPONSE_SCHEMA,
@@ -66,7 +67,12 @@ function discoverControllers(root: Type): readonly Type[] {
   return Object.freeze([...controllers]);
 }
 
-const controllers = discoverControllers(AppModule);
+const controllers = Object.freeze([
+  ...new Set([
+    ...discoverControllers(AppModule),
+    ...discoverControllers(AgentIngressModule),
+  ]),
+]);
 
 function controllerFiles(directory: string): readonly string[] {
   return readdirSync(directory, { withFileTypes: true })

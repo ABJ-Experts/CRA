@@ -2,6 +2,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { membersApi } from "./members.api";
 
+const identity = {
+  idempotencyKey: "11111111-1111-4111-8111-111111111111",
+  correlationId: "22222222-2222-4222-8222-222222222222",
+} as const;
+
 describe("membersApi", () => {
   const userId = "a05570d6-aa75-4b6a-9688-b5a82eb3a774";
   afterEach(() => vi.unstubAllGlobals());
@@ -17,6 +22,7 @@ describe("membersApi", () => {
       membersApi.changeRole(
         "a05570d6-aa75-4b6a-9688-b5a82eb3a774",
         "admin",
+        identity,
         signal,
       ),
     ).resolves.toEqual({ ok: true });
@@ -28,7 +34,11 @@ describe("membersApi", () => {
         credentials: "same-origin",
         cache: "no-store",
         signal,
-        headers: { "content-type": "application/json" },
+        headers: {
+          "content-type": "application/json",
+          "idempotency-key": identity.idempotencyKey,
+          "x-correlation-id": identity.correlationId,
+        },
         body: JSON.stringify({ role: "admin" }),
       },
     );
@@ -45,12 +55,12 @@ describe("membersApi", () => {
       );
     vi.stubGlobal("fetch", fetcher);
 
-    await expect(membersApi.changeRole(userId, "viewer")).rejects.toMatchObject(
-      { kind: "invalid_response" },
-    );
-    await expect(membersApi.changeRole(userId, "viewer")).rejects.toMatchObject(
-      { kind: "api", status: 401 },
-    );
+    await expect(
+      membersApi.changeRole(userId, "viewer", identity),
+    ).rejects.toMatchObject({ kind: "invalid_response" });
+    await expect(
+      membersApi.changeRole(userId, "viewer", identity),
+    ).rejects.toMatchObject({ kind: "api", status: 401 });
     expect(fetcher).toHaveBeenCalledTimes(2);
   });
 
@@ -59,7 +69,7 @@ describe("membersApi", () => {
     vi.stubGlobal("fetch", fetcher);
 
     await expect(
-      membersApi.changeRole("not-a-uuid", "viewer"),
+      membersApi.changeRole("not-a-uuid", "viewer", identity),
     ).rejects.toMatchObject({ kind: "invalid_request" });
     expect(fetcher).not.toHaveBeenCalled();
   });

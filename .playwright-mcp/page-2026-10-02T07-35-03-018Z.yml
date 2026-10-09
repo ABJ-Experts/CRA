@@ -1,0 +1,162 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - complementary [ref=e4]:
+      - generic [ref=e5]:
+        - generic [ref=e6]:
+          - link "CRA Sentinel" [ref=e7] [cursor=pointer]:
+            - /url: /dashboard
+            - generic [aria-hidden] [ref=e8]: C
+            - text: CRA Sentinel
+          - button "Collapse sidebar" [ref=e9] [cursor=pointer]
+        - navigation "Main" [ref=e12]:
+          - generic [ref=e13]:
+            - list [ref=e15]:
+              - listitem [ref=e16]:
+                - link "Dashboard" [ref=e17] [cursor=pointer]:
+                  - /url: /dashboard
+              - listitem [ref=e25]:
+                - link "Management" [ref=e26] [cursor=pointer]:
+                  - /url: /management
+              - listitem [ref=e32]:
+                - link "Organization" [ref=e33] [cursor=pointer]:
+                  - /url: /organization
+              - listitem [ref=e40]:
+                - link "Products" [ref=e41] [cursor=pointer]:
+                  - /url: /products
+              - listitem [ref=e48]:
+                - link "Suppliers" [ref=e49] [cursor=pointer]:
+                  - /url: /suppliers
+              - listitem [ref=e54]:
+                - link "Frameworks" [ref=e55] [cursor=pointer]:
+                  - /url: /frameworks
+              - listitem [ref=e60]:
+                - link "Findings" [ref=e61] [cursor=pointer]:
+                  - /url: /findings
+              - listitem [ref=e66]:
+                - link "Reporting" [ref=e67] [cursor=pointer]:
+                  - /url: /reporting
+              - listitem [ref=e73]:
+                - link "Tasks" [ref=e74] [cursor=pointer]:
+                  - /url: /tasks
+              - listitem [ref=e80]:
+                - link "Connectors" [ref=e81] [cursor=pointer]:
+                  - /url: /connectors
+            - generic [ref=e88]:
+              - paragraph [ref=e89]: Account & access
+              - list [ref=e90]:
+                - listitem [ref=e91]:
+                  - button "Profile" [ref=e92] [cursor=pointer]
+                  - generic:
+                    - list:
+                      - listitem [ref=e100]:
+                        - link "Account" [ref=e101] [cursor=pointer]:
+                          - /url: /account
+                      - listitem [ref=e103]:
+                        - link "Security" [ref=e104] [cursor=pointer]:
+                          - /url: /security
+                - listitem [ref=e106]:
+                  - button "Authorization" [ref=e107] [cursor=pointer]
+                  - generic:
+                    - list:
+                      - listitem [ref=e115]:
+                        - link "Roles" [ref=e116] [cursor=pointer]:
+                          - /url: /roles
+                      - listitem [ref=e118]:
+                        - link "Permissions" [ref=e119] [cursor=pointer]:
+                          - /url: /permissions
+        - button "Sign out" [ref=e123] [cursor=pointer]
+    - generic [ref=e128]:
+      - banner [ref=e129]:
+        - generic [ref=e131]:
+          - generic [ref=e132]: Welcome, Robert Fox
+          - generic [ref=e133]: Overview your store
+        - generic [ref=e134]:
+          - button "Search" [ref=e135] [cursor=pointer]
+          - button "Notifications" [ref=e139] [cursor=pointer]
+          - generic [ref=e143]:
+            - generic [ref=e144]: AF
+            - 'img "Ada Foster: online" [ref=e146]'
+      - main [ref=e147]:
+        - generic [ref=e149]:
+          - generic [ref=e150]:
+            - generic [ref=e151]:
+              - generic [ref=e152]: $0.000K
+              - generic [ref=e154]:
+                - generic [ref=e155]: Total revenue
+                - generic [ref=e156]: +8.24%
+            - generic [ref=e157]:
+              - generic [ref=e158]: $0.000K
+              - generic [ref=e160]:
+                - generic [ref=e161]: Total profit
+                - generic [ref=e162]: +3.11%
+            - generic [ref=e163]:
+              - generic [ref=e164]: "0"
+              - generic [ref=e166]:
+                - generic [ref=e167]: Total orders
+                - generic [ref=e168]: +5.40%
+            - generic [ref=e169]:
+              - generic [ref=e170]: "0"
+              - generic [ref=e172]:
+                - generic [ref=e173]: Total customers
+                - generic [ref=e174]: +2.18%
+            - generic [ref=e175]:
+              - generic [ref=e176]: "0"
+              - generic [ref=e178]:
+                - generic [ref=e179]: Total products
+                - generic [ref=e180]: "-1.20%"
+          - generic [ref=e182]:
+            - heading "Revenue & Summary" [level=2] [ref=e184]
+            - img "Revenue and order volume by month" [ref=e186]
+          - generic [ref=e191]:
+            - heading "Latest Orders" [level=2] [ref=e193]
+            - table "Latest orders" [ref=e197]:
+              - rowgroup [ref=e198]:
+                - row [ref=e199]:
+                  - columnheader "No." [ref=e200]
+                  - columnheader [ref=e201] [cursor=pointer]:
+                    - button "Order No & Tracking ID" [ref=e202]
+                  - columnheader [ref=e206] [cursor=pointer]:
+                    - button "Created & Source" [ref=e207]
+                  - columnheader [ref=e211] [cursor=pointer]:
+                    - button "Status" [ref=e212]
+                  - columnheader [ref=e216] [cursor=pointer]:
+                    - button "Quantity & Price" [ref=e217]
+                  - columnheader [ref=e221]
+              - rowgroup [ref=e222]:
+                - row [ref=e223]:
+                  - cell [ref=e224]
+                  - cell [ref=e226]
+                  - cell [ref=e228]
+                  - cell [ref=e230]
+                  - cell [ref=e232]
+                  - cell [ref=e234]
+                - row [ref=e236]:
+                  - cell [ref=e237]
+                  - cell [ref=e239]
+                  - cell [ref=e241]
+                  - cell [ref=e243]
+                  - cell [ref=e245]
+                  - cell [ref=e247]
+                - row [ref=e249]:
+                  - cell [ref=e250]
+                  - cell [ref=e252]
+                  - cell [ref=e254]
+                  - cell [ref=e256]
+                  - cell [ref=e258]
+                  - cell [ref=e260]
+                - row [ref=e262]:
+                  - cell [ref=e263]
+                  - cell [ref=e265]
+                  - cell [ref=e267]
+                  - cell [ref=e269]
+                  - cell [ref=e271]
+                  - cell [ref=e273]
+                - row [ref=e275]:
+                  - cell [ref=e276]
+                  - cell [ref=e278]
+                  - cell [ref=e280]
+                  - cell [ref=e282]
+                  - cell [ref=e284]
+                  - cell [ref=e286]
+  - button "Open Next.js Dev Tools" [ref=e293] [cursor=pointer]
+  - alert [ref=e297]

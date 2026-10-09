@@ -1,0 +1,158 @@
+- generic [active] [ref=f3e1]:
+  - generic [ref=f3e3]:
+    - complementary [ref=f3e4]:
+      - generic [ref=f3e5]:
+        - generic [ref=f3e6]:
+          - link "CRA Sentinel" [ref=f3e7] [cursor=pointer]:
+            - /url: /dashboard
+            - generic [aria-hidden] [ref=f3e8]: C
+            - text: CRA Sentinel
+          - button "Collapse sidebar" [ref=f3e9] [cursor=pointer]
+        - navigation "Main" [ref=f3e12]:
+          - generic [ref=f3e13]:
+            - list [ref=f3e15]:
+              - listitem [ref=f3e16]:
+                - link "Dashboard" [ref=f3e17] [cursor=pointer]:
+                  - /url: /dashboard
+              - listitem [ref=f3e25]:
+                - link "Management" [ref=f3e26] [cursor=pointer]:
+                  - /url: /management
+              - listitem [ref=f3e32]:
+                - link "Organization" [ref=f3e33] [cursor=pointer]:
+                  - /url: /organization
+              - listitem [ref=f3e40]:
+                - link "Products" [ref=f3e41] [cursor=pointer]:
+                  - /url: /products
+              - listitem [ref=f3e48]:
+                - link "Suppliers" [ref=f3e49] [cursor=pointer]:
+                  - /url: /suppliers
+              - listitem [ref=f3e54]:
+                - link "Frameworks" [ref=f3e55] [cursor=pointer]:
+                  - /url: /frameworks
+              - listitem [ref=f3e60]:
+                - link "Findings" [ref=f3e61] [cursor=pointer]:
+                  - /url: /findings
+              - listitem [ref=f3e66]:
+                - link "Reporting" [ref=f3e67] [cursor=pointer]:
+                  - /url: /reporting
+              - listitem [ref=f3e73]:
+                - link "Tasks" [ref=f3e74] [cursor=pointer]:
+                  - /url: /tasks
+              - listitem [ref=f3e80]:
+                - link "Connectors" [ref=f3e81] [cursor=pointer]:
+                  - /url: /connectors
+            - generic [ref=f3e88]:
+              - paragraph [ref=f3e89]: Account & access
+              - list [ref=f3e90]:
+                - listitem [ref=f3e91]:
+                  - button "Profile" [expanded] [ref=f3e92] [cursor=pointer]
+                  - list [ref=f3e101]:
+                    - listitem [ref=f3e102]:
+                      - link "Account" [ref=f3e103] [cursor=pointer]:
+                        - /url: /account
+                    - listitem [ref=f3e105]:
+                      - link "Security" [ref=f3e106] [cursor=pointer]:
+                        - /url: /security
+                - listitem [ref=f3e108]:
+                  - button "Authorization" [ref=f3e109] [cursor=pointer]
+                  - generic:
+                    - list:
+                      - listitem [ref=f3e117]:
+                        - link "Roles" [ref=f3e118] [cursor=pointer]:
+                          - /url: /roles
+                      - listitem [ref=f3e120]:
+                        - link "Permissions" [ref=f3e121] [cursor=pointer]:
+                          - /url: /permissions
+        - button "Sign out" [ref=f3e125] [cursor=pointer]
+    - generic [ref=f3e130]:
+      - banner [ref=f3e131]:
+        - navigation "Breadcrumb" [ref=f3e133]:
+          - list [ref=f3e134]:
+            - listitem [ref=f3e135]:
+              - link "Dashboard" [ref=f3e136] [cursor=pointer]:
+                - /url: /dashboard
+            - listitem [aria-hidden] [ref=f3e137]
+            - listitem [ref=f3e140]:
+              - generic [ref=f3e141]: Account
+        - generic [ref=f3e142]:
+          - button "Search" [ref=f3e143] [cursor=pointer]
+          - button "Notifications, 1 unread" [ref=f3e188] [cursor=pointer]
+          - generic [ref=f3e151]:
+            - generic [ref=f3e152]: AF
+            - 'img "Ada Foster: online" [ref=f3e153]'
+      - main [ref=f3e154]:
+        - generic [ref=f3e155]:
+          - generic [ref=f3e156]:
+            - heading "Account" [level=1] [ref=f3e157]
+            - paragraph [ref=f3e158]: Your name and details, visible to others in your organization.
+          - generic [ref=f3e161]:
+            - generic [ref=f3e162]:
+              - generic [ref=f3e163]: OA
+              - generic [ref=f3e165]:
+                - paragraph [ref=f3e166]: Owner Account
+                - paragraph [ref=f3e167]: owner@cra.test
+            - generic [ref=f3e168]:
+              - generic [ref=f3e169]:
+                - generic [ref=f3e170]: First name
+                - textbox "First name" [ref=f3e172]: Owner
+              - generic [ref=f3e173]:
+                - generic [ref=f3e174]: Last name
+                - textbox "Last name" [ref=f3e176]: Account
+            - generic [ref=f3e177]:
+              - generic [ref=f3e178]: Job title
+              - textbox "Job title" [ref=f3e180]
+              - paragraph [ref=f3e181]: Shown next to your name in the member list.
+            - generic [ref=f3e182]:
+              - button "Save changes" [ref=f3e183] [cursor=pointer]
+              - status [ref=f3e234]: Saved.
+          - generic [ref=f3e192]:
+            - generic [ref=f3e193]:
+              - heading "Notification preferences" [level=2] [ref=f3e194]
+              - paragraph [ref=f3e195]: Optional categories can use immediate delivery, digest delivery, or be turned off. Critical regulatory alerts bypass these settings.
+            - generic [ref=f3e196]:
+              - generic [ref=f3e197]:
+                - text: Finding triage
+                - combobox "Finding triage" [ref=f3e198] [cursor=pointer]:
+                  - option "Immediate" [selected]
+                  - option "Daily digest"
+                  - option "Weekly digest"
+                  - option "Off"
+              - generic [ref=f3e199]:
+                - text: Evidence
+                - combobox "Evidence" [ref=f3e200] [cursor=pointer]:
+                  - option "Immediate" [selected]
+                  - option "Daily digest"
+                  - option "Weekly digest"
+                  - option "Off"
+              - generic [ref=f3e201]:
+                - text: Supplier owner requests
+                - combobox "Supplier owner requests" [ref=f3e202] [cursor=pointer]:
+                  - option "Immediate" [selected]
+                  - option "Daily digest"
+                  - option "Weekly digest"
+                  - option "Off"
+            - generic [ref=f3e203]:
+              - generic [ref=f3e204]:
+                - generic [ref=f3e205]: Digest timezone
+                - textbox "Digest timezone" [ref=f3e207]: Etc/UTC
+              - generic [ref=f3e208]:
+                - generic [ref=f3e209]: Digest time
+                - textbox "Digest time" [ref=f3e211]: 09:00
+              - generic [ref=f3e212]:
+                - text: Weekly digest day
+                - combobox "Weekly digest day" [ref=f3e213] [cursor=pointer]:
+                  - option "Monday" [selected]
+                  - option "Tuesday"
+                  - option "Wednesday"
+                  - option "Thursday"
+                  - option "Friday"
+                  - option "Saturday"
+                  - option "Sunday"
+              - generic [ref=f3e214]:
+                - generic [ref=f3e215]: Quiet hours
+                - textbox "Quiet hours" [ref=f3e217]
+                - paragraph [ref=f3e218]: Use HH:MM-HH:MM, or leave blank.
+            - paragraph [ref=f3e219]: Critical regulatory alerts remain immediate and cannot be muted, digested, or suppressed by quiet hours.
+            - button "Save notification preferences" [disabled] [ref=f3e221]
+  - button "Open Next.js Dev Tools" [ref=f3e227] [cursor=pointer]
+  - alert [ref=f3e231]

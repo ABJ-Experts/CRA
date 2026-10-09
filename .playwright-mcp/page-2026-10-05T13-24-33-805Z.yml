@@ -1,0 +1,40 @@
+- generic [active] [ref=f15e1]:
+  - generic [ref=f15e3]:
+    - button "Open navigation" [ref=f15e4] [cursor=pointer]
+    - generic [ref=f15e7]:
+      - banner [ref=f15e8]:
+        - navigation "Breadcrumb" [ref=f15e10]:
+          - list [ref=f15e11]:
+            - listitem [ref=f15e12]:
+              - link "Dashboard" [ref=f15e13] [cursor=pointer]:
+                - /url: /dashboard
+            - listitem [aria-hidden] [ref=f15e14]
+            - listitem [ref=f15e17]:
+              - generic [ref=f15e18]: Account
+        - generic [ref=f15e19]:
+          - button "Search" [ref=f15e20] [cursor=pointer]
+          - button "Notifications" [ref=f15e24] [cursor=pointer]
+          - 'img "Ada Foster: online" [ref=f15e30]'
+      - main [ref=f15e31]:
+        - generic [ref=f15e32]:
+          - generic [ref=f15e33]:
+            - heading "Account" [level=1] [ref=f15e34]
+            - paragraph [ref=f15e35]: Your name and details, visible to others in your organization.
+          - generic [ref=f15e38]:
+            - generic [ref=f15e42]:
+              - paragraph [ref=f15e43]: —
+              - paragraph [ref=f15e44]: Loading…
+            - generic [ref=f15e45]:
+              - generic [ref=f15e46]:
+                - generic [ref=f15e47]: First name
+                - textbox "First name" [ref=f15e49]
+              - generic [ref=f15e50]:
+                - generic [ref=f15e51]: Last name
+                - textbox "Last name" [ref=f15e53]
+            - generic [ref=f15e54]:
+              - generic [ref=f15e55]: Job title
+              - textbox "Job title" [ref=f15e57]
+              - paragraph [ref=f15e58]: Shown next to your name in the member list.
+            - button "Save changes" [ref=f15e60] [cursor=pointer]
+          - paragraph [ref=f15e64]: Notification preferences are unavailable.
+  - button "Open Next.js Dev Tools" [ref=f15e70] [cursor=pointer]

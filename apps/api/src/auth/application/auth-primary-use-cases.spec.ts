@@ -23,6 +23,7 @@ const profile = {
   username: "user",
   firstName: null,
   lastName: null,
+  jobTitle: null,
   avatarUrl: null,
   isActive: true,
   emailVerifiedAt: null,
@@ -257,19 +258,18 @@ describe("primary auth use cases", () => {
   it("enrolls, verifies, and unenrolls MFA through user-scoped identity operations", async () => {
     const provider = identity();
     const repository = profiles();
-    const audit = { log: jest.fn() };
     await expect(
       new EnrollMfaUseCase(provider).execute({ accessToken: "raw" }),
     ).resolves.toMatchObject({ ok: true });
     await expect(
-      new VerifyMfaUseCase(provider, audit).execute({
+      new VerifyMfaUseCase(provider).execute({
         accessToken: "raw",
         userId: "profile-1",
         code: "123456",
       }),
     ).resolves.toEqual({ ok: true, value: tokens });
     await expect(
-      new UnenrollMfaUseCase(provider, repository, audit).execute({
+      new UnenrollMfaUseCase(provider, repository).execute({
         accessToken: "raw",
         userId: "profile-1",
         factorId: "factor",
@@ -500,14 +500,12 @@ describe("primary auth use cases", () => {
         }),
       ).execute({ accessToken: "raw" }),
     ).resolves.toEqual({ ok: false, error: { code: "mfa_enroll_failed" } });
-    const audit = { log: jest.fn() };
     for (const outcome of ["challenge_failed", "invalid"] as const) {
       const result = await new ConfirmMfaEnrollmentUseCase(
         identity({ verifyMfa: jest.fn().mockResolvedValue({ outcome }) }),
         profiles(),
         { hash: (v) => v },
         { otp: () => "", token: () => "", recoveryCode: () => "abcdef12" },
-        audit,
       ).execute({
         accessToken: "raw",
         userId: "profile-1",
@@ -521,13 +519,11 @@ describe("primary auth use cases", () => {
         identity({
           listUserMfaFactors: jest.fn().mockResolvedValue(null) as never,
         }),
-        audit,
       ).execute({ accessToken: "raw", userId: "profile-1", code: "123456" }),
     ).resolves.toEqual({ ok: false, error: { code: "mfa_factors_failed" } });
     await expect(
       new VerifyMfaUseCase(
         identity({ listUserMfaFactors: jest.fn().mockResolvedValue([]) }),
-        audit,
       ).execute({ accessToken: "raw", userId: "profile-1", code: "123456" }),
     ).resolves.toEqual({ ok: false, error: { code: "mfa_not_enrolled" } });
     await expect(
@@ -543,7 +539,6 @@ describe("primary auth use cases", () => {
           unenrollMfa: jest.fn().mockResolvedValue(false) as never,
         }),
         profiles(),
-        audit,
       ).execute({
         accessToken: "raw",
         userId: "profile-1",
@@ -556,7 +551,6 @@ describe("primary auth use cases", () => {
     const unavailable = jest
       .fn()
       .mockRejectedValue(new Error("auth identity provider unavailable"));
-    const audit = { log: jest.fn() };
 
     await expect(
       new EnrollMfaUseCase(identity({ enrollMfa: unavailable })).execute({
@@ -569,7 +563,6 @@ describe("primary auth use cases", () => {
         profiles(),
         { hash: (v) => v },
         { otp: () => "", token: () => "", recoveryCode: () => "abcdef12" },
-        audit,
       ).execute({
         accessToken: "raw",
         userId: "profile-1",
@@ -580,7 +573,6 @@ describe("primary auth use cases", () => {
     await expect(
       new VerifyMfaUseCase(
         identity({ listUserMfaFactors: unavailable }),
-        audit,
       ).execute({ accessToken: "raw", userId: "profile-1", code: "123456" }),
     ).resolves.toEqual({ ok: false, error: { code: "auth_unavailable" } });
     await expect(
@@ -588,14 +580,12 @@ describe("primary auth use cases", () => {
         identity({
           verifyMfa: unavailable,
         }),
-        audit,
       ).execute({ accessToken: "raw", userId: "profile-1", code: "123456" }),
     ).resolves.toEqual({ ok: false, error: { code: "auth_unavailable" } });
     await expect(
       new UnenrollMfaUseCase(
         identity({ unenrollMfa: unavailable }),
         profiles(),
-        audit,
       ).execute({
         accessToken: "raw",
         userId: "profile-1",
@@ -654,13 +644,11 @@ describe("primary auth use cases", () => {
 
   it("issues hashed recovery codes only after MFA verification", async () => {
     const repository = profiles();
-    const audit = { log: jest.fn() };
     const result = await new ConfirmMfaEnrollmentUseCase(
       identity(),
       repository,
       { hash: (v) => `hash:${v}` },
       { otp: () => "", token: () => "", recoveryCode: () => "abcdef12" },
-      audit,
       2,
     ).execute({
       accessToken: "raw",
@@ -684,7 +672,6 @@ describe("primary auth use cases", () => {
         }),
         { hash: (v) => v },
         { otp: () => "", token: () => "", recoveryCode: () => "abcdef12" },
-        audit,
         1,
       ).execute({
         accessToken: "raw",

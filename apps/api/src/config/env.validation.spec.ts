@@ -6,9 +6,20 @@ const required = Object.freeze({
   SUPABASE_SERVICE_ROLE_KEY: "service-role-key",
   SUPABASE_JWT_SECRET: "j".repeat(32),
   COOKIE_SIGNING_SECRET: "c".repeat(16),
+  CONNECTOR_SECRET_ENCRYPTION_KEY: "k".repeat(32),
 });
 
 describe("environment validation", () => {
+  it("keeps core API available without legacy or new vault key material", () => {
+    const { CONNECTOR_SECRET_ENCRYPTION_KEY: _legacy, ...core } = required;
+    expect(_legacy).toHaveLength(32);
+    expect(validateEnv(core).CONNECTOR_SECRET_ENCRYPTION_KEY).toBeUndefined();
+    expect(validateEnv(core).CONNECTOR_VAULT_KEYRING).toBeUndefined();
+    expect(
+      validateEnv({ ...core, CONNECTOR_VAULT_KEYRING: "malformed" })
+        .CONNECTOR_VAULT_KEYRING,
+    ).toBe("malformed");
+  });
   it("applies secure local defaults", () => {
     expect(validateEnv(required)).toMatchObject({
       NODE_ENV: "development",
@@ -23,13 +34,71 @@ describe("environment validation", () => {
       SMTP_HOST: "127.0.0.1",
       SMTP_PORT: 54325,
       SMTP_FROM: "CRA <no-reply@cra.test>",
+      SMTP_TLS_MODE: "mailpit",
+      SMTP_CONNECTION_TIMEOUT_MS: 10_000,
+      SMTP_GREETING_TIMEOUT_MS: 10_000,
+      SMTP_SOCKET_TIMEOUT_MS: 30_000,
       LOGIN_MAX_ATTEMPTS: 5,
       LOGIN_LOCK_MINUTES: 15,
       OTP_TTL_MINUTES: 15,
       RECOVERY_TTL_MINUTES: 60,
       INVITATION_TTL_DAYS: 7,
       SESSION_EPOCH_SKEW_SECONDS: 0,
+      TENANT_LIFECYCLE_LEASE_SECONDS: 60,
+      TENANT_EXPORT_MAX_ARCHIVE_BYTES: 47_000_000,
+      PRODUCT_RETENTION_ALERT_LEASE_SECONDS: 60,
+      PRODUCT_RETENTION_MAX_CLOCK_SKEW_MILLISECONDS: 5_000,
+      REPORTING_DEADLINE_MONITOR_LEASE_SECONDS: 60,
+      REPORTING_DEADLINE_MONITOR_MAX_CLOCK_SKEW_MILLISECONDS: 1_000,
+      PRODUCT_IMPORT_LEASE_SECONDS: 60,
+      PRODUCT_COMPLIANCE_LEASE_SECONDS: 60,
+      PRODUCT_COMPLIANCE_MAX_SYNC_INSPECT_BYTES: 67_108_864,
+      VULNERABILITY_REACHABILITY_REGISTERED_ADAPTERS_JSON: "",
+      VULNERABILITY_FINDING_REVIEW_NOTIFICATION_LEASE_SECONDS: 120,
+      VULNERABILITY_VEX_PUBLICATION_TARGETS_JSON: "",
+      VULNERABILITY_VEX_PUBLICATION_LEASE_SECONDS: 120,
+      BRANDING_SCANNER_STRICT: false,
+      AI_OLLAMA_TIMEOUT_MS: 30_000,
+      TRUSTED_PROXY_ADDRESSES: [],
     });
+  });
+
+  it("accepts only explicit proxy IP addresses", () => {
+    expect(
+      validateEnv({
+        ...required,
+        TRUSTED_PROXY_ADDRESSES: "127.0.0.1, ::1",
+      }).TRUSTED_PROXY_ADDRESSES,
+    ).toEqual(["127.0.0.1", "::1"]);
+    expect(() =>
+      validateEnv({ ...required, TRUSTED_PROXY_ADDRESSES: "0.0.0.0/0" }),
+    ).toThrow("TRUSTED_PROXY_ADDRESSES");
+    expect(() =>
+      validateEnv({ ...required, TRUSTED_PROXY_ADDRESSES: "localhost" }),
+    ).toThrow("TRUSTED_PROXY_ADDRESSES");
+  });
+
+  it("keeps AI unavailable by default and accepts only a versioned loopback provider", () => {
+    expect(validateEnv(required).AI_OLLAMA_URL).toBeUndefined();
+    expect(
+      validateEnv({
+        ...required,
+        AI_OLLAMA_URL: "http://127.0.0.1:11434",
+        AI_OLLAMA_MODEL: "qwen2.5:7b",
+      }),
+    ).toMatchObject({
+      AI_OLLAMA_URL: "http://127.0.0.1:11434",
+      AI_OLLAMA_MODEL: "qwen2.5:7b",
+    });
+    expect(() =>
+      validateEnv({ ...required, AI_OLLAMA_URL: "https://cloud.example" }),
+    ).toThrow("AI_OLLAMA_URL");
+    expect(() =>
+      validateEnv({ ...required, AI_OLLAMA_URL: "http://127.0.0.1:11434" }),
+    ).toThrow("must be configured together");
+    expect(() =>
+      validateEnv({ ...required, AI_OLLAMA_MODEL: "qwen:latest" }),
+    ).toThrow("AI_OLLAMA_MODEL");
   });
 
   it("parses explicit deployment values", () => {
@@ -50,12 +119,23 @@ describe("environment validation", () => {
         SMTP_USER: "mailer",
         SMTP_PASS: "secret",
         SMTP_FROM: "CRA <mail@cra.test>",
+        SMTP_TLS_MODE: "starttls",
+        SMTP_TLS_SERVERNAME: "smtp.cra.test",
+        SMTP_CA_CERT_PATH: "/etc/cra/smtp-ca.pem",
+        SMTP_CONNECTION_TIMEOUT_MS: "7000",
+        SMTP_GREETING_TIMEOUT_MS: "8000",
+        SMTP_SOCKET_TIMEOUT_MS: "9000",
         LOGIN_MAX_ATTEMPTS: "8",
         LOGIN_LOCK_MINUTES: "20",
         OTP_TTL_MINUTES: "10",
         RECOVERY_TTL_MINUTES: "45",
         INVITATION_TTL_DAYS: "14",
         SESSION_EPOCH_SKEW_SECONDS: "0",
+        BRANDING_SCANNER_STRICT: "true",
+        PRODUCT_SECURITY_UPDATE_EXTERNAL_REFERENCE_ALLOWED_HOSTS:
+          "updates.example.test,downloads.example.test",
+        VULNERABILITY_REACHABILITY_REGISTERED_ADAPTERS_JSON:
+          '[{"adapterId":"acme","version":"1.0.0","ecosystem":"npm","buildFormat":"node_modules"}]',
       }),
     ).toMatchObject({
       NODE_ENV: "production",
@@ -63,8 +143,19 @@ describe("environment validation", () => {
       COOKIE_SECURE: true,
       ACCESS_TOKEN_MAX_AGE: 1800,
       SMTP_PORT: 2525,
+      SMTP_TLS_MODE: "starttls",
+      SMTP_TLS_SERVERNAME: "smtp.cra.test",
+      SMTP_CA_CERT_PATH: "/etc/cra/smtp-ca.pem",
+      SMTP_CONNECTION_TIMEOUT_MS: 7000,
+      SMTP_GREETING_TIMEOUT_MS: 8000,
+      SMTP_SOCKET_TIMEOUT_MS: 9000,
       LOGIN_MAX_ATTEMPTS: 8,
       SESSION_EPOCH_SKEW_SECONDS: 0,
+      BRANDING_SCANNER_STRICT: true,
+      PRODUCT_SECURITY_UPDATE_EXTERNAL_REFERENCE_ALLOWED_HOSTS:
+        "updates.example.test,downloads.example.test",
+      VULNERABILITY_REACHABILITY_REGISTERED_ADAPTERS_JSON:
+        '[{"adapterId":"acme","version":"1.0.0","ecosystem":"npm","buildFormat":"node_modules"}]',
     });
   });
 
@@ -81,6 +172,41 @@ describe("environment validation", () => {
       COOKIE_SECURE: false,
       SESSION_EPOCH_SKEW_SECONDS: 0,
     });
+  });
+
+  it("rejects unsafe production SMTP TLS configuration", () => {
+    expect(() =>
+      validateEnv({
+        ...required,
+        NODE_ENV: "production",
+        SMTP_HOST: "smtp.customer.test",
+        SMTP_TLS_MODE: "mailpit",
+      }),
+    ).toThrow("SMTP_TLS_MODE");
+    expect(() =>
+      validateEnv({
+        ...required,
+        SMTP_TLS_MODE: "starttls",
+        SMTP_CONNECTION_TIMEOUT_MS: "999",
+      }),
+    ).toThrow("SMTP_CONNECTION_TIMEOUT_MS");
+  });
+
+  it("allows mailpit mode only for loopback SMTP hosts", () => {
+    expect(() =>
+      validateEnv({
+        ...required,
+        SMTP_HOST: "smtp.customer.test",
+        SMTP_TLS_MODE: "mailpit",
+      }),
+    ).toThrow("SMTP_TLS_MODE");
+    expect(
+      validateEnv({
+        ...required,
+        SMTP_HOST: "::1",
+        SMTP_TLS_MODE: "mailpit",
+      }),
+    ).toMatchObject({ SMTP_HOST: "::1", SMTP_TLS_MODE: "mailpit" });
   });
 
   it("rejects malformed and unsafe configuration with actionable paths", () => {
@@ -111,5 +237,85 @@ describe("environment validation", () => {
     expect(() =>
       validateEnv({ ...required, SESSION_EPOCH_SKEW_SECONDS: "1" }),
     ).toThrow("SESSION_EPOCH_SKEW_SECONDS: must be exactly 0");
+  });
+
+  it("accepts only explicit branding scanner policy booleans", () => {
+    expect(
+      validateEnv({ ...required, BRANDING_SCANNER_STRICT: "false" }),
+    ).toMatchObject({ BRANDING_SCANNER_STRICT: false });
+
+    expect(() =>
+      validateEnv({ ...required, BRANDING_SCANNER_STRICT: "enabled" }),
+    ).toThrow("BRANDING_SCANNER_STRICT");
+  });
+
+  it("bounds the configured lifecycle worker lease and in-memory archive ceiling", () => {
+    expect(() =>
+      validateEnv({
+        ...required,
+        TENANT_LIFECYCLE_LEASE_SECONDS: "3601",
+        TENANT_EXPORT_MAX_ARCHIVE_BYTES: "50000001",
+      }),
+    ).toThrow("TENANT_LIFECYCLE_LEASE_SECONDS: must not exceed 3600 seconds");
+  });
+
+  it("bounds the durable finding propagation worker lease", () => {
+    expect(
+      validateEnv({ ...required, FINDING_PROPAGATION_LEASE_SECONDS: "3600" }),
+    ).toMatchObject({ FINDING_PROPAGATION_LEASE_SECONDS: 3600 });
+    expect(() =>
+      validateEnv({ ...required, FINDING_PROPAGATION_LEASE_SECONDS: "3601" }),
+    ).toThrow(
+      "FINDING_PROPAGATION_LEASE_SECONDS: must not exceed 3600 seconds",
+    );
+  });
+
+  it("requires a one-second-or-greater reporting monitor skew threshold", () => {
+    expect(
+      validateEnv({
+        ...required,
+        REPORTING_DEADLINE_MONITOR_MAX_CLOCK_SKEW_MILLISECONDS: "1000",
+      }),
+    ).toMatchObject({
+      REPORTING_DEADLINE_MONITOR_MAX_CLOCK_SKEW_MILLISECONDS: 1_000,
+    });
+    expect(() =>
+      validateEnv({
+        ...required,
+        REPORTING_DEADLINE_MONITOR_MAX_CLOCK_SKEW_MILLISECONDS: "999",
+      }),
+    ).toThrow(
+      "REPORTING_DEADLINE_MONITOR_MAX_CLOCK_SKEW_MILLISECONDS: must be at least 1000 milliseconds",
+    );
+  });
+
+  it("requires an exact host allowlist before enabling connected CSAF", () => {
+    expect(() =>
+      validateEnv({
+        ...required,
+        VULNERABILITY_CSAF_INDEX_URL: "https://csaf.vendor.test/index.json",
+      }),
+    ).toThrow("VULNERABILITY_CSAF_ALLOWED_HOSTS: is required");
+
+    expect(
+      validateEnv({
+        ...required,
+        VULNERABILITY_CSAF_INDEX_URL: "https://csaf.vendor.test/index.json",
+        VULNERABILITY_CSAF_ALLOWED_HOSTS: "csaf.vendor.test",
+      }),
+    ).toMatchObject({
+      VULNERABILITY_CSAF_INDEX_URL: "https://csaf.vendor.test/index.json",
+      VULNERABILITY_CSAF_ALLOWED_HOSTS: "csaf.vendor.test",
+    });
+  });
+
+  it("rejects insecure CSAF endpoints and malformed allowlist entries", () => {
+    expect(() =>
+      validateEnv({
+        ...required,
+        VULNERABILITY_CSAF_INDEX_URL: "http://csaf.vendor.test/index.json",
+        VULNERABILITY_CSAF_ALLOWED_HOSTS: "csaf.vendor.test,https://other.test",
+      }),
+    ).toThrow("VULNERABILITY_CSAF_INDEX_URL: must use HTTPS");
   });
 });

@@ -1,0 +1,14 @@
+{
+  "project": "cra",
+  "environment": "local",
+  "host": "localhost",
+  "tablesAdded": 0,
+  "columnsAdded": 0,
+  "checks": {
+    "connectors_create_idempotency_pair_check": true,
+    "sync_conflicts_exactly_one_target_check": true,
+    "sync_run_plan_items_field_diffs_schema_check": true
+  },
+  "types": "CLI regenerated both copies with no diff",
+  "sqlConnectorAssertions": 77
+}

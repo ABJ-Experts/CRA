@@ -31,7 +31,7 @@ export const cardVariants = cva(
       variant: {
         outlined: "bg-canvas border border-border",
         filled: "bg-surface",
-        primary: "bg-active-500 text-white",
+        primary: "bg-active-500 text-on-accent",
       },
       size: {
         md: "p-6 gap-6",

@@ -107,12 +107,13 @@ export function Calendar({ className, classNames, ...props }: CalendarProps) {
           "disabled:pointer-events-none disabled:opacity-40"
         ),
 
-        // The 40x40 disc: `active-500` behind white text.
+        // The 40x40 disc: `active-500` behind its semantic contrast text.
         selected: cn(
-          "[&_button]:bg-active-500 [&_button]:text-white",
+          "[&_button]:bg-active-500 [&_button]:text-on-accent",
           "[&_button:hover]:bg-active-600"
         ),
-        today: "[&_button]:font-semibold [&_button]:text-active-500",
+        today:
+          "[&:not([data-selected])_button]:font-semibold [&:not([data-selected])_button]:text-active-500",
         outside: "[&_button]:text-border-strong",
         disabled: "[&_button]:text-fg-subtle",
         hidden: "invisible",

@@ -24,7 +24,21 @@ export type { TokenState } from "./app/_features/session/route-session-state";
  *   its failure mode is signing everyone out when the API hiccups.
  */
 
-const PROTECTED = ["/dashboard"];
+const PROTECTED = [
+  "/dashboard",
+  "/management",
+  "/organization",
+  "/products",
+  "/frameworks",
+  "/connectors",
+  "/account",
+  "/security",
+  "/roles",
+  "/permissions",
+  "/notifications",
+  "/audit",
+  "/onboarding",
+];
 
 const AUTH_PAGES = [
   "/sign-in",

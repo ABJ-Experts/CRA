@@ -6,6 +6,8 @@ import {
   apiClient,
   type ApiClient,
   type RequestJsonOptions,
+  type RequestTextOptions,
+  type RequestMultipartOptions,
 } from "./api-client";
 
 /**
@@ -16,7 +18,10 @@ export class AuthenticatedApiClient {
   private refreshInFlight: Promise<void> | null = null;
 
   constructor(
-    private readonly client: Pick<ApiClient, "request"> = apiClient,
+    private readonly client: Pick<
+      ApiClient,
+      "request" | "requestMultipart"
+    > = apiClient,
   ) {}
 
   async request<
@@ -42,6 +47,23 @@ export class AuthenticatedApiClient {
     }
   }
 
+  async requestText<TSchema extends z.ZodTypeAny>(
+    options: RequestTextOptions<TSchema>,
+  ): Promise<z.output<TSchema>> {
+    const client = this.client as Pick<
+      ApiClient,
+      "request" | "requestMultipart" | "requestText"
+    >;
+    try {
+      return await client.requestText(options);
+    } catch (error) {
+      if (!(error instanceof ApiClientError) || error.status !== 401)
+        throw error;
+      await this.refresh(options.fetcher ?? fetch);
+      return client.requestText(options);
+    }
+  }
+
   private async refresh(fetcher: typeof fetch): Promise<void> {
     this.refreshInFlight ??= this.client
       .request({
@@ -57,6 +79,15 @@ export class AuthenticatedApiClient {
 
     return this.refreshInFlight;
   }
+
+  requestMultipart<
+    TResponseSchema extends z.ZodTypeAny,
+    TFieldsSchema extends z.ZodTypeAny,
+  >(
+    options: RequestMultipartOptions<TResponseSchema, TFieldsSchema>,
+  ): Promise<z.output<TResponseSchema>> {
+    return this.client.requestMultipart(options);
+  }
 }
 
 export const authenticatedApiClient = new AuthenticatedApiClient();
@@ -69,4 +100,19 @@ export function authenticatedRequestJson<
   options: RequestJsonOptions<TResponseSchema, TInputSchema>,
 ): Promise<z.output<TResponseSchema>> {
   return authenticatedApiClient.request(options);
+}
+
+export function authenticatedRequestMultipart<
+  TResponseSchema extends z.ZodTypeAny,
+  TFieldsSchema extends z.ZodTypeAny,
+>(
+  options: RequestMultipartOptions<TResponseSchema, TFieldsSchema>,
+): Promise<z.output<TResponseSchema>> {
+  return authenticatedApiClient.requestMultipart(options);
+}
+
+export function authenticatedRequestText<TSchema extends z.ZodTypeAny>(
+  options: RequestTextOptions<TSchema>,
+): Promise<z.output<TSchema>> {
+  return authenticatedApiClient.requestText(options);
 }

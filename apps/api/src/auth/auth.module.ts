@@ -7,6 +7,7 @@ import { MailModule } from "../mail/mail.module";
 import { MailService } from "../mail/mail.service";
 import { SupabaseModule } from "../supabase/supabase.module";
 import type { AuthIdentityProvider } from "./application/auth-identity-provider.port";
+import { AuthSecurityAudit } from "./application/auth-security-audit";
 import type { AuthProfileRepository } from "./application/auth-profile-repository.port";
 import {
   AuthenticateUserUseCase,
@@ -25,7 +26,6 @@ import {
   SignOutEverywhereUseCase,
   UnenrollMfaUseCase,
   VerifyMfaUseCase,
-  type AuthAuditPort,
   type AuthNotifierPort,
   type AuthRandomPort,
   type ClockPort,
@@ -47,6 +47,8 @@ import { SupabaseMfaRecoveryRepository } from "./infrastructure/supabase-mfa-rec
 import { MfaController } from "./mfa/mfa.controller";
 import { MfaService } from "./mfa/mfa.service";
 import { TokenVerifierService } from "./token-verifier.service";
+import { TENANT_SCOPE_ACCESS_PORT } from "./application/tenant-scope-access.port";
+import { SupabaseTenantScopeAccessAdapter } from "./infrastructure/supabase-tenant-scope-access.adapter";
 
 @Module({
   imports: [AuditModule, SupabaseModule, MailModule],
@@ -62,6 +64,16 @@ import { TokenVerifierService } from "./token-verifier.service";
     NodeAuthRandomAdapter,
     SystemClockAdapter,
     SystemDelayAdapter,
+    SupabaseTenantScopeAccessAdapter,
+    {
+      provide: AuthSecurityAudit,
+      inject: [AuditService],
+      useFactory: (audit: AuditService) => new AuthSecurityAudit(audit),
+    },
+    {
+      provide: TENANT_SCOPE_ACCESS_PORT,
+      useExisting: SupabaseTenantScopeAccessAdapter,
+    },
     {
       provide: IssueVerificationArtifactUseCase,
       inject: [
@@ -230,28 +242,19 @@ import { TokenVerifierService } from "./token-verifier.service";
         SupabaseAuthProfileRepository,
         NodeSecretHashAdapter,
         NodeAuthRandomAdapter,
-        AuditService,
       ],
       useFactory: (
         identity: AuthIdentityProvider,
         profiles: AuthProfileRepository,
         hashes: SecretHashPort,
         random: AuthRandomPort,
-        audit: AuthAuditPort,
-      ) =>
-        new ConfirmMfaEnrollmentUseCase(
-          identity,
-          profiles,
-          hashes,
-          random,
-          audit,
-        ),
+      ) => new ConfirmMfaEnrollmentUseCase(identity, profiles, hashes, random),
     },
     {
       provide: VerifyMfaUseCase,
-      inject: [SupabaseAuthIdentityAdapter, AuditService],
-      useFactory: (identity: AuthIdentityProvider, audit: AuthAuditPort) =>
-        new VerifyMfaUseCase(identity, audit),
+      inject: [SupabaseAuthIdentityAdapter],
+      useFactory: (identity: AuthIdentityProvider) =>
+        new VerifyMfaUseCase(identity),
     },
     {
       provide: HasVerifiedMfaQuery,
@@ -276,18 +279,18 @@ import { TokenVerifierService } from "./token-verifier.service";
     },
     {
       provide: UnenrollMfaUseCase,
-      inject: [
-        SupabaseAuthIdentityAdapter,
-        SupabaseAuthProfileRepository,
-        AuditService,
-      ],
+      inject: [SupabaseAuthIdentityAdapter, SupabaseAuthProfileRepository],
       useFactory: (
         identity: AuthIdentityProvider,
         profiles: AuthProfileRepository,
-        audit: AuthAuditPort,
-      ) => new UnenrollMfaUseCase(identity, profiles, audit),
+      ) => new UnenrollMfaUseCase(identity, profiles),
     },
   ],
-  exports: [AuthService, MfaService, TokenVerifierService],
+  exports: [
+    AuthService,
+    MfaService,
+    TokenVerifierService,
+    TENANT_SCOPE_ACCESS_PORT,
+  ],
 })
 export class AuthModule {}

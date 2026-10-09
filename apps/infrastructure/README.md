@@ -112,6 +112,23 @@ pnpm --filter api run test:e2e
 `db:reset` is destructive to local data. The API end-to-end suite also requires
 the local Supabase stack and a built API; run it from the repository root.
 
+## M2 V1 propagation scale verification
+
+The NFR-009 scale suite creates 500 products, 5,000 releases, and 5,000,000
+opaque finding sources in one local database transaction. It requires indexed
+plans for source-page selection, job claims, source/job summaries, and bounded
+target-adjacency traversal, then rolls the complete fixture back. It is never
+part of normal tests and cannot run accidentally:
+
+```bash
+CRA_RUN_M2_PROPAGATION_SCALE=1 \
+  pnpm --filter infrastructure run test:propagation-scale
+```
+
+It uses the seeded `cra` development tenant only while the transaction is open;
+it does not reset, delete, or retain seeded/shared records. If it fails, the
+transaction is rolled back by the client disconnect or the explicit rollback.
+
 ## Not wired into Turborepo — on purpose
 
 There is no `turbo.json` here and no `dev`/`build`/`lint` scripts, so

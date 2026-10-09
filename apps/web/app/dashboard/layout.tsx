@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
-import { Sidebar } from "../_components/sidebar/sidebar";
-import { DashboardTopNav } from "./_components/dashboard-top-nav";
+import { SessionProvider } from "../_providers/session-provider";
+import { WorkspaceShell } from "../(workspace)/workspace-shell";
 
 /**
  * The shell every dashboard and table screen sits in, matching the frames:
@@ -12,12 +12,8 @@ import { DashboardTopNav } from "./_components/dashboard-top-nav";
  */
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="flex min-h-dvh bg-canvas">
-      <Sidebar />
-      <div className="flex min-w-0 flex-1 flex-col">
-        <DashboardTopNav />
-        <main className="min-w-0 flex-1">{children}</main>
-      </div>
-    </div>
+    <SessionProvider>
+      <WorkspaceShell>{children}</WorkspaceShell>
+    </SessionProvider>
   );
 }

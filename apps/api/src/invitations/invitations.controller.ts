@@ -8,13 +8,17 @@ import {
   HttpStatus,
   Param,
   Post,
+  Req,
 } from "@nestjs/common";
+import type { Request } from "express";
 import {
   acceptInvitationInputSchema,
   acceptInvitationResponseSchema,
   createInvitationInputSchema,
   invitationIdParamSchema,
   invitationListResponseSchema,
+  resendInvitationInputSchema,
+  resendInvitationResponseSchema,
 } from "@repo/contracts/invitations/schemas";
 import type {
   AcceptInvitationInput,
@@ -22,6 +26,8 @@ import type {
   CreateInvitationInput,
   InvitationIdParam,
   InvitationListResponse,
+  ResendInvitationInput,
+  ResendInvitationResponse,
 } from "@repo/contracts/invitations/types";
 import {
   idResponseSchema,
@@ -69,6 +75,7 @@ export class InvitationsController {
   async create(
     @Body(zodBody(createInvitationInputSchema)) dto: CreateInvitationInput,
     @CurrentUser() user: RequestUser,
+    @Req() request?: Request,
   ): Promise<IdResponse> {
     return this.invitations.create(
       this.orgOf(user),
@@ -79,6 +86,23 @@ export class InvitationsController {
         firstName: dto.firstName,
         lastName: dto.lastName,
       },
+      request?.ip,
+    );
+  }
+
+  @RequirePermissions("can_create_invitations")
+  @Post(":id/resend")
+  @HttpCode(HttpStatus.OK)
+  @ZodResponse(resendInvitationResponseSchema)
+  async resend(
+    @Body(zodBody(resendInvitationInputSchema)) _input: ResendInvitationInput,
+    @Param(zodParams(invitationIdParamSchema)) { id }: InvitationIdParam,
+    @CurrentUser() user: RequestUser,
+  ): Promise<ResendInvitationResponse> {
+    return this.invitations.resend(
+      this.orgOf(user),
+      { id: user.id, email: user.email },
+      id,
     );
   }
 

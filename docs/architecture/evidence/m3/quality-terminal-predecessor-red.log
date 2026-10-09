@@ -1,0 +1,10 @@
+BEGIN
+              set_config              
+--------------------------------------
+ 4edc0793-95d0-41fd-8adf-bbeff7b23e3f
+(1 row)
+
+INSERT 0 1
+DO
+psql:<stdin>:163: ERROR:  quality queue failures: terminal failed predecessor must not block later report; terminal failed predecessor is never a completed baseline; expired exhausted predecessor is recovered and skipped
+CONTEXT:  PL/pgSQL function inline_code_block line 49 at RAISE

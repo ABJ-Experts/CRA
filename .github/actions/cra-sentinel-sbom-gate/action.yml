@@ -1,0 +1,56 @@
+name: CRA Sentinel SBOM upload and build status
+description: Upload an existing SBOM, then check the nonpassing build status separately.
+inputs:
+  api-origin:
+    required: true
+    description: CRA Sentinel HTTPS API origin.
+  ci-token:
+    required: true
+    description: CRA Sentinel CI credential stored as an Actions secret.
+  binding-id:
+    required: true
+    description: Owner-authorized provider/repository/product/release binding ID.
+  sbom-path:
+    required: true
+    description: Path to an existing CycloneDX or SPDX SBOM.
+  declared-format:
+    required: false
+    description: cyclonedx or spdx.
+  declared-spec-version:
+    required: false
+    description: SBOM specification version.
+runs:
+  using: composite
+  steps:
+    - name: Reject untrusted workflow events
+      shell: bash
+      env:
+        CRA_EVENT_NAME: ${{ github.event_name }}
+      run: |
+        case "$CRA_EVENT_NAME" in
+          push|release) ;;
+          *) echo "CRA Sentinel CI upload is unavailable for this event" >&2; exit 1 ;;
+        esac
+    - name: Upload SBOM
+      shell: bash
+      env:
+        CRA_SENTINEL_MODE: upload
+        CRA_SENTINEL_API_ORIGIN: ${{ inputs.api-origin }}
+        CRA_SENTINEL_CI_TOKEN: ${{ inputs.ci-token }}
+        CRA_SENTINEL_BINDING_ID: ${{ inputs.binding-id }}
+        CRA_SENTINEL_SBOM_PATH: ${{ inputs.sbom-path }}
+        CRA_SENTINEL_RUN_ID: ${{ github.run_id }}
+        CRA_SENTINEL_RUN_ATTEMPT: ${{ github.run_attempt }}
+        CRA_SENTINEL_DECLARED_FORMAT: ${{ inputs.declared-format }}
+        CRA_SENTINEL_DECLARED_SPEC_VERSION: ${{ inputs.declared-spec-version }}
+      run: node "${{ github.action_path }}/../../../tools/ci/cra-sentinel-sbom-gate.mjs"
+    - name: Check build status
+      shell: bash
+      env:
+        CRA_SENTINEL_MODE: gate
+        CRA_SENTINEL_API_ORIGIN: ${{ inputs.api-origin }}
+        CRA_SENTINEL_CI_TOKEN: ${{ inputs.ci-token }}
+        CRA_SENTINEL_BINDING_ID: ${{ inputs.binding-id }}
+        CRA_SENTINEL_RUN_ID: ${{ github.run_id }}
+        CRA_SENTINEL_RUN_ATTEMPT: ${{ github.run_attempt }}
+      run: node "${{ github.action_path }}/../../../tools/ci/cra-sentinel-sbom-gate.mjs"
