@@ -1,3 +1,6 @@
+import { PortfolioController } from "./portfolio.controller";
+import { PortfolioUseCases } from "./application/portfolio-use-cases";
+import { SupabasePortfolioRepository } from "./infrastructure/supabase-portfolio.repository";
 import { DashboardTrendsController } from "./dashboard-trends.controller";
 import { DashboardTrendsUseCases } from "./application/dashboard-trends-use-cases";
 import { DashboardDatasetCodec } from "./infrastructure/dashboard-dataset-codec";
@@ -14,9 +17,27 @@ import { SupabaseDashboardRepository } from "./infrastructure/supabase-dashboard
 
 @Module({
   imports: [SupabaseModule, PermissionsModule],
-  controllers: [DashboardController, DashboardTrendsController],
+  controllers: [
+    DashboardController,
+    DashboardTrendsController,
+    PortfolioController,
+  ],
   exports: [DashboardTrendsUseCases],
   providers: [
+    SupabasePortfolioRepository,
+    {
+      provide: PortfolioUseCases,
+      inject: [
+        SupabasePortfolioRepository,
+        SupabaseDashboardPermissionsRepository,
+        DashboardCursorCodec,
+      ],
+      useFactory: (
+        repository: SupabasePortfolioRepository,
+        permissions: SupabaseDashboardPermissionsRepository,
+        tokens: DashboardCursorCodec,
+      ) => new PortfolioUseCases(repository, permissions, tokens),
+    },
     SupabaseDashboardTrendsRepository,
     {
       provide: DashboardDatasetCodec,

@@ -94,3 +94,5 @@ export type DashboardReadinessWithheldRow = z.output<
   typeof dashboardReadinessWithheldRowSchema
 >;
 export * from "./trends.types.js";
+
+export * from "./portfolio.types.js";

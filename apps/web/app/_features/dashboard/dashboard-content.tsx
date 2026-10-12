@@ -55,6 +55,12 @@ export function DashboardContent({ productId }: { productId?: string }) {
         actions={
           <div className="flex flex-wrap items-center gap-3">
             <Link
+              href="/dashboard/portfolio"
+              className="inline-flex min-h-10 items-center rounded-md border border-border bg-canvas px-4 text-subhead-medium text-fg underline-offset-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand"
+            >
+              Portfolio
+            </Link>
+            <Link
               href="/dashboard/reports"
               className="inline-flex min-h-10 items-center rounded-md border border-border bg-canvas px-4 text-subhead-medium text-fg underline-offset-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand"
             >

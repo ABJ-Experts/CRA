@@ -1,4 +1,6 @@
--- Frozen M4 source characterization: no source policy or validation changes.
+-- Frozen M4 source characterization, with the explicit M14-05 decimal repair.
+-- Cases 8/15 preserve the old reference and characterize the corrected source reader;
+-- all other source policy, provenance and validation expectations are unchanged.
 -- All synthetic source graphs and temporary reference functions roll back.
 begin;
 create extension if not exists pgtap;
@@ -208,14 +210,18 @@ analyze public.vulnerability_enrichments;
 do $$declare r record;old_value jsonb;new_value jsonb;preferred numeric;observed timestamptz;baseline_severity text;at_time jsonb;begin
 for r in select *from m14_cvss_cases loop
  old_value:=pg_temp.m14_cvss_reference(r.vulnerability_id,'2025-01-01');new_value:=public.m4_03_intelligence_json(r.vulnerability_id,'2025-01-01');
- if r.n=12 then
+ if r.n in(8,15)then
+ perform pg_temp.check('frozen decimal exclusion characterized case '||r.n,old_value#>'{cvss,preferred}'='null'::jsonb);
+ perform pg_temp.check('decimal source acceptance repaired case '||r.n,(new_value#>>'{cvss,preferred,baseScore}')::numeric=case when r.n=8 then 9.9 else 8.1 end);
+ perform pg_temp.check('decimal repair retains unrelated intelligence case '||r.n,old_value-'cvss'=new_value-'cvss');
+ elsif r.n=12 then
  -- Equal priority/timestamps have no source tiebreak contract. Preserve the
  -- valid candidate set and unrelated fields without asserting arbitrary order.
  perform pg_temp.check('unspecified tie remains a valid source candidate',old_value#>>'{cvss,preferred,baseScore}'in('1','4')and new_value#>>'{cvss,preferred,baseScore}'in('1','4'));
  perform pg_temp.check('tie preserves unrelated intelligence',old_value-'cvss'=new_value-'cvss');
  else perform pg_temp.check('full intelligence unchanged case '||r.n,old_value=new_value);end if;
  select(value->>'baseScore')::numeric into preferred from public.m4_03_cvss_rows(array[r.vulnerability_id]) order by case version when'4.0'then 4 when'3.1'then 3 when'3.0'then 2 when'2.0'then 1 else 0 end desc,source_updated_at desc nulls last,promoted_at desc limit 1;
- if r.n=12 then perform pg_temp.check('batch tie stays within authoritative candidate set',preferred in(1,4));else perform pg_temp.check('batch preferred source matches frozen reader case '||r.n,preferred is not distinct from(old_value#>>'{cvss,preferred,baseScore}')::numeric);end if;
+ if r.n in(8,15)then perform pg_temp.check('batch decimal matches corrected source reader case '||r.n,preferred=(new_value#>>'{cvss,preferred,baseScore}')::numeric);elsif r.n=12 then perform pg_temp.check('batch tie stays within authoritative candidate set',preferred in(1,4));else perform pg_temp.check('batch preferred source matches frozen reader case '||r.n,preferred is not distinct from(old_value#>>'{cvss,preferred,baseScore}')::numeric);end if;
  perform pg_temp.check('observation time is preserved as metadata case '||r.n,public.m4_03_intelligence_json(r.vulnerability_id,'2024-01-01')#>'{cvss,preferred}'=new_value#>'{cvss,preferred}'and public.m4_03_intelligence_json(r.vulnerability_id,'2024-01-01')#>>'{cvss,assessedAt}'<>new_value#>>'{cvss,assessedAt}');
 -- Equal-ranked ties have no preferred-order contract; do not invent one here.
 if r.n<>12 then
@@ -231,7 +237,7 @@ end if;
 end loop;
 perform pg_temp.check('GitHub score alias retained by full reader and batch',(select(public.m4_03_intelligence_json(vulnerability_id,now())#>>'{cvss,preferred,baseScore}')::numeric=9 and public.m5_triage_observation_severity(vulnerability_id,now())='critical'from m14_cvss_cases where n=13));
 perform pg_temp.check('baseScore takes priority over GitHub score alias',(select(public.m4_03_intelligence_json(vulnerability_id,now())#>>'{cvss,preferred,baseScore}')::numeric=4 from m14_cvss_cases where n=14));
-perform pg_temp.check('inherited GitHub decimal score exclusion unchanged',(select public.m4_03_intelligence_json(vulnerability_id,now())#>'{cvss,preferred}'='null'::jsonb from m14_cvss_cases where n=15));
+perform pg_temp.check('GitHub decimal score now retains source high severity',(select(public.m4_03_intelligence_json(vulnerability_id,now())#>>'{cvss,preferred,baseScore}')::numeric=8.1 and public.m5_triage_observation_severity(vulnerability_id,now())='high'from m14_cvss_cases where n=15));
 perform pg_temp.check('four-version source precedence',(select(public.m4_03_intelligence_json(vulnerability_id,now())#>>'{cvss,preferred,baseScore}')::numeric=9 from m14_cvss_cases where n=1));
 perform pg_temp.check('null observed time sorts last',(select(public.m4_03_intelligence_json(vulnerability_id,now())#>>'{cvss,preferred,baseScore}')::numeric=7 from m14_cvss_cases where n=2));
 perform pg_temp.check('malformed decimal/locale/IEEE values remain excluded',(select public.m4_03_intelligence_json(vulnerability_id,now())#>'{cvss,preferred}'='null'::jsonb from m14_cvss_cases where n=3));

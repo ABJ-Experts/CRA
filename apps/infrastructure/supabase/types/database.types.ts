@@ -27176,6 +27176,15 @@ export type Database = {
           outcome: string
         }[]
       }
+      get_portfolio_projection: {
+        Args: {
+          p_actor: string
+          p_endpoint: string
+          p_filters?: Json
+          p_org: string
+        }
+        Returns: Json
+      }
       get_product: {
         Args: {
           p_actor_user_id: string
@@ -34401,6 +34410,26 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      m14_05_finding_summary: { Args: { p_rows: Json }; Returns: Json }
+      m14_05_identity_digest: {
+        Args: { p_package: string; p_version: string }
+        Returns: string
+      }
+      m14_05_package_identity: {
+        Args: { p_purl: string; p_version: string }
+        Returns: Json
+      }
+      m14_05_percent_decode: { Args: { p_value: string }; Returns: string }
+      m14_05_readiness: {
+        Args: {
+          p_actor: string
+          p_name: string
+          p_org: string
+          p_product: string
+        }
+        Returns: Json
+      }
+      m14_05_revision_hash: { Args: { p_value: string }; Returns: string }
       m14_actor_can: {
         Args: { p_actor: string; p_org: string; p_permission: string }
         Returns: boolean
