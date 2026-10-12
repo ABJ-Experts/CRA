@@ -3167,6 +3167,212 @@ export type Database = {
           },
         ]
       }
+      export_jobs: {
+        Row: {
+          attempts: number
+          auditor_session_id: string | null
+          capture_bytes: number | null
+          captured_columns: Json | null
+          columns: Json
+          context: Json
+          expires_at: string
+          failure_code: string | null
+          filters: Json
+          format: string
+          grant_artifact_id: string | null
+          grant_digest: string | null
+          grant_expires_at: string | null
+          grant_id: string | null
+          id: string
+          idempotency_key: string
+          lease_expires_at: string | null
+          manifest: Json | null
+          organization_id: string
+          parts: Json
+          pending_audit_id: string | null
+          permission_version: number
+          processed_rows: number
+          request_digest: string
+          requested_at: string
+          requester_id: string | null
+          row_count: number | null
+          scope: string
+          selected_ids: string[]
+          session_id: string | null
+          snapshot_as_of: string | null
+          snapshot_transaction: string | null
+          source: string
+          state: string
+          subject_kind: string
+          supplier_invitation_id: string | null
+          supplier_session_digest: string | null
+          updated_at: string
+          version: number
+          worker_id: string | null
+        }
+        Insert: {
+          attempts?: number
+          auditor_session_id?: string | null
+          capture_bytes?: number | null
+          captured_columns?: Json | null
+          columns: Json
+          context: Json
+          expires_at?: string
+          failure_code?: string | null
+          filters: Json
+          format: string
+          grant_artifact_id?: string | null
+          grant_digest?: string | null
+          grant_expires_at?: string | null
+          grant_id?: string | null
+          id?: string
+          idempotency_key: string
+          lease_expires_at?: string | null
+          manifest?: Json | null
+          organization_id: string
+          parts?: Json
+          pending_audit_id?: string | null
+          permission_version: number
+          processed_rows?: number
+          request_digest: string
+          requested_at?: string
+          requester_id?: string | null
+          row_count?: number | null
+          scope: string
+          selected_ids?: string[]
+          session_id?: string | null
+          snapshot_as_of?: string | null
+          snapshot_transaction?: string | null
+          source: string
+          state?: string
+          subject_kind?: string
+          supplier_invitation_id?: string | null
+          supplier_session_digest?: string | null
+          updated_at?: string
+          version?: number
+          worker_id?: string | null
+        }
+        Update: {
+          attempts?: number
+          auditor_session_id?: string | null
+          capture_bytes?: number | null
+          captured_columns?: Json | null
+          columns?: Json
+          context?: Json
+          expires_at?: string
+          failure_code?: string | null
+          filters?: Json
+          format?: string
+          grant_artifact_id?: string | null
+          grant_digest?: string | null
+          grant_expires_at?: string | null
+          grant_id?: string | null
+          id?: string
+          idempotency_key?: string
+          lease_expires_at?: string | null
+          manifest?: Json | null
+          organization_id?: string
+          parts?: Json
+          pending_audit_id?: string | null
+          permission_version?: number
+          processed_rows?: number
+          request_digest?: string
+          requested_at?: string
+          requester_id?: string | null
+          row_count?: number | null
+          scope?: string
+          selected_ids?: string[]
+          session_id?: string | null
+          snapshot_as_of?: string | null
+          snapshot_transaction?: string | null
+          source?: string
+          state?: string
+          subject_kind?: string
+          supplier_invitation_id?: string | null
+          supplier_session_digest?: string | null
+          updated_at?: string
+          version?: number
+          worker_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "export_jobs_auditor_session_id_fkey"
+            columns: ["auditor_session_id"]
+            isOneToOne: false
+            referencedRelation: "technical_file_auditor_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "export_jobs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "export_jobs_requester_id_fkey"
+            columns: ["requester_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "export_jobs_supplier_invitation_id_fkey"
+            columns: ["supplier_invitation_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_evidence_invitations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "export_jobs_supplier_tenant_fk"
+            columns: ["organization_id", "supplier_invitation_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_evidence_invitations"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      export_snapshot_rows: {
+        Row: {
+          job_id: string
+          ordinal: number
+          organization_id: string
+          product_id: string | null
+          row_digest: string
+          row_values: Json
+          source_id: string
+          source_version: string
+        }
+        Insert: {
+          job_id: string
+          ordinal: number
+          organization_id: string
+          product_id?: string | null
+          row_digest: string
+          row_values: Json
+          source_id: string
+          source_version: string
+        }
+        Update: {
+          job_id?: string
+          ordinal?: number
+          organization_id?: string
+          product_id?: string | null
+          row_digest?: string
+          row_values?: Json
+          source_id?: string
+          source_version?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "export_snapshot_rows_organization_id_job_id_fkey"
+            columns: ["organization_id", "job_id"]
+            isOneToOne: false
+            referencedRelation: "export_jobs"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
       field_authority_policies: {
         Row: {
           connector_id: string
@@ -31402,6 +31608,1969 @@ export type Database = {
       m14_02_snapshot_can: {
         Args: { p_actor: string; p_org: string; p_snapshot: string }
         Returns: boolean
+      }
+      m14_03_actor_can: {
+        Args: {
+          p_actor_user_id: string
+          p_organization_id: string
+          p_permission: string
+        }
+        Returns: boolean
+      }
+      m14_03_additional_snapshot_access: {
+        Args: { p_job: Database["public"]["Tables"]["export_jobs"]["Row"] }
+        Returns: boolean
+      }
+      m14_03_additional_source_rows: {
+        Args: {
+          p_actor: string
+          p_context: Json
+          p_filters: Json
+          p_org: string
+          p_source: string
+        }
+        Returns: {
+          product_id: string
+          row_values: Json
+          source_id: string
+          source_version: string
+        }[]
+      }
+      m14_03_audit: {
+        Args: {
+          p_action: string
+          p_job: Database["public"]["Tables"]["export_jobs"]["Row"]
+          p_request_id: string
+        }
+        Returns: undefined
+      }
+      m14_03_audit_source_rows: {
+        Args: {
+          p_actor: string
+          p_context: Json
+          p_filters: Json
+          p_org: string
+        }
+        Returns: {
+          product_id: string
+          row_values: Json
+          source_id: string
+          source_version: string
+        }[]
+      }
+      m14_03_authorize_export_worker: {
+        Args: {
+          p_expected_version: number
+          p_job_id: string
+          p_organization_id: string
+          p_worker_id: string
+        }
+        Returns: boolean
+      }
+      m14_03_cancel_export: {
+        Args: {
+          p_actor_user_id: string
+          p_expected_version: number
+          p_idempotency_key: string
+          p_job_id: string
+          p_organization_id: string
+          p_session_id: string
+        }
+        Returns: Json
+      }
+      m14_03_capture_export: {
+        Args: {
+          p_expected_version: number
+          p_job_id: string
+          p_organization_id: string
+          p_worker_id: string
+        }
+        Returns: Json
+      }
+      m14_03_capture_ordinal: {
+        Args: { p_ordinal: number; p_row_bytes: number; p_total_bytes: number }
+        Returns: number
+      }
+      m14_03_checkpoint_export: {
+        Args: {
+          p_expected_version: number
+          p_job_id: string
+          p_organization_id: string
+          p_parts: Json
+          p_processed_rows: number
+          p_worker_id: string
+        }
+        Returns: Json
+      }
+      m14_03_claim_export: { Args: { p_worker_id: string }; Returns: Json }
+      m14_03_complete_export: {
+        Args: {
+          p_expected_version: number
+          p_job_id: string
+          p_manifest: Json
+          p_organization_id: string
+          p_worker_id: string
+        }
+        Returns: Json
+      }
+      m14_03_connector_conflict_rows: {
+        Args: { p_org: string; p_run: string }
+        Returns: {
+          authority_policy_id: string | null
+          authority_policy_snapshot: Json
+          conflict_kind: string
+          connector_id: string
+          correlation_id: string
+          cra_value: Json
+          cra_value_observed_at: string
+          cra_value_source: string
+          created_at: string
+          detected_at: string
+          entity_id: string | null
+          entity_type: string
+          external_identity_id: string | null
+          external_value: Json
+          external_value_hash: string
+          external_value_observed_at: string
+          field_path: string
+          id: string
+          organization_id: string
+          permitted_actions: string[]
+          plan_item_id: string | null
+          resolution_chosen_action: string | null
+          resolution_reason: string | null
+          resolution_status: string
+          resolution_value: Json | null
+          resolved_against_external_value_hash: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          supersedes_conflict_id: string | null
+          sync_run_id: string
+          updated_at: string
+          version: number
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "sync_conflicts"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      m14_03_connector_identity_rows: {
+        Args: { p_connector: string; p_org: string }
+        Returns: {
+          connector_id: string
+          cra_product_id: string
+          cra_release_id: string | null
+          created_at: string
+          created_by: string
+          entity_type: string
+          external_display_label: string | null
+          external_id: string
+          external_id_normalized: string | null
+          id: string
+          linked_at: string
+          linked_by: string
+          match_confidence: string
+          match_method: string
+          organization_id: string
+          superseded_at: string | null
+          superseded_by_id: string | null
+          supersedes_id: string | null
+          supersession_reason: string | null
+          unlink_reason: string | null
+          unlinked_at: string | null
+          unlinked_by: string | null
+          updated_at: string
+          updated_by: string
+          version: number
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "product_external_identities"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      m14_03_connector_plan_rows: {
+        Args: { p_org: string; p_run: string }
+        Returns: {
+          applied_at: string | null
+          cra_product_id: string | null
+          cra_release_id: string | null
+          created_at: string
+          dead_letter_resolved_at: string | null
+          dead_lettered_at: string | null
+          entity_type: string
+          error_category: string | null
+          error_code: string | null
+          expected_version: number | null
+          external_id: string
+          field_diffs: Json
+          id: string
+          issues: Json
+          organization_id: string
+          proposed_action: string
+          record_outcome: string
+          source_snapshot: Json | null
+          sync_run_id: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "sync_run_plan_items"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      m14_03_connector_registry_rows: {
+        Args: { p_org: string }
+        Returns: {
+          adapter_version: string
+          archived_at: string | null
+          archived_by: string | null
+          archived_reason: string | null
+          commit_policy: string
+          connection_config: Json
+          connection_revision: number
+          connector_type: string
+          create_idempotency_key: string | null
+          create_request_digest: string | null
+          created_at: string
+          created_by: string
+          credential_revision: number
+          disabled_at: string | null
+          disabled_by: string | null
+          display_name: string
+          enabled: boolean
+          field_map: Json
+          field_mapping_revision: number
+          id: string
+          last_test_connection_revision: number | null
+          last_test_error_code: string | null
+          last_test_outcome: string | null
+          last_tested_at: string | null
+          mapping_schema_digest: string | null
+          mapping_version: string
+          organization_id: string
+          scope_assessment: Json
+          secret_ref: string | null
+          updated_at: string
+          updated_by: string
+          version: number
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "connectors"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      m14_03_connector_run_rows: {
+        Args: { p_connector: string; p_org: string; p_status?: string }
+        Returns: {
+          actor_kind: string
+          actor_user_id: string | null
+          adapter_version: string
+          authority_snapshot: Json | null
+          canceled_at: string | null
+          cancellation_reason: string | null
+          checkpoint_cursor: string | null
+          commit_actor_user_id: string | null
+          commit_idempotency_key: string | null
+          commit_request_digest: string | null
+          committed_at: string | null
+          conflict_count: number
+          connection_revision: number
+          connector_id: string
+          correlation_id: string
+          create_count: number
+          created_at: string
+          credential_revision: number
+          cursor_baseline: string | null
+          cursor_from: string | null
+          cursor_to: string | null
+          cycle_blocked_count: number
+          error_code: string | null
+          estimated_graph_impact: Json
+          expires_at: string
+          failed_count: number
+          fetch_content_hash: string | null
+          field_mapping_revision: number | null
+          finished_at: string | null
+          id: string
+          lease_expires_at: string | null
+          lease_generation: number
+          lease_owner: string | null
+          mapping_snapshot: Json | null
+          mapping_version: string
+          next_attempt_at: string
+          organization_id: string
+          pending_count: number
+          permission_version: number | null
+          plan_basis_digest: string | null
+          processed_count: number
+          reconciliation_kind: string
+          replay_parent_run_id: string | null
+          replay_root_run_id: string | null
+          replay_source_mode: string | null
+          retry_count: number
+          row_count: number
+          schema_snapshot: Json | null
+          skip_count: number
+          skipped_count: number
+          started_at: string | null
+          status: string
+          succeeded_count: number
+          tombstone_count: number
+          trigger_idempotency_key: string
+          trigger_request_digest: string
+          unchanged_count: number
+          update_count: number
+          updated_at: string
+          version: number
+          work_kind: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "sync_runs"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      m14_03_core_source_policy: { Args: { p_source: string }; Returns: Json }
+      m14_03_create_export: {
+        Args: {
+          p_actor_user_id: string
+          p_input: Json
+          p_organization_id: string
+          p_session_id: string
+        }
+        Returns: Json
+      }
+      m14_03_create_portal_export: {
+        Args: {
+          p_input: Json
+          p_session_digest: string
+          p_subject_kind: string
+        }
+        Returns: Json
+      }
+      m14_03_create_readiness_export: {
+        Args: {
+          p_actor_user_id: string
+          p_input: Json
+          p_organization_id: string
+          p_session_id: string
+        }
+        Returns: Json
+      }
+      m14_03_dashboard_trend_rows: {
+        Args: {
+          p_actor: string
+          p_context: Json
+          p_filters: Json
+          p_org: string
+        }
+        Returns: {
+          product_id: string
+          row_values: Json
+          source_id: string
+          source_version: string
+        }[]
+      }
+      m14_03_domain_snapshot_access: {
+        Args: { p_job: Database["public"]["Tables"]["export_jobs"]["Row"] }
+        Returns: boolean
+      }
+      m14_03_domain_source_rows: {
+        Args: {
+          p_actor_user_id: string
+          p_context: Json
+          p_filters: Json
+          p_organization_id: string
+          p_source: string
+        }
+        Returns: {
+          product_id: string
+          row_values: Json
+          source_id: string
+          source_version: string
+        }[]
+      }
+      m14_03_evidence_search_rows: {
+        Args: {
+          p_actor: string
+          p_context: Json
+          p_filters: Json
+          p_org: string
+        }
+        Returns: {
+          product_id: string
+          row_values: Json
+          source_id: string
+          source_version: string
+        }[]
+      }
+      m14_03_export_cleanup_eligibility: {
+        Args: {
+          p_cleanup_run_id?: string
+          p_expected_checkpoint_version?: number
+          p_job_id: string
+          p_lease_owner?: string
+          p_organization_id: string
+        }
+        Returns: Json
+      }
+      m14_03_export_scalar: { Args: { p_value: Json }; Returns: Json }
+      m14_03_fail_export: {
+        Args: {
+          p_expected_version: number
+          p_failure_code: string
+          p_job_id: string
+          p_organization_id: string
+          p_worker_id: string
+        }
+        Returns: Json
+      }
+      m14_03_feed_group_scope: {
+        Args: {
+          p_actor: string
+          p_as_of?: string
+          p_category: string
+          p_class: string
+          p_org: string
+          p_severity: string
+          p_window: string
+        }
+        Returns: string
+      }
+      m14_03_framework_control_rows: {
+        Args: { p_include_archived?: boolean; p_org: string }
+        Returns: {
+          archived_at: string | null
+          created_at: string
+          created_by: string
+          description: string
+          id: string
+          implementation_status: string
+          organization_id: string
+          owner_user_id: string
+          revision: number
+          title: string
+          updated_at: string
+          updated_by: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "framework_controls"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      m14_03_framework_pack_rows: {
+        Args: { p_org: string }
+        Returns: {
+          approved_at: string | null
+          attribution: string
+          content_hash: string
+          distribution_rights: string | null
+          edition_date: string
+          edition_label: string | null
+          imported_at: string
+          language: string
+          owner_org_id: string | null
+          pack_key: string
+          requirement_count: number
+          review_evidence: string | null
+          review_owner: string | null
+          rights_evidence: string | null
+          source_celex: string | null
+          source_eli: string | null
+          source_kind: string
+          source_publication_date: string | null
+          source_url: string | null
+          title: string
+          version_key: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "framework_pack_versions"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      m14_03_get_export: {
+        Args: {
+          p_actor_user_id: string
+          p_job_id: string
+          p_organization_id: string
+          p_session_id: string
+        }
+        Returns: Json
+      }
+      m14_03_get_export_manifest: {
+        Args: {
+          p_actor_user_id: string
+          p_job_id: string
+          p_organization_id: string
+          p_session_id: string
+        }
+        Returns: Json
+      }
+      m14_03_get_portal_export: {
+        Args: {
+          p_job_id: string
+          p_session_digest: string
+          p_subject_kind: string
+        }
+        Returns: Json
+      }
+      m14_03_get_portal_export_manifest: {
+        Args: {
+          p_job_id: string
+          p_session_digest: string
+          p_subject_kind: string
+        }
+        Returns: Json
+      }
+      m14_03_heartbeat_export: {
+        Args: {
+          p_expected_version: number
+          p_job_id: string
+          p_organization_id: string
+          p_worker_id: string
+        }
+        Returns: Json
+      }
+      m14_03_invitation_list_rows: {
+        Args: { p_organization_id: string }
+        Returns: {
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          role: string
+          status: string
+        }[]
+      }
+      m14_03_issue_export_download_grant: {
+        Args: {
+          p_actor_user_id: string
+          p_artifact_id: string
+          p_job_id: string
+          p_organization_id: string
+          p_session_id: string
+          p_token_digest: string
+        }
+        Returns: Json
+      }
+      m14_03_issue_portal_export_download_grant: {
+        Args: {
+          p_artifact_id: string
+          p_job_id: string
+          p_session_digest: string
+          p_subject_kind: string
+          p_token_digest: string
+        }
+        Returns: Json
+      }
+      m14_03_job_access: {
+        Args: { p_job: Database["public"]["Tables"]["export_jobs"]["Row"] }
+        Returns: boolean
+      }
+      m14_03_job_json: {
+        Args: { p_job: Database["public"]["Tables"]["export_jobs"]["Row"] }
+        Returns: Json
+      }
+      m14_03_legal_entity_rows: {
+        Args: { p_org: string }
+        Returns: {
+          completion_status: string
+          created_at: string
+          created_by: string
+          deleted_at: string | null
+          display_name: string
+          id: string
+          identifier: string
+          is_default: boolean
+          legal_name: string | null
+          main_establishment_country: string | null
+          manufacturer_contact_email: string | null
+          manufacturer_contact_name: string | null
+          organization_id: string
+          phone: string | null
+          registered_address_administrative_area: string | null
+          registered_address_country: string | null
+          registered_address_line_1: string | null
+          registered_address_line_2: string | null
+          registered_address_locality: string | null
+          registered_address_postal_code: string | null
+          registration_identifier: string | null
+          registration_identifier_normalized: string | null
+          status: string
+          tax_identifier: string | null
+          tax_identifier_normalized: string | null
+          updated_at: string
+          updated_by: string
+          version: number
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "organization_legal_entities"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      m14_03_list_exports: {
+        Args: {
+          p_actor_user_id: string
+          p_organization_id: string
+          p_query: Json
+          p_session_id: string
+        }
+        Returns: Json
+      }
+      m14_03_list_portal_exports: {
+        Args: {
+          p_query: Json
+          p_session_digest: string
+          p_subject_kind: string
+        }
+        Returns: Json
+      }
+      m14_03_member_audit: {
+        Args: {
+          p_action: string
+          p_job: Database["public"]["Tables"]["export_jobs"]["Row"]
+          p_request_id: string
+        }
+        Returns: undefined
+      }
+      m14_03_member_job_access: {
+        Args: { p_job: Database["public"]["Tables"]["export_jobs"]["Row"] }
+        Returns: boolean
+      }
+      m14_03_member_list_rows: {
+        Args: { p_organization_id: string; p_q?: string }
+        Returns: {
+          created_at: string
+          id: string
+          role: string
+          users: Json
+        }[]
+      }
+      m14_03_modification_history_page: {
+        Args: {
+          p_actor_user_id: string
+          p_modification_id: string
+          p_organization_id: string
+          p_page: number
+          p_page_size: number
+          p_product_id: string
+          p_release_id: string
+        }
+        Returns: {
+          assessments: Json
+          outcome: string
+        }[]
+      }
+      m14_03_mutate_portal_export: {
+        Args: {
+          p_expected_version: number
+          p_idempotency_key: string
+          p_job_id: string
+          p_operation: string
+          p_session_digest: string
+          p_subject_kind: string
+        }
+        Returns: Json
+      }
+      m14_03_nested_domain_source_rows: {
+        Args: {
+          p_actor_user_id: string
+          p_context: Json
+          p_filters: Json
+          p_organization_id: string
+          p_source: string
+        }
+        Returns: {
+          product_id: string
+          row_values: Json
+          source_id: string
+          source_version: string
+        }[]
+      }
+      m14_03_nested_snapshot_access: {
+        Args: { p_job: Database["public"]["Tables"]["export_jobs"]["Row"] }
+        Returns: boolean
+      }
+      m14_03_operational_projection: {
+        Args: { p_keys: Json; p_row: Json }
+        Returns: Json
+      }
+      m14_03_operational_snapshot_access: {
+        Args: { p_job: Database["public"]["Tables"]["export_jobs"]["Row"] }
+        Returns: boolean
+      }
+      m14_03_operational_source_policy: {
+        Args: { p_source: string }
+        Returns: Json
+      }
+      m14_03_operational_source_rows: {
+        Args: {
+          p_actor: string
+          p_context: Json
+          p_filters: Json
+          p_org: string
+          p_source: string
+        }
+        Returns: {
+          product_id: string
+          row_values: Json
+          source_id: string
+          source_version: string
+        }[]
+      }
+      m14_03_operational_source_rows_base: {
+        Args: {
+          p_actor: string
+          p_context: Json
+          p_filters: Json
+          p_org: string
+          p_source: string
+        }
+        Returns: {
+          product_id: string
+          row_values: Json
+          source_id: string
+          source_version: string
+        }[]
+      }
+      m14_03_operational_source_rows_unprojected: {
+        Args: {
+          p_actor: string
+          p_context: Json
+          p_filters: Json
+          p_org: string
+          p_source: string
+        }
+        Returns: {
+          product_id: string
+          row_values: Json
+          source_id: string
+          source_version: string
+        }[]
+      }
+      m14_03_portal_job: {
+        Args: {
+          p_job_id: string
+          p_lock?: boolean
+          p_session_digest: string
+          p_subject_kind: string
+        }
+        Returns: {
+          attempts: number
+          auditor_session_id: string | null
+          capture_bytes: number | null
+          captured_columns: Json | null
+          columns: Json
+          context: Json
+          expires_at: string
+          failure_code: string | null
+          filters: Json
+          format: string
+          grant_artifact_id: string | null
+          grant_digest: string | null
+          grant_expires_at: string | null
+          grant_id: string | null
+          id: string
+          idempotency_key: string
+          lease_expires_at: string | null
+          manifest: Json | null
+          organization_id: string
+          parts: Json
+          pending_audit_id: string | null
+          permission_version: number
+          processed_rows: number
+          request_digest: string
+          requested_at: string
+          requester_id: string | null
+          row_count: number | null
+          scope: string
+          selected_ids: string[]
+          session_id: string | null
+          snapshot_as_of: string | null
+          snapshot_transaction: string | null
+          source: string
+          state: string
+          subject_kind: string
+          supplier_invitation_id: string | null
+          supplier_session_digest: string | null
+          updated_at: string
+          version: number
+          worker_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "export_jobs"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      m14_03_portal_principal: {
+        Args: { p_session_digest: string; p_subject_kind: string }
+        Returns: Json
+      }
+      m14_03_pre_administration_source_rows: {
+        Args: {
+          p_actor: string
+          p_context: Json
+          p_filters: Json
+          p_org: string
+          p_source: string
+        }
+        Returns: {
+          product_id: string
+          row_values: Json
+          source_id: string
+          source_version: string
+        }[]
+      }
+      m14_03_pre_column_job_access: {
+        Args: { p_job: Database["public"]["Tables"]["export_jobs"]["Row"] }
+        Returns: boolean
+      }
+      m14_03_pre_evidence_link_policy: {
+        Args: { p_source: string }
+        Returns: Json
+      }
+      m14_03_pre_portal_snapshot_access: {
+        Args: { p_job: Database["public"]["Tables"]["export_jobs"]["Row"] }
+        Returns: boolean
+      }
+      m14_03_pre_portal_source_policy: {
+        Args: { p_source: string }
+        Returns: Json
+      }
+      m14_03_pre_portal_source_rows: {
+        Args: {
+          p_actor_user_id: string
+          p_context: Json
+          p_filters: Json
+          p_organization_id: string
+          p_source: string
+        }
+        Returns: {
+          product_id: string
+          row_values: Json
+          source_id: string
+          source_version: string
+        }[]
+      }
+      m14_03_private_job_json: {
+        Args: { p_job: Database["public"]["Tables"]["export_jobs"]["Row"] }
+        Returns: Json
+      }
+      m14_03_product_matches: {
+        Args: {
+          p: Database["public"]["Tables"]["products"]["Row"]
+          p_archived: boolean
+          p_product_type: string
+          p_q: string
+          p_responsible_owner_id: string
+        }
+        Returns: boolean
+      }
+      m14_03_project_native_row: {
+        Args: { p_row: Json; p_source: string }
+        Returns: Json
+      }
+      m14_03_publish_capture: {
+        Args: {
+          p_expected_version: number
+          p_job_id: string
+          p_organization_id: string
+          p_worker_id: string
+        }
+        Returns: Json
+      }
+      m14_03_read_export_rows: {
+        Args: {
+          p_after_ordinal: number
+          p_expected_version: number
+          p_job_id: string
+          p_limit: number
+          p_organization_id: string
+          p_worker_id: string
+        }
+        Returns: Json
+      }
+      m14_03_readiness_report: {
+        Args: {
+          p_actor_user_id: string
+          p_organization_id: string
+          p_product_id: string
+        }
+        Returns: Json
+      }
+      m14_03_redeem_export_download_grant: {
+        Args: {
+          p_actor_user_id: string
+          p_grant_id: string
+          p_job_id: string
+          p_organization_id: string
+          p_session_id: string
+          p_token_digest: string
+        }
+        Returns: Json
+      }
+      m14_03_redeem_portal_export_download_grant: {
+        Args: {
+          p_grant_id: string
+          p_job_id: string
+          p_session_digest: string
+          p_subject_kind: string
+          p_token_digest: string
+        }
+        Returns: Json
+      }
+      m14_03_registry_capture_preflight: {
+        Args: {
+          p_actor_user_id: string
+          p_filters: Json
+          p_organization_id: string
+        }
+        Returns: undefined
+      }
+      m14_03_release_registry_rows: {
+        Args: {
+          p_actor_user_id: string
+          p_archived: boolean
+          p_lifecycle: string
+          p_organization_id: string
+          p_product_id: string
+        }
+        Returns: {
+          archived_at: string | null
+          archived_by: string | null
+          created_at: string
+          created_by: string
+          description: string | null
+          id: string
+          label: string
+          legal_entity_id: string
+          legal_entity_snapshot: Json
+          legal_entity_version: number
+          lifecycle: string
+          organization_id: string
+          placed_on_market_at: string | null
+          product_id: string
+          release_version: string
+          release_version_normalized: string | null
+          updated_at: string
+          updated_by: string
+          version: number
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "product_releases"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      m14_03_retry_export: {
+        Args: {
+          p_actor_user_id: string
+          p_expected_version: number
+          p_idempotency_key: string
+          p_job_id: string
+          p_organization_id: string
+          p_session_id: string
+        }
+        Returns: Json
+      }
+      m14_03_role_list_rows: {
+        Args: { p_organization_id: string }
+        Returns: {
+          base_role: string
+          color: string
+          created_at: string
+          description: string
+          id: string
+          is_active: boolean
+          is_system: boolean
+          name: string
+          permissions: Json
+          user_role_assignments: Json
+        }[]
+      }
+      m14_03_sbom_ci_binding_rows: {
+        Args: { p_cursor: string; p_limit: number; p_organization_id: string }
+        Returns: Json[]
+      }
+      m14_03_sbom_ci_build_run_rows: {
+        Args: {
+          p_binding_id: string
+          p_cursor: string
+          p_limit: number
+          p_organization_id: string
+        }
+        Returns: Json[]
+      }
+      m14_03_sbom_ci_credential_rows: {
+        Args: { p_cursor: string; p_limit: number; p_organization_id: string }
+        Returns: Json[]
+      }
+      m14_03_snapshot_access: {
+        Args: { p_job: Database["public"]["Tables"]["export_jobs"]["Row"] }
+        Returns: boolean
+      }
+      m14_03_source_connectors_agent_batches_rows: {
+        Args: {
+          p_actor: string
+          p_context: Json
+          p_filters: Json
+          p_org: string
+        }
+        Returns: {
+          product_id: string
+          row_values: Json
+          source_id: string
+          source_version: string
+        }[]
+      }
+      m14_03_source_connectors_catalogue_rows: {
+        Args: {
+          p_actor: string
+          p_context: Json
+          p_filters: Json
+          p_org: string
+        }
+        Returns: {
+          product_id: string
+          row_values: Json
+          source_id: string
+          source_version: string
+        }[]
+      }
+      m14_03_source_connectors_dead_letter_records_rows: {
+        Args: {
+          p_actor: string
+          p_context: Json
+          p_filters: Json
+          p_org: string
+        }
+        Returns: {
+          product_id: string
+          row_values: Json
+          source_id: string
+          source_version: string
+        }[]
+      }
+      m14_03_source_connectors_dead_letters_rows: {
+        Args: {
+          p_actor: string
+          p_context: Json
+          p_filters: Json
+          p_org: string
+        }
+        Returns: {
+          product_id: string
+          row_values: Json
+          source_id: string
+          source_version: string
+        }[]
+      }
+      m14_03_source_connectors_identities_rows: {
+        Args: {
+          p_actor: string
+          p_context: Json
+          p_filters: Json
+          p_org: string
+        }
+        Returns: {
+          product_id: string
+          row_values: Json
+          source_id: string
+          source_version: string
+        }[]
+      }
+      m14_03_source_connectors_instances_rows: {
+        Args: {
+          p_actor: string
+          p_context: Json
+          p_filters: Json
+          p_org: string
+        }
+        Returns: {
+          product_id: string
+          row_values: Json
+          source_id: string
+          source_version: string
+        }[]
+      }
+      m14_03_source_connectors_overview_rows: {
+        Args: {
+          p_actor: string
+          p_context: Json
+          p_filters: Json
+          p_org: string
+        }
+        Returns: {
+          product_id: string
+          row_values: Json
+          source_id: string
+          source_version: string
+        }[]
+      }
+      m14_03_source_connectors_run_conflicts_rows: {
+        Args: {
+          p_actor: string
+          p_context: Json
+          p_filters: Json
+          p_org: string
+        }
+        Returns: {
+          product_id: string
+          row_values: Json
+          source_id: string
+          source_version: string
+        }[]
+      }
+      m14_03_source_connectors_siem_deliveries_rows: {
+        Args: {
+          p_actor: string
+          p_context: Json
+          p_filters: Json
+          p_org: string
+        }
+        Returns: {
+          product_id: string
+          row_values: Json
+          source_id: string
+          source_version: string
+        }[]
+      }
+      m14_03_source_connectors_siem_destinations_rows: {
+        Args: {
+          p_actor: string
+          p_context: Json
+          p_filters: Json
+          p_org: string
+        }
+        Returns: {
+          product_id: string
+          row_values: Json
+          source_id: string
+          source_version: string
+        }[]
+      }
+      m14_03_source_connectors_sync_history_rows: {
+        Args: {
+          p_actor: string
+          p_context: Json
+          p_filters: Json
+          p_org: string
+        }
+        Returns: {
+          product_id: string
+          row_values: Json
+          source_id: string
+          source_version: string
+        }[]
+      }
+      m14_03_source_connectors_sync_plan_items_rows: {
+        Args: {
+          p_actor: string
+          p_context: Json
+          p_filters: Json
+          p_org: string
+        }
+        Returns: {
+          product_id: string
+          row_values: Json
+          source_id: string
+          source_version: string
+        }[]
+      }
+      m14_03_source_connectors_sync_records_rows: {
+        Args: {
+          p_actor: string
+          p_context: Json
+          p_filters: Json
+          p_org: string
+        }
+        Returns: {
+          product_id: string
+          row_values: Json
+          source_id: string
+          source_version: string
+        }[]
+      }
+      m14_03_source_connectors_sync_run_attempts_rows: {
+        Args: {
+          p_actor: string
+          p_context: Json
+          p_filters: Json
+          p_org: string
+        }
+        Returns: {
+          product_id: string
+          row_values: Json
+          source_id: string
+          source_version: string
+        }[]
+      }
+      m14_03_source_connectors_sync_runs_rows: {
+        Args: {
+          p_actor: string
+          p_context: Json
+          p_filters: Json
+          p_org: string
+        }
+        Returns: {
+          product_id: string
+          row_values: Json
+          source_id: string
+          source_version: string
+        }[]
+      }
+      m14_03_source_connectors_webhook_attempts_rows: {
+        Args: {
+          p_actor: string
+          p_context: Json
+          p_filters: Json
+          p_org: string
+        }
+        Returns: {
+          product_id: string
+          row_values: Json
+          source_id: string
+          source_version: string
+        }[]
+      }
+      m14_03_source_connectors_webhook_deliveries_rows: {
+        Args: {
+          p_actor: string
+          p_context: Json
+          p_filters: Json
+          p_org: string
+        }
+        Returns: {
+          product_id: string
+          row_values: Json
+          source_id: string
+          source_version: string
+        }[]
+      }
+      m14_03_source_connectors_webhook_endpoints_rows: {
+        Args: {
+          p_actor: string
+          p_context: Json
+          p_filters: Json
+          p_org: string
+        }
+        Returns: {
+          product_id: string
+          row_values: Json
+          source_id: string
+          source_version: string
+        }[]
+      }
+      m14_03_source_frameworks_catalog_rows: {
+        Args: {
+          p_actor: string
+          p_context: Json
+          p_filters: Json
+          p_org: string
+        }
+        Returns: {
+          product_id: string
+          row_values: Json
+          source_id: string
+          source_version: string
+        }[]
+      }
+      m14_03_source_frameworks_controls_rows: {
+        Args: {
+          p_actor: string
+          p_context: Json
+          p_filters: Json
+          p_org: string
+        }
+        Returns: {
+          product_id: string
+          row_values: Json
+          source_id: string
+          source_version: string
+        }[]
+      }
+      m14_03_source_frameworks_coverage_requirements_rows: {
+        Args: {
+          p_actor: string
+          p_context: Json
+          p_filters: Json
+          p_org: string
+        }
+        Returns: {
+          product_id: string
+          row_values: Json
+          source_id: string
+          source_version: string
+        }[]
+      }
+      m14_03_source_frameworks_crosswalks_rows: {
+        Args: {
+          p_actor: string
+          p_context: Json
+          p_filters: Json
+          p_org: string
+        }
+        Returns: {
+          product_id: string
+          row_values: Json
+          source_id: string
+          source_version: string
+        }[]
+      }
+      m14_03_source_frameworks_custom_requirements_preview_rows: {
+        Args: {
+          p_actor: string
+          p_context: Json
+          p_filters: Json
+          p_org: string
+        }
+        Returns: {
+          product_id: string
+          row_values: Json
+          source_id: string
+          source_version: string
+        }[]
+      }
+      m14_03_source_frameworks_custom_rows: {
+        Args: {
+          p_actor: string
+          p_context: Json
+          p_filters: Json
+          p_org: string
+        }
+        Returns: {
+          product_id: string
+          row_values: Json
+          source_id: string
+          source_version: string
+        }[]
+      }
+      m14_03_source_frameworks_requirement_tree_rows: {
+        Args: {
+          p_actor: string
+          p_context: Json
+          p_filters: Json
+          p_org: string
+        }
+        Returns: {
+          product_id: string
+          row_values: Json
+          source_id: string
+          source_version: string
+        }[]
+      }
+      m14_03_source_frameworks_upgrade_preview_rows: {
+        Args: {
+          p_actor: string
+          p_context: Json
+          p_filters: Json
+          p_org: string
+        }
+        Returns: {
+          product_id: string
+          row_values: Json
+          source_id: string
+          source_version: string
+        }[]
+      }
+      m14_03_source_frameworks_upgrade_review_rows: {
+        Args: {
+          p_actor: string
+          p_context: Json
+          p_filters: Json
+          p_org: string
+        }
+        Returns: {
+          product_id: string
+          row_values: Json
+          source_id: string
+          source_version: string
+        }[]
+      }
+      m14_03_source_notifications_burst_batches_rows: {
+        Args: {
+          p_actor: string
+          p_context: Json
+          p_filters: Json
+          p_org: string
+        }
+        Returns: {
+          product_id: string
+          row_values: Json
+          source_id: string
+          source_version: string
+        }[]
+      }
+      m14_03_source_notifications_chat_channels_rows: {
+        Args: {
+          p_actor: string
+          p_context: Json
+          p_filters: Json
+          p_org: string
+        }
+        Returns: {
+          product_id: string
+          row_values: Json
+          source_id: string
+          source_version: string
+        }[]
+      }
+      m14_03_source_notifications_chat_deliveries_rows: {
+        Args: {
+          p_actor: string
+          p_context: Json
+          p_filters: Json
+          p_org: string
+        }
+        Returns: {
+          product_id: string
+          row_values: Json
+          source_id: string
+          source_version: string
+        }[]
+      }
+      m14_03_source_notifications_deliveries_rows: {
+        Args: {
+          p_actor: string
+          p_context: Json
+          p_filters: Json
+          p_org: string
+        }
+        Returns: {
+          product_id: string
+          row_values: Json
+          source_id: string
+          source_version: string
+        }[]
+      }
+      m14_03_source_notifications_feed_preview_items_rows: {
+        Args: {
+          p_actor: string
+          p_context: Json
+          p_filters: Json
+          p_org: string
+        }
+        Returns: {
+          product_id: string
+          row_values: Json
+          source_id: string
+          source_version: string
+        }[]
+      }
+      m14_03_source_notifications_feed_rows: {
+        Args: {
+          p_actor: string
+          p_context: Json
+          p_filters: Json
+          p_org: string
+        }
+        Returns: {
+          product_id: string
+          row_values: Json
+          source_id: string
+          source_version: string
+        }[]
+      }
+      m14_03_source_onboarding_progress_rows: {
+        Args: {
+          p_actor: string
+          p_context: Json
+          p_filters: Json
+          p_org: string
+        }
+        Returns: {
+          product_id: string
+          row_values: Json
+          source_id: string
+          source_version: string
+        }[]
+      }
+      m14_03_source_organization_holidays_rows: {
+        Args: {
+          p_actor: string
+          p_context: Json
+          p_filters: Json
+          p_org: string
+        }
+        Returns: {
+          product_id: string
+          row_values: Json
+          source_id: string
+          source_version: string
+        }[]
+      }
+      m14_03_source_organization_legal_entities_rows: {
+        Args: {
+          p_actor: string
+          p_context: Json
+          p_filters: Json
+          p_org: string
+        }
+        Returns: {
+          product_id: string
+          row_values: Json
+          source_id: string
+          source_version: string
+        }[]
+      }
+      m14_03_source_organization_lifecycle_blockers_rows: {
+        Args: {
+          p_actor: string
+          p_context: Json
+          p_filters: Json
+          p_org: string
+        }
+        Returns: {
+          product_id: string
+          row_values: Json
+          source_id: string
+          source_version: string
+        }[]
+      }
+      m14_03_source_organization_retention_policies_rows: {
+        Args: {
+          p_actor: string
+          p_context: Json
+          p_filters: Json
+          p_org: string
+        }
+        Returns: {
+          product_id: string
+          row_values: Json
+          source_id: string
+          source_version: string
+        }[]
+      }
+      m14_03_source_organization_tenant_exports_rows: {
+        Args: {
+          p_actor: string
+          p_context: Json
+          p_filters: Json
+          p_org: string
+        }
+        Returns: {
+          product_id: string
+          row_values: Json
+          source_id: string
+          source_version: string
+        }[]
+      }
+      m14_03_source_permissions_matrix_rows: {
+        Args: {
+          p_actor: string
+          p_context: Json
+          p_filters: Json
+          p_org: string
+        }
+        Returns: {
+          product_id: string
+          row_values: Json
+          source_id: string
+          source_version: string
+        }[]
+      }
+      m14_03_source_policy: { Args: { p_source: string }; Returns: Json }
+      m14_03_source_rows: {
+        Args: {
+          p_actor_user_id: string
+          p_context: Json
+          p_filters: Json
+          p_organization_id: string
+          p_source: string
+        }
+        Returns: {
+          product_id: string
+          row_values: Json
+          source_id: string
+          source_version: string
+        }[]
+      }
+      m14_03_source_sboms_ci_binding_runs_rows: {
+        Args: {
+          p_actor: string
+          p_context: Json
+          p_filters: Json
+          p_org: string
+        }
+        Returns: {
+          product_id: string
+          row_values: Json
+          source_id: string
+          source_version: string
+        }[]
+      }
+      m14_03_source_sboms_ci_bindings_rows: {
+        Args: {
+          p_actor: string
+          p_context: Json
+          p_filters: Json
+          p_org: string
+        }
+        Returns: {
+          product_id: string
+          row_values: Json
+          source_id: string
+          source_version: string
+        }[]
+      }
+      m14_03_source_sboms_ci_credentials_rows: {
+        Args: {
+          p_actor: string
+          p_context: Json
+          p_filters: Json
+          p_org: string
+        }
+        Returns: {
+          product_id: string
+          row_values: Json
+          source_id: string
+          source_version: string
+        }[]
+      }
+      m14_03_source_sboms_components_rows: {
+        Args: {
+          p_actor: string
+          p_context: Json
+          p_filters: Json
+          p_org: string
+        }
+        Returns: {
+          product_id: string
+          row_values: Json
+          source_id: string
+          source_version: string
+        }[]
+      }
+      m14_03_source_sboms_composite_conflicts_rows: {
+        Args: {
+          p_actor: string
+          p_context: Json
+          p_filters: Json
+          p_org: string
+        }
+        Returns: {
+          product_id: string
+          row_values: Json
+          source_id: string
+          source_version: string
+        }[]
+      }
+      m14_03_source_sboms_composite_relationships_rows: {
+        Args: {
+          p_actor: string
+          p_context: Json
+          p_filters: Json
+          p_org: string
+        }
+        Returns: {
+          product_id: string
+          row_values: Json
+          source_id: string
+          source_version: string
+        }[]
+      }
+      m14_03_source_sboms_dependency_tree_rows: {
+        Args: {
+          p_actor: string
+          p_context: Json
+          p_filters: Json
+          p_org: string
+        }
+        Returns: {
+          product_id: string
+          row_values: Json
+          source_id: string
+          source_version: string
+        }[]
+      }
+      m14_03_source_sboms_diff_components_rows: {
+        Args: {
+          p_actor: string
+          p_context: Json
+          p_filters: Json
+          p_org: string
+        }
+        Returns: {
+          product_id: string
+          row_values: Json
+          source_id: string
+          source_version: string
+        }[]
+      }
+      m14_03_source_sboms_diff_findings_rows: {
+        Args: {
+          p_actor: string
+          p_context: Json
+          p_filters: Json
+          p_org: string
+        }
+        Returns: {
+          product_id: string
+          row_values: Json
+          source_id: string
+          source_version: string
+        }[]
+      }
+      m14_03_source_sboms_documents_for_release_rows: {
+        Args: {
+          p_actor: string
+          p_context: Json
+          p_filters: Json
+          p_org: string
+        }
+        Returns: {
+          product_id: string
+          row_values: Json
+          source_id: string
+          source_version: string
+        }[]
+      }
+      m14_03_source_sboms_quality_findings_rows: {
+        Args: {
+          p_actor: string
+          p_context: Json
+          p_filters: Json
+          p_org: string
+        }
+        Returns: {
+          product_id: string
+          row_values: Json
+          source_id: string
+          source_version: string
+        }[]
+      }
+      m14_03_source_sboms_source_history_rows: {
+        Args: {
+          p_actor: string
+          p_context: Json
+          p_filters: Json
+          p_org: string
+        }
+        Returns: {
+          product_id: string
+          row_values: Json
+          source_id: string
+          source_version: string
+        }[]
+      }
+      m14_03_source_sboms_supplier_requests_rows: {
+        Args: {
+          p_actor: string
+          p_context: Json
+          p_filters: Json
+          p_org: string
+        }
+        Returns: {
+          product_id: string
+          row_values: Json
+          source_id: string
+          source_version: string
+        }[]
+      }
+      m14_03_source_sboms_validation_diagnostics_rows: {
+        Args: {
+          p_actor: string
+          p_context: Json
+          p_filters: Json
+          p_org: string
+        }
+        Returns: {
+          product_id: string
+          row_values: Json
+          source_id: string
+          source_version: string
+        }[]
+      }
+      m14_03_source_vulnerabilities_document_findings_rows: {
+        Args: {
+          p_actor: string
+          p_context: Json
+          p_filters: Json
+          p_org: string
+        }
+        Returns: {
+          product_id: string
+          row_values: Json
+          source_id: string
+          source_version: string
+        }[]
+      }
+      m14_03_source_vulnerabilities_enriched_findings_rows: {
+        Args: {
+          p_actor: string
+          p_context: Json
+          p_filters: Json
+          p_org: string
+        }
+        Returns: {
+          product_id: string
+          row_values: Json
+          source_id: string
+          source_version: string
+        }[]
+      }
+      m14_03_source_vulnerabilities_feed_health_rows: {
+        Args: {
+          p_actor: string
+          p_context: Json
+          p_filters: Json
+          p_org: string
+        }
+        Returns: {
+          product_id: string
+          row_values: Json
+          source_id: string
+          source_version: string
+        }[]
+      }
+      m14_03_source_vulnerabilities_reachability_evidence_rows: {
+        Args: {
+          p_actor: string
+          p_context: Json
+          p_filters: Json
+          p_org: string
+        }
+        Returns: {
+          product_id: string
+          row_values: Json
+          source_id: string
+          source_version: string
+        }[]
+      }
+      m14_03_source_vulnerabilities_reevaluation_history_rows: {
+        Args: {
+          p_actor: string
+          p_context: Json
+          p_filters: Json
+          p_org: string
+        }
+        Returns: {
+          product_id: string
+          row_values: Json
+          source_id: string
+          source_version: string
+        }[]
+      }
+      m14_03_source_vulnerabilities_sync_runs_rows: {
+        Args: {
+          p_actor: string
+          p_context: Json
+          p_filters: Json
+          p_org: string
+        }
+        Returns: {
+          product_id: string
+          row_values: Json
+          source_id: string
+          source_version: string
+        }[]
+      }
+      m14_03_static_catalog_rows: {
+        Args: never
+        Returns: {
+          product_id: string
+          row_values: Json
+          source_id: string
+          source_version: string
+        }[]
+      }
+      m14_03_static_catalog_version: { Args: never; Returns: string }
+      m14_03_static_permission_rows: {
+        Args: { p_org: string }
+        Returns: {
+          product_id: string
+          row_values: Json
+          source_id: string
+          source_version: string
+        }[]
+      }
+      m14_03_static_permissions_version: { Args: never; Returns: string }
+      m14_03_triage_read_projection: {
+        Args: {
+          p_actor_user_id: string
+          p_cursor?: string
+          p_filters?: Json
+          p_limit?: number
+          p_order?: string
+          p_organization_id: string
+          p_sort?: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      m14_03_worker_job: {
+        Args: {
+          p_expected_version: number
+          p_job_id: string
+          p_organization_id: string
+          p_worker_id: string
+        }
+        Returns: {
+          attempts: number
+          auditor_session_id: string | null
+          capture_bytes: number | null
+          captured_columns: Json | null
+          columns: Json
+          context: Json
+          expires_at: string
+          failure_code: string | null
+          filters: Json
+          format: string
+          grant_artifact_id: string | null
+          grant_digest: string | null
+          grant_expires_at: string | null
+          grant_id: string | null
+          id: string
+          idempotency_key: string
+          lease_expires_at: string | null
+          manifest: Json | null
+          organization_id: string
+          parts: Json
+          pending_audit_id: string | null
+          permission_version: number
+          processed_rows: number
+          request_digest: string
+          requested_at: string
+          requester_id: string | null
+          row_count: number | null
+          scope: string
+          selected_ids: string[]
+          session_id: string | null
+          snapshot_as_of: string | null
+          snapshot_transaction: string | null
+          source: string
+          state: string
+          subject_kind: string
+          supplier_invitation_id: string | null
+          supplier_session_digest: string | null
+          updated_at: string
+          version: number
+          worker_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "export_jobs"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       m14_actor_can: {
         Args: { p_actor: string; p_org: string; p_permission: string }

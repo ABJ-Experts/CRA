@@ -1,4 +1,6 @@
 "use client";
+import { MemberExportControls } from "../exports/member-export-controls";
+import { ExportControls } from "../exports/export-controls";
 
 import { notificationFeedDestinationResponseSchema } from "@repo/contracts/notifications";
 import type {
@@ -97,6 +99,7 @@ export function NotificationCentre({
   const queryClient = useQueryClient();
   const {
     session,
+    permissions = {},
     isLoading: sessionLoading,
     isError: sessionError,
   } = useSession();
@@ -253,6 +256,24 @@ export function NotificationCentre({
 
   return (
     <div className="space-y-5 px-6 pb-10 lg:px-[30px]">
+      <ExportControls key={`${session?.organization?.id ?? "none"}:${session?.user?.id ?? "none"}`}
+        source="notifications.feed"
+        context={{}}
+        filters={query}
+        columns={[
+          "category",
+          "severity",
+          "occurredAt",
+          "title",
+          "summary",
+          "read",
+        ]}
+        enabled={Boolean(
+          session?.organization?.id &&
+          !sessionLoading &&
+          permissions.can_export_notifications,
+        )}
+      />
       <PageHeading
         title="Notifications"
         subtitle="Recent source events and delivery issues that you can access."
@@ -466,6 +487,8 @@ export function NotificationCentre({
                   className="rounded-xl border border-border bg-canvas p-4"
                 >
                   <div className="space-y-2">
+                    <MemberExportControls source="notifications.feed_preview_items" context={{ eventClass: item.eventClass, windowStartsAt: item.windowStartsAt }} filters={query} columns={["title"]} label="Export representative events" enabled={Boolean(session?.organization?.id && !sessionLoading)} />
+                    <p className="text-caption-1-regular text-fg-muted">This export includes the authorized representative events shown for this group, up to five. Open its filtered inbox to export all authorized events.</p>
                     <div className="flex flex-wrap items-center gap-2">
                       <h2 className="text-subhead-semibold text-fg">
                         {item.title}

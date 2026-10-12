@@ -1,4 +1,5 @@
 "use client";
+import { MemberExportControls } from "../../_features/exports/member-export-controls";
 
 import type {
   SbomQualityDimension,
@@ -155,6 +156,7 @@ function RemediationTable({
 
   return (
     <section aria-labelledby="sbom-quality-remediation-heading">
+      <MemberExportControls source="sboms.quality_findings" context={{ sourceId }} filters={{ limit: 50, cursor }} columns={["kind", "severity", "code", "ruleId", "dimension", "sourcePath", "expected", "actual", "remediation"]} enabled={enabled} />
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2

@@ -1,0 +1,43 @@
+# M14-03 additive deployment and rollback
+
+## Before deployment
+
+Use the repository's pnpm version and Supabase CLI. Confirm the project reference, environment, database ledger and repository migration baseline before running any mutation. Do not reset, repair migration history blindly, or apply unrelated pending migrations. Back up through the existing verified operational process; this ticket does not execute a live upgrade or restore.
+
+Deploy the feature-first contracts and permission catalogue with the API, web and export worker. Existing owner/admin defaults and organization overrides remain authoritative. Keep the database and private storage inaccessible to browser roles. The worker needs the existing server-side Supabase configuration; never expose service credentials to web bundles.
+
+## Additive schema
+
+The timestamped `20261009*_m14_03_*.sql` migrations introduce only `export_jobs` and `export_snapshot_rows`, private `filtered-exports` storage, tenant-qualified constraints/indexes, service-only functions, immutable capture protection and source-owned projections. Later amendments preserve native list compatibility and enforce current field-policy authorization. The unpublished 12 October storage compatibility experiment was retired: version `20261012052916` is a harmless history marker for fresh installs, and `20261012054548` removes only its experimental index on local stacks that applied it. The final schema preserves native versioned/partial uniqueness. The local repair path requires approved database-owner access; clean installs need no storage role change. Apply through the CLI in timestamp order, then run `pnpm --filter infrastructure run db:types` when public generated types changed. Do not hand-edit either generated copy.
+
+The inspected local database had a historical ledger mismatch: 158 applied versions versus 599 repository migrations before this feature. Local testing used a private staging CLI project with the exact existing applied versions represented by no-op files and only the new feature migrations supplied for application. No historical migration was replayed or ledger entry repaired. This is an environment-specific verification procedure, not permission to reproduce it on another environment. Resolve that environment's approved migration baseline before deployment.
+
+After applying, check both tables have enabled, non-forced RLS; browser roles have no table or RPC grants; all functions pin `search_path`; the bucket is private with a 64 MiB per-object limit; Storage can upload/download a private `filtered-exports` object; registry-policy parity covers 120 production sources. Run the infrastructure SQL suite, registry/permission/history parity runners and API/browser verification listed in `m14-03-verification.md`.
+
+## Local storage runtime compatibility
+
+On 2026-10-12, restarting the local stack selected cached Storage API 1.67.20 while the retained storage schema already had versioning migrations through `drop-bucketid-objname-index` (72). Upload completion failed with PostgreSQL `42P10`, after successful export capture. The compatible cached 1.77.0 runtime was restored on the same volume/network, with `DB_MIGRATIONS_FREEZE_AT=drop-bucketid-objname-index` to prevent schema upgrades. The older container remains stopped as `supabase_storage_cra_m14_03_cli_runtime_backup`; no objects or volumes were removed. A failed export subsequently retried and delivered its unchanged capture.
+
+Before any local restart, confirm runtime and retained storage schema compatibility. The current CLI default can recreate an older storage container; do not treat a successful health check as proof that uploads work. Do not blindly add a global object-name uniqueness constraint to versioned storage. A review agent initially introduced an unnecessary global uniqueness index. The unpublished migration source was retired before publication, while its local applied history was preserved. The corrective migration was applied through the CLI as the local database owner, restored native versioning without deleting objects, and resets the temporary role before CLI bookkeeping. A rollback fixture proves two versions of one object name can coexist. The public-schema diff excludes storage and cannot validate that change.
+
+## Process startup and limits
+
+Run the API using the normal environment configuration and run `pnpm --filter api run worker:exports` as a separate supervised process. Configure the real web origin and disable mocks. The worker uses bounded pages, leases, heartbeat fencing and tenant concurrency limits; successful captures/checkpoints survive process restart. Provision capacity for retained frozen values and private artifacts, rather than assuming expiry frees storage.
+
+V1 capture is limited to 100,000 rows and 128 MiB, with a bounded capture statement timeout. Artifact parts are bounded to 64 MiB, total output to 1 GiB and checkpoints to 512. Oversized requests fail explicitly. Capture `requestedAt` and `snapshotAsOf` separately. Monitor state, stage, attempts, progress and error codes without logging row contents or credentials. Failed jobs can retry only declared transient errors; terminal access/limit/integrity errors require a new authorized request.
+
+## Compatibility rollout
+
+Do not change best-effort `AuditService.log` globally. New critical export transitions use the existing durable audit path and an explicit pending-publication checkpoint. Capture remains unavailable for rendering until its durable event is recorded. Verify durable audit records after creation, capture, completion and authorized delivery. Source permissions, product restrictions, session revocation and portal expiry must deny both metadata and downloads. Current approved-column policies also apply to pre-issued delivery grants.
+
+The [audit visibility amendment](/Users/abjmac003/Documents/GitHub/CRA/apps/infrastructure/supabase/migrations/20261009130837_m14_03_export_audit_visibility.sql) registers only organization-scoped `export_job` audit metadata under current `can_view_audit`. It does not register new SIEM action pairs. Existing signed audit search pins whose allowed-source vector changes return a stale conflict; refresh the search explicitly rather than expanding an older pin. Filtered pins with an unchanged vector remain usable.
+
+The [range compatibility amendment](/Users/abjmac003/Documents/GitHub/CRA/apps/infrastructure/supabase/migrations/20261009132508_m14_03_audit_range_scope_compatibility.sql) updates the static M13-04 review fingerprint for `m13_03_event_visible_cached` from `f46693aa6776bffbfcd74b09d7d6c1a0` to the explicitly reviewed `c68cd7ec1545d18572acbbd2aba9b92c`. It asserts both the expected baseline and actual reviewed function definition. This is a change-review gate, not a replacement for the SHA-256 chain verification algorithm. No new source table dependency exists because export audit metadata has intrinsic organization scope.
+
+The same migration publishes a durable `audit.range.scope_changed` receipt through existing M13 MVCC authority for organizations with existing range workflows. Earlier range authorization snapshots and cached results become unavailable under the changed read predicate; the response has `access_changed`/`scope_unavailable` and confers no new verification authority. Use an explicit new verification request, or an allowed resume transition that reauthorizes the frozen range. Completed results require a new request. Fresh workflows authorize under the reviewed predicate. The migration does not rotate dataset/session epochs, rewrite ranges/checkpoints, alter grants or automatically approve any regulatory decision. Rollback retains this reviewed compatibility gate and its durable receipts.
+
+## Rollback
+
+Set `EXPORTS_CREATION_ENABLED=false` on the API to disable new member, readiness and portal jobs. Stop the separately supervised export worker through its process manager. Retain the additive schema, existing jobs, snapshots, artifacts and durable audit records. Keep compatible status/download APIs for still-authorized existing jobs. Do not run a destructive down migration or delete objects.
+
+Availability expiry is not deletion authorization. The existing M1 cleanup adapter is unavailable and M13 purge is blocked pending audit archival. This feature exposes a read-only retention eligibility projection that preserves those authorities and never authorizes cleanup. See `m14-03-retention-boundary.md`; a future approved cleanup/archival rollout is required before controlled deletion. Legal holds and protected snapshots remain intact.

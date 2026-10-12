@@ -1,4 +1,5 @@
 "use client";
+import { MemberExportControls } from "../../../_features/exports/member-export-controls";
 import { useRef, useState } from "react";
 import Link from "next/link";
 import { Button } from "@repo/ui/button";
@@ -235,7 +236,17 @@ function WebhooksWorkspace() {
         </p>
       ) : (
         <>
-          <SectionCard title="Receivers">
+          <SectionCard
+            title="Receivers"
+            action={
+              <MemberExportControls
+                source="connectors.webhook_endpoints"
+                context={{}}
+                filters={{ page: endpointPage, pageSize: 15 }}
+                label="Export receivers"
+              />
+            }
+          >
             <div
               className={cn(
                 "mb-4 flex flex-wrap items-center justify-between gap-3",
@@ -581,7 +592,17 @@ function WebhooksWorkspace() {
             </SectionCard>
           )}
           {endpoint && !creating && (
-            <SectionCard title="Delivery history">
+            <SectionCard
+              title="Delivery history"
+              action={
+                <MemberExportControls
+                  source="connectors.webhook_deliveries"
+                  context={{ endpointId }}
+                  filters={{ page: deliveryPage, pageSize: 15 }}
+                  label="Export webhook deliveries"
+                />
+              }
+            >
               {queries.deliveries.isPending ? (
                 <p
                   role="status"
@@ -709,6 +730,7 @@ function WebhooksWorkspace() {
                     queries.detail.data && (
                       <>
                         <WebhookDeliveryPanel
+                          attemptPage={attemptPage}
                           key={deliveryId}
                           detail={queries.detail.data.detail}
                           endpoint={endpoint}

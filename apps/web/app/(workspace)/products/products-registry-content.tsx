@@ -37,6 +37,7 @@ import {
   PageHeading,
   SectionCard,
 } from "../../dashboard/_components/dashboard-chrome";
+import { ExportControls } from "../../_features/exports/export-controls";
 import { ProductImportSection } from "./product-import-section";
 
 const PRODUCT_TYPES: readonly {
@@ -478,6 +479,24 @@ export function ProductsRegistryContent() {
             canExport={canExport}
           />
           <SectionCard title="Product registry" action={registrySummary}>
+            <ExportControls key={`${session?.organization?.id ?? "none"}:${session?.user?.id ?? "none"}`}
+              source="products.registry"
+              context={{}}
+              filters={{
+                page: 1,
+                pageSize: 25,
+                q: search.trim() || undefined,
+                archived,
+              }}
+              columns={[
+                "name",
+                "internalCode",
+                "productType",
+                "responsibleOwnerId",
+                "legalEntity.id",
+              ]}
+              enabled={liveApiEnabled && canView && canExport}
+            />
             <div className="mb-6 flex flex-col gap-3 border-b border-border pb-5 lg:flex-row lg:items-center lg:justify-between">
               <SearchInput
                 aria-label="Search products"

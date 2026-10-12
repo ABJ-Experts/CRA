@@ -1,4 +1,5 @@
 "use client";
+import { MemberExportControls } from "../../_features/exports/member-export-controls";
 
 import {
   type MfaRolloutReadiness,
@@ -275,6 +276,7 @@ export function OrganizationSettingsSection({
           aria-labelledby="organization-holidays-heading"
           className="rounded-xl border border-border bg-surface p-4"
         >
+          <MemberExportControls source="organization.holidays" context={{}} filters={{}} columns={["date"]} />
           <div className="flex items-start gap-3">
             <span
               aria-hidden="true"
@@ -441,6 +443,7 @@ export function OrganizationRetentionSection({
 
   return (
     <SectionCard title="Evidence retention">
+      <MemberExportControls source="organization.retention_policies" context={{}} filters={{}} columns={["evidenceClass", "version", "requestedRetentionDays", "effectiveFloorDays", "effectiveRetentionDays", "updatedAt"]} />
       <div className="flex flex-col gap-4">
         {!canEdit ? (
           <ReadonlyNotice>

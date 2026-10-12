@@ -1,4 +1,5 @@
 "use client";
+import { MemberExportControls } from "../exports/member-export-controls";
 
 import {
   EVIDENCE_BULK_INTAKE_MAX_BYTES,
@@ -266,6 +267,15 @@ export function EvidenceBulkIntakePanel({
       aria-labelledby="bulk-evidence-title"
       className="grid gap-4 rounded-xl border border-border bg-surface p-4"
     >
+      {batchId ? (
+        <MemberExportControls
+          source="evidence.bulk_intake_batch"
+          context={{ productId, batchId }}
+          filters={{}}
+          columns={["status", "fileName", "errorCode", "createdAt"]}
+          enabled={enabled}
+        />
+      ) : null}
       <div className="grid gap-1">
         <h2 id="bulk-evidence-title" className="text-h5 text-fg">
           Bulk evidence intake

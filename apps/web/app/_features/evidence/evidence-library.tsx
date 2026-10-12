@@ -1,4 +1,7 @@
 "use client";
+import { MemberExportControls } from "../exports/member-export-controls";
+
+import { ExportControls } from "../exports/export-controls";
 
 import {
   EVIDENCE_MAX_UPLOAD_BYTES,
@@ -594,6 +597,22 @@ export function EvidenceLibrary({
             </SectionCard>
           ) : null}
           <SectionCard title="Evidence records">
+            <ExportControls key={`${session?.organization?.id ?? "none"}:${session?.user?.id ?? "none"}:${productId}`}
+              source="evidence.documents"
+              context={{ productId }}
+              filters={{
+                validity: validityFilter === "all" ? undefined : validityFilter,
+              }}
+              columns={[
+                "title",
+                "documentClass",
+                "status",
+                "validityStatus",
+                "validFrom",
+                "validUntil",
+              ]}
+              enabled={enabled && permissions.can_export_evidence === true}
+            />
             <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
               <label
                 className="grid gap-1 text-caption-1-semibold text-fg"
@@ -769,6 +788,7 @@ export function EvidenceLibrary({
           </SectionCard>
           {selected ? (
             <SectionCard title="Verified version viewer">
+              {selected ? <MemberExportControls source="evidence.versions" context={{ productId, documentId: selected.id }} filters={{}} columns={["versionNumber", "title", "documentClass", "status", "validFrom", "validUntil", "createdAt"]} enabled={enabled} /> : null}
               <div className="grid gap-4 lg:grid-cols-[minmax(14rem,18rem)_1fr]">
                 <div className="grid content-start gap-3">
                   <label className="grid gap-1 text-caption-1-semibold text-fg">

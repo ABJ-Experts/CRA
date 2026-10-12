@@ -8,6 +8,19 @@ node_modules
 # Repository documentation
 docs/
 
+# M14-03 implementation and verification documents are reviewable source.
+!docs/
+docs/*
+!docs/architecture/
+docs/architecture/*
+!docs/architecture/m14-03*.md
+!docs/architecture/m14-03*.json
+!docs/superpowers/
+docs/superpowers/*
+!docs/superpowers/plans/
+docs/superpowers/plans/*
+!docs/superpowers/plans/2026-10-09-m14-03*.md
+
 # Local env files
 # NOTE: `.env` alone is an EXACT-match pattern, so `.env.production` and
 # `.env.staging` were committable. `.env*` closes that, with example files

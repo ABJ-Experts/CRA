@@ -1,4 +1,5 @@
 "use client";
+import { MemberExportControls } from "../../_features/exports/member-export-controls";
 
 import { Button } from "@repo/ui/button";
 import { Checkbox } from "@repo/ui/checkbox";
@@ -122,6 +123,7 @@ export default function PermissionsMatrixPage() {
   return (
     <div className="flex flex-col gap-6 px-6 pb-8 lg:px-[30px]">
       <div>
+        <MemberExportControls source="permissions.matrix" context={{}} filters={{}} columns={["permissionKey", "owner", "admin", "member", "viewer"]} />
         <h1 className="text-h5 text-fg">Permissions</h1>
         <p className="text-subhead-regular text-fg-muted">
           What each base role can do in this organization. Changes here apply to

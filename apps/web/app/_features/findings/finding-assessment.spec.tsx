@@ -43,6 +43,7 @@ const currentAssessment = () => ({
 });
 
 vi.mock("../../_providers/session-provider", () => ({
+  useSession: () => ({ session: null, permissions: {}, isLoading: false, role: null }),
   useHasPermission: (permission: string) =>
     permission === "can_edit_findings" ||
     (permission === "can_approve_findings" && permissions.canApprove),

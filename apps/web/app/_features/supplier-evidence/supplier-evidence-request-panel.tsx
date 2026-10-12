@@ -1,4 +1,5 @@
 "use client";
+import { MemberExportControls } from "../exports/member-export-controls";
 
 import {
   createSupplierEvidenceRequestInputSchema,
@@ -489,6 +490,7 @@ export function SupplierEvidenceRequestPanel({
 
   return (
     <SectionCard title="Evidence requests">
+      <MemberExportControls source="supplier_evidence.requests" context={{}} filters={{ supplierId, limit: 100 }} columns={["status", "title", "createdAt", "updatedAt"]} enabled={readEnabled} />
       <p className="text-caption-1-regular text-fg-muted">
         Issue a scoped supplier portal request. Product, findings, and
         organization data are never disclosed unless explicitly written into the

@@ -1,4 +1,5 @@
 "use client";
+import { MemberExportControls } from "../exports/member-export-controls";
 
 import { Button } from "@repo/ui/button";
 import { cn } from "@repo/ui/cn";
@@ -55,6 +56,12 @@ export function FrameworkCrosswalkPanel({
 
   return (
     <>
+      <MemberExportControls
+        source="frameworks.crosswalks"
+        context={{ packKey, versionKey }}
+        filters={{ limit: 50 }}
+        label="Export crosswalks"
+      />
       <p className={cn("mb-3 text-caption-1-regular text-fg-muted")}>
         These reviewed relationships suggest where evidence may be relevant. A
         partial, uncertain, or one-way link does not establish equivalence or

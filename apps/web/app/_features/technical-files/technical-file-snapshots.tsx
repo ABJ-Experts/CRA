@@ -1,4 +1,5 @@
 "use client";
+import { MemberExportControls } from "../exports/member-export-controls";
 
 import { Button } from "@repo/ui/button";
 import { cn } from "@repo/ui/cn";
@@ -129,6 +130,7 @@ export function TechnicalFileSnapshots({
       id="technical-file-snapshots"
       className="rounded-xl border border-border bg-surface-subtle p-4"
     >
+      <MemberExportControls source="technical_file.snapshots" context={{ productId }} filters={{}} columns={["technicalFileVersion", "releaseId", "purpose", "readinessStatus", "status", "payloadSha256", "createdAt"]} enabled={enabled && canView} />
       <div>
         <h2 id="technical-file-snapshots-heading" className="text-h4 text-fg">
           Technical-file snapshots
@@ -300,6 +302,7 @@ function SnapshotRow({
         "scroll-mt-24 rounded-xl border border-border bg-canvas p-3 outline-none focus-visible:ring-2 focus-visible:ring-focus",
       )}
     >
+      {current && canSnapshot ? <MemberExportControls source="technical_file.snapshot_exports" context={{ productId, snapshotId: snapshot.id, exportId: current.exportId }} filters={{}} columns={["status", "failureCode", "cancellationReason", "createdAt", "startedAt", "completedAt"]} /> : null}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-subhead-semibold text-fg">

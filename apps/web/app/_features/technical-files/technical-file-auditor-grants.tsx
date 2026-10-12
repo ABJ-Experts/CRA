@@ -1,4 +1,5 @@
 "use client";
+import { MemberExportControls } from "../exports/member-export-controls";
 
 import type { TechnicalFileSnapshotExport } from "@repo/contracts/technical-files";
 import { Button } from "@repo/ui/button";
@@ -81,6 +82,7 @@ export function TechnicalFileAuditorGrants({
 
   return (
     <section aria-labelledby={`auditor-grants-${snapshotId}`} className="mt-4 rounded-xl border border-border bg-surface-subtle p-4">
+      <MemberExportControls source="technical_file.auditor_grants" context={{ productId }} filters={{}} columns={["snapshotId", "recipientEmail", "purpose", "status", "expiresAt", "grantedAt", "revokedAt", "lastAccessedAt"]} enabled={canShare} />
       <h3 id={`auditor-grants-${snapshotId}`} className="text-subhead-semibold text-fg">Auditor access</h3>
       <p className="mt-1 max-w-[75ch] text-caption-1-regular text-fg-muted">Grant read-only access to this immutable snapshot and ready export only. Access cannot browse this workspace or other records.</p>
       {preview.data ? <p className="mt-3 text-caption-1-regular text-fg-muted">Scope: revision {preview.data.preview.snapshotRevision} · {preview.data.preview.snapshotStatus} · export {preview.data.preview.export.status} · expires no later than {date(preview.data.preview.maxExpiresAt)}.</p> : <p role="status" className="mt-3 text-caption-1-regular text-fg-muted">Checking immutable scope…</p>}

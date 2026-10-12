@@ -17,14 +17,22 @@ import {
   type ProfilePatch,
 } from "../application/member-repository.port";
 
-const MEMBER_SELECT =
-  "role, created_at, users!inner(id, email, username, first_name, last_name, avatar_url, job_title, is_active)";
-const MEMBER_SEARCH_COLUMNS = [
-  "email",
-  "first_name",
-  "last_name",
-  "username",
-] as const;
+const memberRowSchema = z.object({
+  role: z.string(),
+  created_at: z.string(),
+  users: z
+    .object({
+      id: z.string(),
+      email: z.string(),
+      username: z.string().nullable(),
+      first_name: z.string().nullable(),
+      last_name: z.string().nullable(),
+      avatar_url: z.string().nullable(),
+      job_title: z.string().nullable(),
+      is_active: z.boolean(),
+    })
+    .nullable(),
+});
 const mutationResultSchema = z.object({
   status: z.enum(["updated", "unchanged", "replayed", "not_found", "conflict"]),
 });
@@ -36,36 +44,31 @@ export class SupabaseMemberRepository implements MemberRepository {
   constructor(private readonly supabase: SupabaseService) {}
 
   async list(orgId: string, params: PageParams): Promise<Paged<Member>> {
-    let countQuery = this.supabase
+    const args = {
+      p_organization_id: orgId,
+      p_q: (params.q ?? null) as string,
+    };
+    const countResult = await this.supabase
       .admin()
-      .from("organization_members")
-      .select("id, users!inner(id)", { count: "exact", head: true })
-      .eq("organization_id", orgId);
-    const search = this.searchExpression(params.q);
-    if (search) {
-      countQuery = countQuery.or(search, { referencedTable: "users" });
-    }
-    const countResult = await countQuery;
+      .rpc("m14_03_member_list_rows", args, { count: "exact", head: true });
     if (countResult.error) this.fail(countResult.error.message);
 
     const total = countResult.count ?? 0;
     const { from, to } = resolvePage(total, params);
-    let rowsQuery = this.supabase
+    const rowsQuery = this.supabase
       .admin()
-      .from("organization_members")
-      .select(MEMBER_SELECT, { count: "exact" })
-      .eq("organization_id", orgId);
-    if (search) {
-      rowsQuery = rowsQuery.or(search, { referencedTable: "users" });
-    }
+      .rpc("m14_03_member_list_rows", args, { count: "exact" });
     const result = await rowsQuery
       .order("created_at", { ascending: params.order === "asc" })
+      .order("id", { ascending: true })
       .range(from, to);
     if (result.error) this.fail(result.error.message);
 
-    const rows = (result.data ?? [])
-      .filter((row) => row.users !== null)
-      .map((row) => this.toMember(row));
+    const parsed = memberRowSchema.array().safeParse(result.data ?? []);
+    if (!parsed.success) this.fail("invalid member list projection");
+    const rows = parsed.data.flatMap((row) =>
+      row.users ? [this.toMember({ ...row, users: row.users })] : [],
+    );
     return paged(rows, result.count ?? total, params);
   }
 
@@ -214,15 +217,6 @@ export class SupabaseMemberRepository implements MemberRepository {
       throw new MemberRepositoryError("member_not_found");
     if (parsed.data.status === "conflict")
       throw new MemberRepositoryError("conflict");
-  }
-
-  private searchExpression(search: string | undefined): string | null {
-    if (!search) return null;
-    const term = search.replace(/[(),\\"]/g, "");
-    if (!term) return null;
-    return MEMBER_SEARCH_COLUMNS.map(
-      (column) => `${column}.ilike.%${term}%`,
-    ).join(",");
   }
 
   private toMember(row: {

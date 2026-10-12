@@ -65,11 +65,10 @@ export class SupabaseFrameworkRepository implements FrameworkRepository {
     if (offset > 2_147_483_647 - query.limit)
       throw new FrameworkInvalidRequestError();
     const { data: allRows, error: packError } = await client
-      .from("framework_pack_versions")
+      .rpc("m14_03_framework_pack_rows", { p_org: orgId })
       .select(
         "pack_key,version_key,title,edition_date,language,source_celex,source_url,attribution,content_hash,source_kind,edition_label,distribution_rights,review_owner,owner_org_id",
       )
-      .or(`owner_org_id.is.null,owner_org_id.eq.${orgId}`)
       .order("pack_key")
       .order("edition_date", { ascending: false })
       .order("version_key")
@@ -159,7 +158,7 @@ export class SupabaseFrameworkRepository implements FrameworkRepository {
     // Pack content is global and immutable. This scoped membership check must
     // precede the global read because the service-role client bypasses RLS.
     const { data: pack, error: packError } = await client
-      .from("framework_pack_versions")
+      .rpc("m14_03_framework_pack_rows", { p_org: orgId })
       .select("pack_key,edition_date,language,owner_org_id")
       .eq("pack_key", input.packKey)
       .eq("version_key", input.versionKey)

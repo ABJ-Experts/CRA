@@ -1,4 +1,5 @@
 "use client";
+import { MemberExportControls } from "../../_features/exports/member-export-controls";
 
 import { SbomExportPanel } from "./sbom-export-panel";
 import type {
@@ -259,6 +260,7 @@ function ComponentSearch({
 
   return (
     <section aria-labelledby="sbom-component-search-heading">
+      <MemberExportControls source="sboms.components" context={{ documentId }} filters={debouncedValue === "" ? { limit: 25, cursor } : { q: debouncedValue, limit: 25, cursor }} columns={["normalizedName", "normalizedVersion", "canonicalPurl", "ecosystem", "scope", "licenseExpression"]} enabled={enabled} />
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <p className="text-caption-1-semibold text-fg-muted">
@@ -464,6 +466,7 @@ function DependencyTree({
 
   return (
     <section aria-labelledby="sbom-dependency-tree-heading">
+      <MemberExportControls source="sboms.dependency_tree" context={{ documentId }} filters={{ limit: 50, cursor: cursors[ROOT_KEY] }} columns={["normalizedName", "normalizedVersion", "parentComponentId", "depth"]} enabled={enabled} />
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <p className="text-caption-1-semibold text-fg-muted">

@@ -1,0 +1,113 @@
+- generic [active] [ref=f2e1]:
+  - generic [ref=f2e3]:
+    - complementary [ref=f2e4]:
+      - generic [ref=f2e5]:
+        - generic [ref=f2e6]:
+          - link "CRA Sentinel" [ref=f2e7] [cursor=pointer]:
+            - /url: /dashboard
+            - generic [aria-hidden] [ref=f2e8]: C
+            - text: CRA Sentinel
+          - button "Collapse sidebar" [ref=f2e9] [cursor=pointer]
+        - navigation "Main" [ref=f2e12]:
+          - generic [ref=f2e13]:
+            - list [ref=f2e15]:
+              - listitem [ref=f2e16]:
+                - link "Dashboard" [ref=f2e17] [cursor=pointer]:
+                  - /url: /dashboard
+              - listitem [ref=f2e25]:
+                - link "Management" [ref=f2e26] [cursor=pointer]:
+                  - /url: /management
+              - listitem [ref=f2e32]:
+                - link "Organization" [ref=f2e33] [cursor=pointer]:
+                  - /url: /organization
+              - listitem [ref=f2e40]:
+                - link "Products" [ref=f2e41] [cursor=pointer]:
+                  - /url: /products
+              - listitem [ref=f2e48]:
+                - link "Suppliers" [ref=f2e49] [cursor=pointer]:
+                  - /url: /suppliers
+              - listitem [ref=f2e54]:
+                - link "Frameworks" [ref=f2e55] [cursor=pointer]:
+                  - /url: /frameworks
+              - listitem [ref=f2e60]:
+                - link "Findings" [ref=f2e61] [cursor=pointer]:
+                  - /url: /findings
+              - listitem [ref=f2e66]:
+                - link "Reporting" [ref=f2e67] [cursor=pointer]:
+                  - /url: /reporting
+              - listitem [ref=f2e73]:
+                - link "Tasks" [ref=f2e74] [cursor=pointer]:
+                  - /url: /tasks
+              - listitem [ref=f2e80]:
+                - link "Connectors" [ref=f2e81] [cursor=pointer]:
+                  - /url: /connectors
+              - listitem [ref=f2e88]:
+                - link "Audit" [ref=f2e89] [cursor=pointer]:
+                  - /url: /audit
+            - generic [ref=f2e95]:
+              - paragraph [ref=f2e96]: Account & access
+              - list [ref=f2e97]:
+                - listitem [ref=f2e98]:
+                  - button "Profile" [ref=f2e99] [cursor=pointer]
+                  - generic
+                - listitem [ref=f2e113]:
+                  - button "Authorization" [ref=f2e114] [cursor=pointer]
+                  - generic
+        - button "Sign out" [ref=f2e130] [cursor=pointer]
+    - generic [ref=f2e135]:
+      - banner [ref=f2e136]:
+        - navigation "Breadcrumb" [ref=f2e138]:
+          - list [ref=f2e139]:
+            - listitem [ref=f2e140]:
+              - link "Dashboard" [ref=f2e141] [cursor=pointer]:
+                - /url: /dashboard
+            - listitem [aria-hidden] [ref=f2e142]
+            - listitem [ref=f2e145]:
+              - generic [ref=f2e146]: Products
+        - generic [ref=f2e147]:
+          - button "Search" [ref=f2e148] [cursor=pointer]
+          - button "Notifications, 1 unread" [ref=f2e178] [cursor=pointer]
+          - generic [ref=f2e156]:
+            - generic [ref=f2e157]: AF
+            - 'img "Ada Foster: online" [ref=f2e158]'
+      - main [ref=f2e159]:
+        - generic [ref=f2e160]:
+          - generic [ref=f2e161]:
+            - generic [ref=f2e162]:
+              - heading "Products" [level=1] [ref=f2e163]
+              - paragraph [ref=f2e164]: Authoritative products and releases for the active organization.
+            - button "Create product" [ref=f2e182] [cursor=pointer]
+          - generic [ref=f2e183]:
+            - heading "Import products and releases" [level=2] [ref=f2e185]
+            - generic [ref=f2e187]:
+              - button "Export imports" [ref=f2e189] [cursor=pointer]
+              - paragraph [ref=f2e190]: Upload a versioned CSV for validation. Product and release records are not changed until you confirm a successful dry run.
+              - generic [ref=f2e191]:
+                - generic [ref=f2e192]:
+                  - text: Import CSV file
+                  - button "Import CSV file" [ref=f2e193] [cursor=pointer]
+                - generic [ref=f2e194]:
+                  - button "Download template" [ref=f2e195] [cursor=pointer]
+                  - button "Validate CSV" [disabled] [ref=f2e196]
+          - generic [ref=f2e197]:
+            - generic [ref=f2e198]:
+              - heading "Product registry" [level=2] [ref=f2e199]
+              - paragraph [ref=f2e200]: 0 products in this registry
+            - generic [ref=f2e201]:
+              - generic [ref=f2e202]:
+                - button "Export list" [expanded] [ref=f2e203] [cursor=pointer]
+                - region "List export" [ref=f2e491]:
+                  - generic [ref=f2e492]
+                  - paragraph [ref=f2e497]: Uses the current filters and approved columns. Maximum 100,000 rows / 128 MiB per capture. Larger results require narrower filters; no rows are silently omitted.
+                  - button "Create export" [ref=f2e499] [cursor=pointer]
+                  - generic "Export status" [ref=f2e500]
+              - generic [ref=f2e204]:
+                - generic [ref=f2e205]:
+                  - searchbox "Search products" [ref=f2e209]: mcp-m14-no-match
+                  - button "Clear search" [ref=f2e486] [cursor=pointer]
+                - generic [ref=f2e211]:
+                  - checkbox "Include archived products" [ref=f2e212] [cursor=pointer]
+                  - generic [ref=f2e213] [cursor=pointer]: Include archived products
+              - paragraph [ref=f2e490]: No products match these filters.
+  - button "Open Next.js Dev Tools" [ref=f2e173] [cursor=pointer]
+  - alert [ref=f2e177]

@@ -1,5 +1,7 @@
 "use client";
 
+import { ExportControls } from "../../_features/exports/export-controls";
+
 import {
   resolveProductCreateAttempt,
   type ProductCreateAttempt,
@@ -1140,6 +1142,15 @@ export function ProductDetailContent({ productId }: { productId: string }) {
               ) : null}
               {visiblePanel === "releases" ? (
                 <>
+                  <ExportControls key={`${session?.organization?.id ?? "none"}:${session?.user?.id ?? "none"}:${productId}`}
+                    source="products.releases"
+                    context={{ productId }}
+                    filters={{ page: 1, pageSize: 50 }}
+                    columns={["label", "version", "lifecycle"]}
+                    enabled={
+                      enabled && permissions.can_export_products === true
+                    }
+                  />
                   {releases.isPending ? (
                     <p
                       role="status"

@@ -1,4 +1,5 @@
 "use client";
+import { MemberExportControls } from "../../_features/exports/member-export-controls";
 import type {
   ConnectorConnectionState,
   ConnectorType,
@@ -537,6 +538,12 @@ export function ConnectorsRegistryContent() {
             }
           >
             <div className="mb-6 border-b border-border pb-5">
+              <MemberExportControls
+                source="connectors.overview"
+                context={{}}
+                filters={{ page, pageSize: 25, q: search.trim() || undefined }}
+                label="Export connector registry"
+              />
               <input
                 type="search"
                 aria-label="Search connectors"

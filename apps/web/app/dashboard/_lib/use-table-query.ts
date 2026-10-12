@@ -116,6 +116,7 @@ export function useTableQuery<T>({
   }, []);
 
   return {
+    queryFilters: Object.fromEntries(params),
     rows: query.data?.rows ?? [],
     total: query.data?.total ?? 0,
     pageCount: query.data?.pageCount ?? 1,

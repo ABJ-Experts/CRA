@@ -1,4 +1,5 @@
 "use client";
+import { MemberExportControls } from "../exports/member-export-controls";
 
 import type { VulnerabilityTriageNoteMentionCandidate } from "@repo/contracts/vulnerabilities";
 import { Button } from "@repo/ui/button";
@@ -122,6 +123,7 @@ export function FindingTriageNotes({
       className="mt-6 border-t border-border pt-6"
       aria-labelledby="finding-notes-heading"
     >
+      <MemberExportControls source="findings.notes" context={{ findingId }} filters={{}} columns={["body", "version", "createdAt", "updatedAt", "deletedAt"]} />
       <div className="flex items-baseline justify-between gap-3">
         <h3
           id="finding-notes-heading"

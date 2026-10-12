@@ -1,4 +1,5 @@
 "use client";
+import { MemberExportControls } from "../exports/member-export-controls";
 
 import type {
   VulnerabilityRemediationAnchor,
@@ -140,6 +141,8 @@ export function FindingRemediation({
 
   return (
     <section className="mt-6" aria-labelledby="remediation-heading">
+      <MemberExportControls source="findings.remediation_history" context={{ findingId }} filters={{}} columns={["revision", "remediationKind", "fixVersion", "mitigationDescription", "availabilityAt", "availabilityProvenance", "correctionReason", "recordedAt"]} />
+      <MemberExportControls source="findings.remediation_tickets" context={{ findingId }} filters={{}} columns={["provider", "externalIssueKey", "externalStatus", "status", "syncRevision", "lastSyncAt", "conflictReason", "version"]} />
       <div className="rounded-xl border border-border bg-canvas p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>

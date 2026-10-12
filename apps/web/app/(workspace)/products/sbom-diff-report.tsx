@@ -1,4 +1,5 @@
 "use client";
+import { MemberExportControls } from "../../_features/exports/member-export-controls";
 
 import {
   sbomComponentChangeKindSchema,
@@ -251,6 +252,8 @@ function FindingDelta({
     );
   }
   return (
+    <>
+      <MemberExportControls source="sboms.diff_findings" context={{ diffId }} filters={{ limit: 50 }} columns={["findingId", "change", "origin", "explanation"]} enabled={enabled} />
     <ul
       aria-label="Finding delta"
       className="mt-3 grid grid-cols-1 min-w-0 gap-2"
@@ -269,6 +272,7 @@ function FindingDelta({
         </li>
       ))}
     </ul>
+    </>
   );
 }
 
@@ -323,6 +327,7 @@ function CompletedDiff({
   const summary = report.counts;
   return (
     <>
+      <MemberExportControls source="sboms.diff_components" context={{ diffId: report.id }} filters={{ limit: 50, cursor, ...(selectedChange ? { change: selectedChange } : {}), ...(ecosystem ? { ecosystem } : {}), ...(debouncedQuery ? { q: debouncedQuery } : {}) }} columns={["change", "identity", "currentVersion", "baselineVersion"]} enabled={enabled} />
       <div className="grid grid-cols-1 min-w-0 gap-4 md:grid-cols-2 xl:grid-cols-4">
         <Metric
           label="Compared versions"

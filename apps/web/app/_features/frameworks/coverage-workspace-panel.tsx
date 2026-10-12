@@ -1,4 +1,5 @@
 "use client";
+import { MemberExportControls } from "../exports/member-export-controls";
 
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import type { z } from "zod";
@@ -553,7 +554,17 @@ export function CoverageWorkspacePanel({
         ) : null}
       </SectionCard>
       {selectedProductId ? (
-        <SectionCard title="Requirement gaps">
+        <SectionCard
+          title="Requirement gaps"
+          action={
+            <MemberExportControls
+              source="frameworks.coverage_requirements"
+              context={{ packKey, versionKey, productId: selectedProductId }}
+              filters={{ filter, limit: 100 }}
+              label="Export coverage"
+            />
+          }
+        >
           {coverage.isLoading ? (
             <p
               role="status"

@@ -306,6 +306,18 @@
     "./dashboard/types": {
       "types": "./dist/dashboard/types/index.d.ts",
       "default": "./dist/dashboard/types/index.js"
+    },
+    "./exports": {
+      "types": "./dist/exports/index.d.ts",
+      "default": "./dist/exports/index.js"
+    },
+    "./exports/schemas": {
+      "types": "./dist/exports/schemas/index.d.ts",
+      "default": "./dist/exports/schemas/index.js"
+    },
+    "./exports/types": {
+      "types": "./dist/exports/types/index.d.ts",
+      "default": "./dist/exports/types/index.js"
     }
   },
   "files": [

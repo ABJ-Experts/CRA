@@ -1,4 +1,5 @@
 "use client";
+import { MemberExportControls } from "../../_features/exports/member-export-controls";
 
 import { Button } from "@repo/ui/button";
 import { Select, SelectItem } from "@repo/ui/select";
@@ -15,7 +16,10 @@ import {
 import { InvitationManager } from "./invitation-manager";
 import { useMocksReady } from "../../_providers/providers";
 import { useSession } from "../../_providers/session-provider";
-import { PageHeading, SectionCard } from "../../dashboard/_components/dashboard-chrome";
+import {
+  PageHeading,
+  SectionCard,
+} from "../../dashboard/_components/dashboard-chrome";
 import { OnboardingProgress } from "./onboarding-progress";
 import { OrganizationProfileForm } from "./organization-profile-form";
 
@@ -213,8 +217,10 @@ export function OnboardingContent() {
                 </div>
               ) : null}
               <OnboardingProgress progress={onboardingQuery.data} />
+              <MemberExportControls source="onboarding.progress" context={{}} filters={{}} columns={["stage", "status", "blockReason", "completedAt", "completedBy", "updatedAt"]} />
               {onboardingQuery.data.integrationAvailability.invitations ? (
                 <InvitationManager
+                  canExport={permissions.can_export_invitations === true}
                   canView={permissions.can_view_invitations === true}
                   canCreate={permissions.can_create_invitations === true}
                   canDelete={permissions.can_delete_invitations === true}

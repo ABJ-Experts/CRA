@@ -16,6 +16,7 @@ vi.mock("../../_features/roles/roles.api", async () => {
   return { ...actual, rolesApi: { ...actual.rolesApi, list: vi.fn() } };
 });
 vi.mock("../../_providers/session-provider", () => ({
+  useSession: () => ({ session: null, permissions: {}, isLoading: false, role: null }),
   useHasPermission: () => false,
 }));
 

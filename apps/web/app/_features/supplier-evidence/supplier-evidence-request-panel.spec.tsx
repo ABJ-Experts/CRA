@@ -7,6 +7,7 @@ const linkedRequest = vi.hoisted(() => ({ current: null as unknown }));
 
 vi.mock("../../_providers/session-provider", () => ({
   useHasPermission: () => true,
+  useSession: () => ({ session: null, permissions: {}, isLoading: false, role: "owner" }),
 }));
 vi.mock("../products/products.queries", () => ({
   useProductsQuery: () => ({

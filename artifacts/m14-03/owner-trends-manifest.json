@@ -1,0 +1,104 @@
+{
+  "version": "m14_03_v1",
+  "jobId": "1f3b2b1f-38d0-4470-be58-23623f87d876",
+  "source": "dashboard.trends",
+  "requestedAt": "2026-10-09T13:15:56.080872+00:00",
+  "snapshotAsOf": "2026-10-09T13:15:56.152437+00:00",
+  "scope": "all_filtered",
+  "requestDigest": "75a0691af6e0e16144d0c4b3fe07149a14fe1cf4005d4cfd668e7ae07ef8dc1a",
+  "rowCount": 60,
+  "columns": [
+    {
+      "key": "bucket",
+      "label": "bucket",
+      "type": "datetime"
+    },
+    {
+      "key": "metric",
+      "label": "metric",
+      "type": "text"
+    },
+    {
+      "key": "start",
+      "label": "start",
+      "type": "datetime"
+    },
+    {
+      "key": "end",
+      "label": "end",
+      "type": "datetime"
+    },
+    {
+      "key": "partial",
+      "label": "partial",
+      "type": "boolean"
+    },
+    {
+      "key": "opened",
+      "label": "opened",
+      "type": "number"
+    },
+    {
+      "key": "closed",
+      "label": "closed",
+      "type": "number"
+    },
+    {
+      "key": "reopened",
+      "label": "reopened",
+      "type": "number"
+    },
+    {
+      "key": "value",
+      "label": "value",
+      "type": "number"
+    },
+    {
+      "key": "sampleCount",
+      "label": "sample Count",
+      "type": "number"
+    },
+    {
+      "key": "excludedCount",
+      "label": "excluded Count",
+      "type": "number"
+    },
+    {
+      "key": "numerator",
+      "label": "numerator",
+      "type": "number"
+    },
+    {
+      "key": "denominator",
+      "label": "denominator",
+      "type": "number"
+    },
+    {
+      "key": "sourceCount",
+      "label": "source Count",
+      "type": "number"
+    },
+    {
+      "key": "sourceVersion",
+      "label": "source Version",
+      "type": "text"
+    },
+    {
+      "key": "asOf",
+      "label": "as Of",
+      "type": "datetime"
+    }
+  ],
+  "artifacts": [
+    {
+      "id": "06beaa88-34e0-4089-a768-ff567119937e",
+      "name": "part-0001.csv",
+      "mediaType": "text/csv",
+      "byteLength": 13805,
+      "sha256": "68a62fa2d44afd3692dc1505e64f20446fc037ba9e6fe7885a4ca017b4a4076e",
+      "rowCount": 60
+    }
+  ],
+  "sourceVersionsDigest": "a9ebe0bf224708e087ed6bda99a24610ea97853987138cb907e1e56e04d24c6b",
+  "documentationReadinessOnly": false
+}

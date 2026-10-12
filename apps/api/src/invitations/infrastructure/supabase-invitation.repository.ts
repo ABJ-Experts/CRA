@@ -375,10 +375,9 @@ export class SupabaseInvitationRepository implements InvitationRepository {
 
     const { data, error } = await this.supabase
       .admin()
-      .from("invitations")
-      .select("id, email, role, status, expires_at")
-      .eq("organization_id", orgId)
-      .order("created_at", { ascending: false });
+      .rpc("m14_03_invitation_list_rows", { p_organization_id: orgId })
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: true });
 
     if (error) throw providerFailure();
     if (!data) return Object.freeze([]);

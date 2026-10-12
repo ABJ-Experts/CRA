@@ -37,6 +37,14 @@ const state = vi.hoisted(() => ({
   refetch: vi.fn(),
 }));
 
+vi.mock("../exports/member-export-controls", () => ({
+  MemberExportControls: (props: unknown) => (
+    <output aria-label="Filtered export request">
+      {JSON.stringify(props)}
+    </output>
+  ),
+}));
+
 vi.mock("./controls.api", () => ({
   controlsApi: {
     list: vi.fn(async () => {
@@ -628,6 +636,12 @@ describe("ControlLibraryPanel", () => {
     expect(
       screen.getByRole("checkbox", { name: "Show archived controls" }),
     ).toBeChecked();
+    expect(screen.getByLabelText("Filtered export request")).toHaveTextContent(
+      '"includeArchived":true',
+    );
+    expect(screen.getByLabelText("Filtered export request")).toHaveTextContent(
+      '"source":"frameworks.controls"',
+    );
   });
 
   it("shows a product-scope prompt when no edition is enabled", async () => {

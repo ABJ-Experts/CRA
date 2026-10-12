@@ -154,6 +154,12 @@ describe("ProductsRegistryContent", () => {
     expect(screen.queryByText("SKU")).not.toBeInTheDocument();
   });
 
+  it("uses product language in plural registry counts", () => {
+    state.products.data.products.total = 2;
+    render(<ProductsRegistryContent />);
+    expect(screen.getByText("2 products in this registry")).toBeInTheDocument();
+  });
+
   it("orients the user before they scan or filter the registry", () => {
     render(<ProductsRegistryContent />);
 

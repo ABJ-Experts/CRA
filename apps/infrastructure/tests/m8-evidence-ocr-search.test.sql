@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap;
-select plan(31);
+select plan(32);
 
 select ok(to_regclass('public.evidence_document_version_texts') is not null,
   'derived text is isolated from immutable evidence versions');
@@ -82,7 +82,7 @@ select ok(position('m5_triage_actor_has_permission' in pg_get_functiondef(
   'search rechecks caller permission inside the database RPC');
 select ok(position('ts_headline' in pg_get_functiondef(
   'public.search_evidence_documents_atomic(uuid,uuid,uuid,text,text,boolean,integer,integer,timestamptz,uuid)'::regprocedure)) > 0
-  and position('StartSel=, StopSel=' in pg_get_functiondef(
+  and position('StartSel="", StopSel=""' in pg_get_functiondef(
   'public.search_evidence_documents_atomic(uuid,uuid,uuid,text,text,boolean,integer,integer,timestamptz,uuid)'::regprocedure)) > 0,
   'search returns plain snippet text rather than FTS-generated HTML');
 select ok(position('worker lease expired' in pg_get_functiondef(
@@ -102,5 +102,17 @@ select is((select outcome from public.search_evidence_documents_atomic(
   gen_random_uuid(),gen_random_uuid(),gen_random_uuid(),'x',null,false,25,null,null,null)), 'invalid_request',
   'invalid short query is rejected before data selection');
 
+-- Populated FTS exercises the actual PostgreSQL 17 headline options rather
+-- than treating the presence of a marker string as runtime verification.
+do $$ declare o uuid;u uuid;p uuid;v uuid;sha text;r record;begin
+ select x.organization_id,m.user_id,vp.product_id,x.id,x.original_sha256 into strict o,u,p,v,sha from public.evidence_document_versions x join public.evidence_document_version_products vp on vp.organization_id=x.organization_id and vp.version_id=x.id join public.organization_members m on m.organization_id=x.organization_id and m.role='owner' where x.processing_state='clean' and (x.validity_ends_on is null or x.validity_ends_on>=current_date) limit 1;
+ insert into public.evidence_document_version_texts(organization_id,version_id,source_sha256,extractor_version,extraction_status,extracted_text,quality,completed_at)
+ values(o,v,sha,'m14-native-search-test','complete','Unicode Ω m14searchfixture plain snippet with commas, and "quotes".','sufficient',clock_timestamp())
+ on conflict(organization_id,version_id) do update set source_sha256=excluded.source_sha256,extractor_version=excluded.extractor_version,extraction_status='complete',extracted_text=excluded.extracted_text,quality='sufficient',completed_at=excluded.completed_at,failure_code=null;
+ select * into r from public.search_evidence_documents_atomic(o,u,p,'m14searchfixture',null,true,25,null,null,null);
+ if r.outcome<>'found' or jsonb_array_length(r.result->'items')<>1 or position('m14searchfixture' in r.result#>>'{items,0,snippetText}')=0 or position('<b>' in r.result#>>'{items,0,snippetText}')>0 or position('<mark>' in r.result#>>'{items,0,snippetText}')>0 then raise exception 'native plain Unicode headline failed';end if;
+ if not exists(select 1 from public.m14_03_source_rows(o,u,'evidence.search_results','{"q":"m14searchfixture","includeHistorical":true}',jsonb_build_object('productId',p)) e where e.row_values->>'snippet' like '%m14searchfixture%' and e.source_id=v::text) then raise exception 'visible plain search export omitted';end if;
+end $$;
+select ok(true,'populated native PostgreSQL headline and authorized export retain plain Unicode snippet');
 select * from finish();
 rollback;

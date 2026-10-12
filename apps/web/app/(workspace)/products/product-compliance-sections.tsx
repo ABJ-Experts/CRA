@@ -1,4 +1,5 @@
 "use client";
+import { MemberExportControls } from "../../_features/exports/member-export-controls";
 
 import {
   createSubstantialModificationAssessmentDraftInputSchema,
@@ -527,6 +528,7 @@ function AssessmentHistory({
   return (
     <div className="grid gap-2 rounded-xl bg-surface-subtle p-4">
       <h4 className="text-caption-1-semibold text-fg">Assessment history</h4>
+      <MemberExportControls source="products.compliance.mod_assessment_history" context={{ productId, modificationId }} filters={{}} columns={["version", "status", "determination", "determinationRationale", "reviewedAt", "createdAt"]} />
       {history.isPending ? (
         <p role="status" className="text-caption-1-regular text-fg-muted">
           Loading history…
@@ -1693,6 +1695,7 @@ export function ProductComplianceSections({
     <div className="grid gap-6">
       {showAssessments ? (
         <Section title="Substantial modifications">
+          <MemberExportControls source="products.compliance.mod_assessments" context={{ productId }} filters={{ page: assessmentPage, pageSize: 15 }} columns={["modificationIdentifier", "title", "status", "determination", "policyVersion", "reviewedAt"]} enabled={enabled && showAssessmentHistory} />
           {showAssessmentHistory && assessments.isPending ? (
             <p role="status" className="text-subhead-regular text-fg-muted">
               Loading assessments…
@@ -1776,6 +1779,7 @@ export function ProductComplianceSections({
       ) : null}
       {showArtifacts ? (
         <Section title="Security update artifacts">
+          <MemberExportControls source="products.compliance.security_artifacts" context={{ productId }} filters={{ page: artifactPage, pageSize: 15 }} columns={["releaseId", "updateVersion", "title", "artifactType", "supportedPlatform", "fileName", "integrityStatus", "reviewStatus", "publicationStatus", "availabilityStatus", "issuedAt", "availabilityUntil"]} enabled={enabled && showArtifactHistory} />
           {showArtifactHistory && artifacts.isPending ? (
             <p role="status" className="text-subhead-regular text-fg-muted">
               Loading security update artifacts…

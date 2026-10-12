@@ -50,7 +50,9 @@ function harness(
     queries.push(current);
     return current;
   });
-  const rpc = jest.fn().mockResolvedValue(rpcResult);
+  const rpc = jest.fn((name: string) =>
+    name === "m14_03_member_list_rows" ? from() : Promise.resolve(rpcResult),
+  );
   const repository = new SupabaseMemberRepository({
     admin: () => ({ from, rpc }),
   } as never);
@@ -79,7 +81,7 @@ describe("SupabaseMemberRepository", () => {
         is_active: true,
       },
     };
-    const { queries, repository } = harness([
+    const { queries, repository, rpc } = harness([
       { data: null, count: 1, error: null },
       { data: [row, { ...row, users: null }], count: 1, error: null },
     ]);
@@ -105,9 +107,21 @@ describe("SupabaseMemberRepository", () => {
       pageSize: 2,
       pageCount: 1,
     });
-    for (const current of queries) {
-      expect(current.eq).toHaveBeenCalledWith("organization_id", "org-a");
-    }
+    expect(rpc).toHaveBeenNthCalledWith(
+      1,
+      "m14_03_member_list_rows",
+      { p_organization_id: "org-a", p_q: null },
+      { count: "exact", head: true },
+    );
+    expect(rpc).toHaveBeenNthCalledWith(
+      2,
+      "m14_03_member_list_rows",
+      { p_organization_id: "org-a", p_q: null },
+      { count: "exact" },
+    );
+    expect(queries[-1 + queries.length]?.order).toHaveBeenCalledWith("id", {
+      ascending: true,
+    });
     expect(queries[1]?.order).toHaveBeenCalledWith("created_at", {
       ascending: false,
     });
@@ -115,23 +129,23 @@ describe("SupabaseMemberRepository", () => {
   });
 
   it("applies the same embedded-user search to count and row queries", async () => {
-    const { queries, repository } = harness([
+    const { queries, repository, rpc } = harness([
       { data: null, count: 0, error: null },
       { data: [], count: 0, error: null },
     ]);
 
     await repository.list("org-a", { ...params, q: "Ada" });
 
-    for (const current of queries) {
-      expect(current.or).toHaveBeenCalledWith(
-        "email.ilike.%Ada%,first_name.ilike.%Ada%,last_name.ilike.%Ada%,username.ilike.%Ada%",
-        { referencedTable: "users" },
-      );
-    }
+    expect(rpc).toHaveBeenCalledWith(
+      "m14_03_member_list_rows",
+      { p_organization_id: "org-a", p_q: "Ada" },
+      expect.anything(),
+    );
+    expect(queries).toHaveLength(2);
   });
 
   it("drops PostgREST structural characters instead of emitting raw filters", async () => {
-    const { queries, repository } = harness([
+    const { queries, repository, rpc } = harness([
       { data: null, count: null, error: null },
       { data: null, count: null, error: null },
     ]);
@@ -145,12 +159,16 @@ describe("SupabaseMemberRepository", () => {
       pageSize: 2,
       pageCount: 1,
     });
-    expect(queries[0]?.or).not.toHaveBeenCalled();
-    expect(queries[1]?.or).not.toHaveBeenCalled();
+    expect(rpc).toHaveBeenCalledWith(
+      "m14_03_member_list_rows",
+      { p_organization_id: "org-a", p_q: ',()\\"' },
+      expect.anything(),
+    );
+    expect(queries).toHaveLength(2);
   });
 
   it("preserves dots in email searches while removing filter separators", async () => {
-    const { queries, repository } = harness([
+    const { queries, repository, rpc } = harness([
       { data: null, count: 0, error: null },
       { data: [], count: 0, error: null },
     ]);
@@ -160,11 +178,38 @@ describe("SupabaseMemberRepository", () => {
       q: "ada@example.com,()",
     });
 
-    expect(queries[0]?.or).toHaveBeenCalledWith(
-      "email.ilike.%ada@example.com%,first_name.ilike.%ada@example.com%,last_name.ilike.%ada@example.com%,username.ilike.%ada@example.com%",
-      { referencedTable: "users" },
+    expect(rpc).toHaveBeenCalledWith(
+      "m14_03_member_list_rows",
+      { p_organization_id: "org-a", p_q: "ada@example.com,()" },
+      expect.anything(),
     );
+    expect(queries).toHaveLength(2);
   });
+
+  it.each([
+    [{ data: null, count: 0, error: { message: "count unavailable" } }],
+    [
+      { data: null, count: 0, error: null },
+      { data: null, error: { message: "rows unavailable" } },
+    ],
+    [
+      { data: null, count: 1, error: null },
+      {
+        data: [
+          { role: "member", created_at: "now", users: { id: "malformed" } },
+        ],
+        error: null,
+      },
+    ],
+  ] as const)(
+    "rejects unavailable or malformed shared member projections",
+    async (...results) => {
+      const { repository } = harness(results);
+      await expect(repository.list("org-a", params)).rejects.toMatchObject({
+        code: "unavailable",
+      });
+    },
+  );
 
   it("scopes membership lookup to organization and user", async () => {
     const { queries, repository } = harness([

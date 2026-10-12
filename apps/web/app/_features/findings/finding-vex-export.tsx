@@ -1,4 +1,5 @@
 "use client";
+import { MemberExportControls } from "../exports/member-export-controls";
 
 import type {
   VulnerabilityVexExport,
@@ -122,6 +123,7 @@ export function FindingVexExport({
 
   return (
     <section className="mt-6" aria-labelledby="vex-export-heading">
+      <MemberExportControls source="findings.vex_exports" context={{ productId, releaseId }} filters={{}} columns={["format", "specificationVersion", "scopeVersion", "contentSha256", "byteSize", "createdAt"]} enabled={canExport} />
       <div className="rounded-xl border border-border bg-canvas p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
@@ -512,6 +514,8 @@ function PublicationControls({
       className="rounded-lg border border-border bg-surface-subtle p-3"
       aria-labelledby="vex-publication-heading"
     >
+      <MemberExportControls source="findings.vex_publications" context={{ exportId: exportSnapshot.id }} filters={{}} columns={["targetId", "state", "attempts", "lastErrorCode", "publishedAt", "withdrawnAt", "createdAt"]} enabled={canManagePublication} />
+      <MemberExportControls source="findings.vex_publication_targets" context={{}} filters={{}} columns={["targetKey", "label", "kind", "enabled", "version", "updatedAt"]} enabled={canManagePublication} />
       <h5
         id="vex-publication-heading"
         className="text-subhead-semibold text-fg"

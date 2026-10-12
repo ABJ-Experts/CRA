@@ -10,6 +10,7 @@ const SOURCE_PERMISSIONS = {
   ai_inference_run: ["can_view_suppliers", "can_view_evidence"],
   audit_chain: "can_view_audit",
   audit_export: "can_view_audit",
+  export_job: "can_view_audit",
   audit_search: "can_view_audit",
   audit_search_denial: "can_view_audit",
   auth_security: "can_view_audit",

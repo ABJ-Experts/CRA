@@ -1,4 +1,5 @@
 "use client";
+import { MemberExportControls } from "../../_features/exports/member-export-controls";
 
 import {
   type SupplierSbomRequestsResponse,
@@ -310,6 +311,7 @@ export function SbomSupplierReviewSection({
       aria-labelledby="supplier-sbom-review-heading"
       className="w-full min-w-0 max-w-full rounded-xl border border-border bg-canvas p-4 sm:p-6"
     >
+      <MemberExportControls source="sboms.supplier_requests" context={{ productId, releaseId }} filters={{ productId, releaseId, limit: 100, cursor: requestCursor }} columns={["status", "createdAt", "updatedAt"]} enabled={enabled && canReview && Boolean(releaseId)} />
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <h2

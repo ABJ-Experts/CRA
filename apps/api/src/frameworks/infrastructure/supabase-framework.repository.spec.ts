@@ -11,7 +11,7 @@ import { ServiceUnavailableException } from "@nestjs/common";
 
 describe("SupabaseFrameworkRepository", () => {
   const rpc = jest.fn();
-  const from = jest.fn();
+  const from = jest.fn<unknown, [string]>();
   const supabase = {
     admin: () => ({ rpc, from }),
   } as unknown as SupabaseService;
@@ -20,6 +20,11 @@ describe("SupabaseFrameworkRepository", () => {
   beforeEach(() => {
     rpc.mockReset();
     from.mockReset();
+    rpc.mockImplementation((name: string) =>
+      name === "m14_03_framework_pack_rows"
+        ? from("framework_pack_versions")
+        : undefined,
+    );
   });
 
   const selectionInput = {
@@ -224,9 +229,9 @@ describe("SupabaseFrameworkRepository", () => {
         },
       ],
     });
-    expect(packQuery.or).toHaveBeenCalledWith(
-      "owner_org_id.is.null,owner_org_id.eq.org-a",
-    );
+    expect(rpc).toHaveBeenCalledWith("m14_03_framework_pack_rows", {
+      p_org: "org-a",
+    });
     expect(selectionQuery.eq).toHaveBeenCalledWith("organization_id", "org-a");
     expect(selectionQuery.in).toHaveBeenCalledWith("pack_key", [
       "cra",

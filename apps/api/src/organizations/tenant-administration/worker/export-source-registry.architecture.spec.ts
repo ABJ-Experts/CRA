@@ -344,6 +344,14 @@ describe("tenant export source registry architecture", () => {
     );
   });
 
+  it("does not recursively archive filtered export workflow security state", () => {
+    expect(exportSourceExclusions.export_jobs).toMatch(/security/);
+    expect(exportSourceExclusions.export_snapshot_rows).toMatch(/duplicate/);
+    expect(exportSourceRegistry.flatMap((source) => source.tables)).not.toEqual(
+      expect.arrayContaining(["export_jobs", "export_snapshot_rows"]),
+    );
+  });
+
   it("keeps TypeScript registry in parity with SQL physical source mappings", () => {
     const tenantTables = new Set(tenantTablesFromMigrations());
     const exported = new Set(

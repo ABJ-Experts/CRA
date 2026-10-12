@@ -90,6 +90,16 @@ describe("MfaService compatibility facade", () => {
     ).toMatchObject({ code });
   });
 
+  it("maps a revoked identity session to authentication denial", async () => {
+    expect(
+      await response(
+        create(4, failed("session_revoked")).hasVerifiedFactor("revoked"),
+      ),
+    ).toMatchObject({ code: "session_revoked" });
+    await expect(
+      create(4, failed("session_revoked")).hasVerifiedFactor("revoked"),
+    ).rejects.toMatchObject({ status: 401 });
+  });
   it("maps enroll, factor lookup, and unenroll failures", async () => {
     expect(
       await response(create(0, failed("mfa_enroll_failed")).enroll("raw", "u")),

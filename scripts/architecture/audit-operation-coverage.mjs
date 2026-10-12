@@ -44,10 +44,13 @@ function decoratorCall(node) {
   return { name: expression.text, args: node.expression.arguments };
 }
 
-function routePath(argument, source) {
-  if (!argument) return "";
-  if (ts.isStringLiteralLike(argument)) return argument.text;
-  return argument.getText(source);
+function routePaths(argument, source) {
+  if (!argument) return [""];
+  if (ts.isArrayLiteralExpression(argument)) {
+    return argument.elements.flatMap((element) => routePaths(element, source));
+  }
+  if (ts.isStringLiteralLike(argument)) return [argument.text];
+  return [argument.getText(source)];
 }
 
 export async function collectMutationRoutes(rootDir) {
@@ -74,7 +77,7 @@ export async function collectMutationRoutes(rootDir) {
       const controller = classDecorators
         .map(decoratorCall)
         .find((call) => call?.name === "Controller");
-      const basePath = routePath(controller?.args[0], source);
+      const basePaths = routePaths(controller?.args[0], source);
       for (const member of statement.members) {
         if (!ts.isMethodDeclaration(member) || !member.name) continue;
         const name = member.name.getText(source);
@@ -84,11 +87,14 @@ export async function collectMutationRoutes(rootDir) {
         for (const decorator of decorators) {
           const call = decoratorCall(decorator);
           if (!call || !METHODS.has(call.name)) continue;
-          const methodPath = routePath(call.args[0], source);
-          const fullPath = [basePath, methodPath].filter(Boolean).join("/");
-          ids.push(
-            `${file}#${className}.${name}:${call.name.toUpperCase()}:${fullPath}`,
-          );
+          for (const basePath of basePaths) {
+            for (const methodPath of routePaths(call.args[0], source)) {
+              const fullPath = [basePath, methodPath].filter(Boolean).join("/");
+              ids.push(
+                `${file}#${className}.${name}:${call.name.toUpperCase()}:${fullPath}`,
+              );
+            }
+          }
         }
       }
     }
@@ -136,7 +142,8 @@ async function sourceSymbolExists(rootDir, authority) {
     typeof authority.symbol !== "string" ||
     !/^[A-Za-z_][A-Za-z0-9_.:-]{2,149}$/.test(authority.symbol) ||
     !(await evidenceExists(rootDir, authority.evidence))
-  ) return false;
+  )
+    return false;
   try {
     const source = await readFile(join(rootDir, authority.evidence), "utf8");
     return source.includes(authority.symbol);

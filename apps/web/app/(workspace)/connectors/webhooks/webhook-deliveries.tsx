@@ -1,4 +1,5 @@
 "use client";
+import { MemberExportControls } from "../../../_features/exports/member-export-controls";
 import { useRef, useState } from "react";
 import { Button } from "@repo/ui/button";
 import { cn } from "@repo/ui/cn";
@@ -12,12 +13,14 @@ import { webhookInputClass } from "./webhook-form";
 
 export function WebhookDeliveryPanel({
   detail,
+  attemptPage = 1,
   endpoint,
   canEdit,
   pending,
   run,
   onReplayed,
 }: {
+  attemptPage?: number;
   detail: WebhookDeliveryDetail;
   endpoint: WebhookEndpoint;
   canEdit: boolean;
@@ -103,6 +106,12 @@ export function WebhookDeliveryPanel({
       >
         Delivery details
       </h3>
+      <MemberExportControls
+        source="connectors.webhook_attempts"
+        context={{ endpointId: endpoint.id, deliveryId: delivery.id }}
+        filters={{ page: attemptPage, pageSize: 15 }}
+        label="Export webhook attempts"
+      />
       <dl
         className={cn(
           "grid gap-2 text-caption-1-regular text-fg sm:grid-cols-2",

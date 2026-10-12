@@ -1,4 +1,5 @@
 "use client";
+import { MemberExportControls } from "../exports/member-export-controls";
 
 import type { TechnicalFileDeclaration } from "@repo/contracts/technical-files";
 import { Button } from "@repo/ui/button";
@@ -208,6 +209,7 @@ export function TechnicalFileDeclarations({
       aria-labelledby="technical-file-declarations-heading"
       className="rounded-xl border border-border bg-surface-subtle p-4"
     >
+      <MemberExportControls source="technical_file.declarations" context={{ productId }} filters={{}} columns={["snapshotId", "version", "status", "assessmentRoute", "issuedAt", "createdAt"]} enabled={enabled && canView} />
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2

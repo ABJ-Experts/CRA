@@ -184,21 +184,24 @@ export class SupabaseConnectorRepository {
   async listConnectors(orgId: string, params: PageParams) {
     const countQuery = this.supabase
       .admin()
-      .from("connectors")
-      .select("id", { count: "exact", head: true })
-      .eq("organization_id", orgId)
-      .is("archived_at", null);
+      .rpc(
+        "m14_03_connector_registry_rows",
+        { p_org: orgId },
+        { count: "exact", head: true },
+      )
+      .select("id")
+      .eq("organization_id", orgId);
     const countResult = await countQuery;
     if (countResult.error) throw new ConnectorError("unavailable");
     const total = countResult.count ?? 0;
     const { from, to } = resolvePage(total, params);
     const { data, error } = await this.supabase
       .admin()
-      .from("connectors")
+      .rpc("m14_03_connector_registry_rows", { p_org: orgId })
       .select("*")
       .eq("organization_id", orgId)
-      .is("archived_at", null)
       .order("created_at", { ascending: false })
+      .order("id", { ascending: true })
       .range(from, to);
     if (error) throw new ConnectorError("unavailable");
     return paged((data ?? []).map(mapConnectorRow), total, params);
@@ -313,22 +316,28 @@ export class SupabaseConnectorRepository {
     await this.getConnector(orgId, connectorId);
     const countResult = await this.supabase
       .admin()
-      .from("product_external_identities")
-      .select("id", { count: "exact", head: true })
+      .rpc(
+        "m14_03_connector_identity_rows",
+        { p_org: orgId, p_connector: connectorId },
+        { count: "exact", head: true },
+      )
+      .select("id")
       .eq("organization_id", orgId)
-      .eq("connector_id", connectorId)
-      .is("superseded_at", null);
+      .eq("connector_id", connectorId);
     if (countResult.error) throw new ConnectorError("unavailable");
     const total = countResult.count ?? 0;
     const { from, to } = resolvePage(total, params);
     const { data, error } = await this.supabase
       .admin()
-      .from("product_external_identities")
+      .rpc("m14_03_connector_identity_rows", {
+        p_org: orgId,
+        p_connector: connectorId,
+      })
       .select("*")
       .eq("organization_id", orgId)
       .eq("connector_id", connectorId)
-      .is("superseded_at", null)
       .order("linked_at", { ascending: false })
+      .order("id", { ascending: true })
       .range(from, to);
     if (error) throw new ConnectorError("unavailable");
     return paged((data ?? []).map(mapExternalIdentityRow), total, params);
@@ -467,26 +476,33 @@ export class SupabaseConnectorRepository {
     status?: string,
   ) {
     await this.getConnector(orgId, connectorId);
-    let countQuery = this.supabase
+    const countQuery = this.supabase
       .admin()
-      .from("sync_runs")
-      .select("id", { count: "exact", head: true })
+      .rpc(
+        "m14_03_connector_run_rows",
+        { p_org: orgId, p_connector: connectorId, p_status: status },
+        { count: "exact", head: true },
+      )
+      .select("id")
       .eq("organization_id", orgId)
       .eq("connector_id", connectorId);
-    if (status) countQuery = countQuery.eq("status", status);
     const countResult = await countQuery;
     if (countResult.error) throw new ConnectorError("unavailable");
     const total = countResult.count ?? 0;
     const { from, to } = resolvePage(total, params);
-    let rowsQuery = this.supabase
+    const rowsQuery = this.supabase
       .admin()
-      .from("sync_runs")
+      .rpc("m14_03_connector_run_rows", {
+        p_org: orgId,
+        p_connector: connectorId,
+        p_status: status,
+      })
       .select("*")
       .eq("organization_id", orgId)
       .eq("connector_id", connectorId);
-    if (status) rowsQuery = rowsQuery.eq("status", status);
     const { data, error } = await rowsQuery
       .order("created_at", { ascending: false })
+      .order("id", { ascending: true })
       .range(from, to);
     if (error) throw new ConnectorError("unavailable");
     return paged((data ?? []).map(mapSyncRunRow), total, params);
@@ -501,8 +517,12 @@ export class SupabaseConnectorRepository {
     await this.getSyncRun(orgId, connectorId, syncRunId);
     const countResult = await this.supabase
       .admin()
-      .from("sync_run_plan_items")
-      .select("id", { count: "exact", head: true })
+      .rpc(
+        "m14_03_connector_plan_rows",
+        { p_org: orgId, p_run: syncRunId },
+        { count: "exact", head: true },
+      )
+      .select("id")
       .eq("organization_id", orgId)
       .eq("sync_run_id", syncRunId);
     if (countResult.error) throw new ConnectorError("unavailable");
@@ -510,11 +530,12 @@ export class SupabaseConnectorRepository {
     const { from, to } = resolvePage(total, params);
     const { data, error } = await this.supabase
       .admin()
-      .from("sync_run_plan_items")
+      .rpc("m14_03_connector_plan_rows", { p_org: orgId, p_run: syncRunId })
       .select("*")
       .eq("organization_id", orgId)
       .eq("sync_run_id", syncRunId)
       .order("created_at", { ascending: true })
+      .order("id", { ascending: true })
       .range(from, to);
     if (error) throw new ConnectorError("unavailable");
     return paged((data ?? []).map(mapSyncRunPlanItemRow), total, params);
@@ -530,11 +551,12 @@ export class SupabaseConnectorRepository {
     await this.getSyncRun(orgId, connectorId, syncRunId);
     const { data, error } = await this.supabase
       .admin()
-      .from("sync_conflicts")
+      .rpc("m14_03_connector_conflict_rows", { p_org: orgId, p_run: syncRunId })
       .select("*")
       .eq("organization_id", orgId)
       .eq("sync_run_id", syncRunId)
       .order("detected_at", { ascending: false })
+      .order("id", { ascending: true })
       .limit(500);
     if (error) throw new ConnectorError("unavailable");
     return (data ?? []).map(mapSyncConflictRow);

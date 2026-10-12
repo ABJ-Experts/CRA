@@ -1,0 +1,57 @@
+{
+  "results": [
+    {
+      "rows": 10000,
+      "scale": 10000,
+      "rejected": false,
+      "capture_ms": 454.534,
+      "payload_bytes": 1318894,
+      "status_p95_ms": 16.69415,
+      "status_p99_ms": 23.50621
+    },
+    {
+      "rows": 100000,
+      "scale": 100000,
+      "rejected": false,
+      "capture_ms": 4004.408,
+      "payload_bytes": 13288895,
+      "status_p95_ms": 330.952,
+      "status_p99_ms": 476.53081
+    },
+    {
+      "rows": 0,
+      "scale": 1000000,
+      "rejected": true,
+      "capture_ms": 693.444,
+      "payload_bytes": 0,
+      "status_p95_ms": 0.7588,
+      "status_p99_ms": 1.16924
+    }
+  ],
+  "classification": "Native products registry capture in isolated cloned database; synthetic rows, rollback-only; sequential SQL metadata latency with frozen rows, Docker RSS/CPU sampled separately; no HTTP/rendering/tenant fairness measured",
+  "date": "2026-10-09",
+  "runDurationSeconds": 54.834,
+  "resourceLimits": {
+    "databaseContainer": "3.826GiB",
+    "workMem": "16MiB",
+    "guardThreshold": "3.2GiB",
+    "statementTimeout": "10min"
+  },
+  "resourceSamples": {
+    "count": 25,
+    "peakMemory": "644.8MiB / 3.826GiB",
+    "peakCpuPercent": 158.48,
+    "memoryGuardTriggered": false
+  },
+  "rollbackConfirmed": {
+    "products": 11,
+    "snapshotRows": 0,
+    "ownedConnections": 0,
+    "existingTimeoutFixturePreserved": true
+  },
+  "limitsPassed": true,
+  "nativeSqlReadTargetsMet": true,
+  "scopeLimits": "Native synthetic registry SQL only. No HTTP/authentication transport, rendering/storage or sustained tenant fairness measured.",
+  "previous100kStatusP95Ms": 486.0521,
+  "final100kStatusP95Ms": 330.952
+}

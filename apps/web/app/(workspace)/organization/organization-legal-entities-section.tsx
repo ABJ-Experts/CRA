@@ -1,4 +1,5 @@
 "use client";
+import { MemberExportControls } from "../../_features/exports/member-export-controls";
 
 import {
   ISO_3166_ALPHA_2_CODES,
@@ -202,6 +203,7 @@ export function OrganizationLegalEntitiesSection({
 
   return (
     <SectionCard title="Legal entities">
+      <MemberExportControls source="organization.legal_entities" context={{}} filters={{}} columns={["identifier", "displayName", "legalName", "mainEstablishmentCountry", "manufacturerContactName", "manufacturerContactEmail", "completionStatus", "status", "isDefault"]} />
       <div className="flex flex-col gap-5">
         {!canManage ? (
           <ReadonlyNotice>

@@ -10,6 +10,13 @@ export class AuthIdentityProviderUnavailableError extends Error {
   }
 }
 
+export class AuthIdentitySessionInvalidError extends Error {
+  constructor() {
+    super("auth identity session is invalid");
+    this.name = "AuthIdentitySessionInvalidError";
+  }
+}
+
 export type AuthenticatedIdentity = Readonly<{
   authUserId: string;
   tokens: AuthTokens;

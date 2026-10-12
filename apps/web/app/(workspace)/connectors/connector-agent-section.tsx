@@ -1,4 +1,5 @@
 "use client";
+import { MemberExportControls } from "../../_features/exports/member-export-controls";
 
 import { Button } from "@repo/ui/button";
 import { cn } from "@repo/ui/cn";
@@ -305,6 +306,12 @@ export function ConnectorAgentSection({
           <div className="space-y-3">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
               <h3 className="text-headline-semibold">Staged pages</h3>
+              <MemberExportControls
+                source="connectors.agent_batches"
+                context={{ connectorId }}
+                filters={{}}
+                label="Export staged pages"
+              />
               <a
                 href="#connector-sync-runs"
                 className="underline underline-offset-4 focus-visible:ring-2 focus-visible:ring-active-500"

@@ -1,7 +1,9 @@
+import { isAuthSessionMissingError } from "@supabase/supabase-js";
 import { Injectable } from "@nestjs/common";
 
 import {
   AuthIdentityProviderUnavailableError,
+  AuthIdentitySessionInvalidError,
   type AuthIdentityProvider,
 } from "../application/auth-identity-provider.port";
 import { SupabaseService } from "../../supabase/supabase.service";
@@ -180,13 +182,16 @@ export class SupabaseAuthIdentityAdapter implements AuthIdentityProvider {
       const { data, error } = await this.supabase
         .asUser(accessToken)
         .auth.mfa.listFactors();
+      if (isAuthSessionMissingError(error))
+        throw new AuthIdentitySessionInvalidError();
       if (error || !data) return null;
       return Object.freeze(
         data.totp.map((factor) =>
           Object.freeze({ id: factor.id, status: factor.status }),
         ),
       );
-    } catch {
+    } catch (error) {
+      if (error instanceof AuthIdentitySessionInvalidError) throw error;
       throw new AuthIdentityProviderUnavailableError();
     }
   }

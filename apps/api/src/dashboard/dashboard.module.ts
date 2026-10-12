@@ -15,6 +15,7 @@ import { SupabaseDashboardRepository } from "./infrastructure/supabase-dashboard
 @Module({
   imports: [SupabaseModule, PermissionsModule],
   controllers: [DashboardController, DashboardTrendsController],
+  exports: [DashboardTrendsUseCases],
   providers: [
     SupabaseDashboardTrendsRepository,
     {

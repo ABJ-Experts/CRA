@@ -52,7 +52,9 @@ function harness(
     queries.push(current);
     return current;
   });
-  const rpc = jest.fn().mockResolvedValue(rpcResult);
+  const rpc = jest.fn((name: string) =>
+    name === "m14_03_role_list_rows" ? from() : Promise.resolve(rpcResult),
+  );
   const repository = new SupabaseRoleRepository({
     admin: () => ({ from, rpc }),
   } as never);
@@ -73,7 +75,9 @@ const roleRow = {
 
 describe("SupabaseRoleRepository", () => {
   it("scopes and maps role lists while sanitizing persisted data", async () => {
-    const { queries, repository } = harness([{ data: [roleRow], error: null }]);
+    const { queries, repository, rpc } = harness([
+      { data: [roleRow], error: null },
+    ]);
 
     await expect(repository.list("org-a")).resolves.toEqual([
       {
@@ -88,8 +92,12 @@ describe("SupabaseRoleRepository", () => {
         memberCount: 3,
       },
     ]);
-    expect(queries[0]?.eq).toHaveBeenCalledWith("organization_id", "org-a");
-    expect(queries[0]?.eq).toHaveBeenCalledWith("is_deleted", false);
+    expect(rpc).toHaveBeenCalledWith("m14_03_role_list_rows", {
+      p_organization_id: "org-a",
+    });
+    expect(queries[-1 + queries.length]?.order).toHaveBeenCalledWith("id", {
+      ascending: true,
+    });
     expect(queries[0]?.order).toHaveBeenCalledWith("created_at", {
       ascending: true,
     });
@@ -140,6 +148,19 @@ describe("SupabaseRoleRepository", () => {
       expect.objectContaining({ memberCount: 0 }),
     ]);
   });
+
+  it.each([
+    { data: null, error: { message: "provider unavailable" } },
+    { data: [{ id: roleRow.id }], error: null },
+  ])(
+    "rejects unavailable or malformed shared role projections",
+    async (result) => {
+      const { repository } = harness([result]);
+      await expect(repository.list("org-a")).rejects.toMatchObject({
+        code: "unavailable",
+      });
+    },
+  );
 
   const context = {
     eventKey: "11111111-1111-4111-8111-111111111111",

@@ -512,19 +512,7 @@ export class VerifyMfaUseCase {
   }
 }
 
-export class HasVerifiedMfaQuery {
-  constructor(private readonly identity: AuthIdentityProvider) {}
-  async execute(query: Readonly<{ accessToken: string }>) {
-    try {
-      const factors = await this.identity.listUserMfaFactors(query.accessToken);
-      return factors
-        ? valueSuccess(factors.some(({ status }) => status === "verified"))
-        : failure("auth_unavailable");
-    } catch {
-      return failure("auth_unavailable");
-    }
-  }
-}
+export { HasVerifiedMfaQuery } from "./has-verified-mfa.query";
 
 export class UnenrollMfaUseCase {
   constructor(

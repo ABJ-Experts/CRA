@@ -1,5 +1,7 @@
 "use client";
 
+import { ExportControls } from "../../_features/exports/export-controls";
+
 import { memberSchema, type Member } from "@repo/contracts/users";
 import { Avatar } from "@repo/ui/avatar";
 import { Select, SelectItem } from "@repo/ui/select";
@@ -48,6 +50,7 @@ function fullName(row: MemberRow): string {
 }
 
 export default function ManagementPage() {
+  const canExport = useHasPermission("can_export_users");
   const canEdit = useHasPermission("can_edit_users");
   const { session } = useSession();
   const queryClient = useQueryClient();
@@ -155,6 +158,22 @@ export default function ManagementPage() {
 
   return (
     <TablePage<MemberRow>
+      renderExport={(filters) => (
+        <ExportControls key={`${session?.organization?.id ?? "none"}:${session?.user?.id ?? "none"}`}
+          source="users.members"
+          context={{}}
+          filters={filters}
+          columns={[
+            "firstName",
+            "lastName",
+            "email",
+            "role",
+            "isActive",
+            "joinedAt",
+          ]}
+          enabled={canExport}
+        />
+      )}
       endpoint="/api/v1/users"
       rowSchema={memberSchema}
       variant="basic"

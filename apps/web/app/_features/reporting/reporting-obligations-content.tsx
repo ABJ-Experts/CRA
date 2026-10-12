@@ -1,4 +1,5 @@
 "use client";
+import { MemberExportControls } from "../exports/member-export-controls";
 
 import type {
   ReportingObligationAnchorKind,
@@ -90,6 +91,7 @@ export function ReportingObligationsContent() {
   const searchParams = useSearchParams();
   const { isLoading: sessionLoading } = useSession();
   const canView = useHasPermission("can_view_findings");
+  const canExport = useHasPermission("can_export_reporting");
   const canEdit = useHasPermission("can_edit_findings");
   const canSubmit = useHasPermission("can_submit_reporting");
   const [scope, setScope] = useState<ReportingObligationScope>("real");
@@ -164,6 +166,13 @@ export function ReportingObligationsContent() {
   if (!canView) {
     return (
       <div className="flex flex-col gap-6 px-6 py-6 lg:px-[30px]">
+        <MemberExportControls
+          source="reporting.obligations"
+          context={{}}
+          filters={{ limit: 50, scope }}
+          columns={["type", "status", "awarenessAt", "createdAt"]}
+          enabled={canView && canExport && !sessionLoading}
+        />
         <PageHeading
           title="Reporting obligations"
           subtitle="Track CRA reporting timers from human-asserted awareness, frozen rule versions, and durable anchor corrections."

@@ -74,8 +74,8 @@ export type PermissionAction = (typeof PERMISSION_ACTIONS)[number];
 export const PERMISSION_MATRIX = {
   // Administration
   users: ["view", "create", "edit", "delete", "export"],
-  roles: ["view", "create", "edit", "delete"],
-  invitations: ["view", "create", "delete"],
+  roles: ["view", "create", "edit", "delete", "export"],
+  invitations: ["view", "create", "delete", "export"],
   organization: ["view", "edit", "delete", "export"],
   audit: ["view", "export"],
   // Commerce
@@ -100,10 +100,14 @@ export const PERMISSION_MATRIX = {
   finding_publication: ["manage"],
   // Regulatory reporting submission is intentionally separate from editing a
   // draft. It is granted only to owner/admin presets unless explicitly added.
-  reporting: ["view", "submit"],
+  reporting: ["view", "submit", "export"],
   // Annex VII technical-file editing is distinct from product editing. It is
   // intentionally absent from member/viewer presets but assignable by custom roles.
-  technical_files: ["view", "edit", "snapshot", "issue", "share"],
+  technical_files: ["view", "edit", "snapshot", "issue", "share", "export"],
+  // Portable list projections require an explicit capability; no tables fallback.
+  tasks: ["export"],
+  notifications: ["export"],
+  vulnerabilities: ["export"],
   // Logistics
   fleet: ["view", "create", "edit", "delete"],
   routes: ["view", "create", "edit", "delete"],
@@ -126,16 +130,16 @@ export const PERMISSION_MATRIX = {
   // supplier evidence and generated composite SBOMs. It is deliberately
   // distinct from upload: collecting evidence must not authorize accepting
   // it into an authoritative composition.
-  sboms: ["view", "upload", "review"],
+  sboms: ["view", "upload", "review", "export"],
   // Evidence files are distinct from SBOMs and technical-file links. Uploading
   // never grants lifecycle control over a quarantined or otherwise immutable
   // version; that is deliberately reserved for `manage`.
-  evidence: ["view", "upload", "review", "manage"],
+  evidence: ["view", "upload", "review", "manage", "export"],
   // Internal supplier registry. These permissions never authorize the public
   // supplier-SBOM portal, whose opaque invitation/session remains separate.
-  suppliers: ["view", "manage"],
+  suppliers: ["view", "manage", "export"],
   // Version selection is organizational; immutable pack loading is deployment-only.
-  frameworks: ["view", "manage"],
+  frameworks: ["view", "manage", "export"],
 } as const satisfies Record<string, readonly PermissionAction[]>;
 
 export type PermissionModule = keyof typeof PERMISSION_MATRIX;

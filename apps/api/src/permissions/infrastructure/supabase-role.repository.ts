@@ -19,8 +19,17 @@ import {
   type UpdateRoleRecord,
 } from "../application/role-repository.port";
 
-const ROLE_SELECT =
-  "id, name, description, color, base_role, permissions, is_system, is_active, user_role_assignments(count)";
+const roleRowSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  description: z.string().nullable(),
+  color: z.string(),
+  base_role: z.string(),
+  permissions: z.unknown(),
+  is_system: z.boolean(),
+  is_active: z.boolean(),
+  user_role_assignments: z.unknown(),
+});
 const mutationResultSchema = z.object({
   status: z.enum([
     "updated",
@@ -42,14 +51,14 @@ export class SupabaseRoleRepository implements RoleRepository {
   async list(orgId: string): Promise<readonly CustomRole[]> {
     const { data, error } = await this.supabase
       .admin()
-      .from("custom_roles")
-      .select(ROLE_SELECT)
-      .eq("organization_id", orgId)
-      .eq("is_deleted", false)
-      .order("created_at", { ascending: true });
+      .rpc("m14_03_role_list_rows", { p_organization_id: orgId })
+      .order("created_at", { ascending: true })
+      .order("id", { ascending: true });
     if (error) this.fail(error.message);
 
-    return (data ?? []).map((row) => this.toRole(row));
+    const parsed = roleRowSchema.array().safeParse(data ?? []);
+    if (!parsed.success) this.fail("invalid role list projection");
+    return parsed.data.map((row) => this.toRole(row));
   }
 
   async create(

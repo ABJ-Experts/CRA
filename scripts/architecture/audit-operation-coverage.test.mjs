@@ -4,7 +4,10 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import test from "node:test";
 
-import { verifyAuditOperationCoverage } from "./audit-operation-coverage.mjs";
+import {
+  collectMutationRoutes,
+  verifyAuditOperationCoverage,
+} from "./audit-operation-coverage.mjs";
 
 async function fixture(t, registry) {
   const root = await mkdtemp(join(tmpdir(), "cra-audit-coverage-"));
@@ -111,14 +114,18 @@ test("requires an evidence path for claimed authoritative writers", async (t) =>
 
 test("requires a source symbol present in evidence", async (t) => {
   const root = await fixture(t, {
-    routes: [{
-      ...operation,
-      authority: [{
-        kind: "transactional-audit",
-        evidence: "apps/api/src/orders/orders.controller.ts",
-        symbol: "missing_audit_writer",
-      }],
-    }],
+    routes: [
+      {
+        ...operation,
+        authority: [
+          {
+            kind: "transactional-audit",
+            evidence: "apps/api/src/orders/orders.controller.ts",
+            symbol: "missing_audit_writer",
+          },
+        ],
+      },
+    ],
     workers: [],
     rpcs: [],
   });
@@ -130,13 +137,17 @@ test("requires a source symbol present in evidence", async (t) => {
 
 test("requires source symbols for durable authorities", async (t) => {
   const root = await fixture(t, {
-    routes: [{
-      ...operation,
-      authority: [{
-        kind: "transactional-audit",
-        evidence: "apps/api/src/orders/orders.controller.ts",
-      }],
-    }],
+    routes: [
+      {
+        ...operation,
+        authority: [
+          {
+            kind: "transactional-audit",
+            evidence: "apps/api/src/orders/orders.controller.ts",
+          },
+        ],
+      },
+    ],
     workers: [],
     rpcs: [],
   });
@@ -170,14 +181,18 @@ test("rejects an unresolved mutation authority", async (t) => {
 
 test("rejects an unreviewed best-effort mutation authority", async (t) => {
   const root = await fixture(t, {
-    routes: [{
-      ...operation,
-      authority: [{
-        kind: "best-effort",
-        evidence: "apps/api/src/orders/orders.controller.ts",
-        symbol: "approve",
-      }],
-    }],
+    routes: [
+      {
+        ...operation,
+        authority: [
+          {
+            kind: "best-effort",
+            evidence: "apps/api/src/orders/orders.controller.ts",
+            symbol: "approve",
+          },
+        ],
+      },
+    ],
     workers: [],
     rpcs: [],
   });
@@ -203,9 +218,25 @@ test("range verification worker requires a durable authority", async (t) => {
   const worker = "apps/api/src/audit/range/audit-range-worker.ts";
   await mkdir(dirname(join(root, worker)), { recursive: true });
   await writeFile(join(root, worker), "export class AuditRangeWorker {}\n");
-  assert.match((await verifyAuditOperationCoverage(root)).join("\n"), /unregistered worker/);
+  assert.match(
+    (await verifyAuditOperationCoverage(root)).join("\n"),
+    /unregistered worker/,
+  );
 });
 
 test("the repository mutation surface is fully registered", async () => {
   assert.deepEqual(await verifyAuditOperationCoverage(process.cwd()), []);
+});
+
+test("enumerates every literal controller and method alias", async (t) => {
+  const root = await fixture(t, { routes: [], workers: [], rpcs: [] });
+  await writeFile(
+    join(root, "apps/api/src/orders/orders.controller.ts"),
+    '@Controller(["orders", "portal/orders"])\nclass OrdersController { @Post([":id/approve", ":id/confirm"]) approve() {} }\n',
+  );
+  const routes = await collectMutationRoutes(root);
+  assert.equal(routes.length, 4);
+  assert.ok(
+    routes.some((route) => route.endsWith("POST:portal/orders/:id/confirm")),
+  );
 });

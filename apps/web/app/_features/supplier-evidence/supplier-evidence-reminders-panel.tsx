@@ -1,4 +1,5 @@
 "use client";
+import { MemberExportControls } from "../exports/member-export-controls";
 
 import { supplierEvidenceReminderSettingsInputSchema } from "@repo/contracts/supplier-evidence";
 import { Button } from "@repo/ui/button";
@@ -194,6 +195,7 @@ export function SupplierEvidenceRemindersPanel({
       aria-labelledby="supplier-evidence-reminders-heading"
       className="mt-6 border-t border-border pt-6"
     >
+      <MemberExportControls source="supplier_evidence.overdue" context={{}} filters={{ supplierId, limit: 25 }} columns={["title", "dueAt", "status"]} enabled={readEnabled} />
       <div>
         <h3
           id="supplier-evidence-reminders-heading"

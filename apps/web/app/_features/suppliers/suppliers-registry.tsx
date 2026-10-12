@@ -1,5 +1,7 @@
 "use client";
 
+import { ExportControls } from "../exports/export-controls";
+
 import {
   createSupplierInputSchema,
   supplierDuplicateCandidatesErrorSchema,
@@ -319,6 +321,13 @@ export function SuppliersRegistryContent() {
             </SectionCard>
           )}
           <SectionCard title="Supplier registry">
+            <ExportControls key={`${session?.organization?.id ?? "none"}:${session?.user?.id ?? "none"}`}
+              source="suppliers.registry"
+              context={{}}
+              filters={{ search: search.trim() || undefined, includeArchived }}
+              columns={["name", "criticality", "state"]}
+              enabled={enabled && permissions.can_export_suppliers === true}
+            />
             <div className="mb-6 flex flex-col gap-3 border-b border-border pb-5 lg:flex-row lg:items-center lg:justify-between">
               <SearchInput
                 aria-label="Search suppliers"

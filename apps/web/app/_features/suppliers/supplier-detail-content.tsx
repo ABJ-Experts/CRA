@@ -1,4 +1,5 @@
 "use client";
+import { MemberExportControls } from "../exports/member-export-controls";
 
 import {
   archiveSupplierContactInputSchema,
@@ -588,6 +589,7 @@ export function SupplierDetailContent({
             </p>
           </SectionCard>
           <SectionCard title="Contacts">
+            <MemberExportControls source="suppliers.contacts" context={{ supplierId }} filters={{}} columns={["name", "email", "state", "role"]} enabled={enabled} />
             <ul className="grid gap-2" aria-label="Supplier contacts">
               {supplier.contacts.length === 0 ? (
                 <li className="text-caption-1-regular text-fg-muted">
@@ -624,6 +626,7 @@ export function SupplierDetailContent({
             ) : null}
           </SectionCard>
           <SectionCard title="Component responsibilities">
+            <MemberExportControls source="suppliers.responsibilities" context={{ supplierId }} filters={{}} columns={["productId", "releaseId", "componentIdentity", "componentVersion", "state", "provenance"]} enabled={enabled} />
             <ul
               className="grid gap-3"
               aria-label="Supplier component responsibilities"

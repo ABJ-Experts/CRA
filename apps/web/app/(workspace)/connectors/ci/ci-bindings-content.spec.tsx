@@ -50,6 +50,10 @@ const state = vi.hoisted(() => ({
   },
 }));
 
+vi.mock("../../../_features/exports/member-export-controls", () => ({
+  MemberExportControls: ({ source, context, filters }: { source: string; context: Record<string, unknown>; filters: Record<string, unknown> }) =>
+    <output data-testid={source}>{JSON.stringify({ context, filters })}</output>,
+}));
 vi.mock("../../../_providers/providers", () => ({ useMocksReady: () => true }));
 vi.mock("../../../_providers/session-provider", () => ({
   useSession: () => ({
@@ -200,6 +204,8 @@ describe("CI binding owner workspace", () => {
     state.revoke.mutateAsync = vi.fn(async () => ({}));
     render(<CiBindingsContent />);
     fireEvent.click(screen.getByRole("button", { name: "Recent builds" }));
+    expect(screen.getByTestId("sboms.ci_bindings")).toHaveTextContent(JSON.stringify({ context: {}, filters: {} }));
+    expect(screen.getByTestId("sboms.ci_binding_runs")).toHaveTextContent(JSON.stringify({ context: { bindingId: id }, filters: { limit: 20 } }));
     expect(screen.getByText("policy not configured")).toBeVisible();
     expect(screen.getByRole("cell", { name: /build-42 \/ 1/ })).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "Revoke" }));

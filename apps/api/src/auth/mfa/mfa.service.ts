@@ -264,6 +264,11 @@ export class MfaService {
   async hasVerifiedFactor(accessToken: string): Promise<boolean> {
     const result = await this.hasMfa.execute({ accessToken });
     if (result.ok) return result.value;
+    if (result.error.code === "session_revoked")
+      throw new UnauthorizedException({
+        message: "Your session has ended. Please sign in again.",
+        code: "session_revoked",
+      });
     this.logger.error("MFA factor lookup failed");
     throw new ServiceUnavailableException({
       message: "Sign-in is temporarily unavailable. Please try again.",

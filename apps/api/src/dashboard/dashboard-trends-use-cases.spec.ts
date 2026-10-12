@@ -518,3 +518,56 @@ describe("trend application authorization and pinned reads", () => {
     );
   });
 });
+
+describe("filtered export trusted trend snapshot", () => {
+  it("preserves the signed pin and verifies the current dataset and filters", async () => {
+    const { api, read } = fixture();
+    const initial = await api.trends(user, filters);
+    const context = await api.exportCaptureContext(user, {
+      ...filters,
+      datasetToken: initial.datasetToken,
+    });
+    expect(context._datasetSnapshot).toEqual(pin);
+    expect(context._datasetRevision).toBe("revision");
+    expect(read).toHaveBeenLastCalledWith(
+      id,
+      expect.objectContaining({ snapshot: pin }),
+    );
+    await expect(
+      api.exportCaptureContext(user, {
+        ...filters,
+        to: "2026-10-07",
+        datasetToken: initial.datasetToken,
+      }),
+    ).rejects.toThrow(DashboardDatasetConflictError);
+  });
+  it("denies forged, cross-actor and revoked-permission tokens", async () => {
+    const { api, snapshot } = fixture();
+    const initial = await api.trends(user, filters);
+    await expect(
+      api.exportCaptureContext(user, { ...filters, datasetToken: "forged" }),
+    ).rejects.toThrow(DashboardDatasetConflictError);
+    await expect(
+      api.exportCaptureContext(
+        { ...user, id: "00000000-0000-4000-8000-000000000002" },
+        { ...filters, datasetToken: initial.datasetToken },
+      ),
+    ).rejects.toThrow(DashboardDatasetConflictError);
+    snapshot.mockResolvedValue({
+      version: 2,
+      permissions: DEFAULT_PERMISSIONS_BY_ROLE.owner,
+    });
+    await expect(
+      api.exportCaptureContext(user, {
+        ...filters,
+        datasetToken: initial.datasetToken,
+      }),
+    ).rejects.toThrow(DashboardDatasetConflictError);
+  });
+  it("can generate a trusted pin for a query without an existing token", async () => {
+    const { api } = fixture();
+    expect(
+      (await api.exportCaptureContext(user, filters))._datasetSnapshot,
+    ).toEqual(pin);
+  });
+});

@@ -40,6 +40,44 @@ export class AuditExplorerUseCases {
     private readonly tokens: AuditExplorerTokenCodec,
   ) {}
 
+  /** Validate the displayed snapshot and its durable receipt before capture. */
+  async exportCaptureContext(
+    user: RequestUser,
+    snapshotToken: string,
+    filters: AuditSearchInput["filters"],
+  ) {
+    const principal = this.principal(user);
+    const snapshot = this.openSnapshot(snapshotToken, principal);
+    if (this.tokens.digest(filters) !== this.tokens.digest(snapshot.filters))
+      throw new AuditExplorerForbiddenError();
+    const sourcePolicy = await this.currentSourcePolicy(
+      user,
+      snapshot.filters,
+      snapshot,
+    );
+    await this.repository.readPage({
+      organizationId: principal.organizationId,
+      actorId: principal.actorId,
+      receiptId: snapshot.receiptId,
+      filterDigest: snapshot.filterDigest,
+      scopeDigest: snapshot.scopeDigest,
+      filters: snapshot.filters,
+      allowedEntityTypes: sourcePolicy.allowedEntityTypes,
+      cursor: cursorToRead(null),
+      limit: 1,
+    });
+    return Object.freeze({
+      _auditSnapshot: Object.freeze({
+        receiptId: snapshot.receiptId,
+        highWaterSequence: snapshot.highWaterSequence,
+        filterDigest: snapshot.filterDigest,
+        scopeDigest: snapshot.scopeDigest,
+        scopeVersion: snapshot.scopeVersion,
+        allowedEntityTypes: sourcePolicy.allowedEntityTypes,
+      }),
+    });
+  }
+
   async createSnapshot(
     user: RequestUser,
     input: AuditSearchInput,
@@ -92,7 +130,11 @@ export class AuditExplorerUseCases {
   ): Promise<AuditPage> {
     const principal = this.principal(user);
     const snapshot = this.openSnapshot(snapshotToken, principal);
-    const sourcePolicy = await this.currentSourcePolicy(user, snapshot.filters);
+    const sourcePolicy = await this.currentSourcePolicy(
+      user,
+      snapshot.filters,
+      snapshot,
+    );
     const cursor = query.cursor
       ? this.openCursor(query.cursor, principal)
       : null;
@@ -144,7 +186,11 @@ export class AuditExplorerUseCases {
   ): Promise<AuditDetail> {
     const principal = this.principal(user);
     const snapshot = this.openSnapshot(snapshotToken, principal);
-    const sourcePolicy = await this.currentSourcePolicy(user, snapshot.filters);
+    const sourcePolicy = await this.currentSourcePolicy(
+      user,
+      snapshot.filters,
+      snapshot,
+    );
     await this.repository.recordAccess({
       organizationId: principal.organizationId,
       actorId: principal.actorId,
@@ -175,7 +221,11 @@ export class AuditExplorerUseCases {
   ): Promise<AuditVerificationResult> {
     const principal = this.principal(user);
     const snapshot = this.openSnapshot(snapshotToken, principal);
-    const sourcePolicy = await this.currentSourcePolicy(user, snapshot.filters);
+    const sourcePolicy = await this.currentSourcePolicy(
+      user,
+      snapshot.filters,
+      snapshot,
+    );
     await this.repository.recordAccess({
       organizationId: principal.organizationId,
       actorId: principal.actorId,
@@ -205,7 +255,11 @@ export class AuditExplorerUseCases {
   ): Promise<AuditExportJob> {
     const principal = this.principal(user);
     const snapshot = this.tokens.openSnapshot(input.snapshotToken, principal);
-    const sourcePolicy = await this.currentSourcePolicy(user, snapshot.filters);
+    const sourcePolicy = await this.currentSourcePolicy(
+      user,
+      snapshot.filters,
+      snapshot,
+    );
     return this.repository.createExport({
       organizationId: principal.organizationId,
       actorId: principal.actorId,
@@ -331,6 +385,7 @@ export class AuditExplorerUseCases {
   private async currentSourcePolicy(
     user: RequestUser,
     filters: AuditSearchInput["filters"],
+    snapshot: AuditSnapshotTokenPayload,
   ) {
     const principal = this.principal(user);
     const permissionState = await this.repository.effectivePermissions(
@@ -338,7 +393,15 @@ export class AuditExplorerUseCases {
       principal.actorId,
       this.baseRole(user),
     );
-    return buildAuditSourcePolicy(permissionState.permissions, filters);
+    const policy = buildAuditSourcePolicy(permissionState.permissions, filters);
+    const currentDigest = this.tokens.digest({
+      kind: SNAPSHOT_SCOPE_KIND,
+      permissionsVersion: permissionState.version,
+      allowedEntityTypes: policy.allowedEntityTypes,
+    });
+    if (currentDigest !== snapshot.scopeDigest)
+      throw new AuditExplorerStaleError();
+    return policy;
   }
 
   private openSnapshot(

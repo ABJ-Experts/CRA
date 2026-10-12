@@ -1,4 +1,5 @@
 "use client";
+import { MemberExportControls } from "../exports/member-export-controls";
 
 import {
   calculateRiskLevel,
@@ -971,6 +972,7 @@ export function RiskRegisterWorkspace({
         ) : undefined
       }
     >
+      <MemberExportControls source="risk_register.risks" context={{ productId }} filters={{}} columns={["status", "version", "archivedAt", "createdAt", "updatedAt"]} enabled={enabled} />
       <div className="flex flex-col gap-4">
         <p className="text-subhead-regular text-fg-muted">
           Pinned method: CRA 5×5 v1. This is a risk method, not a compliance

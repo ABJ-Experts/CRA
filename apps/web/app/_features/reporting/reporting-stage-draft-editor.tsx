@@ -1,4 +1,5 @@
 "use client";
+import { MemberExportControls } from "../exports/member-export-controls";
 
 import type {
   ReportingObligationListResponse,
@@ -1116,6 +1117,7 @@ export function ReportingStageDraftEditor({
               className="mt-4 border-t border-border pt-3"
               aria-label="Evidence timeline"
             >
+              <MemberExportControls source="reporting.stage_evidence_timeline" context={{ obligationId: obligation.id, stageId: stage.id }} filters={{}} columns={["kind", "occurredAt", "recordedAt", "summary", "contentSha256"]} enabled={canSubmitReports} />
               <h4 className="text-caption-1-semibold text-fg">
                 Evidence timeline
               </h4>

@@ -1,0 +1,117 @@
+{
+  "version": "m14_03_v1",
+  "product": {
+    "id": "8d45ba58-63ac-4f01-888e-d1257a5c679b",
+    "name": "M7 declaration E2E 1789458690746",
+    "version": 0
+  },
+  "snapshotAsOf": "2026-10-09T12:19:40.781404+00:00",
+  "technicalFileVersion": 1,
+  "canonicalReadiness": {
+    "technicalFileId": "ec215eac-cf2a-472e-81bd-6d304cefeeb4",
+    "overallStatus": "complete",
+    "recalculationStatus": "current",
+    "calculatedAt": "2026-10-09T12:19:40Z",
+    "sections": [
+      {
+        "sectionKey": "design_development_production",
+        "status": "complete",
+        "gapCount": 0,
+        "validEvidenceCount": 1,
+        "staleEvidenceCount": 0,
+        "unavailableEvidenceCount": 0,
+        "staleReasons": [],
+        "gaps": []
+      },
+      {
+        "sectionKey": "general_description",
+        "status": "complete",
+        "gapCount": 0,
+        "validEvidenceCount": 0,
+        "staleEvidenceCount": 0,
+        "unavailableEvidenceCount": 0,
+        "staleReasons": [],
+        "gaps": []
+      },
+      {
+        "sectionKey": "release_sbom",
+        "status": "complete",
+        "gapCount": 0,
+        "validEvidenceCount": 0,
+        "staleEvidenceCount": 0,
+        "unavailableEvidenceCount": 0,
+        "staleReasons": [],
+        "gaps": []
+      },
+      {
+        "sectionKey": "standards_common_specifications",
+        "status": "complete",
+        "gapCount": 0,
+        "validEvidenceCount": 1,
+        "staleEvidenceCount": 0,
+        "unavailableEvidenceCount": 0,
+        "staleReasons": [],
+        "gaps": []
+      },
+      {
+        "sectionKey": "support_period_basis",
+        "status": "complete",
+        "gapCount": 0,
+        "validEvidenceCount": 0,
+        "staleEvidenceCount": 0,
+        "unavailableEvidenceCount": 0,
+        "staleReasons": [],
+        "gaps": []
+      },
+      {
+        "sectionKey": "test_reports",
+        "status": "complete",
+        "gapCount": 0,
+        "validEvidenceCount": 0,
+        "staleEvidenceCount": 0,
+        "unavailableEvidenceCount": 0,
+        "staleReasons": [],
+        "gaps": []
+      },
+      {
+        "sectionKey": "user_instructions",
+        "status": "complete",
+        "gapCount": 0,
+        "validEvidenceCount": 0,
+        "staleEvidenceCount": 0,
+        "unavailableEvidenceCount": 0,
+        "staleReasons": [],
+        "gaps": []
+      },
+      {
+        "sectionKey": "vulnerability_handling",
+        "status": "complete",
+        "gapCount": 0,
+        "validEvidenceCount": 0,
+        "staleEvidenceCount": 0,
+        "unavailableEvidenceCount": 0,
+        "staleReasons": [],
+        "gaps": []
+      }
+    ],
+    "gaps": []
+  },
+  "evidence": [],
+  "degraded": false,
+  "notices": [
+    "Documentation readiness is not certified conformity."
+  ],
+  "documentationReadinessOnly": true,
+  "sourceVersions": [
+    {
+      "source": "product",
+      "version": "0",
+      "asOf": "2026-10-09T12:19:40.781404+00:00"
+    },
+    {
+      "source": "technical_file",
+      "version": "1",
+      "asOf": "2026-10-09T12:19:40.781404+00:00"
+    }
+  ]
+}

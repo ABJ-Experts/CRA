@@ -1,4 +1,5 @@
 "use client";
+import { MemberExportControls } from "../exports/member-export-controls";
 
 import {
   frameworkCatalogResponseSchema,
@@ -535,7 +536,17 @@ export function FrameworksWorkspace() {
           ) : null}
           {pack ? (
             <>
-              <SectionCard title="Workspace selection">
+              <SectionCard
+                title="Workspace selection"
+                action={
+                  <MemberExportControls
+                    source="frameworks.catalog"
+                    context={{}}
+                    filters={{ limit: 100 }}
+                    label="Export framework catalogue"
+                  />
+                }
+              >
                 <div className={cn("grid min-w-0 gap-4 md:grid-cols-2")}>
                   <label
                     className={cn(
@@ -697,7 +708,20 @@ export function FrameworksWorkspace() {
                 />
               ) : null}
               {version ? (
-                <SectionCard title="Requirements preview">
+                <SectionCard
+                  title="Requirements preview"
+                  action={
+                    <MemberExportControls
+                      source="frameworks.requirement_tree"
+                      context={{
+                        packKey: pack.packKey,
+                        versionKey: version.versionKey,
+                      }}
+                      filters={{ limit: 100 }}
+                      label="Export requirements"
+                    />
+                  }
+                >
                   <p className={cn("mb-2 text-subhead-regular text-fg")}>
                     {pack.title} · {formatEdition(version.editionDate)}
                   </p>

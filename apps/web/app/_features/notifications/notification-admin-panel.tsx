@@ -1,4 +1,5 @@
 "use client";
+import { MemberExportControls } from "../exports/member-export-controls";
 
 import type {
   NotificationCategory,
@@ -187,17 +188,18 @@ export function NotificationAdminPanel({
     routeEnabled ? recipientUserId : null,
     canManage,
   );
+  const deliveryFilters = {
+    status: status || undefined,
+    category: category || undefined,
+    recipientUserId:
+      deliveryRecipientValid && normalizedDeliveryRecipientUserId
+        ? normalizedDeliveryRecipientUserId
+        : undefined,
+    cursor: activeCursor ?? undefined,
+    limit: 25,
+  };
   const deliveries = useNotificationDeliveriesQuery(
-    {
-      status: status || undefined,
-      category: category || undefined,
-      recipientUserId:
-        deliveryRecipientValid && normalizedDeliveryRecipientUserId
-          ? normalizedDeliveryRecipientUserId
-          : undefined,
-      cursor: activeCursor ?? undefined,
-      limit: 25,
-    },
+    deliveryFilters,
     canViewDeliveries && deliveryRecipientValid,
   );
   const updateRoute = useUpdateNotificationCriticalRouteMutation();
@@ -324,6 +326,23 @@ export function NotificationAdminPanel({
       className="grid gap-5"
       aria-labelledby="notification-admin-heading"
     >
+      <MemberExportControls
+        source="notifications.deliveries"
+        context={{}}
+        filters={deliveryFilters}
+        columns={[
+          "category",
+          "status",
+          "sourceType",
+          "originalRecipientUserId",
+          "effectiveRecipientUserId",
+          "attemptCount",
+          "safeErrorCode",
+          "createdAt",
+          "updatedAt",
+        ]}
+        enabled={canViewDeliveries && deliveryRecipientValid}
+      />
       <div>
         <h3
           id="notification-admin-heading"

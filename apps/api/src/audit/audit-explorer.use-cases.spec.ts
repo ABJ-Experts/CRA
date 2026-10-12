@@ -43,14 +43,19 @@ function repository(permissions: PermissionSet = { can_view_products: true }) {
     effectivePermissions: jest
       .fn()
       .mockResolvedValue({ permissions, version: "7" }),
-    createSnapshot: jest.fn().mockResolvedValue({
-      receiptId,
-      highWaterSequence: "41",
-      expiresAt: new Date(Date.now() + 60_000).toISOString(),
-      filterDigest: "a".repeat(64),
-      scopeDigest: "b".repeat(64),
-      scopeVersion: "7",
-    }),
+    createSnapshot: jest
+      .fn()
+      .mockImplementation(
+        (request: Parameters<AuditExplorerRepository["createSnapshot"]>[0]) =>
+          Promise.resolve({
+            receiptId,
+            highWaterSequence: "41",
+            expiresAt: new Date(Date.now() + 60_000).toISOString(),
+            filterDigest: request.filterDigest,
+            scopeDigest: request.scopeDigest,
+            scopeVersion: "7",
+          }),
+      ),
     recordDenial: jest.fn().mockResolvedValue({ receiptId, replayed: false }),
     recordAccess: jest.fn().mockResolvedValue({ receiptId, replayed: false }),
     readPage: jest.fn().mockResolvedValue({
@@ -86,6 +91,39 @@ function repository(permissions: PermissionSet = { can_view_products: true }) {
 }
 
 describe("AuditExplorerUseCases", () => {
+  it("rejects a signed older source vector before it can expand on page or export", async () => {
+    const repo = repository({ can_view_audit: true });
+    const codec = tokens();
+    const service = new AuditExplorerUseCases(repo, codec);
+    const oldFilters = { from: filters.from, to: filters.to };
+    const oldScopeDigest = codec.digest({
+      kind: "cra.audit.snapshot.scope.v1",
+      permissionsVersion: "7",
+      allowedEntityTypes: ["audit_search"],
+    });
+    const oldToken = codec.snapshot({
+      kind: "snapshot",
+      organizationId,
+      actorId,
+      sessionId,
+      requestId: snapshotRequestId,
+      receiptId,
+      highWaterSequence: "41",
+      expiresAt: new Date(Date.now() + 60_000).toISOString(),
+      filterDigest: codec.digest(oldFilters),
+      scopeDigest: oldScopeDigest,
+      scopeVersion: "7",
+      filters: oldFilters,
+    });
+    await expect(
+      service.page(user, oldToken, { requestId: pageRequestId, limit: 25 }),
+    ).rejects.toThrow("audit explorer snapshot is stale");
+    await expect(
+      service.exportCaptureContext(user, oldToken, oldFilters),
+    ).rejects.toThrow("audit explorer snapshot is stale");
+    expect(repo.readPage).not.toHaveBeenCalled();
+    expect(repo.recordAccess).not.toHaveBeenCalled();
+  });
   it("creates a snapshot receipt from plain filters and an exact source allowlist", async () => {
     const repo = repository();
     const service = new AuditExplorerUseCases(repo, tokens());
@@ -428,4 +466,62 @@ it("rejects wrong-job grants and stale package hashes before storage opens", asy
     service.download(user, exportJob.id, pageRequestId, grant.cookieValue),
   ).rejects.toThrow("audit explorer snapshot is stale");
   expect(repo.downloadPackage).not.toHaveBeenCalled();
+});
+
+describe("filtered export signed audit capture", () => {
+  it("binds the frozen receipt, filters and current source permissions", async () => {
+    const repo = repository();
+    const api = new AuditExplorerUseCases(repo, tokens());
+    const snapshot = await api.createSnapshot(user, {
+      requestId: snapshotRequestId,
+      filters,
+    });
+    const context = await api.exportCaptureContext(
+      user,
+      snapshot.snapshotToken,
+      filters,
+    );
+    expect(context._auditSnapshot).toEqual(
+      expect.objectContaining({
+        receiptId,
+        highWaterSequence: "41",
+        allowedEntityTypes: ["product"],
+      }),
+    );
+    expect(repo.readPage).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        receiptId,
+        limit: 1,
+        allowedEntityTypes: ["product"],
+      }),
+    );
+    await expect(
+      api.exportCaptureContext(user, snapshot.snapshotToken, {
+        ...filters,
+        resourceType: "supplier_contact",
+      }),
+    ).rejects.toThrow();
+  });
+  it("rejects forged and cross-actor tokens and unavailable receipts", async () => {
+    const repo = repository();
+    const api = new AuditExplorerUseCases(repo, tokens());
+    const snapshot = await api.createSnapshot(user, {
+      requestId: snapshotRequestId,
+      filters,
+    });
+    await expect(
+      api.exportCaptureContext(user, "forged", filters),
+    ).rejects.toThrow();
+    await expect(
+      api.exportCaptureContext(
+        { ...user, id: eventId },
+        snapshot.snapshotToken,
+        filters,
+      ),
+    ).rejects.toThrow();
+    repo.readPage.mockRejectedValue(new Error("expired receipt"));
+    await expect(
+      api.exportCaptureContext(user, snapshot.snapshotToken, filters),
+    ).rejects.toThrow();
+  });
 });

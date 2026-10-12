@@ -1,5 +1,7 @@
 "use client";
 
+import { ExportControls } from "../../_features/exports/export-controls";
+
 import { createInvitationInputSchema } from "@repo/contracts/invitations/schemas";
 import type { CreateInvitationInput } from "@repo/contracts/invitations/types";
 import { BASE_ROLES } from "@repo/contracts/permissions";
@@ -46,10 +48,12 @@ export function InvitationManager({
   canView,
   canCreate,
   canDelete,
+  canExport = false,
 }: {
   canView: boolean;
   canCreate: boolean;
   canDelete: boolean;
+  canExport?: boolean;
 }) {
   const list = useInvitationListQuery(canView);
   const create = useCreateInvitationMutation();
@@ -112,6 +116,13 @@ export function InvitationManager({
       aria-labelledby="invite-team-heading"
       className="flex flex-col gap-4"
     >
+      <ExportControls
+        source="invitations.pending"
+        context={{}}
+        filters={{}}
+        columns={["email", "role", "status", "expiresAt"]}
+        enabled={canView && canExport}
+      />
       <div>
         <h3 id="invite-team-heading" className="text-subhead-semibold text-fg">
           Invite the team

@@ -477,7 +477,7 @@ describe("normalizePermissions", () => {
 
 describe("presets", () => {
   it("grants explicit SBOM view/upload/review defaults without changing permission resolution", () => {
-    expect(PERMISSION_MATRIX.sboms).toEqual(["view", "upload", "review"]);
+    expect(PERMISSION_MATRIX.sboms).toEqual(["view", "upload", "review", "export"]);
     for (const baseRole of BASE_ROLES) {
       expect(
         hasPermission(DEFAULT_PERMISSIONS_BY_ROLE[baseRole], "can_view_sboms"),

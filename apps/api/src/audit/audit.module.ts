@@ -53,6 +53,6 @@ import { SupabaseAuditExplorerRepository } from "./supabase-audit-explorer.repos
       useExisting: SupabaseAuditExplorerRepository,
     },
   ],
-  exports: [AuditService],
+  exports: [AuditService, AuditExplorerUseCases],
 })
 export class AuditModule {}

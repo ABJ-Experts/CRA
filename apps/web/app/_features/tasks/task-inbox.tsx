@@ -1,5 +1,7 @@
 "use client";
 
+import { ExportControls } from "../exports/export-controls";
+
 import type {
   TaskListQuery,
   TaskRow,
@@ -217,7 +219,7 @@ function TaskTable({
 }
 
 export function TaskInbox() {
-  const { session, isLoading: sessionLoading } = useSession();
+  const { session, permissions = {}, isLoading: sessionLoading } = useSession();
   const orgId = session?.organization?.id;
   const [scope, setScope] = useState<(typeof scopes)[number][0]>("mine");
   const [taskType, setTaskType] = useState<TaskType | "">("");
@@ -308,6 +310,24 @@ export function TaskInbox() {
             Routing settings
           </Button>
         }
+      />
+      <ExportControls key={`${session?.organization?.id ?? "none"}:${session?.user?.id ?? "none"}`}
+        source="tasks.inbox"
+        context={{}}
+        filters={query}
+        columns={[
+          "taskType",
+          "state",
+          "title",
+          "accountableOwnerUserId",
+          "dueAt",
+        ]}
+        enabled={Boolean(
+          orgId &&
+          filtersValid &&
+          !sessionLoading &&
+          permissions.can_export_tasks,
+        )}
       />
       <div hidden={!settingsOpen}>
         <TaskSettings active={settingsOpen} />

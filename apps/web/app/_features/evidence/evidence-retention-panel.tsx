@@ -1,4 +1,5 @@
 "use client";
+import { MemberExportControls } from "../exports/member-export-controls";
 
 import type { EvidenceRetentionReview } from "@repo/contracts/evidence";
 import { Button } from "@repo/ui/button";
@@ -193,6 +194,8 @@ export function EvidenceRetentionPanel({
       aria-labelledby="evidence-retention-title"
       className="grid gap-4 rounded-xl border border-border bg-surface p-4"
     >
+      <MemberExportControls source="evidence.legal_holds" context={{ documentId }} filters={{}} columns={["reason", "status", "placedAt", "releasedAt"]} enabled={enabled} />
+      <MemberExportControls source="evidence.retention_review" context={{ documentId }} filters={{}} columns={["code", "kind", "productName", "retentionUntil", "retentionProtectionUntil", "message"]} enabled={enabled} />
       <div className="grid gap-1">
         <h3 id="evidence-retention-title" className="text-h5 text-fg">
           Retention and deletion review

@@ -53,6 +53,17 @@ export class DashboardTrendsUseCases {
     private readonly permissions: DashboardPermissionsPort,
     private readonly tokens: DashboardDatasetTokens,
   ) {}
+  /** Source-owned authorization and token validation for durable list capture. */
+  async exportCaptureContext(user: RequestUser, query: DashboardTrendsQuery) {
+    const { scope, access } = await this.authorize(user);
+    const data = await this.readTrends(scope, access, query);
+    const position = this.open(data.datasetToken, scope);
+    return Object.freeze({
+      _datasetSnapshot: position.pin,
+      _datasetRevision: position.datasetRevision,
+      _sourceAccess: access,
+    });
+  }
   async trends(user: RequestUser, query: DashboardTrendsQuery) {
     const { scope, access } = await this.authorize(user);
     return this.readTrends(scope, access, query);

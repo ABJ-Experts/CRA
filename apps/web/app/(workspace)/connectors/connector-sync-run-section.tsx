@@ -1,4 +1,5 @@
 "use client";
+import { MemberExportControls } from "../../_features/exports/member-export-controls";
 
 import type { SyncRun } from "../../_features/connectors/connectors.schemas";
 import { Button } from "@repo/ui/button";
@@ -290,6 +291,14 @@ export function ConnectorSyncRunSection({
             </div>
             <div className="border-t border-border pt-4">
               <h3 className="text-headline-semibold text-fg">Plan items</h3>
+              {runId ? (
+                <MemberExportControls
+                  source="connectors.sync_plan_items"
+                  context={{ connectorId, runId }}
+                  filters={{ page, pageSize: 25 }}
+                  label="Export plan items"
+                />
+              ) : null}
               {planItems.isPending ? (
                 <p
                   role="status"
@@ -398,6 +407,12 @@ export function ConnectorSyncRunSection({
         {history.data?.runs.rows.length ? (
           <div className="border-t border-border pt-4">
             <h3 className="text-headline-semibold text-fg">Recent sync runs</h3>
+            <MemberExportControls
+              source="connectors.sync_runs"
+              context={{ connectorId }}
+              filters={{ page: 1, pageSize: 5 }}
+              label="Export sync runs"
+            />
             <ul
               className="mt-3 divide-y divide-border"
               aria-label="Recent sync runs"

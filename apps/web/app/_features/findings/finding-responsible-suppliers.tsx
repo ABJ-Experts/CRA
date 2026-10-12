@@ -1,4 +1,5 @@
 "use client";
+import { MemberExportControls } from "../exports/member-export-controls";
 
 import { Button } from "@repo/ui/button";
 import Link from "next/link";
@@ -17,6 +18,7 @@ export function FindingResponsibleSuppliers({
   );
   return (
     <section className="mt-6" aria-labelledby="responsible-suppliers-heading">
+      <MemberExportControls source="findings.responsible_suppliers" context={{ findingId }} filters={{}} columns={["name", "state", "provenance"]} enabled={canViewSuppliers} />
       <h3
         id="responsible-suppliers-heading"
         className="text-subhead-semibold text-fg"

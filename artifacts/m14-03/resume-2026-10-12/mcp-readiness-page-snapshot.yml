@@ -1,0 +1,90 @@
+- generic [active] [ref=f3e1]:
+  - generic [ref=f3e3]:
+    - complementary [ref=f3e4]:
+      - generic [ref=f3e5]:
+        - generic [ref=f3e6]:
+          - link "CRA Sentinel" [ref=f3e7] [cursor=pointer]:
+            - /url: /dashboard
+            - generic [aria-hidden] [ref=f3e8]: C
+            - text: CRA Sentinel
+          - button "Collapse sidebar" [ref=f3e9] [cursor=pointer]
+        - navigation "Main" [ref=f3e12]:
+          - generic [ref=f3e13]:
+            - list [ref=f3e15]:
+              - listitem [ref=f3e16]:
+                - link "Dashboard" [ref=f3e17] [cursor=pointer]:
+                  - /url: /dashboard
+              - listitem [ref=f3e25]:
+                - link "Management" [ref=f3e26] [cursor=pointer]:
+                  - /url: /management
+              - listitem [ref=f3e32]:
+                - link "Organization" [ref=f3e33] [cursor=pointer]:
+                  - /url: /organization
+              - listitem [ref=f3e40]:
+                - link "Products" [ref=f3e41] [cursor=pointer]:
+                  - /url: /products
+              - listitem [ref=f3e48]:
+                - link "Suppliers" [ref=f3e49] [cursor=pointer]:
+                  - /url: /suppliers
+              - listitem [ref=f3e54]:
+                - link "Frameworks" [ref=f3e55] [cursor=pointer]:
+                  - /url: /frameworks
+              - listitem [ref=f3e60]:
+                - link "Findings" [ref=f3e61] [cursor=pointer]:
+                  - /url: /findings
+              - listitem [ref=f3e66]:
+                - link "Reporting" [ref=f3e67] [cursor=pointer]:
+                  - /url: /reporting
+              - listitem [ref=f3e73]:
+                - link "Tasks" [ref=f3e74] [cursor=pointer]:
+                  - /url: /tasks
+              - listitem [ref=f3e80]:
+                - link "Connectors" [ref=f3e81] [cursor=pointer]:
+                  - /url: /connectors
+              - listitem [ref=f3e88]:
+                - link "Audit" [ref=f3e89] [cursor=pointer]:
+                  - /url: /audit
+            - generic [ref=f3e95]:
+              - paragraph [ref=f3e96]: Account & access
+              - list [ref=f3e97]:
+                - listitem [ref=f3e98]
+                - listitem [ref=f3e113]
+        - button "Sign out" [ref=f3e130] [cursor=pointer]
+    - generic [ref=f3e135]:
+      - banner [ref=f3e136]:
+        - navigation "Breadcrumb" [ref=f3e138]:
+          - list [ref=f3e139]:
+            - listitem [ref=f3e140]:
+              - link "Dashboard" [ref=f3e141] [cursor=pointer]:
+                - /url: /dashboard
+            - listitem [aria-hidden] [ref=f3e142]
+            - listitem [ref=f3e145]:
+              - generic [ref=f3e146]: Technical File
+        - generic [ref=f3e147]:
+          - button "Search" [ref=f3e148] [cursor=pointer]
+          - button "Notifications, 1 unread" [ref=f3e181] [cursor=pointer]
+          - generic [ref=f3e156]:
+            - generic [ref=f3e157]: AF
+            - 'img "Ada Foster: online" [ref=f3e159]'
+      - main [ref=f3e160]:
+        - generic [ref=f3e161]:
+          - generic [ref=f3e162]:
+            - generic [ref=f3e163]:
+              - heading "Technical file" [level=1] [ref=f3e164]
+              - paragraph [ref=f3e165]: Annex VII source-linked technical documentation.
+            - button "Back to product" [ref=f3e167] [cursor=pointer]
+          - button "Export readiness report" [ref=f3e184] [cursor=pointer]
+          - generic [ref=f3e185]:
+            - heading "Annex VII technical file" [level=2] [ref=f3e187]
+            - generic [ref=f3e188]:
+              - button "Export sections" [ref=f3e190] [cursor=pointer]
+              - generic [ref=f3e191]:
+                - generic [ref=f3e192]
+                - generic [ref=f3e197]
+                - region "Documentation readiness" [ref=f3e201]
+                - generic [ref=f3e236]
+                - generic [ref=f3e277]
+                - region "Technical-file snapshots" [ref=f3e288]
+                - region "EU declarations of conformity" [ref=f3e323]
+  - button "Open Next.js Dev Tools" [ref=f3e176] [cursor=pointer]
+  - alert [ref=f3e180]

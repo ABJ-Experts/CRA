@@ -1,0 +1,69 @@
+[
+  {
+    "file": "apps/web/test-results/m14-resume-2026-10-12/private-chromium/m14-03-filtered-exports-su-090db-st-through-private-delivery-chromium/supplier-checklist.xlsx",
+    "rows": 1,
+    "parity": true,
+    "formulaCells": 0
+  },
+  {
+    "file": "apps/web/test-results/m14-resume-2026-10-12/runtime-restored-chromium/m14-03-filtered-exports-au-2f30e-ted-immutable-artifact-list-chromium/auditor-artifacts.xlsx",
+    "rows": 3,
+    "parity": true,
+    "formulaCells": 0
+  },
+  {
+    "file": "apps/web/test-results/m14-resume-2026-10-12/runtime-restored-chromium/m14-03-filtered-exports-ow-c05f1-rmats-with-a-captured-as-of-chromium/filtered-empty.xlsx",
+    "rows": 0,
+    "parity": true,
+    "formulaCells": 0
+  },
+  {
+    "file": "apps/web/test-results/m14-resume-2026-10-12/cross-engine/m14-03-filtered-exports-ow-c05f1-rmats-with-a-captured-as-of-webkit/filtered-empty.xlsx",
+    "rows": 0,
+    "parity": true,
+    "formulaCells": 0
+  },
+  {
+    "file": "apps/web/test-results/m14-resume-2026-10-12/cross-engine/m14-03-filtered-exports-ow-c05f1-rmats-with-a-captured-as-of-firefox/filtered-empty.xlsx",
+    "rows": 0,
+    "parity": true,
+    "formulaCells": 0
+  },
+  {
+    "file": "apps/web/test-results/m14-resume-2026-10-12/runtime-restored-chromium/m14-03-filtered-exports-tr-ae1e4-dataset-and-source-versions-chromium/pinned-trends.csv",
+    "rows": 18,
+    "canonicalBucketValuesVerified": 216,
+    "manifestHash": true
+  },
+  {
+    "file": "apps/web/test-results/m14-resume-2026-10-12/cross-engine/m14-03-filtered-exports-tr-ae1e4-dataset-and-source-versions-webkit/pinned-trends.csv",
+    "rows": 18,
+    "canonicalBucketValuesVerified": 216,
+    "manifestHash": true
+  },
+  {
+    "file": "apps/web/test-results/m14-resume-2026-10-12/cross-engine/m14-03-filtered-exports-tr-ae1e4-dataset-and-source-versions-firefox/pinned-trends.csv",
+    "rows": 18,
+    "canonicalBucketValuesVerified": 216,
+    "manifestHash": true
+  },
+  {
+    "file": "apps/web/test-results/m14-resume-2026-10-12/runtime-restored-chromium/m14-03-filtered-exports-au-2f30e-ted-immutable-artifact-list-chromium/auditor-permitted-source.json",
+    "permittedNativeValuesVerified": 18
+  },
+  {
+    "file": "apps/web/test-results/m14-resume-2026-10-12/runtime-restored-chromium/m14-03-filtered-exports-ow-8befc-ating-a-regulatory-decision-chromium/readiness.pdf",
+    "disclaimerExtracted": true,
+    "canonicalManifest": true
+  },
+  {
+    "file": "apps/web/test-results/m14-resume-2026-10-12/cross-engine/m14-03-filtered-exports-ow-8befc-ating-a-regulatory-decision-webkit/readiness.pdf",
+    "disclaimerExtracted": true,
+    "canonicalManifest": true
+  },
+  {
+    "file": "apps/web/test-results/m14-resume-2026-10-12/cross-engine/m14-03-filtered-exports-ow-8befc-ating-a-regulatory-decision-firefox/readiness.pdf",
+    "disclaimerExtracted": true,
+    "canonicalManifest": true
+  }
+]

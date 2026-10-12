@@ -1,3 +1,4 @@
+import { AuthIdentitySessionInvalidError } from "./auth-identity-provider.port";
 import type { AuthIdentityProvider } from "./auth-identity-provider.port";
 import type { AuthProfileRepository } from "./auth-profile-repository.port";
 import {
@@ -683,5 +684,27 @@ describe("primary auth use cases", () => {
       ok: false,
       error: { code: "mfa_recovery_generate_failed" },
     });
+  });
+});
+
+describe("missing identity session during MFA guard query", () => {
+  it("reports identity revocation while retaining unavailable semantics for outages", async () => {
+    const lookup = jest
+      .fn()
+      .mockRejectedValue(new AuthIdentitySessionInvalidError());
+    const provider = {
+      listUserMfaFactors: lookup,
+    } as unknown as AuthIdentityProvider;
+    expect(
+      await new HasVerifiedMfaQuery(provider).execute({
+        accessToken: "revoked",
+      }),
+    ).toEqual({ ok: false, error: { code: "session_revoked" } });
+    lookup.mockRejectedValue(new Error("provider outage"));
+    expect(
+      await new HasVerifiedMfaQuery(provider).execute({
+        accessToken: "revoked",
+      }),
+    ).toEqual({ ok: false, error: { code: "auth_unavailable" } });
   });
 });

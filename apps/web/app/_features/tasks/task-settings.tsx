@@ -1,4 +1,5 @@
 "use client";
+import { MemberExportControls } from "../exports/member-export-controls";
 
 import { Button } from "@repo/ui/button";
 import { useEffect, useRef, useState } from "react";
@@ -109,6 +110,8 @@ export function TaskSettings({ active }: Readonly<{ active: boolean }>) {
       aria-label="Task routing settings"
       className="space-y-6 rounded-xl border border-border bg-canvas p-4 sm:p-5"
     >
+      <MemberExportControls source="tasks.routing_groups" context={{}} filters={{}} columns={["name", "version", "createdAt", "updatedAt"]} enabled={active} />
+      <MemberExportControls source="tasks.absences" context={{}} filters={{}} columns={["userId", "startsAt", "endsAt", "reason", "version"]} enabled={active} />
       <div>
         <h2 className="text-subhead-semibold text-fg">Routing settings</h2>
         <p className="mt-1 text-caption-1-regular text-fg-muted">

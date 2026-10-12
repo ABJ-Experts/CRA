@@ -13,12 +13,30 @@ const mocks = vi.hoisted(() => ({
   sources: vi.fn(),
   download: vi.fn(),
   products: vi.fn(),
+  exportControls: vi.fn(),
 }));
 vi.mock("./dashboard-trends.queries", () => ({
   useDashboardTrends: mocks.query,
   useDashboardTrendSources: mocks.sources,
   downloadDashboardTrends: mocks.download,
   useDashboardTrendProducts: mocks.products,
+}));
+vi.mock("../../_providers/session-provider", () => ({
+  useHasPermission: () => true,
+}));
+vi.mock("../exports/member-export-controls", () => ({
+  MemberExportControls: (props: {
+    enabled: boolean;
+    creationEnabled: boolean;
+    filters: Record<string, unknown>;
+  }) => {
+    mocks.exportControls(props);
+    return (
+      <button disabled={!props.enabled || !props.creationEnabled}>
+        Export pinned trend list
+      </button>
+    );
+  },
 }));
 vi.mock("@repo/ui/chart", () => ({
   Chart: ({
@@ -38,10 +56,12 @@ vi.mock("@repo/ui/chart", () => ({
     return <div role="img" aria-label={ariaLabel} />;
   },
 }));
+import { defaultTrendFilters } from "./dashboard-trends-policy";
 import { DashboardTrendsPanel } from "./dashboard-trends-panel";
 afterEach(cleanup);
 beforeEach(() => {
   mocks.products.mockReturnValue({});
+  mocks.exportControls.mockClear();
   mocks.download.mockReset().mockResolvedValue(undefined);
 });
 const bucket = {
@@ -467,4 +487,53 @@ it("supports explicit horizontal keyboard scrolling across browser engines", () 
   Object.defineProperty(area, "scrollWidth", { value: 100 });
   fireEvent.keyDown(area, { key: "ArrowRight" });
   expect(scrollBy).toHaveBeenCalledTimes(2);
+});
+
+describe("M14 filtered trend export pinning", () => {
+  it("exports the displayed signed dataset with its frozen filters", () => {
+    const frozenFilters = defaultTrendFilters();
+    mocks.query.mockReturnValue({
+      data: { ...data, filters: frozenFilters, datasetToken: "signed_pin" },
+    });
+    mocks.sources.mockReturnValue({});
+    render(<DashboardTrendsPanel scope="scope" enabled />);
+    expect(mocks.exportControls.mock.calls.at(-1)?.[0]).toMatchObject({
+      source: "dashboard.trends",
+      filters: { ...frozenFilters, datasetToken: "signed_pin" },
+      enabled: true,
+      creationEnabled: true,
+    });
+  });
+  it.each([
+    "fetching",
+    "error",
+    "missing_pin",
+    "expired",
+    "mismatched_filters",
+  ])("withholds creation for %s datasets", (state) => {
+    const frozenFilters = defaultTrendFilters();
+    mocks.query.mockReturnValue({
+      data: {
+        ...data,
+        filters:
+          state === "mismatched_filters"
+            ? { ...frozenFilters, timezone: "Europe/Berlin" }
+            : frozenFilters,
+        datasetToken: state === "missing_pin" ? "" : "signed_pin",
+        generatedAt:
+          state === "expired"
+            ? new Date(Date.now() - 16 * 60 * 1000).toISOString()
+            : new Date().toISOString(),
+      },
+      isFetching: state === "fetching",
+      isError: state === "error",
+      refetch: vi.fn(),
+    });
+    mocks.sources.mockReturnValue({});
+    render(<DashboardTrendsPanel scope="scope" enabled />);
+    expect(mocks.exportControls.mock.calls.at(-1)?.[0].creationEnabled).toBe(
+      false,
+    );
+    expect(mocks.exportControls.mock.calls.at(-1)?.[0].enabled).toBe(true);
+  });
 });

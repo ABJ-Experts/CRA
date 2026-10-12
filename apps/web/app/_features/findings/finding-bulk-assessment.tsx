@@ -1,4 +1,5 @@
 "use client";
+import { MemberExportControls } from "../exports/member-export-controls";
 
 import type {
   VulnerabilityAssessmentBulkOperation,
@@ -79,6 +80,7 @@ function OutcomeSummary({
   const counts = operation.counts;
   return (
     <div className="mt-4 rounded-lg border border-border bg-surface-subtle p-3">
+      <MemberExportControls source="findings.bulk_assessment_targets" context={{ operationId: operation.id }} filters={{}} columns={["findingId", "componentIdentity", "componentVersion", "outcome", "outcomeMessage"]} />
       <p className="text-caption-1-semibold text-fg">
         {operation.kind === "propagation"
           ? "Propagation preview"

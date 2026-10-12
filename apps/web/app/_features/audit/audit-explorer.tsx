@@ -1,4 +1,5 @@
 "use client";
+import { MemberExportControls } from "../exports/member-export-controls";
 
 import type {
   AuditEventView,
@@ -423,6 +424,7 @@ export function AuditExplorer() {
       aria-labelledby="audit-trail-heading"
       className="mx-auto flex w-full max-w-7xl flex-col gap-5 px-6 py-8"
     >
+      {snapshot ? <MemberExportControls source="audit.events" context={{ snapshotToken: snapshot.snapshotToken }} filters={snapshot.filters} columns={["sequence", "createdAt", "action", "resourceType", "resourceId"]} enabled={canView && canExport && !isLoading && !isError} /> : null}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="grid gap-1">
           <h1 id="audit-trail-heading" className="text-h3 text-fg">

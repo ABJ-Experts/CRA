@@ -1,4 +1,6 @@
 "use client";
+import { MemberExportControls } from "../exports/member-export-controls";
+import { useHasPermission } from "../../_providers/session-provider";
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@repo/ui/button";
 import { Chart } from "@repo/ui/chart";
@@ -8,7 +10,10 @@ import type {
   DashboardTrendMetric,
   DashboardTrendSeries,
 } from "@repo/contracts/dashboard/types";
-import { dashboardTrendsQuerySchema } from "@repo/contracts/dashboard/schemas";
+import {
+  dashboardTrendFiltersSchema,
+  dashboardTrendsQuerySchema,
+} from "@repo/contracts/dashboard/schemas";
 import {
   defaultTrendFilters,
   trendValue,
@@ -261,6 +266,7 @@ export function DashboardTrendsPanel({
   enabled: boolean;
   canSelectProduct?: boolean;
 }) {
+  const canExport = useHasPermission("can_export_dashboards");
   const [draft, setDraft] = useState<DashboardTrendsQuery>(() => ({
     ...defaultTrendFilters(),
     ...(productId ? { productId } : {}),
@@ -292,6 +298,19 @@ export function DashboardTrendsPanel({
   const data = enabled ? query.data : undefined;
   const expired =
     !!data && Date.now() - Date.parse(data.generatedAt) >= 15 * 60 * 1000;
+  const requestedFilters = dashboardTrendFiltersSchema.safeParse(filters);
+  const displayedFilters = dashboardTrendFiltersSchema.safeParse(data?.filters);
+  const canExportPinnedDataset =
+    enabled &&
+    canExport &&
+    !!data?.datasetToken &&
+    !expired &&
+    !query.isError &&
+    !query.isFetching &&
+    requestedFilters.success &&
+    displayedFilters.success &&
+    JSON.stringify(requestedFilters.data) ===
+      JSON.stringify(displayedFilters.data);
   const metric =
     !expired && sourceViewOpen && sourcePin?.token === data?.datasetToken
       ? selectedMetric
@@ -346,6 +365,15 @@ export function DashboardTrendsPanel({
       data-testid="dashboard-trends"
       className="flex min-w-0 flex-col gap-5 rounded-xl border border-border bg-surface p-6"
     >
+      <MemberExportControls
+        source="dashboard.trends"
+        context={{}}
+        filters={
+          data ? { ...data.filters, datasetToken: data.datasetToken } : filters
+        }
+        enabled={enabled && canExport}
+        creationEnabled={canExportPinnedDataset}
+      />
       <div>
         <h2 className="text-h4">Finding and coverage trends</h2>
         <p className="mt-2 max-w-prose text-subhead-regular">

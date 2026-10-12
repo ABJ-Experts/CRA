@@ -1,4 +1,5 @@
 "use client";
+import { MemberExportControls } from "../../_features/exports/member-export-controls";
 
 import { Button } from "@repo/ui/button";
 import { useState } from "react";
@@ -104,6 +105,7 @@ export function OrganizationSbomCiCredentialsSection({
       aria-labelledby="sbom-ci-credentials-heading"
       className="rounded-xl border border-border bg-canvas p-4 sm:p-6"
     >
+      <MemberExportControls source="sboms.ci_credentials" context={{}} filters={{}} columns={["label", "createdAt", "revokedAt", "lastUsedAt"]} enabled={enabled && canManage} />
       <h2
         id="sbom-ci-credentials-heading"
         className="text-title-semibold text-fg"

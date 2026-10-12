@@ -4,6 +4,7 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("../../_providers/session-provider", () => ({
+  useSession: () => ({ session: null, permissions: {}, isLoading: false, role: null }),
   useHasPermission: () => true,
 }));
 vi.mock("../suppliers/suppliers.queries", () => ({

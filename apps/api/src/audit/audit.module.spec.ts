@@ -60,6 +60,7 @@ describe("AuditModule", () => {
     );
     expect(Reflect.getMetadata(MODULE_METADATA.EXPORTS, AuditModule)).toEqual([
       AuditService,
+      AuditExplorerUseCases,
     ]);
   });
 });

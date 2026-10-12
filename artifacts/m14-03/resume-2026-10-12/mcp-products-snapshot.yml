@@ -1,0 +1,113 @@
+- generic [active] [ref=f2e1]:
+  - generic [ref=f2e3]:
+    - complementary [ref=f2e4]:
+      - generic [ref=f2e5]:
+        - generic [ref=f2e6]:
+          - link "CRA Sentinel" [ref=f2e7] [cursor=pointer]:
+            - /url: /dashboard
+            - generic [aria-hidden] [ref=f2e8]: C
+            - text: CRA Sentinel
+          - button "Collapse sidebar" [ref=f2e9] [cursor=pointer]
+        - navigation "Main" [ref=f2e12]:
+          - generic [ref=f2e13]:
+            - list [ref=f2e15]:
+              - listitem [ref=f2e16]:
+                - link "Dashboard" [ref=f2e17] [cursor=pointer]:
+                  - /url: /dashboard
+              - listitem [ref=f2e25]:
+                - link "Management" [ref=f2e26] [cursor=pointer]:
+                  - /url: /management
+              - listitem [ref=f2e32]:
+                - link "Organization" [ref=f2e33] [cursor=pointer]:
+                  - /url: /organization
+              - listitem [ref=f2e40]:
+                - link "Products" [ref=f2e41] [cursor=pointer]:
+                  - /url: /products
+              - listitem [ref=f2e48]:
+                - link "Suppliers" [ref=f2e49] [cursor=pointer]:
+                  - /url: /suppliers
+              - listitem [ref=f2e54]:
+                - link "Frameworks" [ref=f2e55] [cursor=pointer]:
+                  - /url: /frameworks
+              - listitem [ref=f2e60]:
+                - link "Findings" [ref=f2e61] [cursor=pointer]:
+                  - /url: /findings
+              - listitem [ref=f2e66]:
+                - link "Reporting" [ref=f2e67] [cursor=pointer]:
+                  - /url: /reporting
+              - listitem [ref=f2e73]:
+                - link "Tasks" [ref=f2e74] [cursor=pointer]:
+                  - /url: /tasks
+              - listitem [ref=f2e80]:
+                - link "Connectors" [ref=f2e81] [cursor=pointer]:
+                  - /url: /connectors
+              - listitem [ref=f2e88]:
+                - link "Audit" [ref=f2e89] [cursor=pointer]:
+                  - /url: /audit
+            - generic [ref=f2e95]:
+              - paragraph [ref=f2e96]: Account & access
+              - list [ref=f2e97]:
+                - listitem [ref=f2e98]
+                - listitem [ref=f2e113]
+        - button "Sign out" [ref=f2e130] [cursor=pointer]
+    - generic [ref=f2e135]:
+      - banner [ref=f2e136]:
+        - navigation "Breadcrumb" [ref=f2e138]:
+          - list [ref=f2e139]:
+            - listitem [ref=f2e140]:
+              - link "Dashboard" [ref=f2e141] [cursor=pointer]:
+                - /url: /dashboard
+            - listitem [aria-hidden] [ref=f2e142]
+            - listitem [ref=f2e145]:
+              - generic [ref=f2e146]: Products
+        - generic [ref=f2e147]:
+          - button "Search" [ref=f2e148] [cursor=pointer]
+          - button "Notifications, 1 unread" [ref=f2e178] [cursor=pointer]
+          - generic [ref=f2e156]:
+            - generic [ref=f2e157]: AF
+            - 'img "Ada Foster: online" [ref=f2e158]'
+      - main [ref=f2e159]:
+        - generic [ref=f2e160]:
+          - generic [ref=f2e161]:
+            - generic [ref=f2e162]:
+              - heading "Products" [level=1] [ref=f2e163]
+              - paragraph [ref=f2e164]: Authoritative products and releases for the active organization.
+            - button "Create product" [ref=f2e182] [cursor=pointer]
+          - generic [ref=f2e183]:
+            - heading "Import products and releases" [level=2] [ref=f2e185]
+            - generic [ref=f2e187]:
+              - button "Export imports" [ref=f2e189] [cursor=pointer]
+              - paragraph [ref=f2e190]: Upload a versioned CSV for validation. Product and release records are not changed until you confirm a successful dry run.
+              - generic [ref=f2e191]:
+                - generic [ref=f2e192]
+                - generic [ref=f2e194]
+          - generic [ref=f2e197]:
+            - generic [ref=f2e198]:
+              - heading "Product registry" [level=2] [ref=f2e199]
+              - paragraph [ref=f2e200]: 18 products in this registry
+            - generic [ref=f2e201]:
+              - button "Export list" [ref=f2e203] [cursor=pointer]
+              - generic [ref=f2e204]:
+                - searchbox "Search products" [ref=f2e209]
+                - generic [ref=f2e211]
+              - list "Products" [ref=f2e215]:
+                - listitem [ref=f2e216]
+                - listitem [ref=f2e231]
+                - listitem [ref=f2e246]
+                - listitem [ref=f2e261]
+                - listitem [ref=f2e276]
+                - listitem [ref=f2e291]
+                - listitem [ref=f2e306]
+                - listitem [ref=f2e321]
+                - listitem [ref=f2e336]
+                - listitem [ref=f2e351]
+                - listitem [ref=f2e366]
+                - listitem [ref=f2e381]
+                - listitem [ref=f2e396]
+                - listitem [ref=f2e411]
+                - listitem [ref=f2e426]
+                - listitem [ref=f2e441]
+                - listitem [ref=f2e456]
+                - listitem [ref=f2e471]
+  - button "Open Next.js Dev Tools" [ref=f2e173] [cursor=pointer]
+  - alert [ref=f2e177]

@@ -1,4 +1,7 @@
 "use client";
+import { MemberExportControls } from "../../_features/exports/member-export-controls";
+
+import { ExportControls } from "../../_features/exports/export-controls";
 
 import {
   type TechnicalFile,
@@ -415,6 +418,7 @@ function SectionEditor({
         </Button>
       }
     >
+      <MemberExportControls source="technical_file.section_sources" context={{ productId, sectionKey: section.key }} filters={{}} columns={["kind", "title", "editionOrRevision", "issuer", "locator", "status", "staleAt", "staleReason"]} />
       <div className="flex flex-col gap-6">
         <div className="rounded-xl border border-border bg-surface-subtle p-4">
           <p className="text-caption-1-semibold text-fg-muted">
@@ -866,6 +870,7 @@ function TechnicalFileReadinessOverview({
             ))}
         </ol>
       )}
+      <MemberExportControls source="technical_file.readiness_gaps" context={{ productId }} filters={{}} columns={["sectionKey", "code", "priority", "actionLabel"]} enabled={enabled} />
       <ul className="mt-4 grid gap-2" aria-label="Section readiness states">
         {result.sections.map((section) => (
           <li
@@ -947,6 +952,7 @@ function TechnicalFileOverview({
     );
   return (
     <SectionCard title="Annex VII technical file">
+      <MemberExportControls source="technical_file.sections" context={{ productId }} filters={{}} columns={["key", "heading", "applicability", "status", "updatedAt"]} enabled={enabled && canView} />
       <div className="flex flex-col gap-5">
         <div className="rounded-xl border border-border bg-surface-subtle p-4">
           <p className="text-caption-1-semibold text-fg-muted">Template</p>
@@ -1080,6 +1086,20 @@ export function TechnicalFileWorkspace({ productId }: { productId: string }) {
           >
             Back to product
           </Button>
+        }
+      />
+      <ExportControls key={`${session?.organization?.id ?? "none"}:${session?.user?.id ?? "none"}:${productId}`}
+        source="products.registry"
+        context={{}}
+        filters={{}}
+        readinessProductId={productId}
+        enabled={
+          liveApiEnabled &&
+          hasMembership &&
+          !sessionLoading &&
+          canView &&
+          permissions.can_view_products === true &&
+          permissions.can_export_technical_files === true
         }
       />
       {!liveApiEnabled ? (

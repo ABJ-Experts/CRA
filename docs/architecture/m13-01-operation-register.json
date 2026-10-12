@@ -3387,6 +3387,136 @@
           "note": "Tenant-scoped commands persist action-specific security receipts with workflow transitions; collector tests persist intent before external dispatch."
         }
       ]
+    },
+    {
+      "id": "apps/api/src/exports/exports.controller.ts#ExportsController.cancel:POST:exports/:jobId/cancel",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261009110804_m14_03_filtered_export_persistence.sql",
+          "symbol": "m14_03_audit"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/exports/exports.controller.ts#ExportsController.create:POST:exports",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261009110804_m14_03_filtered_export_persistence.sql",
+          "symbol": "m14_03_audit"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/exports/exports.controller.ts#ExportsController.grant:POST:exports/:jobId/download-grants",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261009110804_m14_03_filtered_export_persistence.sql",
+          "symbol": "m14_03_audit"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/exports/exports.controller.ts#ExportsController.retry:POST:exports/:jobId/retry",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261009110804_m14_03_filtered_export_persistence.sql",
+          "symbol": "m14_03_audit"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/exports/exports.controller.ts#ProductReadinessExportsController.create:POST:products/:productId/audit-readiness/exports",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261009110804_m14_03_filtered_export_persistence.sql",
+          "symbol": "m14_03_audit"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/exports/portal-exports.controller.ts#PortalExportsController.cancel:POST:auditor/exports/:jobId/cancel",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261009110804_m14_03_filtered_export_persistence.sql",
+          "symbol": "m14_03_audit"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/exports/portal-exports.controller.ts#PortalExportsController.cancel:POST:supplier-evidence-portal/exports/:jobId/cancel",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261009110804_m14_03_filtered_export_persistence.sql",
+          "symbol": "m14_03_audit"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/exports/portal-exports.controller.ts#PortalExportsController.create:POST:auditor/exports",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261009110804_m14_03_filtered_export_persistence.sql",
+          "symbol": "m14_03_audit"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/exports/portal-exports.controller.ts#PortalExportsController.create:POST:supplier-evidence-portal/exports",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261009110804_m14_03_filtered_export_persistence.sql",
+          "symbol": "m14_03_audit"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/exports/portal-exports.controller.ts#PortalExportsController.grant:POST:auditor/exports/:jobId/download-grants",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261009110804_m14_03_filtered_export_persistence.sql",
+          "symbol": "m14_03_audit"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/exports/portal-exports.controller.ts#PortalExportsController.grant:POST:supplier-evidence-portal/exports/:jobId/download-grants",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261009110804_m14_03_filtered_export_persistence.sql",
+          "symbol": "m14_03_audit"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/exports/portal-exports.controller.ts#PortalExportsController.retry:POST:auditor/exports/:jobId/retry",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261009110804_m14_03_filtered_export_persistence.sql",
+          "symbol": "m14_03_audit"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/exports/portal-exports.controller.ts#PortalExportsController.retry:POST:supplier-evidence-portal/exports/:jobId/retry",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261009110804_m14_03_filtered_export_persistence.sql",
+          "symbol": "m14_03_audit"
+        }
+      ]
     }
   ],
   "workers": [
@@ -3792,6 +3922,16 @@
           "evidence": "apps/infrastructure/supabase/migrations/20261007104830_m13_05_siem_forwarding.sql",
           "symbol": "m13_05_siem_complete",
           "note": "Staging, claim, authorization and fenced completion persist durable security receipts; forwarding never alters original ledger events."
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/exports/worker/export-worker.ts",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261009110804_m14_03_filtered_export_persistence.sql",
+          "symbol": "m14_03_audit"
         }
       ]
     }

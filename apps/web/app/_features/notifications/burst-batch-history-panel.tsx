@@ -1,4 +1,5 @@
 "use client";
+import { ExportControls } from "../exports/export-controls";
 
 import type {
   NotificationBurstBatch,
@@ -50,7 +51,7 @@ function errorMessage(error: unknown): string {
 export function BurstBatchHistoryPanel({
   canViewAudit,
 }: Readonly<{ canViewAudit: boolean }>) {
-  const { session } = useSession();
+  const { session, permissions = {} } = useSession();
   const organizationId = session?.organization?.id ?? null;
   const lastOrganization = useRef(organizationId);
   const [cursors, setCursors] = useState<
@@ -83,6 +84,20 @@ export function BurstBatchHistoryPanel({
       aria-labelledby="burst-history-title"
       className="space-y-3 rounded-xl border border-border bg-canvas p-4"
     >
+      <ExportControls key={`${session?.organization?.id ?? "none"}:${session?.user?.id ?? "none"}`}
+        source="notifications.burst_batches"
+        context={{}}
+        filters={query}
+        columns={[
+          "category",
+          "eventClass",
+          "status",
+          "windowStartsAt",
+          "windowEndsAt",
+          "memberCount",
+        ]}
+        enabled={canViewAudit && permissions.can_export_notifications === true}
+      />
       <div className="space-y-1">
         <h3 id="burst-history-title" className="text-subhead-semibold text-fg">
           Burst delivery history

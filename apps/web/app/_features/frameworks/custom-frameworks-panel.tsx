@@ -1,4 +1,5 @@
 "use client";
+import { MemberExportControls } from "../exports/member-export-controls";
 
 import { customFrameworkImportSchema } from "@repo/contracts/frameworks";
 import type {
@@ -456,7 +457,17 @@ export function CustomFrameworksPanel({
     exportChoice === "published" || parsedContent !== null;
 
   return (
-    <SectionCard title="Custom frameworks">
+    <SectionCard
+      title="Custom frameworks"
+      action={
+        <MemberExportControls
+          source="frameworks.custom"
+          context={{}}
+          filters={{ limit: 20, offset: 0 }}
+          label="Export custom frameworks"
+        />
+      }
+    >
       <div
         className={cn(
           "grid min-w-0 max-w-full overflow-hidden gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]",
@@ -575,6 +586,23 @@ export function CustomFrameworksPanel({
         </div>
 
         <div className={cn("min-w-0 max-w-full overflow-hidden space-y-6")}>
+          {editor.draftId ? (
+            <MemberExportControls
+              source="frameworks.custom_requirements_preview"
+              context={{ draftId: editor.draftId }}
+              filters={{}}
+              enabled={!hasUnsavedEdits}
+              label="Export saved requirements"
+            />
+          ) : null}
+          {hasUnsavedEdits ? (
+            <p
+              role="status"
+              className={cn("text-caption-1-regular text-fg-muted")}
+            >
+              Save your draft before exporting its requirements.
+            </p>
+          ) : null}
           {parsedContent ? (
             <fieldset
               className={cn(

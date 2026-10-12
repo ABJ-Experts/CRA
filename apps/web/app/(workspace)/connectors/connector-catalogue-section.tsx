@@ -1,4 +1,5 @@
 "use client";
+import { MemberExportControls } from "../../_features/exports/member-export-controls";
 import type {
   ConnectorCatalogueEntry,
   ConnectorType,
@@ -18,7 +19,17 @@ export function ConnectorCatalogueSection({
   onConfigure: (type: ConnectorType) => void;
 }>) {
   return (
-    <SectionCard title="Integration catalogue">
+    <SectionCard
+      title="Integration catalogue"
+      action={
+        <MemberExportControls
+          source="connectors.catalogue"
+          context={{}}
+          filters={{}}
+          label="Export catalogue"
+        />
+      }
+    >
       <p className={cn("mb-4 max-w-prose text-subhead-regular text-fg")}>
         Availability reflects registered adapters. Roadmap phases do not mean a
         vendor connection is functioning.

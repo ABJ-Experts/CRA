@@ -1,4 +1,5 @@
 "use client";
+import { MemberExportControls } from "../../_features/exports/member-export-controls";
 
 import { Button } from "@repo/ui/button";
 
@@ -181,6 +182,12 @@ export function ProductRelationshipSection({
 
   return (
     <section aria-label="Product relationships" className="grid gap-4">
+      <MemberExportControls source="products.relationship.baseline_memberships" context={{ productId }} filters={{}} columns={["baselineId", "baselineRevisionNumber", "effectiveStartsAt", "effectiveEndsAt", "endReason"]} enabled={enabled} />
+      {selectedBaselineId ? <MemberExportControls source="products.relationship.baseline_revisions" context={{ baselineId: selectedBaselineId }} filters={{}} columns={["revisionNumber", "identifier", "name", "revisionSummary", "effectiveStartsAt", "effectiveEndsAt"]} enabled={enabled} /> : null}
+      <MemberExportControls source="products.relationship.variants" context={{ productId }} filters={{}} columns={["relationshipType", "sourceProductId", "targetProductId", "reason", "effectiveStartsAt", "effectiveEndsAt"]} enabled={enabled} />
+      <MemberExportControls source="products.relationship.component_links" context={{ productId }} filters={{}} columns={["reason", "effectiveStartsAt", "effectiveEndsAt", "version"]} enabled={enabled} />
+      <MemberExportControls source="products.relationship.graph_links" context={{ productId }} filters={{}} columns={["relationshipType", "sourceProductId", "targetProductId", "sourceReleaseId", "targetReleaseId"]} enabled={enabled && showOverview} />
+      <MemberExportControls source="products.relationship.propagation_events" context={{ productId }} filters={{}} columns={["graphVersion", "eventType", "deliveryState", "occurredAt", "deliveredAt", "lastErrorCode", "retryCount"]} enabled={enabled} />
       <header className="grid gap-4 rounded-xl border border-border bg-surface-subtle p-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
         <div>
           <p className="text-caption-1-semibold text-fg-muted">

@@ -1,4 +1,5 @@
 "use client";
+import { MemberExportControls } from "../../_features/exports/member-export-controls";
 
 import type { SbomDocument } from "@repo/contracts/sboms";
 import { Button } from "@repo/ui/button";
@@ -95,6 +96,7 @@ export function SbomNormalizedDocumentsPanel({
       aria-labelledby="normalized-sbom-documents-heading"
       className="min-w-0 rounded-xl border border-border bg-surface-subtle p-4"
     >
+      <MemberExportControls source="sboms.documents_for_release" context={{ productId, releaseId }} filters={{ limit: 25, cursor }} columns={["format", "specificationVersion", "state", "validationStatus", "componentCount", "dependencyCount"]} enabled={enabled} />
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-caption-1-semibold text-fg-muted">

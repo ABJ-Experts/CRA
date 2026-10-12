@@ -1,0 +1,135 @@
+- generic [active] [ref=f3e1]:
+  - generic [ref=f3e3]:
+    - complementary [ref=f3e4]:
+      - generic [ref=f3e5]:
+        - generic [ref=f3e6]:
+          - link "CRA Sentinel" [ref=f3e7] [cursor=pointer]:
+            - /url: /dashboard
+            - generic [aria-hidden] [ref=f3e8]: C
+            - text: CRA Sentinel
+          - button "Collapse sidebar" [ref=f3e9] [cursor=pointer]
+        - navigation "Main" [ref=f3e12]:
+          - generic [ref=f3e13]:
+            - list [ref=f3e15]:
+              - listitem [ref=f3e16]:
+                - link "Dashboard" [ref=f3e17] [cursor=pointer]:
+                  - /url: /dashboard
+              - listitem [ref=f3e25]:
+                - link "Management" [ref=f3e26] [cursor=pointer]:
+                  - /url: /management
+              - listitem [ref=f3e32]:
+                - link "Organization" [ref=f3e33] [cursor=pointer]:
+                  - /url: /organization
+              - listitem [ref=f3e40]:
+                - link "Products" [ref=f3e41] [cursor=pointer]:
+                  - /url: /products
+              - listitem [ref=f3e48]:
+                - link "Suppliers" [ref=f3e49] [cursor=pointer]:
+                  - /url: /suppliers
+              - listitem [ref=f3e54]:
+                - link "Frameworks" [ref=f3e55] [cursor=pointer]:
+                  - /url: /frameworks
+              - listitem [ref=f3e60]:
+                - link "Findings" [ref=f3e61] [cursor=pointer]:
+                  - /url: /findings
+              - listitem [ref=f3e66]:
+                - link "Reporting" [ref=f3e67] [cursor=pointer]:
+                  - /url: /reporting
+              - listitem [ref=f3e73]:
+                - link "Tasks" [ref=f3e74] [cursor=pointer]:
+                  - /url: /tasks
+              - listitem [ref=f3e80]:
+                - link "Connectors" [ref=f3e81] [cursor=pointer]:
+                  - /url: /connectors
+              - listitem [ref=f3e88]:
+                - link "Audit" [ref=f3e89] [cursor=pointer]:
+                  - /url: /audit
+            - generic [ref=f3e95]:
+              - paragraph [ref=f3e96]: Account & access
+              - list [ref=f3e97]:
+                - listitem [ref=f3e98]:
+                  - button "Profile" [ref=f3e99] [cursor=pointer]
+                  - generic
+                - listitem [ref=f3e113]:
+                  - button "Authorization" [ref=f3e114] [cursor=pointer]
+                  - generic
+        - button "Sign out" [ref=f3e130] [cursor=pointer]
+    - generic [ref=f3e135]:
+      - banner [ref=f3e136]:
+        - navigation "Breadcrumb" [ref=f3e138]:
+          - list [ref=f3e139]:
+            - listitem [ref=f3e140]:
+              - link "Dashboard" [ref=f3e141] [cursor=pointer]:
+                - /url: /dashboard
+            - listitem [aria-hidden] [ref=f3e142]
+            - listitem [ref=f3e145]:
+              - generic [ref=f3e146]: Technical File
+        - generic [ref=f3e147]:
+          - button "Search" [ref=f3e148] [cursor=pointer]
+          - button "Notifications, 1 unread" [ref=f3e181] [cursor=pointer]
+          - generic [ref=f3e156]:
+            - generic [ref=f3e157]: AF
+            - 'img "Ada Foster: online" [ref=f3e159]'
+      - main [ref=f3e160]:
+        - generic [ref=f3e161]:
+          - generic [ref=f3e162]:
+            - generic [ref=f3e163]:
+              - heading "Technical file" [level=1] [ref=f3e164]
+              - paragraph [ref=f3e165]: Annex VII source-linked technical documentation.
+            - button "Back to product" [ref=f3e167] [cursor=pointer]
+          - generic [ref=f3e183]:
+            - button "Export readiness report" [expanded] [ref=f3e184] [cursor=pointer]
+            - region "Readiness report export" [ref=f3e396]:
+              - paragraph [ref=f3e397]: PDF and JSON from current authorized evidence. Documentation readiness does not certify conformity.
+              - button "Create export" [ref=f3e399] [cursor=pointer]
+              - generic "Export status" [ref=f3e400]:
+                - status [ref=f3e401]: Ready · Captured 12/10/2026, 11:11:34
+                - paragraph [ref=f3e402]: Requested 12/10/2026, 11:11:34 · 1 rows
+                - generic [ref=f3e404]:
+                  - button "Refresh status" [ref=f3e405] [cursor=pointer]
+                  - button "Download manifest JSON" [ref=f3e407] [cursor=pointer]
+                  - button "Download readiness.pdf" [ref=f3e408] [cursor=pointer]
+                  - button "Download readiness.json" [ref=f3e409] [cursor=pointer]
+          - generic [ref=f3e185]:
+            - heading "Annex VII technical file" [level=2] [ref=f3e187]
+            - generic [ref=f3e188]:
+              - button "Export sections" [ref=f3e190] [cursor=pointer]
+              - generic [ref=f3e191]:
+                - generic [ref=f3e192]:
+                  - paragraph [ref=f3e193]: Template
+                  - paragraph [ref=f3e194]: Annex VII · 2024-01
+                  - paragraph [ref=f3e195]: Regulation (EU) 2024/2847, Annex VII and Annex II
+                  - paragraph [ref=f3e196]: This workspace organizes evidence against the template. It does not certify legal completeness.
+                - generic [ref=f3e197]:
+                  - paragraph [ref=f3e198]: Support and retention basis
+                  - paragraph [ref=f3e199]: Retention basis is incomplete
+                  - paragraph [ref=f3e200]: "No active legal hold is recorded. Missing: missing_release."
+                - region "Documentation readiness" [ref=f3e201]:
+                  - generic [ref=f3e202]
+                  - paragraph [ref=f3e208]: No actionable documentation gaps are currently reported.
+                  - button "Export readiness gaps" [ref=f3e210] [cursor=pointer]
+                  - list "Section readiness states" [ref=f3e211]
+                - generic [ref=f3e236]:
+                  - generic [ref=f3e237]
+                  - generic [ref=f3e242]
+                  - generic [ref=f3e247]
+                  - generic [ref=f3e252]
+                  - generic [ref=f3e257]
+                  - generic [ref=f3e262]
+                  - generic [ref=f3e267]
+                  - generic [ref=f3e272]
+                - generic [ref=f3e277]:
+                  - generic [ref=f3e278]
+                  - generic [ref=f3e281]
+                - region "Technical-file snapshots" [ref=f3e288]:
+                  - button "Export snapshots" [ref=f3e290] [cursor=pointer]
+                  - generic [ref=f3e291]
+                  - generic [ref=f3e294]
+                  - list "Technical-file snapshots" [ref=f3e301]
+                - region "EU declarations of conformity" [ref=f3e323]:
+                  - button "Export declarations" [ref=f3e325] [cursor=pointer]
+                  - generic [ref=f3e326]
+                  - generic [ref=f3e331]
+                  - generic [ref=f3e353]
+  - button "Open Next.js Dev Tools" [ref=f3e176] [cursor=pointer]
+  - alert [ref=f3e180]

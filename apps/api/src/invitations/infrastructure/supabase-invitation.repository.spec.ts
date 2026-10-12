@@ -13,11 +13,15 @@ function query(result: ProviderResult) {
     order: jest.fn(),
     select: jest.fn(),
     single: jest.fn(),
+    then: ((resolve: (value: ProviderResult) => unknown) =>
+      Promise.resolve(result).then(
+        resolve,
+      )) as PromiseLike<ProviderResult>["then"],
   };
   builder.eq.mockReturnValue(builder);
   builder.insert.mockReturnValue(builder);
   builder.maybeSingle.mockResolvedValue(result);
-  builder.order.mockResolvedValue(result);
+  builder.order.mockReturnValue(builder);
   builder.select.mockReturnValue(builder);
   builder.single.mockResolvedValue(result);
   return builder;
@@ -44,6 +48,7 @@ function fixture(
 
   const rpcIndexes: Record<string, number> = {};
   const rpc = jest.fn((name: string) => {
+    if (name === "m14_03_invitation_list_rows") return from("invitations");
     const index = rpcIndexes[name] ?? 0;
     rpcIndexes[name] = index + 1;
     const result = rpcResults[name]?.[index];
@@ -688,10 +693,12 @@ describe("SupabaseInvitationRepository list", () => {
       },
     ]);
     expect(rpc).toHaveBeenCalledWith("expire_stale_invitations");
-    expect(builders.invitations?.[0]?.eq).toHaveBeenCalledWith(
-      "organization_id",
-      organizationId,
-    );
+    expect(rpc).toHaveBeenCalledWith("m14_03_invitation_list_rows", {
+      p_organization_id: organizationId,
+    });
+    expect(builders.invitations?.[0]?.order).toHaveBeenCalledWith("id", {
+      ascending: true,
+    });
     expect(builders.invitations?.[0]?.order).toHaveBeenCalledWith(
       "created_at",
       { ascending: false },

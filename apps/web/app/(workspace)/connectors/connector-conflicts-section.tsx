@@ -1,4 +1,5 @@
 "use client";
+import { MemberExportControls } from "../../_features/exports/member-export-controls";
 
 import type {
   ConflictResolutionAction,
@@ -234,6 +235,12 @@ export function ConnectorConflictsSection({
         ) : undefined
       }
     >
+      <MemberExportControls
+        source="connectors.run_conflicts"
+        context={{ connectorId, runId: effectiveRunId }}
+        filters={{}}
+        label="Export conflicts"
+      />
       {effectiveRunId === "" ? (
         <p className="text-subhead-regular text-fg-muted">
           No sync run has run yet.

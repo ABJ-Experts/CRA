@@ -1,4 +1,5 @@
 "use client";
+import { MemberExportControls } from "../exports/member-export-controls";
 
 import { Button } from "@repo/ui/button";
 import { cn } from "@repo/ui/cn";
@@ -249,7 +250,17 @@ export function FrameworkUpgradePanel({
     );
 
   return (
-    <SectionCard title="Review framework upgrade">
+    <SectionCard
+      title="Review framework upgrade"
+      action={
+        <MemberExportControls
+          source="frameworks.upgrade_preview"
+          context={{ packKey, targetVersionKey }}
+          filters={{ limit: 50 }}
+          label="Export upgrade impact"
+        />
+      }
+    >
       <p className={cn("mb-4 text-subhead-regular text-fg-muted")}>
         {sourceVersionKey} → {targetVersionKey}. Curated suggestions need your
         decision. An upgrade does not certify compliance.

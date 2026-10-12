@@ -1,4 +1,5 @@
 "use client";
+import { MemberExportControls } from "../../_features/exports/member-export-controls";
 import { useState } from "react";
 import { Button } from "@repo/ui/button";
 import {
@@ -80,6 +81,12 @@ function RunHistoryDetail({
         </>
       ) : null}
       <h3 className="text-headline-semibold text-fg">Attempts</h3>
+      <MemberExportControls
+        source="connectors.sync_run_attempts"
+        context={{ connectorId, runId }}
+        filters={{ page, pageSize: 25 }}
+        label="Export attempts"
+      />
       {!attempts.rows.length ? (
         <OperationMessage>
           No attempt details were retained for this run.
@@ -138,6 +145,12 @@ function RunHistoryDetail({
         </div>
       )}
       <h3 className="text-headline-semibold text-fg">Record outcomes</h3>
+      <MemberExportControls
+        source="connectors.sync_records"
+        context={{ connectorId, runId }}
+        filters={{ page, pageSize: 25 }}
+        label="Export record outcomes"
+      />
       {!records.rows.length ? (
         <OperationMessage>
           No record details were retained for this run.
@@ -206,7 +219,17 @@ export function ConnectorSyncHistorySection({
     canView,
   );
   return (
-    <SectionCard title="Sync history">
+    <SectionCard
+      title="Sync history"
+      action={
+        <MemberExportControls
+          source="connectors.sync_history"
+          context={{ connectorId }}
+          filters={{ page, pageSize: 15 }}
+          label="Export sync history"
+        />
+      }
+    >
       <div className="space-y-4">
         {!canView ? (
           <OperationMessage alert>

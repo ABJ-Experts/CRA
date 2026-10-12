@@ -1,4 +1,5 @@
 "use client";
+import { MemberExportControls } from "../../_features/exports/member-export-controls";
 
 import type { OrganizationLifecycle } from "@repo/contracts";
 import { Button } from "@repo/ui/button";
@@ -146,6 +147,7 @@ export function OrganizationLifecycleSection({
 
   return (
     <SectionCard title="Deactivation and deletion">
+      <MemberExportControls source="organization.lifecycle_blockers" context={{}} filters={{}} columns={["kind", "code", "recordId", "requiredRetentionDays"]} />
       <div className="flex flex-col gap-4">
         {!canDelete ? (
           <ReadonlyNotice>

@@ -1,4 +1,5 @@
 "use client";
+import { MemberExportControls } from "../exports/member-export-controls";
 
 import {
   evidenceDocumentClassSchema,
@@ -122,6 +123,7 @@ export function EvidenceSearchPanel({
       aria-labelledby="evidence-search-heading"
       className="rounded-xl border border-border bg-surface"
     >
+      <MemberExportControls source="evidence.search_results" context={{ productId }} filters={query} columns={["title", "fileName", "documentClass", "snippet", "versionNumber", "currentVersion"]} enabled={enabled && baseParsed.success} />
       <div className="flex flex-wrap items-end justify-between gap-4 border-b border-border px-4 py-3">
         <div>
           <h2

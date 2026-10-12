@@ -67,7 +67,8 @@ function collect(app: INestApplication): RouteInfo[] {
       if (!instance || !controllerClass) continue;
 
       const controllerPath =
-        (Reflect.getMetadata(PATH_METADATA, controllerClass) as string) ?? "";
+        (Reflect.getMetadata(PATH_METADATA, controllerClass) as
+          string | string[]) ?? "";
       const prototype = Object.getPrototypeOf(instance) as object;
 
       for (const name of scanner.getAllMethodNames(prototype)) {
@@ -75,31 +76,38 @@ function collect(app: INestApplication): RouteInfo[] {
         if (typeof handler !== "function") continue;
 
         const methodPath = Reflect.getMetadata(PATH_METADATA, handler) as
-          string | undefined;
+          string | string[] | undefined;
         if (methodPath === undefined) continue;
 
         const verb = Reflect.getMetadata(METHOD_METADATA, handler) as
           number | undefined;
         const targets = [handler as never, controllerClass as never];
 
-        routes.push({
-          key: `${VERBS[verb ?? 0] ?? "GET"} ${[controllerPath, methodPath]
-            .map((p) => p.replace(/^\/|\/$/g, ""))
-            .filter(Boolean)
-            .join("/")}`,
-          isPublic:
-            reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, targets) ===
-            true,
-          permissions: reflector.getAllAndOverride<string[]>(
-            REQUIRE_PERMISSIONS_KEY,
-            targets,
-          ),
-          role: reflector.getAllAndOverride<string>(REQUIRE_ROLE_KEY, targets),
-          selfScoped: reflector.getAllAndOverride<string>(
-            SELF_SCOPED_KEY,
-            targets,
-          ),
-        });
+        for (const base of [controllerPath].flat()) {
+          for (const suffix of [methodPath].flat()) {
+            routes.push({
+              key: `${VERBS[verb ?? 0] ?? "GET"} ${[base, suffix]
+                .map((p) => p.replace(/^\/|\/$/g, ""))
+                .filter(Boolean)
+                .join("/")}`,
+              isPublic:
+                reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, targets) ===
+                true,
+              permissions: reflector.getAllAndOverride<string[]>(
+                REQUIRE_PERMISSIONS_KEY,
+                targets,
+              ),
+              role: reflector.getAllAndOverride<string>(
+                REQUIRE_ROLE_KEY,
+                targets,
+              ),
+              selfScoped: reflector.getAllAndOverride<string>(
+                SELF_SCOPED_KEY,
+                targets,
+              ),
+            });
+          }
+        }
       }
     }
   }

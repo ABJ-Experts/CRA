@@ -1,4 +1,5 @@
 "use client";
+import { MemberExportControls } from "../../_features/exports/member-export-controls";
 
 import {
   SBOM_MAX_UPLOAD_BYTES,
@@ -516,6 +517,8 @@ export function SbomIntakeSection({
       aria-labelledby="sbom-evidence-heading"
       className="w-full min-w-0 max-w-full rounded-xl border border-border bg-canvas p-4 sm:p-6"
     >
+      <MemberExportControls source="sboms.source_history" context={{ productId, releaseId }} filters={{ limit: DEFAULT_HISTORY_LIMIT, cursor: historyCursor }} columns={["fileName", "source", "status", "createdAt"]} enabled={enabled && canView && Boolean(releaseId)} />
+      {selectedSourceId ? <MemberExportControls source="sboms.validation_diagnostics" context={{ sourceId: selectedSourceId }} filters={{}} columns={["severity", "code", "path", "message"]} enabled={enabled && canView} /> : null}
       <div className="flex min-w-0 max-w-full flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <h2

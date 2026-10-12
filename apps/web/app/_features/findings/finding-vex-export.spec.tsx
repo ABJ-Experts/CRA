@@ -29,6 +29,7 @@ const publicationId = "55555555-5555-4555-8555-555555555555";
 let publicationState: "dead_letter" | "published" = "dead_letter";
 
 vi.mock("../../_providers/session-provider", () => ({
+  useSession: () => ({ session: null, permissions: {}, isLoading: false, role: null }),
   useHasPermission: () => true,
 }));
 vi.mock("./triage.queries", () => ({

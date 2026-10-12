@@ -1,0 +1,49 @@
+{
+  "version": "m14_03_v1",
+  "jobId": "2b802a04-26f1-4d15-8d71-e97018dd0de3",
+  "source": "audit.events",
+  "requestedAt": "2026-10-09T12:56:55.936881+00:00",
+  "snapshotAsOf": "2026-10-09T12:56:56.430372+00:00",
+  "scope": "all_filtered",
+  "requestDigest": "9cd79065f48d59eab176e216fb739c83357b8e7a7ae5f315600b72fa6aef4de2",
+  "rowCount": 1969,
+  "columns": [
+    {
+      "key": "sequence",
+      "label": "sequence",
+      "type": "text"
+    },
+    {
+      "key": "createdAt",
+      "label": "created At",
+      "type": "datetime"
+    },
+    {
+      "key": "action",
+      "label": "action",
+      "type": "text"
+    },
+    {
+      "key": "resourceType",
+      "label": "resource Type",
+      "type": "text"
+    },
+    {
+      "key": "resourceId",
+      "label": "resource Id",
+      "type": "text"
+    }
+  ],
+  "artifacts": [
+    {
+      "id": "67513243-a4e0-432b-96bb-22a190c44d0d",
+      "name": "part-0001.csv",
+      "mediaType": "text/csv",
+      "byteLength": 246766,
+      "sha256": "58550b0b2624800c0b782f108783f65174d16c3bf7a854156a4070b1152665e4",
+      "rowCount": 1969
+    }
+  ],
+  "sourceVersionsDigest": "8960fc42926fdeb0f106757a9b6817f80a857b89117b4dbd3ee63a548fdee632",
+  "documentationReadinessOnly": false
+}

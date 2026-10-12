@@ -1,4 +1,5 @@
 "use client";
+import { MemberExportControls } from "../../_features/exports/member-export-controls";
 
 import { Button } from "@repo/ui/button";
 import { Tag } from "@repo/ui/tag";
@@ -331,6 +332,8 @@ export function ProductImportSection({
   return (
     <SectionCard title={COPY.title}>
       <div className="flex flex-col gap-5">
+        <MemberExportControls source="products.imports" context={{}} filters={{ page: 1, pageSize: 5 }} columns={["schemaVersion", "status", "rowCount", "processedRowCount", "errorCode", "createdAt", "committedAt"]} enabled={canView && canExport} />
+        {importId ? <MemberExportControls source="products.import_rows" context={{ importId }} filters={{ page, pageSize: 25 }} columns={["sourceRowNumber", "rowType", "proposedAction", "result", "productInternalCode", "releaseVersion"]} enabled={canView && canExport} /> : null}
         <p className="max-w-3xl text-subhead-regular text-fg-muted">
           {COPY.description}
         </p>

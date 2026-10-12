@@ -11,6 +11,20 @@ const filters = {
 };
 
 describe("audit source policy", () => {
+  it("allows safe export job audit events only with audit read permission", () => {
+    expect(
+      buildAuditSourcePolicy(
+        { can_view_audit: true },
+        { ...filters, resourceType: "export_job" },
+      ).allowedEntityTypes,
+    ).toEqual(["export_job"]);
+    expect(
+      buildAuditSourcePolicy(
+        { can_view_audit: false, can_export_products: true },
+        { ...filters, resourceType: "export_job" },
+      ).allowedEntityTypes,
+    ).toEqual([]);
+  });
   it("omits unknown requested entity types before rows can be read", () => {
     const policy = buildAuditSourcePolicy(
       { can_view_audit: true },

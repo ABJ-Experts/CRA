@@ -1,5 +1,7 @@
 "use client";
 
+import { MemberExportControls } from "../../../_features/exports/member-export-controls";
+
 import {
   upsertCiProviderReleaseBindingInputSchema,
   type CiProvider,
@@ -495,6 +497,22 @@ export function CiBindingsContent() {
             </form>
           </SectionCard>
           <SectionCard title="Release bindings and recent builds">
+            <MemberExportControls
+              source="sboms.ci_bindings"
+              context={{}}
+              filters={{}}
+              columns={[
+                "id",
+                "provider",
+                "repositoryOwner",
+                "repositoryName",
+                "productId",
+                "releaseId",
+                "status",
+              ]}
+              enabled={enabled && canManage}
+              label="Export CI bindings"
+            />
             {bindings.isPending ? (
               <p
                 role="status"
@@ -616,6 +634,23 @@ export function CiBindingsContent() {
                 <h3 className={cn("text-subhead-semibold text-fg")}>
                   Recent builds for {selectedBindingId}
                 </h3>
+                <MemberExportControls
+                  source="sboms.ci_binding_runs"
+                  context={{ bindingId: selectedBindingId }}
+                  filters={{ limit: 20 }}
+                  columns={[
+                    "runId",
+                    "runAttempt",
+                    "createdAt",
+                    "commitSha",
+                    "ref",
+                    "state",
+                    "sourceId",
+                    "jobId",
+                  ]}
+                  enabled={enabled && canManage}
+                  label="Export build history"
+                />
                 {runs.isPending ? (
                   <p role="status">Loading builds…</p>
                 ) : runs.isError ? (

@@ -1,4 +1,5 @@
 "use client";
+import { MemberExportControls } from "../../_features/exports/member-export-controls";
 import { Button } from "@repo/ui/button";
 import { useState } from "react";
 import { useDeadLetterRecordsQuery } from "../../_features/connectors/sync-operations.queries";
@@ -26,7 +27,17 @@ export function ConnectorDeadLettersSection({
     canView,
   );
   return (
-    <SectionCard title="Dead letters">
+    <SectionCard
+      title="Dead letters"
+      action={
+        <MemberExportControls
+          source="connectors.dead_letter_records"
+          context={{ connectorId }}
+          filters={{ page, pageSize: 25 }}
+          label="Export dead letters"
+        />
+      }
+    >
       <div className="space-y-4">
         {!canView ? (
           <OperationMessage alert>

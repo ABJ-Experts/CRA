@@ -1,5 +1,8 @@
 "use client";
 
+import { MemberExportControls } from "../exports/member-export-controls";
+import { ExportControls } from "../exports/export-controls";
+
 import type {
   VulnerabilityTriageQueueQuery,
   VulnerabilityTriageQueueResponse,
@@ -773,6 +776,7 @@ function SavedViews({
       className="rounded-2xl border border-border bg-canvas p-6"
       aria-labelledby="saved-views-heading"
     >
+      <MemberExportControls source="findings.saved_views" context={{}} filters={{}} columns={["name", "sort", "order", "version", "createdAt", "updatedAt"]} enabled={Boolean(organizationId)} />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2
@@ -915,6 +919,7 @@ export function FindingTriageContent() {
   const organizationId = session?.organization?.id ?? null;
   const canView = useHasPermission("can_view_findings");
   const canEdit = useHasPermission("can_edit_findings");
+  const canExport = useHasPermission("can_export_findings");
   const linkedFilters = useMemo(
     () => readDashboardTriageLink(searchParams),
     [searchParams],
@@ -1035,6 +1040,22 @@ export function FindingTriageContent() {
     );
   return (
     <div className="flex min-w-0 flex-col gap-6 overflow-x-hidden px-6 py-6 lg:px-[30px]">
+      <ExportControls key={`${session?.organization?.id ?? "none"}:${session?.user?.id ?? "none"}`}
+        source="findings.triage_queue"
+        context={{}}
+        filters={query}
+        selectedIds={selectedFindingIds}
+        columns={[
+          "productId",
+          "releaseId",
+          "advisoryId",
+          "severity",
+          "vexStatus",
+        ]}
+        enabled={Boolean(
+          organizationId && canView && canExport && !sessionLoading,
+        )}
+      />
       <PageHeading
         title="Findings"
         subtitle="Tenant-scoped vulnerability triage. Filters and pagination run on the server."

@@ -1,4 +1,5 @@
 "use client";
+import { MemberExportControls } from "../exports/member-export-controls";
 
 import {
   SUPPLIER_DOCUMENT_BULK_CONFIDENCE_THRESHOLD,
@@ -243,6 +244,7 @@ export function SupplierDocumentExtractionPanel({
       className="mt-5 min-w-0 border-t border-border pt-4"
       aria-label={`Document fields for ${submission.fileName}`}
     >
+      <MemberExportControls source="supplier_evidence.extraction_fields" context={{ productId, requestId, submissionId: submission.id }} filters={{ productId }} columns={["id", "fieldKey", "originalValue", "correctedValue", "confidence", "status"]} />
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h4 className="text-subhead-semibold text-fg">Document fields</h4>

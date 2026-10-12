@@ -1,4 +1,5 @@
 "use client";
+import { MemberExportControls } from "../../_features/exports/member-export-controls";
 
 import {
   createSupportPeriodRequestSchema,
@@ -287,6 +288,8 @@ export function SupportPeriodRetentionSection({
       className="mt-2 border-t border-border pt-6"
       aria-label={`Support and retention for ${release.label}`}
     >
+      <MemberExportControls source="products.support_period_history" context={{ productId }} filters={{ releaseId: release.id }} columns={["revision", "startsAt", "endsAt", "rationale"]} enabled={enabled} />
+      <MemberExportControls source="products.support_alerts" context={{ productId }} filters={{}} columns={["supportPeriodRevision", "thresholdDays", "dueAt", "deliveryState", "missed", "obsolete", "lastErrorCode"]} enabled={enabled} />
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h3 className="text-title-3-semibold text-fg">

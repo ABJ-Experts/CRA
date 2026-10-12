@@ -1,4 +1,5 @@
 "use client";
+import { MemberExportControls } from "../../exports/member-export-controls";
 import { useRef, useState } from "react";
 import Link from "next/link";
 import type {
@@ -47,6 +48,7 @@ function SiemWorkspace() {
   const [formRevision, setFormRevision] = useState(0);
   const identities = useRef<Record<string, string>>({});
   const creationId = useRef(crypto.randomUUID());
+  const exportReadId = useRef(crypto.randomUUID());
   const queries = useSiemQueries(
       orgId,
       selectedId,
@@ -205,7 +207,17 @@ function SiemWorkspace() {
       <p role="status" aria-live="polite">
         {command.pending ? "SIEM action in progress…" : message}
       </p>
-      <SectionCard title="Destinations">
+      <SectionCard
+        title="Destinations"
+        action={
+          <MemberExportControls
+            source="connectors.siem_destinations"
+            context={{}}
+            filters={{ requestId: exportReadId.current }}
+            label="Export SIEM destinations"
+          />
+        }
+      >
         {queries.list.isLoading ? (
           <p role="status">Loading destinations…</p>
         ) : queries.list.isError ? (
@@ -386,7 +398,17 @@ function SiemWorkspace() {
               />
             </SectionCard>
           ) : null}
-          <SectionCard title="Delivery evidence">
+          <SectionCard
+            title="Delivery evidence"
+            action={
+              <MemberExportControls
+                source="connectors.siem_deliveries"
+                context={{ destinationId: selected.id }}
+                filters={{ requestId: exportReadId.current, limit: 50, cursor }}
+                label="Export SIEM deliveries"
+              />
+            }
+          >
             {queries.deliveries.isError ? (
               <>
                 <p role="alert">

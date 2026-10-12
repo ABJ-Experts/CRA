@@ -147,7 +147,10 @@ export class SupabaseControlRepository implements ControlRepository {
     const after = decodeControlCursor(input.cursor);
     let query = this.supabase
       .admin()
-      .from("framework_controls")
+      .rpc("m14_03_framework_control_rows", {
+        p_org: orgId,
+        p_include_archived: input.includeArchived ?? false,
+      })
       .select(
         "id,title,description,owner_user_id,implementation_status,revision,archived_at,created_at,updated_at",
       )
@@ -155,7 +158,6 @@ export class SupabaseControlRepository implements ControlRepository {
       .order("updated_at", { ascending: false })
       .order("id")
       .limit(input.limit + 1);
-    if (!input.includeArchived) query = query.is("archived_at", null);
     if (after)
       query = query.or(
         `updated_at.lt.${after[0]},and(updated_at.eq.${after[0]},id.gt.${after[1]})`,

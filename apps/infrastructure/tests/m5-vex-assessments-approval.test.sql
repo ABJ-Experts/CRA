@@ -75,9 +75,13 @@ select pg_temp.check(
   'M5 queue uses the parsed reEvaluation key and VEX approval filters',
   pg_get_functiondef('public.list_finding_triage_queue_raw(uuid,uuid,jsonb,integer,text,text,text)'::regprocedure)
     ~ '''reEvaluationStates'''
+  -- The public facade materializes due work, then delegates the identical
+  -- read-only predicate used by snapshot exports. Inspect that consumed path.
   and pg_get_functiondef('public.list_finding_triage_queue(uuid,uuid,jsonb,integer,text,text,text)'::regprocedure)
+    ~ 'm14_03_triage_read_projection'
+  and pg_get_functiondef('public.m14_03_triage_read_projection(uuid,uuid,jsonb,integer,text,text,text)'::regprocedure)
     ~ '''vexStatuses'''
-  and pg_get_functiondef('public.list_finding_triage_queue(uuid,uuid,jsonb,integer,text,text,text)'::regprocedure)
+  and pg_get_functiondef('public.m14_03_triage_read_projection(uuid,uuid,jsonb,integer,text,text,text)'::regprocedure)
     ~ '''approvalStates'''
 );
 

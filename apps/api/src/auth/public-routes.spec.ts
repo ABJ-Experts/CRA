@@ -32,6 +32,38 @@ import { IS_PUBLIC_KEY } from "./auth.types";
 
 /** Every route that is intentionally reachable without authentication. */
 const ALLOWED_PUBLIC: Record<string, string> = {
+  "POST auditor/exports":
+    "A scoped portal session, independently revalidated against its invitation or grant, authorizes only its own frozen export; no membership session is accepted.",
+  "GET auditor/exports":
+    "A scoped portal session, independently revalidated against its invitation or grant, authorizes only its own frozen export; no membership session is accepted.",
+  "GET auditor/exports/:jobId/manifest":
+    "Auditor manifest delivery freshly validates scoped session and durably audits access",
+  "GET auditor/exports/:jobId":
+    "A scoped portal session, independently revalidated against its invitation or grant, authorizes only its own frozen export; no membership session is accepted.",
+  "POST auditor/exports/:jobId/cancel":
+    "A scoped portal session, independently revalidated against its invitation or grant, authorizes only its own frozen export; no membership session is accepted.",
+  "POST auditor/exports/:jobId/retry":
+    "A scoped portal session, independently revalidated against its invitation or grant, authorizes only its own frozen export; no membership session is accepted.",
+  "POST auditor/exports/:jobId/download-grants":
+    "A scoped portal session, independently revalidated against its invitation or grant, authorizes only its own frozen export; no membership session is accepted.",
+  "GET auditor/exports/:jobId/download/:grantId":
+    "A scoped portal session, independently revalidated against its invitation or grant, authorizes only its own frozen export; no membership session is accepted.",
+  "POST supplier-evidence-portal/exports":
+    "A scoped portal session, independently revalidated against its invitation or grant, authorizes only its own frozen export; no membership session is accepted.",
+  "GET supplier-evidence-portal/exports":
+    "A scoped portal session, independently revalidated against its invitation or grant, authorizes only its own frozen export; no membership session is accepted.",
+  "GET supplier-evidence-portal/exports/:jobId/manifest":
+    "Supplier manifest delivery freshly validates original session and durably audits access",
+  "GET supplier-evidence-portal/exports/:jobId":
+    "A scoped portal session, independently revalidated against its invitation or grant, authorizes only its own frozen export; no membership session is accepted.",
+  "POST supplier-evidence-portal/exports/:jobId/cancel":
+    "A scoped portal session, independently revalidated against its invitation or grant, authorizes only its own frozen export; no membership session is accepted.",
+  "POST supplier-evidence-portal/exports/:jobId/retry":
+    "A scoped portal session, independently revalidated against its invitation or grant, authorizes only its own frozen export; no membership session is accepted.",
+  "POST supplier-evidence-portal/exports/:jobId/download-grants":
+    "A scoped portal session, independently revalidated against its invitation or grant, authorizes only its own frozen export; no membership session is accepted.",
+  "GET supplier-evidence-portal/exports/:jobId/download/:grantId":
+    "A scoped portal session, independently revalidated against its invitation or grant, authorizes only its own frozen export; no membership session is accepted.",
   "GET health": "Liveness probe. Must answer before anything is configured.",
   "GET health/ready":
     "Readiness probe for orchestration; reports database reachability only.",
@@ -112,7 +144,8 @@ function collectRoutes(app: INestApplication): RouteInfo[] {
       if (!controllerClass) continue;
 
       const controllerPath =
-        (Reflect.getMetadata(PATH_METADATA, controllerClass) as string) ?? "";
+        (Reflect.getMetadata(PATH_METADATA, controllerClass) as
+          string | string[]) ?? "";
       const prototype = Object.getPrototypeOf(instance) as object;
 
       for (const methodName of scanner.getAllMethodNames(prototype)) {
@@ -120,7 +153,7 @@ function collectRoutes(app: INestApplication): RouteInfo[] {
         if (typeof handler !== "function") continue;
 
         const methodPath = Reflect.getMetadata(PATH_METADATA, handler) as
-          string | undefined;
+          string | string[] | undefined;
         if (methodPath === undefined) continue;
 
         const verb = Reflect.getMetadata(METHOD_METADATA, handler) as
@@ -132,12 +165,15 @@ function collectRoutes(app: INestApplication): RouteInfo[] {
             controllerClass as never,
           ]) === true;
 
-        const path = [controllerPath, methodPath]
-          .map((p) => p.replace(/^\/|\/$/g, ""))
-          .filter(Boolean)
-          .join("/");
-
-        routes.push({ method: VERBS[verb ?? 0] ?? "GET", path, isPublic });
+        for (const base of [controllerPath].flat()) {
+          for (const suffix of [methodPath].flat()) {
+            const path = [base, suffix]
+              .map((part) => part.replace(/^\/|\/$/g, ""))
+              .filter(Boolean)
+              .join("/");
+            routes.push({ method: VERBS[verb ?? 0] ?? "GET", path, isPublic });
+          }
+        }
       }
     }
   }

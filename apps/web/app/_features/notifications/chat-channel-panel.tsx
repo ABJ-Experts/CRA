@@ -1,4 +1,5 @@
 "use client";
+import { MemberExportControls } from "../exports/member-export-controls";
 
 import {
   createChatChannelInputSchema,
@@ -475,6 +476,8 @@ export function ChatChannelPanel({
       className={cn("grid gap-4 border-t border-border pt-5")}
       aria-labelledby="chat-alerts-heading"
     >
+      <MemberExportControls source="notifications.chat_channels" context={{}} filters={{}} columns={["mode", "displayName", "enabled", "verified", "safeErrorCode", "createdAt", "updatedAt"]} enabled={canManage} />
+      <MemberExportControls source="notifications.chat_deliveries" context={{}} filters={{ status: status || undefined, cursor, limit: 25 }} columns={["eventClass", "status", "attemptCount", "lastAttemptAt", "nextAttemptAt", "safeErrorCode", "createdAt", "updatedAt"]} enabled={canViewAudit} />
       <div>
         <h3
           id="chat-alerts-heading"

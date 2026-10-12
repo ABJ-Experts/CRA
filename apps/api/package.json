@@ -54,7 +54,8 @@
     "worker:vulnerability-remediation-tickets": "node dist/vulnerability-remediation-ticket-operation-worker.js",
     "worker:audit-range-verification": "node dist/audit-range-verify-worker.js",
     "worker:audit-siem": "node dist/audit-siem-worker.js",
-    "vault:siem": "node dist/siem-vault-maintenance.js"
+    "vault:siem": "node dist/siem-vault-maintenance.js",
+    "worker:exports": "node dist/exports-worker.js"
   },
   "dependencies": {
     "@cyclonedx/cyclonedx-library": "10.2.0",
@@ -71,6 +72,7 @@
     "ajv-formats": "3.0.1",
     "cookie-parser": "^1.4.7",
     "csv-parse": "^6.2.1",
+    "exceljs": "4.4.0",
     "file-type": "^16.5.4",
     "helmet": "^8.3.0",
     "jose": "^5.10.0",

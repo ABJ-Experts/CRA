@@ -1,4 +1,5 @@
 "use client";
+import { MemberExportControls } from "../exports/member-export-controls";
 
 import {
   reRequestSupplierEvidenceRequestInputSchema,
@@ -173,6 +174,7 @@ function SubmissionReview({
 
   return (
     <li className="min-w-0 rounded-xl border border-border bg-canvas p-4">
+      <MemberExportControls source="supplier_evidence.review_history" context={{ requestId, submissionId: submission.id }} filters={{}} columns={["decision", "supplierVisibleReason", "reviewedAt", "createdAt"]} />
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="break-words text-subhead-semibold text-fg">
@@ -572,6 +574,7 @@ export function SupplierEvidenceReviewPanel({
       className="mt-6 min-w-0 rounded-xl border border-border bg-surface p-4 sm:p-6"
       aria-labelledby="supplier-evidence-review-heading"
     >
+      <MemberExportControls source="supplier_evidence.review_items" context={{ requestId }} filters={{}} columns={["title", "documentClass", "kind", "position", "state", "reRequestReason"]} enabled={enabled} />
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2
@@ -635,6 +638,7 @@ export function SupplierEvidenceReviewPanel({
               key={item.id}
               className="min-w-0 rounded-xl border border-border bg-canvas p-4"
             >
+              <MemberExportControls source="supplier_evidence.review_submissions" context={{ requestId: request.id, checklistItemId: item.id }} filters={{}} columns={["state", "fileName", "mediaType", "byteSize", "reviewState", "rejectionReason", "createdAt"]} enabled={enabled} />
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div>
                   <h3 className="text-subhead-semibold text-fg">

@@ -351,18 +351,14 @@ export class SupabaseSbomRepository
   async listBindings(
     orgId: string,
   ): Promise<Awaited<ReturnType<SbomCiIntegrationRepository["listBindings"]>>> {
-    const result = await (this.supabase.admin() as unknown as TableClient)
-      .from("ci_provider_release_bindings")
-      .select("*")
-      .eq("organization_id", orgId)
-      .order("updated_at", { ascending: false })
-      .limit(100);
-    if (result.error) throw new SbomRepositoryError("unavailable");
-    return providerRowsSchema
-      .parse(result.data)
-      .map((row) =>
-        ciProviderReleaseBindingSchema.parse(ciBindingFromRow(row)),
-      );
+    const rows = await this.rows("m14_03_sbom_ci_binding_rows", {
+      p_organization_id: orgId,
+      p_limit: 100,
+      p_cursor: null,
+    });
+    return rows.map((row) =>
+      ciProviderReleaseBindingSchema.parse(ciBindingFromRow(row)),
+    );
   }
 
   async revokeBinding(
@@ -429,17 +425,12 @@ export class SupabaseSbomRepository
     const binding = await this.getBinding(orgId, bindingId);
     if (!binding) return [];
     const boundedLimit = Math.min(Math.max(limit, 1), 50);
-    const result = await (this.supabase.admin() as unknown as TableClient)
-      .from("ci_build_runs")
-      .select(
-        "id,binding_id,run_id,run_attempt,commit_sha,ref,source_id,ingest_job_id,created_at",
-      )
-      .eq("organization_id", orgId)
-      .eq("binding_id", bindingId)
-      .order("created_at", { ascending: false })
-      .limit(boundedLimit);
-    if (result.error) throw new SbomRepositoryError("unavailable");
-    const rows = providerRowsSchema.parse(result.data);
+    const rows = await this.rows("m14_03_sbom_ci_build_run_rows", {
+      p_organization_id: orgId,
+      p_binding_id: bindingId,
+      p_limit: boundedLimit,
+      p_cursor: null,
+    });
     if (rows.length === 0) return [];
     const jobIds = rows.flatMap((row) =>
       typeof row.ingest_job_id === "string" ? [row.ingest_job_id] : [],
@@ -2630,18 +2621,25 @@ export class SupabaseSbomRepository
     };
   }
   async list(organizationId: string): Promise<readonly SbomCiCredential[]> {
-    const result = await this.tables()
-      .from("sbom_ci_credentials")
-      .select(
-        "id, organization_id, label, token_prefix, created_at, created_by, revoked_at, revoked_by, last_used_at",
-      )
-      .eq("organization_id", organizationId)
-      .order("created_at", { ascending: false });
-    if (result.error || !Array.isArray(result.data))
-      throw new SbomRepositoryError("unavailable");
-    return Object.freeze(
-      result.data.map((value) => this.credentialFromRow(value)),
-    );
+    let cursor: string | null = null;
+    let credentials: readonly SbomCiCredential[] = [];
+    do {
+      const rows = await this.rows("m14_03_sbom_ci_credential_rows", {
+        p_organization_id: organizationId,
+        p_limit: 100,
+        p_cursor: cursor,
+      });
+      credentials = [
+        ...credentials,
+        ...rows.map((value) => this.credentialFromRow(value)),
+      ];
+      const last = rows.at(-1);
+      cursor =
+        rows.length === 100 && last
+          ? `${String(last.created_at)}|${String(last.id)}`
+          : null;
+    } while (cursor);
+    return Object.freeze(credentials);
   }
   async revoke(
     organizationId: string,

@@ -1,4 +1,5 @@
 "use client";
+import { MemberExportControls } from "../../_features/exports/member-export-controls";
 
 import {
   type SbomCompositeConflict,
@@ -596,6 +597,7 @@ export function SbomCompositeReviewSection({
       aria-labelledby="sbom-composite-review-heading"
       className="w-full min-w-0 max-w-full rounded-xl border border-border bg-canvas p-4 sm:p-6"
     >
+      {review ? <><MemberExportControls source="sboms.composite_conflicts" context={{ reviewId: review.id }} filters={{}} columns={["identity", "kind", "field", "state", "resolutionReason", "resolvedAt"]} enabled={enabled} /><MemberExportControls source="sboms.composite_relationships" context={{ reviewId: review.id }} filters={{}} columns={["kind", "state", "parentComponentId", "childComponentId", "reason", "resolvedAt"]} enabled={enabled} /></> : null}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <h2

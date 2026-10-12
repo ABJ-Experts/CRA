@@ -1,4 +1,5 @@
 "use client";
+import { MemberExportControls } from "../../_features/exports/member-export-controls";
 
 import type { OrganizationExport } from "@repo/contracts";
 import { Button } from "@repo/ui/button";
@@ -88,6 +89,7 @@ export function OrganizationExportSection({
 
   return (
     <SectionCard title="Full tenant export" className="h-full" bodyClassName="flex">
+      <MemberExportControls source="organization.tenant_exports" context={{}} filters={{}} columns={["status", "completedParts", "totalParts", "attemptCount", "safeErrorCode", "verifiedAt", "createdAt", "updatedAt"]} enabled={canExport} />
       <div className="flex flex-1 flex-col gap-4">
         {!canExport ? (
           <ReadonlyNotice>

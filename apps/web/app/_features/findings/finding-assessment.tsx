@@ -1,4 +1,5 @@
 "use client";
+import { MemberExportControls } from "../exports/member-export-controls";
 
 import type {
   VulnerabilityAssessmentApprovalPolicyListResponse,
@@ -176,6 +177,9 @@ export function FindingAssessment({
 
   return (
     <section className="mt-6" aria-labelledby="vex-assessment-heading">
+      <MemberExportControls source="findings.detail.assessment_history" context={{ findingId }} filters={{}} columns={["eventType", "actorUserId", "occurredAt", "reason"]} />
+      <MemberExportControls source="findings.detail.assessment_evidence" context={{ findingId }} filters={{}} columns={["id", "kind", "title", "url", "evidenceId"]} />
+      <MemberExportControls source="findings.detail.approval_policy" context={{ findingId }} filters={{}} columns={["severity", "approvalRequired", "version", "isOverride", "updatedAt"]} enabled={canManagePolicy} />
       <div className="rounded-xl border border-border bg-canvas p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>

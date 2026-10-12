@@ -12,6 +12,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { z } from "zod";
 
 import { ApiClientError } from "../../_lib/http/api-client";
+import { PortalExportControls } from "../exports/portal-export-controls";
 import { supplierEvidenceApi } from "./supplier-evidence.api";
 
 const SupplierEvidenceSbomItem = dynamic(
@@ -273,6 +274,10 @@ function PortalRequest({
         <h2 id="portal-checklist" className="text-subhead-semibold text-fg">
           Requested evidence
         </h2>
+        <PortalExportControls
+          source="supplier_evidence.portal_items"
+          sessionToken={sessionToken}
+        />
         <ul className="mt-3 grid gap-3">
           {request.items.map((item) => {
             if (item.kind === "sbom")
@@ -329,6 +334,11 @@ function PortalRequest({
                     Re-request reason: {item.reRequestReason}
                   </p>
                 ) : null}
+                <PortalExportControls
+                  source="supplier_evidence.portal_submissions"
+                  sessionToken={sessionToken}
+                  checklistItemId={item.id}
+                />
                 <div className="mt-2 grid gap-1">
                   {submissions.length === 0 ? (
                     <span className="text-caption-1-regular text-fg-muted">

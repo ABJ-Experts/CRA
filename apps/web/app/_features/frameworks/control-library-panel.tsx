@@ -1,4 +1,5 @@
 "use client";
+import { MemberExportControls } from "../exports/member-export-controls";
 
 import {
   useInfiniteQuery,
@@ -161,7 +162,17 @@ export function ControlLibraryPanel({
 
   return (
     <section aria-label="Control library" className={cn("grid gap-6")}>
-      <SectionCard title="Control library">
+      <SectionCard
+        title="Control library"
+        action={
+          <MemberExportControls
+            source="frameworks.controls"
+            context={{}}
+            filters={{ includeArchived: showArchived }}
+            label="Export controls"
+          />
+        }
+      >
         {initialRequirementKey && !selectedId ? (
           <p role="status" className={cn("mb-3 text-subhead-regular text-fg")}>
             Select or create a control, then review its mapping for requirement{" "}

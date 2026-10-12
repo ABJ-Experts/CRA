@@ -279,11 +279,25 @@ describe("SupabaseControlRepository scoped reads", () => {
     return query;
   }
 
+  const sourceCalls: unknown[] = [];
   const repository = new SupabaseControlRepository({
     admin: () => ({
       from: table,
-      rpc: (name: string) =>
-        Promise.resolve({
+      rpc: (
+        name: string,
+        args: { p_org?: string; p_include_archived?: boolean },
+      ) => {
+        if (name === "m14_03_framework_control_rows") {
+          sourceCalls.push(args);
+          const selected = table("framework_controls").eq(
+            "organization_id",
+            args.p_org,
+          );
+          return args.p_include_archived
+            ? selected
+            : selected.is("archived_at", null);
+        }
+        return Promise.resolve({
           data:
             name === "m10_coverage_summary"
               ? {
@@ -301,12 +315,14 @@ describe("SupabaseControlRepository scoped reads", () => {
                   },
                 ],
           error: null,
-        }),
+        });
+      },
     }),
   } as never);
 
   beforeEach(() => {
     filters.length = 0;
+    sourceCalls.length = 0;
   });
 
   it("lists only selected-organization controls and makes an inactive owner visible", async () => {
@@ -323,6 +339,7 @@ describe("SupabaseControlRepository scoped reads", () => {
       value: orgId,
     });
     expect(result.nextCursor).toBeNull();
+    expect(sourceCalls).toEqual([{ p_org: orgId, p_include_archived: false }]);
   });
 
   it("rejects a tenant substitution before querying controls", async () => {

@@ -1,5 +1,7 @@
 "use client";
 
+import { MemberExportControls } from "../../_features/exports/member-export-controls";
+
 import { Button } from "@repo/ui/button";
 import { Card, CardBody, CardHeader, CardTitle } from "@repo/ui/card";
 import { Tag } from "@repo/ui/tag";
@@ -29,6 +31,7 @@ function grantedCount(permissions: Readonly<Record<string, boolean>>): number {
 }
 
 export default function RolesPage() {
+  const canExport = useHasPermission("can_export_roles");
   const canCreate = useHasPermission("can_create_roles");
 
   const { data, isLoading, isError, refetch } = useQuery({
@@ -39,6 +42,13 @@ export default function RolesPage() {
 
   return (
     <div className="flex flex-col gap-6 px-6 pb-8 lg:px-[30px]">
+      <MemberExportControls
+        source="roles.custom_roles"
+        context={{}}
+        filters={{}}
+        columns={["name", "baseRole", "isActive", "memberCount"]}
+        enabled={canExport}
+      />
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-h5 text-fg">Roles</h1>
