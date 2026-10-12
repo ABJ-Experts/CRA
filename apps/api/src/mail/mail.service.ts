@@ -624,6 +624,27 @@ export class MailService {
     );
   }
 
+  async sendScheduledReportReady(
+    to: string,
+    runId: string,
+    idempotencyKey: string,
+  ): Promise<MailDeliveryReceipt> {
+    if (!/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(runId)) {
+      throw new RequiredMailDeliveryError("delivery_failed");
+    }
+    return this.required(
+      to,
+      "Your scheduled report is ready",
+      this.layout(
+        "Your scheduled report is ready",
+        `<p style="color:#4b5058;font-size:14px">Your scheduled report is ready to view in CRA.</p>
+         <p style="color:#4b5058;font-size:14px"><a href="${escapeHtml(`${this.appUrl}/dashboard/reports/runs/${runId}`)}">Open your report</a></p>`,
+      ),
+      idempotencyKey,
+      true,
+    );
+  }
+
   async sendNotificationBurst(
     to: string,
     input: Readonly<{

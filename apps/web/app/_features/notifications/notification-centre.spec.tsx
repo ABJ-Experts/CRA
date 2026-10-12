@@ -116,6 +116,40 @@ afterEach(() => {
 });
 
 describe("NotificationCentre", () => {
+  it("offers scheduled reports only in the eligible event feed", () => {
+    render(<NotificationCentre />);
+    expect(actions.feed).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        view: "events",
+        includeScheduledReports: true,
+      }),
+    );
+    expect(
+      screen.getByRole("option", { name: "Scheduled reports" }),
+    ).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("Category"), {
+      target: { value: "scheduled_report" },
+    });
+    expect(actions.feed).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        category: "scheduled_report",
+        includeScheduledReports: true,
+      }),
+    );
+    fireEvent.change(screen.getByLabelText("Feed view"), {
+      target: { value: "grouped" },
+    });
+    expect(actions.feed).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        view: "grouped",
+        category: undefined,
+        includeScheduledReports: undefined,
+      }),
+    );
+    expect(
+      screen.queryByRole("option", { name: "Scheduled reports" }),
+    ).not.toBeInTheDocument();
+  });
   it("shows a bounded grouped summary and opens its permission-checked filtered inbox", () => {
     state.feed = {
       items: [

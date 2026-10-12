@@ -7,6 +7,7 @@ import type {
   UpdateNotificationPreferencesInput,
   NotificationFeedRef,
   NotificationFeedQuery,
+  NotificationFeedUnreadCountQuery,
   MarkNotificationFeedReadInput,
   CreateNotificationChatChannelInput,
   UpdateNotificationChatChannelInput,
@@ -106,8 +107,12 @@ export class NotificationsUseCases {
     return this.repository.listFeed(organizationId, actorId, query);
   }
 
-  countFeedUnread(organizationId: string, actorId: string) {
-    return this.repository.countFeedUnread(organizationId, actorId);
+  countFeedUnread(
+    organizationId: string,
+    actorId: string,
+    query: NotificationFeedUnreadCountQuery = {},
+  ) {
+    return this.repository.countFeedUnread(organizationId, actorId, query);
   }
 
   resolveFeedDestination(

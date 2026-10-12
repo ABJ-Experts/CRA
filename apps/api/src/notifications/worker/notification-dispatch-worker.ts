@@ -14,6 +14,7 @@ export type NotificationPayload =
     }>
   | Readonly<{ kind: "evidence_quarantined" }>
   | Readonly<{ kind: "evidence_integrity_failure" }>
+  | Readonly<{ kind: "scheduled_report"; runId: string }>
   | Readonly<{
       kind: "evidence_validity";
       title: string;

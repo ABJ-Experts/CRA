@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { hasPermission } from "@repo/contracts/permissions";
+import { type BaseRole, hasPermission } from "@repo/contracts/permissions";
 import {
   dashboardTrendFiltersSchema,
   dashboardTrendsDataSchema,
@@ -64,6 +64,89 @@ export class DashboardTrendsUseCases {
       _sourceAccess: access,
     });
   }
+  /** Database-verified members; no interactive session or dataset token is minted. */
+  async exportBackgroundCaptureContext(
+    principal: Readonly<{
+      organizationId: string;
+      ownerUserId: string;
+      userId: string;
+      ownerBaseRole: BaseRole;
+      recipientBaseRole: BaseRole;
+    }>,
+    query: DashboardTrendsQuery,
+  ) {
+    const filters = dashboardTrendFiltersSchema.parse(query);
+    const owner = await this.permissionContext(
+      principal.organizationId,
+      principal.ownerUserId,
+      principal.ownerBaseRole,
+    );
+    const recipient = await this.permissionContext(
+      principal.organizationId,
+      principal.userId,
+      principal.recipientBaseRole,
+    );
+    if (
+      !hasPermission(owner.permissions, "can_export_dashboards") ||
+      !hasPermission(recipient.permissions, "can_export_dashboards")
+    )
+      throw new DashboardForbiddenError();
+    const ownerAccess = dashboardSourceAccess(owner.permissions);
+    const recipientAccess = dashboardSourceAccess(recipient.permissions);
+    const access = Object.fromEntries(
+      Object.entries(ownerAccess).map(([key, value]) => [
+        key,
+        value && recipientAccess[key as keyof typeof recipientAccess],
+      ]),
+    ) as ReturnType<typeof dashboardSourceAccess>;
+    const raw = await this.repository.read(principal.organizationId, {
+      actorId: principal.userId,
+      endpoint: "trends",
+      filters: { ...filters, sourceAccess: access },
+    });
+    try {
+      const { envelope, result } = this.parseTrends(
+        raw,
+        principal.organizationId,
+        filters,
+        access,
+      );
+      return Object.freeze({
+        _datasetSnapshot: envelope.snapshot,
+        _datasetRevision: result.datasetRevision,
+        _sourceAccess: access,
+      });
+    } catch {
+      throw new DashboardUnavailableError();
+    }
+  }
+  private parseTrends(
+    raw: unknown,
+    organizationId: string,
+    filters: DashboardTrendsQuery,
+    access: ReturnType<typeof dashboardSourceAccess>,
+  ) {
+    const envelope = envelopeSchema.parse(raw);
+    const result = dashboardTrendsDataSchema.parse(envelope.result);
+    if (
+      result.organizationId !== organizationId ||
+      this.tokens.fingerprint(result.filters) !==
+        this.tokens.fingerprint(filters)
+    )
+      throw new Error();
+    this.checkWithheld(result, access);
+    if (
+      result.generatedAt !== envelope.snapshot.cutoffAt ||
+      Object.values(result.series).some((series) =>
+        series.buckets.some(
+          (bucket) =>
+            Date.parse(bucket.end) > Date.parse(envelope.snapshot.cutoffAt),
+        ),
+      )
+    )
+      throw new Error();
+    return { envelope, result };
+  }
   async trends(user: RequestUser, query: DashboardTrendsQuery) {
     const { scope, access } = await this.authorize(user);
     return this.readTrends(scope, access, query);
@@ -88,25 +171,12 @@ export class DashboardTrendsUseCases {
       ...(position ? { snapshot: position.pin } : {}),
     });
     try {
-      const envelope = envelopeSchema.parse(raw);
-      const result = dashboardTrendsDataSchema.parse(envelope.result);
-      if (
-        result.organizationId !== scope.organizationId ||
-        this.tokens.fingerprint(result.filters) !==
-          this.tokens.fingerprint(filters)
-      )
-        throw new Error();
-      this.checkWithheld(result, access);
-      if (
-        result.generatedAt !== envelope.snapshot.cutoffAt ||
-        Object.values(result.series).some((series) =>
-          series.buckets.some(
-            (bucket) =>
-              Date.parse(bucket.end) > Date.parse(envelope.snapshot.cutoffAt),
-          ),
-        )
-      )
-        throw new Error();
+      const { envelope, result } = this.parseTrends(
+        raw,
+        scope.organizationId,
+        filters,
+        access,
+      );
       if (
         position &&
         (result.datasetRevision !== position.datasetRevision ||
@@ -257,21 +327,11 @@ export class DashboardTrendsUseCases {
   private async authorize(user: RequestUser) {
     if (!user.isActive || !user.organizationId || !user.role || !user.sessionId)
       throw new DashboardForbiddenError();
-    let context;
-    try {
-      context = await this.permissions.snapshot(
-        user.organizationId,
-        user.id,
-        user.role,
-      );
-    } catch (error) {
-      if (error instanceof DashboardForbiddenError) throw error;
-      throw new DashboardUnavailableError();
-    }
-    if (!Number.isSafeInteger(context.version) || context.version <= 0)
-      throw new DashboardUnavailableError();
-    if (!hasPermission(context.permissions, "can_view_dashboards"))
-      throw new DashboardForbiddenError();
+    const context = await this.permissionContext(
+      user.organizationId,
+      user.id,
+      user.role,
+    );
     return {
       scope: {
         organizationId: user.organizationId,
@@ -283,6 +343,24 @@ export class DashboardTrendsUseCases {
       },
       access: dashboardSourceAccess(context.permissions),
     };
+  }
+  private async permissionContext(
+    organizationId: string,
+    actorId: string,
+    role: BaseRole,
+  ) {
+    let context;
+    try {
+      context = await this.permissions.snapshot(organizationId, actorId, role);
+    } catch (error) {
+      if (error instanceof DashboardForbiddenError) throw error;
+      throw new DashboardUnavailableError();
+    }
+    if (!Number.isSafeInteger(context.version) || context.version <= 0)
+      throw new DashboardUnavailableError();
+    if (!hasPermission(context.permissions, "can_view_dashboards"))
+      throw new DashboardForbiddenError();
+    return context;
   }
   private checkWithheld(
     data: z.output<typeof dashboardTrendsDataSchema>,

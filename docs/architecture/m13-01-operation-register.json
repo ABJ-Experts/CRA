@@ -3517,6 +3517,127 @@
           "symbol": "m14_03_audit"
         }
       ]
+    },
+    {
+      "id": "apps/api/src/reports/reports.controller.ts#ReportsController.activate:POST:reports/definitions/:definitionId/activate",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261012064414_m14_04_report_workflow.sql",
+          "symbol": "m14_04_mutate_definition",
+          "note": "M14-04: source-owned tenant-scoped transaction and durable chained audit; no best-effort completion."
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/reports/reports.controller.ts#ReportsController.adminPause:POST:reports/administration/:definitionId/pause",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261012064414_m14_04_report_workflow.sql",
+          "symbol": "m14_04_admin_pause",
+          "note": "M14-04: source-owned tenant-scoped transaction and durable chained audit; no best-effort completion."
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/reports/reports.controller.ts#ReportsController.archive:POST:reports/definitions/:definitionId/archive",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261012064414_m14_04_report_workflow.sql",
+          "symbol": "m14_04_mutate_definition",
+          "note": "M14-04: source-owned tenant-scoped transaction and durable chained audit; no best-effort completion."
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/reports/reports.controller.ts#ReportsController.create:POST:reports/definitions",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261012064414_m14_04_report_workflow.sql",
+          "symbol": "m14_04_create_definition",
+          "note": "M14-04: source-owned tenant-scoped transaction and durable chained audit; no best-effort completion."
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/reports/reports.controller.ts#ReportsController.grant:POST:reports/runs/:runId/recipients/:recipientId/download-grants",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261012064416_m14_04_report_delivery.sql",
+          "symbol": "m14_04_grant",
+          "note": "M14-04: source-owned tenant-scoped transaction and durable chained audit; no best-effort completion."
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/reports/reports.controller.ts#ReportsController.pause:POST:reports/definitions/:definitionId/pause",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261012064414_m14_04_report_workflow.sql",
+          "symbol": "m14_04_mutate_definition",
+          "note": "M14-04: source-owned tenant-scoped transaction and durable chained audit; no best-effort completion."
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/reports/reports.controller.ts#ReportsController.preview:POST:reports/definitions/:definitionId/preview",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261012064414_m14_04_report_workflow.sql",
+          "symbol": "m14_04_preview",
+          "note": "M14-04: source-owned tenant-scoped transaction and durable chained audit; no best-effort completion."
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/reports/reports.controller.ts#ReportsController.replay:POST:reports/runs/:runId/replay",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261012064414_m14_04_report_workflow.sql",
+          "symbol": "m14_04_replay",
+          "note": "M14-04: source-owned tenant-scoped transaction and durable chained audit; no best-effort completion."
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/reports/reports.controller.ts#ReportsController.resume:POST:reports/definitions/:definitionId/resume",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261012064414_m14_04_report_workflow.sql",
+          "symbol": "m14_04_mutate_definition",
+          "note": "M14-04: source-owned tenant-scoped transaction and durable chained audit; no best-effort completion."
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/reports/reports.controller.ts#ReportsController.setEmailPreference:PATCH:reports/email-preference",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261012064416_m14_04_report_delivery.sql",
+          "symbol": "m14_04_set_email_preference",
+          "note": "M14-04: source-owned tenant-scoped transaction and durable chained audit; no best-effort completion."
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/reports/reports.controller.ts#ReportsController.update:PATCH:reports/definitions/:definitionId",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261012064414_m14_04_report_workflow.sql",
+          "symbol": "m14_04_update_definition",
+          "note": "M14-04: source-owned tenant-scoped transaction and durable chained audit; no best-effort completion."
+        }
+      ]
     }
   ],
   "workers": [
@@ -3932,6 +4053,17 @@
           "kind": "transactional-audit",
           "evidence": "apps/infrastructure/supabase/migrations/20261009110804_m14_03_filtered_export_persistence.sql",
           "symbol": "m14_03_audit"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/reports/worker/reports-worker.ts",
+      "authority": [
+        {
+          "kind": "job-history",
+          "evidence": "apps/infrastructure/supabase/migrations/20261012064415_m14_04_report_generation.sql",
+          "symbol": "m14_04_publish_recipient",
+          "note": "Immutable report occurrence and recipient checkpoint; artifact publication and audit precede email outbox."
         }
       ]
     }

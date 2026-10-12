@@ -12,6 +12,7 @@ import type {
   notificationFeedQuerySchema,
   notificationFeedResponseSchema,
   notificationFeedUnreadCountResponseSchema,
+  notificationFeedUnreadCountQuerySchema,
   notificationFeedDestinationResponseSchema,
   markNotificationFeedReadInputSchema,
   markNotificationFeedReadResponseSchema,
@@ -86,6 +87,9 @@ export type NotificationGroupedFeedResponse = z.output<
 >;
 export type NotificationFeedUnreadCountResponse = z.output<
   typeof notificationFeedUnreadCountResponseSchema
+>;
+export type NotificationFeedUnreadCountQuery = z.output<
+  typeof notificationFeedUnreadCountQuerySchema
 >;
 export type NotificationFeedDestinationResponse = z.output<
   typeof notificationFeedDestinationResponseSchema
@@ -204,6 +208,7 @@ export interface NotificationRepository {
   countFeedUnread(
     organizationId: string,
     actorId: string,
+    query?: NotificationFeedUnreadCountQuery,
   ): Promise<NotificationResult<NotificationFeedUnreadCountResponse>>;
   resolveFeedDestination(
     organizationId: string,

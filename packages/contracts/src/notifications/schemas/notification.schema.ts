@@ -36,6 +36,11 @@ export const notificationCriticalCategorySchema = z.enum([
 export const notificationCategorySchema = z.union([
   notificationOptionalCategorySchema,
   notificationCriticalCategorySchema,
+  z.literal("scheduled_report"),
+]);
+const scheduledReportOptInSchema = z.union([
+  z.boolean(),
+  z.enum(["true", "false"]).transform((value) => value === "true"),
 ]);
 export const notificationModeSchema = z.enum([
   "immediate",
@@ -159,13 +164,19 @@ export const notificationDeliveryCursorSchema =
   opaqueRefSchema.brand<"NotificationDeliveryCursor">();
 export const notificationDeliveriesQuerySchema = z
   .object({
+    includeScheduledReports: scheduledReportOptInSchema.optional(),
     status: notificationDeliveryStatusSchema.optional(),
     category: notificationCategorySchema.optional(),
     recipientUserId: z.uuid().optional(),
     cursor: notificationDeliveryCursorSchema.optional(),
     limit: z.coerce.number().int().min(1).max(100).default(50),
   })
-  .strict();
+  .strict()
+  .refine(
+    ({ category, includeScheduledReports }) =>
+      category !== "scheduled_report" || includeScheduledReports === true,
+    { path: ["category"], message: "Include scheduled reports to filter them" },
+  );
 export const notificationDeliveryParamsSchema = z
   .object({ deliveryRef: notificationDeliveryRefSchema })
   .strict();
@@ -262,12 +273,12 @@ export const retryNotificationDeliveryInputSchema = z
   .strict();
 
 const feedRefPattern =
-  /^(?:m2|m5|m6|m8|m9)_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}_(?:event|failure)$/;
+  /^(?:m2|m5|m6|m8|m9|m14)_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}_(?:event|failure)$/;
 const fingerprintSchema = z.string().regex(/^[0-9a-f]{64}$/);
 const feedUuidPattern =
   "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";
 const trustedFeedRoutePattern = new RegExp(
-  `^/(?:products/${feedUuidPattern}(?:/evidence\\?documentId=${feedUuidPattern}&versionId=${feedUuidPattern})?|findings\\?findingId=${feedUuidPattern}(?:&assessmentId=${feedUuidPattern})?|reporting\\?obligationId=${feedUuidPattern}&stageId=${feedUuidPattern}|suppliers/${feedUuidPattern}\\?requestId=${feedUuidPattern})$`,
+  `^/(?:products/${feedUuidPattern}(?:/evidence\\?documentId=${feedUuidPattern}&versionId=${feedUuidPattern})?|findings\\?findingId=${feedUuidPattern}(?:&assessmentId=${feedUuidPattern})?|reporting\\?obligationId=${feedUuidPattern}&stageId=${feedUuidPattern}|suppliers/${feedUuidPattern}\\?requestId=${feedUuidPattern}|dashboard/reports/runs/${feedUuidPattern})$`,
 );
 const localAppUrlSchema = z.string().max(2_048).regex(trustedFeedRoutePattern);
 export const trustedNotificationRouteSchema = localAppUrlSchema;
@@ -300,6 +311,7 @@ export const notificationBurstEventClassSchema = z.enum([
 export const notificationFeedViewSchema = z.enum(["events", "grouped"]);
 export const notificationFeedQuerySchema = z
   .object({
+    includeScheduledReports: scheduledReportOptInSchema.optional(),
     view: notificationFeedViewSchema.optional(),
     batchId: z.uuid().optional(),
     eventClass: notificationBurstEventClassSchema.optional(),
@@ -313,7 +325,16 @@ export const notificationFeedQuerySchema = z
   .strict()
   .superRefine(
     (
-      { view, batchId, eventClass, windowStart, category, severity, read },
+      {
+        view,
+        batchId,
+        eventClass,
+        windowStart,
+        category,
+        severity,
+        read,
+        includeScheduledReports,
+      },
       context,
     ) => {
       if (view === "grouped" && (batchId || eventClass || windowStart)) {
@@ -321,6 +342,23 @@ export const notificationFeedQuerySchema = z
           code: "custom",
           path: ["view"],
           message: "Grouped view cannot be filtered to a single batch",
+        });
+      }
+      if (category === "scheduled_report" && includeScheduledReports !== true) {
+        context.addIssue({
+          code: "custom",
+          path: ["category"],
+          message: "Include scheduled reports to filter them",
+        });
+      }
+      if (
+        includeScheduledReports === true &&
+        (view === "grouped" || batchId || eventClass || windowStart)
+      ) {
+        context.addIssue({
+          code: "custom",
+          path: ["includeScheduledReports"],
+          message: "Scheduled reports use the event feed",
         });
       }
       if ((eventClass === undefined) !== (windowStart === undefined)) {
@@ -348,6 +386,11 @@ export const notificationFeedQuerySchema = z
       }
     },
   );
+export const notificationFeedUnreadCountQuerySchema = z
+  .object({
+    includeScheduledReports: scheduledReportOptInSchema.optional(),
+  })
+  .strict();
 
 /** Only scoped inbox cohort URLs may be emitted by a summary or email batch. */
 export const trustedNotificationInboxUrlSchema = z

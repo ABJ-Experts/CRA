@@ -12,19 +12,28 @@ export function MemberExportControls(
   const allowed = specification.requiredPermissions.every(
     (permission) => permissions[permission] === true,
   );
-  const roleAllowed = !specification.requiredRole || role === "owner" || (specification.requiredRole === "admin" && role === "admin");
+  const roleAllowed =
+    !specification.requiredRole ||
+    role === "owner" ||
+    (specification.requiredRole === "admin" && role === "admin");
   const identity = `${session?.organization?.id ?? "none"}:${session?.user?.id ?? "none"}`;
+  const enabled =
+    props.enabled !== false &&
+    !isLoading &&
+    Boolean(session?.organization?.id && session?.user?.id) &&
+    allowed &&
+    roleAllowed &&
+    specification.subjectKind === "member";
+  if (!enabled) return null;
   return (
     <ExportControls
       {...props}
       key={`${identity}:${props.source}:${JSON.stringify(props.context)}`}
-      label={props.label ?? `Export ${props.source.split(".").at(-1)?.replaceAll("_", " ") ?? "list"}`}
-      enabled={
-        props.enabled !== false &&
-        !isLoading &&
-        Boolean(session?.organization?.id && session?.user?.id) &&
-        allowed && roleAllowed && specification.subjectKind === "member"
+      label={
+        props.label ??
+        `Export ${props.source.split(".").at(-1)?.replaceAll("_", " ") ?? "list"}`
       }
+      enabled
     />
   );
 }

@@ -22,6 +22,7 @@ import type {
   UpdateNotificationPreferencesInput,
   NotificationFeedRef,
   NotificationFeedQuery,
+  NotificationFeedUnreadCountQuery,
   MarkNotificationFeedReadInput,
   UpdateNotificationBurstPolicyInput,
   NotificationBurstBatchesQuery,
@@ -155,7 +156,9 @@ export class SupabaseNotificationRepository implements NotificationRepository {
     query: NotificationDeliveriesQuery,
   ) {
     return this.call(
-      "list_notification_dispatches_atomic",
+      query.includeScheduledReports
+        ? "m14_04_list_notification_dispatches_atomic"
+        : "list_notification_dispatches_atomic",
       {
         p_organization_id: organizationId,
         p_actor_user_id: actorId,
@@ -164,6 +167,9 @@ export class SupabaseNotificationRepository implements NotificationRepository {
         p_recipient_user_id: query.recipientUserId ?? null,
         p_cursor: query.cursor ?? null,
         p_limit: query.limit,
+        ...(query.includeScheduledReports
+          ? { p_include_scheduled_reports: true }
+          : {}),
       },
       notificationDeliveriesResponseSchema,
     );
@@ -236,7 +242,9 @@ export class SupabaseNotificationRepository implements NotificationRepository {
       );
     }
     return this.call(
-      "list_notification_feed_atomic",
+      query.includeScheduledReports
+        ? "m14_04_list_notification_feed_atomic"
+        : "list_notification_feed_atomic",
       {
         p_organization_id: organizationId,
         p_actor_user_id: actorId,
@@ -250,9 +258,15 @@ export class SupabaseNotificationRepository implements NotificationRepository {
     );
   }
 
-  countFeedUnread(organizationId: string, actorId: string) {
+  countFeedUnread(
+    organizationId: string,
+    actorId: string,
+    query: NotificationFeedUnreadCountQuery = {},
+  ) {
     return this.call(
-      "count_notification_feed_unread_atomic",
+      query.includeScheduledReports
+        ? "m14_04_count_notification_feed_unread_atomic"
+        : "count_notification_feed_unread_atomic",
       { p_organization_id: organizationId, p_actor_user_id: actorId },
       notificationFeedUnreadCountResponseSchema,
     );

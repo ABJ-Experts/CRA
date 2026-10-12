@@ -36,6 +36,7 @@ import type {
   notificationGroupedFeedItemSchema,
   notificationGroupedFeedResponseSchema,
   notificationFeedUnreadCountResponseSchema,
+  notificationFeedUnreadCountQuerySchema,
   notificationFeedDestinationResponseSchema,
   markNotificationFeedReadInputSchema,
   markNotificationFeedReadResponseSchema,
@@ -181,6 +182,9 @@ export type NotificationAnyFeedResponse = z.output<
 >;
 export type NotificationFeedUnreadCountResponse = z.output<
   typeof notificationFeedUnreadCountResponseSchema
+>;
+export type NotificationFeedUnreadCountQuery = z.output<
+  typeof notificationFeedUnreadCountQuerySchema
 >;
 export type NotificationFeedDestinationResponse = z.output<
   typeof notificationFeedDestinationResponseSchema

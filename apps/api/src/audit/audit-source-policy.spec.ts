@@ -3,7 +3,10 @@ import {
   type PermissionSet,
 } from "@repo/contracts/permissions";
 
-import { buildAuditSourcePolicy } from "./audit-source-policy";
+import {
+  buildAuditSourcePolicy,
+  isKnownAuditSourceEntityType,
+} from "./audit-source-policy";
 
 const filters = {
   from: "2026-01-01T00:00:00.000Z",
@@ -22,6 +25,21 @@ describe("audit source policy", () => {
       buildAuditSourcePolicy(
         { can_view_audit: false, can_export_products: true },
         { ...filters, resourceType: "export_job" },
+      ).allowedEntityTypes,
+    ).toEqual([]);
+  });
+  it("recognizes safe scheduled report audit metadata only with audit read permission", () => {
+    expect(isKnownAuditSourceEntityType("scheduled_report")).toBe(true);
+    expect(
+      buildAuditSourcePolicy(
+        { can_view_audit: true },
+        { ...filters, resourceType: "scheduled_report" },
+      ).allowedEntityTypes,
+    ).toEqual(["scheduled_report"]);
+    expect(
+      buildAuditSourcePolicy(
+        { can_view_audit: false, can_view_products: true },
+        { ...filters, resourceType: "scheduled_report" },
       ).allowedEntityTypes,
     ).toEqual([]);
   });

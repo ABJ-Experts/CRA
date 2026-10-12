@@ -11,6 +11,7 @@ const SOURCE_PERMISSIONS = {
   audit_chain: "can_view_audit",
   audit_export: "can_view_audit",
   export_job: "can_view_audit",
+  scheduled_report: "can_view_audit",
   audit_search: "can_view_audit",
   audit_search_denial: "can_view_audit",
   auth_security: "can_view_audit",

@@ -18,6 +18,7 @@ import {
   notificationFeedDestinationParamsSchema,
   notificationFeedDestinationResponseSchema,
   notificationFeedQuerySchema,
+  notificationFeedUnreadCountQuerySchema,
   notificationFeedUnreadCountResponseSchema,
   markNotificationFeedReadInputSchema,
   markNotificationFeedReadResponseSchema,
@@ -248,9 +249,18 @@ export class NotificationsApi {
     });
   }
 
-  unreadCount(signal?: AbortSignal) {
+  unreadCount(signal?: AbortSignal, includeScheduledReports = false) {
+    const parsed = apiClient.parseInput(
+      notificationFeedUnreadCountQuerySchema,
+      includeScheduledReports ? { includeScheduledReports: true } : {},
+    );
+    const search = new URLSearchParams();
+    if (parsed.includeScheduledReports)
+      search.set("includeScheduledReports", "true");
     return authenticatedRequestJson({
-      path: "/api/v1/notifications/feed/unread-count",
+      path: search.size
+        ? `/api/v1/notifications/feed/unread-count?${search.toString()}`
+        : "/api/v1/notifications/feed/unread-count",
       schema: notificationFeedUnreadCountResponseSchema,
       signal,
     });

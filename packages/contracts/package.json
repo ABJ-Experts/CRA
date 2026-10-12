@@ -318,6 +318,22 @@
     "./exports/types": {
       "types": "./dist/exports/types/index.d.ts",
       "default": "./dist/exports/types/index.js"
+    },
+    "./reports": {
+      "types": "./dist/reports/index.d.ts",
+      "default": "./dist/reports/index.js"
+    },
+    "./reports/schemas": {
+      "types": "./dist/reports/schemas/index.d.ts",
+      "default": "./dist/reports/schemas/index.js"
+    },
+    "./reports/types": {
+      "types": "./dist/reports/types/index.d.ts",
+      "default": "./dist/reports/types/index.js"
+    },
+    "./reports/policy": {
+      "types": "./dist/reports/policy.d.ts",
+      "default": "./dist/reports/policy.js"
     }
   },
   "files": [

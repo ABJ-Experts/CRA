@@ -525,3 +525,60 @@ describe("filtered export signed audit capture", () => {
     ).rejects.toThrow();
   });
 });
+
+describe("background audit intersection", () => {
+  const principal = {
+    organizationId,
+    ownerUserId: actorId,
+    userId: eventId,
+    ownerBaseRole: "owner" as const,
+    recipientBaseRole: "member" as const,
+    requestId: snapshotRequestId,
+  };
+  it("creates a fresh recipient receipt for the owner/recipient source intersection without tokens", async () => {
+    const repo = repository({
+      can_view_audit: true,
+      can_export_audit: true,
+      can_view_products: true,
+      can_view_suppliers: true,
+    });
+    repo.effectivePermissions.mockResolvedValueOnce({
+      version: "7",
+      permissions: {
+        can_view_audit: true,
+        can_export_audit: true,
+        can_view_products: true,
+      },
+    });
+    const codec = tokens();
+    const seal = jest.spyOn(codec, "snapshot");
+    const context = await new AuditExplorerUseCases(
+      repo,
+      codec,
+    ).exportBackgroundCaptureContext(principal, {
+      from: filters.from,
+      to: filters.to,
+    });
+    expect(context._auditSnapshot.allowedEntityTypes).toContain("product");
+    expect(context._auditSnapshot.allowedEntityTypes).not.toContain(
+      "supplier_organization",
+    );
+    expect(repo.createSnapshot).toHaveBeenCalledWith(
+      expect.objectContaining({
+        actorId: eventId,
+        requestId: snapshotRequestId,
+      }),
+    );
+    expect(seal).not.toHaveBeenCalled();
+  });
+  it("denies missing audit export permission before creating a receipt", async () => {
+    const repo = repository();
+    await expect(
+      new AuditExplorerUseCases(repo, tokens()).exportBackgroundCaptureContext(
+        principal,
+        filters,
+      ),
+    ).rejects.toThrow();
+    expect(repo.createSnapshot).not.toHaveBeenCalled();
+  });
+});

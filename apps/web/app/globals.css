@@ -11,6 +11,8 @@
  * are equivalent and editors' built-in CSS validators flag the inline
  * `source()` form as a syntax error. */
 @source "../";
+/* Isolated live-verification builds contain binaries, not UI classes. */
+@source not "../.next-*";
 
 @import "@repo/design-system/styles.css";
 

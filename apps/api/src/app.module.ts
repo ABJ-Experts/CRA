@@ -1,4 +1,5 @@
 import { ExportsModule } from "./exports/exports.module";
+import { ReportsModule } from "./reports/reports.module";
 import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
 import { ThrottlerModule } from "@nestjs/throttler";
@@ -78,6 +79,7 @@ import { NotificationsModule } from "./notifications/notifications.module";
     NotificationsModule,
     DashboardModule,
     ExportsModule,
+    ReportsModule,
   ],
   controllers: [HealthController],
 })

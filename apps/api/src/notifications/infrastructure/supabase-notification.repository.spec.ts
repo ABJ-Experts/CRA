@@ -282,6 +282,19 @@ describe("Supabase notification repository", () => {
       p_limit: 10,
     });
 
+    await repository.listDeliveries(organizationId, actorId, {
+      category: "scheduled_report",
+      includeScheduledReports: true,
+      limit: 10,
+    });
+    expect(rpc).toHaveBeenLastCalledWith(
+      "m14_04_list_notification_dispatches_atomic",
+      expect.objectContaining({
+        p_category: "scheduled_report",
+        p_include_scheduled_reports: true,
+      }),
+    );
+
     rpc.mockResolvedValue({
       data: [{ outcome: "queued", result: { delivery } }],
       error: null,
@@ -454,6 +467,19 @@ describe("Supabase notification repository", () => {
       p_limit: 25,
     });
 
+    await repository.listFeed(organizationId, actorId, {
+      limit: 25,
+      read: "all",
+      includeScheduledReports: true,
+    });
+    expect(rpc).toHaveBeenLastCalledWith(
+      "m14_04_list_notification_feed_atomic",
+      expect.objectContaining({
+        p_organization_id: organizationId,
+        p_actor_user_id: actorId,
+      }),
+    );
+
     rpc.mockResolvedValue({
       data: [{ outcome: "found", result: { count: 3 } }],
       error: null,
@@ -468,6 +494,14 @@ describe("Supabase notification repository", () => {
         p_organization_id: organizationId,
         p_actor_user_id: actorId,
       },
+    );
+
+    await repository.countFeedUnread(organizationId, actorId, {
+      includeScheduledReports: true,
+    });
+    expect(rpc).toHaveBeenLastCalledWith(
+      "m14_04_count_notification_feed_unread_atomic",
+      { p_organization_id: organizationId, p_actor_user_id: actorId },
     );
 
     rpc.mockResolvedValue({

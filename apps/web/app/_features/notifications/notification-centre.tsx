@@ -36,6 +36,7 @@ const categories: readonly (readonly [NotificationCategory | "", string])[] = [
   ["supplier_owner", "Supplier owner"],
   ["support_period", "Support period"],
   ["reporting_deadline", "Reporting deadline"],
+  ["scheduled_report", "Scheduled reports"],
 ];
 const severities: readonly (readonly [
   NotificationFeedSeverity | "",
@@ -137,13 +138,22 @@ export function NotificationCentre({
     if (actionError) actionAlertRef.current?.focus();
   }, [actionError]);
 
+  const reportFeedEligible =
+    view === "events" &&
+    !initialFilter.batchId &&
+    !initialFilter.eventClass &&
+    !initialFilter.windowStart;
   const query = useMemo(
     () => ({
+      includeScheduledReports: reportFeedEligible ? true : undefined,
       view,
       batchId: initialFilter.batchId,
       eventClass: initialFilter.eventClass,
       windowStart: initialFilter.windowStart,
-      category: category || undefined,
+      category:
+        category === "scheduled_report" && !reportFeedEligible
+          ? undefined
+          : category || undefined,
       severity: severity || undefined,
       read,
       cursor: cursors[pageIndex],
@@ -151,6 +161,7 @@ export function NotificationCentre({
     }),
     [
       view,
+      reportFeedEligible,
       initialFilter.batchId,
       initialFilter.eventClass,
       initialFilter.windowStart,
@@ -256,7 +267,8 @@ export function NotificationCentre({
 
   return (
     <div className="space-y-5 px-6 pb-10 lg:px-[30px]">
-      <ExportControls key={`${session?.organization?.id ?? "none"}:${session?.user?.id ?? "none"}`}
+      <ExportControls
+        key={`${session?.organization?.id ?? "none"}:${session?.user?.id ?? "none"}`}
         source="notifications.feed"
         context={{}}
         filters={query}
@@ -320,7 +332,10 @@ export function NotificationCentre({
             value={view}
             disabled={filteredInbox}
             onChange={(event) => {
-              setView(event.target.value as "events" | "grouped");
+              const nextView = event.target.value as "events" | "grouped";
+              setView(nextView);
+              if (nextView === "grouped" && category === "scheduled_report")
+                setCategory("");
               resetPage();
             }}
           >
@@ -332,18 +347,26 @@ export function NotificationCentre({
           Category
           <select
             className={cn(fieldClass)}
-            value={category}
+            value={
+              category === "scheduled_report" && !reportFeedEligible
+                ? ""
+                : category
+            }
             disabled={filteredInbox}
             onChange={(event) => {
               setCategory(event.target.value as NotificationCategory | "");
               resetPage();
             }}
           >
-            {categories.map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
+            {categories
+              .filter(
+                ([value]) => value !== "scheduled_report" || reportFeedEligible,
+              )
+              .map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
           </select>
         </label>
         <label className="space-y-1 text-caption-1-regular text-fg">
@@ -487,8 +510,24 @@ export function NotificationCentre({
                   className="rounded-xl border border-border bg-canvas p-4"
                 >
                   <div className="space-y-2">
-                    <MemberExportControls source="notifications.feed_preview_items" context={{ eventClass: item.eventClass, windowStartsAt: item.windowStartsAt }} filters={query} columns={["title"]} label="Export representative events" enabled={Boolean(session?.organization?.id && !sessionLoading)} />
-                    <p className="text-caption-1-regular text-fg-muted">This export includes the authorized representative events shown for this group, up to five. Open its filtered inbox to export all authorized events.</p>
+                    <MemberExportControls
+                      source="notifications.feed_preview_items"
+                      context={{
+                        eventClass: item.eventClass,
+                        windowStartsAt: item.windowStartsAt,
+                      }}
+                      filters={query}
+                      columns={["title"]}
+                      label="Export representative events"
+                      enabled={Boolean(
+                        session?.organization?.id && !sessionLoading,
+                      )}
+                    />
+                    <p className="text-caption-1-regular text-fg-muted">
+                      This export includes the authorized representative events
+                      shown for this group, up to five. Open its filtered inbox
+                      to export all authorized events.
+                    </p>
                     <div className="flex flex-wrap items-center gap-2">
                       <h2 className="text-subhead-semibold text-fg">
                         {item.title}

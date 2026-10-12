@@ -38,6 +38,7 @@ const payloadSchema = z.discriminatedUnion("kind", [
     .strict(),
   z.object({ kind: z.literal("evidence_quarantined") }).strict(),
   z.object({ kind: z.literal("evidence_integrity_failure") }).strict(),
+  z.object({ kind: z.literal("scheduled_report"), runId: uuid }).strict(),
   z
     .object({
       kind: z.literal("evidence_validity"),

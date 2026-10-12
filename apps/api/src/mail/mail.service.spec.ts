@@ -73,6 +73,30 @@ describe("MailService", () => {
     jest.restoreAllMocks();
   });
 
+  it("sends only a protected report link with fixed copy and terminal uncertainty", async () => {
+    const service = new MailService(enabledConfig());
+    const runId = "11111111-1111-4111-8111-111111111111";
+    await service.sendScheduledReportReady(
+      "member@cra.test",
+      runId,
+      "report-dispatch:1",
+    );
+    const message = mockSendMail.mock.calls[0]?.[0];
+    expect(message?.subject).toBe("Your scheduled report is ready");
+    expect(message?.html).toContain(
+      `https://cra.test/dashboard/reports/runs/${runId}`,
+    );
+    expect(message?.html).not.toMatch(/attachment|download|row count|filter/i);
+    mockSendMail.mockRejectedValueOnce(new Error("SMTP timed out"));
+    await expect(
+      service.sendScheduledReportReady(
+        "member@cra.test",
+        runId,
+        "report-dispatch:2",
+      ),
+    ).rejects.toBeInstanceOf(UncertainMailDeliveryError);
+  });
+
   it("suppresses delivery when SMTP is disabled", async () => {
     const service = new MailService(
       config({

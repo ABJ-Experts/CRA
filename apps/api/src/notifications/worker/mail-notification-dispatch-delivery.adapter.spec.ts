@@ -130,6 +130,39 @@ describe("MailNotificationDispatchDeliveryAdapter", () => {
     );
   });
 
+  it("sends a scheduled report through its fixed protected-link template", async () => {
+    const sendScheduledReportReady = jest.fn().mockResolvedValue(receipt);
+    const adapter = new MailNotificationDispatchDeliveryAdapter({
+      sendScheduledReportReady,
+    } as never);
+    const runId = "55555555-5555-4555-8555-555555555555";
+
+    await adapter.send(input({ kind: "scheduled_report", runId }));
+
+    expect(sendScheduledReportReady).toHaveBeenCalledWith(
+      recipient.email,
+      runId,
+      "notification:fixture:1",
+    );
+  });
+
+  it("treats a report transport error as terminal uncertainty", async () => {
+    const adapter = new MailNotificationDispatchDeliveryAdapter({
+      sendScheduledReportReady: jest
+        .fn()
+        .mockRejectedValue(new Error("timeout")),
+    } as never);
+
+    await expect(
+      adapter.send(
+        input({
+          kind: "scheduled_report",
+          runId: "55555555-5555-4555-8555-555555555555",
+        }),
+      ),
+    ).rejects.toMatchObject({ code: "delivery_uncertain", retryable: false });
+  });
+
   it("rejects any claimed inbox-delivered receipt or wrong recipient", async () => {
     const sendEvidenceQuarantinedAlert = jest.fn().mockResolvedValue({
       ...receipt,

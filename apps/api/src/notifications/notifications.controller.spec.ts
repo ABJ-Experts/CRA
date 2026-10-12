@@ -281,6 +281,7 @@ describe("notification HTTP policy", () => {
     expect(useCases.countFeedUnread).toHaveBeenCalledWith(
       organizationId,
       actorId,
+      {},
     );
     expect(useCases.resolveFeedDestination).toHaveBeenCalledWith(
       organizationId,

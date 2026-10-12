@@ -352,6 +352,33 @@ describe("tenant export source registry architecture", () => {
     );
   });
 
+  it("keeps recipient-scoped scheduled report snapshots and grants out of owner-wide archives", () => {
+    const exported = new Set(
+      exportSourceRegistry.flatMap((source) => source.tables),
+    );
+    for (const table of [
+      "report_definitions",
+      "report_runs",
+      "report_run_recipients",
+    ]) {
+      expect(exported.has(table)).toBe(false);
+      expect(exportSourceExclusions[table]).toMatch(
+        /security|authorization|recipient|session|grant/i,
+      );
+      expect(exportSourceExclusions[table]).toMatch(/audit|source/i);
+    }
+    expect(exportSourceExclusions.report_run_recipients).toMatch(
+      /manifest|content count/i,
+    );
+    expect(() =>
+      validateExportRegistryCoverage([
+        "report_definitions",
+        "report_runs",
+        "report_run_recipients",
+      ]),
+    ).not.toThrow();
+  });
+
   it("keeps TypeScript registry in parity with SQL physical source mappings", () => {
     const tenantTables = new Set(tenantTablesFromMigrations());
     const exported = new Set(

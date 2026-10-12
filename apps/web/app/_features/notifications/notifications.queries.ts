@@ -293,14 +293,25 @@ export function useUpdateNotificationBurstPolicyMutation() {
   });
 }
 
-export function useNotificationUnreadCountQuery(enabled = true) {
+export function useNotificationUnreadCountQuery(
+  enabled = true,
+  includeScheduledReports = false,
+) {
   const { orgId, userId, permissions, feedReady } = useNotificationScope();
   const result = useQuery({
-    queryKey: ["notifications", orgId, userId, permissions, "unread-count"],
+    queryKey: [
+      "notifications",
+      orgId,
+      userId,
+      permissions,
+      "unread-count",
+      includeScheduledReports,
+    ],
     enabled: enabled && feedReady,
     retry: false,
     refetchInterval: 30_000,
-    queryFn: ({ signal }) => notificationsApi.unreadCount(signal),
+    queryFn: ({ signal }) =>
+      notificationsApi.unreadCount(signal, includeScheduledReports),
   });
   return feedReady ? result : { ...result, data: undefined };
 }

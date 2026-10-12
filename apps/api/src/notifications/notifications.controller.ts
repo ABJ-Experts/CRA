@@ -22,6 +22,7 @@ import {
   notificationPreferencesResponseSchema,
   notificationFeedQuerySchema,
   notificationFeedUnreadCountResponseSchema,
+  notificationFeedUnreadCountQuerySchema,
   notificationFeedDestinationParamsSchema,
   notificationFeedDestinationResponseSchema,
   markNotificationFeedReadInputSchema,
@@ -72,6 +73,7 @@ import type {
   UpdateNotificationCriticalRouteInput,
   UpdateNotificationPreferencesInput,
   NotificationFeedQuery,
+  NotificationFeedUnreadCountQuery,
   MarkNotificationFeedReadInput,
   NotificationChatChannelParams,
   CreateNotificationChatChannelInput,
@@ -139,9 +141,13 @@ export class NotificationsController {
   )
   @Get("feed/unread-count")
   @ZodResponse(notificationFeedUnreadCountResponseSchema)
-  feedUnreadCount(@CurrentUser() user: RequestUser) {
+  feedUnreadCount(
+    @CurrentUser() user: RequestUser,
+    @Query(zodQuery(notificationFeedUnreadCountQuerySchema))
+    query: NotificationFeedUnreadCountQuery = {},
+  ) {
     return unwrapNotification(
-      this.notifications.countFeedUnread(organizationId(user), user.id),
+      this.notifications.countFeedUnread(organizationId(user), user.id, query),
     );
   }
 

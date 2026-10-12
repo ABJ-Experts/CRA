@@ -1,3 +1,4 @@
+import { hasPermission, type BaseRole } from "@repo/contracts/permissions";
 import type {
   AuditDetail,
   AuditDownloadGrant,
@@ -74,6 +75,76 @@ export class AuditExplorerUseCases {
         scopeDigest: snapshot.scopeDigest,
         scopeVersion: snapshot.scopeVersion,
         allowedEntityTypes: sourcePolicy.allowedEntityTypes,
+      }),
+    });
+  }
+
+  /** Fresh durable receipt under both current source policies, without a session. */
+  async exportBackgroundCaptureContext(
+    principal: Readonly<{
+      organizationId: string;
+      ownerUserId: string;
+      userId: string;
+      ownerBaseRole: BaseRole;
+      recipientBaseRole: BaseRole;
+      requestId: string;
+    }>,
+    filters: AuditSearchInput["filters"],
+  ) {
+    const owner = await this.repository.effectivePermissions(
+      principal.organizationId,
+      principal.ownerUserId,
+      principal.ownerBaseRole,
+    );
+    const recipient = await this.repository.effectivePermissions(
+      principal.organizationId,
+      principal.userId,
+      principal.recipientBaseRole,
+    );
+    for (const state of [owner, recipient]) {
+      if (
+        !hasPermission(state.permissions, "can_view_audit") ||
+        !hasPermission(state.permissions, "can_export_audit")
+      )
+        throw new AuditExplorerForbiddenError();
+    }
+    const ownerPolicy = buildAuditSourcePolicy(owner.permissions, filters);
+    const recipientPolicy = buildAuditSourcePolicy(
+      recipient.permissions,
+      filters,
+    );
+    const allowedEntityTypes = ownerPolicy.allowedEntityTypes.filter((type) =>
+      recipientPolicy.allowedEntityTypes.includes(type),
+    );
+    const filterDigest = this.tokens.digest(filters);
+    const scopeDigest = this.tokens.digest({
+      kind: SNAPSHOT_SCOPE_KIND,
+      permissionsVersion: recipient.version,
+      ownerPermissionsVersion: owner.version,
+      ownerUserId: principal.ownerUserId,
+      allowedEntityTypes,
+    });
+    const receipt = await this.repository.createSnapshot({
+      organizationId: principal.organizationId,
+      actorId: principal.userId,
+      requestId: principal.requestId,
+      filterDigest,
+      scopeDigest,
+    });
+    if (
+      receipt.filterDigest !== filterDigest ||
+      receipt.scopeDigest !== scopeDigest ||
+      receipt.scopeVersion !== recipient.version
+    )
+      throw new AuditExplorerStaleError();
+    return Object.freeze({
+      _auditSnapshot: Object.freeze({
+        receiptId: receipt.receiptId,
+        highWaterSequence: receipt.highWaterSequence,
+        filterDigest,
+        scopeDigest,
+        scopeVersion: receipt.scopeVersion,
+        allowedEntityTypes,
       }),
     });
   }

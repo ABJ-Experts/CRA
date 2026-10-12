@@ -56,7 +56,7 @@ function titleise(segment: string) {
 export function DashboardTopNav() {
   const pathname = usePathname();
   const router = useRouter();
-  const unread = useNotificationUnreadCountQuery();
+  const unread = useNotificationUnreadCountQuery(true, true);
 
   const { session } = useSession();
   const liveDashboard =

@@ -16,6 +16,7 @@ import {
   notificationFeedResponseSchema,
   notificationGroupedFeedResponseSchema,
   notificationFeedUnreadCountResponseSchema,
+  notificationFeedUnreadCountQuerySchema,
   notificationFeedDestinationParamsSchema,
   notificationFeedDestinationResponseSchema,
   markNotificationFeedReadInputSchema,
@@ -44,6 +45,31 @@ const schedule = {
 };
 
 describe("notification wire contracts", () => {
+  it("opts scheduled reports into the legacy feed and delivery scopes explicitly", () => {
+    expect(
+      notificationFeedQuerySchema.parse({ includeScheduledReports: "true" }),
+    ).toMatchObject({ includeScheduledReports: true });
+    expect(
+      notificationDeliveriesQuerySchema.parse({
+        includeScheduledReports: "false",
+      }),
+    ).toMatchObject({ includeScheduledReports: false });
+    expect(
+      notificationFeedUnreadCountQuerySchema.parse({
+        includeScheduledReports: "true",
+      }),
+    ).toEqual({ includeScheduledReports: true });
+    expect(
+      notificationFeedQuerySchema.safeParse({ category: "scheduled_report" })
+        .success,
+    ).toBe(false);
+    expect(
+      notificationFeedQuerySchema.safeParse({
+        category: "scheduled_report",
+        includeScheduledReports: "true",
+      }).success,
+    ).toBe(true);
+  });
   it("bounds and parses the authorized burst delivery ledger", () => {
     expect(notificationBurstBatchesQuerySchema.parse({})).toEqual({
       limit: 25,

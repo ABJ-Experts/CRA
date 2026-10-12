@@ -3192,6 +3192,7 @@ export type Database = {
           pending_audit_id: string | null
           permission_version: number
           processed_rows: number
+          report_recipient_id: string | null
           request_digest: string
           requested_at: string
           requester_id: string | null
@@ -3234,6 +3235,7 @@ export type Database = {
           pending_audit_id?: string | null
           permission_version: number
           processed_rows?: number
+          report_recipient_id?: string | null
           request_digest: string
           requested_at?: string
           requester_id?: string | null
@@ -3276,6 +3278,7 @@ export type Database = {
           pending_audit_id?: string | null
           permission_version?: number
           processed_rows?: number
+          report_recipient_id?: string | null
           request_digest?: string
           requested_at?: string
           requester_id?: string | null
@@ -3328,6 +3331,13 @@ export type Database = {
             columns: ["organization_id", "supplier_invitation_id"]
             isOneToOne: false
             referencedRelation: "supplier_evidence_invitations"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "export_report_recipient_tenant_fk"
+            columns: ["organization_id", "report_recipient_id"]
+            isOneToOne: false
+            referencedRelation: "report_run_recipients"
             referencedColumns: ["organization_id", "id"]
           },
         ]
@@ -5765,6 +5775,10 @@ export type Database = {
           organization_id: string
           quiet_end: string | null
           quiet_start: string | null
+          report_email_last_digest: string | null
+          report_email_last_key: string | null
+          report_email_mode: string
+          report_email_version: number
           timezone: string
           updated_at: string
           updated_by: string | null
@@ -5781,6 +5795,10 @@ export type Database = {
           organization_id: string
           quiet_end?: string | null
           quiet_start?: string | null
+          report_email_last_digest?: string | null
+          report_email_last_key?: string | null
+          report_email_mode?: string
+          report_email_version?: number
           timezone?: string
           updated_at?: string
           updated_by?: string | null
@@ -5797,6 +5815,10 @@ export type Database = {
           organization_id?: string
           quiet_end?: string | null
           quiet_start?: string | null
+          report_email_last_digest?: string | null
+          report_email_last_key?: string | null
+          report_email_mode?: string
+          report_email_version?: number
           timezone?: string
           updated_at?: string
           updated_by?: string | null
@@ -9948,6 +9970,257 @@ export type Database = {
           {
             foreignKeyName: "products_updated_by_fkey"
             columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      report_definitions: {
+        Row: {
+          commands: Json
+          config: Json
+          config_digest: string
+          create_key: string
+          created_at: string
+          definition_version: number
+          id: string
+          next_due_at: string | null
+          organization_id: string
+          owner_user_id: string
+          pause_reason: string | null
+          preview_run_id: string | null
+          schema_version: string
+          source_schema_digest: string
+          state: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          commands?: Json
+          config: Json
+          config_digest: string
+          create_key: string
+          created_at?: string
+          definition_version?: number
+          id?: string
+          next_due_at?: string | null
+          organization_id: string
+          owner_user_id: string
+          pause_reason?: string | null
+          preview_run_id?: string | null
+          schema_version?: string
+          source_schema_digest: string
+          state?: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          commands?: Json
+          config?: Json
+          config_digest?: string
+          create_key?: string
+          created_at?: string
+          definition_version?: number
+          id?: string
+          next_due_at?: string | null
+          organization_id?: string
+          owner_user_id?: string
+          pause_reason?: string | null
+          preview_run_id?: string | null
+          schema_version?: string
+          source_schema_digest?: string
+          state?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_definitions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_definitions_owner_user_id_fkey"
+            columns: ["owner_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_preview_tenant_fk"
+            columns: ["organization_id", "preview_run_id"]
+            isOneToOne: false
+            referencedRelation: "report_runs"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      report_run_recipients: {
+        Row: {
+          created_at: string
+          email_state: string
+          expires_at: string
+          export_job_id: string | null
+          generation_state: string
+          grant_artifact_id: string | null
+          grant_digest: string | null
+          grant_expires_at: string | null
+          grant_id: string | null
+          grant_session_id: string | null
+          id: string
+          last_claimed_at: string | null
+          lease_expires_at: string | null
+          manifest: Json | null
+          manifest_digest: string | null
+          organization_id: string
+          run_id: string
+          safe_error_code: string | null
+          user_id: string
+          version: number
+          worker_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          email_state?: string
+          expires_at?: string
+          export_job_id?: string | null
+          generation_state?: string
+          grant_artifact_id?: string | null
+          grant_digest?: string | null
+          grant_expires_at?: string | null
+          grant_id?: string | null
+          grant_session_id?: string | null
+          id?: string
+          last_claimed_at?: string | null
+          lease_expires_at?: string | null
+          manifest?: Json | null
+          manifest_digest?: string | null
+          organization_id: string
+          run_id: string
+          safe_error_code?: string | null
+          user_id: string
+          version?: number
+          worker_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          email_state?: string
+          expires_at?: string
+          export_job_id?: string | null
+          generation_state?: string
+          grant_artifact_id?: string | null
+          grant_digest?: string | null
+          grant_expires_at?: string | null
+          grant_id?: string | null
+          grant_session_id?: string | null
+          id?: string
+          last_claimed_at?: string | null
+          lease_expires_at?: string | null
+          manifest?: Json | null
+          manifest_digest?: string | null
+          organization_id?: string
+          run_id?: string
+          safe_error_code?: string | null
+          user_id?: string
+          version?: number
+          worker_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_run_recipients_organization_id_export_job_id_fkey"
+            columns: ["organization_id", "export_job_id"]
+            isOneToOne: false
+            referencedRelation: "export_jobs"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "report_run_recipients_organization_id_run_id_fkey"
+            columns: ["organization_id", "run_id"]
+            isOneToOne: false
+            referencedRelation: "report_runs"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "report_run_recipients_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      report_runs: {
+        Row: {
+          config: Json
+          config_digest: string
+          created_at: string
+          definition_id: string
+          definition_version: number
+          finished_at: string | null
+          id: string
+          kind: string
+          occurrence_key: string
+          organization_id: string
+          owner_user_id: string
+          recipient_eligibility: Json
+          safe_error_code: string | null
+          scheduled_for: string
+          schema_version: string
+          source_schema_digest: string
+          state: string
+        }
+        Insert: {
+          config: Json
+          config_digest: string
+          created_at?: string
+          definition_id: string
+          definition_version: number
+          finished_at?: string | null
+          id?: string
+          kind: string
+          occurrence_key: string
+          organization_id: string
+          owner_user_id: string
+          recipient_eligibility?: Json
+          safe_error_code?: string | null
+          scheduled_for: string
+          schema_version: string
+          source_schema_digest: string
+          state?: string
+        }
+        Update: {
+          config?: Json
+          config_digest?: string
+          created_at?: string
+          definition_id?: string
+          definition_version?: number
+          finished_at?: string | null
+          id?: string
+          kind?: string
+          occurrence_key?: string
+          organization_id?: string
+          owner_user_id?: string
+          recipient_eligibility?: Json
+          safe_error_code?: string | null
+          scheduled_for?: string
+          schema_version?: string
+          source_schema_digest?: string
+          state?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_runs_organization_id_definition_id_fkey"
+            columns: ["organization_id", "definition_id"]
+            isOneToOne: false
+            referencedRelation: "report_definitions"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "report_runs_owner_user_id_fkey"
+            columns: ["owner_user_id"]
             isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
@@ -32392,6 +32665,7 @@ export type Database = {
           pending_audit_id: string | null
           permission_version: number
           processed_rows: number
+          report_recipient_id: string | null
           request_digest: string
           requested_at: string
           requester_id: string | null
@@ -33547,6 +33821,7 @@ export type Database = {
           pending_audit_id: string | null
           permission_version: number
           processed_rows: number
+          report_recipient_id: string | null
           request_digest: string
           requested_at: string
           requester_id: string | null
@@ -33568,6 +33843,560 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "export_jobs"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      m14_04_admin_pause: {
+        Args: {
+          p_actor_user_id: string
+          p_definition_id: string
+          p_input: Json
+          p_organization_id: string
+        }
+        Returns: Json
+      }
+      m14_04_admit_export: {
+        Args: {
+          p_context: Json
+          p_expected_version: number
+          p_organization_id: string
+          p_recipient_id: string
+          p_worker_id: string
+        }
+        Returns: Json
+      }
+      m14_04_audit: {
+        Args: {
+          p_action: string
+          p_actor: string
+          p_details?: Json
+          p_entity: string
+          p_key: string
+          p_org: string
+        }
+        Returns: undefined
+      }
+      m14_04_authorize_download: {
+        Args: {
+          p_actor_user_id: string
+          p_organization_id: string
+          p_recipient_id: string
+          p_run_id: string
+          p_session_id: string
+        }
+        Returns: boolean
+      }
+      m14_04_authorize_history: {
+        Args: { p_organization_id: string; p_recipient_id: string }
+        Returns: boolean
+      }
+      m14_04_authorize_recipient:
+        | {
+            Args: {
+              p_actor_user_id: string
+              p_organization_id: string
+              p_recipient_id: string
+              p_run_id: string
+            }
+            Returns: boolean
+          }
+        | {
+            Args: { p_organization_id: string; p_recipient_id: string }
+            Returns: boolean
+          }
+      m14_04_both_can: {
+        Args: {
+          p_organization_id: string
+          p_owner_user_id: string
+          p_permission: string
+          p_recipient_user_id: string
+        }
+        Returns: boolean
+      }
+      m14_04_claim_export: { Args: { p_worker_id: string }; Returns: Json }
+      m14_04_claim_notification_base: {
+        Args: {
+          p_lease_seconds: number
+          p_organization_id: string
+          p_worker_id: string
+        }
+        Returns: {
+          dispatch: Json
+          outcome: string
+        }[]
+      }
+      m14_04_claim_recipient: { Args: { p_worker_id: string }; Returns: Json }
+      m14_04_count_notification_feed_unread_atomic: {
+        Args: { p_actor_user_id: string; p_organization_id: string }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      m14_04_create_definition: {
+        Args: {
+          p_actor_user_id: string
+          p_input: Json
+          p_organization_id: string
+          p_schema_digest?: string
+        }
+        Returns: Json
+      }
+      m14_04_current_session: {
+        Args: {
+          p_actor_user_id: string
+          p_organization_id: string
+          p_session_id: string
+        }
+        Returns: boolean
+      }
+      m14_04_definition_json: {
+        Args: { d: Database["public"]["Tables"]["report_definitions"]["Row"] }
+        Returns: Json
+      }
+      m14_04_digest: { Args: { p_value: Json }; Returns: string }
+      m14_04_dispatch_source_rows: {
+        Args: {
+          p_actor_user_id: string
+          p_context: Json
+          p_filters: Json
+          p_job: Database["public"]["Tables"]["export_jobs"]["Row"]
+          p_organization_id: string
+          p_source: string
+        }
+        Returns: {
+          product_id: string
+          row_values: Json
+          source_id: string
+          source_version: string
+        }[]
+      }
+      m14_04_enqueue_notice: {
+        Args: { p_organization_id: string; p_recipient_id: string }
+        Returns: undefined
+      }
+      m14_04_fail_notification_base: {
+        Args: {
+          p_dispatch_id: string
+          p_error_code: string
+          p_expected_version: number
+          p_organization_id: string
+          p_retryable: boolean
+          p_worker_id: string
+        }
+        Returns: {
+          outcome: string
+        }[]
+      }
+      m14_04_fail_recipient: {
+        Args: {
+          p_code: string
+          p_expected_version: number
+          p_organization_id: string
+          p_recipient_id: string
+          p_worker_id: string
+        }
+        Returns: Json
+      }
+      m14_04_feed_rows: {
+        Args: { p_actor_user_id: string; p_organization_id: string }
+        Returns: {
+          category: string
+          fingerprint: string
+          notice_kind: string
+          occurred_at: string
+          ref: string
+          severity: string
+          source_created_at: string
+          source_state: string
+          summary: string
+          title: string
+          url: string
+        }[]
+      }
+      m14_04_finish_run: {
+        Args: { p_organization_id: string; p_run_id: string }
+        Returns: undefined
+      }
+      m14_04_get_definition: {
+        Args: {
+          p_actor_user_id: string
+          p_definition_id: string
+          p_organization_id: string
+        }
+        Returns: Json
+      }
+      m14_04_get_email_preference: {
+        Args: { p_actor_user_id: string; p_organization_id: string }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      m14_04_get_run: {
+        Args: {
+          p_actor_user_id: string
+          p_organization_id: string
+          p_run_id: string
+        }
+        Returns: Json
+      }
+      m14_04_grant: {
+        Args: {
+          p_actor_user_id: string
+          p_artifact_id: string
+          p_organization_id: string
+          p_recipient_id: string
+          p_run_id: string
+          p_session_id: string
+          p_token_digest: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      m14_04_heartbeat_recipient: {
+        Args: {
+          p_expected_version: number
+          p_organization_id: string
+          p_recipient_id: string
+          p_worker_id: string
+        }
+        Returns: boolean
+      }
+      m14_04_list_administration: {
+        Args: {
+          p_actor_user_id: string
+          p_organization_id: string
+          p_query: Json
+        }
+        Returns: Json
+      }
+      m14_04_list_definitions: {
+        Args: {
+          p_actor_user_id: string
+          p_organization_id: string
+          p_query: Json
+        }
+        Returns: Json
+      }
+      m14_04_list_due_notification_organizations_base: {
+        Args: { p_after_organization_id?: string; p_limit?: number }
+        Returns: {
+          organization_id: string
+        }[]
+      }
+      m14_04_list_notification_dispatches_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_category?: string
+          p_cursor?: string
+          p_include_scheduled_reports?: boolean
+          p_limit?: number
+          p_organization_id: string
+          p_recipient_user_id?: string
+          p_status?: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      m14_04_list_notification_feed_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_category?: string
+          p_cursor?: string
+          p_limit?: number
+          p_organization_id: string
+          p_read?: string
+          p_severity?: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      m14_04_list_runs: {
+        Args: {
+          p_actor_user_id: string
+          p_organization_id: string
+          p_query: Json
+        }
+        Returns: Json
+      }
+      m14_04_manifest: {
+        Args: {
+          p_actor_user_id: string
+          p_organization_id: string
+          p_recipient_id: string
+          p_run_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      m14_04_member: {
+        Args: { p_organization_id: string; p_user_id: string }
+        Returns: boolean
+      }
+      m14_04_mutate_definition: {
+        Args: {
+          p_actor_user_id: string
+          p_definition_id: string
+          p_input: Json
+          p_operation: string
+          p_organization_id: string
+        }
+        Returns: Json
+      }
+      m14_04_next_occurrence: {
+        Args: { p_after: string; p_schedule: Json }
+        Returns: string
+      }
+      m14_04_owned: {
+        Args: {
+          p_actor_user_id: string
+          p_definition_id: string
+          p_organization_id: string
+        }
+        Returns: {
+          commands: Json
+          config: Json
+          config_digest: string
+          create_key: string
+          created_at: string
+          definition_version: number
+          id: string
+          next_due_at: string | null
+          organization_id: string
+          owner_user_id: string
+          pause_reason: string | null
+          preview_run_id: string | null
+          schema_version: string
+          source_schema_digest: string
+          state: string
+          updated_at: string
+          version: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "report_definitions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      m14_04_prepare_notification_base: {
+        Args: {
+          p_dispatch_id: string
+          p_expected_version: number
+          p_organization_id: string
+          p_worker_id: string
+        }
+        Returns: {
+          delivery: Json
+          outcome: string
+        }[]
+      }
+      m14_04_preview: {
+        Args: {
+          p_actor_user_id: string
+          p_definition_id: string
+          p_input: Json
+          p_organization_id: string
+        }
+        Returns: Json
+      }
+      m14_04_publish_recipient: {
+        Args: {
+          p_expected_version: number
+          p_manifest: Json
+          p_organization_id: string
+          p_recipient_id: string
+          p_worker_id: string
+        }
+        Returns: Json
+      }
+      m14_04_readiness_report: {
+        Args: {
+          p_actor_user_id: string
+          p_organization_id: string
+          p_owner_user_id: string
+          p_product_id: string
+        }
+        Returns: Json
+      }
+      m14_04_recipients: {
+        Args: {
+          p_actor_user_id: string
+          p_organization_id: string
+          p_query?: Json
+        }
+        Returns: Json
+      }
+      m14_04_redeem: {
+        Args: {
+          p_actor_user_id: string
+          p_grant_id: string
+          p_organization_id: string
+          p_recipient_id: string
+          p_run_id: string
+          p_session_id: string
+          p_token_digest: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      m14_04_replay: {
+        Args: {
+          p_actor_user_id: string
+          p_input: Json
+          p_organization_id: string
+          p_run_id: string
+        }
+        Returns: Json
+      }
+      m14_04_retry_notification_base: {
+        Args: {
+          p_actor_user_id: string
+          p_delivery_ref: string
+          p_expected_version: number
+          p_idempotency_key: string
+          p_organization_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      m14_04_run_json: {
+        Args: { r: Database["public"]["Tables"]["report_runs"]["Row"] }
+        Returns: Json
+      }
+      m14_04_schedule_due: {
+        Args: { p_limit: number; p_worker_id: string }
+        Returns: number
+      }
+      m14_04_scheduled_snapshot_access: {
+        Args: { p_job: Database["public"]["Tables"]["export_jobs"]["Row"] }
+        Returns: boolean
+      }
+      m14_04_set_delivery_mode_base: {
+        Args: { p_mode: string; p_organization_id: string }
+        Returns: {
+          current_mode: string
+          outcome: string
+          previous_mode: string
+        }[]
+      }
+      m14_04_set_email_preference: {
+        Args: {
+          p_actor_user_id: string
+          p_input: Json
+          p_organization_id: string
+        }
+        Returns: {
+          outcome: string
+          result: Json
+        }[]
+      }
+      m14_04_source_access: {
+        Args: { p_config: Json; p_organization_id: string; p_user_id: string }
+        Returns: boolean
+      }
+      m14_04_source_actor_access: {
+        Args: {
+          p_actor_user_id: string
+          p_context: Json
+          p_organization_id: string
+          p_source: string
+        }
+        Returns: boolean
+      }
+      m14_04_source_rows: {
+        Args: {
+          p_context: Json
+          p_filters: Json
+          p_organization_id: string
+          p_owner_user_id: string
+          p_recipient_user_id: string
+          p_source: string
+        }
+        Returns: {
+          product_id: string
+          row_values: Json
+          source_id: string
+          source_version: string
+        }[]
+      }
+      m14_04_source_snapshot_access: {
+        Args: {
+          p_job: Database["public"]["Tables"]["export_jobs"]["Row"]
+          p_owner: string
+          p_recipient: string
+        }
+        Returns: boolean
+      }
+      m14_04_stop_notices: {
+        Args: { p_definition_id: string; p_organization_id: string }
+        Returns: undefined
+      }
+      m14_04_update_definition: {
+        Args: {
+          p_actor_user_id: string
+          p_definition_id: string
+          p_input: Json
+          p_organization_id: string
+          p_schema_digest?: string
+        }
+        Returns: Json
+      }
+      m14_04_validate_config: {
+        Args: {
+          p_actor_user_id: string
+          p_config: Json
+          p_organization_id: string
+        }
+        Returns: undefined
+      }
+      m14_04_worker_recipient: {
+        Args: {
+          p_expected_version: number
+          p_organization_id: string
+          p_recipient_id: string
+          p_worker_id: string
+        }
+        Returns: {
+          created_at: string
+          email_state: string
+          expires_at: string
+          export_job_id: string | null
+          generation_state: string
+          grant_artifact_id: string | null
+          grant_digest: string | null
+          grant_expires_at: string | null
+          grant_id: string | null
+          grant_session_id: string | null
+          id: string
+          last_claimed_at: string | null
+          lease_expires_at: string | null
+          manifest: Json | null
+          manifest_digest: string | null
+          organization_id: string
+          run_id: string
+          safe_error_code: string | null
+          user_id: string
+          version: number
+          worker_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "report_run_recipients"
           isOneToOne: true
           isSetofReturn: false
         }

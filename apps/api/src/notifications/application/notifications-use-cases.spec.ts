@@ -173,6 +173,7 @@ describe("notification application boundary", () => {
     expect(repository.countFeedUnread).toHaveBeenCalledWith(
       organizationId,
       actorId,
+      {},
     );
     expect(repository.resolveFeedDestination).toHaveBeenCalledWith(
       organizationId,

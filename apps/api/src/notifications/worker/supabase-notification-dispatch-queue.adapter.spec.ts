@@ -215,6 +215,50 @@ describe("SupabaseNotificationDispatchQueueAdapter", () => {
     ).rejects.toMatchObject({ code: "malformed_provider", retryable: false });
   });
 
+  it("accepts only a run ID in a scheduled report payload", async () => {
+    const runId = "55555555-5555-4555-8555-555555555555";
+    const delivery = {
+      deliveryRef: dispatchId,
+      idempotencyKey: `notification-dispatch:${dispatchId}`,
+      recipient: { userId: recipientId, email: "member@cra.test" },
+      payload: { kind: "scheduled_report", runId },
+    };
+    const rpc = jest.fn().mockResolvedValue({
+      data: [{ outcome: "ready", delivery }],
+      error: null,
+    });
+    const adapter = subject(rpc);
+    await expect(
+      adapter.prepare({
+        organizationId,
+        dispatchId,
+        leaseOwner: workerId,
+        checkpointVersion: 2,
+      }),
+    ).resolves.toMatchObject({ outcome: "ready", payload: delivery.payload });
+
+    rpc.mockResolvedValue({
+      data: [
+        {
+          outcome: "ready",
+          delivery: {
+            ...delivery,
+            payload: { ...delivery.payload, rowCount: 42 },
+          },
+        },
+      ],
+      error: null,
+    });
+    await expect(
+      adapter.prepare({
+        organizationId,
+        dispatchId,
+        leaseOwner: workerId,
+        checkpointVersion: 2,
+      }),
+    ).rejects.toMatchObject({ code: "malformed_provider" });
+  });
+
   it("accepts the largest configured evidence validity threshold and a scoped product", async () => {
     const productId = "66666666-6666-4666-8666-666666666666";
     const adapter = subject(

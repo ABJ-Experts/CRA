@@ -91,3 +91,20 @@ export interface ExportSourceContextPort {
     input: ExportInput,
   ): Promise<Readonly<Record<string, unknown>>>;
 }
+
+export type ScheduledExportSourceInput = Readonly<{
+  organizationId: string;
+  ownerUserId: string;
+  userId: string;
+  ownerBaseRole: import("@repo/contracts/permissions").BaseRole;
+  recipientBaseRole: import("@repo/contracts/permissions").BaseRole;
+  requestId: string;
+  source: string;
+  filters: Readonly<Record<string, unknown>>;
+  context: Readonly<Record<string, unknown>>;
+}>;
+export interface ScheduledExportSourceContextPort {
+  prepareScheduled(
+    input: ScheduledExportSourceInput,
+  ): Promise<Readonly<Record<string, unknown>>>;
+}

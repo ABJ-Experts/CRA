@@ -15,6 +15,7 @@ do $$ declare
  o uuid:='00000000-0000-4000-8000-0000000000ca';a uuid;viewer uuid;c uuid;r uuid;
  pack text;version text;p uuid;ctx jsonb;expected jsonb;actual jsonb;source text;policy jsonb;
  columns jsonb;native_row record;count_before bigint;count_after bigint;
+ legacy_notifications_only boolean;
  begin
  select m.user_id into a from public.organization_members m join public.users u on u.id=m.user_id
  where m.organization_id=o and u.email='owner@cra.test' and m.role='owner';
@@ -35,12 +36,17 @@ do $$ declare
  from (select gen_random_uuid() id,n from generate_series(1,121) n) x;
  select count(*) into count_after from public.m14_03_operational_source_rows(o,a,'frameworks.custom','{}','{}');
  perform pg_temp.assert_ok('custom framework export follows every native nextOffset beyond first page',count_after=count_before+121);
- select count(*) into count_before from public.notification_dispatches where organization_id=o;
+ select count(*) into count_before from public.notification_dispatches
+ where organization_id=o and source_type<>'report_run_recipient';
  insert into public.notification_dispatches(organization_id,category,source_type,source_id,source_subtype,original_recipient_user_id,status,created_at)
  select o,'finding_triage','finding_triage_alert',gen_random_uuid(),'m14_export_parity_'||n,a,
  case when n%2=0 then 'failed' else 'queued' end,statement_timestamp()-n*interval '1 second' from generate_series(1,121) n;
- select count(*) into count_after from public.m14_03_operational_source_rows(o,a,'notifications.deliveries','{}','{}');
+ select count(*),coalesce(bool_and(x.row_values->>'sourceType'<>'report_run_recipient'),true)
+ into count_after,legacy_notifications_only
+ from public.m14_03_operational_source_rows(o,a,'notifications.deliveries','{}','{}') x;
  perform pg_temp.assert_ok('notification export follows every native cursor beyond first page',count_after>=count_before+121);
+ perform pg_temp.assert_ok('legacy notification export excludes scheduled report dispatches',
+   legacy_notifications_only);
  select * into native_row from public.list_notification_dispatches_atomic(o,a,'failed','finding_triage',null,null,100);
  columns:=public.m14_03_source_policy('notifications.deliveries')->'columns';
  select coalesce(jsonb_agg(public.m14_03_operational_projection(x.item,columns) order by x.n),'[]') into expected

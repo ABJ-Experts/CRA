@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
+import Link from "next/link";
 import { Button } from "@repo/ui/button";
 import { cn } from "@repo/ui/cn";
 import {
@@ -11,6 +12,8 @@ import {
 } from "@repo/contracts/exports";
 import { ApiClientError } from "../../_lib/http/api-client";
 import { exportsGateway, type ExportsGateway } from "./exports.api";
+import { useSession } from "../../_providers/session-provider";
+import { storeReportDraftSeed } from "../reports/report-draft";
 
 type Gateway = Pick<
   ExportsGateway,
@@ -76,9 +79,22 @@ export function ExportControls({
   >("all_filtered");
   const [job, setJob] = useState<ExportJob | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [scheduleError, setScheduleError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const attempt = useRef<{ signature: string; key: string } | null>(null);
   const sourceDefinition = exportSources[source];
+  const { session, permissions = {}, role, isLoading } = useSession();
+  const canSchedule =
+    creationEnabled &&
+    !isLoading &&
+    Boolean(session?.organization?.id && session?.user?.id) &&
+    sourceDefinition.subjectKind === "member" &&
+    sourceDefinition.requiredPermissions.every(
+      (permission) => permissions[permission] === true,
+    ) &&
+    (!sourceDefinition.requiredRole ||
+      role === "owner" ||
+      (sourceDefinition.requiredRole === "admin" && role === "admin"));
   const deliveryActive = useRef(true);
   const deliveryEnabled = useRef(enabled);
   deliveryEnabled.current = enabled;
@@ -264,16 +280,53 @@ export function ExportControls({
   }
   return (
     <div className={cn("flex flex-col gap-3 text-caption-1-regular text-fg")}>
-      <Button
-        type="button"
-        variant="outline"
-        aria-expanded={open}
-        aria-controls={`${id}-panel`}
-        onClick={() => setOpen(!open)}
-      >
-        {buttonLabel ??
-          (readinessProductId ? "Export readiness report" : "Export list")}
-      </Button>
+      <div className="flex flex-wrap items-center gap-3">
+        <Button
+          type="button"
+          variant="outline"
+          aria-expanded={open}
+          aria-controls={`${id}-panel`}
+          onClick={() => setOpen(!open)}
+        >
+          {buttonLabel ??
+            (readinessProductId ? "Export readiness report" : "Export list")}
+        </Button>
+        {canSchedule ? (
+          <Link
+            className="inline-flex min-h-10 items-center rounded-md border border-border bg-canvas px-4 text-subhead-medium text-fg underline-offset-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand"
+            href="/dashboard/reports"
+            onClick={(event) => {
+              event.preventDefault();
+              try {
+                const scope = `${session!.organization!.id}:${session!.user.id}`;
+                const key = storeReportDraftSeed(
+                  readinessProductId
+                    ? { kind: "readiness", productId: readinessProductId }
+                    : { source, format, context, filters, columns },
+                  scope,
+                );
+                window.location.assign(
+                  `/dashboard/reports?draft=${encodeURIComponent(key)}`,
+                );
+              } catch {
+                setScheduleError(
+                  "This source cannot be scheduled from the current view. Refresh its filters and try again.",
+                );
+              }
+            }}
+          >
+            Schedule report
+          </Link>
+        ) : null}
+      </div>
+      {scheduleError ? (
+        <p
+          role="alert"
+          className="max-w-prose text-caption-1-regular text-danger"
+        >
+          {scheduleError}
+        </p>
+      ) : null}
       {open ? (
         <section
           id={`${id}-panel`}

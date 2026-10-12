@@ -571,3 +571,81 @@ describe("filtered export trusted trend snapshot", () => {
     ).toEqual(pin);
   });
 });
+
+describe("background trend intersection", () => {
+  const principal = {
+    organizationId: id,
+    ownerUserId: id,
+    userId: "00000000-0000-4000-8000-000000000002",
+    ownerBaseRole: "owner" as const,
+    recipientBaseRole: "member" as const,
+  };
+  it("uses fresh pins and ANDs source permissions before aggregation without sessions", async () => {
+    const { api, read, snapshot, tokens } = fixture();
+    snapshot
+      .mockResolvedValueOnce({
+        version: 1,
+        permissions: DEFAULT_PERMISSIONS_BY_ROLE.owner,
+      })
+      .mockResolvedValueOnce({
+        version: 1,
+        permissions: {
+          ...DEFAULT_PERMISSIONS_BY_ROLE.owner,
+          can_view_findings: false,
+        },
+      });
+    const restricted = {
+      state: "restricted",
+      reason: "permission_denied",
+      unit: "count",
+      baselineAt: null,
+      buckets: [],
+    };
+    const result = data();
+    read.mockResolvedValue({
+      result: {
+        ...result,
+        series: {
+          ...result.series,
+          activity: restricted,
+          triage: { ...restricted, unit: "hours" },
+          remediation: { ...restricted, unit: "days" },
+        },
+      },
+      snapshot: pin,
+    });
+    const seal = jest.spyOn(tokens, "seal");
+    const captured = await api.exportBackgroundCaptureContext(
+      principal,
+      filters,
+    );
+    expect(captured._datasetSnapshot).toEqual(pin);
+    expect(captured._sourceAccess.findings).toBe(false);
+    expect(read.mock.calls as unknown).toEqual([
+      [
+        id,
+        {
+          actorId: principal.userId,
+          endpoint: "trends",
+          filters: { ...filters, sourceAccess: captured._sourceAccess },
+        },
+      ],
+    ]);
+    expect(seal).not.toHaveBeenCalled();
+  });
+  it("denies either principal before a source read", async () => {
+    const { api, read, snapshot } = fixture();
+    snapshot.mockResolvedValueOnce({ version: 1, permissions: {} });
+    await expect(
+      api.exportBackgroundCaptureContext(principal, filters),
+    ).rejects.toBeInstanceOf(DashboardForbiddenError);
+    expect(read).not.toHaveBeenCalled();
+  });
+  it("rejects malformed source responses", async () => {
+    const { api, read } = fixture();
+    read.mockResolvedValue({});
+    await expect(
+      api.exportBackgroundCaptureContext(principal, filters),
+    ).rejects.toBeInstanceOf(DashboardUnavailableError);
+  });
+});

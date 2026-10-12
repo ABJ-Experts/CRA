@@ -434,6 +434,12 @@ export const exportSourceExclusions: Readonly<Record<string, string>> =
       "Filtered export leases, principal session identities, private artifacts and delivery grants are deployment-local workflow security state; durable audit evidence exports separately.",
     export_snapshot_rows:
       "Immutable filtered copies duplicate source-owned tenant records; recursive exports would repeat frozen values and bypass current field-access projections.",
+    report_definitions:
+      "Saved report filters, recipient selections and command replay keys are self-scoped authorization-adjacent security state; an owner-wide archive cannot preserve each creator's access boundary. Source-owned tenant records and report change audit facts export separately; this exclusion does not change live retention authority.",
+    report_runs:
+      "Frozen report configs and occurrence snapshots preserve private owner filters and source scopes; copying them into an owner-wide archive would bypass self-scoped authorization. Source-owned tenant records and scheduling audit facts export separately; live retention authority remains unchanged.",
+    report_run_recipients:
+      "Recipient-specific private manifests and content counts, export job references, live leases, one-use grant digests and session identifiers are security state; an owner-wide archive must not disclose another recipient's artifact. Source-owned tenant records and publication audit facts export separately; live retention authority remains unchanged.",
     siem_destinations:
       "SIEM credentials, authority and scan cursors are deployment-local security state.",
     siem_deliveries:

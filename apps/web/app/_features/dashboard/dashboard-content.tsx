@@ -53,16 +53,24 @@ export function DashboardContent({ productId }: { productId?: string }) {
             : "Regulatory deadlines and the evidence that needs attention."
         }
         actions={
-          <Button
-            data-testid="dashboard-refresh"
-            variant="outline"
-            tone="grey"
-            disabled={!query.enabled || query.isFetching}
-            loading={query.isFetching}
-            onClick={() => void query.refetch()}
-          >
-            Refresh dashboard
-          </Button>
+          <div className="flex flex-wrap items-center gap-3">
+            <Link
+              href="/dashboard/reports"
+              className="inline-flex min-h-10 items-center rounded-md border border-border bg-canvas px-4 text-subhead-medium text-fg underline-offset-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand"
+            >
+              Scheduled reports
+            </Link>
+            <Button
+              data-testid="dashboard-refresh"
+              variant="outline"
+              tone="grey"
+              disabled={!query.enabled || query.isFetching}
+              loading={query.isFetching}
+              onClick={() => void query.refetch()}
+            >
+              Refresh dashboard
+            </Button>
+          </div>
         }
       />
       {projection ? (

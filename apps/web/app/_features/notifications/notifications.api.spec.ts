@@ -51,6 +51,28 @@ const delivery = {
 describe("notificationsApi", () => {
   afterEach(() => vi.unstubAllGlobals());
 
+  it("opts scheduled report notices in explicitly without changing legacy request URLs", async () => {
+    const fetcher = vi.fn(
+      async (url: RequestInfo | URL) =>
+        new Response(
+          JSON.stringify(
+            String(url).includes("unread-count")
+              ? { count: 0 }
+              : { items: [], nextCursor: null },
+          ),
+        ),
+    );
+    vi.stubGlobal("fetch", fetcher);
+    await notificationsApi.feed({ includeScheduledReports: true });
+    await notificationsApi.unreadCount(undefined, true);
+    await notificationsApi.unreadCount();
+    expect(fetcher.mock.calls.map(([url]) => url)).toEqual([
+      "/api/v1/notifications/feed?includeScheduledReports=true&read=all&limit=25",
+      "/api/v1/notifications/feed/unread-count?includeScheduledReports=true",
+      "/api/v1/notifications/feed/unread-count",
+    ]);
+  });
+
   it("parses burst policy and validates optimistic updates before transport", async () => {
     const policy = {
       organizationId: preferences.organizationId,

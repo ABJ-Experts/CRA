@@ -41,10 +41,12 @@ export class MailNotificationDispatchDeliveryAdapter {
         throw new NotificationDispatchFailure(error.code, true);
       }
       throw new NotificationDispatchFailure(
-        input.payload.kind === "burst"
+        input.payload.kind === "burst" ||
+          input.payload.kind === "scheduled_report"
           ? "delivery_uncertain"
           : "provider_unavailable",
-        input.payload.kind !== "burst",
+        input.payload.kind !== "burst" &&
+          input.payload.kind !== "scheduled_report",
       );
     }
 
@@ -92,6 +94,12 @@ export class MailNotificationDispatchDeliveryAdapter {
         return this.mail.sendEvidenceQuarantinedAlert(to, idempotencyKey);
       case "evidence_integrity_failure":
         return this.mail.sendEvidenceIntegrityFailureAlert(to, idempotencyKey);
+      case "scheduled_report":
+        return this.mail.sendScheduledReportReady(
+          to,
+          payload.runId,
+          idempotencyKey,
+        );
       case "evidence_validity":
         return this.mail.sendEvidenceValidityExpiryAlert(
           to,
