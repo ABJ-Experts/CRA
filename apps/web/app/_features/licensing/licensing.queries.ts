@@ -1,7 +1,10 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { LicenseActivationInput } from "@repo/contracts/licensing/types";
+import type {
+  LicenseActivationInput,
+  LicenseUsageOperationInput,
+} from "@repo/contracts/licensing/types";
 import { useSession } from "../../_providers/session-provider";
 import { useMocksReady } from "../../_providers/providers";
 import { ApiClientError } from "../../_lib/http/api-client";
@@ -52,13 +55,50 @@ export function useLicensingQueries({
     enabled: enabled && canView && management,
     queryFn: ({ signal }) => gateway.history({}, signal),
   });
+  const usage = useQuery({
+    ...common,
+    queryKey: ["licensing", scope, "usage"],
+    enabled: enabled && canView && management,
+    queryFn: ({ signal }) => gateway.usage(signal),
+  });
+  const usageExport = useMutation({
+    mutationKey: ["licensing", scope, "export"],
+    mutationFn: (input: LicenseUsageOperationInput) =>
+      gateway.exportUsage(input),
+    retry: false,
+    onSettled: () => {
+      // Do not defer a revoked POST error until this follow-up GET completes.
+      void client.invalidateQueries({
+        queryKey: ["licensing", scope, "usage"],
+      });
+    },
+  });
+  const reconciliation = useMutation({
+    mutationKey: ["licensing", scope, "reconcile"],
+    mutationFn: (input: LicenseUsageOperationInput) =>
+      gateway.reconcileUsage(input),
+    retry: false,
+    onSettled: () => {
+      // Do not defer a revoked POST error until this follow-up GET completes.
+      void client.invalidateQueries({
+        queryKey: ["licensing", scope, "usage"],
+      });
+    },
+  });
   const activation = useMutation({
     mutationFn: (input: LicenseActivationInput) => gateway.activate(input),
     retry: false,
     onSettled: () =>
       client.invalidateQueries({ queryKey: ["licensing", scope] }),
   });
-  const revoked = [policy.error, current.error].some(
+  const revoked = [
+    policy.error,
+    current.error,
+    history.error,
+    usage.error,
+    usageExport.error,
+    reconciliation.error,
+  ].some(
     (error) =>
       error instanceof ApiClientError &&
       (error.status === 401 || error.status === 403),
@@ -73,6 +113,14 @@ export function useLicensingQueries({
       ...history,
       data: enabled && canView && !revoked ? history.data : undefined,
     },
+    usage: {
+      ...usage,
+      data:
+        enabled && canView && management && !revoked ? usage.data : undefined,
+    },
+    usageExport,
+    reconciliation,
+    scope,
     activation,
     canView,
     canManage: permissions.can_manage_licensing === true && !revoked,

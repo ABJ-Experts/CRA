@@ -2510,6 +2510,33 @@ export const licenceRouteOperations: Readonly<
     evidence: "apps/api/src/invitations/invitations.controller.ts",
     reason: "Credential revocation cannot be blocked by a licence.",
   },
+  "LicensingUsageController.getUsage": {
+    kind: "protective",
+    identity: "member",
+    mutation: false,
+    authority: "getUsage",
+    evidence: "apps/api/src/licensing/licensing-usage.controller.ts",
+    reason:
+      "Normally authorized aggregate diagnostics remain available under expiry.",
+  },
+  "LicensingUsageController.exportUsage": {
+    kind: "evidence",
+    identity: "member",
+    mutation: true,
+    authority: "m15_02_export_usage",
+    evidence: "apps/api/src/licensing/licensing-usage.controller.ts",
+    reason:
+      "Audited usage snapshots are protected local exports, never customer growth.",
+  },
+  "LicensingUsageController.reconcileUsage": {
+    kind: "protective",
+    identity: "member",
+    mutation: true,
+    authority: "m15_02_reconcile_usage",
+    evidence: "apps/api/src/licensing/licensing-usage.controller.ts",
+    reason:
+      "Authorized bounded accounting repair preserves source data and licence authority.",
+  },
   "LicensingController.activate": {
     kind: "renewal",
     identity: "member",

@@ -1,25 +1,11 @@
 import { z } from "zod";
 
-export const LICENSE_CAPABILITIES = [
-  "administration",
-  "products",
-  "sboms",
-  "vulnerabilities",
-  "findings",
-  "reporting",
-  "technical_files",
-  "evidence",
-  "suppliers",
-  "frameworks",
-  "connectors",
-  "tasks",
-  "notifications",
-  "dashboards",
-  "scheduled_reports",
-  "portfolio",
-  "ai",
-] as const;
-export const licenseCapabilitySchema = z.enum(LICENSE_CAPABILITIES);
+import {
+  LICENSE_CAPABILITIES,
+  licenseCapabilitySchema,
+  licenseStateSchema,
+} from "./license-values.schemas.js";
+export * from "./license-values.schemas.js";
 const integer = z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER);
 const timestamp = z.iso.datetime({ offset: false });
 export const licenseLimitsSchema = z
@@ -82,14 +68,6 @@ export const licenseActivationInputSchema = z
     idempotencyKey: z.uuid(),
   })
   .strict();
-export const licenseStateSchema = z.enum([
-  "missing",
-  "active",
-  "grace",
-  "expired_read_only",
-  "invalid",
-  "clock_untrusted",
-]);
 export const licenseUsageSchema = z
   .object({
     activeMembers: integer,
@@ -201,3 +179,5 @@ export const uploadPathSchema = z
     token: z.string().regex(/^[A-Za-z0-9_-]{43}$/),
   })
   .strict();
+
+export * from "./usage.schemas.js";

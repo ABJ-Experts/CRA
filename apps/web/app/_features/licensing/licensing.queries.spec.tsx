@@ -15,6 +15,9 @@ const fixture = vi.hoisted(() => ({
   current: vi.fn(),
   history: vi.fn(),
   activate: vi.fn(),
+  usage: vi.fn(),
+  exportUsage: vi.fn(),
+  reconcileUsage: vi.fn(),
 }));
 vi.mock("../../_providers/session-provider", () => ({
   useSession: () => fixture,
@@ -28,6 +31,9 @@ vi.mock("./licensing-gateway", () => ({
     current = fixture.current;
     history = fixture.history;
     activate = fixture.activate;
+    usage = fixture.usage;
+    exportUsage = fixture.exportUsage;
+    reconcileUsage = fixture.reconcileUsage;
   },
 }));
 afterEach(() => {
@@ -41,6 +47,8 @@ afterEach(() => {
   };
 });
 function setup() {
+  if (!fixture.usage.getMockImplementation())
+    fixture.usage.mockResolvedValue({ meterVersion: 1 });
   vi.stubEnv("NEXT_PUBLIC_ENABLE_MOCKS", "false");
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -100,9 +108,7 @@ describe("licensing queries", () => {
     expect(result.current.canManage).toBe(false);
   });
   it("drops cached management data after revocation", async () => {
-    fixture.policy.mockRejectedValue(
-      new ApiClientError("api", "Revoked", 403),
-    );
+    fixture.policy.mockRejectedValue(new ApiClientError("api", "Revoked", 403));
     fixture.current.mockResolvedValue({ version: 1 });
     fixture.history.mockResolvedValue({ items: [] });
     const { result } = setup();
@@ -111,4 +117,95 @@ describe("licensing queries", () => {
     expect(result.current.history.data).toBeUndefined();
     expect(result.current.canManage).toBe(false);
   });
+});
+
+describe("usage query isolation", () => {
+  it("loads usage independently of failed current licence configuration", async () => {
+    fixture.policy.mockResolvedValue({ state: "invalid" });
+    fixture.current.mockRejectedValue(new Error("configuration unavailable"));
+    fixture.history.mockResolvedValue({ items: [] });
+    fixture.usage.mockResolvedValue({ meterVersion: 3 });
+    const { result } = setup();
+    await waitFor(() =>
+      expect(result.current.usage.data).toEqual({ meterVersion: 3 }),
+    );
+    expect(result.current.current.isError).toBe(true);
+  });
+  it("invalidates usage after a failed reconciliation and never retries the POST", async () => {
+    fixture.policy.mockResolvedValue({ state: "active" });
+    fixture.current.mockResolvedValue({ version: 1 });
+    fixture.history.mockResolvedValue({ items: [] });
+    fixture.usage.mockResolvedValue({ meterVersion: 3 });
+    fixture.reconcileUsage.mockRejectedValue(new Error("network"));
+    const { result } = setup();
+    await waitFor(() => expect(result.current.usage.data).toBeDefined());
+    await act(async () => {
+      await expect(
+        result.current.reconciliation.mutateAsync({
+          expectedLicenseVersion: 1,
+          expectedMeterVersion: 3,
+          idempotencyKey: "key",
+        }),
+      ).rejects.toThrow("network");
+    });
+    expect(fixture.reconcileUsage).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(fixture.usage).toHaveBeenCalledTimes(2));
+  });
+  it("immediately removes usage after permission, user and tenant scope changes", async () => {
+    fixture.policy.mockResolvedValue({ state: "active" });
+    fixture.current.mockResolvedValue({ version: 1 });
+    fixture.history.mockResolvedValue({ items: [] });
+    fixture.usage.mockResolvedValue({ meterVersion: 3 });
+    const { result, rerender } = setup();
+    await waitFor(() => expect(result.current.usage.data).toBeDefined());
+    fixture.permissions = {
+      can_view_licensing: false,
+      can_manage_licensing: false,
+    };
+    rerender();
+    expect(result.current.usage.data).toBeUndefined();
+    fixture.permissions = {
+      can_view_licensing: true,
+      can_manage_licensing: true,
+    };
+    fixture.session = {
+      organization: { id: "other" },
+      user: { id: "other-user" },
+    };
+    fixture.usage.mockReturnValue(new Promise(() => {}));
+    rerender();
+    expect(result.current.usage.data).toBeUndefined();
+    fixture.session = { organization: { id: "tenant" }, user: { id: "user" } };
+  });
+  it("clears all management data on usage authorization failure", async () => {
+    fixture.policy.mockResolvedValue({ state: "active" });
+    fixture.current.mockResolvedValue({ version: 1 });
+    fixture.history.mockResolvedValue({ items: [] });
+    fixture.usage.mockRejectedValue(
+      new ApiClientError("api", "Forbidden", 403),
+    );
+    const { result } = setup();
+    await waitFor(() => expect(result.current.revoked).toBe(true));
+    expect(result.current.usage.data).toBeUndefined();
+    expect(result.current.current.data).toBeUndefined();
+  });
+});
+
+it("audits export once and refreshes usage after completion", async () => {
+  fixture.policy.mockResolvedValue({ state: "active" });
+  fixture.current.mockResolvedValue({ version: 1 });
+  fixture.history.mockResolvedValue({ items: [] });
+  fixture.usage.mockResolvedValue({ meterVersion: 1 });
+  fixture.exportUsage.mockResolvedValue({ replayed: false });
+  const { result } = setup();
+  await waitFor(() => expect(result.current.usage.data).toBeDefined());
+  await act(() =>
+    result.current.usageExport.mutateAsync({
+      expectedLicenseVersion: 1,
+      expectedMeterVersion: 1,
+      idempotencyKey: "key",
+    }),
+  );
+  expect(fixture.exportUsage).toHaveBeenCalledOnce();
+  await waitFor(() => expect(fixture.usage).toHaveBeenCalledTimes(2));
 });

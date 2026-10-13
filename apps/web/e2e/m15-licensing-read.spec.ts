@@ -1,4 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
+import { decodeJwt } from "jose";
+
+/* eslint-disable turbo/no-undeclared-env-vars -- Browser journeys run outside Turbo's cached task graph. */
 import {
   licenseCurrentResponseSchema,
   licenseHistoryResponseSchema,
@@ -38,15 +41,26 @@ async function visit(page: Page, route: string) {
   return response;
 }
 
+let nextOwnedSignInAt = 0;
+async function paceOwnedSignIn() {
+  const now = Date.now();
+  const wait = Math.max(0, nextOwnedSignInAt - now);
+  nextOwnedSignInAt = Math.max(now, nextOwnedSignInAt) + 8_000;
+  if (wait > 0) await new Promise((resolve) => setTimeout(resolve, wait));
+}
+
 async function signIn(page: Page, email: string) {
   await visit(page, "/sign-in");
   await page.getByTestId("si-identifier").fill(email);
   await page.getByTestId("si-password").fill("Password123");
+  await paceOwnedSignIn();
   const signedIn = page.waitForResponse((response) => {
     return new URL(response.url()).pathname === "/api/v1/auth/sign-in";
   });
   await page.getByTestId("si-submit").click();
-  expect((await signedIn).status()).toBe(200);
+  const completed = await signedIn;
+  nextOwnedSignInAt = Math.max(nextOwnedSignInAt, Date.now() + 8_000);
+  expect(completed.status()).toBe(200);
   await expect(page).toHaveURL(/\/dashboard$/);
   await expect(page.locator("main").first()).toBeVisible();
   await page.waitForLoadState("networkidle");
@@ -147,9 +161,43 @@ test("owner reads licence state and workspace pages without browser runtime erro
   await visit(page, "/dashboard?from=m15-browser");
   expect((await refreshed).status()).toBe(302);
   await expect(page).toHaveURL(/\/dashboard\?from=m15-browser$/);
-  expect(
-    (await page.request.post("/api/v1/auth/sign-out", { data: {} })).status(),
-  ).toBe(200);
+  const anonKey = process.env.E2E_SUPABASE_ANON_KEY;
+  if (!anonKey)
+    throw new Error(
+      "Local public Supabase anon key is required for scoped smoke-test teardown.",
+    );
+  const supabaseOrigin =
+    process.env.E2E_SUPABASE_ORIGIN ?? "http://127.0.0.1:54321";
+  expect(["localhost", "127.0.0.1"]).toContain(
+    new URL(supabaseOrigin).hostname,
+  );
+  const ownAccess = (await context.cookies()).find(
+    (cookie) => cookie.name === "cra_at",
+  )?.value;
+  if (!ownAccess || typeof decodeJwt(ownAccess).session_id !== "string")
+    throw new Error("The freshly owned smoke-test session is unavailable.");
+  // End only this test's freshly created GoTrue session. CRA sign-out is global
+  // and would advance the account epoch for unrelated owner sessions.
+  const revoked = await page.request.post(
+    `${supabaseOrigin}/auth/v1/logout?scope=local`,
+    {
+      headers: { apikey: anonKey, authorization: `Bearer ${ownAccess}` },
+    },
+  );
+  expect(revoked.status()).toBe(204);
+  // Match clearSessionCookies in cookies.util.ts, within this owned context
+  // and current host only. Retaining cra_session would trigger another refresh
+  // hop after the tokens are removed and alter the original redirect assertion.
+  for (const name of [
+    "cra_at",
+    "cra_rt",
+    "cra_session",
+    "cra_rm",
+    "cra_pending",
+    "cra_mfa",
+  ]) {
+    await context.clearCookies({ name, domain: new URL(page.url()).hostname });
+  }
   await visit(page, "/organization?settings=licence");
   await expect(page).toHaveURL(/\/sign-in\?/);
   await page.waitForLoadState("networkidle");

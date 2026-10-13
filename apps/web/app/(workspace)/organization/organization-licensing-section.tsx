@@ -10,6 +10,7 @@ import {
   licenceDate,
   licenceReason,
 } from "../../_features/licensing/licensing-status";
+import { OrganizationUsageSection } from "./organization-usage-section";
 import { ApiClientError } from "../../_lib/http/api-client";
 
 const FIELD_CLASS =
@@ -21,8 +22,8 @@ export function OrganizationLicensingSection({
 }: {
   organizationId: string;
 }) {
-  const { current, history, activation, canView, canManage, revoked } =
-    useLicensingQueries();
+  const queries = useLicensingQueries();
+  const { current, history, activation, canView, canManage, revoked } = queries;
   const [draft, setDraft] = useState({ organizationId, artifact: "" });
   const artifact =
     draft.organizationId === organizationId ? draft.artifact : "";
@@ -203,67 +204,6 @@ export function OrganizationLicensingSection({
               was preserved.
             </p>
           ) : null}
-          <div className={cn("overflow-x-auto")}>
-            <table
-              aria-label="Licence capacity"
-              className={cn("w-full text-left text-caption-1-regular text-fg")}
-            >
-              <thead>
-                <tr>
-                  <th className={cn("p-2")}>Resource</th>
-                  <th className={cn("p-2")}>Used / reserved</th>
-                  <th className={cn("p-2")}>Limit</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(
-                  [
-                    [
-                      "Active members and reserved invitations",
-                      data.usage.activeMembers,
-                      data.claims?.limits.activeMembers,
-                    ],
-                    [
-                      "Nonarchived products",
-                      data.usage.products,
-                      data.claims?.limits.products,
-                    ],
-                    [
-                      "Customer storage bytes",
-                      data.usage.storageBytes + data.usage.storageReservedBytes,
-                      data.claims?.limits.storageBytes,
-                    ],
-                  ] as const
-                ).map(([label, used, limit]) => (
-                  <tr key={label} className={cn("border-t border-border")}>
-                    <th scope="row" className={cn("p-2 font-normal")}>
-                      {label}
-                    </th>
-                    <td className={cn("p-2")}>
-                      {data.usage.availability === "ready"
-                        ? used.toLocaleString()
-                        : "Unavailable"}
-                    </td>
-                    <td className={cn("p-2")}>
-                      {limit === null
-                        ? "Unlimited"
-                        : limit === undefined
-                          ? "No licence"
-                          : limit.toLocaleString()}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <p className={cn("text-caption-1-regular text-fg-muted")}>
-            Protected storage:{" "}
-            {data.usage.availability === "ready"
-              ? `${data.usage.protectedStorageBytes.toLocaleString()} bytes`
-              : "Unavailable"}
-            . Generated protective evidence and exports are exempt from the
-            customer storage limit.
-          </p>
           <div>
             <h3 className={cn("text-subhead-semibold text-fg")}>
               Effective capabilities
@@ -282,6 +222,10 @@ export function OrganizationLicensingSection({
           </div>
         </div>
       ) : null}
+      <OrganizationUsageSection
+        organizationId={organizationId}
+        queries={queries}
+      />
       <div className={cn("mt-6 border-t border-border pt-5")}>
         <h3 className={cn("text-subhead-semibold text-fg")}>
           Activate or replace a licence

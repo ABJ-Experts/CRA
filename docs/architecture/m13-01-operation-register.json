@@ -3658,6 +3658,26 @@
           "symbol": "m15_01_complete_storage"
         }
       ]
+    },
+    {
+      "id": "apps/api/src/licensing/licensing-usage.controller.ts#LicensingUsageController.exportUsage:POST:licensing/usage/export",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261013103250_m15_02_usage_operations.sql",
+          "symbol": "m15_02_export_usage"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/licensing/licensing-usage.controller.ts#LicensingUsageController.reconcileUsage:POST:licensing/usage/reconcile",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261013103250_m15_02_usage_operations.sql",
+          "symbol": "m15_02_reconcile_usage"
+        }
+      ]
     }
   ],
   "workers": [

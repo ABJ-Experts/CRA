@@ -17,6 +17,11 @@ docs/architecture/*
 !docs/architecture/m14-03*.json
 !docs/architecture/m15-01*.md
 !docs/architecture/m15-01*.json
+!docs/architecture/m15-02*.md
+!docs/architecture/m15-02*.json
+!docs/architecture/m15-02-evidence/
+docs/architecture/m15-02-evidence/*
+!docs/architecture/m15-02-evidence/*.png
 !docs/architecture/m15-01-evidence/
 docs/architecture/m15-01-evidence/*
 !docs/architecture/m15-01-evidence/*.png
@@ -26,6 +31,8 @@ docs/superpowers/*
 docs/superpowers/plans/*
 !docs/superpowers/plans/2026-10-09-m14-03*.md
 !docs/superpowers/plans/2026-10-13-m15-01*.md
+!docs/superpowers/plans/2026-10-13-m15-02*.md
+!docs/superpowers/plans/2026-10-13-local-storage-export-recovery.md
 
 # Local env files
 # NOTE: `.env` alone is an EXACT-match pattern, so `.env.production` and

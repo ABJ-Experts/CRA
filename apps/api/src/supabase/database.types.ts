@@ -8028,6 +8028,83 @@ export type Database = {
           },
         ]
       }
+      organization_usage_meters: {
+        Row: {
+          active_members: number | null
+          meter_version: number
+          next_invitation_expiry: string | null
+          organization_id: string
+          products: number | null
+          products_ready: boolean
+          products_reasons: string[]
+          protected_storage_bytes: number | null
+          protected_storage_ready: boolean
+          protected_storage_reasons: string[]
+          reconciled_at: string | null
+          reserved_invitations: number | null
+          seats_ready: boolean
+          seats_reasons: string[]
+          source_version: number
+          storage_bytes: number | null
+          storage_ready: boolean
+          storage_reasons: string[]
+          storage_reserved_bytes: number | null
+          updated_at: string
+        }
+        Insert: {
+          active_members?: number | null
+          meter_version?: number
+          next_invitation_expiry?: string | null
+          organization_id: string
+          products?: number | null
+          products_ready?: boolean
+          products_reasons?: string[]
+          protected_storage_bytes?: number | null
+          protected_storage_ready?: boolean
+          protected_storage_reasons?: string[]
+          reconciled_at?: string | null
+          reserved_invitations?: number | null
+          seats_ready?: boolean
+          seats_reasons?: string[]
+          source_version?: number
+          storage_bytes?: number | null
+          storage_ready?: boolean
+          storage_reasons?: string[]
+          storage_reserved_bytes?: number | null
+          updated_at?: string
+        }
+        Update: {
+          active_members?: number | null
+          meter_version?: number
+          next_invitation_expiry?: string | null
+          organization_id?: string
+          products?: number | null
+          products_ready?: boolean
+          products_reasons?: string[]
+          protected_storage_bytes?: number | null
+          protected_storage_ready?: boolean
+          protected_storage_reasons?: string[]
+          reconciled_at?: string | null
+          reserved_invitations?: number | null
+          seats_ready?: boolean
+          seats_reasons?: string[]
+          source_version?: number
+          storage_bytes?: number | null
+          storage_ready?: boolean
+          storage_reasons?: string[]
+          storage_reserved_bytes?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_usage_meters_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organizations: {
         Row: {
           audit_dataset_context: string
@@ -34858,6 +34935,109 @@ export type Database = {
           p_configuration_digest: string
           p_limit: number
           p_policy_revision: number
+        }
+        Returns: Json
+      }
+      m15_02_apply_delta: {
+        Args: {
+          p_column: string
+          p_delta: number
+          p_group: string
+          p_organization_id: string
+        }
+        Returns: undefined
+      }
+      m15_02_export_usage: {
+        Args: {
+          p_actor_user_id: string
+          p_expected_license_version: number
+          p_expected_meter_version: number
+          p_idempotency_key: string
+          p_organization_id: string
+          p_request_digest: string
+          p_snapshot: Json
+        }
+        Returns: Json
+      }
+      m15_02_generated_objects: {
+        Args: {
+          p_bucket?: string
+          p_object_path?: string
+          p_organization_id: string
+        }
+        Returns: {
+          bucket: string
+          object_path: string
+        }[]
+      }
+      m15_02_legacy_accounting_ready: {
+        Args: { p_organization_id: string }
+        Returns: boolean
+      }
+      m15_02_legacy_usage: {
+        Args: { p_organization_id: string }
+        Returns: Json
+      }
+      m15_02_object_bytes: { Args: { p_metadata: Json }; Returns: number }
+      m15_02_object_owners: {
+        Args: { p_bucket: string; p_path: string }
+        Returns: {
+          organization_id: string
+        }[]
+      }
+      m15_02_projection: { Args: { p_organization_id: string }; Returns: Json }
+      m15_02_read_usage: {
+        Args: {
+          p_actor_user_id: string
+          p_expected_license_version?: number
+          p_organization_id: string
+        }
+        Returns: Json
+      }
+      m15_02_rebuild_meter: {
+        Args: { p_organization_id: string; p_reconciled?: boolean }
+        Returns: undefined
+      }
+      m15_02_reconcile_usage: {
+        Args: {
+          p_actor_user_id: string
+          p_expected_license_version: number
+          p_expected_meter_version: number
+          p_idempotency_key: string
+          p_organization_id: string
+          p_request_digest: string
+        }
+        Returns: Json
+      }
+      m15_02_refresh_seats: {
+        Args: { p_organization_id: string }
+        Returns: undefined
+      }
+      m15_02_safe_integer: {
+        Args: { nullable?: boolean; v: Json }
+        Returns: boolean
+      }
+      m15_02_safe_reasons: { Args: { v: Json }; Returns: boolean }
+      m15_02_safe_receipt: { Args: { v: Json }; Returns: boolean }
+      m15_02_safe_snapshot: { Args: { v: Json }; Returns: boolean }
+      m15_02_snapshot_policy_matches: {
+        Args: { p_organization_id: string; p_snapshot: Json }
+        Returns: boolean
+      }
+      m15_02_source_refs: {
+        Args: { p_row: Json; p_table: string }
+        Returns: {
+          bucket: string
+          object_path: string
+        }[]
+      }
+      m15_02_usage_receipt: {
+        Args: {
+          p_actor_user_id: string
+          p_idempotency_key: string
+          p_operation: string
+          p_organization_id: string
+          p_request_digest: string
         }
         Returns: Json
       }

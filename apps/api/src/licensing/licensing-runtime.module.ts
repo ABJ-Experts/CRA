@@ -7,6 +7,11 @@ import { LicensingStartup } from "./infrastructure/licensing-startup";
 import { SupabaseModule } from "../supabase/supabase.module";
 import { LicensingService } from "./application/licensing.service";
 import { SupabaseLicensingRepository } from "./infrastructure/supabase-licensing.repository";
+import { SupabaseLicenseUsageRepository } from "./infrastructure/supabase-license-usage.repository";
+import {
+  LicenseUsageService,
+  LICENSING_USAGE_APPLICATION,
+} from "./application/license-usage.service";
 import {
   LocalLicenseVerifier,
   LicenseVerificationError,
@@ -19,6 +24,7 @@ type VerifierLoader = () => Promise<LocalLicenseVerifier>;
   providers: [
     SourceLicenseAdmission,
     SupabaseLicensingRepository,
+    SupabaseLicenseUsageRepository,
     {
       provide: LOCAL_LICENSE_VERIFIER,
       useFactory: (config: ConfigService): VerifierLoader => {
@@ -61,6 +67,23 @@ type VerifierLoader = () => Promise<LocalLicenseVerifier>;
       ],
     },
     {
+      provide: LicenseUsageService,
+      useFactory: (
+        repository: SupabaseLicenseUsageRepository,
+        service: LicensingService,
+        config: ConfigService,
+      ) =>
+        new LicenseUsageService(repository, {
+          getCurrent: (orgId, actorId) => service.getCurrent(orgId, actorId),
+          instanceConfigured: Boolean(
+            config.get<string>("LICENSING_INSTANCE_ID"),
+          ),
+          policyRevision: config.get<number>("LICENSING_POLICY_REVISION") ?? 1,
+        }),
+      inject: [SupabaseLicenseUsageRepository, LicensingService, ConfigService],
+    },
+    { provide: LICENSING_USAGE_APPLICATION, useExisting: LicenseUsageService },
+    {
       provide: LicensingStartup,
       useFactory: (
         repository: SupabaseLicensingRepository,
@@ -80,6 +103,11 @@ type VerifierLoader = () => Promise<LocalLicenseVerifier>;
       ],
     },
   ],
-  exports: [LicensingService, SourceLicenseAdmission],
+  exports: [
+    LicensingService,
+    SourceLicenseAdmission,
+    LicenseUsageService,
+    LICENSING_USAGE_APPLICATION,
+  ],
 })
 export class LicensingRuntimeModule {}

@@ -5,10 +5,15 @@ import {
   licenseHistoryQuerySchema,
   licenseHistoryResponseSchema,
   licensePolicyResponseSchema,
+  licenseUsageSnapshotSchema,
+  licenseUsageOperationInputSchema,
+  licenseUsageExportResponseSchema,
+  licenseUsageReconciliationResponseSchema,
 } from "@repo/contracts/licensing/schemas";
 import type {
   LicenseActivationInput,
   LicenseHistoryQuery,
+  LicenseUsageOperationInput,
 } from "@repo/contracts/licensing/types";
 import { authenticatedRequestJson } from "../../_lib/http/authenticated-request";
 
@@ -38,6 +43,31 @@ export class LicensingGateway {
       path: `/api/v1/licensing/history?${params}`,
       schema: licenseHistoryResponseSchema,
       signal,
+    });
+  }
+  usage(signal?: AbortSignal) {
+    return this.transport({
+      path: "/api/v1/licensing/usage",
+      schema: licenseUsageSnapshotSchema,
+      signal,
+    });
+  }
+  exportUsage(input: LicenseUsageOperationInput) {
+    return this.transport({
+      path: "/api/v1/licensing/usage/export",
+      method: "POST",
+      body: licenseUsageOperationInputSchema.parse(input),
+      inputSchema: licenseUsageOperationInputSchema,
+      schema: licenseUsageExportResponseSchema,
+    });
+  }
+  reconcileUsage(input: LicenseUsageOperationInput) {
+    return this.transport({
+      path: "/api/v1/licensing/usage/reconcile",
+      method: "POST",
+      body: licenseUsageOperationInputSchema.parse(input),
+      inputSchema: licenseUsageOperationInputSchema,
+      schema: licenseUsageReconciliationResponseSchema,
     });
   }
   activate(input: LicenseActivationInput) {

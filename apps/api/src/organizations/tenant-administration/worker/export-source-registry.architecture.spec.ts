@@ -88,7 +88,31 @@ const dynamicSnapshotLockAdditions = (sql: string): readonly string[] =>
       .filter((table): table is string => Boolean(table)),
   );
 
+const physicalSourceMappings = (sql: string): readonly string[] =>
+  [
+    ...sql.matchAll(
+      /\('[^']+'\s*,\s*'([a-z_]+)'\s*,\s*'[a-z_]+'\s*,\s*'[a-z_]+'\s*,\s*\d+\s*\)/g,
+    ),
+  ]
+    .map((match) => match[1])
+    .filter((table): table is string => Boolean(table));
+
 describe("tenant export source registry architecture", () => {
+  it("reads complete catalogue tuples rather than partial trigger source lists", () => {
+    expect(
+      physicalSourceMappings(
+        "values ('product_records', 'products', 'organization_id', 'id', 1); if tg_table_name in ('evidence_document_versions', 'sbom_sources', 'sbom_raw_objects') then",
+      ),
+    ).toEqual(["products"]);
+  });
+  it("keeps reconstructible usage projections out of retained source archives", () => {
+    expect(exportSourceExclusions.organization_usage_meters).toMatch(
+      /projection|reconstruct/i,
+    );
+    expect(
+      exportSourceRegistry.flatMap((source) => source.tables),
+    ).not.toContain("organization_usage_meters");
+  });
   it("keeps range verification leases and authorization snapshots deployment-local", () => {
     expect(exportSourceExclusions).toHaveProperty("audit_verification_jobs");
     expect(exportSourceExclusions.audit_verification_jobs).toMatch(
@@ -385,11 +409,9 @@ describe("tenant export source registry architecture", () => {
       exportSourceRegistry.flatMap((source) => source.tables),
     );
     const sqlMappedTenantTables = new Set(
-      [...migrationSql().matchAll(/\('[^']+'\s*,\s*'([a-z_]+)'/g)]
-        .map((match) => match[1])
-        .filter((table): table is string =>
-          Boolean(table && tenantTables.has(table)),
-        ),
+      physicalSourceMappings(migrationSql()).filter((table): table is string =>
+        Boolean(table && tenantTables.has(table)),
+      ),
     );
 
     expect([...sqlMappedTenantTables].sort()).toEqual(

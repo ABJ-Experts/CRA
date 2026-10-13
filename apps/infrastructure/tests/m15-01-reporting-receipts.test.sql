@@ -34,11 +34,16 @@ declare
   v_finalize record; v_filing_proof record; v_filing record; v_evidence record;
   v_hash text; v_package uuid; v_approval_id uuid; v_filing_proof_id uuid; v_submission_id uuid;
   v_package_path text; v_receipt_path text; v_session_id uuid := gen_random_uuid(); v_filing_key uuid := gen_random_uuid();
+  v_customer_fixture uuid:=gen_random_uuid(); v_customer_reserved_before bigint; v_protected_reservation_before bigint;
   v_protected_before bigint; v_mutation_blocked boolean := false; ctx jsonb; admitted jsonb; op uuid:=gen_random_uuid();
 begin
   select id into v_actor from public.users where email='owner@cra.test';
   select id into v_release from public.product_releases where organization_id=v_org and archived_at is null order by created_at limit 1;
   perform pg_temp.m15_legacy_license(m.organization_id) from public.organization_members m where m.user_id=v_actor;
+  -- Keep a deliberate customer reservation so this test never depends on an
+  -- empty seeded tenant. This source fixture and every effect roll back.
+  insert into public.organization_storage_admissions(organization_id,operation_id,actor_user_id,bucket,object_path,reserved_bytes,token_digest,content_type,capability,state,expires_at)
+  values(v_org,v_customer_fixture,v_actor,'evidence-documents',v_org::text||'/m15-01-customer-baseline-'||v_customer_fixture::text,17,repeat('e',64),'application/pdf','evidence','reserved',clock_timestamp()+interval '1 hour');
   v_protected_before:=(public.m15_01_usage(v_org)->>'protectedStorageBytes')::bigint;
   select * into v_create from public.create_reporting_obligation_atomic(v_org,v_actor,'severe_incident',null,clock_timestamp()-interval '1 hour','M6-05 evidence SQL test',gen_random_uuid(),gen_random_uuid());
   v_obligation := (v_create.result->'obligation'->>'id')::uuid;
@@ -104,9 +109,16 @@ begin
   perform pg_temp.check('after-cutoff customer receipt obeys exhausted cap',admitted->>'outcome'='quota_exceeded');
   update public.reporting_obligations set created_at=clock_timestamp()-interval '60 days' where organization_id=v_org and id=v_obligation;
   update public.organization_license_states set verified_claims=jsonb_set(verified_claims,'{expiresAt}',to_jsonb(clock_timestamp()-interval '31 days')) where organization_id=v_org;
+  v_customer_reserved_before:=(public.m15_01_usage(v_org)->>'storageReservedBytes')::bigint;
+  v_protected_reservation_before:=(public.m15_01_usage(v_org)->>'protectedStorageBytes')::bigint;
   admitted:=public.m15_01_reserve_storage(v_org,v_actor,op,'reporting-evidence',v_receipt_path,512,repeat('a',64),clock_timestamp()+interval '2 minutes','reporting',ctx,'application/pdf');
   perform pg_temp.check('existing real duty admits proof across expiry and exhausted cap',admitted->>'outcome'='reserved' and exists(select 1 from public.organization_storage_admissions where operation_id=op and protected_input));
-  perform pg_temp.check('reserved protected receipt displayed separately',(public.m15_01_usage(v_org)->>'protectedStorageBytes')::bigint>=512 and (public.m15_01_usage(v_org)->>'storageReservedBytes')::bigint=0);
+  perform pg_temp.check('reserved protected receipt adds only protected bytes',
+    (public.m15_01_usage(v_org)->>'protectedStorageBytes')::bigint=v_protected_reservation_before+512
+    and (public.m15_01_usage(v_org)->>'storageReservedBytes')::bigint=v_customer_reserved_before);
+  perform pg_temp.check('protected admission preserves unrelated customer reservation',
+    (select state='reserved' and reserved_bytes=17 and observed_bytes is null and not protected_input
+     from public.organization_storage_admissions where organization_id=v_org and operation_id=v_customer_fixture));
   perform public.m15_01_claim_storage_upload(op,repeat('a',64));
   perform public.m15_01_prepare_storage_publication(op,repeat('a',64),repeat('c',64));
   admitted:=public.m15_01_reconcile_storage_upload(op,repeat('a',64));

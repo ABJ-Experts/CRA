@@ -8620,6 +8620,45 @@
       "identity": "member",
       "authority": "status",
       "reason": "Source-owned vulnerabilities operation retains its existing identity, tenant and approval checks."
+    },
+    {
+      "id": "apps/api/src/licensing/licensing-usage.controller.ts#LicensingUsageController.exportUsage:POST:licensing/usage/export",
+      "controller": "LicensingUsageController",
+      "handler": "exportUsage",
+      "mutation": true,
+      "public": false,
+      "evidence": "apps/api/src/licensing/licensing-usage.controller.ts",
+      "symbol": "exportUsage",
+      "kind": "evidence",
+      "identity": "member",
+      "authority": "m15_02_export_usage",
+      "reason": "Audited local usage snapshots preserve tenant scope and reveal no tenant contents."
+    },
+    {
+      "id": "apps/api/src/licensing/licensing-usage.controller.ts#LicensingUsageController.getUsage:GET:licensing/usage",
+      "controller": "LicensingUsageController",
+      "handler": "getUsage",
+      "mutation": false,
+      "public": false,
+      "evidence": "apps/api/src/licensing/licensing-usage.controller.ts",
+      "symbol": "getUsage",
+      "kind": "protective",
+      "identity": "member",
+      "authority": "getUsage",
+      "reason": "Normally authorized aggregate diagnostics remain available under expiry."
+    },
+    {
+      "id": "apps/api/src/licensing/licensing-usage.controller.ts#LicensingUsageController.reconcileUsage:POST:licensing/usage/reconcile",
+      "controller": "LicensingUsageController",
+      "handler": "reconcileUsage",
+      "mutation": true,
+      "public": false,
+      "evidence": "apps/api/src/licensing/licensing-usage.controller.ts",
+      "symbol": "reconcileUsage",
+      "kind": "protective",
+      "identity": "member",
+      "authority": "m15_02_reconcile_usage",
+      "reason": "Authorized bounded reconciliation retains source data and all safety authorities."
     }
   ],
   "workers": [

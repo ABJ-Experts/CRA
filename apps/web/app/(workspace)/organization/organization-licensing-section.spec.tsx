@@ -9,6 +9,7 @@ import {
 } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ApiClientError } from "../../_lib/http/api-client";
+import { usageSnapshot } from "../../_features/licensing/test/usage-fixtures";
 import { OrganizationLicensingSection } from "./organization-licensing-section";
 const fixtures = vi.hoisted(() => ({
   current: {
@@ -19,6 +20,17 @@ const fixtures = vi.hoisted(() => ({
   },
   history: { data: undefined, refetch: vi.fn() },
   activation: { isPending: false, mutateAsync: vi.fn() },
+  scope: "tenant-user",
+  enabled: true,
+  usage: {
+    data: undefined as ReturnType<typeof usageSnapshot> | undefined,
+    isPending: false,
+    isFetching: false,
+    error: null as unknown,
+    refetch: vi.fn(),
+  },
+  usageExport: { isPending: false, mutateAsync: vi.fn() },
+  reconciliation: { isPending: false, mutateAsync: vi.fn() },
   canView: true,
   canManage: true,
   revoked: false,
@@ -30,6 +42,8 @@ afterEach(() => {
   cleanup();
   vi.clearAllMocks();
   fixtures.current.error = null;
+  fixtures.usage.data = undefined;
+  fixtures.usage.error = null;
   fixtures.canView = true;
   fixtures.current.data = undefined;
   fixtures.current.isPending = false;
@@ -72,6 +86,15 @@ const current = {
 describe("OrganizationLicensingSection", () => {
   it("separates rejected replacements and shows accessible usage", () => {
     fixtures.current.data = current;
+    fixtures.usage.data = {
+      ...usageSnapshot(),
+      organizationId: "tenant",
+      counters: usageSnapshot().counters.map((row) =>
+        row.id === "products"
+          ? { ...row, limit: { kind: "unlimited", value: null } }
+          : row,
+      ),
+    };
     render(<OrganizationLicensingSection organizationId="tenant" />);
     expect(screen.getByText("Active")).toBeVisible();
     expect(screen.getByText(/invalid signature/i)).toBeVisible();
@@ -133,7 +156,7 @@ describe("licence lifecycle and recovery", () => {
     expect(
       screen.getByText(/manual evidence export remains available/),
     ).toBeVisible();
-    expect(screen.getAllByText("Unavailable")).toHaveLength(3);
+    expect(screen.queryByRole("table")).not.toBeInTheDocument();
     expect(screen.getByText(/Disabled by configuration/)).toBeVisible();
   });
   it("keeps editing unavailable while loading and supports retry", () => {
@@ -220,8 +243,9 @@ describe("licence lifecycle and recovery", () => {
 
 it("displays exempt protected storage separately from the licensed cap", () => {
   fixtures.current.data = current;
+  fixtures.usage.data = { ...usageSnapshot(), organizationId: "tenant" };
   render(<OrganizationLicensingSection organizationId="tenant" />);
-  expect(screen.getByText(/Protected storage: 200 bytes/)).toBeVisible();
+  expect(screen.getByText("Protected storage")).toBeVisible();
   expect(
     screen.getByText(/exempt from the customer storage limit/),
   ).toBeVisible();
@@ -267,4 +291,18 @@ it("uses a new receipt key and refreshed version after a confirmed conflict", as
   const second = fixtures.activation.mutateAsync.mock.calls[1]?.[0];
   expect(second.expectedVersion).toBe(3);
   expect(second.idempotencyKey).not.toBe(first.idempotencyKey);
+});
+
+it("renders independent usage when current licence configuration fails and preserves a draft", () => {
+  fixtures.current.data = current;
+  fixtures.usage.data = { ...usageSnapshot(), organizationId: "tenant" };
+  const view = render(<OrganizationLicensingSection organizationId="tenant" />);
+  fireEvent.change(screen.getByLabelText("Signed licence artifact"), {
+    target: { value: "a.b.c" },
+  });
+  fixtures.current.error = new Error("configuration unavailable");
+  fixtures.current.data = undefined;
+  view.rerender(<OrganizationLicensingSection organizationId="tenant" />);
+  expect(screen.getByRole("table", { name: "Licence capacity" })).toBeVisible();
+  expect(screen.getByLabelText("Signed licence artifact")).toHaveValue("a.b.c");
 });
