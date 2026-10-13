@@ -1,3 +1,4 @@
+import { LicensingModule } from "../licensing/licensing.module";
 import { Module } from "@nestjs/common";
 
 import { MailModule } from "../mail/mail.module";
@@ -26,7 +27,7 @@ import {
 } from "./supplier-evidence.controller";
 
 @Module({
-  imports: [SupabaseModule, MailModule, SbomModule],
+  imports: [LicensingModule, SupabaseModule, MailModule, SbomModule],
   controllers: [
     SupplierEvidenceSbomInternalController,
     SupplierEvidenceRequestsController,

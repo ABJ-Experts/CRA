@@ -1,3 +1,4 @@
+import { LicensingError } from "../../licensing/application/licensing.errors";
 import { failure, success } from "../../common/domain/result";
 import { SbomCiIntegrationUseCases } from "./sbom-ci-integration-use-cases";
 
@@ -161,6 +162,24 @@ function harness() {
 }
 
 describe("SbomCiIntegrationUseCases", () => {
+  it("preserves licence refresh denials before issuing upload storage", async () => {
+    const { useCases, repository, storage } = harness();
+    const denial = new LicensingError(
+      "license_write_denied",
+      403,
+      "Customer writes are paused",
+    );
+    repository.reserveBuildUpload.mockRejectedValue(denial);
+    await expect(
+      useCases.initializeBuildUpload({
+        organizationId,
+        credentialId,
+        input: uploadInput,
+        correlationId: idempotencyKey,
+      }),
+    ).rejects.toBe(denial);
+    expect(storage.createSignedUpload).not.toHaveBeenCalled();
+  });
   it("requires an expected version before updating an owner binding", async () => {
     const { useCases, connections } = harness();
     expect(

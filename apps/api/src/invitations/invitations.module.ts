@@ -1,3 +1,4 @@
+import { LicensingModule } from "../licensing/licensing.module";
 import { Module } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 
@@ -17,7 +18,7 @@ import { SupabaseInvitationRepository } from "./infrastructure/supabase-invitati
 import { InvitationsService } from "./invitations.service";
 
 @Module({
-  imports: [SupabaseModule, MailModule, OrganizationsModule],
+  imports: [LicensingModule, SupabaseModule, MailModule, OrganizationsModule],
   controllers: [InvitationsController],
   providers: [
     SupabaseInvitationRepository,

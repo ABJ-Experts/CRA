@@ -25,6 +25,7 @@ import {
 } from "@repo/contracts/reporting";
 import { z } from "zod";
 
+import { BoundedUploadService } from "../../licensing/uploads/bounded-upload.service";
 import { SupabaseService } from "../../supabase/supabase.service";
 import { buildStoredZip } from "../../organizations/tenant-administration/worker/export-archive";
 import type {
@@ -79,6 +80,7 @@ export class ReportingEvidenceWorkflowService implements ReportingEvidenceWorkfl
   constructor(
     private readonly supabase: SupabaseService,
     private readonly config: ConfigService,
+    private readonly uploads: BoundedUploadService,
   ) {}
 
   async generateStageSubmissionPackage(
@@ -405,15 +407,27 @@ export class ReportingEvidenceWorkflowService implements ReportingEvidenceWorkfl
     const extension = extensionFor(input.receipt.mimeType);
     const proofPath = `${rpcName === "record_reporting_stage_rehearsal_filing_atomic" ? "rehearsals/" : ""}${organizationId}/${input.stageId}/filings/${input.fields.idempotencyKey}/receipt.${extension}`;
     const receiptDigest = digest(input.receipt.bytes);
-    const upload = await this.client()
-      .storage.from(bucket)
-      .upload(proofPath, input.receipt.bytes, {
+    if (!packageData.hasSubmission)
+      await this.uploads.write({
+        bucket,
+        objectKey: proofPath,
+        bytes: input.receipt.bytes,
         contentType: input.receipt.mimeType,
-        upsert: false,
+        scope: {
+          kind: "reporting_receipt",
+          organizationId,
+          actorId: input.actorId,
+          sessionId: input.sessionId,
+          obligationId: input.obligationId,
+          stageId: input.stageId,
+          packageId: input.fields.packageId,
+          approvalId: packageData.approvalId,
+          proofId: input.fields.filingReauthenticationProofId,
+          idempotencyKey: input.fields.idempotencyKey,
+          isRehearsal:
+            rpcName === "record_reporting_stage_rehearsal_filing_atomic",
+        },
       });
-    if (upload.error && !alreadyExists(upload.error.message)) {
-      throw new ReportingEvidenceWorkflowError("unavailable");
-    }
     const result = await this.rpc(rpcName, {
       p_organization_id: organizationId,
       p_actor_user_id: input.actorId,
@@ -686,8 +700,13 @@ export class ReportingEvidenceWorkflowService implements ReportingEvidenceWorkfl
       p_stage_id: stageId,
     });
     if (result.outcome === "not_found") return null;
-    const packages = evidenceReadSchema.parse(result.result).packages;
-    return packages.find((entry) => entry.id === packageId) ?? null;
+    const evidence = evidenceReadSchema.parse(result.result);
+    const packageData = evidence.packages.find(
+      (entry) => entry.id === packageId,
+    );
+    return packageData
+      ? { ...packageData, hasSubmission: evidence.submission !== null }
+      : null;
   }
 
   private async stageEvidence(

@@ -1,3 +1,4 @@
+import { licensingHttp } from "../licensing/infrastructure/licensing-http";
 import {
   BadRequestException,
   ConflictException,
@@ -39,7 +40,7 @@ export class UsersService {
     orgId: string,
     params: PageParams,
   ): Promise<Paged<MemberRow>> {
-    return this.unwrap(await this.useCases.list({ orgId, params }));
+    return this.unwrap(this.useCases.list({ orgId, params }));
   }
 
   async changeRole(
@@ -49,8 +50,8 @@ export class UsersService {
     role: BaseRole,
     context?: AuditMutationContext,
   ): Promise<void> {
-    this.unwrap(
-      await this.useCases.changeRole({
+    await this.unwrap(
+      this.useCases.changeRole({
         orgId,
         actor,
         targetUserId,
@@ -66,8 +67,8 @@ export class UsersService {
     targetUserId: string,
     context?: AuditMutationContext,
   ): Promise<void> {
-    this.unwrap(
-      await this.useCases.remove({ orgId, actor, targetUserId, context }),
+    await this.unwrap(
+      this.useCases.remove({ orgId, actor, targetUserId, context }),
     );
   }
 
@@ -78,8 +79,8 @@ export class UsersService {
     isActive: boolean,
     context?: AuditMutationContext,
   ): Promise<void> {
-    this.unwrap(
-      await this.useCases.setActive({
+    await this.unwrap(
+      this.useCases.setActive({
         orgId,
         actor,
         targetUserId,
@@ -95,8 +96,8 @@ export class UsersService {
     orgId?: string | null,
     context?: AuditMutationContext,
   ): Promise<void> {
-    this.unwrap(
-      await this.useCases.updateOwnProfile({
+    await this.unwrap(
+      this.useCases.updateOwnProfile({
         actorUserId: userId,
         targetUserId: userId,
         patch,
@@ -106,7 +107,10 @@ export class UsersService {
     );
   }
 
-  private unwrap<T>(result: Result<T, MemberUseCaseError>): T {
+  private async unwrap<T>(
+    pending: Promise<Result<T, MemberUseCaseError>>,
+  ): Promise<T> {
+    const result = await licensingHttp(() => pending);
     if (result.ok) return result.value;
     throw this.httpFailure(result.error);
   }

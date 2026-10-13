@@ -3,6 +3,7 @@ import {
   Body,
   ConflictException,
   Controller,
+  HttpException,
   NotFoundException,
   Param,
   Post,
@@ -10,6 +11,8 @@ import {
   UseInterceptors,
 } from "@nestjs/common";
 import { FileInterceptor } from "@nestjs/platform-express";
+import { LicensingError } from "../licensing/application/licensing.errors";
+import { licensingHttpException } from "../licensing/infrastructure/licensing-http";
 import { memoryStorage } from "multer";
 import {
   createReportingRehearsalInputSchema,
@@ -199,6 +202,8 @@ function rehearsalMutationFailure(error: unknown): Error {
 }
 
 function rehearsalEvidenceFailure(error: unknown): Error {
+  if (error instanceof HttpException) return error;
+  if (error instanceof LicensingError) return licensingHttpException(error);
   if (
     error instanceof ReportingEvidenceWorkflowError &&
     error.code === "conflict"

@@ -138,6 +138,7 @@ export function secureWorker(
     return query;
   });
   const worker = new ConnectorSyncWorker(
+    { canClaim: () => Promise.resolve(true) },
     repository as never,
     { admin: () => ({ rpc, from }) } as never,
     new Map([["reference_conformance", adapter as never]]),

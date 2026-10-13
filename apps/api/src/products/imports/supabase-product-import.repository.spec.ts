@@ -32,7 +32,7 @@ function job(overrides: Record<string, unknown> = {}) {
 
 describe("SupabaseProductImportRepository", () => {
   it("uses the canonical bucket MIME type for CSV storage uploads", async () => {
-    const upload = jest.fn().mockResolvedValue({ error: null });
+    const upload = jest.fn().mockResolvedValue(undefined);
     const rpc = jest.fn((_name: string, args: Record<string, unknown>) =>
       Promise.resolve({
         data: [
@@ -59,12 +59,15 @@ describe("SupabaseProductImportRepository", () => {
         error: null,
       }),
     );
-    const repository = new SupabaseProductImportRepository({
-      admin: () => ({
-        rpc,
-        storage: { from: () => ({ upload }) },
-      }),
-    } as never);
+    const repository = new SupabaseProductImportRepository(
+      {
+        admin: () => ({
+          rpc,
+          storage: { from: () => ({ upload }) },
+        }),
+      } as never,
+      { write: upload } as never,
+    );
 
     await repository.begin(organizationId, {
       actorId,
@@ -75,13 +78,15 @@ describe("SupabaseProductImportRepository", () => {
       bytes: Buffer.from("csv"),
     });
 
-    expect(upload).toHaveBeenCalledWith(
-      expect.stringMatching(
+    expect(upload).toHaveBeenCalledWith({
+      objectKey: expect.stringMatching(
         new RegExp(`^${organizationId}/[0-9a-f-]+/source\\.csv$`),
-      ),
-      Buffer.from("csv"),
-      { contentType: "text/csv", upsert: false },
-    );
+      ) as unknown,
+      bytes: Buffer.from("csv"),
+      contentType: "text/csv",
+      bucket: "product-imports",
+      scope: { kind: "member", organizationId, actorId },
+    });
   });
 
   it("parses every job RPC response and fails closed on malformed provider data", async () => {

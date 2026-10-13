@@ -1,3 +1,4 @@
+import type { UploadScope } from "../../licensing/uploads/upload-scope";
 import type {
   CreateSubstantialModificationAssessmentInput,
   CreateSubstantialModificationAssessmentDraftInput,
@@ -284,6 +285,7 @@ export interface ProductComplianceStoragePort {
       objectKey: string;
       contentType: string;
       byteSize: number;
+      scope: UploadScope;
     }>,
   ): Promise<NonNullable<SecurityUpdateArtifactReserveResponse["upload"]>>;
   createSignedDownload(
@@ -607,6 +609,11 @@ export class ProductComplianceUseCases {
         return failure(Object.freeze({ code: "malformed_provider" as const }));
       }
       const upload = await this.storage.createSignedUpload({
+        scope: {
+          kind: "member",
+          organizationId: command.organizationId,
+          actorId: command.actorId,
+        },
         objectKey: reservation.objectKey,
         contentType: reservation.artifact.contentType,
         byteSize: reservation.artifact.byteSize,

@@ -28,6 +28,9 @@ vi.mock("../_features/notifications/notifications.queries", () => ({
     isError: false,
   }),
 }));
+vi.mock("../_features/licensing/licensing.queries", () => ({
+  useLicensingQueries: () => ({ policy: { data: undefined, isError: false } }),
+}));
 vi.mock("./_components/dashboard-onboarding-resume", () => ({
   DashboardOnboardingResume: () => null,
 }));

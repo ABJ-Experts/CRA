@@ -1,3 +1,6 @@
+import { SupabaseLicensingRepository } from "../../licensing/infrastructure/supabase-licensing.repository";
+import { LicensingModule } from "../../licensing/licensing.module";
+import { LicensingGuard } from "../../licensing/infrastructure/licensing.guard";
 import type { INestApplication } from "@nestjs/common";
 import { MODULE_METADATA } from "@nestjs/common/constants";
 import { APP_GUARD } from "@nestjs/core";
@@ -20,6 +23,7 @@ describe("SecurityModule", () => {
       ThrottlerGuard.name,
       SupabaseAuthGuard.name,
       PermissionsGuard.name,
+      LicensingGuard.name,
     ]);
   });
 
@@ -33,13 +37,14 @@ describe("SecurityModule", () => {
       { provide: APP_GUARD, useClass: ThrottlerGuard },
       { provide: APP_GUARD, useClass: SupabaseAuthGuard },
       { provide: APP_GUARD, useClass: PermissionsGuard },
+      { provide: APP_GUARD, useClass: LicensingGuard },
     ]);
   });
 
   it("imports every module needed by the centralized guards", () => {
     expect(
       Reflect.getMetadata(MODULE_METADATA.IMPORTS, SecurityModule),
-    ).toEqual([AuthModule, PermissionsModule, SupabaseModule]);
+    ).toEqual([AuthModule, PermissionsModule, SupabaseModule, LicensingModule]);
   });
 
   it("runs rate limiting before authentication and authorization per request", async () => {
@@ -73,7 +78,13 @@ describe("SecurityModule", () => {
     try {
       const moduleRef = await Test.createTestingModule({
         imports: [AppModule],
-      }).compile();
+      })
+        .overrideProvider(SupabaseLicensingRepository)
+        .useValue({
+          listPolicyTenants: () =>
+            Promise.resolve({ organizationIds: [], nextCursor: null }),
+        })
+        .compile();
       app = moduleRef.createNestApplication();
       await app.init();
 

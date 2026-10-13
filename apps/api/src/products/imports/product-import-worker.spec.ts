@@ -5,6 +5,49 @@ const organizationA = "00000000-0000-4000-8000-000000000002";
 const organizationB = "00000000-0000-4000-8000-000000000003";
 
 describe("ProductImportWorker", () => {
+  it("retains a source-paused commit without retries or a busy loop", async () => {
+    const repository = {
+      dueOrganizationIds: jest.fn().mockResolvedValue([organizationA]),
+      claim: jest
+        .fn()
+        .mockResolvedValueOnce({
+          outcome: "claimed",
+          importId: workerId,
+          contentHash: "a".repeat(64),
+          retryCount: 0,
+          work: { kind: "commit", actorId: workerId, idempotencyKey: workerId },
+        })
+        .mockResolvedValue({ outcome: "none_available" }),
+      source: jest.fn().mockResolvedValue({ contentHash: "a".repeat(64) }),
+      failClaim: jest.fn(),
+      markStaleClaim: jest.fn(),
+    };
+    const observe = jest.fn();
+    const executeCommit = jest.fn().mockResolvedValue({
+      ok: true,
+      value: { import: { status: "retrying", retryCount: 0 } },
+    });
+    const worker = new ProductImportWorker({
+      licensing: { canClaim: () => Promise.resolve(true) },
+      workerId,
+      leaseSeconds: 60,
+      repository: repository as never,
+      useCases: { executeCommit } as never,
+      authorizeCommit: jest.fn().mockResolvedValue(true),
+      observe,
+    });
+    await worker.runOnce();
+    expect(repository.claim).toHaveBeenCalledTimes(2);
+    expect(executeCommit).toHaveBeenCalledTimes(1);
+    expect(repository.failClaim).not.toHaveBeenCalled();
+    expect(repository.markStaleClaim).not.toHaveBeenCalled();
+    expect(observe).not.toHaveBeenCalledWith(
+      expect.objectContaining({ metric: "retry_count" }),
+    );
+    expect(observe).not.toHaveBeenCalledWith(
+      expect.objectContaining({ metric: "dead_letter" }),
+    );
+  });
   it("claims one job per tenant per round", async () => {
     const calls: string[] = [];
     const remaining = new Map([
@@ -40,6 +83,7 @@ describe("ProductImportWorker", () => {
       }),
     };
     const worker = new ProductImportWorker({
+      licensing: { canClaim: () => Promise.resolve(true) },
       workerId,
       leaseSeconds: 60,
       repository: repository as never,
@@ -78,6 +122,7 @@ describe("ProductImportWorker", () => {
     };
     const measurements: unknown[] = [];
     const worker = new ProductImportWorker({
+      licensing: { canClaim: () => Promise.resolve(true) },
       workerId,
       leaseSeconds: 60,
       repository: repository as never,
@@ -125,6 +170,7 @@ describe("ProductImportWorker", () => {
     };
     const useCases = { executeCommit: jest.fn() };
     const worker = new ProductImportWorker({
+      licensing: { canClaim: () => Promise.resolve(true) },
       workerId,
       leaseSeconds: 60,
       repository: repository as never,
@@ -167,6 +213,7 @@ describe("ProductImportWorker", () => {
     };
     const useCases = { executeCommit: jest.fn() };
     const worker = new ProductImportWorker({
+      licensing: { canClaim: () => Promise.resolve(true) },
       workerId,
       leaseSeconds: 60,
       repository: repository as never,

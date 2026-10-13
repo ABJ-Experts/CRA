@@ -1,3 +1,4 @@
+import type { UploadScope } from "../../../licensing/uploads/upload-scope";
 import type {
   OrganizationBrandingDraft,
   OrganizationBrandingDraftResponse,
@@ -142,6 +143,7 @@ export interface BrandingStoragePort {
     objectKey: string,
     bytes: Buffer,
     mimeType: "image/webp",
+    scope: UploadScope,
   ): Promise<void>;
   remove(objectKey: string): Promise<void>;
   download(
@@ -281,6 +283,11 @@ export class BrandingUseCases {
         uploadedObjectKey,
         processed.bytes,
         "image/webp",
+        {
+          kind: "member",
+          organizationId: command.organizationId,
+          actorId: command.actorId,
+        },
       );
       const finalized = await this.repository.finalizeAsset(
         command.organizationId,

@@ -67,6 +67,7 @@ vi.mock("../../_providers/session-provider", () => ({
 
 afterEach(() => {
   cleanup();
+  vi.restoreAllMocks();
   sessionStorage.clear();
   history.replaceState(null, "", "/");
   sessionState.value = {
@@ -131,6 +132,9 @@ describe("ReportsWorkspace", () => {
   });
 
   it("requires a successful preview before activation", async () => {
+    vi.spyOn(Date, "now").mockReturnValue(
+      Date.parse("2026-10-12T10:00:00.000Z"),
+    );
     const gateway = {
       list: vi
         .fn()
@@ -176,9 +180,11 @@ describe("ReportsWorkspace", () => {
       }),
     ).toBeVisible();
     expect(screen.getByText(/Owner.*Eligible/)).toBeVisible();
-    await userEvent.click(
-      screen.getByRole("button", { name: "Activate schedule" }),
-    );
+    const activateButton = screen.getByRole("button", {
+      name: "Activate schedule",
+    });
+    await waitFor(() => expect(activateButton).toBeEnabled());
+    await userEvent.click(activateButton);
     await waitFor(() =>
       expect(gateway.activate).toHaveBeenCalledWith(
         id,

@@ -8,6 +8,7 @@ import helmet from "helmet";
 import { AppModule } from "./app.module";
 import { AllExceptionsFilter } from "./common/filters/all-exceptions.filter";
 import { API_PREFIX } from "./auth/cookies.util";
+import { configureApiBodyParsers } from "./common/http/body-parsers";
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
@@ -15,6 +16,7 @@ async function bootstrap(): Promise<void> {
     bufferLogs: false,
     // Provider signatures cover the exact request bytes, before JSON parsing.
     rawBody: true,
+    bodyParser: false,
   });
   const config = app.get(ConfigService);
   const logger = new Logger("Bootstrap");
@@ -31,7 +33,7 @@ async function bootstrap(): Promise<void> {
 
   // Customer framework imports are capped at 2 MiB by the shared schema;
   // allow JSON envelope overhead before the Zod boundary rejects larger input.
-  app.useBodyParser("json", { limit: "2200kb" });
+  configureApiBodyParsers(app);
 
   /*
    * Trust only configured ingress addresses. A hop count of one trusts an

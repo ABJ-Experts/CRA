@@ -1,3 +1,4 @@
+import { SourceLicenseAdmission } from "../../licensing/infrastructure/source-license-admission";
 import { Injectable } from "@nestjs/common";
 import {
   acquireReportingStageDraftLockResponseSchema,
@@ -69,7 +70,10 @@ type RpcClient = Readonly<{
 
 @Injectable()
 export class SupabaseReportingObligationRepository implements ReportingObligationRepository {
-  constructor(private readonly supabase: SupabaseService) {}
+  constructor(
+    private readonly supabase: SupabaseService,
+    private readonly admission?: SourceLicenseAdmission,
+  ) {}
 
   async getStageDraft(
     organizationId: string,
@@ -628,6 +632,8 @@ export class SupabaseReportingObligationRepository implements ReportingObligatio
     name: string,
     args: Readonly<Record<string, unknown>>,
   ): Promise<Readonly<{ outcome: string; result: unknown }>> {
+    if (name.endsWith("_atomic") && typeof args.p_organization_id === "string")
+      await this.admission?.reporting(args.p_organization_id);
     const response = await this.client().rpc(name, args);
     if (response.error) throw new Error("reporting obligation unavailable");
     const row = one(response.data);

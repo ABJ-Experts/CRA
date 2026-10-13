@@ -1,3 +1,4 @@
+import { licensingHttp } from "../licensing/infrastructure/licensing-http";
 import {
   BadGatewayException,
   BadRequestException,
@@ -240,7 +241,7 @@ export class ProductsService {
   private async unwrap<T>(
     pending: Promise<Result<T, ProductError>>,
   ): Promise<T> {
-    const result = await pending;
+    const result = await licensingHttp(() => pending);
     if (result.ok) return result.value;
     throw this.httpFailure(result.error);
   }
@@ -250,7 +251,7 @@ export class ProductsService {
       preview: { outcome: "allowed" | "cycle_detected" | "depth_exceeded" };
     }>,
   >(pending: Promise<Result<T, ProductError>>): Promise<T> {
-    const result = await pending;
+    const result = await licensingHttp(() => pending);
     if (result.ok && result.value.preview.outcome === "cycle_detected") {
       this.logger.warn(
         JSON.stringify({

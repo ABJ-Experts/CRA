@@ -23,27 +23,31 @@ function sha256(bytes: Buffer): string {
 }
 
 describe("SupabaseBrandingStorageAdapter", () => {
-  it("uploads normalized WebP bytes into the private branding bucket without upsert", async () => {
-    const upload = jest
-      .fn()
-      .mockResolvedValue({ data: { path: "ok" }, error: null });
-    const supabase = {
-      admin: () => ({
-        storage: {
-          from: jest.fn().mockReturnValue({ upload }),
-        },
-      }),
+  it("admits normalized branding bytes before private storage publication", async () => {
+    const write = jest.fn().mockResolvedValue(undefined);
+    const scope = {
+      kind: "member" as const,
+      organizationId: "00000000-0000-4000-8000-000000000001",
+      actorId: "00000000-0000-4000-8000-000000000002",
     };
-    const adapter = new SupabaseBrandingStorageAdapter(supabase as never);
-
+    const adapter = new SupabaseBrandingStorageAdapter(
+      {} as never,
+      { write } as never,
+    );
     await expect(
-      adapter.upload("org/asset.webp", Buffer.from("webp"), "image/webp"),
+      adapter.upload(
+        "org/asset.webp",
+        Buffer.from("webp"),
+        "image/webp",
+        scope,
+      ),
     ).resolves.toBeUndefined();
-
-    expect(upload).toHaveBeenCalledWith("org/asset.webp", Buffer.from("webp"), {
+    expect(write).toHaveBeenCalledWith({
+      objectKey: "org/asset.webp",
+      bytes: Buffer.from("webp"),
       contentType: "image/webp",
-      cacheControl: "31536000",
-      upsert: false,
+      bucket: "organization-branding",
+      scope,
     });
   });
 

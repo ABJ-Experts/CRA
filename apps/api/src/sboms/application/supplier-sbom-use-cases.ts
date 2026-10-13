@@ -1,3 +1,5 @@
+import { LicensingError } from "../../licensing/application/licensing.errors";
+import { createHash } from "node:crypto";
 import { randomUUID } from "node:crypto";
 
 import type { Result } from "../../common/domain/result";
@@ -277,7 +279,8 @@ export class SupplierSbomUseCases {
             }),
           )
         : failure({ code: "not_found" });
-    } catch {
+    } catch (error) {
+      if (error instanceof LicensingError) throw error;
       return failure({ code: "unavailable" });
     }
   }
@@ -334,6 +337,12 @@ export class SupplierSbomUseCases {
       if (!("reservation" in reserved))
         return failure({ code: reserved.outcome });
       const upload = await this.storage.createSignedUpload({
+        scope: {
+          kind: "supplier_sbom",
+          sessionTokenHash: createHash("sha256")
+            .update(command.sessionToken)
+            .digest("hex"),
+        },
         objectKey: reserved.reservation.objectKey,
         contentType: reserved.reservation.mediaType,
         byteSize: reserved.reservation.byteSize,
@@ -346,7 +355,8 @@ export class SupplierSbomUseCases {
           replayed: reserved.outcome === "replayed",
         }),
       );
-    } catch {
+    } catch (error) {
+      if (error instanceof LicensingError) throw error;
       return failure({ code: "unavailable" });
     }
   }
@@ -401,7 +411,8 @@ export class SupplierSbomUseCases {
           outcome: completed.outcome,
         }),
       );
-    } catch {
+    } catch (error) {
+      if (error instanceof LicensingError) throw error;
       return failure({ code: "unavailable" });
     }
   }
@@ -425,7 +436,8 @@ export class SupplierSbomUseCases {
       const result = pick(value);
       if (result !== null) return success(result);
       return failure({ code: supplierOutcomeError(value.outcome) });
-    } catch {
+    } catch (error) {
+      if (error instanceof LicensingError) throw error;
       return failure({ code: "unavailable" });
     }
   }

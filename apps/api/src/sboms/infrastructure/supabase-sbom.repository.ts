@@ -1,3 +1,4 @@
+import { SourceLicenseAdmission } from "../../licensing/infrastructure/source-license-admission";
 import {
   createHash,
   randomBytes,
@@ -296,7 +297,10 @@ export class SupabaseSbomRepository
     SbomDiffQueue,
     SbomCompositeQueue
 {
-  constructor(private readonly supabase: SupabaseService) {}
+  constructor(
+    private readonly supabase: SupabaseService,
+    private readonly admission?: SourceLicenseAdmission,
+  ) {}
 
   async upsertBinding(
     orgId: string,
@@ -551,6 +555,7 @@ export class SupabaseSbomRepository
       binding.credentialId !== credentialId
     )
       return { outcome: "not_found" };
+    await this.admission?.ci(orgId);
     const sourceId = randomUUID();
     const expiresAt = new Date(Date.now() + 10 * 60_000).toISOString();
     const intakeInput = {
@@ -1129,6 +1134,10 @@ export class SupabaseSbomRepository
   async reserveUpload(
     input: Parameters<SupplierSbomRepository["reserveUpload"]>[0],
   ): Promise<Awaited<ReturnType<SupplierSbomRepository["reserveUpload"]>>> {
+    await this.admission?.supplier(
+      "supplier_sbom",
+      tokenHash(input.sessionToken),
+    );
     const sourceId = randomUUID();
     const row = await this.one("reserve_supplier_sbom_submission_atomic", {
       p_session_token_hash: tokenHash(input.sessionToken),

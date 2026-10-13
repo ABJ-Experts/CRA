@@ -1,3 +1,4 @@
+import { LicensingService } from "../../licensing/application/licensing.service";
 import { Injectable } from "@nestjs/common";
 import { createHash, randomUUID } from "node:crypto";
 import PDFDocument from "pdfkit";
@@ -20,7 +21,10 @@ const claimSchema = z.object({
 /** Renders only the transactionally frozen payload of one leased declaration. */
 @Injectable()
 export class TechnicalFileDeclarationWorker {
-  constructor(private readonly supabase: SupabaseService) {}
+  constructor(
+    private readonly supabase: SupabaseService,
+    private readonly licensing: LicensingService,
+  ) {}
 
   async processOne(
     workerId = randomUUID(),
@@ -32,6 +36,7 @@ export class TechnicalFileDeclarationWorker {
   private async claimAndProcessOne(
     workerId: string,
   ): Promise<"empty" | "issued" | "failed"> {
+    await this.licensing.prepareClaims("technical_files");
     const claimed = await this.rpc("claim_technical_file_declaration", {
       p_worker_id: workerId,
       p_lease_seconds: 120,

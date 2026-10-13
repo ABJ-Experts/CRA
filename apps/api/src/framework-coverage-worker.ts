@@ -1,3 +1,4 @@
+import { LicensingService } from "./licensing/application/licensing.service";
 import { Logger } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 import { randomUUID } from "node:crypto";
@@ -16,6 +17,7 @@ async function bootstrap() {
   const logger = new Logger("FrameworkCoverageWorker");
   const worker = new CoverageRecalculationWorker(
     app.get(SupabaseCoverageWorkQueue),
+    app.get(LicensingService),
   );
   const workerId = randomUUID();
   const once = process.argv.includes("--once");

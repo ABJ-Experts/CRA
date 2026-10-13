@@ -687,6 +687,7 @@ describe("connector sync worker claim fairness", () => {
       claimSyncRun: jest.fn().mockResolvedValue(null),
     };
     const worker = new ConnectorSyncWorker(
+      { canClaim: () => Promise.resolve(true) },
       repository as never,
       {} as never,
       new Map(),

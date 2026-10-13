@@ -173,6 +173,7 @@ describe("SbomDiffWorker", () => {
 
 function worker(queue: SbomDiffQueue) {
   return new SbomDiffWorker({
+    licensing: { canClaim: () => Promise.resolve(true) },
     workerId: "00000000-0000-4000-8000-000000000007",
     leaseSeconds: 60,
     queue,

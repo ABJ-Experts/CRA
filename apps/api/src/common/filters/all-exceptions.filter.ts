@@ -51,6 +51,8 @@ function isSafeServerErrorCode(
 
 function logUrl(request: Request): string {
   const originalUrl = request.originalUrl ?? request.url ?? "";
+  if (originalUrl.startsWith("/api/v1/licensing/uploads/"))
+    return "/api/v1/licensing/uploads/:operationId/:token";
   if (!originalUrl.startsWith("/api/v1/audit")) return originalUrl;
 
   return originalUrl

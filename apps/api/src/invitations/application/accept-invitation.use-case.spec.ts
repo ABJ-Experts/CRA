@@ -1,3 +1,4 @@
+import { LicensingError } from "../../licensing/application/licensing.errors";
 import type {
   Invitation,
   OrganizationSummary,
@@ -87,6 +88,17 @@ function fixture() {
 const user = Object.freeze({ id: "user-1", email: "member@cra.test" });
 
 describe("AcceptInvitationUseCase", () => {
+  it("preserves a typed licence denial from source admission", async () => {
+    const { repository, useCase } = fixture();
+    repository.failure = new LicensingError(
+      "license_seat_limit",
+      409,
+      "Seat limit reached",
+    );
+    await expect(
+      useCase.execute({ token: "raw-token", user }),
+    ).rejects.toMatchObject({ code: "license_seat_limit", status: 409 });
+  });
   it("hashes the raw token and normalizes the caller email", async () => {
     const { repository, useCase } = fixture();
 

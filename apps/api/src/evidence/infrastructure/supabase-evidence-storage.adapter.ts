@@ -1,14 +1,14 @@
+import { BoundedUploadService } from "../../licensing/uploads/bounded-upload.service";
+import type { UploadScope } from "../../licensing/uploads/upload-scope";
 import { createHash } from "node:crypto";
 import { Readable, Transform } from "node:stream";
-import { Injectable } from "@nestjs/common";
-import { fromBuffer as fileTypeFromBuffer } from "file-type";
-import yauzl from "yauzl";
+import { Injectable, Optional } from "@nestjs/common";
+import { inspectEvidenceMediaType } from "../../common/storage/evidence-media-inspection";
 import { SupabaseService } from "../../supabase/supabase.service";
 import type { EvidenceStoragePort } from "../application/evidence-intake-use-cases";
 
 const bucket = "evidence-documents";
 const maximumBytes = 50 * 1024 * 1024;
-const uploadTtlMilliseconds = 15 * 60 * 1_000;
 const objectKey =
   /^[0-9a-f-]{36}\/[0-9a-f-]{36}\/[0-9a-f-]{36}\/[0-9a-f-]{36}$/;
 const accepted = new Set([
@@ -29,30 +29,25 @@ type StorageResponse<T> = Readonly<{
 
 @Injectable()
 export class SupabaseEvidenceStorageAdapter implements EvidenceStoragePort {
-  constructor(private readonly supabase: SupabaseService) {}
+  constructor(
+    private readonly supabase: SupabaseService,
+    @Optional() private readonly uploads?: BoundedUploadService,
+  ) {}
 
   async createSignedUpload(
     input: Readonly<{
       objectKey: string;
       contentType: string;
       byteSize: number;
+      scope?: UploadScope;
     }>,
   ) {
     if (!objectKey.test(input.objectKey) || !validSize(input.byteSize))
       throw new EvidenceStorageError("malformed");
     try {
-      const result = (await this.supabase
-        .admin()
-        .storage.from(bucket)
-        .createSignedUploadUrl(input.objectKey, {
-          upsert: false,
-        })) as StorageResponse<Readonly<{ signedUrl?: unknown }>>;
-      if (result.error || typeof result.data?.signedUrl !== "string")
-        throw new EvidenceStorageError("unavailable");
-      return Object.freeze({
-        uploadUrl: result.data.signedUrl,
-        expiresAt: new Date(Date.now() + uploadTtlMilliseconds).toISOString(),
-      });
+      if (!this.uploads || !input.scope)
+        throw new Error("Upload admission unavailable");
+      return await this.uploads.issue({ ...input, scope: input.scope, bucket });
     } catch (error) {
       throw this.providerError(error);
     }
@@ -83,10 +78,10 @@ export class SupabaseEvidenceStorageAdapter implements EvidenceStoragePort {
       if (!validSize(result.data.size))
         return { outcome: "rejected" as const, code: "size_exceeded" };
       const measured = await digest(result.data);
-      const mediaType = await inspectType(
+      const mediaType = await inspectEvidenceMediaType(
         measured.probe,
         measured.textProbe,
-        result.data,
+        async () => Buffer.from(await result.data!.arrayBuffer()),
       );
       if (!mediaType)
         return {
@@ -149,10 +144,10 @@ export class SupabaseEvidenceStorageAdapter implements EvidenceStoragePort {
       .download(input.objectKey)) as StorageResponse<Blob>;
     if (result.error || !result.data) return null;
     const measured = await digest(result.data);
-    const detected = await inspectType(
+    const detected = await inspectEvidenceMediaType(
       measured.probe,
       measured.textProbe,
-      result.data,
+      async () => Buffer.from(await result.data!.arrayBuffer()),
     );
     if (
       measured.byteSize !== input.byteSize ||
@@ -249,92 +244,6 @@ async function digest(blob: Blob) {
     probe,
     textProbe: probe.toString("utf8"),
   };
-}
-
-async function inspectType(
-  probe: Buffer,
-  text: string,
-  blob: Blob,
-): Promise<string | null> {
-  // PDF must begin at byte zero: allowing a leading executable turns a polyglot
-  // into a plausible document. Office files are further constrained by their
-  // declared extension at the reservation/DB layer and scanned before access.
-  if (probe.subarray(0, 5).toString("ascii") === "%PDF-")
-    return "application/pdf";
-  const detected = await fileTypeFromBuffer(probe);
-  if (
-    detected?.mime === "image/jpeg" ||
-    detected?.mime === "image/png" ||
-    detected?.mime === "image/webp"
-  )
-    return detected.mime;
-  if (detected?.mime === "application/zip") return inspectOoxml(blob);
-  if (probe.includes(0)) return null;
-  if (!/^[\t\n\r\x20-\x7e\u0080-\uffff]*$/u.test(text)) return null;
-  return /[,;\n\r]/.test(text) ? "text/csv" : "text/plain";
-}
-
-/** Inspect OOXML central-directory metadata only. yauzl never extracts an
- * entry here: entries are bounded before any future consumer can process one. */
-async function inspectOoxml(blob: Blob): Promise<string | null> {
-  const bytes = Buffer.from(await blob.arrayBuffer());
-  return new Promise((resolve) => {
-    yauzl.fromBuffer(
-      bytes,
-      { lazyEntries: true, decodeStrings: true, validateEntrySizes: true },
-      (error, archive) => {
-        if (error || !archive) return resolve(null);
-        let count = 0;
-        let total = 0;
-        let contentType: string | null = null;
-        let done = false;
-        const finish = (value: string | null) => {
-          if (!done) {
-            done = true;
-            archive.close();
-            resolve(value);
-          }
-        };
-        archive.on("error", () => finish(null));
-        let word = false;
-        let xl = false;
-        let ppt = false;
-        archive.on("entry", (entry: yauzl.Entry) => {
-          if (
-            ++count > 10_000 ||
-            entry.uncompressedSize > 50 * 1024 * 1024 ||
-            (entry.compressedSize > 0 &&
-              entry.uncompressedSize / entry.compressedSize > 100) ||
-            entry.fileName.startsWith("/") ||
-            entry.fileName.includes("..") ||
-            /vbaProject\.bin$/i.test(entry.fileName) ||
-            (entry.generalPurposeBitFlag & 1) !== 0
-          )
-            return finish(null);
-          total += entry.uncompressedSize;
-          if (total > 200 * 1024 * 1024) return finish(null);
-          if (entry.fileName === "[Content_Types].xml") contentType = "pending";
-          if (entry.fileName === "word/document.xml") word = true;
-          if (entry.fileName === "xl/workbook.xml") xl = true;
-          if (entry.fileName === "ppt/presentation.xml") ppt = true;
-          archive.readEntry();
-        });
-        archive.removeAllListeners("end");
-        archive.on("end", () =>
-          finish(
-            contentType === "pending" && word
-              ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-              : contentType === "pending" && xl
-                ? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                : contentType === "pending" && ppt
-                  ? "application/vnd.openxmlformats-officedocument.presentationml.presentation"
-                  : null,
-          ),
-        );
-        archive.readEntry();
-      },
-    );
-  });
 }
 
 function validSize(value: number) {

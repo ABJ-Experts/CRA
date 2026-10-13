@@ -88,6 +88,7 @@ function fixture() {
       ),
   };
   const worker = new WebhookDeliveryWorker(
+    { canClaim: () => Promise.resolve(true) },
     repo as unknown as WebhookRepositoryPort,
     vault as unknown as WebhookVaultPort,
     transport,

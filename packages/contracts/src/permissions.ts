@@ -78,6 +78,7 @@ export const PERMISSION_MATRIX = {
   invitations: ["view", "create", "delete", "export"],
   organization: ["view", "edit", "delete", "export"],
   audit: ["view", "export"],
+  licensing: ["view", "manage"],
   // Commerce
   products: ["view", "create", "edit", "delete", "export", "approve"],
   orders: ["view", "create", "edit", "delete", "export"],

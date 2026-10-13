@@ -228,6 +228,29 @@ describe("AllExceptionsFilter", () => {
     );
   });
 
+  it("redacts bounded upload bearer tokens and query values from logs", () => {
+    const host = {
+      switchToHttp: () => ({
+        getRequest: () => ({
+          method: "PUT",
+          originalUrl:
+            "/api/v1/licensing/uploads/11111111-1111-4111-8111-111111111111/private-upload-token?retry=private",
+        }),
+        getResponse: () => ({
+          status: jest.fn().mockReturnThis(),
+          json: jest.fn(),
+        }),
+      }),
+    } as unknown as ArgumentsHost;
+    new AllExceptionsFilter().catch(
+      new HttpException({ message: "Denied", code: "forbidden" }, 403),
+      host,
+    );
+    expect(warn).toHaveBeenCalledWith(
+      "PUT /api/v1/licensing/uploads/:operationId/:token -> 403 forbidden",
+    );
+  });
+
   it("sanitizes and stringifies a non-Error thrown value", () => {
     const { filter, host, json } = fixture();
 

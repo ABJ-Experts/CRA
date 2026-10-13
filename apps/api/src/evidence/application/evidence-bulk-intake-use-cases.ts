@@ -232,6 +232,11 @@ export class EvidenceBulkIntakeUseCases {
     const byteSize = numberValue(value.declaredByteSize);
     if (!key || byteSize === null) return { outcome: "conflict" as const };
     const upload = await this.storage.createSignedUpload({
+      scope: {
+        kind: "member",
+        organizationId: input.organizationId,
+        actorId: input.actorId,
+      },
       objectKey: key,
       contentType: "application/octet-stream",
       byteSize,
@@ -313,6 +318,11 @@ export class EvidenceBulkIntakeUseCases {
     const byteSize = numberValue(value.declaredByteSize);
     if (!key || byteSize === null) return { outcome: "conflict" as const };
     const upload = await this.storage.createSignedUpload({
+      scope: {
+        kind: "member",
+        organizationId: input.organizationId,
+        actorId: input.actorId,
+      },
       objectKey: key,
       contentType: "application/octet-stream",
       byteSize,

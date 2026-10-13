@@ -1,3 +1,4 @@
+import type { LicensingWorkerPolicy } from "../../licensing/operations/licensing-worker-policy";
 import { Logger } from "@nestjs/common";
 import { webhookEnvelopeSchema } from "@repo/contracts/connectors/schemas";
 import type { OutgoingHttpHeaders } from "node:http";
@@ -34,6 +35,7 @@ export type WebhookTransportPort = Readonly<{
 export class WebhookDeliveryWorker {
   private readonly logger = new Logger(WebhookDeliveryWorker.name);
   constructor(
+    private readonly licensing: LicensingWorkerPolicy,
     private readonly repository: WebhookRepositoryPort,
     private readonly vault: WebhookVaultPort,
     private readonly transport: WebhookTransportPort,
@@ -48,6 +50,7 @@ export class WebhookDeliveryWorker {
     let processed = 0;
     for (const orgId of organizations) {
       try {
+        if (!(await this.licensing.canClaim(orgId, "connectors"))) continue;
         const claimed = await this.repository.claim(
           orgId,
           this.workerId,

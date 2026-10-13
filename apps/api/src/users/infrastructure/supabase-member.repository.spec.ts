@@ -6,7 +6,7 @@ import { SupabaseMemberRepository } from "./supabase-member.repository";
 interface QueryResult {
   readonly data: unknown;
   readonly count?: number | null;
-  readonly error: { readonly message: string } | null;
+  readonly error: { readonly message: string; readonly code?: string } | null;
 }
 
 function query(result: QueryResult) {
@@ -251,6 +251,16 @@ describe("SupabaseMemberRepository", () => {
     correlationId: "22222222-2222-4222-8222-222222222222",
     sourceIp: "127.0.0.1",
   };
+
+  it("preserves the active-member source quota denial", async () => {
+    const { repository } = harness([], {
+      data: null,
+      error: { code: "42501", message: "licensing_seat_limit" },
+    });
+    await expect(
+      repository.setActive("org-a", "user-a", true, "actor-a", context),
+    ).rejects.toMatchObject({ code: "license_seat_limit", status: 409 });
+  });
 
   it("uses one scoped RPC for each audited member mutation", async () => {
     const { repository, rpc, from } = harness([]);

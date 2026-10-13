@@ -1,3 +1,5 @@
+import { LicensingModule } from "../../licensing/licensing.module";
+import { LicensingGuard } from "../../licensing/infrastructure/licensing.guard";
 import { Module } from "@nestjs/common";
 import { APP_GUARD } from "@nestjs/core";
 import { ThrottlerGuard } from "@nestjs/throttler";
@@ -19,14 +21,16 @@ export const SECURITY_GUARD_ORDER = Object.freeze([
   ThrottlerGuard.name,
   SupabaseAuthGuard.name,
   PermissionsGuard.name,
+  LicensingGuard.name,
 ]);
 
 @Module({
-  imports: [AuthModule, PermissionsModule, SupabaseModule],
+  imports: [AuthModule, PermissionsModule, SupabaseModule, LicensingModule],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_GUARD, useClass: SupabaseAuthGuard },
     { provide: APP_GUARD, useClass: PermissionsGuard },
+    { provide: APP_GUARD, useClass: LicensingGuard },
   ],
 })
 export class SecurityModule {}

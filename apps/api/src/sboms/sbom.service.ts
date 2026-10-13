@@ -1,3 +1,4 @@
+import { licensingHttp } from "../licensing/infrastructure/licensing-http";
 import {
   BadRequestException,
   ConflictException,
@@ -234,7 +235,7 @@ export class SbomService {
   private async unwrap<T>(
     pending: Promise<Result<T, SbomIntakeError>>,
   ): Promise<T> {
-    const result = await pending;
+    const result = await licensingHttp(() => pending);
     if (result.ok) return result.value;
     throw this.failure(result.error);
   }

@@ -1,3 +1,4 @@
+import { sourceLicenseError } from "../../licensing/infrastructure/source-license-error";
 import { randomUUID } from "node:crypto";
 import { Injectable } from "@nestjs/common";
 import {
@@ -1690,10 +1691,16 @@ export class SupabaseProductRepository implements ProductRepository {
         name,
         args,
       );
-    } catch {
-      throw new ProductProviderError("unavailable");
+    } catch (error) {
+      throw (
+        sourceLicenseError(error) ?? new ProductProviderError("unavailable")
+      );
     }
-    if (result.error) throw new ProductProviderError("unavailable");
+    if (result.error)
+      throw (
+        sourceLicenseError(result.error) ??
+        new ProductProviderError("unavailable")
+      );
     if (!Array.isArray(result.data) || result.data.length !== 1)
       throw new ProductProviderError("malformed");
     return this.record(result.data[0]);

@@ -1,5 +1,6 @@
+import { BoundedUploadService } from "../../licensing/uploads/bounded-upload.service";
 import { randomUUID } from "node:crypto";
-import { Injectable, Logger } from "@nestjs/common";
+import { Injectable, Logger, Optional } from "@nestjs/common";
 import {
   productImportFieldIssueSchema,
   productImportReportLinkResponseSchema,
@@ -69,14 +70,25 @@ const workSchema = z
 export class SupabaseProductImportRepository implements ProductImportRepository {
   private readonly logger = new Logger(SupabaseProductImportRepository.name);
 
-  constructor(private readonly supabase: SupabaseService) {}
+  constructor(
+    private readonly supabase: SupabaseService,
+    @Optional() private readonly uploads?: BoundedUploadService,
+  ) {}
 
   async begin(
     organizationId: string,
     input: Parameters<ProductImportRepository["begin"]>[1],
   ): Promise<ImportRepositoryOutcome> {
     const paths = importObjectPath(organizationId);
-    await this.upload(paths.source, input.bytes, false);
+    if (!this.uploads)
+      throw new ProductImportProviderError("provider_unavailable");
+    await this.uploads.write({
+      objectKey: paths.source,
+      bytes: input.bytes,
+      contentType: "text/csv",
+      bucket,
+      scope: { kind: "member", organizationId, actorId: input.actorId },
+    });
     const row = await this.one("create_product_import_job", {
       p_organization_id: organizationId,
       p_actor_user_id: input.actorId,

@@ -1,3 +1,4 @@
+import { LicensingError } from "../../licensing/application/licensing.errors";
 import {
   SupplierSbomUseCases,
   type SupplierSbomRepository,
@@ -22,6 +23,20 @@ const reservation = {
 };
 
 describe("SupplierSbomUseCases", () => {
+  it("preserves licence refresh denials before issuing supplier upload storage", async () => {
+    const denial = new LicensingError(
+      "license_write_denied",
+      403,
+      "Customer writes are paused",
+    );
+    const storage = { createSignedUpload: jest.fn() };
+    const useCases = new SupplierSbomUseCases(
+      { reserveUpload: jest.fn().mockRejectedValue(denial) } as never,
+      storage as never,
+    );
+    await expect(useCases.initializeUpload({} as never)).rejects.toBe(denial);
+    expect(storage.createSignedUpload).not.toHaveBeenCalled();
+  });
   it("binds a caller-generated session secret so a lost exchange response can retry safely", async () => {
     const exchangeInvitation = jest.fn().mockResolvedValue({
       outcome: "created",

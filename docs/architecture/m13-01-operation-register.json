@@ -3638,6 +3638,26 @@
           "note": "M14-04: source-owned tenant-scoped transaction and durable chained audit; no best-effort completion."
         }
       ]
+    },
+    {
+      "id": "apps/api/src/licensing/licensing.controller.ts#LicensingController.activate:POST:licensing/activate",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261013054206_m15_01_local_licensing.sql",
+          "symbol": "m15_01_activate"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/licensing/uploads/bounded-upload.controller.ts#BoundedUploadController.upload:PUT:licensing/uploads/:operationId/:token",
+      "authority": [
+        {
+          "kind": "job-history",
+          "evidence": "apps/infrastructure/supabase/migrations/20261013054206_m15_01_local_licensing.sql",
+          "symbol": "m15_01_complete_storage"
+        }
+      ]
     }
   ],
   "workers": [

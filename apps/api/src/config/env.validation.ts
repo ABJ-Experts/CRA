@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { isIP } from "node:net";
+import { licenseCapabilitySchema } from "@repo/contracts/licensing/schemas";
 
 /**
  * Environment schema. Validated once at boot so a missing or malformed value
@@ -461,6 +462,44 @@ export const envSchema = z.object({
    * cookies anyway. This is a fixed invariant rather than a tunable value.
    */
   SESSION_EPOCH_SKEW_SECONDS: fixedZero,
+  /** Absent provisioning fails only licensed operations, never renewal/auth/export. */
+  API_PUBLIC_ORIGIN: z
+    .url()
+    .refine((value) => {
+      const url = new URL(value);
+      return (
+        (url.protocol === "https:" ||
+          (url.protocol === "http:" &&
+            ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname))) &&
+        !url.username &&
+        !url.password &&
+        !url.search &&
+        !url.hash &&
+        url.pathname === "/"
+      );
+    }, "must be an HTTPS origin or loopback HTTP origin")
+    .optional(),
+  LICENSING_POLICY_REVISION: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(Number.MAX_SAFE_INTEGER)
+    .default(1),
+  LICENSING_INSTANCE_ID: z.uuid().optional(),
+  LICENSING_TRUST_FILE: z.string().trim().min(1).max(1024).optional(),
+  LICENSING_LOCAL_FEATURES_JSON: z
+    .string()
+    .max(8192)
+    .default("{}")
+    .refine((value) => {
+      try {
+        return z
+          .partialRecord(licenseCapabilitySchema, z.boolean())
+          .safeParse(JSON.parse(value)).success;
+      } catch {
+        return false;
+      }
+    }, "must be a capability-to-boolean object"),
 });
 
 export type Env = z.infer<typeof envSchema>;

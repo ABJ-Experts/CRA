@@ -1,3 +1,4 @@
+import type { LicensingWorkerPolicy } from "../../licensing/operations/licensing-worker-policy";
 import { Logger } from "@nestjs/common";
 import { z } from "zod";
 
@@ -144,6 +145,7 @@ export class SbomQualityWorker {
   constructor(
     private readonly dependencies: Readonly<{
       workerId: string;
+      licensing: LicensingWorkerPolicy;
       leaseSeconds: number;
       queue: SbomQualityQueue;
       pageSize?: number;
@@ -188,6 +190,8 @@ export class SbomQualityWorker {
   }
 
   private async processOne(organizationId: string): Promise<boolean> {
+    if (!(await this.dependencies.licensing.canClaim(organizationId, "sboms")))
+      return false;
     const claim = await this.dependencies.queue.claimQualityReport(
       organizationId,
       {

@@ -1,6 +1,8 @@
+import { BoundedUploadService } from "../../../licensing/uploads/bounded-upload.service";
+import type { UploadScope } from "../../../licensing/uploads/upload-scope";
 import { createHash } from "node:crypto";
 
-import { Injectable } from "@nestjs/common";
+import { Injectable, Optional } from "@nestjs/common";
 import { fromBuffer as fileTypeFromBuffer } from "file-type";
 import { BRANDING_MAX_LOGO_BYTES } from "@repo/contracts/organizations";
 
@@ -15,23 +17,27 @@ const SHA256_PATTERN = /^[a-f0-9]{64}$/;
 
 @Injectable()
 export class SupabaseBrandingStorageAdapter implements BrandingStoragePort {
-  constructor(private readonly supabase: SupabaseService) {}
+  constructor(
+    private readonly supabase: SupabaseService,
+    @Optional() private readonly uploads?: BoundedUploadService,
+  ) {}
 
   async upload(
     objectKey: string,
     bytes: Buffer,
     mimeType: "image/webp",
+    scope?: UploadScope,
   ): Promise<void> {
     try {
-      const result = await this.supabase
-        .admin()
-        .storage.from(BRANDING_BUCKET)
-        .upload(objectKey, bytes, {
-          contentType: mimeType,
-          cacheControl: "31536000",
-          upsert: false,
-        });
-      if (result.error) throw new BrandingProviderError("unavailable");
+      if (!this.uploads || !scope)
+        throw new BrandingProviderError("unavailable");
+      await this.uploads.write({
+        objectKey,
+        bytes,
+        contentType: mimeType,
+        bucket: BRANDING_BUCKET,
+        scope,
+      });
     } catch (error) {
       if (error instanceof BrandingProviderError) throw error;
       throw new BrandingProviderError("unavailable");

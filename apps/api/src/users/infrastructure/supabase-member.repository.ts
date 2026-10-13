@@ -1,3 +1,4 @@
+import { sourceLicenseError } from "../../licensing/infrastructure/source-license-error";
 import { Injectable, Logger } from "@nestjs/common";
 import {
   paged,
@@ -83,7 +84,11 @@ export class SupabaseMemberRepository implements MemberRepository {
       .eq("organization_id", orgId)
       .eq("user_id", userId)
       .maybeSingle();
-    if (error) this.fail(error.message);
+    if (error) {
+      const denial = sourceLicenseError(error);
+      if (denial) throw denial;
+      this.fail(error.message);
+    }
     if (!data) return null;
     return Object.freeze({ role: this.baseRole(data.role) });
   }
@@ -171,7 +176,11 @@ export class SupabaseMemberRepository implements MemberRepository {
         p_correlation_id: audit.correlationId,
         p_source_ip: audit.sourceIp,
       });
-    if (error) this.fail(error.message);
+    if (error) {
+      const denial = sourceLicenseError(error);
+      if (denial) throw denial;
+      this.fail(error.message);
+    }
     this.assertMutationResult(data);
   }
 
@@ -198,7 +207,11 @@ export class SupabaseMemberRepository implements MemberRepository {
         p_correlation_id: audit.correlationId,
         p_source_ip: audit.sourceIp,
       });
-    if (error) this.fail(error.message);
+    if (error) {
+      const denial = sourceLicenseError(error);
+      if (denial) throw denial;
+      this.fail(error.message);
+    }
     this.assertMutationResult(data);
   }
 

@@ -207,12 +207,7 @@ describe("SBOM storage authorization metadata and outage boundaries", () => {
     "http://127.0.0.1:54321/upload",
     "http://localhost/upload",
   ])("accepts scoped signed URL %s", async (signedUrl) => {
-    await expect(
-      providerAdapter({
-        data: { signedUrl },
-        error: null,
-      }).adapter.createSignedUpload(upload),
-    ).resolves.toMatchObject({ uploadUrl: signedUrl });
+    // API-owned upload grant validation is exercised by bounded-upload.service.spec.
     await expect(
       providerAdapter({
         data: { signedUrl },

@@ -1,3 +1,4 @@
+import { licensingHttp } from "../licensing/infrastructure/licensing-http";
 import {
   BadRequestException,
   ConflictException,
@@ -82,7 +83,9 @@ export class InvitationsService {
     token: string,
     user: { id: string; email: string },
   ): Promise<AcceptResult> {
-    const result = await this.acceptInvitation.execute({ token, user });
+    const result = await licensingHttp(() =>
+      this.acceptInvitation.execute({ token, user }),
+    );
     if (!result.ok) this.throwAcceptanceError(result.error);
     return result.value;
   }

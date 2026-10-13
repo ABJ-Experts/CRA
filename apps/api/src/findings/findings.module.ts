@@ -1,3 +1,5 @@
+import { LicensingModule } from "../licensing/licensing.module";
+import { LicensingService } from "../licensing/application/licensing.service";
 import { randomUUID } from "node:crypto";
 import { Module } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
@@ -95,6 +97,7 @@ import {
 
 @Module({
   imports: [
+    LicensingModule,
     SupabaseModule,
     ProductsModule,
     MailModule,
@@ -172,18 +175,21 @@ import {
     {
       provide: VulnerabilityRemediationTicketOperationWorker,
       inject: [
+        LicensingService,
         VULNERABILITY_TRIAGE_REPOSITORY,
         JiraConnectorCredentialReader,
         JiraRemediationAdapter,
         ConfigService,
       ],
       useFactory: (
+        licensing: LicensingService,
         repository: VulnerabilityTriageRepository,
         credentials: JiraConnectorCredentialReader,
         adapter: JiraRemediationAdapter,
         config: ConfigService,
       ) =>
         new VulnerabilityRemediationTicketOperationWorker({
+          licensing,
           workerId: randomUUID(),
           leaseSeconds: config.get<number>(
             "VULNERABILITY_REMEDIATION_TICKET_OPERATION_LEASE_SECONDS",

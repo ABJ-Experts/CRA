@@ -1,3 +1,4 @@
+import type { LicensingGlobalWorkerPolicy } from "../../licensing/operations/licensing-worker-policy";
 export type CoverageScope = Readonly<{
   organizationId: string;
   productId: string;
@@ -22,9 +23,13 @@ export interface CoverageWorkQueue {
 
 /** One durable claim per call keeps worker cycles bounded and restart safe. */
 export class CoverageRecalculationWorker {
-  constructor(private readonly queue: CoverageWorkQueue) {}
+  constructor(
+    private readonly queue: CoverageWorkQueue,
+    private readonly licensing: LicensingGlobalWorkerPolicy,
+  ) {}
 
   async runOnce(workerId: string): Promise<boolean> {
+    await this.licensing.prepareClaims("frameworks");
     const scope = await this.queue.claim(workerId);
     if (!scope) return false;
     try {

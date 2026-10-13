@@ -1,3 +1,4 @@
+import { SupabaseLicensingRepository } from "../licensing/infrastructure/supabase-licensing.repository";
 import { Test } from "@nestjs/testing";
 import type { INestApplication } from "@nestjs/common";
 import { METHOD_METADATA, PATH_METADATA } from "@nestjs/common/constants";
@@ -122,7 +123,14 @@ describe("permission coverage", () => {
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({
       imports: [AppModule],
-    }).compile();
+    })
+      // Metadata/guard ordering tests have no persisted licence tenants.
+      .overrideProvider(SupabaseLicensingRepository)
+      .useValue({
+        listPolicyTenants: () =>
+          Promise.resolve({ organizationIds: [], nextCursor: null }),
+      })
+      .compile();
     app = moduleRef.createNestApplication();
     await app.init();
     routes = collect(app);

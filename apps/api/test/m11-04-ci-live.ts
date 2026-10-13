@@ -1,3 +1,6 @@
+import { LicensingService } from "../src/licensing/application/licensing.service";
+import { SupabaseLicensingRepository } from "../src/licensing/infrastructure/supabase-licensing.repository";
+import { LocalLicenseVerifier } from "../src/licensing/infrastructure/local-license-verifier";
 import "./m11-03-environment";
 import { createHash, randomBytes, randomUUID, scryptSync } from "node:crypto";
 import { execFileSync } from "node:child_process";
@@ -252,6 +255,16 @@ async function run() {
       finalizeNormalization: repository.finalizeNormalization.bind(repository),
     };
     await new SbomIngestWorker({
+      licensing: new LicensingService(
+        new SupabaseLicensingRepository(supabase),
+        () =>
+          LocalLicenseVerifier.fromFile(process.env.LICENSING_TRUST_FILE ?? ""),
+        {
+          instanceId: process.env.LICENSING_INSTANCE_ID,
+          configuration: {},
+          policyRevision: Number(process.env.LICENSING_POLICY_REVISION ?? 1),
+        },
+      ),
       workerId: randomUUID(),
       leaseSeconds: 60,
       queue,

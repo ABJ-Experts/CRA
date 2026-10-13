@@ -1,3 +1,4 @@
+import type { UploadScope } from "../../licensing/uploads/upload-scope";
 import { randomUUID } from "node:crypto";
 
 export const EVIDENCE_REPOSITORY = Symbol("EVIDENCE_REPOSITORY");
@@ -98,6 +99,7 @@ export interface EvidenceStoragePort {
       objectKey: string;
       contentType: string;
       byteSize: number;
+      scope: UploadScope;
     }>,
   ): Promise<Readonly<{ uploadUrl: string; expiresAt: string }>>;
   inspect(
@@ -133,6 +135,11 @@ export class EvidenceIntakeUseCases {
       return reserved;
     const reservation = reserved.reservation;
     const upload = await this.storage.createSignedUpload({
+      scope: {
+        kind: "member",
+        organizationId: input.organizationId,
+        actorId: input.actorId,
+      },
       objectKey: reservation.objectKey,
       contentType: "application/octet-stream",
       byteSize: input.declaredByteSize,
@@ -151,6 +158,11 @@ export class EvidenceIntakeUseCases {
     if (reserved.outcome !== "created" && reserved.outcome !== "replayed")
       return reserved;
     const upload = await this.storage.createSignedUpload({
+      scope: {
+        kind: "member",
+        organizationId: input.organizationId,
+        actorId: input.actorId,
+      },
       objectKey: reserved.reservation.objectKey,
       contentType: "application/octet-stream",
       byteSize: input.declaredByteSize,

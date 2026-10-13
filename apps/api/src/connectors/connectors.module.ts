@@ -1,3 +1,5 @@
+import { LicensingModule } from "../licensing/licensing.module";
+import { LicensingService } from "../licensing/application/licensing.service";
 import { Module } from "@nestjs/common";
 
 import { PermissionsModule } from "../permissions/permissions.module";
@@ -38,7 +40,7 @@ import { SupabaseAgentRepository } from "./agent/supabase-agent.repository";
 export const CONNECTOR_PORTS = Symbol("CONNECTOR_PORTS");
 
 @Module({
-  imports: [SupabaseModule, PermissionsModule],
+  imports: [LicensingModule, SupabaseModule, PermissionsModule],
   controllers: [
     ConnectorsWebhooksController,
     AgentManagementController,
@@ -187,12 +189,14 @@ export const CONNECTOR_PORTS = Symbol("CONNECTOR_PORTS");
     {
       provide: WebhookDeliveryWorker,
       useFactory: (
+        licensing: LicensingService,
         repository: SupabaseWebhookRepository,
         vault: WebhookVault,
         transport: NodeWebhookTransport,
         authorization: ConnectorAuthorizationAdapter,
       ) =>
         new WebhookDeliveryWorker(
+          licensing,
           repository,
           vault,
           transport,
@@ -201,6 +205,7 @@ export const CONNECTOR_PORTS = Symbol("CONNECTOR_PORTS");
           60,
         ),
       inject: [
+        LicensingService,
         SupabaseWebhookRepository,
         WebhookVault,
         NodeWebhookTransport,
@@ -287,6 +292,7 @@ export const CONNECTOR_PORTS = Symbol("CONNECTOR_PORTS");
     {
       provide: ConnectorSyncWorker,
       useFactory: (
+        licensing: LicensingService,
         repository: SupabaseConnectorRepository,
         supabase: SupabaseService,
         adapters: ReadonlyMap<ConnectorType, ConnectorPort>,
@@ -299,6 +305,7 @@ export const CONNECTOR_PORTS = Symbol("CONNECTOR_PORTS");
         const encryptionKey = process.env.CONNECTOR_SECRET_ENCRYPTION_KEY ?? "";
         const workerId = `connector-sync-${process.pid}`;
         return new ConnectorSyncWorker(
+          licensing,
           repository,
           supabase,
           adapters,
@@ -309,6 +316,7 @@ export const CONNECTOR_PORTS = Symbol("CONNECTOR_PORTS");
         );
       },
       inject: [
+        LicensingService,
         SupabaseConnectorRepository,
         SupabaseService,
         CONNECTOR_PORTS,

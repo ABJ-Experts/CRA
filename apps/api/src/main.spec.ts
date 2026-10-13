@@ -52,9 +52,17 @@ describe("API bootstrap", () => {
     expect(create).toHaveBeenCalledWith(expect.any(Function), {
       bufferLogs: false,
       rawBody: true,
+      bodyParser: false,
     });
     expect(app.setGlobalPrefix).toHaveBeenCalledWith("api/v1");
-    expect(app.useBodyParser).toHaveBeenCalledWith("json", { limit: "2200kb" });
+    expect(app.useBodyParser).toHaveBeenNthCalledWith(1, "json", {
+      limit: "2200kb",
+      type: expect.any(Function) as unknown,
+    });
+    expect(app.useBodyParser).toHaveBeenNthCalledWith(2, "urlencoded", {
+      extended: true,
+      type: expect.any(Function) as unknown,
+    });
     expect(app.set).toHaveBeenCalledWith("trust proxy", false);
     expect(cookieParser).toHaveBeenCalledWith();
     expect(helmet).toHaveBeenCalledWith({

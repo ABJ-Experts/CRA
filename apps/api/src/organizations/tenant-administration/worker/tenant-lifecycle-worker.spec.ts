@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 
 import {
   TenantLifecycleWorker,
+  WorkerFailure,
   type TenantLifecycleWorkerDependencies,
 } from "./tenant-lifecycle-worker";
 
@@ -82,6 +83,47 @@ describe("TenantLifecycleWorker", () => {
       expect.objectContaining({
         code: "artifact_snapshot_unavailable",
         retryable: true,
+      }),
+    );
+  });
+
+  it("records missing retained artifacts without completing an incomplete archive", async () => {
+    const complete = jest.fn();
+    const fail = jest.fn();
+    const read = jest.fn();
+    const worker = new TenantLifecycleWorker(
+      dependencies({
+        artifactSnapshot: {
+          snapshot: jest
+            .fn()
+            .mockRejectedValue(
+              new WorkerFailure("artifact_source_missing", false),
+            ),
+        },
+        sources: { read },
+        export: {
+          dueOrganizationIds: jest.fn().mockResolvedValue([organizationId]),
+          claim: jest.fn().mockResolvedValue({
+            outcome: "claimed",
+            jobId: exportId,
+            leaseOwner,
+            checkpointVersion: 0,
+            sourceIds: ["organization_profile"],
+          }),
+          complete,
+          fail,
+        },
+      }),
+    );
+    await worker.runOnce();
+    expect(read).not.toHaveBeenCalled();
+    expect(complete).not.toHaveBeenCalled();
+    expect(fail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        organizationId,
+        exportId,
+        code: "artifact_source_missing",
+        retryable: false,
       }),
     );
   });

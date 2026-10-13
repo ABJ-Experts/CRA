@@ -1,3 +1,4 @@
+import type { LicensingWorkerPolicy } from "../../licensing/operations/licensing-worker-policy";
 import { randomUUID } from "node:crypto";
 import { SupabaseService } from "../../supabase/supabase.service";
 import type { SupabaseEvidenceStorageAdapter } from "../infrastructure/supabase-evidence-storage.adapter";
@@ -38,6 +39,7 @@ export class EvidenceTextExtractionWorker {
   constructor(
     private readonly dependencies: Readonly<{
       supabase: SupabaseService;
+      licensing: LicensingWorkerPolicy;
       storage: Pick<SupabaseEvidenceStorageAdapter, "openVerified">;
       extractor: Pick<LocalEvidenceTextExtractorAdapter, "extract">;
       leaseSeconds: number;
@@ -67,6 +69,10 @@ export class EvidenceTextExtractionWorker {
     client: RpcClient,
     organizationId: string,
   ): Promise<ClaimedJob | null> {
+    if (
+      !(await this.dependencies.licensing.canClaim(organizationId, "evidence"))
+    )
+      return null;
     const response = await client.rpc(
       "claim_evidence_text_extraction_job_atomic",
       {

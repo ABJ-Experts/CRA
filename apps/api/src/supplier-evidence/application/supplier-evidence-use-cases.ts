@@ -1,3 +1,4 @@
+import type { UploadScope } from "../../licensing/uploads/upload-scope";
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import type {
   CloseSupplierEvidenceRequestInput,
@@ -41,6 +42,7 @@ export interface SupplierEvidenceStoragePort {
       objectKey: string;
       contentType: string;
       byteSize: number;
+      scope: UploadScope;
     }>,
   ): Promise<Readonly<{ uploadUrl: string; expiresAt: string }>>;
   inspect(
@@ -491,6 +493,10 @@ export class SupplierEvidenceUseCases {
       }),
     });
     const upload = await this.storage.createSignedUpload({
+      scope: {
+        kind: "supplier_evidence",
+        sessionTokenHash: hash(input.sessionToken),
+      },
       objectKey: reserved.objectKey,
       contentType: input.mediaType,
       byteSize: input.byteSize,

@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 
+import { LicensingBanner } from "../_features/licensing/licensing-banner";
 import { Sidebar } from "../_components/sidebar/sidebar";
 import { DashboardOnboardingGate } from "../dashboard/_components/dashboard-onboarding-gate";
 import { DashboardTopNav } from "../dashboard/_components/dashboard-top-nav";
@@ -13,6 +14,7 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
         <Sidebar />
         <div className="flex min-w-0 flex-1 flex-col">
           <DashboardTopNav />
+          <LicensingBanner />
           <main className="min-w-0 flex-1">
             <DashboardOnboardingGate>{children}</DashboardOnboardingGate>
           </main>

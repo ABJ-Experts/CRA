@@ -1,3 +1,4 @@
+import { LicensingError } from "../licensing/application/licensing.errors";
 import { ProductsService } from "./products.service";
 
 function harness(
@@ -30,6 +31,24 @@ function harness(
 }
 
 describe("ProductsService", () => {
+  it("maps source quota denials without losing their safe reason", async () => {
+    const { service, useCases } = harness();
+    useCases.create!.mockRejectedValue(
+      new LicensingError(
+        "license_product_limit",
+        409,
+        "The licensed product limit has been reached",
+        "product_limit",
+      ),
+    );
+    await expect(service.create({} as never)).rejects.toMatchObject({
+      status: 409,
+      response: {
+        code: "license_product_limit",
+        details: { reason: "product_limit" },
+      },
+    });
+  });
   it.each([
     ["invalid_request", 400],
     ["not_found", 404],

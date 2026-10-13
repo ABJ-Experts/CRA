@@ -1,3 +1,4 @@
+import { LicensingError } from "../../licensing/application/licensing.errors";
 import type {
   ArchiveProductInput,
   ArchiveSoftwareBaselineInput,
@@ -1951,6 +1952,7 @@ export class ProductUseCases
     return failure(Object.freeze({ code: "not_found" }));
   }
   private providerFailure<T>(error?: unknown): ProductResult<T> {
+    if (error instanceof LicensingError) throw error;
     if (error instanceof Error && error.message === "malformed")
       return failure(Object.freeze({ code: "malformed_provider" }));
     return failure(Object.freeze({ code: "unavailable" }));

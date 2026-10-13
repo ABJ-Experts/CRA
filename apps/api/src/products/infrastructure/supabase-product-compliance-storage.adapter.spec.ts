@@ -9,47 +9,35 @@ const objectKey = `${organizationId}/${sha256}`;
 const legacyObjectKey = `${organizationId}/${artifactId}/${sha256}`;
 
 describe("SupabaseProductComplianceStorageAdapter", () => {
-  it("issues a private immutable signed-upload URL only for an org-first content-addressed key", async () => {
-    const createSignedUploadUrl = jest.fn().mockResolvedValue({
-      data: { signedUrl: "https://storage.example.test/upload" },
-      error: null,
+  it("issues an immutable API upload grant without asking Supabase to sign", async () => {
+    const scope = {
+      kind: "member" as const,
+      organizationId,
+      actorId: artifactId,
+    };
+    const issue = jest.fn().mockResolvedValue({
+      uploadUrl: "https://api.example.test/upload",
+      expiresAt: "2026-01-01T00:00:00Z",
     });
-    const storage = new SupabaseProductComplianceStorageAdapter({
-      admin: () => ({ storage: { from: () => ({ createSignedUploadUrl }) } }),
-    } as never);
-
+    const storage = new SupabaseProductComplianceStorageAdapter(
+      {} as never,
+      { issue } as never,
+    );
     await expect(
       storage.createSignedUpload({
         objectKey,
         contentType: "application/octet-stream",
-        byteSize: 1_024,
+        byteSize: 1024,
+        scope,
       }),
-    ).resolves.toMatchObject({
-      uploadUrl: "https://storage.example.test/upload",
-    });
-    expect(createSignedUploadUrl).toHaveBeenCalledWith(objectKey, {
-      upsert: false,
-    });
-  });
-
-  it("permits a loopback HTTP signed URL only for local Supabase development", async () => {
-    const createSignedUploadUrl = jest.fn().mockResolvedValue({
-      data: {
-        signedUrl:
-          "http://127.0.0.1:54321/storage/v1/object/upload/security-update-artifacts/test",
-      },
-      error: null,
-    });
-    const storage = new SupabaseProductComplianceStorageAdapter({
-      admin: () => ({ storage: { from: () => ({ createSignedUploadUrl }) } }),
-    } as never);
-
-    const result = await storage.createSignedUpload({
+    ).resolves.toMatchObject({ uploadUrl: "https://api.example.test/upload" });
+    expect(issue).toHaveBeenCalledWith({
       objectKey,
       contentType: "application/octet-stream",
-      byteSize: 1_024,
+      byteSize: 1024,
+      scope,
+      bucket: "security-update-artifacts",
     });
-    expect(result.uploadUrl.startsWith("http://127.0.0.1:")).toBe(true);
   });
 
   it("rejects non-org-first or non-content-addressed paths before calling storage", async () => {

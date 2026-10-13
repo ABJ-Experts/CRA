@@ -1,3 +1,4 @@
+import type { LicensingWorkerPolicy } from "../../licensing/operations/licensing-worker-policy";
 import { Logger } from "@nestjs/common";
 import { z } from "zod";
 
@@ -22,6 +23,7 @@ export class ProductImportWorker {
   constructor(
     private readonly dependencies: Readonly<{
       workerId: string;
+      licensing: LicensingWorkerPolicy;
       leaseSeconds: number;
       repository: ProductImportRepository;
       useCases: ProductImportUseCases;
@@ -62,6 +64,10 @@ export class ProductImportWorker {
   }
 
   private async processOne(organizationId: string): Promise<boolean> {
+    if (
+      !(await this.dependencies.licensing.canClaim(organizationId, "products"))
+    )
+      return false;
     const claim = await this.dependencies.repository.claim(organizationId, {
       workerId: this.dependencies.workerId,
       leaseSeconds: this.dependencies.leaseSeconds,

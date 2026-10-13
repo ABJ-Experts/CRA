@@ -1,5 +1,9 @@
 import { randomUUID } from "node:crypto";
-import { ConflictException, NotFoundException } from "@nestjs/common";
+import {
+  ConflictException,
+  ForbiddenException,
+  NotFoundException,
+} from "@nestjs/common";
 
 import type { RequestUser } from "../auth/auth.types";
 import {
@@ -22,6 +26,33 @@ const user = {
 } as unknown as RequestUser;
 
 describe("ReportingObligationController", () => {
+  it.each([
+    new ForbiddenException("The licensed storage limit has been reached"),
+    new ConflictException("The admitted receipt changed"),
+  ])("preserves admitted receipt denial %s", async (failure) => {
+    const useCases = useCasesFor();
+    useCases.recordStageExternalFiling.mockRejectedValue(failure);
+    await expect(
+      subject(useCases).recordStageExternalFiling(
+        { obligationId, stageId: "77777777-7777-4777-8777-777777777777" },
+        {
+          packageId: "99999999-9999-4999-8999-999999999999",
+          filingReauthenticationProofId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+          submissionReference: "M15-test",
+          submittedAt: "2026-09-10T10:00:00Z",
+          submittedAtBasis: "Human receipt",
+          expectedStageVersion: 1,
+          idempotencyKey: key,
+        },
+        {
+          buffer: Buffer.from("receipt"),
+          mimetype: "text/plain",
+          originalname: "receipt.txt",
+        } as Express.Multer.File,
+        { ...user, sessionId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb" },
+      ),
+    ).rejects.toBe(failure);
+  });
   it("scopes reporting reads and mutations to the verified organization", async () => {
     const useCases = useCasesFor();
     useCases.list.mockResolvedValue({ obligations: [], nextCursor: null });

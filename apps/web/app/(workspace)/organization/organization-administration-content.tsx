@@ -17,7 +17,8 @@ import {
   ShieldAlert,
   type LucideIcon,
 } from "lucide-react";
-import { useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import {
   useCurrentOrganizationQuery,
@@ -37,6 +38,7 @@ import {
   PageHeading,
   SectionCard,
 } from "../../dashboard/_components/dashboard-chrome";
+import { OrganizationLicensingSection } from "./organization-licensing-section";
 import { OrganizationExportSection } from "./organization-export-section";
 import { OrganizationBrandingSection } from "./organization-branding-section";
 import { OrganizationLegalEntitiesSection } from "./organization-legal-entities-section";
@@ -156,6 +158,7 @@ function OrganizationWorkspaceSummary({
 type OrganizationWorkbenchPanel = "settings" | "identity" | "lifecycle";
 type OrganizationWorkbenchTab =
   | "settings"
+  | "licence"
   | "retention"
   | "notifications"
   | "export"
@@ -194,6 +197,7 @@ const ORGANIZATION_WORKBENCH_ITEMS = Object.freeze([
 const ORGANIZATION_WORKBENCH_TABS = Object.freeze({
   settings: [
     { value: "settings", label: "Settings" },
+    { value: "licence", label: "Licence" },
     { value: "retention", label: "Evidence retention" },
     { value: "notifications", label: "Notifications" },
     { value: "export", label: "Exports" },
@@ -322,6 +326,11 @@ function OrganizationWorkbenchDialog({
 }
 
 export function OrganizationAdministrationContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const requestedLicence =
+    searchParams.getAll("settings").length === 1 &&
+    searchParams.get("settings") === "licence";
   const mocksReady = useMocksReady();
   const { session, permissions = {}, role, isLoading, isError } = useSession();
   const liveApiEnabled =
@@ -352,6 +361,13 @@ export function OrganizationAdministrationContent() {
     useState<OrganizationWorkbenchTab>("settings");
   const lastWorkbenchOpenerRef = useRef<HTMLButtonElement | null>(null);
 
+  useEffect(() => {
+    if (requestedLicence) {
+      setActivePanel("settings");
+      setActiveTab("licence");
+    }
+  }, [requestedLicence]);
+
   function openWorkbench(
     panel: OrganizationWorkbenchPanel,
     opener: HTMLButtonElement,
@@ -363,6 +379,13 @@ export function OrganizationAdministrationContent() {
 
   function closeWorkbench() {
     setActivePanel(null);
+    if (requestedLicence) {
+      const params = new URLSearchParams(searchParams.toString());
+      params.delete("settings");
+      router.replace(`/organization${params.size ? `?${params}` : ""}`, {
+        scroll: false,
+      });
+    }
     window.setTimeout(() => lastWorkbenchOpenerRef.current?.focus(), 0);
   }
 
@@ -482,6 +505,16 @@ export function OrganizationAdministrationContent() {
                         onRetry={() => void catalog.refetch()}
                       />
                     )}
+                  </TabsContent>
+                  <TabsContent
+                    value="licence"
+                    forceMount
+                    className="min-w-0 data-[state=inactive]:hidden"
+                  >
+                    <OrganizationLicensingSection
+                      key={`licence-${current.data.organization.id}`}
+                      organizationId={current.data.organization.id}
+                    />
                   </TabsContent>
                   <TabsContent
                     value="retention"

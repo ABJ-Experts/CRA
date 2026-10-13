@@ -20,3 +20,4 @@ export * from "./supplier-evidence.js";
 export * from "./frameworks.js";
 export * from "./tasks/index.js";
 export * from "./dashboard/index.js";
+export * from "./licensing/index.js";

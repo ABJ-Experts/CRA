@@ -1,3 +1,4 @@
+import type { LicensingWorkerPolicy } from "../../licensing/operations/licensing-worker-policy";
 import { openSbomSpool, withSbomSpool } from "../validation/sbom-spool";
 import {
   validateSbomFile,
@@ -175,6 +176,7 @@ export class SbomIngestWorker {
   constructor(
     private readonly dependencies: Readonly<{
       workerId: string;
+      licensing: LicensingWorkerPolicy;
       leaseSeconds: number;
       queue: SbomIngestQueue;
       storage: SbomIngestStorage;
@@ -223,6 +225,8 @@ export class SbomIngestWorker {
   }
 
   private async processOne(organizationId: string): Promise<boolean> {
+    if (!(await this.dependencies.licensing.canClaim(organizationId, "sboms")))
+      return false;
     const claim = await this.dependencies.queue.claim(organizationId, {
       workerId: this.dependencies.workerId,
       leaseSeconds: this.dependencies.leaseSeconds,

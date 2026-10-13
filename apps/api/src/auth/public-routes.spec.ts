@@ -1,3 +1,4 @@
+import { SupabaseLicensingRepository } from "../licensing/infrastructure/supabase-licensing.repository";
 import { Test } from "@nestjs/testing";
 import type { INestApplication } from "@nestjs/common";
 import { METHOD_METADATA, PATH_METADATA } from "@nestjs/common/constants";
@@ -64,6 +65,8 @@ const ALLOWED_PUBLIC: Record<string, string> = {
     "A scoped portal session, independently revalidated against its invitation or grant, authorizes only its own frozen export; no membership session is accepted.",
   "GET supplier-evidence-portal/exports/:jobId/download/:grantId":
     "A scoped portal session, independently revalidated against its invitation or grant, authorizes only its own frozen export; no membership session is accepted.",
+  "PUT licensing/uploads/:operationId/:token":
+    "Single-use tenant/source-bound byte reservation token; live identity and object scope are revalidated before publication, without granting a browser session.",
   "GET health": "Liveness probe. Must answer before anything is configured.",
   "GET health/ready":
     "Readiness probe for orchestration; reports database reachability only.",
@@ -200,7 +203,14 @@ describe("route guard coverage", () => {
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({
       imports: [AppModule],
-    }).compile();
+    })
+      // Metadata/guard ordering tests have no persisted licence tenants.
+      .overrideProvider(SupabaseLicensingRepository)
+      .useValue({
+        listPolicyTenants: () =>
+          Promise.resolve({ organizationIds: [], nextCursor: null }),
+      })
+      .compile();
     app = moduleRef.createNestApplication();
     await app.init();
     routes = collectRoutes(app);

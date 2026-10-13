@@ -1,3 +1,4 @@
+import { SourceLicenseAdmission } from "../../licensing/infrastructure/source-license-admission";
 import { Injectable } from "@nestjs/common";
 import {
   supplierEvidenceInvitationSchema,
@@ -33,7 +34,10 @@ type Row = Readonly<{ outcome?: unknown; result?: unknown }>;
 /** The adapter is the only service-role access point. Every internal call is organization-first; public calls use only bearer hashes. */
 @Injectable()
 export class SupabaseSupplierEvidenceRepository implements SupplierEvidenceRepository {
-  constructor(private readonly supabase: SupabaseService) {}
+  constructor(
+    private readonly supabase: SupabaseService,
+    private readonly admission?: SourceLicenseAdmission,
+  ) {}
 
   async preview(
     organizationId: string,
@@ -377,6 +381,7 @@ export class SupabaseSupplierEvidenceRepository implements SupplierEvidenceRepos
     return supplierEvidencePortalRequestSchema.parse(row.result);
   }
   async reserve(input: Parameters<SupplierEvidenceRepository["reserve"]>[0]) {
+    await this.admission?.supplier("supplier_evidence", input.sessionTokenHash);
     const row = await this.row("reserve_supplier_evidence_submission_atomic", {
       p_session_token_hash: input.sessionTokenHash,
       p_request_item_id: input.checklistItemId,

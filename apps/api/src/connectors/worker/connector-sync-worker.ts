@@ -1,3 +1,4 @@
+import type { LicensingWorkerPolicy } from "../../licensing/operations/licensing-worker-policy";
 import { createConnectorSyncPlanContext } from "./connector-sync-plan-context";
 export { createConnectorSyncPlanContext } from "./connector-sync-plan-context";
 import { Logger } from "@nestjs/common";
@@ -93,6 +94,7 @@ export class ConnectorSyncWorker {
   private readonly logger = new Logger(ConnectorSyncWorker.name);
 
   constructor(
+    private readonly licensing: LicensingWorkerPolicy,
     private readonly repository: SupabaseConnectorRepository,
     private readonly supabase: SupabaseService,
     private readonly adapters: ReadonlyMap<ConnectorType, ConnectorPort>,
@@ -128,6 +130,8 @@ export class ConnectorSyncWorker {
 
   /** Returns true if this org may still have more due work this cycle. */
   private async processOne(organizationId: string): Promise<boolean> {
+    if (!(await this.licensing.canClaim(organizationId, "connectors")))
+      return false;
     const claimed = await this.repository.claimSyncRun(
       organizationId,
       this.workerId,

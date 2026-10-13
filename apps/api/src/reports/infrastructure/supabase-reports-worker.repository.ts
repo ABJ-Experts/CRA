@@ -84,6 +84,13 @@ export class SupabaseReportsWorkerRepository implements ReportsWorkerQueue {
       z.boolean(),
     );
   }
+  async pauseRecipient(claim: ReportRecipientClaim): Promise<void> {
+    await this.call(
+      "m15_01_pause_report_recipient",
+      this.fence(claim),
+      z.unknown(),
+    );
+  }
   private fence(claim: ReportRecipientClaim) {
     return {
       p_organization_id: claim.organizationId,

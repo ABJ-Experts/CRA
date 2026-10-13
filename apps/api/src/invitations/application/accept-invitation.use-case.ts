@@ -1,3 +1,4 @@
+import { LicensingError } from "../../licensing/application/licensing.errors";
 import { normalizeEmail } from "@repo/contracts/auth";
 import type { AcceptInvitationResponse } from "@repo/contracts/invitations";
 
@@ -93,7 +94,8 @@ export class AcceptInvitationUseCase {
           email: normalizeEmail(command.user.email),
         }),
       );
-    } catch {
+    } catch (error) {
+      if (error instanceof LicensingError) throw error;
       return failure(Object.freeze({ code: "membership_failed" as const }));
     }
 

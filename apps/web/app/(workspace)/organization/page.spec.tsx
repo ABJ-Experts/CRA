@@ -14,6 +14,19 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiClientError } from "../../_lib/http/api-client";
 import OrganizationAdministrationPage from "./page";
 
+vi.mock("./organization-licensing-section", () => ({
+  OrganizationLicensingSection: () => <div>Licence controls</div>,
+}));
+
+const navigation = vi.hoisted(() => ({
+  params: new URLSearchParams(),
+  replace: vi.fn(),
+}));
+vi.mock("next/navigation", () => ({
+  useSearchParams: () => navigation.params,
+  useRouter: () => ({ replace: navigation.replace }),
+}));
+
 const queries = vi.hoisted(() => ({
   useCurrentOrganizationQuery: vi.fn(),
   useOrganizationSettingsQuery: vi.fn(),
@@ -330,6 +343,8 @@ function okQuery(data: unknown) {
 }
 
 beforeEach(() => {
+  navigation.params = new URLSearchParams();
+  navigation.replace.mockReset();
   process.env.NEXT_PUBLIC_ENABLE_MOCKS = "false";
   vi.stubGlobal(
     "ResizeObserver",
@@ -1227,4 +1242,17 @@ describe("OrganizationAdministrationPage", () => {
     expect(await screen.findByText(/restoration is unavailable/i)).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Recover tenant" })).toBeNull();
   });
+});
+
+it("opens the Licence settings tab from the scoped banner link", async () => {
+  navigation.params = new URLSearchParams("settings=licence");
+  render(<OrganizationAdministrationPage />);
+  expect(
+    await screen.findByRole("dialog", { name: "Organization settings" }),
+  ).toBeVisible();
+  expect(screen.getByRole("tab", { name: "Licence" })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
+  expect(screen.getByText("Licence controls")).toBeVisible();
 });

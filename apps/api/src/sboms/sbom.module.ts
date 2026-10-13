@@ -1,3 +1,5 @@
+import { LicensingModule } from "../licensing/licensing.module";
+import { LicensingService } from "../licensing/application/licensing.service";
 import { randomUUID } from "node:crypto";
 import { Module } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
@@ -84,7 +86,7 @@ import { createM4SbomDiffVersionComparator } from "./infrastructure/m4-sbom-diff
 import { SbomCompositeWorker } from "./worker/sbom-composite-worker";
 
 @Module({
-  imports: [SupabaseModule, ConnectorsModule],
+  imports: [LicensingModule, SupabaseModule, ConnectorsModule],
   controllers: [
     SbomExportController,
     ProductReleaseSbomController,
@@ -249,16 +251,19 @@ import { SbomCompositeWorker } from "./worker/sbom-composite-worker";
     {
       provide: SbomIngestWorker,
       inject: [
+        LicensingService,
         SupabaseSbomRepository,
         SupabaseSbomStorageAdapter,
         ConfigService,
       ],
       useFactory: (
+        licensing: LicensingService,
         queue: SupabaseSbomRepository,
         storage: SupabaseSbomStorageAdapter,
         config: ConfigService,
       ) =>
         new SbomIngestWorker({
+          licensing,
           workerId: randomUUID(),
           leaseSeconds: 60,
           queue,
@@ -275,16 +280,19 @@ import { SbomCompositeWorker } from "./worker/sbom-composite-worker";
     {
       provide: SbomQualityWorker,
       inject: [
+        LicensingService,
         SupabaseSbomRepository,
         ConfigService,
         SupabaseBsiEvidenceAdapter,
       ],
       useFactory: (
+        licensing: LicensingService,
         queue: SupabaseSbomRepository,
         config: ConfigService,
         bsiEvidenceReader: SupabaseBsiEvidenceAdapter,
       ) =>
         new SbomQualityWorker({
+          licensing,
           workerId: randomUUID(),
           leaseSeconds: 60,
           queue,
@@ -296,9 +304,14 @@ import { SbomCompositeWorker } from "./worker/sbom-composite-worker";
     },
     {
       provide: SbomDiffWorker,
-      inject: [SupabaseSbomRepository, ConfigService],
-      useFactory: (queue: SupabaseSbomRepository, config: ConfigService) =>
+      inject: [LicensingService, SupabaseSbomRepository, ConfigService],
+      useFactory: (
+        licensing: LicensingService,
+        queue: SupabaseSbomRepository,
+        config: ConfigService,
+      ) =>
         new SbomDiffWorker({
+          licensing,
           workerId: randomUUID(),
           leaseSeconds: 60,
           queue,
@@ -310,16 +323,19 @@ import { SbomCompositeWorker } from "./worker/sbom-composite-worker";
     {
       provide: SbomCompositeWorker,
       inject: [
+        LicensingService,
         SupabaseSbomRepository,
         SbomIntakeUseCases,
         SupabaseSbomStorageAdapter,
       ],
       useFactory: (
+        licensing: LicensingService,
         queue: SupabaseSbomRepository,
         intake: SbomIntakeUseCases,
         storage: SupabaseSbomStorageAdapter,
       ) =>
         new SbomCompositeWorker({
+          licensing,
           workerId: randomUUID(),
           leaseSeconds: 60,
           queue,

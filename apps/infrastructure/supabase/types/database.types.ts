@@ -7129,6 +7129,80 @@ export type Database = {
           },
         ]
       }
+      organization_license_states: {
+        Row: {
+          artifact: string
+          artifact_digest: string
+          artifact_object_path: string
+          clock_rollback_detected: boolean
+          configuration_digest: string | null
+          effective_capabilities: Json
+          issuance_sequence: number
+          organization_id: string
+          policy_revision: number
+          protected_regulatory_cutoff: string | null
+          storage_accounting_ready: boolean
+          time_high_water_at: string
+          updated_at: string
+          verification_artifact_digest: string | null
+          verification_checked_at: string | null
+          verification_valid: boolean
+          verification_version: number | null
+          verified_claims: Json
+          version: number
+        }
+        Insert: {
+          artifact: string
+          artifact_digest: string
+          artifact_object_path: string
+          clock_rollback_detected?: boolean
+          configuration_digest?: string | null
+          effective_capabilities?: Json
+          issuance_sequence: number
+          organization_id: string
+          policy_revision?: number
+          protected_regulatory_cutoff?: string | null
+          storage_accounting_ready?: boolean
+          time_high_water_at: string
+          updated_at?: string
+          verification_artifact_digest?: string | null
+          verification_checked_at?: string | null
+          verification_valid?: boolean
+          verification_version?: number | null
+          verified_claims: Json
+          version: number
+        }
+        Update: {
+          artifact?: string
+          artifact_digest?: string
+          artifact_object_path?: string
+          clock_rollback_detected?: boolean
+          configuration_digest?: string | null
+          effective_capabilities?: Json
+          issuance_sequence?: number
+          organization_id?: string
+          policy_revision?: number
+          protected_regulatory_cutoff?: string | null
+          storage_accounting_ready?: boolean
+          time_high_water_at?: string
+          updated_at?: string
+          verification_artifact_digest?: string | null
+          verification_checked_at?: string | null
+          verification_valid?: boolean
+          verification_version?: number | null
+          verified_claims?: Json
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_license_states_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organization_lifecycles: {
         Row: {
           changed_at: string
@@ -7870,6 +7944,84 @@ export type Database = {
             columns: ["updated_by"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organization_storage_admissions: {
+        Row: {
+          actor_user_id: string | null
+          bucket: string
+          capability: string
+          content_sha256: string | null
+          content_type: string
+          created_at: string
+          expires_at: string
+          id: string
+          object_path: string
+          observed_bytes: number | null
+          operation_id: string
+          organization_id: string
+          protected_input: boolean
+          reserved_bytes: number
+          source_context: Json | null
+          state: string
+          token_digest: string
+          updated_at: string
+        }
+        Insert: {
+          actor_user_id?: string | null
+          bucket: string
+          capability: string
+          content_sha256?: string | null
+          content_type: string
+          created_at?: string
+          expires_at: string
+          id?: string
+          object_path: string
+          observed_bytes?: number | null
+          operation_id: string
+          organization_id: string
+          protected_input?: boolean
+          reserved_bytes: number
+          source_context?: Json | null
+          state?: string
+          token_digest: string
+          updated_at?: string
+        }
+        Update: {
+          actor_user_id?: string | null
+          bucket?: string
+          capability?: string
+          content_sha256?: string | null
+          content_type?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          object_path?: string
+          observed_bytes?: number | null
+          operation_id?: string
+          organization_id?: string
+          protected_input?: boolean
+          reserved_bytes?: number
+          source_context?: Json | null
+          state?: string
+          token_digest?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_storage_admissions_actor_user_id_fkey"
+            columns: ["actor_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_storage_admissions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
@@ -34436,6 +34588,275 @@ export type Database = {
       }
       m14_section: {
         Args: { p_data?: Json; p_state: string; p_updated?: string }
+        Returns: Json
+      }
+      m15_01_activate: {
+        Args: {
+          p_actor_user_id: string
+          p_artifact: string
+          p_artifact_digest: string
+          p_artifact_object_path?: string
+          p_expected_version: number
+          p_idempotency_key: string
+          p_organization_id: string
+          p_rejection_reason?: string
+          p_request_digest: string
+          p_verified_claims: Json
+        }
+        Returns: Json
+      }
+      m15_01_activation_receipt: {
+        Args: {
+          p_actor_user_id: string
+          p_artifact: string
+          p_artifact_digest: string
+          p_idempotency_key: string
+          p_organization_id: string
+          p_request_digest: string
+        }
+        Returns: Json
+      }
+      m15_01_actor_can: {
+        Args: {
+          p_actor_user_id: string
+          p_organization_id: string
+          p_permission: string
+        }
+        Returns: boolean
+      }
+      m15_01_admitted_upload_allowed: {
+        Args: {
+          p_admission: Database["public"]["Tables"]["organization_storage_admissions"]["Row"]
+        }
+        Returns: boolean
+      }
+      m15_01_assert_customer_write: {
+        Args: { p_capability: string; p_organization_id: string }
+        Returns: undefined
+      }
+      m15_01_assert_reporting_continuation: {
+        Args: { p_obligation_id: string; p_organization_id: string }
+        Returns: undefined
+      }
+      m15_01_checkpoint_clock: {
+        Args: {
+          p_actor_user_id?: string
+          p_observed_at: string
+          p_organization_id: string
+        }
+        Returns: Json
+      }
+      m15_01_checkpoint_time: {
+        Args: {
+          p_actor_user_id: string
+          p_observed_at: string
+          p_organization_id: string
+        }
+        Returns: Json
+      }
+      m15_01_checkpoint_verification: {
+        Args: {
+          p_actor_user_id: string
+          p_artifact_digest: string
+          p_configuration_digest: string
+          p_effective_capabilities: Json
+          p_observed_at: string
+          p_organization_id: string
+          p_policy_revision: number
+          p_verified: boolean
+          p_version: number
+        }
+        Returns: Json
+      }
+      m15_01_checkpoint_worker_time: {
+        Args: { p_observed_at: string; p_organization_id: string }
+        Returns: Json
+      }
+      m15_01_claim_storage_upload: {
+        Args: { p_operation_id: string; p_token_digest: string }
+        Returns: Json
+      }
+      m15_01_complete_storage: {
+        Args: {
+          p_actor_user_id: string
+          p_observed_bytes: number
+          p_operation_id: string
+          p_organization_id: string
+          p_token_digest: string
+        }
+        Returns: Json
+      }
+      m15_01_customer_objects: {
+        Args: never
+        Returns: {
+          bucket: string
+          object_path: string
+          organization_id: string
+        }[]
+      }
+      m15_01_customer_write_allowed: {
+        Args: { p_capability: string; p_organization_id: string }
+        Returns: boolean
+      }
+      m15_01_get_state: {
+        Args: { p_actor_user_id: string; p_organization_id: string }
+        Returns: Json
+      }
+      m15_01_get_worker_state: {
+        Args: { p_organization_id: string }
+        Returns: Json
+      }
+      m15_01_history: {
+        Args: {
+          p_actor_user_id: string
+          p_cursor?: number
+          p_limit?: number
+          p_organization_id: string
+        }
+        Returns: Json
+      }
+      m15_01_import_capacity_allowed: {
+        Args: { p_import_id: string; p_organization_id: string }
+        Returns: boolean
+      }
+      m15_01_lock: { Args: { p_organization_id: string }; Returns: undefined }
+      m15_01_member_upload_allowed: {
+        Args: {
+          p_actor_user_id: string
+          p_bucket: string
+          p_bytes: number
+          p_object_path: string
+          p_organization_id: string
+        }
+        Returns: boolean
+      }
+      m15_01_pause_report_recipient: {
+        Args: {
+          p_expected_version: number
+          p_organization_id: string
+          p_recipient_id: string
+          p_worker_id: string
+        }
+        Returns: undefined
+      }
+      m15_01_policy_tenants: {
+        Args: { p_after?: string; p_limit?: number }
+        Returns: Json
+      }
+      m15_01_prepare_storage_publication: {
+        Args: {
+          p_operation_id: string
+          p_sha256: string
+          p_token_digest: string
+        }
+        Returns: Json
+      }
+      m15_01_reconcile_abandoned_reservations: {
+        Args: { p_limit?: number; p_organization_id: string }
+        Returns: number
+      }
+      m15_01_reconcile_storage_upload: {
+        Args: { p_operation_id: string; p_token_digest: string }
+        Returns: Json
+      }
+      m15_01_release_storage: {
+        Args: {
+          p_actor_user_id: string
+          p_bucket: string
+          p_object_path: string
+          p_organization_id: string
+        }
+        Returns: Json
+      }
+      m15_01_replay_reporting_receipt: {
+        Args: {
+          p_actor_user_id: string
+          p_bytes: number
+          p_content_type: string
+          p_context: Json
+          p_object_path: string
+          p_organization_id: string
+          p_sha256: string
+        }
+        Returns: Json
+      }
+      m15_01_reporting_receipt_allowed: {
+        Args: {
+          p_actor_user_id: string
+          p_bytes: number
+          p_context: Json
+          p_object_path: string
+          p_organization_id: string
+        }
+        Returns: boolean
+      }
+      m15_01_reporting_receipt_protected: {
+        Args: { p_obligation_id: string; p_organization_id: string }
+        Returns: boolean
+      }
+      m15_01_reserve_storage: {
+        Args: {
+          p_actor_user_id: string
+          p_bucket: string
+          p_bytes: number
+          p_capability: string
+          p_content_type?: string
+          p_expires_at: string
+          p_object_path: string
+          p_operation_id: string
+          p_organization_id: string
+          p_source_context?: Json
+          p_token_digest: string
+        }
+        Returns: Json
+      }
+      m15_01_reset_storage_upload: {
+        Args: { p_operation_id: string; p_token_digest: string }
+        Returns: Json
+      }
+      m15_01_resolve_upload_owner: {
+        Args: {
+          p_bucket: string
+          p_bytes: number
+          p_object_path: string
+          p_source_context: Json
+        }
+        Returns: string
+      }
+      m15_01_seat_admission: {
+        Args: { p_email: string; p_organization_id: string }
+        Returns: undefined
+      }
+      m15_01_storage_accounting_ready: {
+        Args: { p_organization_id: string }
+        Returns: boolean
+      }
+      m15_01_storage_object_matches: {
+        Args: {
+          p_admission: Database["public"]["Tables"]["organization_storage_admissions"]["Row"]
+        }
+        Returns: boolean
+      }
+      m15_01_supplier_source_organization: {
+        Args: { p_kind: string; p_session_token_hash: string }
+        Returns: string
+      }
+      m15_01_sync_capacity_allowed: {
+        Args: { p_organization_id: string; p_sync_run_id: string }
+        Returns: boolean
+      }
+      m15_01_usage: { Args: { p_organization_id: string }; Returns: Json }
+      m15_01_validate_storage_upload: {
+        Args: { p_operation_id: string; p_token_digest: string }
+        Returns: Json
+      }
+      m15_01_worker_candidates: {
+        Args: {
+          p_capability: string
+          p_configuration_digest: string
+          p_limit: number
+          p_policy_revision: number
+        }
         Returns: Json
       }
       m2_active_member: {

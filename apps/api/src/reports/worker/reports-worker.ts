@@ -1,3 +1,7 @@
+import type {
+  LicensingWorkerPolicy,
+  LicensingGlobalWorkerPolicy,
+} from "../../licensing/operations/licensing-worker-policy";
 import { z } from "zod";
 import { reportConfigurationSchema } from "@repo/contracts/reports/schemas";
 import { resolveReportDateWindow } from "@repo/contracts/reports/policy";
@@ -62,6 +66,7 @@ export interface ReportsWorkerQueue {
   publishRecipient(claim: ReportRecipientClaim): Promise<unknown>;
   failRecipient(claim: ReportRecipientClaim, code: string): Promise<unknown>;
   heartbeatRecipient(claim: ReportRecipientClaim): Promise<boolean>;
+  pauseRecipient(claim: ReportRecipientClaim): Promise<void>;
 }
 export interface ScheduledSourceContexts {
   prepareScheduled(
@@ -105,12 +110,24 @@ export class ReportsWorker {
     }>,
     private readonly sourceContexts: ScheduledSourceContexts,
     private readonly workerId: string,
+    private readonly licensing: LicensingWorkerPolicy &
+      LicensingGlobalWorkerPolicy,
   ) {}
   async runOnce(): Promise<"idle" | "processed"> {
+    await this.licensing.prepareClaims("scheduled_reports");
     await this.queue.scheduleDue(this.workerId, 10);
     const claim = await this.queue.claimRecipient(this.workerId);
     if (!claim) {
       return this.exportWorker.runOnce();
+    }
+    if (
+      !(await this.licensing.canClaim(
+        claim.organizationId,
+        "scheduled_reports",
+      ))
+    ) {
+      await this.queue.pauseRecipient(claim);
+      return "processed";
     }
     let pulse = Promise.resolve();
     let pulseFailure: unknown;
@@ -175,6 +192,15 @@ export class ReportsWorker {
       }
       if (!(await this.queue.authorizeRecipient(claim)))
         throw new Error("access_changed");
+      if (
+        !(await this.licensing.canClaim(
+          claim.organizationId,
+          "scheduled_reports",
+        ))
+      ) {
+        await this.queue.pauseRecipient(claim);
+        return "processed";
+      }
       await this.exportWorker.runOnce();
       await pulse;
       if (pulseFailure)

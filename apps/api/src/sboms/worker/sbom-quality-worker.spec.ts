@@ -350,6 +350,7 @@ function subject(
   overrides: Partial<ConstructorParameters<typeof SbomQualityWorker>[0]> = {},
 ) {
   return new SbomQualityWorker({
+    licensing: { canClaim: () => Promise.resolve(true) },
     workerId: "77777777-7777-4777-8777-777777777777",
     leaseSeconds: 60,
     queue,

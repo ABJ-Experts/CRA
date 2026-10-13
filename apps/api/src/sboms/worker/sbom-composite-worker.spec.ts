@@ -161,6 +161,7 @@ function worker(
   storage: { writeImmutable: jest.Mock },
 ) {
   return new SbomCompositeWorker({
+    licensing: { canClaim: () => Promise.resolve(true) },
     workerId: ids.workerId,
     leaseSeconds: 60,
     queue,

@@ -1,3 +1,4 @@
+import { LicensingError } from "../../licensing/application/licensing.errors";
 import { ciBuildMetadataSchema } from "@repo/contracts/sboms";
 import type {
   CiBuildGateVerdict,
@@ -87,7 +88,8 @@ export class SbomCiIntegrationUseCases {
       if ("binding" in result)
         return success(Object.freeze({ binding: result.binding }));
       return failure({ code: result.outcome });
-    } catch {
+    } catch (error) {
+      if (error instanceof LicensingError) throw error;
       return failure({ code: "unavailable" as const });
     }
   }
@@ -98,7 +100,8 @@ export class SbomCiIntegrationUseCases {
         command.organizationId,
       );
       return success(Object.freeze({ bindings }));
-    } catch {
+    } catch (error) {
+      if (error instanceof LicensingError) throw error;
       return failure({ code: "unavailable" as const });
     }
   }
@@ -122,7 +125,8 @@ export class SbomCiIntegrationUseCases {
         command.limit,
       );
       return success(Object.freeze({ runs }));
-    } catch {
+    } catch (error) {
+      if (error instanceof LicensingError) throw error;
       return failure({ code: "unavailable" as const });
     }
   }
@@ -143,7 +147,8 @@ export class SbomCiIntegrationUseCases {
       if ("binding" in result)
         return success(Object.freeze({ binding: result.binding }));
       return failure({ code: result.outcome });
-    } catch {
+    } catch (error) {
+      if (error instanceof LicensingError) throw error;
       return failure({ code: "unavailable" as const });
     }
   }
@@ -183,6 +188,11 @@ export class SbomCiIntegrationUseCases {
         );
       }
       const upload = await this.storage.createSignedUpload({
+        scope: {
+          kind: "ci",
+          organizationId: command.organizationId,
+          credentialId: command.credentialId,
+        },
         objectKey: reserved.reservation.objectKey,
         contentType: reserved.reservation.mediaType,
         byteSize: reserved.reservation.byteSize,
@@ -195,7 +205,8 @@ export class SbomCiIntegrationUseCases {
           buildRunId: reserved.buildRunId,
         }),
       );
-    } catch {
+    } catch (error) {
+      if (error instanceof LicensingError) throw error;
       return failure({ code: "unavailable" as const });
     }
   }
@@ -279,7 +290,8 @@ export class SbomCiIntegrationUseCases {
           buildRunId: completed.buildRunId,
         }),
       );
-    } catch {
+    } catch (error) {
+      if (error instanceof LicensingError) throw error;
       return failure({ code: "unavailable" as const });
     }
   }
@@ -299,7 +311,8 @@ export class SbomCiIntegrationUseCases {
           ),
         }),
       );
-    } catch {
+    } catch (error) {
+      if (error instanceof LicensingError) throw error;
       return failure({ code: "unavailable" });
     }
   }

@@ -1,3 +1,4 @@
+import { LicensingError } from "../licensing/application/licensing.errors";
 import {
   BadRequestException,
   ConflictException,
@@ -40,6 +41,18 @@ function fixture() {
 }
 
 describe("InvitationsService acceptance facade", () => {
+  it("presents source seat quota as 409 without provider leakage", async () => {
+    const { accept, service } = fixture();
+    accept.execute.mockRejectedValue(
+      new LicensingError("license_seat_limit", 409, "Seat limit reached"),
+    );
+    await expect(
+      service.accept("raw-token", { id: "user-1", email: "member@cra.test" }),
+    ).rejects.toMatchObject({
+      status: 409,
+      response: { code: "license_seat_limit", message: "Seat limit reached" },
+    });
+  });
   it("delegates acceptance and returns the existing response", async () => {
     const { accept, auditLog, service } = fixture();
 

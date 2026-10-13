@@ -1,3 +1,5 @@
+import { sourceLicenseError } from "../../licensing/infrastructure/source-license-error";
+import { SourceLicenseAdmission } from "../../licensing/infrastructure/source-license-admission";
 import { Injectable } from "@nestjs/common";
 import {
   invitationSchema,
@@ -134,7 +136,10 @@ type CancelFailedDeliveryRpcClient = Readonly<{
 
 @Injectable()
 export class SupabaseInvitationRepository implements InvitationRepository {
-  constructor(private readonly supabase: SupabaseService) {}
+  constructor(
+    private readonly supabase: SupabaseService,
+    private readonly admission?: SourceLicenseAdmission,
+  ) {}
 
   async findExistingUser(
     email: string,
@@ -146,7 +151,7 @@ export class SupabaseInvitationRepository implements InvitationRepository {
       .eq("email", email)
       .maybeSingle();
 
-    if (error) throw providerFailure();
+    if (error) throw sourceLicenseError(error) ?? providerFailure();
     if (!data) return null;
     const row = record(data);
     if (!row) throw malformedData();
@@ -162,7 +167,7 @@ export class SupabaseInvitationRepository implements InvitationRepository {
       .eq("user_id", userId)
       .maybeSingle();
 
-    if (error) throw providerFailure();
+    if (error) throw sourceLicenseError(error) ?? providerFailure();
     if (!data) return false;
     const row = record(data);
     if (!row) throw malformedData();
@@ -180,7 +185,7 @@ export class SupabaseInvitationRepository implements InvitationRepository {
       .eq("status", "pending")
       .maybeSingle();
 
-    if (error) throw providerFailure();
+    if (error) throw sourceLicenseError(error) ?? providerFailure();
     if (!data) return false;
     const row = record(data);
     if (!row) throw malformedData();
@@ -212,7 +217,7 @@ export class SupabaseInvitationRepository implements InvitationRepository {
       },
     );
 
-    if (error) throw providerFailure();
+    if (error) throw sourceLicenseError(error) ?? providerFailure();
     if (!Array.isArray(data) || data.length !== 1) throw malformedData();
     const row = record(data[0]);
     if (!row) throw malformedData();
@@ -248,7 +253,7 @@ export class SupabaseInvitationRepository implements InvitationRepository {
         p_token_hash: tokenHash,
       },
     );
-    if (error) throw providerFailure();
+    if (error) throw sourceLicenseError(error) ?? providerFailure();
     if (data !== "cancelled" && data !== "changed" && data !== "not_found") {
       throw malformedData();
     }
@@ -259,6 +264,7 @@ export class SupabaseInvitationRepository implements InvitationRepository {
     tokenHash: string,
     user: InvitationActor,
   ): Promise<AcceptInvitationAtomicOutcome> {
+    await this.admission?.invitation(tokenHash, user.email);
     const { data, error } = await this.supabase
       .admin()
       .rpc("accept_invitation_atomic", {
@@ -267,7 +273,7 @@ export class SupabaseInvitationRepository implements InvitationRepository {
         p_email: user.email,
       });
 
-    if (error) throw providerFailure();
+    if (error) throw sourceLicenseError(error) ?? providerFailure();
     if (!Array.isArray(data) || data.length !== 1) throw malformedData();
     const row = record(data[0]);
     if (!row) throw malformedData();
@@ -313,7 +319,7 @@ export class SupabaseInvitationRepository implements InvitationRepository {
         p_actor_email: actor.email,
       });
 
-    if (error) throw providerFailure();
+    if (error) throw sourceLicenseError(error) ?? providerFailure();
     if (typeof data !== "string" || !REVOCATION_OUTCOMES.has(data as never)) {
       throw malformedData();
     }
@@ -343,7 +349,7 @@ export class SupabaseInvitationRepository implements InvitationRepository {
       p_expires_at: expiresAt,
     });
 
-    if (error) throw providerFailure();
+    if (error) throw sourceLicenseError(error) ?? providerFailure();
     if (!Array.isArray(data) || data.length !== 1) throw malformedData();
     const row = record(data[0]);
     if (!row) throw malformedData();
@@ -379,7 +385,7 @@ export class SupabaseInvitationRepository implements InvitationRepository {
       .order("created_at", { ascending: false })
       .order("id", { ascending: true });
 
-    if (error) throw providerFailure();
+    if (error) throw sourceLicenseError(error) ?? providerFailure();
     if (!data) return Object.freeze([]);
     if (!Array.isArray(data)) throw malformedData();
 
@@ -408,7 +414,7 @@ export class SupabaseInvitationRepository implements InvitationRepository {
       .eq("id", orgId)
       .maybeSingle();
 
-    if (error) throw providerFailure();
+    if (error) throw sourceLicenseError(error) ?? providerFailure();
     if (!data) return null;
     const parsed = organizationSummarySchema.safeParse(data);
     if (!parsed.success) throw malformedData();

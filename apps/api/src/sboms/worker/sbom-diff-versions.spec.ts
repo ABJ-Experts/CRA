@@ -51,6 +51,7 @@ async function run(
     failDiffReport: jest.fn(),
   };
   await new SbomDiffWorker({
+    licensing: { canClaim: () => Promise.resolve(true) },
     workerId: report,
     leaseSeconds: 60,
     queue,
@@ -130,7 +131,12 @@ describe("installed M4 lineage comparator", () => {
   });
   it("validates worker identity, lease and bounded batches", () => {
     const queue = {} as SbomDiffQueue;
-    const base = { workerId: report, leaseSeconds: 60, queue };
+    const base = {
+      licensing: { canClaim: () => Promise.resolve(true) },
+      workerId: report,
+      leaseSeconds: 60,
+      queue,
+    };
     expect(() => new SbomDiffWorker({ ...base, workerId: "invalid" })).toThrow(
       "invalid sbom diff worker id",
     );

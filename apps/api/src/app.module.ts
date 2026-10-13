@@ -1,3 +1,4 @@
+import { LicensingModule } from "./licensing/licensing.module";
 import { ExportsModule } from "./exports/exports.module";
 import { ReportsModule } from "./reports/reports.module";
 import { Module } from "@nestjs/common";
@@ -80,6 +81,7 @@ import { NotificationsModule } from "./notifications/notifications.module";
     DashboardModule,
     ExportsModule,
     ReportsModule,
+    LicensingModule,
   ],
   controllers: [HealthController],
 })

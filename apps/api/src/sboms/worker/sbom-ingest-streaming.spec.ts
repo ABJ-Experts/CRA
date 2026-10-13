@@ -52,6 +52,7 @@ function setup(
     contentType: "application/json",
   });
   const worker = new SbomIngestWorker({
+    licensing: { canClaim: () => Promise.resolve(true) },
     workerId: "44444444-4444-4444-8444-444444444444",
     leaseSeconds: 60,
     queue,

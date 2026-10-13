@@ -1,7 +1,9 @@
+import { BoundedUploadService } from "../../licensing/uploads/bounded-upload.service";
+import type { UploadScope } from "../../licensing/uploads/upload-scope";
 import { createHash } from "node:crypto";
 import { Readable } from "node:stream";
 
-import { Injectable } from "@nestjs/common";
+import { Injectable, Optional } from "@nestjs/common";
 import { fromBuffer as fileTypeFromBuffer } from "file-type";
 
 import { SupabaseService } from "../../supabase/supabase.service";
@@ -12,7 +14,6 @@ import {
 } from "../application/product-compliance-use-cases";
 
 const bucket = "security-update-artifacts";
-const signedUploadTtlMilliseconds = 2 * 60 * 60 * 1_000;
 const signedDownloadTtlSeconds = 5 * 60;
 const sharedContentAddressedObjectKey =
   /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}\/[a-f0-9]{64}$/;
@@ -33,36 +34,24 @@ type StorageResponse<T> = Readonly<{
  */
 @Injectable()
 export class SupabaseProductComplianceStorageAdapter implements ProductComplianceStoragePort {
-  constructor(private readonly supabase: SupabaseService) {}
+  constructor(
+    private readonly supabase: SupabaseService,
+    @Optional() private readonly uploads?: BoundedUploadService,
+  ) {}
 
   async createSignedUpload(
     input: Readonly<{
       objectKey: string;
       contentType: string;
       byteSize: number;
+      scope?: UploadScope;
     }>,
   ) {
     this.assertNewObjectInput(input);
     try {
-      const result = (await this.supabase
-        .admin()
-        .storage.from(bucket)
-        .createSignedUploadUrl(input.objectKey, {
-          upsert: false,
-        })) as StorageResponse<Readonly<{ signedUrl?: unknown }>>;
-      if (
-        result.error ||
-        !result.data ||
-        !isSignedStorageUrl(result.data.signedUrl)
-      ) {
-        throw new ProductComplianceProviderError("unavailable");
-      }
-      return Object.freeze({
-        uploadUrl: result.data.signedUrl,
-        expiresAt: new Date(
-          Date.now() + signedUploadTtlMilliseconds,
-        ).toISOString(),
-      });
+      if (!this.uploads || !input.scope)
+        throw new Error("Upload admission unavailable");
+      return await this.uploads.issue({ ...input, scope: input.scope, bucket });
     } catch (error) {
       throw this.providerError(error);
     }

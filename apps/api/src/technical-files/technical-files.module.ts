@@ -1,3 +1,4 @@
+import { LicensingModule } from "../licensing/licensing.module";
 import { Module } from "@nestjs/common";
 
 import { ProductsModule } from "../products/products.module";
@@ -51,7 +52,7 @@ import {
 } from "./technical-file-auditor-access.controller";
 
 @Module({
-  imports: [SupabaseModule, ProductsModule],
+  imports: [LicensingModule, SupabaseModule, ProductsModule],
   controllers: [
     TechnicalFilesController,
     TechnicalFileAuditorGrantsController,

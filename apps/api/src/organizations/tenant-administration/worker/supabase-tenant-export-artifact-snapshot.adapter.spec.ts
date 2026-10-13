@@ -178,6 +178,104 @@ const makeAdapter = (
 };
 
 describe("SupabaseTenantExportArtifactSnapshotAdapter", () => {
+  it.each([
+    { status: 404, message: "Object not found" },
+    { statusCode: "404", message: "Object not found" },
+    {
+      status: 500,
+      message: "ENOENT: no such file or directory, stat '/private/source'",
+    },
+    { code: "NoSuchKey", message: "Missing source" },
+  ])(
+    "preserves a missing source without publishing or consuming outage retries: %j",
+    async (error) => {
+      const source = makeStorageBucket();
+      const archive = makeStorageBucket();
+      const { adapter, rpc } = makeAdapter({
+        storage: Object.freeze({
+          "evidence-documents": source,
+          "tenant-exports": archive,
+        }),
+      });
+      source.download.mockResolvedValue({
+        data: null,
+        error,
+      });
+      await expect(
+        adapter.snapshot({
+          organizationId,
+          exportId,
+          leaseOwner,
+          checkpointVersion: 7,
+        }),
+      ).rejects.toMatchObject({
+        code: "artifact_source_missing",
+        retryable: false,
+      });
+      expect(archive.upload).not.toHaveBeenCalled();
+      expect(rpc).not.toHaveBeenCalled();
+    },
+  );
+  it("distinguishes an absent source catalog entry from a provider outage", async () => {
+    const source = makeStorageBucket();
+    const { adapter } = makeAdapter({
+      storage: Object.freeze({
+        "evidence-documents": source,
+        "tenant-exports": makeStorageBucket(),
+      }),
+    });
+    source.info.mockResolvedValue({
+      data: null,
+      error: { status: 404 },
+    });
+    await expect(
+      adapter.snapshot({
+        organizationId,
+        exportId,
+        leaseOwner,
+        checkpointVersion: 7,
+      }),
+    ).rejects.toMatchObject({
+      code: "artifact_source_missing",
+      retryable: false,
+    });
+    expect(source.download).not.toHaveBeenCalled();
+  });
+
+  it.each(["info", "download"] as const)(
+    "keeps returned %s outages retryable",
+    async (operation) => {
+      const source = makeStorageBucket();
+      const archive = makeStorageBucket();
+      const { adapter, rpc } = makeAdapter({
+        storage: Object.freeze({
+          "evidence-documents": source,
+          "tenant-exports": archive,
+        }),
+      });
+      source[operation].mockResolvedValue({
+        data: null,
+        error: {
+          status: 503,
+          statusCode: "503",
+          message: "Provider unavailable",
+        },
+      });
+      await expect(
+        adapter.snapshot({
+          organizationId,
+          exportId,
+          leaseOwner,
+          checkpointVersion: 7,
+        }),
+      ).rejects.toMatchObject({
+        code: "provider_unavailable",
+        retryable: true,
+      });
+      expect(archive.upload).not.toHaveBeenCalled();
+      expect(rpc).not.toHaveBeenCalled();
+    },
+  );
   it("rejects an invalid configured artifact byte limit", () => {
     expect(() => makeAdapter({ maxBytes: 0 })).toThrow(
       "invalid tenant export artifact snapshot limit",

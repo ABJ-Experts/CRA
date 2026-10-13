@@ -1,3 +1,4 @@
+import { LicensingService } from "./licensing/application/licensing.service";
 import { Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { NestFactory } from "@nestjs/core";
@@ -19,6 +20,7 @@ async function bootstrap() {
   const config = app.get(ConfigService);
   const worker = new SupplierDocumentExtractionWorker({
     supabase: app.get(SupabaseService),
+    licensing: app.get(LicensingService),
     storage: app.get(SupabaseEvidenceStorageAdapter),
     extractor: new LocalEvidenceTextExtractorAdapter({
       pdftotextPath: config.get<string>("EVIDENCE_PDFTOTEXT_PATH"),

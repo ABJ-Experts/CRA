@@ -1,3 +1,4 @@
+import type { LicensingGlobalWorkerPolicy } from "../licensing/operations/licensing-worker-policy";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 
@@ -73,6 +74,7 @@ export class SupplierDocumentExtractionWorker {
   constructor(
     private readonly dependencies: Readonly<{
       supabase: Pick<SupabaseService, "admin">;
+      licensing: LicensingGlobalWorkerPolicy;
       storage: Pick<SupabaseEvidenceStorageAdapter, "openVerified">;
       extractor: Pick<LocalEvidenceTextExtractorAdapter, "extract">;
       gateway: Pick<AiGateway, "extractSupplierFields">;
@@ -83,6 +85,7 @@ export class SupplierDocumentExtractionWorker {
   }
 
   async runOnce(): Promise<number> {
+    await this.dependencies.licensing.prepareClaims("ai");
     const client = this.dependencies.supabase.admin() as unknown as RpcClient;
     const claimed = await call(
       client,

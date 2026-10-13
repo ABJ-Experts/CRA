@@ -51,6 +51,7 @@ describe("EvidenceTextExtractionWorker", () => {
       }));
       const worker = new EvidenceTextExtractionWorker(
         {
+          licensing: { canClaim: () => Promise.resolve(true) },
           supabase: {
             admin: () => ({ rpc, from: select }),
           } as unknown as SupabaseService,
@@ -300,6 +301,7 @@ function harness(
   );
   const worker = new EvidenceTextExtractionWorker(
     {
+      licensing: { canClaim: () => Promise.resolve(true) },
       supabase: { admin: () => ({ rpc, from }) } as unknown as SupabaseService,
       storage: { openVerified },
       extractor: { extract },

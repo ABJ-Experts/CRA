@@ -8,30 +8,34 @@ const objectKey =
   "a".repeat(64);
 
 describe("SupabaseSbomStorageAdapter", () => {
-  it("accepts text/plain SBOM metadata when creating signed uploads", async () => {
-    const createSignedUploadUrl = jest.fn().mockResolvedValue({
-      data: { signedUrl: "http://localhost/upload/sbom" },
-      error: null,
+  it("issues a bounded API grant with the verified member identity", async () => {
+    const scope = {
+      kind: "member" as const,
+      organizationId: objectKey.split("/")[0]!,
+      actorId: "11111111-1111-4111-8111-111111111111",
+    };
+    const issue = jest.fn().mockResolvedValue({
+      uploadUrl: "http://localhost/upload/sbom",
+      expiresAt: "2026-01-01T00:00:00Z",
     });
-    const adapter = new SupabaseSbomStorageAdapter({
-      admin: () => ({
-        storage: {
-          from: () => ({ createSignedUploadUrl }),
-        },
-      }),
-    } as unknown as SupabaseService);
-
+    const adapter = new SupabaseSbomStorageAdapter(
+      {} as SupabaseService,
+      { issue } as never,
+    );
     await expect(
       adapter.createSignedUpload({
         objectKey,
         contentType: "text/plain",
         byteSize: 12,
+        scope,
       }),
-    ).resolves.toMatchObject({
-      uploadUrl: "http://localhost/upload/sbom",
-    });
-    expect(createSignedUploadUrl).toHaveBeenCalledWith(objectKey, {
-      upsert: false,
+    ).resolves.toMatchObject({ uploadUrl: "http://localhost/upload/sbom" });
+    expect(issue).toHaveBeenCalledWith({
+      objectKey,
+      contentType: "text/plain",
+      byteSize: 12,
+      scope,
+      bucket: "sbom-originals",
     });
   });
 

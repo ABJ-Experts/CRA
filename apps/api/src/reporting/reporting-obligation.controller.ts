@@ -15,6 +15,8 @@ import {
   UseInterceptors,
 } from "@nestjs/common";
 import { FileInterceptor } from "@nestjs/platform-express";
+import { LicensingError } from "../licensing/application/licensing.errors";
+import { licensingHttpException } from "../licensing/infrastructure/licensing-http";
 import { memoryStorage } from "multer";
 import {
   acquireReportingStageDraftLockInputSchema,
@@ -882,6 +884,8 @@ function validatedReceipt(file: Express.Multer.File | undefined) {
 }
 
 function evidenceFailure(error: unknown): Error {
+  if (error instanceof HttpException) return error;
+  if (error instanceof LicensingError) return licensingHttpException(error);
   if (error instanceof ReportingObligationInvalidStateError)
     return new ConflictException({
       code: "rehearsal_filing_forbidden",

@@ -1,3 +1,5 @@
+import { LicensingModule } from "../licensing/licensing.module";
+import { LicensingService } from "../licensing/application/licensing.service";
 import { ProductClassificationsController } from "./product-classifications.controller";
 import {
   ProductClassificationUseCases,
@@ -74,7 +76,13 @@ import { SupabaseProductComplianceWorkerAdapter } from "./worker/supabase-produc
 const complianceMetricsLogger = new Logger(ProductComplianceWorker.name);
 
 @Module({
-  imports: [SupabaseModule, OrganizationsModule, PermissionsModule, MailModule],
+  imports: [
+    LicensingModule,
+    SupabaseModule,
+    OrganizationsModule,
+    PermissionsModule,
+    MailModule,
+  ],
   controllers: [
     ProductImportsController,
     ProductOwnersController,
@@ -267,18 +275,21 @@ const complianceMetricsLogger = new Logger(ProductComplianceWorker.name);
     {
       provide: ProductImportWorker,
       inject: [
+        LicensingService,
         SupabaseProductImportRepository,
         ProductImportUseCases,
         PermissionsService,
         ConfigService,
       ],
       useFactory: (
+        licensing: LicensingService,
         repository: SupabaseProductImportRepository,
         useCases: ProductImportUseCases,
         permissions: PermissionsService,
         config: ConfigService,
       ) =>
         new ProductImportWorker({
+          licensing,
           workerId: randomUUID(),
           leaseSeconds: config.getOrThrow<number>(
             "PRODUCT_IMPORT_LEASE_SECONDS",

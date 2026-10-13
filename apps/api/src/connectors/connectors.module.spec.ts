@@ -1,3 +1,4 @@
+import { LicensingService } from "../licensing/application/licensing.service";
 import { randomBytes } from "node:crypto";
 import { Logger } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
@@ -101,6 +102,9 @@ describe("ConnectorsModule production composition", () => {
         .useValue(supabase)
         .overrideProvider(PermissionsService)
         .useValue(permissions)
+        // Admit the synthetic tenant so original actor policy remains exercised.
+        .overrideProvider(LicensingService)
+        .useValue({ canClaim: () => Promise.resolve(true) })
         .compile();
       try {
         const service = module.get(ConnectorsService);

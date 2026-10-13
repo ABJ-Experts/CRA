@@ -1,3 +1,4 @@
+import { LicensingService } from "./licensing/application/licensing.service";
 import { Logger } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 import { randomUUID } from "node:crypto";
@@ -62,6 +63,7 @@ export function reportsWorkerFromContext(
     }),
     sourceContexts,
     workerId,
+    context.get(LicensingService) as LicensingService,
   );
 }
 /* istanbul ignore next -- runtime entry guard. */

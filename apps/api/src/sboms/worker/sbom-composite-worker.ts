@@ -1,3 +1,4 @@
+import type { LicensingWorkerPolicy } from "../../licensing/operations/licensing-worker-policy";
 import { createHash, randomUUID } from "node:crypto";
 
 import { Logger } from "@nestjs/common";
@@ -83,6 +84,7 @@ export class SbomCompositeWorker {
   constructor(
     private readonly dependencies: Readonly<{
       workerId: string;
+      licensing: LicensingWorkerPolicy;
       leaseSeconds: number;
       queue: SbomCompositeQueue;
       intake: Pick<SbomIntakeUseCases, "initialize" | "complete">;
@@ -118,6 +120,8 @@ export class SbomCompositeWorker {
   }
 
   private async processOne(organizationId: string): Promise<boolean> {
+    // SQL admits new generation or bounded reconciliation of an existing source.
+    await this.dependencies.licensing.canClaim(organizationId, "sboms");
     const claim = await this.dependencies.queue.claimCompositeGeneration(
       organizationId,
       {

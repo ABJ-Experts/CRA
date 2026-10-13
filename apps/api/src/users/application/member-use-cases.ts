@@ -1,3 +1,4 @@
+import { LicensingError } from "../../licensing/application/licensing.errors";
 import type { PageParams, Paged } from "@repo/contracts/pagination";
 import type { BaseRole } from "@repo/contracts/permissions";
 import type { Member } from "@repo/contracts/users";
@@ -197,6 +198,7 @@ export class MemberUseCases {
     error: unknown,
     operation: MemberMutationOperation,
   ): MemberResult<never> {
+    if (error instanceof LicensingError) throw error;
     if (error instanceof MemberRepositoryError) {
       if (error.code === "last_owner") {
         return failure(Object.freeze({ code: "last_owner" as const }));

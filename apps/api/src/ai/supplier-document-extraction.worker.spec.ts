@@ -80,6 +80,7 @@ function setup(overrides: Record<string, unknown> = {}) {
   };
   const worker = new SupplierDocumentExtractionWorker(
     {
+      licensing: { prepareClaims: () => Promise.resolve() },
       supabase: { admin: () => ({ rpc }) } as unknown as SupabaseService,
       storage,
       extractor,

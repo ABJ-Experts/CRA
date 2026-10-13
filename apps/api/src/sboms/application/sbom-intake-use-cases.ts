@@ -1,3 +1,4 @@
+import type { UploadScope } from "../../licensing/uploads/upload-scope";
 import type { Result } from "../../common/domain/result";
 import type {
   SbomDetectedFormat,
@@ -210,6 +211,7 @@ export interface SbomStoragePort {
       objectKey: string;
       contentType: string;
       byteSize: number;
+      scope: UploadScope;
     }>,
   ): Promise<Readonly<{ uploadUrl: string; expiresAt: string }>>;
   inspect(
@@ -291,6 +293,17 @@ export class SbomIntakeUseCases {
         );
       }
       const upload = await this.storage.createSignedUpload({
+        scope: command.ciCredentialId
+          ? {
+              kind: "ci",
+              organizationId: command.organizationId,
+              credentialId: command.ciCredentialId,
+            }
+          : {
+              kind: "member",
+              organizationId: command.organizationId,
+              actorId: command.actorId,
+            },
         objectKey: reserved.reservation.objectKey,
         contentType: reserved.reservation.mediaType,
         byteSize: reserved.reservation.byteSize,

@@ -1,3 +1,4 @@
+import { LicensingModule } from "../licensing/licensing.module";
 import { randomUUID } from "node:crypto";
 import { Module } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
@@ -27,7 +28,7 @@ import { ReportingRehearsalController } from "./reporting-rehearsal.controller";
 import { ReportingDeadlineMonitorWorker } from "./worker/reporting-deadline-monitor-worker";
 
 @Module({
-  imports: [SupabaseModule, MailModule, AuthModule],
+  imports: [LicensingModule, SupabaseModule, MailModule, AuthModule],
   controllers: [ReportingObligationController, ReportingRehearsalController],
   providers: [
     SupabaseReportingObligationRepository,

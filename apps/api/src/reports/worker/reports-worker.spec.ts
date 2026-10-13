@@ -51,6 +51,10 @@ describe("ReportsWorker", () => {
       { runOnce },
       { prepareScheduled: jest.fn() },
       claim.workerId,
+      {
+        canClaim: () => Promise.resolve(true),
+        prepareClaims: () => Promise.resolve(),
+      },
     );
     await expect(worker.runOnce()).resolves.toBe("idle");
     expect(runOnce).toHaveBeenCalledTimes(1);
@@ -68,6 +72,10 @@ describe("ReportsWorker", () => {
       { runOnce: jest.fn() },
       { prepareScheduled: jest.fn() },
       claim.workerId,
+      {
+        canClaim: () => Promise.resolve(true),
+        prepareClaims: () => Promise.resolve(),
+      },
     );
     await expect(worker.runOnce()).resolves.toBe("processed");
     expect(failRecipient).toHaveBeenCalledWith(claim, "access_changed");
@@ -92,6 +100,10 @@ describe("ReportsWorker", () => {
       { runOnce: jest.fn() },
       { prepareScheduled },
       claim.workerId,
+      {
+        canClaim: () => Promise.resolve(true),
+        prepareClaims: () => Promise.resolve(),
+      },
     );
     await worker.runOnce();
     expect(admitExport).toHaveBeenCalledWith(
@@ -130,6 +142,10 @@ describe("ReportsWorker", () => {
       { runOnce: jest.fn() },
       { prepareScheduled },
       claim.workerId,
+      {
+        canClaim: () => Promise.resolve(true),
+        prepareClaims: () => Promise.resolve(),
+      },
     );
     expect(() => reportRecipientClaimSchema.parse(retiredClaim)).not.toThrow();
     await expect(worker.runOnce()).resolves.toBe("processed");
@@ -159,6 +175,10 @@ describe("ReportsWorker", () => {
       { runOnce: jest.fn() },
       { prepareScheduled: jest.fn() },
       claim.workerId,
+      {
+        canClaim: () => Promise.resolve(true),
+        prepareClaims: () => Promise.resolve(),
+      },
     );
     await expect(worker.runOnce()).resolves.toBe("processed");
     expect(admitExport).toHaveBeenCalledWith(
@@ -185,6 +205,10 @@ describe("ReportsWorker", () => {
       { runOnce: render },
       { prepareScheduled: jest.fn() },
       claim.workerId,
+      {
+        canClaim: () => Promise.resolve(true),
+        prepareClaims: () => Promise.resolve(),
+      },
     );
     await expect(worker.runOnce()).resolves.toBe("processed");
     expect(admitExport).toHaveBeenCalledWith(
@@ -231,6 +255,10 @@ describe("ReportsWorker", () => {
       { runOnce: jest.fn().mockResolvedValue("processed") },
       { prepareScheduled },
       claim.workerId,
+      {
+        canClaim: () => Promise.resolve(true),
+        prepareClaims: () => Promise.resolve(),
+      },
     );
     await worker.runOnce();
     expect(prepareScheduled).toHaveBeenCalledWith(
@@ -291,6 +319,10 @@ describe("ReportsWorker", () => {
       { runOnce: jest.fn().mockResolvedValue("processed") },
       { prepareScheduled },
       claim.workerId,
+      {
+        canClaim: () => Promise.resolve(true),
+        prepareClaims: () => Promise.resolve(),
+      },
     );
     await worker.runOnce();
     await worker.runOnce();
@@ -325,6 +357,10 @@ describe("ReportsWorker", () => {
       { runOnce: jest.fn() },
       { prepareScheduled: jest.fn() },
       claim.workerId,
+      {
+        canClaim: () => Promise.resolve(true),
+        prepareClaims: () => Promise.resolve(),
+      },
     );
     await worker.runOnce();
     expect(failRecipient).toHaveBeenCalledWith(
@@ -352,6 +388,10 @@ describe("ReportsWorker", () => {
       { runOnce: jest.fn().mockResolvedValue("processed") },
       { prepareScheduled: jest.fn() },
       claim.workerId,
+      {
+        canClaim: () => Promise.resolve(true),
+        prepareClaims: () => Promise.resolve(),
+      },
     );
     await expect(worker.runOnce()).resolves.toBe("processed");
     expect(failRecipient).not.toHaveBeenCalled();
@@ -384,6 +424,10 @@ describe("ReportsWorker", () => {
       { runOnce: () => render },
       { prepareScheduled: jest.fn() },
       claim.workerId,
+      {
+        canClaim: () => Promise.resolve(true),
+        prepareClaims: () => Promise.resolve(),
+      },
     );
     try {
       const work = worker.runOnce();
@@ -410,6 +454,10 @@ describe("ReportsWorker", () => {
       { runOnce: jest.fn() },
       { prepareScheduled: jest.fn() },
       claim.workerId,
+      {
+        canClaim: () => Promise.resolve(true),
+        prepareClaims: () => Promise.resolve(),
+      },
     );
     await worker.runOnce();
     expect(publishRecipient).not.toHaveBeenCalled();
@@ -433,6 +481,10 @@ describe("ReportsWorker", () => {
       { runOnce: render },
       { prepareScheduled: jest.fn() },
       claim.workerId,
+      {
+        canClaim: () => Promise.resolve(true),
+        prepareClaims: () => Promise.resolve(),
+      },
     );
     await expect(worker.runOnce()).resolves.toBe("processed");
     expect(render).toHaveBeenCalledTimes(1);
@@ -462,8 +514,43 @@ describe("ReportsWorker", () => {
       exportWorker,
       { prepareScheduled: jest.fn() },
       claim.workerId,
+      {
+        canClaim: () => Promise.resolve(true),
+        prepareClaims: () => Promise.resolve(),
+      },
     );
     await worker.runOnce();
     expect(events).toEqual(["render", "publish"]);
+  });
+});
+
+describe("ReportsWorker licence transitions", () => {
+  it("releases a newly denied recipient without recording a failed retry or generating an export", async () => {
+    const pauseRecipient = jest.fn();
+    const failRecipient = jest.fn();
+    const authorizeRecipient = jest.fn();
+    const queue = {
+      scheduleDue: jest.fn().mockResolvedValue(0),
+      claimRecipient: jest.fn().mockResolvedValue(claim),
+      pauseRecipient,
+      failRecipient,
+      authorizeRecipient,
+    } as unknown as ReportsWorkerQueue;
+    const render = jest.fn();
+    const worker = new ReportsWorker(
+      queue,
+      { runOnce: render },
+      { prepareScheduled: jest.fn() },
+      claim.workerId,
+      {
+        canClaim: () => Promise.resolve(false),
+        prepareClaims: () => Promise.resolve(),
+      },
+    );
+    await expect(worker.runOnce()).resolves.toBe("processed");
+    expect(pauseRecipient).toHaveBeenCalledWith(claim);
+    expect(failRecipient).not.toHaveBeenCalled();
+    expect(render).not.toHaveBeenCalled();
+    expect(authorizeRecipient).not.toHaveBeenCalled();
   });
 });

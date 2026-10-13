@@ -26,7 +26,8 @@ begin
  perform pg_temp.check('report predecessor permits full range authorization',(authorized->>'complete')::boolean and (authorized->>'scopeAvailable')::boolean and authorized->'job'->'predecessor'->>'id'=event.id::text);
  perform pg_temp.check('authorized bounded page available',jsonb_array_length(public.m13_04_page_verification(org,(created->>'id')::uuid,'report-predecessor-regression',(claimed->>'lease_token')::uuid,(authorized->'job'->>'version')::int,'1','2',250,16777216)->'rows')=1);
  select * into old_job from public.audit_verification_jobs where id=(created->>'id')::uuid;
- old_job.authorization_xid:=(pg_current_xact_id()::text::bigint-1)::text::xid8;
+ -- Use a known committed predecessor; XID-1 can belong to a concurrent request.
+ select xmin::text::xid8 into old_job.authorization_xid from public.users where id=actor;
  perform public.m13_04_security_receipt(org,null,gen_random_uuid(),'audit.range.scope_changed',null,repeat('b',64),jsonb_build_object('epoch',old_job.dataset_epoch,'xid',pg_current_xact_id()::text,'policyVersion',1));
  perform pg_temp.check('old authorization fails closed after scope rollout',public.m13_04_current_scope(old_job)='access_changed');
  created:=public.m13_04_create_verification(org,actor,gen_random_uuid(),'2','2',null,repeat('c',64));

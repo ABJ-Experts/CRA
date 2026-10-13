@@ -256,6 +256,7 @@ describe("BrandingUseCases", () => {
         `${organizationId}/${assetId}/${"a".repeat(64)}.webp`,
         Buffer.from("webp"),
         "image/webp",
+        { kind: "member", organizationId, actorId },
       ],
     ]);
     expect((repository.finalizeAsset as jest.Mock).mock.calls).toEqual([
@@ -321,6 +322,7 @@ describe("BrandingUseCases", () => {
         `${organizationId}/${assetId}/${"a".repeat(64)}.webp`,
         Buffer.from("webp"),
         "image/webp",
+        { kind: "member", organizationId, actorId },
       ],
     ]);
     const finalizeCalls = (repository.finalizeAsset as jest.Mock).mock

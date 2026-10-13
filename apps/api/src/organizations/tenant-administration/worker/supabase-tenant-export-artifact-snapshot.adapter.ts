@@ -18,6 +18,33 @@ type StorageBucket = Readonly<{
   ): PromiseLike<Readonly<{ error: unknown }>>;
 }>;
 
+const sourceStorageErrorSchema = z
+  .object({
+    status: z.number().optional(),
+    statusCode: z.union([z.number(), z.string()]).optional(),
+    code: z.string().optional(),
+    errorCode: z.string().optional(),
+    message: z.string().optional(),
+  })
+  .passthrough();
+
+/** Missing retained bytes are a recovery condition, never an empty export or a transient retry. */
+function sourceStorageFailure(error: unknown): WorkerFailure {
+  const parsed = sourceStorageErrorSchema.safeParse(error);
+  const missing =
+    parsed.success &&
+    (parsed.data.status === 404 ||
+      String(parsed.data.statusCode) === "404" ||
+      /^(NoSuchKey|NoSuchObject|not_found|object_not_found)$/i.test(
+        parsed.data.errorCode ?? parsed.data.code ?? "",
+      ) ||
+      /\bENOENT\b/.test(parsed.data.message ?? ""));
+  return new WorkerFailure(
+    missing ? "artifact_source_missing" : "provider_unavailable",
+    !missing,
+  );
+}
+
 const tenantExportBucket = "tenant-exports";
 const pageSize = 1000;
 const maximumArtifactSnapshotBytes = 50 * 1024 * 1024;
@@ -311,7 +338,7 @@ export class SupabaseTenantExportArtifactSnapshotAdapter {
     const result = await this.storage(source.bucketId).download(
       source.sourcePath,
     );
-    if (result.error) throw new WorkerFailure("provider_unavailable", true);
+    if (result.error) throw sourceStorageFailure(result.error);
     if (!result.data || typeof result.data !== "object") {
       throw new WorkerFailure("malformed_provider", false);
     }
@@ -331,7 +358,7 @@ export class SupabaseTenantExportArtifactSnapshotAdapter {
 
   private async verifySourceInfo(source: SourceArtifact): Promise<void> {
     const result = await this.storage(source.bucketId).info(source.sourcePath);
-    if (result.error) throw new WorkerFailure("provider_unavailable", true);
+    if (result.error) throw sourceStorageFailure(result.error);
     const parsed = z
       .object({
         id: z.string().min(1),

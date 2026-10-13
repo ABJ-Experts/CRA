@@ -16,7 +16,9 @@ describe("CoverageRecalculationWorker", () => {
     recalculate: jest.fn(),
     fail: jest.fn(),
   } as jest.Mocked<CoverageWorkQueue>;
-  const worker = new CoverageRecalculationWorker(queue);
+  const worker = new CoverageRecalculationWorker(queue, {
+    prepareClaims: () => Promise.resolve(),
+  });
 
   beforeEach(() => {
     queue.claim.mockReset();

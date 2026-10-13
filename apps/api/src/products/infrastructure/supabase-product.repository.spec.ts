@@ -1,6 +1,30 @@
 import { SupabaseProductRepository } from "./supabase-product.repository";
 
 describe("SupabaseProductRepository", () => {
+  it.each([false, true])(
+    "preserves the SQL product quota denial (rejected=%s)",
+    async (rejected) => {
+      const error = {
+        code: "42501",
+        message: "licensing_product_limit",
+        details: "private database details",
+      };
+      const rpc = rejected
+        ? jest.fn().mockRejectedValue(error)
+        : jest.fn().mockResolvedValue({ data: null, error });
+      const repository = new SupabaseProductRepository({
+        admin: () => ({ rpc }),
+      } as never);
+      await expect(
+        repository.createProduct("org", "actor", {} as never),
+      ).rejects.toMatchObject({
+        code: "license_product_limit",
+        status: 409,
+        reason: "product_limit",
+      });
+    },
+  );
+
   const organizationId = "00000000-0000-4000-8000-000000000001";
   const actorId = "00000000-0000-4000-8000-000000000002";
   const productId = "00000000-0000-4000-8000-000000000003";

@@ -412,6 +412,10 @@ export const exportSourceRegistry: readonly ExportSourceRegistration[] =
 /** Explicit omissions are security objects, never an accidental omission. */
 export const exportSourceExclusions: Readonly<Record<string, string>> =
   Object.freeze({
+    organization_license_states:
+      "Instance-bound licence verification, clock and runtime policy authority is deployment-local; durable activation evidence exports through the audit chain and immutable artifact inventory.",
+    organization_storage_admissions:
+      "Upload bearer digests, source grants and reservation leases are deployment-local security state; retained evidence bytes and source metadata export independently.",
     organization_creation_idempotencies:
       "Idempotency keys are request-security material and are not tenant records.",
     organization_export_idempotencies:

@@ -334,6 +334,18 @@
     "./reports/policy": {
       "types": "./dist/reports/policy.d.ts",
       "default": "./dist/reports/policy.js"
+    },
+    "./licensing": {
+      "types": "./dist/licensing/index.d.ts",
+      "default": "./dist/licensing/index.js"
+    },
+    "./licensing/schemas": {
+      "types": "./dist/licensing/schemas/index.d.ts",
+      "default": "./dist/licensing/schemas/index.js"
+    },
+    "./licensing/types": {
+      "types": "./dist/licensing/types/index.d.ts",
+      "default": "./dist/licensing/types/index.js"
     }
   },
   "files": [
