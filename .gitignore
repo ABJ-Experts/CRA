@@ -103,3 +103,14 @@ docs/architecture/m15-03-evidence/*
 !docs/architecture/m15-03-evidence/*.png
 !docs/architecture/m15-03-evidence/*.json
 !docs/superpowers/plans/2026-10-14-m15-03*.md
+
+# M15-04 reviewed design, plan, and nonsecret verification evidence.
+!docs/architecture/m15-04*.md
+!docs/architecture/evidence/
+docs/architecture/evidence/*
+!docs/architecture/evidence/m15-04/
+docs/architecture/evidence/m15-04/*
+!docs/architecture/evidence/m15-04/*.png
+!docs/architecture/evidence/m15-04/*.json
+!docs/architecture/evidence/m15-04/*.md
+!docs/superpowers/plans/2026-10-14-m15-04-support-diagnostics.md

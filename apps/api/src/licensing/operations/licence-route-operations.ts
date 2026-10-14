@@ -4,6 +4,106 @@ import type { LicenceOperation } from "./licence-operation.registry";
 export const licenceRouteOperations: Readonly<
   Record<string, LicenceOperation>
 > = Object.freeze({
+  "SupportDiagnosticsController.cancel": {
+    kind: "security",
+    identity: "member",
+    mutation: true,
+    authority: "m15_04_cancel",
+    evidence:
+      "apps/api/src/support-diagnostics/support-diagnostics.controller.ts",
+    reason:
+      "Consented creator-only diagnostics retain current administrator, source and session authority under licence expiry; no external transmission or regulatory grant.",
+  },
+  "SupportDiagnosticsController.cleanup": {
+    kind: "security",
+    identity: "member",
+    mutation: true,
+    authority: "m15_04_request_cleanup",
+    evidence:
+      "apps/api/src/support-diagnostics/support-diagnostics.controller.ts",
+    reason:
+      "Consented creator-only diagnostics retain current administrator, source and session authority under licence expiry; no external transmission or regulatory grant.",
+  },
+  "SupportDiagnosticsController.cleanupReview": {
+    kind: "security",
+    identity: "member",
+    mutation: true,
+    authority: "m15_04_cleanup_review",
+    evidence:
+      "apps/api/src/support-diagnostics/support-diagnostics.controller.ts",
+    reason:
+      "Consented creator-only diagnostics retain current administrator, source and session authority under licence expiry; no external transmission or regulatory grant.",
+  },
+  "SupportDiagnosticsController.content": {
+    kind: "security",
+    identity: "member",
+    mutation: false,
+    authority: "m15_04_access",
+    evidence:
+      "apps/api/src/support-diagnostics/support-diagnostics.controller.ts",
+    reason:
+      "Consented creator-only diagnostics retain current administrator, source and session authority under licence expiry; no external transmission or regulatory grant.",
+  },
+  "SupportDiagnosticsController.create": {
+    kind: "security",
+    identity: "member",
+    mutation: true,
+    authority: "m15_04_create",
+    evidence:
+      "apps/api/src/support-diagnostics/support-diagnostics.controller.ts",
+    reason:
+      "Consented creator-only diagnostics retain current administrator, source and session authority under licence expiry; no external transmission or regulatory grant.",
+  },
+  "SupportDiagnosticsController.download": {
+    kind: "security",
+    identity: "member",
+    mutation: false,
+    authority: "m15_04_redeem_grant",
+    evidence:
+      "apps/api/src/support-diagnostics/support-diagnostics.controller.ts",
+    reason:
+      "Consented creator-only diagnostics retain current administrator, source and session authority under licence expiry; no external transmission or regulatory grant.",
+  },
+  "SupportDiagnosticsController.get": {
+    kind: "security",
+    identity: "member",
+    mutation: false,
+    authority: "m15_04_get",
+    evidence:
+      "apps/api/src/support-diagnostics/support-diagnostics.controller.ts",
+    reason:
+      "Consented creator-only diagnostics retain current administrator, source and session authority under licence expiry; no external transmission or regulatory grant.",
+  },
+  "SupportDiagnosticsController.grant": {
+    kind: "security",
+    identity: "member",
+    mutation: true,
+    authority: "m15_04_issue_grant",
+    evidence:
+      "apps/api/src/support-diagnostics/support-diagnostics.controller.ts",
+    reason:
+      "Consented creator-only diagnostics retain current administrator, source and session authority under licence expiry; no external transmission or regulatory grant.",
+  },
+  "SupportDiagnosticsController.list": {
+    kind: "security",
+    identity: "member",
+    mutation: false,
+    authority: "m15_04_list",
+    evidence:
+      "apps/api/src/support-diagnostics/support-diagnostics.controller.ts",
+    reason:
+      "Consented creator-only diagnostics retain current administrator, source and session authority under licence expiry; no external transmission or regulatory grant.",
+  },
+  "SupportDiagnosticsController.preview": {
+    kind: "security",
+    identity: "member",
+    mutation: true,
+    authority: "preview",
+    evidence:
+      "apps/api/src/support-diagnostics/support-diagnostics.controller.ts",
+    reason:
+      "Consented creator-only diagnostics retain current administrator, source and session authority under licence expiry; no external transmission or regulatory grant.",
+  },
   "OperatorController.session": {
     kind: "security",
     identity: "operator",

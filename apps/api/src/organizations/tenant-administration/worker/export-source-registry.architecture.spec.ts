@@ -80,7 +80,7 @@ const dynamicSnapshotLockAdditions = (sql: string): readonly string[] =>
       ]),
       ...[
         ...sql.matchAll(
-          /replace\(v_definition,v_anchor,', public\.([a-z_]+)'\|\|v_anchor\)/g,
+          /replace\((?:v_definition|d),(?:v_anchor|anchor),', public\.([a-z_]+)'\|\|(?:v_anchor|anchor)\)/g,
         ),
       ].map((match) => ["", match[1]]),
     ]
@@ -98,6 +98,13 @@ const physicalSourceMappings = (sql: string): readonly string[] =>
     .filter((table): table is string => Boolean(table));
 
 describe("tenant export source registry architecture", () => {
+  it("registers diagnostic disclosure metadata without exporting private bundle bytes", () => {
+    expect(
+      exportSourceRegistry.find(
+        (source) => source.sourceId === "support_diagnostics",
+      )?.tables,
+    ).toEqual(["support_diagnostic_jobs"]);
+  });
   it("reads complete catalogue tuples rather than partial trigger source lists", () => {
     expect(
       physicalSourceMappings(

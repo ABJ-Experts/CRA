@@ -71,6 +71,27 @@ export class SupabaseService {
     return this.adminClient;
   }
 
+  /** Request-scoped cancellation reaches RPC, upload and download fetches. */
+  adminWithSignal(signal: AbortSignal): CraSupabaseClient {
+    return createClient<Database>(this.url, this.serviceKey, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+        detectSessionInUrl: false,
+      },
+      global: {
+        fetch: (input, init) =>
+          fetch(input, {
+            ...init,
+            signal: AbortSignal.any([
+              signal,
+              ...(init?.signal ? [init.signal] : []),
+            ]),
+          }),
+      },
+    });
+  }
+
   /**
    * A FRESH client every call, never a singleton.
    *

@@ -16,6 +16,11 @@ export const exportSourceRegistry: readonly ExportSourceRegistration[] =
       tables: ["organizations", "organization_legal_profiles"],
     },
     { sourceId: "memberships", tables: ["organization_members"] },
+    {
+      // SQL projects consent/manifest metadata only; creator-bound bytes and grants never travel.
+      sourceId: "support_diagnostics",
+      tables: ["support_diagnostic_jobs"],
+    },
     { sourceId: "audit_logs", tables: ["audit_logs", "audit_chain_heads"] },
     {
       // The active organization choice is portable tenant state. Versioned

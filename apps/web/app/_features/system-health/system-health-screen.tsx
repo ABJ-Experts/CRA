@@ -3,6 +3,7 @@ import { cn } from "@repo/ui/cn";
 import { useSession } from "../../_providers/session-provider";
 import { useMocksReady } from "../../_providers/providers";
 import { SystemHealthContent } from "./system-health-content";
+import { SupportDiagnostics } from "../support-diagnostics/support-diagnostics";
 
 export function SystemHealthScreen() {
   const { session, permissions, isLoading, isError } = useSession();
@@ -37,9 +38,18 @@ export function SystemHealthScreen() {
       }
     : null;
   return (
-    <SystemHealthContent
-      scope={scope}
-      canView={permissions.can_view_system_health === true}
-    />
+    <>
+      <SystemHealthContent
+        scope={scope}
+        canView={permissions.can_view_system_health === true}
+      />
+      <SupportDiagnostics
+        scope={scope}
+        canGenerate={
+          permissions.can_export_system_health === true &&
+          ["owner", "admin"].includes(session?.organization?.role ?? "")
+        }
+      />
+    </>
   );
 }

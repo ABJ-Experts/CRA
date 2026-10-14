@@ -1,0 +1,15 @@
+{
+  "jobId": "5721313f-4a81-449c-a504-231d2640e844",
+  "initialState": "cancelled",
+  "claimed": {
+    "objectPath": null,
+    "objectPaths": []
+  },
+  "finalState": "deleted",
+  "cleanupState": "deleted",
+  "storageRemoveCalls": 0,
+  "perObjectAuthorizeCalls": 0,
+  "realFinishPolicyRpc": true,
+  "productionSourceAdapter": true,
+  "fixtureOnly": true
+}

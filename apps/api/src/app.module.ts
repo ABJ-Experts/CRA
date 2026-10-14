@@ -1,3 +1,4 @@
+import { SupportDiagnosticsModule } from "./support-diagnostics/support-diagnostics.module";
 import { LicensingModule } from "./licensing/licensing.module";
 import { SystemHealthModule } from "./system-health/system-health.module";
 import { ExportsModule } from "./exports/exports.module";
@@ -84,6 +85,7 @@ import { NotificationsModule } from "./notifications/notifications.module";
     ReportsModule,
     LicensingModule,
     SystemHealthModule,
+    SupportDiagnosticsModule,
   ],
   controllers: [HealthController],
 })

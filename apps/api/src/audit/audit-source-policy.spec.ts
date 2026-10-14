@@ -115,3 +115,19 @@ it("requires supplier and evidence visibility for supplier AI extraction events"
   expect(supplierOnly.allowedEntityTypes).not.toContain("ai_inference_run");
   expect(supplierAndEvidence.allowedEntityTypes).toContain("ai_inference_run");
 });
+
+it("exposes diagnostic consent receipts to audit readers without granting bundle access", () => {
+  expect(isKnownAuditSourceEntityType("support_diagnostic")).toBe(true);
+  expect(
+    buildAuditSourcePolicy(
+      { can_view_audit: true },
+      { ...filters, resourceType: "support_diagnostic" },
+    ).allowedEntityTypes,
+  ).toEqual(["support_diagnostic"]);
+  expect(
+    buildAuditSourcePolicy(
+      { can_export_system_health: true },
+      { ...filters, resourceType: "support_diagnostic" },
+    ).allowedEntityTypes,
+  ).toEqual([]);
+});

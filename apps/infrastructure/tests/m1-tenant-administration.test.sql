@@ -1253,7 +1253,7 @@ select pg_temp.check(
       'framework_controls', 'evidence_business_records',
       'technical_file_business_records', 'supplier_business_records',
       'vulnerability_detection_records', 'vulnerability_triage_views',
-      'notification_delivery'
+      'notification_delivery', 'support_diagnostics'
     ]::text[]
 );
 

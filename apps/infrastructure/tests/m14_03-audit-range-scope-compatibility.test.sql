@@ -12,10 +12,11 @@ begin
  set constraints all immediate;
  created:=public.m13_04_create_verification(org,actor,gen_random_uuid(),'1',null,null,repeat('a',64));
  select * into strict old_job from public.audit_verification_jobs where id=(created->>'id')::uuid;
- -- Model a previously committed authorization snapshot without changing the
- -- stored job or its range/checkpoint. Its authorization transaction differs
- -- from the rollout transaction, whose XID is absent from the frozen snapshot.
- old_job.authorization_xid:=(pg_current_xact_id()::text::bigint-1)::text::xid8;
+ -- Freeze both fields as one prior authorization. Its committed predecessor
+ -- stays visible and the exclusive upper bound excludes the rollout XID,
+ -- independently of the current snapshot or other active transactions.
+ select xmin::text::xid8 into old_job.authorization_xid from public.users where id=actor;
+ old_job.authorization_snapshot:=format('%s:%s:',old_job.authorization_xid,pg_current_xact_id())::pg_snapshot;
  perform public.m13_04_security_receipt(org,null,gen_random_uuid(),'audit.range.scope_changed',null,repeat('b',64),jsonb_build_object('epoch',old_job.dataset_epoch,'xid',pg_current_xact_id()::text,'policyVersion',1));
  perform pg_temp.assert_scope_compatibility(public.m13_04_current_scope(old_job)='access_changed','old authorization fails closed after policy rollout');
  perform pg_temp.assert_scope_compatibility(public.m13_04_unavailable_result(old_job,'scope_unavailable')->>'authenticityProven'='false','old result confers no new verification authority');

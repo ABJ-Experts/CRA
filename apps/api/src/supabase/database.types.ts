@@ -16069,6 +16069,150 @@ export type Database = {
           },
         ]
       }
+      support_diagnostic_jobs: {
+        Row: {
+          artifact: Json | null
+          attempt_started_at: string | null
+          attempts: number
+          cleanup_attempts: number
+          cleanup_lease_expires_at: string | null
+          cleanup_request_key: string | null
+          cleanup_review_fingerprint: string | null
+          cleanup_state: string
+          cleanup_worker_id: string | null
+          completed_at: string | null
+          consented_at: string
+          created_at: string
+          creator_user_id: string
+          disclosure_version: string
+          expires_at: string | null
+          failure_code: string | null
+          grant_digest: string | null
+          grant_expires_at: string | null
+          grant_id: string | null
+          grant_session_id: string | null
+          grant_used_at: string | null
+          grant_version: number | null
+          id: string
+          idempotency_key: string
+          lease_expires_at: string | null
+          manifest: Json | null
+          object_path: string | null
+          object_paths: string[]
+          omissions: Json
+          organization_id: string
+          permission_version: number
+          preview_digest: string
+          progress: Json
+          selection: Json
+          selection_digest: string
+          session_id: string
+          stage: string
+          state: string
+          version: number
+          worker_id: string | null
+        }
+        Insert: {
+          artifact?: Json | null
+          attempt_started_at?: string | null
+          attempts?: number
+          cleanup_attempts?: number
+          cleanup_lease_expires_at?: string | null
+          cleanup_request_key?: string | null
+          cleanup_review_fingerprint?: string | null
+          cleanup_state?: string
+          cleanup_worker_id?: string | null
+          completed_at?: string | null
+          consented_at?: string
+          created_at?: string
+          creator_user_id: string
+          disclosure_version?: string
+          expires_at?: string | null
+          failure_code?: string | null
+          grant_digest?: string | null
+          grant_expires_at?: string | null
+          grant_id?: string | null
+          grant_session_id?: string | null
+          grant_used_at?: string | null
+          grant_version?: number | null
+          id?: string
+          idempotency_key: string
+          lease_expires_at?: string | null
+          manifest?: Json | null
+          object_path?: string | null
+          object_paths?: string[]
+          omissions?: Json
+          organization_id: string
+          permission_version: number
+          preview_digest: string
+          progress?: Json
+          selection: Json
+          selection_digest: string
+          session_id: string
+          stage?: string
+          state?: string
+          version?: number
+          worker_id?: string | null
+        }
+        Update: {
+          artifact?: Json | null
+          attempt_started_at?: string | null
+          attempts?: number
+          cleanup_attempts?: number
+          cleanup_lease_expires_at?: string | null
+          cleanup_request_key?: string | null
+          cleanup_review_fingerprint?: string | null
+          cleanup_state?: string
+          cleanup_worker_id?: string | null
+          completed_at?: string | null
+          consented_at?: string
+          created_at?: string
+          creator_user_id?: string
+          disclosure_version?: string
+          expires_at?: string | null
+          failure_code?: string | null
+          grant_digest?: string | null
+          grant_expires_at?: string | null
+          grant_id?: string | null
+          grant_session_id?: string | null
+          grant_used_at?: string | null
+          grant_version?: number | null
+          id?: string
+          idempotency_key?: string
+          lease_expires_at?: string | null
+          manifest?: Json | null
+          object_path?: string | null
+          object_paths?: string[]
+          omissions?: Json
+          organization_id?: string
+          permission_version?: number
+          preview_digest?: string
+          progress?: Json
+          selection?: Json
+          selection_digest?: string
+          session_id?: string
+          stage?: string
+          state?: string
+          version?: number
+          worker_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_diagnostic_jobs_creator_user_id_fkey"
+            columns: ["creator_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_diagnostic_jobs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sync_conflicts: {
         Row: {
           authority_policy_id: string | null
@@ -35221,6 +35365,265 @@ export type Database = {
           p_source_at: string
         }
         Returns: string
+      }
+      m15_04_access: {
+        Args: {
+          p_actor_user_id: string
+          p_job_id: string
+          p_organization_id: string
+          p_request_id: string
+          p_session_id: string
+        }
+        Returns: Json
+      }
+      m15_04_access_valid: {
+        Args: {
+          p_actor_user_id: string
+          p_job: Database["public"]["Tables"]["support_diagnostic_jobs"]["Row"]
+          p_session_id: string
+        }
+        Returns: boolean
+      }
+      m15_04_audit: {
+        Args: {
+          p_action: string
+          p_actor_user_id?: string
+          p_job: Database["public"]["Tables"]["support_diagnostic_jobs"]["Row"]
+          p_request_id: string
+        }
+        Returns: undefined
+      }
+      m15_04_audit_receipt_json: {
+        Args: {
+          p_action: string
+          p_entity_id: string
+          p_organization_id: string
+          p_value: Json
+        }
+        Returns: Json
+      }
+      m15_04_authority: {
+        Args: {
+          p_actor_user_id: string
+          p_organization_id: string
+          p_session_id: string
+        }
+        Returns: Json
+      }
+      m15_04_authorize_cleanup: {
+        Args: {
+          p_expected_version: number
+          p_job_id: string
+          p_organization_id: string
+          p_worker_id: string
+        }
+        Returns: Json
+      }
+      m15_04_authorize_worker: {
+        Args: {
+          p_expected_version: number
+          p_job_id: string
+          p_organization_id: string
+          p_worker_id: string
+        }
+        Returns: Json
+      }
+      m15_04_can: {
+        Args: {
+          p_actor_user_id: string
+          p_organization_id: string
+          p_session_id: string
+        }
+        Returns: boolean
+      }
+      m15_04_cancel: {
+        Args: {
+          p_actor_user_id: string
+          p_expected_version: number
+          p_idempotency_key: string
+          p_job_id: string
+          p_organization_id: string
+          p_session_id: string
+        }
+        Returns: Json
+      }
+      m15_04_checkpoint: {
+        Args: {
+          p_expected_version: number
+          p_job_id: string
+          p_omissions: Json
+          p_organization_id: string
+          p_progress: Json
+          p_stage: string
+          p_worker_id: string
+        }
+        Returns: Json
+      }
+      m15_04_claim: { Args: { p_worker_id: string }; Returns: Json }
+      m15_04_claim_cleanup: { Args: { p_worker_id: string }; Returns: Json }
+      m15_04_cleanup_policy: {
+        Args: {
+          p_job: Database["public"]["Tables"]["support_diagnostic_jobs"]["Row"]
+        }
+        Returns: Json
+      }
+      m15_04_cleanup_review: {
+        Args: {
+          p_actor_user_id: string
+          p_job_id: string
+          p_organization_id: string
+          p_session_id: string
+        }
+        Returns: Json
+      }
+      m15_04_complete: {
+        Args: {
+          p_artifact: Json
+          p_expected_version: number
+          p_job_id: string
+          p_manifest: Json
+          p_organization_id: string
+          p_worker_id: string
+        }
+        Returns: Json
+      }
+      m15_04_create: {
+        Args: {
+          p_actor_user_id: string
+          p_idempotency_key: string
+          p_organization_id: string
+          p_preview_digest: string
+          p_selection: Json
+          p_session_id: string
+        }
+        Returns: Json
+      }
+      m15_04_export_metadata: { Args: { p_row: Json }; Returns: Json }
+      m15_04_fail: {
+        Args: {
+          p_expected_version: number
+          p_failure_code: string
+          p_job_id: string
+          p_organization_id: string
+          p_worker_id: string
+        }
+        Returns: Json
+      }
+      m15_04_finish_cleanup: {
+        Args: {
+          p_deleted: boolean
+          p_expected_version: number
+          p_job_id: string
+          p_organization_id: string
+          p_worker_id: string
+        }
+        Returns: Json
+      }
+      m15_04_get: {
+        Args: {
+          p_actor_user_id: string
+          p_job_id: string
+          p_organization_id: string
+          p_session_id: string
+        }
+        Returns: Json
+      }
+      m15_04_heartbeat: {
+        Args: {
+          p_expected_version: number
+          p_job_id: string
+          p_organization_id: string
+          p_worker_id: string
+        }
+        Returns: Json
+      }
+      m15_04_internal: {
+        Args: {
+          p_job: Database["public"]["Tables"]["support_diagnostic_jobs"]["Row"]
+        }
+        Returns: Json
+      }
+      m15_04_issue_grant: {
+        Args: {
+          p_actor_user_id: string
+          p_expected_version: number
+          p_grant_digest: string
+          p_grant_id: string
+          p_idempotency_key: string
+          p_job_id: string
+          p_organization_id: string
+          p_session_id: string
+        }
+        Returns: Json
+      }
+      m15_04_job_json: {
+        Args: {
+          p_job: Database["public"]["Tables"]["support_diagnostic_jobs"]["Row"]
+        }
+        Returns: Json
+      }
+      m15_04_list: {
+        Args: {
+          p_actor_user_id: string
+          p_after_id?: string
+          p_limit?: number
+          p_organization_id: string
+          p_session_id: string
+        }
+        Returns: Json
+      }
+      m15_04_logs: {
+        Args: {
+          p_expected_version: number
+          p_job_id: string
+          p_organization_id: string
+          p_worker_id: string
+        }
+        Returns: Json
+      }
+      m15_04_omissions_valid: { Args: { p_value: Json }; Returns: boolean }
+      m15_04_redeem_grant: {
+        Args: {
+          p_actor_user_id: string
+          p_grant_digest: string
+          p_grant_id: string
+          p_job_id: string
+          p_organization_id: string
+          p_request_id: string
+          p_session_id: string
+        }
+        Returns: Json
+      }
+      m15_04_request_cleanup: {
+        Args: {
+          p_actor_user_id: string
+          p_expected_version: number
+          p_idempotency_key: string
+          p_job_id: string
+          p_organization_id: string
+          p_review_fingerprint: string
+          p_session_id: string
+        }
+        Returns: Json
+      }
+      m15_04_revalidate: {
+        Args: {
+          p_actor_user_id: string
+          p_job_id: string
+          p_organization_id: string
+          p_request_id: string
+          p_session_id: string
+        }
+        Returns: Json
+      }
+      m15_04_selection_valid: { Args: { p_selection: Json }; Returns: boolean }
+      m15_04_worker_valid: {
+        Args: {
+          p_expected_version: number
+          p_job: Database["public"]["Tables"]["support_diagnostic_jobs"]["Row"]
+          p_worker_id: string
+        }
+        Returns: boolean
       }
       m2_active_member: {
         Args: { p_actor_user_id: string; p_organization_id: string }

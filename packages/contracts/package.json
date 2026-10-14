@@ -358,6 +358,18 @@
     "./operator/types": {
       "types": "./dist/operator/types/index.d.ts",
       "default": "./dist/operator/types/index.js"
+    },
+    "./support-diagnostics": {
+      "types": "./dist/support-diagnostics/index.d.ts",
+      "default": "./dist/support-diagnostics/index.js"
+    },
+    "./support-diagnostics/schemas": {
+      "types": "./dist/support-diagnostics/schemas/index.d.ts",
+      "default": "./dist/support-diagnostics/schemas/index.js"
+    },
+    "./support-diagnostics/types": {
+      "types": "./dist/support-diagnostics/types/index.d.ts",
+      "default": "./dist/support-diagnostics/types/index.js"
     }
   },
   "files": [

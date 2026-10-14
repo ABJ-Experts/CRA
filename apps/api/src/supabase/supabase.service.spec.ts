@@ -150,3 +150,27 @@ it("attaches AbortSignal to the real database probe", async () => {
   await expect(service.ping(signal)).resolves.toBe(true);
   expect(abortSignal).toHaveBeenCalledWith(signal);
 });
+
+describe("scoped abortable service-role transport", () => {
+  it("creates fresh clients and combines caller and transport abort signals", async () => {
+    mockedCreateClient.mockReset();
+    const fetchMock = jest
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(new Response("ok"));
+    const service = new SupabaseService(config().serviceConfig);
+    const request = new AbortController();
+    const transport = new AbortController();
+    service.adminWithSignal(request.signal);
+    service.adminWithSignal(request.signal);
+    expect(mockedCreateClient).toHaveBeenCalledTimes(2);
+    const options = mockedCreateClient.mock.calls[0]![2]!;
+    expect(options.auth).toEqual(clientOptions.auth);
+    await options.global!.fetch!("https://example.test", {
+      signal: transport.signal,
+    });
+    const bound = fetchMock.mock.calls[0]![1]!.signal!;
+    transport.abort();
+    expect(bound.aborted).toBe(true);
+    fetchMock.mockRestore();
+  });
+});

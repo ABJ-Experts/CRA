@@ -3678,6 +3678,66 @@
           "symbol": "m15_02_reconcile_usage"
         }
       ]
+    },
+    {
+      "id": "apps/api/src/support-diagnostics/support-diagnostics.controller.ts#SupportDiagnosticsController.cancel:POST:system/diagnostics/bundles/:jobId/cancel",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261014090758_m15_04_support_diagnostics.sql",
+          "symbol": "m15_04_cancel"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/support-diagnostics/support-diagnostics.controller.ts#SupportDiagnosticsController.cleanup:POST:system/diagnostics/bundles/:jobId/cleanup",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261014090758_m15_04_support_diagnostics.sql",
+          "symbol": "m15_04_request_cleanup"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/support-diagnostics/support-diagnostics.controller.ts#SupportDiagnosticsController.cleanupReview:POST:system/diagnostics/bundles/:jobId/cleanup-review",
+      "authority": [
+        {
+          "kind": "read-only-command",
+          "evidence": "apps/api/src/support-diagnostics/support-diagnostics.controller.ts",
+          "symbol": "cleanupReview"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/support-diagnostics/support-diagnostics.controller.ts#SupportDiagnosticsController.create:POST:system/diagnostics/bundles",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261014090758_m15_04_support_diagnostics.sql",
+          "symbol": "m15_04_create"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/support-diagnostics/support-diagnostics.controller.ts#SupportDiagnosticsController.grant:POST:system/diagnostics/bundles/:jobId/download-grants",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261014090758_m15_04_support_diagnostics.sql",
+          "symbol": "m15_04_issue_grant"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/support-diagnostics/support-diagnostics.controller.ts#SupportDiagnosticsController.preview:POST:system/diagnostics/preview",
+      "authority": [
+        {
+          "kind": "read-only-command",
+          "evidence": "apps/api/src/support-diagnostics/support-diagnostics.controller.ts",
+          "symbol": "preview"
+        }
+      ]
     }
   ],
   "workers": [
@@ -4116,6 +4176,16 @@
           "symbol": "m15_03_publish_observation"
         }
       ]
+    },
+    {
+      "id": "apps/api/src/support-diagnostics/worker/diagnostic-worker.ts",
+      "authority": [
+        {
+          "kind": "job-history",
+          "evidence": "apps/infrastructure/supabase/migrations/20261014090758_m15_04_support_diagnostics.sql",
+          "symbol": "m15_04_complete"
+        }
+      ]
     }
   ],
   "rpcs": [
@@ -4186,6 +4256,86 @@
           "kind": "job-history",
           "evidence": "apps/infrastructure/supabase/migrations/20261014054407_m15_03_scoped_operator_health.sql",
           "symbol": "m15_03_publish_observation"
+        }
+      ]
+    },
+    {
+      "id": "m15_04_create",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261014090758_m15_04_support_diagnostics.sql",
+          "symbol": "m15_04_create"
+        }
+      ]
+    },
+    {
+      "id": "m15_04_complete",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261014090758_m15_04_support_diagnostics.sql",
+          "symbol": "m15_04_complete"
+        }
+      ]
+    },
+    {
+      "id": "m15_04_access",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261014090758_m15_04_support_diagnostics.sql",
+          "symbol": "m15_04_access"
+        }
+      ]
+    },
+    {
+      "id": "m15_04_issue_grant",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261014090758_m15_04_support_diagnostics.sql",
+          "symbol": "m15_04_issue_grant"
+        }
+      ]
+    },
+    {
+      "id": "m15_04_redeem_grant",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261014090758_m15_04_support_diagnostics.sql",
+          "symbol": "m15_04_redeem_grant"
+        }
+      ]
+    },
+    {
+      "id": "m15_04_cancel",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261014090758_m15_04_support_diagnostics.sql",
+          "symbol": "m15_04_cancel"
+        }
+      ]
+    },
+    {
+      "id": "m15_04_request_cleanup",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261014090758_m15_04_support_diagnostics.sql",
+          "symbol": "m15_04_request_cleanup"
+        }
+      ]
+    },
+    {
+      "id": "m15_04_finish_cleanup",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261014090758_m15_04_support_diagnostics.sql",
+          "symbol": "m15_04_finish_cleanup"
         }
       ]
     }

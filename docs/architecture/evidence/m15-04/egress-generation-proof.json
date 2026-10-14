@@ -1,0 +1,30 @@
+{
+  "jobId": "fae371a9-4469-4e6d-b7f0-458b42f37227",
+  "state": "ready",
+  "selected": ["logs", "configuration", "metrics"],
+  "sections": {
+    "logs": 200,
+    "configuration": 200,
+    "metrics": 200,
+    "omissions": 200
+  },
+  "sha256": "6704cd7bd7225e10d7641cc056b8d7427732103c644ca70449cae1d7fc4737b4",
+  "byteSize": 4512,
+  "downloadHashVerified": true,
+  "driverEgress": {
+    "blocked": 1,
+    "allowedFetch": 9,
+    "allowedSocket": 2
+  },
+  "workerEgress": {
+    "blocked": 1,
+    "allowedFetch": 34,
+    "allowedSocket": 5
+  },
+  "apiEgress": {
+    "blocked": 1,
+    "allowedFetch": 54,
+    "allowedSocket": 8
+  },
+  "image": "public.ecr.aws/supabase/storage-api:v1.77.0"
+}

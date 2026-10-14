@@ -8737,6 +8737,136 @@
       "identity": "member",
       "authority": "read",
       "reason": "Authenticated tenant source-authorized diagnostics remain available under expiry."
+    },
+    {
+      "id": "apps/api/src/support-diagnostics/support-diagnostics.controller.ts#SupportDiagnosticsController.cancel:POST:system/diagnostics/bundles/:jobId/cancel",
+      "controller": "SupportDiagnosticsController",
+      "handler": "cancel",
+      "mutation": true,
+      "public": false,
+      "evidence": "apps/api/src/support-diagnostics/support-diagnostics.controller.ts",
+      "symbol": "cancel",
+      "kind": "security",
+      "identity": "member",
+      "authority": "m15_04_cancel",
+      "reason": "Consented creator-only diagnostics retain current administrator, source and session authority under licence expiry; no external transmission or regulatory grant."
+    },
+    {
+      "id": "apps/api/src/support-diagnostics/support-diagnostics.controller.ts#SupportDiagnosticsController.cleanup:POST:system/diagnostics/bundles/:jobId/cleanup",
+      "controller": "SupportDiagnosticsController",
+      "handler": "cleanup",
+      "mutation": true,
+      "public": false,
+      "evidence": "apps/api/src/support-diagnostics/support-diagnostics.controller.ts",
+      "symbol": "cleanup",
+      "kind": "security",
+      "identity": "member",
+      "authority": "m15_04_request_cleanup",
+      "reason": "Consented creator-only diagnostics retain current administrator, source and session authority under licence expiry; no external transmission or regulatory grant."
+    },
+    {
+      "id": "apps/api/src/support-diagnostics/support-diagnostics.controller.ts#SupportDiagnosticsController.cleanupReview:POST:system/diagnostics/bundles/:jobId/cleanup-review",
+      "controller": "SupportDiagnosticsController",
+      "handler": "cleanupReview",
+      "mutation": true,
+      "public": false,
+      "evidence": "apps/api/src/support-diagnostics/support-diagnostics.controller.ts",
+      "symbol": "cleanupReview",
+      "kind": "security",
+      "identity": "member",
+      "authority": "m15_04_cleanup_review",
+      "reason": "Consented creator-only diagnostics retain current administrator, source and session authority under licence expiry; no external transmission or regulatory grant."
+    },
+    {
+      "id": "apps/api/src/support-diagnostics/support-diagnostics.controller.ts#SupportDiagnosticsController.content:GET:system/diagnostics/bundles/:jobId/content",
+      "controller": "SupportDiagnosticsController",
+      "handler": "content",
+      "mutation": false,
+      "public": false,
+      "evidence": "apps/api/src/support-diagnostics/support-diagnostics.controller.ts",
+      "symbol": "content",
+      "kind": "security",
+      "identity": "member",
+      "authority": "m15_04_access",
+      "reason": "Consented creator-only diagnostics retain current administrator, source and session authority under licence expiry; no external transmission or regulatory grant."
+    },
+    {
+      "id": "apps/api/src/support-diagnostics/support-diagnostics.controller.ts#SupportDiagnosticsController.create:POST:system/diagnostics/bundles",
+      "controller": "SupportDiagnosticsController",
+      "handler": "create",
+      "mutation": true,
+      "public": false,
+      "evidence": "apps/api/src/support-diagnostics/support-diagnostics.controller.ts",
+      "symbol": "create",
+      "kind": "security",
+      "identity": "member",
+      "authority": "m15_04_create",
+      "reason": "Consented creator-only diagnostics retain current administrator, source and session authority under licence expiry; no external transmission or regulatory grant."
+    },
+    {
+      "id": "apps/api/src/support-diagnostics/support-diagnostics.controller.ts#SupportDiagnosticsController.download:GET:system/diagnostics/bundles/:jobId/download/:grantId",
+      "controller": "SupportDiagnosticsController",
+      "handler": "download",
+      "mutation": false,
+      "public": false,
+      "evidence": "apps/api/src/support-diagnostics/support-diagnostics.controller.ts",
+      "symbol": "download",
+      "kind": "security",
+      "identity": "member",
+      "authority": "m15_04_redeem_grant",
+      "reason": "Consented creator-only diagnostics retain current administrator, source and session authority under licence expiry; no external transmission or regulatory grant."
+    },
+    {
+      "id": "apps/api/src/support-diagnostics/support-diagnostics.controller.ts#SupportDiagnosticsController.get:GET:system/diagnostics/bundles/:jobId",
+      "controller": "SupportDiagnosticsController",
+      "handler": "get",
+      "mutation": false,
+      "public": false,
+      "evidence": "apps/api/src/support-diagnostics/support-diagnostics.controller.ts",
+      "symbol": "get",
+      "kind": "security",
+      "identity": "member",
+      "authority": "m15_04_get",
+      "reason": "Consented creator-only diagnostics retain current administrator, source and session authority under licence expiry; no external transmission or regulatory grant."
+    },
+    {
+      "id": "apps/api/src/support-diagnostics/support-diagnostics.controller.ts#SupportDiagnosticsController.grant:POST:system/diagnostics/bundles/:jobId/download-grants",
+      "controller": "SupportDiagnosticsController",
+      "handler": "grant",
+      "mutation": true,
+      "public": false,
+      "evidence": "apps/api/src/support-diagnostics/support-diagnostics.controller.ts",
+      "symbol": "grant",
+      "kind": "security",
+      "identity": "member",
+      "authority": "m15_04_issue_grant",
+      "reason": "Consented creator-only diagnostics retain current administrator, source and session authority under licence expiry; no external transmission or regulatory grant."
+    },
+    {
+      "id": "apps/api/src/support-diagnostics/support-diagnostics.controller.ts#SupportDiagnosticsController.list:GET:system/diagnostics/bundles",
+      "controller": "SupportDiagnosticsController",
+      "handler": "list",
+      "mutation": false,
+      "public": false,
+      "evidence": "apps/api/src/support-diagnostics/support-diagnostics.controller.ts",
+      "symbol": "list",
+      "kind": "security",
+      "identity": "member",
+      "authority": "m15_04_list",
+      "reason": "Consented creator-only diagnostics retain current administrator, source and session authority under licence expiry; no external transmission or regulatory grant."
+    },
+    {
+      "id": "apps/api/src/support-diagnostics/support-diagnostics.controller.ts#SupportDiagnosticsController.preview:POST:system/diagnostics/preview",
+      "controller": "SupportDiagnosticsController",
+      "handler": "preview",
+      "mutation": true,
+      "public": false,
+      "evidence": "apps/api/src/support-diagnostics/support-diagnostics.controller.ts",
+      "symbol": "preview",
+      "kind": "security",
+      "identity": "member",
+      "authority": "preview",
+      "reason": "Consented creator-only diagnostics retain current administrator, source and session authority under licence expiry; no external transmission or regulatory grant."
     }
   ],
   "workers": [
@@ -9113,6 +9243,16 @@
       "evidence": "apps/infrastructure/supabase/migrations/20261014054407_m15_03_scoped_operator_health.sql",
       "symbol": "m15_03_publish_observation",
       "reason": "Explicit deployment-scoped metadata observation; durable publication, no call-home or content access."
+    },
+    {
+      "id": "apps/api/src/support-diagnostics/worker/diagnostic-worker.ts",
+      "kind": "security",
+      "identity": "worker",
+      "mutation": true,
+      "authority": "m15_04_complete",
+      "evidence": "apps/infrastructure/supabase/migrations/20261014090758_m15_04_support_diagnostics.sql",
+      "symbol": "m15_04_complete",
+      "reason": "Consented creator-only diagnostics retain current administrator, source and session authority under licence expiry; no external transmission or regulatory grant."
     }
   ],
   "rpcs": [

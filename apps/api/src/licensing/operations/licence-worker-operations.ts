@@ -3,6 +3,16 @@ import type { LicenceOperation } from "./licence-operation.registry";
 export const licenceWorkerOperations: Readonly<
   Record<string, LicenceOperation>
 > = Object.freeze({
+  "apps/api/src/support-diagnostics/worker/diagnostic-worker.ts": {
+    kind: "security",
+    identity: "worker",
+    mutation: true,
+    authority: "m15_04_complete",
+    evidence:
+      "apps/infrastructure/supabase/migrations/20261014090758_m15_04_support_diagnostics.sql",
+    reason:
+      "Consented creator-only diagnostics retain current administrator, source and session authority under licence expiry; no external transmission or regulatory grant.",
+  },
   "apps/api/src/operator-registry-worker.ts": {
     kind: "security",
     identity: "worker",
