@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { isIP } from "node:net";
 import { licenseCapabilitySchema } from "@repo/contracts/licensing/schemas";
+import { systemHealthVersionSchema } from "@repo/contracts/system/schemas";
 
 /**
  * Environment schema. Validated once at boot so a missing or malformed value
@@ -75,6 +76,21 @@ export const envSchema = z.object({
     .enum(["development", "test", "production"])
     .default("development"),
   PORT: int(3333),
+  SYSTEM_HEALTH_BUILD_MANIFEST: z
+    .string()
+    .max(4096)
+    .optional()
+    .refine((value) => {
+      if (value === undefined) return true;
+      try {
+        return systemHealthVersionSchema
+          .pick({ version: true, commit: true, builtAt: true })
+          .strict()
+          .safeParse(JSON.parse(value)).success;
+      } catch {
+        return false;
+      }
+    }, "must contain only valid version, commit and builtAt JSON metadata"),
   /** Exact addresses of ingress proxies. Empty means forwarded headers are ignored. */
   TRUSTED_PROXY_ADDRESSES: z
     .string()

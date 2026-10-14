@@ -102,11 +102,9 @@ export class SupabaseService {
   }
 
   /** Cheap liveness probe used by GET /api/v1/health. */
-  async ping(): Promise<boolean> {
-    const { error } = await this.admin()
-      .from("organizations")
-      .select("id")
-      .limit(1);
+  async ping(signal?: AbortSignal): Promise<boolean> {
+    const query = this.admin().from("organizations").select("id").limit(1);
+    const { error } = await (signal ? query.abortSignal(signal) : query);
 
     if (error) {
       this.logger.error(`Supabase ping failed: ${error.message}`);

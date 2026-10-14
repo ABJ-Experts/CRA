@@ -438,3 +438,57 @@ describe("LicensingService", () => {
     ).resolves.toBeUndefined();
   });
 });
+describe("LicensingService diagnostic cancellation", () => {
+  it("propagates one cancellation signal through the authoritative read", async () => {
+    const { service, port } = fixture();
+    const signal = new AbortController().signal;
+    await service.getCurrent(org, "actor", signal);
+    expect(port.getState).toHaveBeenCalledWith(org, "actor", signal);
+    expect(port.checkpoint).toHaveBeenCalledWith(
+      org,
+      "actor",
+      expect.any(String),
+      signal,
+    );
+    expect(port.publishVerification).toHaveBeenCalledWith(
+      org,
+      "actor",
+      expect.any(Object),
+      signal,
+    );
+  });
+  it("stops after cancelled IO without checkpointing or publishing", async () => {
+    const { service, port } = fixture();
+    const controller = new AbortController();
+    port.getState.mockImplementation(() => {
+      controller.abort();
+      return Promise.resolve(structuredClone(stored));
+    });
+    await expect(
+      service.getCurrent(org, "actor", controller.signal),
+    ).rejects.toThrow();
+    expect(port.checkpoint).not.toHaveBeenCalled();
+    expect(port.publishVerification).not.toHaveBeenCalled();
+  });
+  it("stops before authority reads when already cancelled", async () => {
+    const { service, port } = fixture();
+    const controller = new AbortController();
+    controller.abort();
+    await expect(
+      service.getCurrent(org, "actor", controller.signal),
+    ).rejects.toThrow();
+    expect(port.getState).not.toHaveBeenCalled();
+  });
+});
+it("stops after cancellation during local verification before publishing proof", async () => {
+  const { service, port, verifier } = fixture();
+  const controller = new AbortController();
+  verifier.verify.mockImplementation(() => {
+    controller.abort();
+    return Promise.resolve({ claims, digest: "a".repeat(64), keyId: "key" });
+  });
+  await expect(
+    service.getCurrent(org, "actor", controller.signal),
+  ).rejects.toThrow();
+  expect(port.publishVerification).not.toHaveBeenCalled();
+});

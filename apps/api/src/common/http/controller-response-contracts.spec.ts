@@ -10,6 +10,8 @@ import type { Type } from "@nestjs/common";
 import type { z } from "zod";
 
 import { AppModule } from "../../app.module";
+import { OperatorIngressModule } from "../../operator/operator-listener";
+import { OperatorController } from "../../operator/operator.controller";
 import { AgentIngressModule } from "../../connectors/agent/agent-ingress.module";
 import {
   NON_JSON_RESPONSE_KIND,
@@ -71,6 +73,7 @@ const controllers = Object.freeze([
   ...new Set([
     ...discoverControllers(AppModule),
     ...discoverControllers(AgentIngressModule),
+    ...discoverControllers(OperatorIngressModule),
   ]),
 ]);
 
@@ -100,6 +103,16 @@ describe("controller response contracts", () => {
   it("discovers every controller from the application module graph", () => {
     expect(controllers.map((Controller) => Controller.name).sort()).toEqual(
       controllerClassNamesOnDisk(),
+    );
+  });
+
+  it("keeps the operator controller exclusively in the private composition", () => {
+    expect(discoverControllers(AppModule)).not.toContain(OperatorController);
+    expect(discoverControllers(AgentIngressModule)).not.toContain(
+      OperatorController,
+    );
+    expect(discoverControllers(OperatorIngressModule)).toContain(
+      OperatorController,
     );
   });
 

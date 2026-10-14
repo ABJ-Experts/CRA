@@ -85,16 +85,25 @@ export interface LicensingPort {
       configurationDigest: string;
       observedAt: string;
     },
+    signal?: AbortSignal,
   ): Promise<{ outcome: "updated" | "stale" | "conflict" | "forbidden" }>;
-  getWorkerState(orgId: string): Promise<LicenseStoredState>;
+  getWorkerState(
+    orgId: string,
+    signal?: AbortSignal,
+  ): Promise<LicenseStoredState>;
   checkpointWorker(
     orgId: string,
     observedAt: string,
+    signal?: AbortSignal,
   ): Promise<{
     timeHighWaterAt: string | null;
     clockRollbackDetected: boolean;
   }>;
-  getState(orgId: string, actorId: string): Promise<LicenseStoredState>;
+  getState(
+    orgId: string,
+    actorId: string,
+    signal?: AbortSignal,
+  ): Promise<LicenseStoredState>;
   activate(
     orgId: string,
     actorId: string,
@@ -110,6 +119,7 @@ export interface LicensingPort {
     orgId: string,
     actorId: string,
     observedAt: string,
+    signal?: AbortSignal,
   ): Promise<{
     timeHighWaterAt: string | null;
     clockRollbackDetected: boolean;

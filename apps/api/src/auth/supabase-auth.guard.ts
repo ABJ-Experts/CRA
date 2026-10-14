@@ -116,6 +116,14 @@ export class SupabaseAuthGuard implements CanActivate {
     }
 
     const claims = verified.claims;
+    // A metadata database credential is never a user session, even with a
+    // forged subject or session claim referring to a real tenant owner.
+    if (claims.role === "cra_operator_registry_reader") {
+      throw new UnauthorizedException({
+        message: "This credential cannot authorize a customer session.",
+        code: "non_tenant_credential",
+      });
+    }
     const authUserId = claims.sub;
 
     if (!authUserId) {

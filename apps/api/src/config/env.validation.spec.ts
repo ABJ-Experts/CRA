@@ -10,6 +10,34 @@ const required = Object.freeze({
 });
 
 describe("environment validation", () => {
+  it("accepts a bounded explicit system-health build manifest and leaves it absent by default", () => {
+    const manifest = JSON.stringify({
+      version: "m15-03-development",
+      commit: "4b5f6770417d8e8d408e2691f9679e7fc499c997",
+      builtAt: "2026-10-14T05:00:00Z",
+    });
+    expect(validateEnv(required).SYSTEM_HEALTH_BUILD_MANIFEST).toBeUndefined();
+    expect(
+      validateEnv({ ...required, SYSTEM_HEALTH_BUILD_MANIFEST: manifest })
+        .SYSTEM_HEALTH_BUILD_MANIFEST,
+    ).toBe(manifest);
+  });
+
+  it.each([
+    "not-json",
+    JSON.stringify({
+      version: "dev",
+      commit: null,
+      builtAt: null,
+      hostname: "private-host",
+    }),
+    JSON.stringify({ version: "dev", commit: "invalid", builtAt: null }),
+    "x".repeat(4097),
+  ])("rejects malformed or unapproved build metadata", (manifest) => {
+    expect(() =>
+      validateEnv({ ...required, SYSTEM_HEALTH_BUILD_MANIFEST: manifest }),
+    ).toThrow("SYSTEM_HEALTH_BUILD_MANIFEST");
+  });
   it("keeps core API available without legacy or new vault key material", () => {
     const { CONNECTOR_SECRET_ENCRYPTION_KEY: _legacy, ...core } = required;
     expect(_legacy).toHaveLength(32);

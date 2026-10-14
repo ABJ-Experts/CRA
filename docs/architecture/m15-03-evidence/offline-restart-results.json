@@ -1,0 +1,11 @@
+{
+  "completedAt": "2026-10-14T08:10:25.971262+00:00",
+  "registryRows": 10001,
+  "registryMetadataDigestUnchanged": true,
+  "allPublishedSourceTimestampsAndDigestsPreserved": true,
+  "bothApiAndPrivateMtlsListenerRestartedUnderTaskProcessEgressDenial": true,
+  "expiredLicenceReverifiedOffline": "expired_read_only",
+  "evidenceExportPreserved": true,
+  "backupAssurance": "unknown",
+  "noHostNetworkSettingsChanged": true
+}

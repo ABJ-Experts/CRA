@@ -1,4 +1,5 @@
 import { LicensingModule } from "./licensing/licensing.module";
+import { SystemHealthModule } from "./system-health/system-health.module";
 import { ExportsModule } from "./exports/exports.module";
 import { ReportsModule } from "./reports/reports.module";
 import { Module } from "@nestjs/common";
@@ -82,6 +83,7 @@ import { NotificationsModule } from "./notifications/notifications.module";
     ExportsModule,
     ReportsModule,
     LicensingModule,
+    SystemHealthModule,
   ],
   controllers: [HealthController],
 })

@@ -318,9 +318,14 @@ export class SupabaseReportingDeadlineMonitorRepository implements ReportingDead
     },
   );
 
-  async isReady(): Promise<boolean> {
+  async isReady(signal?: AbortSignal): Promise<boolean> {
     try {
-      const row = await this.rpc("get_reporting_deadline_monitor_health", {});
+      const query = this.supabase
+        .admin()
+        .rpc("get_reporting_deadline_monitor_health");
+      const result = await (signal ? query.abortSignal(signal) : query);
+      if (result.error) return false;
+      const row = one(result.data);
       if (outcome(row) !== "found") return false;
       const health = z
         .object({ critical: z.boolean() })

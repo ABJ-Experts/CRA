@@ -240,3 +240,15 @@ test("enumerates every literal controller and method alias", async (t) => {
     routes.some((route) => route.endsWith("POST:portal/orders/:id/confirm")),
   );
 });
+
+test("operator registry worker is a semantic audit authority outside tenant worker folders", async (t) => {
+  const root = await fixture(t, { routes: [operation], workers: [], rpcs: [] });
+  await writeFile(
+    join(root, "apps/api/src/operator-registry-worker.ts"),
+    "export function bootstrapOperatorRegistryWorker() {}\n",
+  );
+  assert.match(
+    (await verifyAuditOperationCoverage(root)).join("\n"),
+    /unregistered worker: apps\/api\/src\/operator-registry-worker.ts/,
+  );
+});

@@ -4,13 +4,13 @@ export const REPORTING_DEADLINE_MONITOR_HEALTH_READER = Symbol(
 
 /** Read-only operational state; it contains no organization or user data. */
 export interface ReportingDeadlineMonitorHealthReader {
-  isReady(): Promise<boolean>;
+  isReady(signal?: AbortSignal): Promise<boolean>;
 }
 
 export class ReportingDeadlineMonitorHealthUseCases {
   constructor(private readonly reader: ReportingDeadlineMonitorHealthReader) {}
 
-  async isReady(): Promise<boolean> {
-    return this.reader.isReady();
+  async isReady(signal?: AbortSignal): Promise<boolean> {
+    return this.reader.isReady(signal);
   }
 }

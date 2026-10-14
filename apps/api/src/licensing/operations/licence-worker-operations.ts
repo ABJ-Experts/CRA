@@ -3,6 +3,16 @@ import type { LicenceOperation } from "./licence-operation.registry";
 export const licenceWorkerOperations: Readonly<
   Record<string, LicenceOperation>
 > = Object.freeze({
+  "apps/api/src/operator-registry-worker.ts": {
+    kind: "security",
+    identity: "worker",
+    mutation: true,
+    authority: "m15_03_publish_observation",
+    evidence:
+      "apps/infrastructure/supabase/migrations/20261014054407_m15_03_scoped_operator_health.sql",
+    reason:
+      "Deployment-scoped local metadata publication and private collector preserve durable audit and existing evidence boundaries.",
+  },
   "apps/api/src/ai/supplier-document-extraction.worker.ts": {
     kind: "customer",
     capability: "ai",

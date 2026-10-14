@@ -55,7 +55,11 @@ interface RpcClient {
   rpc(
     name: string,
     args: Record<string, unknown>,
-  ): PromiseLike<{ data: unknown; error: unknown }>;
+  ): PromiseLike<{ data: unknown; error: unknown }> & {
+    abortSignal(
+      signal: AbortSignal,
+    ): PromiseLike<{ data: unknown; error: unknown }>;
+  };
 }
 /** Service-role adapter: every RPC receives verified tenant and actor first. */
 @Injectable()
@@ -105,49 +109,70 @@ export class SupabaseLicensingRepository
     orgId: string,
     actorId: string | null,
     proof: Parameters<LicensingPort["publishVerification"]>[2],
+    signal?: AbortSignal,
   ) {
     return z
       .object({
         outcome: z.enum(["updated", "stale", "conflict", "forbidden"]),
       })
       .parse(
-        await this.rpc("m15_01_checkpoint_verification", {
-          p_organization_id: orgId,
-          p_actor_user_id: actorId,
-          p_version: proof.version,
-          p_artifact_digest: proof.digest,
-          p_verified: proof.verified,
-          p_effective_capabilities: proof.capabilities,
-          p_policy_revision: proof.policyRevision,
-          p_configuration_digest: proof.configurationDigest,
-          p_observed_at: proof.observedAt,
-        }),
+        await this.rpc(
+          "m15_01_checkpoint_verification",
+          {
+            p_organization_id: orgId,
+            p_actor_user_id: actorId,
+            p_version: proof.version,
+            p_artifact_digest: proof.digest,
+            p_verified: proof.verified,
+            p_effective_capabilities: proof.capabilities,
+            p_policy_revision: proof.policyRevision,
+            p_configuration_digest: proof.configurationDigest,
+            p_observed_at: proof.observedAt,
+          },
+          signal,
+        ),
       );
   }
-  async getWorkerState(orgId: string) {
+  async getWorkerState(orgId: string, signal?: AbortSignal) {
     return licenseStoredStateSchema.parse(
-      await this.rpc("m15_01_get_worker_state", { p_organization_id: orgId }),
+      await this.rpc(
+        "m15_01_get_worker_state",
+        { p_organization_id: orgId },
+        signal,
+      ),
     );
   }
-  async checkpointWorker(orgId: string, observedAt: string) {
+  async checkpointWorker(
+    orgId: string,
+    observedAt: string,
+    signal?: AbortSignal,
+  ) {
     return z
       .object({
         timeHighWaterAt: z.string().nullable(),
         clockRollbackDetected: z.boolean(),
       })
       .parse(
-        await this.rpc("m15_01_checkpoint_worker_time", {
-          p_organization_id: orgId,
-          p_observed_at: observedAt,
-        }),
+        await this.rpc(
+          "m15_01_checkpoint_worker_time",
+          {
+            p_organization_id: orgId,
+            p_observed_at: observedAt,
+          },
+          signal,
+        ),
       );
   }
-  async getState(orgId: string, actorId: string) {
+  async getState(orgId: string, actorId: string, signal?: AbortSignal) {
     return licenseStoredStateSchema.parse(
-      await this.rpc("m15_01_get_state", {
-        p_organization_id: orgId,
-        p_actor_user_id: actorId,
-      }),
+      await this.rpc(
+        "m15_01_get_state",
+        {
+          p_organization_id: orgId,
+          p_actor_user_id: actorId,
+        },
+        signal,
+      ),
     );
   }
   async activationReceipt(
@@ -249,26 +274,39 @@ export class SupabaseLicensingRepository
       });
     return path;
   }
-  async checkpoint(orgId: string, actorId: string, observedAt: string) {
+  async checkpoint(
+    orgId: string,
+    actorId: string,
+    observedAt: string,
+    signal?: AbortSignal,
+  ) {
     return z
       .object({
         timeHighWaterAt: z.string().nullable(),
         clockRollbackDetected: z.boolean(),
       })
       .parse(
-        await this.rpc("m15_01_checkpoint_time", {
-          p_organization_id: orgId,
-          p_actor_user_id: actorId,
-          p_observed_at: observedAt,
-        }),
+        await this.rpc(
+          "m15_01_checkpoint_time",
+          {
+            p_organization_id: orgId,
+            p_actor_user_id: actorId,
+            p_observed_at: observedAt,
+          },
+          signal,
+        ),
       );
   }
   private async rpc(
     name: string,
     args: Record<string, unknown>,
+    signal?: AbortSignal,
   ): Promise<unknown> {
     const client = this.supabase.admin() as unknown as RpcClient;
-    const { data, error } = await client.rpc(name, args);
+    signal?.throwIfAborted();
+    const query = client.rpc(name, args);
+    const { data, error } = await (signal ? query.abortSignal(signal) : query);
+    signal?.throwIfAborted();
     if (
       (error &&
         typeof error === "object" &&

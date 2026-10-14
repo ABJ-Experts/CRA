@@ -1,0 +1,98 @@
+import type { CustomerSystemHealthResponse } from "@repo/contracts";
+
+export const healthOrg = "11111111-1111-4111-8111-111111111111";
+export const healthTime = "2026-10-14T10:00:00.000Z";
+const provenance = { sourceAt: healthTime, observedAt: healthTime };
+export const healthFixture: CustomerSystemHealthResponse = {
+  schemaVersion: 1,
+  organizationId: healthOrg,
+  observedAt: healthTime,
+  overallStatus: "degraded",
+  currentVersion: {
+    version: null,
+    commit: null,
+    builtAt: null,
+    sourceAt: null,
+    observedAt: null,
+  },
+  licence: {
+    state: "expired_read_only",
+    expiresAt: healthTime,
+    graceEndsAt: null,
+    managementUrl: "/organization?settings=licence",
+    usageUrl: "/organization?settings=licence",
+    ...provenance,
+  },
+  components: [
+    {
+      id: "database",
+      label: "Database",
+      status: "healthy",
+      source: "supabase",
+      summary: "Reachable",
+      reasons: [],
+      ...provenance,
+    },
+    {
+      id: "audit",
+      label: "Audit",
+      status: "unreachable",
+      source: "audit",
+      summary: "Unavailable",
+      reasons: ["audit_unavailable"],
+      sourceAt: null,
+      observedAt: healthTime,
+    },
+  ],
+  queues: [
+    {
+      id: "exports",
+      label: "Exports",
+      availability: "ready",
+      pending: 10_000,
+      running: 1,
+      retrying: 2,
+      waitingForReview: 3,
+      uncertainDelivery: 4,
+      failedTerminal: 5,
+      oldestPendingAt: healthTime,
+      countRelation: "at_least",
+      status: "degraded",
+      reasons: ["queue_backlog"],
+      interpretation: "queue_observation",
+      ...provenance,
+    },
+  ],
+  storage: {
+    customerBytes: 100,
+    customerReservedBytes: 10,
+    protectedBytes: 20,
+    unit: "bytes",
+    status: "degraded",
+    reachability: "healthy",
+    integrity: "unknown",
+    reasons: ["storage_integrity_unknown"],
+    ...provenance,
+  },
+  feedFreshness: [
+    {
+      id: "nvd",
+      label: "NVD",
+      status: "stale",
+      lastSuccessAt: healthTime,
+      lastSourceSnapshotAt: healthTime,
+      staleAfterSeconds: 86400,
+      reasons: ["source_stale"],
+      ...provenance,
+    },
+  ],
+  backup: {
+    status: "unknown",
+    lastExecutionAt: null,
+    lastVerifiedRestoreAt: null,
+    reasons: ["m15_05_not_available"],
+    sourceAt: null,
+    observedAt: null,
+  },
+  evidenceExportPreserved: true,
+};

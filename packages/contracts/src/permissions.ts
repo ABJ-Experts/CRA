@@ -79,6 +79,7 @@ export const PERMISSION_MATRIX = {
   organization: ["view", "edit", "delete", "export"],
   audit: ["view", "export"],
   licensing: ["view", "manage"],
+  system_health: ["view"],
   // Commerce
   products: ["view", "create", "edit", "delete", "export", "approve"],
   orders: ["view", "create", "edit", "delete", "export"],

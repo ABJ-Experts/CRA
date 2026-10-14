@@ -139,3 +139,14 @@ describe("SupabaseService", () => {
     },
   );
 });
+it("attaches AbortSignal to the real database probe", async () => {
+  const abortSignal = jest.fn().mockResolvedValue({ error: null });
+  const query = { abortSignal };
+  mockedCreateClient.mockReturnValue({
+    from: () => ({ select: () => ({ limit: () => query }) }),
+  } as never);
+  const service = new SupabaseService(config().serviceConfig);
+  const signal = new AbortController().signal;
+  await expect(service.ping(signal)).resolves.toBe(true);
+  expect(abortSignal).toHaveBeenCalledWith(signal);
+});

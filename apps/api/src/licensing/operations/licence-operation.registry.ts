@@ -14,7 +14,7 @@ export type LicenceOperation = Readonly<{
     | "source"
     | "admission-finalization";
   capability?: LicenseCapability;
-  identity: "member" | "source" | "public" | "worker";
+  identity: "member" | "source" | "public" | "worker" | "operator";
   mutation: boolean;
   authority: string;
   evidence: string;

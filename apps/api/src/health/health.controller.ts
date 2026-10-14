@@ -8,6 +8,11 @@ import type {
   ReadinessResponse,
 } from "@repo/contracts/system/types";
 
+import {
+  boundedProbe,
+  collectBounded,
+} from "../system-health/application/bounded-probe";
+
 import { Public } from "../auth/auth.types";
 import { ZodResponse } from "../common/http/zod-response.interceptor";
 import { ReportingDeadlineMonitorHealthUseCases } from "../reporting/application/reporting-deadline-monitor-health.port";
@@ -43,13 +48,20 @@ export class HealthController {
   @Get("ready")
   @ZodResponse(readinessResponseSchema)
   async readiness(): Promise<ReadinessResponse> {
-    const database = await this.supabase.ping();
-    const reportingMonitor = database
-      ? await this.reportingDeadlineMonitor.isReady().catch(() => false)
-      : false;
-    const audit = database
-      ? await this.audit.isReady().catch(() => false)
-      : false;
+    const databaseProbe = await boundedProbe((signal) =>
+      this.supabase.ping(signal),
+    );
+    const database = databaseProbe.outcome === "ready" && databaseProbe.value;
+    const dependent = database
+      ? await collectBounded([
+          (signal) => this.reportingDeadlineMonitor.isReady(signal),
+          (signal) => this.audit.isReady(signal),
+        ])
+      : [];
+    const reportingMonitor =
+      dependent[0]?.outcome === "ready" && dependent[0].value;
+    const audit =
+      dependent[1]?.outcome === "ready" ? dependent[1].value : false;
     return {
       status: database && reportingMonitor && audit ? "ok" : "degraded",
       database,

@@ -250,3 +250,23 @@ describe("SupabaseLicensingRepository", () => {
     ).rejects.toMatchObject({ response: { code: "forbidden" } });
   });
 });
+it("attaches cancellation to real licence RPC IO", async () => {
+  const { repository, rpc } = fixture();
+  const signal = new AbortController().signal;
+  const abortSignal = jest.fn().mockResolvedValue({
+    data: {
+      state: null,
+      usage: {
+        activeMembers: 0,
+        reservedInvitations: 0,
+        products: 0,
+        storageBytes: 0,
+      },
+      storageAccountingReady: false,
+    },
+    error: null,
+  });
+  rpc.mockReturnValue({ abortSignal });
+  await repository.getState(org, "actor", signal);
+  expect(abortSignal).toHaveBeenCalledWith(signal);
+});

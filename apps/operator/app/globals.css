@@ -1,0 +1,14 @@
+@import "tailwindcss";
+@source "../";
+@source not "../out";
+@source "../../../packages/ui/src";
+@import "@repo/design-system/styles.css";
+@layer base {
+  body {
+    background-color: var(--color-canvas);
+    color: var(--color-fg);
+  }
+  button:not(:disabled) {
+    cursor: pointer;
+  }
+}

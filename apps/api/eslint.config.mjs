@@ -33,7 +33,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ["src/audit/worker/verify.mjs"],
+    files: ["src/audit/worker/verify.mjs", "test/m15-03*.mjs"],
     extends: [tseslint.configs.disableTypeChecked],
     rules: {
       "@typescript-eslint/no-floating-promises": "off",

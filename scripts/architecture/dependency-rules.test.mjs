@@ -305,3 +305,42 @@ test("isolated Next build output is excluded while source boundaries stay enforc
   );
   assert.doesNotMatch(sourceViolation.stdout, /\.next-m15-02/);
 });
+
+test("private operator UI cannot import tenant runtime or backend providers", async (t) => {
+  const root = await mkdtemp(join(tmpdir(), "cra-operator-boundaries-"));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  await symlink(join(projectRoot, "node_modules"), join(root, "node_modules"));
+  await Promise.all([
+    write(root, "apps/api/provider.ts", "export const provider = true;\n"),
+    write(root, "apps/web/provider.ts", "export const provider = true;\n"),
+    write(
+      root,
+      "apps/operator/to-api.ts",
+      'export { provider } from "../api/provider";\n',
+    ),
+    write(
+      root,
+      "apps/operator/to-web.ts",
+      'export { provider } from "../web/provider";\n',
+    ),
+    write(
+      root,
+      "apps/api/to-operator.ts",
+      'export { provider } from "../operator/provider";\n',
+    ),
+    write(root, "apps/operator/provider.ts", "export const provider = true;\n"),
+  ]);
+  const result = spawnSync(
+    process.execPath,
+    [cli, "--config", config, "--output-type", "json", "apps"],
+    { cwd: root, encoding: "utf8" },
+  );
+  const violations = JSON.parse(result.stdout).summary.violations.map(
+    (v) => v.rule.name,
+  );
+  assert.ok(
+    violations.includes("no-operator-ui-to-tenant-or-backend"),
+    JSON.stringify(violations),
+  );
+  assert.ok(violations.includes("no-api-to-web"), JSON.stringify(violations));
+});

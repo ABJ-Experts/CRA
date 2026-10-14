@@ -15,7 +15,15 @@ import { ApiClientError } from "../../_lib/http/api-client";
 import OrganizationAdministrationPage from "./page";
 
 vi.mock("./organization-licensing-section", () => ({
-  OrganizationLicensingSection: () => <div>Licence controls</div>,
+  OrganizationLicensingSection: () => (
+    <div>
+      Licence controls
+      <input aria-label="Licence draft" defaultValue="" />
+    </div>
+  ),
+}));
+vi.mock("../../_features/system-health/system-health-screen", () => ({
+  SystemHealthScreen: () => <p>Health observation</p>,
 }));
 
 const navigation = vi.hoisted(() => ({
@@ -89,6 +97,7 @@ const session = vi.hoisted(() => ({
       ],
     },
     permissions: {
+      can_view_system_health: false,
       can_view_organization: true,
       can_edit_organization: true,
       can_export_organization: true,
@@ -357,6 +366,7 @@ beforeEach(() => {
   session.value = {
     ...session.value,
     permissions: {
+      can_view_system_health: false,
       can_view_organization: true,
       can_edit_organization: true,
       can_export_organization: true,
@@ -494,6 +504,7 @@ describe("OrganizationAdministrationPage", () => {
     session.value = {
       ...session.value,
       permissions: {
+        can_view_system_health: false,
         can_view_organization: true,
         can_edit_organization: false,
         can_export_organization: false,
@@ -556,11 +567,61 @@ describe("OrganizationAdministrationPage", () => {
       "America/New_York",
     );
   });
+  it("preserves a licence draft across the authorized System health tab", async () => {
+    session.value = {
+      ...session.value,
+      permissions: {
+        ...session.value.permissions,
+        can_view_system_health: true,
+      },
+    };
+    render(<OrganizationAdministrationPage />);
+    await openOrganizationWorkspace("Organization settings");
+    selectOrganizationWorkspaceTab("Licence");
+    fireEvent.change(screen.getByLabelText("Licence draft"), {
+      target: { value: "unsaved licence" },
+    });
+    selectOrganizationWorkspaceTab("System health");
+    expect(screen.getByText("Health observation")).toBeVisible();
+    selectOrganizationWorkspaceTab("Licence");
+    expect(screen.getByLabelText("Licence draft")).toHaveValue(
+      "unsaved licence",
+    );
+  });
+  it("keeps the independent health link when settings fail and hides it on revocation", async () => {
+    session.value = {
+      ...session.value,
+      permissions: {
+        ...session.value.permissions,
+        can_view_system_health: true,
+      },
+    };
+    queries.useOrganizationSettingsQuery.mockReturnValue({
+      ...okQuery(undefined),
+      isError: true,
+      error: new Error("settings unavailable"),
+    });
+    const view = render(<OrganizationAdministrationPage />);
+    expect(screen.getByRole("link", { name: "System health" })).toHaveAttribute(
+      "href",
+      "/organization/health",
+    );
+    session.value = {
+      ...session.value,
+      permissions: {
+        ...session.value.permissions,
+        can_view_system_health: false,
+      },
+    };
+    view.rerender(<OrganizationAdministrationPage />);
+    expect(screen.queryByRole("link", { name: "System health" })).toBeNull();
+  });
 
   it("does not request organization data for a user without view permission", async () => {
     session.value = {
       ...session.value,
       permissions: {
+        can_view_system_health: false,
         can_view_organization: false,
         can_edit_organization: false,
         can_export_organization: false,
@@ -731,6 +792,7 @@ describe("OrganizationAdministrationPage", () => {
     session.value = {
       ...session.value,
       permissions: {
+        can_view_system_health: false,
         can_view_organization: true,
         can_edit_organization: false,
         can_export_organization: false,

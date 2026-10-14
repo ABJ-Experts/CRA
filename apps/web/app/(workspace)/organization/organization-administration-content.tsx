@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 
 import {
   useCurrentOrganizationQuery,
@@ -31,6 +32,7 @@ import {
   useOrganizationBrandingQuery,
 } from "../../_features/organizations/organizations.queries";
 import { NotificationAdminPanel } from "../../_features/notifications/notification-admin-panel";
+import { SystemHealthScreen } from "../../_features/system-health/system-health-screen";
 import { ApiClientError } from "../../_lib/http/api-client";
 import { useMocksReady } from "../../_providers/providers";
 import { useSession } from "../../_providers/session-provider";
@@ -159,6 +161,7 @@ type OrganizationWorkbenchPanel = "settings" | "identity" | "lifecycle";
 type OrganizationWorkbenchTab =
   | "settings"
   | "licence"
+  | "health"
   | "retention"
   | "notifications"
   | "export"
@@ -198,6 +201,7 @@ const ORGANIZATION_WORKBENCH_TABS = Object.freeze({
   settings: [
     { value: "settings", label: "Settings" },
     { value: "licence", label: "Licence" },
+    { value: "health", label: "System health" },
     { value: "retention", label: "Evidence retention" },
     { value: "notifications", label: "Notifications" },
     { value: "export", label: "Exports" },
@@ -273,12 +277,14 @@ function OrganizationWorkbenchDialog({
   onTabChange,
   onClose,
   children,
+  canViewHealth,
 }: Readonly<{
   panel: OrganizationWorkbenchPanel;
   tab: OrganizationWorkbenchTab;
   onTabChange: (tab: OrganizationWorkbenchTab) => void;
   onClose: () => void;
   children: ReactNode;
+  canViewHealth: boolean;
 }>) {
   const item = ORGANIZATION_WORKBENCH_ITEMS.find(
     (candidate) => candidate.id === panel,
@@ -307,15 +313,19 @@ function OrganizationWorkbenchDialog({
               aria-label={`${item.title} sections`}
               className="mt-2 w-full"
             >
-              {ORGANIZATION_WORKBENCH_TABS[panel].map((itemTab) => (
-                <TabsTrigger
-                  key={itemTab.value}
-                  value={itemTab.value}
-                  onClick={() => onTabChange(itemTab.value)}
-                >
-                  {itemTab.label}
-                </TabsTrigger>
-              ))}
+              {ORGANIZATION_WORKBENCH_TABS[panel]
+                .filter(
+                  (itemTab) => itemTab.value !== "health" || canViewHealth,
+                )
+                .map((itemTab) => (
+                  <TabsTrigger
+                    key={itemTab.value}
+                    value={itemTab.value}
+                    onClick={() => onTabChange(itemTab.value)}
+                  >
+                    {itemTab.label}
+                  </TabsTrigger>
+                ))}
             </TabsList>
           </ModalHeader>
           <ModalBody className="pb-6">{children}</ModalBody>
@@ -419,6 +429,13 @@ export function OrganizationAdministrationContent() {
         title="Organization administration"
         subtitle="Settings, retention, export, and tenant data lifecycle controls."
       />
+      {permissions.can_view_system_health === true ? (
+        <div>
+          <Button asChild variant="outline" tone="grey">
+            <Link href="/organization/health">System health</Link>
+          </Button>
+        </div>
+      ) : null}
       {!liveApiEnabled ? (
         <ReadonlyNotice>
           Organization administration is available when the live backend is
@@ -468,6 +485,7 @@ export function OrganizationAdministrationContent() {
           ) : null}
           {activePanel ? (
             <OrganizationWorkbenchDialog
+              canViewHealth={permissions.can_view_system_health === true}
               panel={activePanel}
               tab={activeTab}
               onTabChange={setActiveTab}
@@ -515,6 +533,9 @@ export function OrganizationAdministrationContent() {
                       key={`licence-${current.data.organization.id}`}
                       organizationId={current.data.organization.id}
                     />
+                  </TabsContent>
+                  <TabsContent value="health" className="min-w-0">
+                    {activeTab === "health" ? <SystemHealthScreen /> : null}
                   </TabsContent>
                   <TabsContent
                     value="retention"

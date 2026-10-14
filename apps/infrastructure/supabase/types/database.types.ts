@@ -5864,6 +5864,81 @@ export type Database = {
           },
         ]
       }
+      operator_registry_observations: {
+        Row: {
+          attempted_at: string
+          commit: string | null
+          digest: string
+          entity_id: string
+          entity_kind: string
+          entity_observed_at: string | null
+          expected_version: string | null
+          grace_ends_at: string | null
+          instance_id: string
+          label: string
+          licence_expires_at: string | null
+          licence_source_at: string | null
+          licence_state: string | null
+          poll_reason: string | null
+          received_at: string | null
+          revision: number
+          source_observed_at: string | null
+          sources: Database["public"]["CompositeTypes"]["m15_03_source_observation"][]
+          status: string
+          succeeded_at: string | null
+          version: string | null
+          version_source_at: string | null
+        }
+        Insert: {
+          attempted_at: string
+          commit?: string | null
+          digest: string
+          entity_id: string
+          entity_kind: string
+          entity_observed_at?: string | null
+          expected_version?: string | null
+          grace_ends_at?: string | null
+          instance_id: string
+          label: string
+          licence_expires_at?: string | null
+          licence_source_at?: string | null
+          licence_state?: string | null
+          poll_reason?: string | null
+          received_at?: string | null
+          revision: number
+          source_observed_at?: string | null
+          sources?: Database["public"]["CompositeTypes"]["m15_03_source_observation"][]
+          status: string
+          succeeded_at?: string | null
+          version?: string | null
+          version_source_at?: string | null
+        }
+        Update: {
+          attempted_at?: string
+          commit?: string | null
+          digest?: string
+          entity_id?: string
+          entity_kind?: string
+          entity_observed_at?: string | null
+          expected_version?: string | null
+          grace_ends_at?: string | null
+          instance_id?: string
+          label?: string
+          licence_expires_at?: string | null
+          licence_source_at?: string | null
+          licence_state?: string | null
+          poll_reason?: string | null
+          received_at?: string | null
+          revision?: number
+          source_observed_at?: string | null
+          sources?: Database["public"]["CompositeTypes"]["m15_03_source_observation"][]
+          status?: string
+          succeeded_at?: string | null
+          version?: string | null
+          version_source_at?: string | null
+        }
+        Relationships: []
+      }
       organization_branding_assets: {
         Row: {
           alt_text: string | null
@@ -35039,6 +35114,112 @@ export type Database = {
         }
         Returns: Json
       }
+      m15_03_canonical_json: { Args: { p_value: Json }; Returns: string }
+      m15_03_health_can: {
+        Args: { p_actor_user_id: string; p_organization_id: string }
+        Returns: boolean
+      }
+      m15_03_notification_visible: {
+        Args: {
+          p_actor: string
+          p_org: string
+          p_product: string
+          p_row: Database["public"]["Tables"]["notification_dispatches"]["Row"]
+        }
+        Returns: boolean
+      }
+      m15_03_observe_instance: {
+        Args: {
+          p_after_id?: string
+          p_instance_id: string
+          p_limit?: number
+          p_observed_at: string
+        }
+        Returns: Json
+      }
+      m15_03_operator_read: {
+        Args: {
+          p_after_id?: string
+          p_instance_id?: string
+          p_instance_ids: string[]
+          p_kind: string
+          p_limit?: number
+          p_operator_id: string
+          p_request_id: string
+          p_tenant_ids: string[]
+        }
+        Returns: Json
+      }
+      m15_03_publish_observation: {
+        Args: { p_expected_instance_id: string; p_observation: Json }
+        Returns: Json
+      }
+      m15_03_queue: {
+        Args: {
+          p_failed: number
+          p_id: string
+          p_oldest: string
+          p_pending: number
+          p_retrying: number
+          p_review: number
+          p_running: number
+          p_source_at: string
+          p_uncertain: number
+        }
+        Returns: Json
+      }
+      m15_03_read_health_source: {
+        Args: {
+          p_actor_user_id: string
+          p_organization_id: string
+          p_product_id?: string
+          p_source: string
+        }
+        Returns: Json
+      }
+      m15_03_record_poll_outcome: {
+        Args: {
+          p_attempted_at: string
+          p_instance_id: string
+          p_reason: string
+        }
+        Returns: Json
+      }
+      m15_03_registry_json: {
+        Args: {
+          p_row: Database["public"]["Tables"]["operator_registry_observations"]["Row"]
+        }
+        Returns: Json
+      }
+      m15_03_source_json: {
+        Args: {
+          p_sources: Database["public"]["CompositeTypes"]["m15_03_source_observation"][]
+        }
+        Returns: Json
+      }
+      m15_03_source_queue: {
+        Args: {
+          p_actor: string
+          p_org: string
+          p_product: string
+          p_source: string
+        }
+        Returns: Json
+      }
+      m15_03_sources: {
+        Args: { p_sources: Json }
+        Returns: Database["public"]["CompositeTypes"]["m15_03_source_observation"][]
+      }
+      m15_03_store_entity: {
+        Args: {
+          p_entity: Json
+          p_instance_id: string
+          p_kind: string
+          p_revision: number
+          p_source_at: string
+        }
+        Returns: string
+      }
       m2_active_member: {
         Args: { p_actor_user_id: string; p_organization_id: string }
         Returns: boolean
@@ -39991,7 +40172,16 @@ export type Database = {
         | "declined"
     }
     CompositeTypes: {
-      [_ in never]: never
+      m15_03_source_observation: {
+        source: string | null
+        status: string | null
+        source_at: string | null
+        observed_at: string | null
+        attempted_at: string | null
+        succeeded_at: string | null
+        received_at: string | null
+        reasons: string[] | null
+      }
     }
   }
 }

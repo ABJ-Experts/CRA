@@ -8659,6 +8659,84 @@
       "identity": "member",
       "authority": "m15_02_reconcile_usage",
       "reason": "Authorized bounded reconciliation retains source data and all safety authorities."
+    },
+    {
+      "id": "apps/api/src/operator/operator.controller.ts#OperatorController.detail:GET:operator/instances/:instanceId",
+      "controller": "OperatorController",
+      "handler": "detail",
+      "mutation": false,
+      "public": false,
+      "evidence": "apps/api/src/operator/operator.controller.ts",
+      "symbol": "detail",
+      "kind": "security",
+      "identity": "operator",
+      "authority": "detail",
+      "reason": "Private mTLS tuple-scoped metadata only; no tenant evidence or ordinary authentication grant."
+    },
+    {
+      "id": "apps/api/src/operator/operator.controller.ts#OperatorController.instances:GET:operator/instances",
+      "controller": "OperatorController",
+      "handler": "instances",
+      "mutation": false,
+      "public": false,
+      "evidence": "apps/api/src/operator/operator.controller.ts",
+      "symbol": "instances",
+      "kind": "security",
+      "identity": "operator",
+      "authority": "instances",
+      "reason": "Private mTLS tuple-scoped metadata only; no tenant evidence or ordinary authentication grant."
+    },
+    {
+      "id": "apps/api/src/operator/operator.controller.ts#OperatorController.metadata:GET:operator/instance-metadata",
+      "controller": "OperatorController",
+      "handler": "metadata",
+      "mutation": false,
+      "public": false,
+      "evidence": "apps/api/src/operator/operator.controller.ts",
+      "symbol": "metadata",
+      "kind": "security",
+      "identity": "operator",
+      "authority": "metadata",
+      "reason": "Private mTLS tuple-scoped metadata only; no tenant evidence or ordinary authentication grant."
+    },
+    {
+      "id": "apps/api/src/operator/operator.controller.ts#OperatorController.session:GET:operator/session",
+      "controller": "OperatorController",
+      "handler": "session",
+      "mutation": false,
+      "public": false,
+      "evidence": "apps/api/src/operator/operator.controller.ts",
+      "symbol": "session",
+      "kind": "security",
+      "identity": "operator",
+      "authority": "session",
+      "reason": "Private mTLS tuple-scoped metadata only; no tenant evidence or ordinary authentication grant."
+    },
+    {
+      "id": "apps/api/src/operator/operator.controller.ts#OperatorController.tenants:GET:operator/instances/:instanceId/tenants",
+      "controller": "OperatorController",
+      "handler": "tenants",
+      "mutation": false,
+      "public": false,
+      "evidence": "apps/api/src/operator/operator.controller.ts",
+      "symbol": "tenants",
+      "kind": "security",
+      "identity": "operator",
+      "authority": "tenants",
+      "reason": "Private mTLS tuple-scoped metadata only; no tenant evidence or ordinary authentication grant."
+    },
+    {
+      "id": "apps/api/src/system-health/system-health.controller.ts#SystemHealthController.read:GET:system/health",
+      "controller": "SystemHealthController",
+      "handler": "read",
+      "mutation": false,
+      "public": false,
+      "evidence": "apps/api/src/system-health/system-health.controller.ts",
+      "symbol": "read",
+      "kind": "security",
+      "identity": "member",
+      "authority": "read",
+      "reason": "Authenticated tenant source-authorized diagnostics remain available under expiry."
     }
   ],
   "workers": [
@@ -9025,6 +9103,16 @@
       "evidence": "apps/infrastructure/supabase/migrations/20261012064415_m14_04_report_generation.sql",
       "symbol": "m14_04_publish_recipient",
       "authority": "m14_04_publish_recipient"
+    },
+    {
+      "id": "apps/api/src/operator-registry-worker.ts",
+      "kind": "security",
+      "identity": "worker",
+      "mutation": true,
+      "authority": "m15_03_publish_observation",
+      "evidence": "apps/infrastructure/supabase/migrations/20261014054407_m15_03_scoped_operator_health.sql",
+      "symbol": "m15_03_publish_observation",
+      "reason": "Explicit deployment-scoped metadata observation; durable publication, no call-home or content access."
     }
   ],
   "rpcs": [

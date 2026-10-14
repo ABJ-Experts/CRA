@@ -27,6 +27,7 @@ function context(request: Record<string, unknown>): ExecutionContext {
 
 function createGuard(options: {
   aal?: "aal1" | "aal2";
+  databaseRole?: string;
   emailVerifiedAt?: string | null;
   hasVerifiedFactor?: boolean;
 }) {
@@ -61,7 +62,12 @@ function createGuard(options: {
   const tokens = {
     verify: jest.fn().mockResolvedValue({
       ok: true,
-      claims: { sub: "auth-1", iat: 1_800_000_000, aal: options.aal ?? "aal1" },
+      claims: {
+        sub: "auth-1",
+        iat: 1_800_000_000,
+        aal: options.aal ?? "aal1",
+        role: options.databaseRole,
+      },
     }),
   } as unknown as TokenVerifierService;
   const supabase = {
@@ -85,6 +91,7 @@ function createGuard(options: {
       authorize: jest.fn().mockResolvedValue({ outcome: "allowed" }),
     }),
     hasVerifiedFactor,
+    users,
   };
 }
 
@@ -93,6 +100,19 @@ describe("SupabaseAuthGuard server-side gates", () => {
     cookies: { cra_at: "access-token" },
     headers: {},
   };
+
+  it("rejects an operator database credential before querying a forged tenant subject", async () => {
+    const { guard, users, hasVerifiedFactor } = createGuard({
+      databaseRole: "cra_operator_registry_reader",
+      aal: "aal2",
+    });
+
+    await expect(guard.canActivate(context(request))).rejects.toMatchObject({
+      response: { code: "non_tenant_credential" },
+    });
+    expect(users.select).not.toHaveBeenCalled();
+    expect(hasVerifiedFactor).not.toHaveBeenCalled();
+  });
 
   it("rejects an unverified email even when the pending browser cookie was deleted", async () => {
     const { guard, hasVerifiedFactor } = createGuard({ emailVerifiedAt: null });

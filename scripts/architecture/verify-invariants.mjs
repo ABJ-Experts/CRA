@@ -963,14 +963,39 @@ async function verifyControllerRoutes(rootDir, errors) {
         (decorator) => decorator.name === "Controller",
       );
       if (!controllerDecorator) continue;
-      const classAuthorized = hasAuthorizationDecorator(controller);
+      const privateOperator =
+        relativePath === "apps/api/src/operator/operator.controller.ts";
+      const operatorScoped = (node) =>
+        decoratorsByName(node).some(
+          (decorator) =>
+            decorator.name === "OperatorScoped" &&
+            (stringLiteralValue(decorator.arguments[0])?.trim().length ?? 0) >= 10,
+        );
+      if (
+        !privateOperator &&
+        nodesWithin(controller, (node) =>
+          (ts.isClassDeclaration(node) || ts.isMethodDeclaration(node)) &&
+          decoratorsByName(node).some((d) => d.name === "OperatorScoped"),
+        ).length
+      ) {
+        errors.push(
+          `${RULE.routeAuthorization} ${relativePath} cannot use private operator scope on the tenant listener`,
+        );
+      }
+      const classAuthorized = privateOperator
+        ? operatorScoped(controller)
+        : hasAuthorizationDecorator(controller);
       const controllerPath = routePath(controllerDecorator);
       for (const member of controller.members) {
         if (!ts.isMethodDeclaration(member)) continue;
         const route = decoratorsByName(member).find((decorator) =>
           ROUTE_DECORATORS.has(decorator.name),
         );
-        if (!route || classAuthorized || hasAuthorizationDecorator(member)) {
+        if (
+          !route ||
+          classAuthorized ||
+          (privateOperator ? operatorScoped(member) : hasAuthorizationDecorator(member))
+        ) {
           continue;
         }
         const routeKey = `${ROUTE_DECORATORS.get(route.name)} ${joinRoutePath(

@@ -4,6 +4,60 @@ import type { LicenceOperation } from "./licence-operation.registry";
 export const licenceRouteOperations: Readonly<
   Record<string, LicenceOperation>
 > = Object.freeze({
+  "OperatorController.session": {
+    kind: "security",
+    identity: "operator",
+    mutation: false,
+    authority: "session",
+    evidence: "apps/api/src/operator/operator.controller.ts",
+    reason:
+      "Private mTLS metadata scope is separate from tenant permissions and preserves no evidence/content access.",
+  },
+  "OperatorController.instances": {
+    kind: "security",
+    identity: "operator",
+    mutation: false,
+    authority: "instances",
+    evidence: "apps/api/src/operator/operator.controller.ts",
+    reason:
+      "Private mTLS metadata scope is separate from tenant permissions and preserves no evidence/content access.",
+  },
+  "OperatorController.detail": {
+    kind: "security",
+    identity: "operator",
+    mutation: false,
+    authority: "detail",
+    evidence: "apps/api/src/operator/operator.controller.ts",
+    reason:
+      "Private mTLS metadata scope is separate from tenant permissions and preserves no evidence/content access.",
+  },
+  "OperatorController.tenants": {
+    kind: "security",
+    identity: "operator",
+    mutation: false,
+    authority: "tenants",
+    evidence: "apps/api/src/operator/operator.controller.ts",
+    reason:
+      "Private mTLS metadata scope is separate from tenant permissions and preserves no evidence/content access.",
+  },
+  "OperatorController.metadata": {
+    kind: "security",
+    identity: "operator",
+    mutation: false,
+    authority: "metadata",
+    evidence: "apps/api/src/operator/operator.controller.ts",
+    reason:
+      "Private mTLS metadata scope is separate from tenant permissions and preserves no evidence/content access.",
+  },
+  "SystemHealthController.read": {
+    kind: "security",
+    identity: "member",
+    mutation: false,
+    authority: "read",
+    evidence: "apps/api/src/system-health/system-health.controller.ts",
+    reason:
+      "Tenant health diagnostics retain live session, health and source permissions under expiry without granting evidence access or customer writes.",
+  },
   "AuditExplorerController.createExport": {
     kind: "security",
     identity: "member",

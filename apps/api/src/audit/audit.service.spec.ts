@@ -137,3 +137,14 @@ describe("AuditService", () => {
     await expect(exceptionService.isReady()).resolves.toBe(false);
   });
 });
+it("attaches AbortSignal to audit readiness without changing capture behavior", async () => {
+  const abortSignal = jest.fn().mockResolvedValue({ error: null });
+  const service = new AuditService({
+    admin: () => ({
+      from: () => ({ select: () => ({ limit: () => ({ abortSignal }) }) }),
+    }),
+  } as never);
+  const signal = new AbortController().signal;
+  await expect(service.isReady(signal)).resolves.toBe(true);
+  expect(abortSignal).toHaveBeenCalledWith(signal);
+});

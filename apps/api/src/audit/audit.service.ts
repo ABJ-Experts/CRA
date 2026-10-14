@@ -109,14 +109,15 @@ export class AuditService {
     }
   }
 
-  async isReady(): Promise<boolean> {
+  async isReady(signal?: AbortSignal): Promise<boolean> {
     if (this.lastWriteFailed) return false;
     try {
-      const { error } = await this.supabase
+      const query = this.supabase
         .admin()
         .from("audit_logs")
         .select("id")
         .limit(1);
+      const { error } = await (signal ? query.abortSignal(signal) : query);
       return !error;
     } catch {
       return false;

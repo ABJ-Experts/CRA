@@ -64,11 +64,15 @@ export class LicensingService {
   async getCurrent(
     orgId: string,
     actorId: string,
+    signal?: AbortSignal,
   ): Promise<LicenseCurrentResponse> {
+    signal?.throwIfAborted();
+    const cancellation = signal ? ([signal] as const) : [];
     const instanceId = this.binding();
     const stored = actorId
-      ? await this.port.getState(orgId, actorId)
-      : await this.port.getWorkerState(orgId);
+      ? await this.port.getState(orgId, actorId, ...cancellation)
+      : await this.port.getWorkerState(orgId, ...cancellation);
+    signal?.throwIfAborted();
     const trusted = calculateTrustedTime({
       wallTimeMs: this.now().getTime(),
       persistedHighWaterMs: stored.state?.time_high_water_at
@@ -78,8 +82,18 @@ export class LicensingService {
       monotonicElapsedMs: Math.max(0, this.monotonic() - this.startedMonotonic),
     });
     const checkpoint = actorId
-      ? await this.port.checkpoint(orgId, actorId, this.now().toISOString())
-      : await this.port.checkpointWorker(orgId, this.now().toISOString());
+      ? await this.port.checkpoint(
+          orgId,
+          actorId,
+          this.now().toISOString(),
+          ...cancellation,
+        )
+      : await this.port.checkpointWorker(
+          orgId,
+          this.now().toISOString(),
+          ...cancellation,
+        );
+    signal?.throwIfAborted();
     const now = new Date(
       Math.max(
         trusted.effectiveTimeMs,
@@ -116,6 +130,7 @@ export class LicensingService {
             : "trust_unavailable";
       }
     }
+    signal?.throwIfAborted();
     const usage = {
       activeMembers:
         stored.usage.activeMembers + stored.usage.reservedInvitations,
@@ -151,6 +166,7 @@ export class LicensingService {
     });
     if (stored.state?.artifact_digest) {
       const configurationDigest = await this.configurationDigest();
+      signal?.throwIfAborted();
       const proof = await this.port.publishVerification(
         orgId,
         actorId || null,
@@ -166,7 +182,9 @@ export class LicensingService {
           configurationDigest,
           observedAt: this.now().toISOString(),
         },
+        ...cancellation,
       );
+      signal?.throwIfAborted();
       if (proof.outcome === "stale" || proof.outcome === "conflict")
         throw new LicensingError(
           "license_conflict",

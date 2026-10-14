@@ -94,6 +94,49 @@ describe("framework permissions", () => {
   });
 });
 
+describe("system health permissions", () => {
+  it("defaults tenant system health to owner and admin only", () => {
+    expect(
+      hasPermission(
+        DEFAULT_PERMISSIONS_BY_ROLE.owner,
+        "can_view_system_health",
+      ),
+    ).toBe(true);
+    expect(
+      hasPermission(
+        DEFAULT_PERMISSIONS_BY_ROLE.admin,
+        "can_view_system_health",
+      ),
+    ).toBe(true);
+    expect(
+      hasPermission(
+        DEFAULT_PERMISSIONS_BY_ROLE.member,
+        "can_view_system_health",
+      ),
+    ).toBe(false);
+    expect(
+      hasPermission(
+        DEFAULT_PERMISSIONS_BY_ROLE.viewer,
+        "can_view_system_health",
+      ),
+    ).toBe(false);
+  });
+
+  it("allows explicit custom-role delegation while preserving hard overrides", () => {
+    const granted = resolveEffectivePermissions({
+      baseRole: "viewer",
+      customRoles: [role({ permissions: { can_view_system_health: true } })],
+    });
+    expect(hasPermission(granted, "can_view_system_health")).toBe(true);
+
+    const revoked = resolveEffectivePermissions({
+      baseRole: "admin",
+      baseRoleOverrides: { can_view_system_health: false },
+    });
+    expect(hasPermission(revoked, "can_view_system_health")).toBe(false);
+  });
+});
+
 describe("supplier registry permissions", () => {
   it("reserves registry management for owner/admin while allowing a narrow custom grant", () => {
     expect(
@@ -477,7 +520,12 @@ describe("normalizePermissions", () => {
 
 describe("presets", () => {
   it("grants explicit SBOM view/upload/review defaults without changing permission resolution", () => {
-    expect(PERMISSION_MATRIX.sboms).toEqual(["view", "upload", "review", "export"]);
+    expect(PERMISSION_MATRIX.sboms).toEqual([
+      "view",
+      "upload",
+      "review",
+      "export",
+    ]);
     for (const baseRole of BASE_ROLES) {
       expect(
         hasPermission(DEFAULT_PERMISSIONS_BY_ROLE[baseRole], "can_view_sboms"),

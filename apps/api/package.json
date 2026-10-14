@@ -8,6 +8,8 @@
     "build": "nest build",
     "start": "node dist/main",
     "agent:ingress": "node dist/agent-main.js",
+    "operator:ingress": "node dist/operator-main.js",
+    "worker:operator-registry": "node dist/operator-registry-worker.js",
     "lint": "eslint src test --max-warnings 0",
     "check-types": "tsc --noEmit",
     "test": "jest",

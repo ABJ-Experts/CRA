@@ -21,3 +21,6 @@ export * from "./frameworks.js";
 export * from "./tasks/index.js";
 export * from "./dashboard/index.js";
 export * from "./licensing/index.js";
+export * from "./operator/index.js";
+export * from "./system/schemas/system-health.schema.js";
+export type * from "./system/types/system-health.type.js";

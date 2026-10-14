@@ -149,6 +149,29 @@ describe("explicit licence operation registry", () => {
         "security",
       );
   });
+  it("classifies private operator metadata separately from tenant identities", () => {
+    for (const handler of [
+      "session",
+      "instances",
+      "detail",
+      "tenants",
+      "metadata",
+    ])
+      expect(
+        getLicenceRouteOperation("OperatorController", handler),
+      ).toMatchObject({
+        kind: "security",
+        identity: "operator",
+        mutation: false,
+      });
+    expect(
+      getLicenceWorkerOperation("apps/api/src/operator-registry-worker.ts"),
+    ).toMatchObject({
+      kind: "security",
+      identity: "worker",
+      mutation: true,
+    });
+  });
   it("unknown and prototype names are absent grants", () => {
     expect(
       getLicenceRouteOperation("UnknownController", "create"),

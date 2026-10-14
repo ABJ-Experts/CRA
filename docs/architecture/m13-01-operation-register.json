@@ -4106,6 +4106,16 @@
           "note": "Immutable report occurrence and recipient checkpoint; artifact publication and audit precede email outbox."
         }
       ]
+    },
+    {
+      "id": "apps/api/src/operator-registry-worker.ts",
+      "authority": [
+        {
+          "kind": "job-history",
+          "evidence": "apps/infrastructure/supabase/migrations/20261014054407_m15_03_scoped_operator_health.sql",
+          "symbol": "m15_03_publish_observation"
+        }
+      ]
     }
   ],
   "rpcs": [
@@ -4156,6 +4166,26 @@
           "kind": "transactional-audit",
           "evidence": "apps/infrastructure/supabase/migrations/20261005110937_m13_01_invitation_failed_delivery_recovery.sql",
           "symbol": "m13_01_cancel_failed_invitation_delivery_atomic"
+        }
+      ]
+    },
+    {
+      "id": "m15_03_operator_read",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261014054407_m15_03_scoped_operator_health.sql",
+          "symbol": "m15_03_operator_read"
+        }
+      ]
+    },
+    {
+      "id": "m15_03_publish_observation",
+      "authority": [
+        {
+          "kind": "job-history",
+          "evidence": "apps/infrastructure/supabase/migrations/20261014054407_m15_03_scoped_operator_health.sql",
+          "symbol": "m15_03_publish_observation"
         }
       ]
     }

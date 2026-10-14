@@ -346,6 +346,18 @@
     "./licensing/types": {
       "types": "./dist/licensing/types/index.d.ts",
       "default": "./dist/licensing/types/index.js"
+    },
+    "./operator": {
+      "types": "./dist/operator/index.d.ts",
+      "default": "./dist/operator/index.js"
+    },
+    "./operator/schemas": {
+      "types": "./dist/operator/schemas/index.d.ts",
+      "default": "./dist/operator/schemas/index.js"
+    },
+    "./operator/types": {
+      "types": "./dist/operator/types/index.d.ts",
+      "default": "./dist/operator/types/index.js"
     }
   },
   "files": [

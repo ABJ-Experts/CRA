@@ -94,3 +94,12 @@ yarn-error.log*
 *.pem
 
 *.playwright-mcp
+
+# M15-03 reviewed source and nonsecret verification artifacts.
+!docs/architecture/m15-03*.md
+!docs/architecture/m15-03*.json
+!docs/architecture/m15-03-evidence/
+docs/architecture/m15-03-evidence/*
+!docs/architecture/m15-03-evidence/*.png
+!docs/architecture/m15-03-evidence/*.json
+!docs/superpowers/plans/2026-10-14-m15-03*.md
