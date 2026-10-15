@@ -1,0 +1,13 @@
+{
+  "platform": "macOS sandbox-exec",
+  "executorPolicy": "deny outbound IP connections except localhost; Docker Unix socket remains usable",
+  "canary": {
+    "destination": "1.1.1.1:443",
+    "result": "EPERM"
+  },
+  "localDockerSocket": {
+    "result": "linux daemon reachable"
+  },
+  "restoreNetwork": "fresh internal Docker network; no published target ports; loopback-only DNS; outbound TCP canary required by verifier",
+  "fullDrillUnderPolicy": "passed: ca55b0fd-c179-49ae-90b2-aca508c8fa93, 18/18 checks"
+}

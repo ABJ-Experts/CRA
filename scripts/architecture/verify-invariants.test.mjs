@@ -961,6 +961,36 @@ test("rejects operator scope metadata on ordinary tenant controllers", async (t)
   assert.ok(hasRule(await verifyInvariants(root), RULE.routeAuthorization));
 });
 
+test("accepts backup execution scope only on its isolated private controller", async (t) => {
+  const root = await temporaryRoot(t);
+  await writePassingFixture(root);
+  await write(root, "apps/api/src/backups/operator-backups.controller.ts", [
+    'import { backupHistorySchema } from "@repo/contracts/backups/schemas";',
+    '@Controller("operator/instances/:instanceId/backups")',
+    '@OperatorScoped("Fresh instance-bound mTLS backup action grant")',
+    'export class OperatorBackupsController {',
+    ' @Get("runs") @ZodResponse(backupHistorySchema)',
+    ' list() { return {}; }',
+    '}',
+  ].join("\n"));
+  assert.deepEqual(await verifyInvariants(root), []);
+});
+
+test("rejects tenant role authority on private backup execution", async (t) => {
+  const root = await temporaryRoot(t);
+  await writePassingFixture(root);
+  await write(root, "apps/api/src/backups/operator-backups.controller.ts", [
+    'import { backupHistorySchema } from "@repo/contracts/backups/schemas";',
+    '@Controller("operator/instances/:instanceId/backups")',
+    '@RequireRole("owner")',
+    'export class OperatorBackupsController {',
+    ' @Get("runs") @ZodResponse(backupHistorySchema)',
+    ' list() { return {}; }',
+    '}',
+  ].join("\n"));
+  assert.ok(hasRule(await verifyInvariants(root), RULE.routeAuthorization));
+});
+
 test("rejects tenant role decorators as operator authorization", async (t) => {
   const root = await temporaryRoot(t);
   await writePassingFixture(root);

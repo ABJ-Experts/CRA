@@ -1,0 +1,136 @@
+{
+  "recordedAt": "2026-10-15T06:05:17.083881+00:00",
+  "branch": "milestone-1",
+  "baseCommit": "8268d9858556003e28b599d7d91610a264a7d3a5",
+  "committedOrPushed": false,
+  "coverage": {
+    "final-api": {
+      "modules": 53,
+      "metrics": {
+        "statements": 94.76,
+        "branches": 89.79,
+        "functions": 94.36,
+        "lines": 95.74
+      },
+      "everyModuleAtLeast80": true
+    },
+    "final-web": {
+      "modules": 5,
+      "metrics": {
+        "statements": 100,
+        "branches": 98.58,
+        "functions": 100,
+        "lines": 100
+      },
+      "everyModuleAtLeast80": true
+    },
+    "final-operator": {
+      "modules": 4,
+      "metrics": {
+        "statements": 99.72,
+        "branches": 95.77,
+        "functions": 100,
+        "lines": 99.72
+      },
+      "everyModuleAtLeast80": true
+    },
+    "final-contracts": {
+      "modules": 6,
+      "metrics": {
+        "statements": 99.42,
+        "branches": 97.82,
+        "functions": 100,
+        "lines": 99.42
+      },
+      "everyModuleAtLeast80": true
+    }
+  },
+  "focusedApi": {
+    "suites": 50,
+    "tests": 369,
+    "exitCode": 0
+  },
+  "contracts": {
+    "files": 92,
+    "tests": 1022,
+    "exitCode": 0
+  },
+  "liveAuth": {
+    "passed": 33,
+    "failed": 0
+  },
+  "liveApi": {
+    "suites": 7,
+    "tests": 23,
+    "exitCode": 0,
+    "excluded": "SIEM suite changes existing destination credentials; preserved unrelated configuration"
+  },
+  "orderedSql": {
+    "migrations": 3,
+    "suites": 10,
+    "assertions": 128,
+    "exitCode": 0,
+    "sourceRowsCopied": 0
+  },
+  "browser": {
+    "engineJourneys": 6,
+    "passed": 6,
+    "mcpFinalPageCount": 2,
+    "unexpectedCustomerQueryStatus": 400,
+    "originalAssurance": "unavailable/not configured"
+  },
+  "originalDatabase": {
+    "policies": 0,
+    "runs": 0,
+    "nonForcedRls": true,
+    "authenticatedSelect": false,
+    "generatedTypeBodyParity": true,
+    "historicalLedgerRowsPreserved": 233
+  },
+  "supabaseMcp": {
+    "matchingLocalPreviouslyVerified": true,
+    "currentMatchingConnectionAvailable": false,
+    "unrelatedCloudProjectsQueried": false,
+    "finalChecks": "Exact matching local PostgreSQL containers; no data reset"
+  },
+  "limits": [
+    "Complete recovery measurements apply only to the isolated local profile.",
+    "Original source missing historical object bytes remains a recoverability limitation.",
+    "Same physical Mac does not demonstrate independent off-host durability or escrow custody.",
+    "Bundled engines do not certify native Safari/Edge or full WCAG compliance."
+  ],
+  "repositoryGate": {
+    "command": "pnpm verify",
+    "exitCode": 0,
+    "lintTasks": 6,
+    "typecheckTasks": 7,
+    "architectureAssertions": 150,
+    "testTasks": 10,
+    "buildTasks": 6,
+    "apiSuites": 577,
+    "apiTests": 6011,
+    "webFiles": 249,
+    "webTests": 1759,
+    "contractFiles": 92,
+    "contractTests": 1022,
+    "operatorFiles": 4,
+    "operatorTests": 47
+  },
+  "restoredReceiptRecheck": {
+    "captureState": "certified",
+    "verificationState": "verified",
+    "correctParent": true,
+    "checks": 18,
+    "passed": 18,
+    "schedulingEnabled": false,
+    "manifestSha256": "db59e5713afe7beae8118890722cbdcbbe0a1fbfd0c6a78b9c6d8dc139d20bfd"
+  },
+  "postBuildListenerChecks": {
+    "originalCustomerStatus": 200,
+    "originalCustomerState": "unavailable",
+    "unexpectedQueryStatus": 400,
+    "privateMtlsHistoryStatus": 200,
+    "privateHistoryContractParsed": true,
+    "mcpPages": 2
+  }
+}

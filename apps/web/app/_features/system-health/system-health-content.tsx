@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import type { CustomerSystemHealthResponse } from "@repo/contracts";
+import type { CustomerSystemHealthV2Response } from "@repo/contracts/system/types";
 import { Button } from "@repo/ui/button";
 import { cn } from "@repo/ui/cn";
 import { ApiClientError } from "../../_lib/http/api-client";
@@ -17,7 +17,7 @@ export interface HealthScope {
 }
 type Snapshot = Readonly<{
   key: string;
-  data?: CustomerSystemHealthResponse;
+  data?: CustomerSystemHealthV2Response;
   error?: unknown;
 }>;
 function failure(error: unknown) {

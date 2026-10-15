@@ -1,0 +1,31 @@
+{
+  "purpose": "Recovery probe dependency mount regression",
+  "observedAt": "2026-10-14T12:58:59.298Z",
+  "image": "public.ecr.aws/supabase/storage-api:v1.77.0",
+  "network": "none",
+  "credentialsOrEnvironmentFilesMounted": false,
+  "cases": [
+    {
+      "contractsDependencyMount": false,
+      "exitCode": 1,
+      "result": {
+        "code": "MODULE_NOT_FOUND",
+        "missing": "zod"
+      }
+    },
+    {
+      "contractsDependencyMount": true,
+      "exitCode": 0,
+      "result": "runtime_loaded"
+    }
+  ],
+  "productionRuntimeMounts": [
+    "apps/api/dist",
+    "apps/api/node_modules",
+    "node_modules",
+    "packages/contracts/dist",
+    "packages/contracts/node_modules",
+    "packages/contracts/package.json"
+  ],
+  "scope": "Module-loading proof only; full restore verification is recorded separately."
+}

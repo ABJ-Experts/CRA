@@ -1,0 +1,44 @@
+{
+  "recordedAt": "2026-10-15T05:24:30.230Z",
+  "version": "20261015052219",
+  "name": "m15_05_capture_assurance_projection",
+  "migrationSha256": "8ff1952fedf5835566788e1d7f7be6d271e3f36a4c9c74ad124fc0fbc1c1489e",
+  "registrationMethod": "supabase migration repair --local --status applied 20261015052219; exact CLI-produced new row copied to disposable source only",
+  "statementCount": 4,
+  "statementsMatchMigration": true,
+  "red": {
+    "assertions": 23,
+    "failedAssertions": 8,
+    "reason": "capture attempt included newer verification runs"
+  },
+  "green": {
+    "assertionsPerTarget": 23,
+    "targets": 2
+  },
+  "priorLedgerEvidencePreserved": "m15-05-ledger-registration-results.json",
+  "priorRegisteredMigrationFilesUnchanged": true,
+  "targets": [
+    {
+      "target": "supabase_db_cra",
+      "historicalRows": 233,
+      "historicalLedgerSha256": "cc23be02406650a4406f7fae504b4e0db43c48eba91e1412cb622fa005bed2b9",
+      "historicalLedgerUnchanged": true,
+      "priorFeatureVersionsUnchanged": true,
+      "priorFeatureRows": 2,
+      "newLedgerRowIdenticalToCli": true,
+      "assuranceRegressionAssertions": 23,
+      "canonicalFunctionDigest": "7ed923b377713b49957711544740886e"
+    },
+    {
+      "target": "cra_m15_05_source_db",
+      "historicalRows": 233,
+      "historicalLedgerSha256": "cc23be02406650a4406f7fae504b4e0db43c48eba91e1412cb622fa005bed2b9",
+      "historicalLedgerUnchanged": true,
+      "priorFeatureVersionsUnchanged": true,
+      "priorFeatureRows": 0,
+      "newLedgerRowIdenticalToCli": true,
+      "assuranceRegressionAssertions": 23,
+      "canonicalFunctionDigest": "7ed923b377713b49957711544740886e"
+    }
+  ]
+}

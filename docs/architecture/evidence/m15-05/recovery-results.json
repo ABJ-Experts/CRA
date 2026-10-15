@@ -1,0 +1,226 @@
+{
+  "profile": "isolated local SaaS-profile disposable source",
+  "capture": {
+    "id": "e3203a41-1d56-4299-97ac-439eba9d6940",
+    "kind": "capture",
+    "stage": "completed",
+    "state": "certified",
+    "attempt": 1,
+    "cleanup": {
+      "state": "retained",
+      "deletedAt": null
+    },
+    "version": 64,
+    "progress": 100,
+    "createdAt": "2026-10-15T05:30:07.753Z",
+    "startedAt": "2026-10-15T05:30:08.027Z",
+    "durationMs": 68859,
+    "instanceId": "364152ee-46e2-4eb7-a41f-4531e3fd89b1",
+    "certificate": {
+      "keyId": "dedicated",
+      "version": 1,
+      "timeline": 1,
+      "walBytes": 251658240,
+      "baseRunId": "04bde987-0fc5-4654-a7bb-63ca6fb1ef53",
+      "integrity": "passed",
+      "certifiedAt": "2026-10-15T05:31:15.169Z",
+      "objectBytes": 1073741964,
+      "objectCount": 18,
+      "checkpointId": "e3203a41-1d56-4299-97ac-439eba9d6940",
+      "checkpointLsn": "0/62014DA0",
+      "databaseBytes": 1201231360,
+      "manifestSha256": "db59e5713afe7beae8118890722cbdcbbe0a1fbfd0c6a78b9c6d8dc139d20bfd",
+      "recoveryPointAt": "2026-10-15T05:31:15.169Z",
+      "postgresqlVersion": "17.6",
+      "repositoryGeneration": "2e1f2800-2564-471a-a108-af9329536cfe",
+      "sourceSystemIdentifier": "7696484019590184994"
+    },
+    "completedAt": "2026-10-15T05:31:16.886Z",
+    "failureCode": null,
+    "parentRunId": null,
+    "verification": null,
+    "configurationRevision": 1
+  },
+  "verification": {
+    "id": "ca55b0fd-c179-49ae-90b2-aca508c8fa93",
+    "kind": "verification",
+    "stage": "completed",
+    "state": "verified",
+    "attempt": 1,
+    "cleanup": {
+      "state": "retained",
+      "deletedAt": null
+    },
+    "version": 60,
+    "progress": 100,
+    "createdAt": "2026-10-15T05:31:17.717Z",
+    "startedAt": "2026-10-15T05:31:17.810Z",
+    "durationMs": 89089,
+    "instanceId": "364152ee-46e2-4eb7-a41f-4531e3fd89b1",
+    "certificate": null,
+    "completedAt": "2026-10-15T05:32:46.899Z",
+    "failureCode": null,
+    "parentRunId": "e3203a41-1d56-4299-97ac-439eba9d6940",
+    "verification": {
+      "checks": [
+        {
+          "code": "ciphertext_authentication",
+          "status": "passed",
+          "durationMs": 480,
+          "failureCode": null
+        },
+        {
+          "code": "manifest_integrity",
+          "status": "passed",
+          "durationMs": 480,
+          "failureCode": null
+        },
+        {
+          "code": "schema_migrations",
+          "status": "passed",
+          "durationMs": 4427,
+          "failureCode": null
+        },
+        {
+          "code": "extensions",
+          "status": "passed",
+          "durationMs": 4427,
+          "failureCode": null
+        },
+        {
+          "code": "ownership_acl_rls",
+          "status": "passed",
+          "durationMs": 4427,
+          "failureCode": null
+        },
+        {
+          "code": "sequences",
+          "status": "passed",
+          "durationMs": 4427,
+          "failureCode": null
+        },
+        {
+          "code": "object_integrity",
+          "status": "passed",
+          "durationMs": 4427,
+          "failureCode": null
+        },
+        {
+          "code": "audit_continuity",
+          "status": "passed",
+          "durationMs": 4427,
+          "failureCode": null
+        },
+        {
+          "code": "external_keys",
+          "status": "passed",
+          "durationMs": 4427,
+          "failureCode": null
+        },
+        {
+          "code": "credential_quarantine",
+          "status": "passed",
+          "durationMs": 238,
+          "failureCode": null
+        },
+        {
+          "code": "session_revocation",
+          "status": "passed",
+          "durationMs": 238,
+          "failureCode": null
+        },
+        {
+          "code": "dataset_markers",
+          "status": "passed",
+          "durationMs": 238,
+          "failureCode": null
+        },
+        {
+          "code": "authentication",
+          "status": "passed",
+          "durationMs": 5634,
+          "failureCode": null
+        },
+        {
+          "code": "tenant_isolation",
+          "status": "passed",
+          "durationMs": 5634,
+          "failureCode": null
+        },
+        {
+          "code": "product_isolation",
+          "status": "passed",
+          "durationMs": 5634,
+          "failureCode": null
+        },
+        {
+          "code": "private_evidence_access",
+          "status": "passed",
+          "durationMs": 5634,
+          "failureCode": null
+        },
+        {
+          "code": "egress_denied",
+          "status": "passed",
+          "durationMs": 14,
+          "failureCode": null
+        },
+        {
+          "code": "runtime_compatibility",
+          "status": "passed",
+          "durationMs": 73230,
+          "failureCode": null
+        }
+      ],
+      "integrity": "passed",
+      "verifiedAt": "2026-10-15T05:32:46.748Z",
+      "objectBytes": 1073741964,
+      "databaseBytes": 1201231360,
+      "targetProfile": "saas",
+      "measuredProfile": "saas",
+      "recoveryDurationMs": 87582,
+      "recoveryPointAgeMs": 91579
+    },
+    "configurationRevision": 1
+  },
+  "writePause": {
+    "startedAt": "2026-10-15T05:30:12.909265+00:00",
+    "deadlineAt": "2026-10-15T05:32:12.909265+00:00",
+    "conservativeUpperBoundMs": 63977
+  },
+  "sourceWorkload": {
+    "databaseBytes": 1168592019,
+    "workloadPayloadBytes": 1073741824,
+    "objectCount": 18,
+    "objectBytes": 1073741964
+  },
+  "executorEgress": "macOS sandbox denies outbound IP except localhost; Docker Unix socket allowed",
+  "targetEgress": "fresh internal network, no target published ports, loopback DNS; actual egress_denied check passed",
+  "storageCompatibility": "full exact object inventory copied to fresh Linux-native volume on explicitly attested FileVault-backed Docker daemon; all hashes verified before actual M8 private download",
+  "hardware": {
+    "host": "macOS 26.6.2 arm64",
+    "hostMemoryGiB": 16,
+    "hostCpuCores": 10,
+    "dockerMemoryBytes": 4108357632,
+    "dockerCpuCores": 10
+  },
+  "versions": {
+    "postgres": "17.6.1.156",
+    "storage": "1.77.0",
+    "gotrue": "2.197.0",
+    "postgrest": "16.3"
+  },
+  "limits": [
+    "Same physical Mac repository does not demonstrate independent off-host durability or residency.",
+    "RPO/RTO measurements apply only to this workload and profile.",
+    "Original development source retains historical missing object bytes; no original backup policy/run was created.",
+    "Earlier failed and interrupted jobs remain visible; they were not treated as verified."
+  ],
+  "requestToVerifiedCompletionMs": 89182,
+  "images": {
+    "public.ecr.aws/supabase/postgres:17.6.1.156": "sha256:ca7871b587ca2c401ac0f325df6249c9aa0d25647ded34631158efc51176767f",
+    "public.ecr.aws/supabase/storage-api:v1.77.0": "sha256:3999cfa4f3286f945fa68069fc9b8b6bf3929a6bd53916dcf2e8c209801173c0",
+    "public.ecr.aws/supabase/gotrue:v2.197.0": "sha256:1736a63078f5922b198c4cbe50f80ab9a2d3b54fe8b7b6cfb2e9dc5dbbc12c6b",
+    "public.ecr.aws/supabase/postgrest:v16.3": "sha256:ec0e25a4e24b0a3bc5e4f011369bfc736bd1b19f513bd01079b86329a7636962"
+  }
+}

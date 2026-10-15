@@ -59,7 +59,8 @@
     "vault:siem": "node dist/siem-vault-maintenance.js",
     "worker:exports": "node dist/exports-worker.js",
     "worker:reports": "node dist/reports-worker.js",
-    "worker:support-diagnostics": "node dist/support-diagnostics-worker.js"
+    "worker:support-diagnostics": "node dist/support-diagnostics-worker.js",
+    "worker:backups": "node dist/backup-worker.js"
   },
   "dependencies": {
     "@cyclonedx/cyclonedx-library": "10.2.0",

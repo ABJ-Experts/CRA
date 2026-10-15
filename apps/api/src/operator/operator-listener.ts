@@ -3,6 +3,11 @@ import {
   type INestApplication,
   UnauthorizedException,
 } from "@nestjs/common";
+import { OperatorBackupsController } from "../backups/operator-backups.controller";
+import { BackupUseCases } from "../backups/application/backup-use-cases";
+import type { BackupControlPort } from "../backups/application/backup-control.port";
+import { assertPrivateMutation } from "../backups/domain/backup-authorization";
+import { ServiceUnavailableException } from "@nestjs/common";
 import { NestFactory, Reflector } from "@nestjs/core";
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import { z } from "zod";
@@ -36,11 +41,12 @@ export interface OperatorListenerConfig {
   grantsPath: string;
   staticRoot: string;
 }
-@Module({ controllers: [OperatorController] })
+@Module({ controllers: [OperatorController, OperatorBackupsController] })
 export class OperatorIngressModule {}
 export async function createOperatorApplication(
   config: OperatorListenerConfig,
   reader: RegistryReader,
+  backupControl?: BackupControlPort,
 ): Promise<INestApplication> {
   z.uuid().parse(config.instanceId);
   if (!privateAddress(config.host))
@@ -61,6 +67,18 @@ export async function createOperatorApplication(
       providers: [
         { provide: OperatorRegistry, useValue: new OperatorRegistry(reader) },
         { provide: OPERATOR_INSTANCE_ID, useValue: config.instanceId },
+        {
+          provide: BackupUseCases,
+          useValue: new BackupUseCases(
+            config.instanceId,
+            backupControl ?? {
+              execute: () =>
+                Promise.reject(
+                  new ServiceUnavailableException("Backup control unavailable"),
+                ),
+            },
+          ),
+        },
       ],
     },
     { logger: false, bodyParser: false, httpsOptions },
@@ -108,6 +126,14 @@ export async function createOperatorApplication(
             response.status(404).end();
             return;
           }
+          try {
+            assertPrivateMutation(request);
+          } catch {
+            response
+              .status(403)
+              .json({ message: "Private JSON origin required" });
+            return;
+          }
           request.operatorIdentity = identity;
           response.setHeader("Cache-Control", "no-store");
           next();
@@ -119,6 +145,7 @@ export async function createOperatorApplication(
         });
     },
   );
+  app.useBodyParser("json", { limit: "32kb", strict: true });
   app.use(
     helmet({
       contentSecurityPolicy: {

@@ -114,3 +114,13 @@ docs/architecture/evidence/m15-04/*
 !docs/architecture/evidence/m15-04/*.json
 !docs/architecture/evidence/m15-04/*.md
 !docs/superpowers/plans/2026-10-14-m15-04-support-diagnostics.md
+
+# M15-05 reviewed design and nonsecret recovery verification evidence.
+!docs/architecture/m15-05*.md
+!docs/architecture/m15-05*.json
+!docs/architecture/evidence/m15-05/
+docs/architecture/evidence/m15-05/*
+!docs/architecture/evidence/m15-05/*.png
+!docs/architecture/evidence/m15-05/*.json
+!docs/architecture/evidence/m15-05/*.md
+!docs/superpowers/plans/2026-10-14-m15-05-encrypted-backups.md

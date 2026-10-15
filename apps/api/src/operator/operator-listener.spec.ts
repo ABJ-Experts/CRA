@@ -13,10 +13,12 @@ import { TLSSocket } from "node:tls";
 import type { INestApplication } from "@nestjs/common";
 const instanceId = "20000000-0000-4000-8000-000000000001";
 const principalId = "10000000-0000-4000-8000-000000000001";
+import { OperatorBackupsController } from "../backups/operator-backups.controller";
 import { OperatorController } from "./operator.controller";
 it("exposes the private controller through only its dedicated static module graph", () => {
   expect(Reflect.getMetadata("controllers", OperatorIngressModule)).toEqual([
     OperatorController,
+    OperatorBackupsController,
   ]);
 });
 describe("real mTLS private operator composition", () => {

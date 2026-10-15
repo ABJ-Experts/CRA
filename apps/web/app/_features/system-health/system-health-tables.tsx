@@ -1,4 +1,5 @@
-import type { CustomerSystemHealthResponse } from "@repo/contracts";
+import type { CustomerSystemHealthVersionedResponse } from "@repo/contracts/system/types";
+import { BackupAssurance } from "./backup-assurance";
 import { cn } from "@repo/ui/cn";
 import type { ReactNode } from "react";
 
@@ -88,7 +89,7 @@ function Metric({ name, value }: { name: string; value: ReactNode }) {
 export function SystemHealthTables({
   data,
 }: {
-  data: CustomerSystemHealthResponse;
+  data: CustomerSystemHealthVersionedResponse;
 }) {
   const count = (
     value: number | null,
@@ -344,37 +345,48 @@ export function SystemHealthTables({
           </tr>
         ))}
       </Table>
-      <section
-        aria-labelledby="backup-health-heading"
-        className={cn("rounded-lg border border-border p-5")}
-      >
-        <h2 id="backup-health-heading" className={cn("text-subhead-semibold")}>
-          Backup and restore assurance
-        </h2>
-        <dl className={cn("mt-4 grid gap-5 sm:grid-cols-2")}>
-          <Metric
-            name="Last backup execution"
-            value={<Time value={data.backup.lastExecutionAt} />}
-          />
-          <Metric
-            name="Last verified restore"
-            value={<Time value={data.backup.lastVerifiedRestoreAt} />}
-          />
-          <Metric
-            name="Backup source time"
-            value={<Time value={data.backup.sourceAt} />}
-          />
-          <Metric
-            name="Backup observed"
-            value={<Time value={data.backup.observedAt} />}
-          />
-        </dl>
-        <p className={cn("mt-4 text-subhead-regular text-fg-muted")}>
-          Backup execution and verified restore evidence are unknown until the
-          backup assurance service is available. Health observations do not
-          demonstrate recoverability.
-        </p>
-      </section>
+      {data.schemaVersion === 2 ? (
+        <BackupAssurance
+          key={data.organizationId}
+          organizationId={data.organizationId}
+          data={data.backup}
+        />
+      ) : (
+        <section
+          aria-labelledby="backup-health-heading"
+          className={cn("rounded-lg border border-border p-5")}
+        >
+          <h2
+            id="backup-health-heading"
+            className={cn("text-subhead-semibold")}
+          >
+            Backup and restore assurance
+          </h2>
+          <dl className={cn("mt-4 grid gap-5 sm:grid-cols-2")}>
+            <Metric
+              name="Last backup execution"
+              value={<Time value={data.backup.lastExecutionAt} />}
+            />
+            <Metric
+              name="Last verified restore"
+              value={<Time value={data.backup.lastVerifiedRestoreAt} />}
+            />
+            <Metric
+              name="Backup source time"
+              value={<Time value={data.backup.sourceAt} />}
+            />
+            <Metric
+              name="Backup observed"
+              value={<Time value={data.backup.observedAt} />}
+            />
+          </dl>
+          <p className={cn("mt-4 text-subhead-regular text-fg-muted")}>
+            Backup execution and verified restore evidence are unknown until the
+            backup assurance service is available. Health observations do not
+            demonstrate recoverability.
+          </p>
+        </section>
+      )}
     </div>
   );
 }

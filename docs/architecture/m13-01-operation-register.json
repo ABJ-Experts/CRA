@@ -3738,6 +3738,76 @@
           "symbol": "preview"
         }
       ]
+    },
+    {
+      "id": "apps/api/src/backups/operator-backups.controller.ts#OperatorBackupsController.cancel:POST:operator/instances/:instanceId/backups/runs/:runId/cancel",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261014112426_m15_05_encrypted_backups.sql",
+          "symbol": "m15_05_backup_control"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/backups/operator-backups.controller.ts#OperatorBackupsController.cleanup:POST:operator/instances/:instanceId/backups/runs/:runId/cleanup",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261014112426_m15_05_encrypted_backups.sql",
+          "symbol": "m15_05_backup_control"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/backups/operator-backups.controller.ts#OperatorBackupsController.cleanupReview:POST:operator/instances/:instanceId/backups/runs/:runId/cleanup-review",
+      "authority": [
+        {
+          "kind": "read-only-command",
+          "evidence": "apps/api/src/backups/operator-backups.controller.ts",
+          "symbol": "cleanupReview"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/backups/operator-backups.controller.ts#OperatorBackupsController.configure:PUT:operator/instances/:instanceId/backups/policy",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261014112426_m15_05_encrypted_backups.sql",
+          "symbol": "m15_05_backup_control"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/backups/operator-backups.controller.ts#OperatorBackupsController.create:POST:operator/instances/:instanceId/backups/runs",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261014112426_m15_05_encrypted_backups.sql",
+          "symbol": "m15_05_backup_control"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/backups/operator-backups.controller.ts#OperatorBackupsController.validate:POST:operator/instances/:instanceId/backups/policy/validate",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261014112426_m15_05_encrypted_backups.sql",
+          "symbol": "m15_05_backup_control"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/backups/operator-backups.controller.ts#OperatorBackupsController.verify:POST:operator/instances/:instanceId/backups/runs/:runId/verifications",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261014112426_m15_05_encrypted_backups.sql",
+          "symbol": "m15_05_backup_control"
+        }
+      ]
     }
   ],
   "workers": [
@@ -4186,6 +4256,26 @@
           "symbol": "m15_04_complete"
         }
       ]
+    },
+    {
+      "id": "apps/api/src/backups/worker/backup-cleanup-worker.ts",
+      "authority": [
+        {
+          "kind": "job-history",
+          "evidence": "apps/infrastructure/supabase/migrations/20261014112426_m15_05_encrypted_backups.sql",
+          "symbol": "m15_05_backup_control"
+        }
+      ]
+    },
+    {
+      "id": "apps/api/src/backups/worker/backup-worker.ts",
+      "authority": [
+        {
+          "kind": "job-history",
+          "evidence": "apps/infrastructure/supabase/migrations/20261014112426_m15_05_encrypted_backups.sql",
+          "symbol": "m15_05_backup_control"
+        }
+      ]
     }
   ],
   "rpcs": [
@@ -4336,6 +4426,16 @@
           "kind": "transactional-audit",
           "evidence": "apps/infrastructure/supabase/migrations/20261014090758_m15_04_support_diagnostics.sql",
           "symbol": "m15_04_finish_cleanup"
+        }
+      ]
+    },
+    {
+      "id": "m15_05_backup_control",
+      "authority": [
+        {
+          "kind": "transactional-audit",
+          "evidence": "apps/infrastructure/supabase/migrations/20261014112426_m15_05_encrypted_backups.sql",
+          "symbol": "m15_05_backup_control"
         }
       ]
     }

@@ -1,0 +1,44 @@
+{
+  "recordedAt": "2026-10-14T13:27:03.892265+00:00",
+  "target": "original local Supabase project cra",
+  "registrationMethod": "supabase migration repair --local --status applied 20261014112426 20261014171300",
+  "registeredVersions": [
+    {
+      "version": "20261014112426",
+      "name": "m15_05_encrypted_backups",
+      "statementCount": 36,
+      "ledgerStatementsMatchFileExceptSeparatorWhitespace": true,
+      "ledgerStatementsSha256": "b2d6306015d33a1bea67bdf14eabdc12334871ca421200347ef46846d448a855"
+    },
+    {
+      "version": "20261014171300",
+      "name": "m15_05_backup_validation_contract",
+      "statementCount": 40,
+      "ledgerStatementsMatchFileExceptSeparatorWhitespace": true,
+      "ledgerStatementsSha256": "0aca4388f6ae10bf67198b79da00acd5c76fdc9773c24db361815c70674be511"
+    }
+  ],
+  "historicalRowsBefore": {
+    "count": 233,
+    "sha256": "1beed84914236dc77f64eeb6fae2666f509634085145ffe849f4b1b025edc6b7"
+  },
+  "historicalRowsAfter": {
+    "count": 233,
+    "sha256": "1beed84914236dc77f64eeb6fae2666f509634085145ffe849f4b1b025edc6b7"
+  },
+  "historicalLedgerUnchanged": true,
+  "migrationFiles": [
+    {
+      "file": "20261014112426_m15_05_encrypted_backups.sql",
+      "sha256": "fa88dbca1340029e89da8c42d7280499fdd84205dc1b0ffb5431807d7dddc3bc"
+    },
+    {
+      "file": "20261014171300_m15_05_backup_validation_contract.sql",
+      "sha256": "7108f50d6612cc428010de404f9bedf399704c98a53a721101b4d44c857ecaa5"
+    }
+  ],
+  "originalAndTaskSourceFunctionDigest": "c0108b8d5ab2d925c86c901178107755",
+  "orderedInstallationParity": true,
+  "featurePolicyRows": 0,
+  "featureRunRows": 0
+}

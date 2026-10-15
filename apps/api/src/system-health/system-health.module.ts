@@ -1,3 +1,4 @@
+import { BackupsModule } from "../backups/backups.module";
 import { Module } from "@nestjs/common";
 import { ConfigModule, ConfigService } from "@nestjs/config";
 import { systemHealthVersionSchema } from "@repo/contracts/system/schemas";
@@ -11,7 +12,13 @@ import { SystemHealthUseCases } from "./application/system-health.use-cases";
 import { SupabaseHealthSourceAdapter } from "./infrastructure/supabase-health-source.adapter";
 import { RuntimeHealthAdapter } from "./infrastructure/runtime-health.adapter";
 @Module({
-  imports: [SupabaseModule, AuditModule, ConfigModule, LicensingRuntimeModule],
+  imports: [
+    BackupsModule,
+    SupabaseModule,
+    AuditModule,
+    ConfigModule,
+    LicensingRuntimeModule,
+  ],
   controllers: [SystemHealthController],
   providers: [
     SupabaseHealthSourceAdapter,

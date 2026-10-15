@@ -4,7 +4,7 @@ import { ExportControls } from "../exports/export-controls";
 
 import { notificationFeedDestinationResponseSchema } from "@repo/contracts/notifications";
 import type {
-  NotificationCategory,
+  NotificationFeedCategory,
   NotificationFeedCursor,
   NotificationFeedItem,
   NotificationFeedQuery,
@@ -29,7 +29,10 @@ import {
   useNotificationFeedQuery,
 } from "./notifications.queries";
 
-const categories: readonly (readonly [NotificationCategory | "", string])[] = [
+const categories: readonly (readonly [
+  NotificationFeedCategory | "",
+  string,
+])[] = [
   ["", "All categories"],
   ["finding_triage", "Finding triage"],
   ["evidence", "Evidence"],
@@ -37,6 +40,7 @@ const categories: readonly (readonly [NotificationCategory | "", string])[] = [
   ["support_period", "Support period"],
   ["reporting_deadline", "Reporting deadline"],
   ["scheduled_report", "Scheduled reports"],
+  ["backup_health", "Backup assurance"],
 ];
 const severities: readonly (readonly [
   NotificationFeedSeverity | "",
@@ -108,7 +112,7 @@ export function NotificationCentre({
   const lastScope = useRef(scopeKey);
   const actionAlertRef = useRef<HTMLDivElement | null>(null);
   const scopeChanged = lastScope.current !== scopeKey;
-  const [category, setCategory] = useState<NotificationCategory | "">("");
+  const [category, setCategory] = useState<NotificationFeedCategory | "">("");
   const [severity, setSeverity] = useState<NotificationFeedSeverity | "">("");
   const [read, setRead] = useState<NotificationFeedReadFilter>("all");
   const [view, setView] = useState<"events" | "grouped">("events");
@@ -354,7 +358,7 @@ export function NotificationCentre({
             }
             disabled={filteredInbox}
             onChange={(event) => {
-              setCategory(event.target.value as NotificationCategory | "");
+              setCategory(event.target.value as NotificationFeedCategory | "");
               resetPage();
             }}
           >

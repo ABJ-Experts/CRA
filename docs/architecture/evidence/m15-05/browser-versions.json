@@ -1,0 +1,12 @@
+{
+  "playwright": "1.62.1",
+  "cliEngines": {
+    "chromium": "151.0.7922.34",
+    "firefox": "153.0",
+    "webkit": "26.5"
+  },
+  "mcpChromium": "155.0.8059.40",
+  "journeys": 6,
+  "passed": 6,
+  "limits": "Automated bundled engines; native Safari/Edge and previous major versions not certified. Keyboard, labels, focus, reduced motion and mobile checks do not establish full WCAG certification."
+}

@@ -3,6 +3,24 @@ import type { LicenceOperation } from "./licence-operation.registry";
 export const licenceWorkerOperations: Readonly<
   Record<string, LicenceOperation>
 > = Object.freeze({
+  "apps/api/src/backups/worker/backup-cleanup-worker.ts": {
+    kind: "protective",
+    identity: "worker",
+    mutation: true,
+    authority: "m15_05_backup_control",
+    evidence: "apps/api/src/backups/worker/backup-cleanup-worker.ts",
+    reason:
+      "Only explicitly reviewed cleanup intents retain live all-tenant protection locks; licence state cannot confer deletion authority.",
+  },
+  "apps/api/src/backups/worker/backup-worker.ts": {
+    kind: "security",
+    identity: "worker",
+    mutation: true,
+    authority: "m15_05_backup_control",
+    evidence: "apps/api/src/backups/worker/backup-worker.ts",
+    reason:
+      "Protective capture and isolated restoration preserve fenced native execution and durable audit under licence expiry.",
+  },
   "apps/api/src/support-diagnostics/worker/diagnostic-worker.ts": {
     kind: "security",
     identity: "worker",

@@ -9,7 +9,11 @@ import {
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { SystemHealthContent } from "./system-health-content";
 import { ApiClientError } from "../../_lib/http/api-client";
-import { healthFixture, healthOrg } from "./system-health.fixture";
+import {
+  healthFixture,
+  healthOrg,
+  legacyHealthFixture,
+} from "./system-health.fixture";
 import { SystemHealthTables, observationTime } from "./system-health-tables";
 
 const scope = {
@@ -19,6 +23,13 @@ const scope = {
 };
 describe("customer health presentation", () => {
   afterEach(cleanup);
+  it("retains the strict version-one unavailable assurance presentation", () => {
+    render(<SystemHealthTables data={legacyHealthFixture} />);
+    expect(screen.getByText(/unknown until the/)).toBeTruthy();
+    expect(
+      screen.getByText("Last backup execution").parentElement?.textContent,
+    ).toContain("Unknown");
+  });
   it("shows provenance, qualified counts and honest assurance", async () => {
     render(
       <SystemHealthContent

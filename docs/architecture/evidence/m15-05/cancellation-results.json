@@ -1,0 +1,14 @@
+{
+  "runId": "7b01ce69-646c-42f2-8559-309d1cb65e39",
+  "state": "cancelled",
+  "admission": {
+    "until": null,
+    "paused": false,
+    "configured": true
+  },
+  "cancelledAt": "2026-10-14T13:00:48.89518+00:00",
+  "hasCertificate": false,
+  "pauseStartedAt": "2026-10-14T13:00:37.013992+00:00",
+  "pauseDeadlineAt": "2026-10-14T13:02:37.013992+00:00",
+  "playwrightCancelResponseMs": 4958
+}

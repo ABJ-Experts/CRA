@@ -9,6 +9,7 @@ import type {
   notificationBurstBatchesQuerySchema,
   notificationBurstBatchesResponseSchema,
   notificationCategorySchema,
+  notificationFeedCategorySchema,
   notificationCriticalCategorySchema,
   notificationCriticalRouteMutationResponseSchema,
   notificationCriticalRouteParamsSchema,
@@ -60,6 +61,9 @@ export type NotificationOptionalCategory = z.output<
 >;
 export type NotificationCriticalCategory = z.output<
   typeof notificationCriticalCategorySchema
+>;
+export type NotificationFeedCategory = z.output<
+  typeof notificationFeedCategorySchema
 >;
 export type NotificationCategory = z.output<typeof notificationCategorySchema>;
 export type NotificationMode = z.output<typeof notificationModeSchema>;

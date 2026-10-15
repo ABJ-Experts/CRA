@@ -1,0 +1,18 @@
+{
+  "recordedAt": "2026-10-15T05:25:17.428Z",
+  "purpose": "Complete only the three task-owned feature migration ledger rows on the disposable recovery source",
+  "sourceFeatureVersionsBefore": ["20261015052219"],
+  "copiedVersions": ["20261014112426", "20261014171300"],
+  "sourceFeatureVersionsAfter": [
+    "20261014112426",
+    "20261014171300",
+    "20261015052219"
+  ],
+  "exactCliLedgerRowsMatchOriginal": true,
+  "originalLedgerUnchanged": true,
+  "sourceHistoricalRows": 233,
+  "sourceHistoricalLedgerSha256": "1beed84914236dc77f64eeb6fae2666f509634085145ffe849f4b1b025edc6b7",
+  "sourceHistoricalLedgerUnchanged": true,
+  "noSchemaOrApplicationDataMutation": true,
+  "priorProjectionDeploymentProof": "assurance-projection-results.json"
+}

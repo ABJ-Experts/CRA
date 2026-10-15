@@ -1,0 +1,12 @@
+{
+  "image": "public.ecr.aws/supabase/storage-api:v1.77.0",
+  "syntheticNonsecretFixture": true,
+  "backend": "linux-native-volume",
+  "exitCode": 0,
+  "safe": [
+    {
+      "ok": true,
+      "status": 200
+    }
+  ]
+}

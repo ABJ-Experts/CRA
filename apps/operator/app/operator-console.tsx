@@ -17,6 +17,7 @@ import {
   OperatorDetailTables,
   OperatorInstancesTable,
 } from "./operator-tables";
+import { BackupsWorkbench } from "./backups-workbench";
 
 type Snapshot = Readonly<{
   key: string;
@@ -49,12 +50,22 @@ export function OperatorConsole({
   const [attempt, setAttempt] = useState(0);
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
   const heading = useRef<HTMLHeadingElement>(null);
-  const key = JSON.stringify([target.instanceId, target.cursor, attempt]);
+  const key = JSON.stringify([target.instanceId, target.cursor]);
   useEffect(() => {
     const controller = new AbortController();
-    setSnapshot(null);
+    setSnapshot((previous) =>
+      previous?.key === key ? { ...previous, error: undefined } : null,
+    );
     async function read() {
       const session = await gateway.session(controller.signal);
+      if (controller.signal.aborted) return;
+      setSnapshot((previous) =>
+        previous?.session &&
+        (previous.session.principalId !== session.principalId ||
+          previous.session.grantRevision !== session.grantRevision)
+          ? null
+          : previous,
+      );
       if (
         target.instanceId &&
         !session.allowedInstanceIds.includes(target.instanceId)
@@ -97,7 +108,16 @@ export function OperatorConsole({
       if (!controller.signal.aborted) setSnapshot(result);
     }
     void read().catch((error: unknown) => {
-      if (!controller.signal.aborted) setSnapshot({ key, error });
+      if (!controller.signal.aborted) {
+        const authorityChanged =
+          error instanceof OperatorRequestError &&
+          [401, 403, 409].includes(error.status);
+        setSnapshot((previous) =>
+          !authorityChanged && previous?.key === key
+            ? { ...previous, error }
+            : { key, error },
+        );
+      }
     });
     const timer = window.setInterval(
       () => setAttempt((value) => value + 1),
@@ -107,7 +127,7 @@ export function OperatorConsole({
       controller.abort();
       window.clearInterval(timer);
     };
-  }, [key, target.instanceId, target.cursor, gateway]);
+  }, [key, target.instanceId, target.cursor, gateway, attempt]);
   const current = snapshot?.key === key ? snapshot : null;
   function navigate(next: Target) {
     setTarget(next);
@@ -125,7 +145,7 @@ export function OperatorConsole({
       >
         <div>
           <p className={cn("text-subhead-semibold text-fg-muted")}>
-            Private operator registry · read only
+            Private operator registry
           </p>
           <h1
             ref={heading}
@@ -140,8 +160,8 @@ export function OperatorConsole({
             )}
           >
             Authorized instance and organization metadata. Source timestamps
-            remain unchanged when collection fails. Backup execution and
-            verified restore assurance remain unknown.
+            remain unchanged when collection fails. Backup execution requires
+            separate, explicit instance-bound authorization.
           </p>
         </div>
         <div className={cn("flex flex-wrap gap-3")}>
@@ -182,7 +202,8 @@ export function OperatorConsole({
             Try again
           </Button>
         </div>
-      ) : current?.session ? (
+      ) : null}
+      {current?.session ? (
         <>
           <p className={cn("text-subhead-regular text-fg-muted")}>
             Metadata scope revision: {current.session.grantRevision}. Last-known
@@ -194,10 +215,16 @@ export function OperatorConsole({
               onSelect={(instanceId) => navigate({ instanceId })}
             />
           ) : current.instance && current.tenants ? (
-            <OperatorDetailTables
-              instance={current.instance}
-              tenants={current.tenants.tenants}
-            />
+            <>
+              <OperatorDetailTables
+                instance={current.instance}
+                tenants={current.tenants.tenants}
+              />
+              <BackupsWorkbench
+                key={`${current.session.principalId}:${current.session.grantRevision}:${current.instance.instanceId}`}
+                instanceId={current.instance.instanceId}
+              />
+            </>
           ) : null}
           {nextCursor ? (
             <Button
@@ -222,11 +249,11 @@ export function OperatorConsole({
             </Button>
           ) : null}
         </>
-      ) : (
+      ) : !current?.error ? (
         <p role="status" className={cn("text-subhead-regular text-fg-muted")}>
           Loading authorized metadata…
         </p>
-      )}
+      ) : null}
     </main>
   );
 }

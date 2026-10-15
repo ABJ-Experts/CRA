@@ -1,7 +1,7 @@
 import {
-  customerSystemHealthQuerySchema,
-  customerSystemHealthResponseSchema,
-} from "@repo/contracts";
+  customerSystemHealthV2QuerySchema,
+  customerSystemHealthV2ResponseSchema,
+} from "@repo/contracts/system/schemas";
 import { authenticatedRequestJson } from "../../_lib/http/authenticated-request";
 import { ApiClientError } from "../../_lib/http/api-client";
 
@@ -10,12 +10,12 @@ export class SystemHealthGateway {
   constructor(private readonly request = authenticatedRequestJson) {}
 
   async read(organizationId: string, signal?: AbortSignal) {
-    customerSystemHealthQuerySchema.parse({});
+    customerSystemHealthV2QuerySchema.parse({ schemaVersion: 2 });
     const response = await this.request({
-      path: "/api/v1/system/health",
+      path: "/api/v1/system/health?schemaVersion=2",
       method: "GET",
       signal,
-      schema: customerSystemHealthResponseSchema,
+      schema: customerSystemHealthV2ResponseSchema,
     });
     if (response.organizationId !== organizationId) {
       throw new ApiClientError(

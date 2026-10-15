@@ -1,0 +1,13 @@
+{
+  "rows": 10000,
+  "clients": 6,
+  "requests": 72,
+  "transport": "HTTPS/mTLS → private Nest API → PostgREST → PostgreSQL",
+  "p50Ms": 16.301,
+  "p95Ms": 34.619,
+  "p99Ms": 38.109,
+  "maxMs": 38.109,
+  "p95TargetMet": true,
+  "p99TargetMet": true,
+  "limits": "Local development profile; 72 samples. Separate SQL benchmark measures concurrent large/small tenant traffic."
+}

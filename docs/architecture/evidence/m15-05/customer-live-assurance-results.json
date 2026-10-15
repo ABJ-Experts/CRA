@@ -1,0 +1,46 @@
+{
+  "source": "disposable complete source, real service RPC",
+  "authorizedTenantAssurance": {
+    "status": "verified",
+    "reasons": [],
+    "sourceAt": "2026-10-15T05:32:46.899Z",
+    "residency": "local-isolated",
+    "observedAt": "2026-10-15T05:35:32.250Z",
+    "lastAttempt": {
+      "id": "e3203a41-1d56-4299-97ac-439eba9d6940",
+      "kind": "capture",
+      "state": "certified",
+      "createdAt": "2026-10-15T05:30:07.753Z",
+      "integrity": "passed",
+      "durationMs": 68859,
+      "completedAt": "2026-10-15T05:31:16.886Z",
+      "failureCode": null
+    },
+    "lastCapture": {
+      "id": "e3203a41-1d56-4299-97ac-439eba9d6940",
+      "kind": "capture",
+      "state": "certified",
+      "createdAt": "2026-10-15T05:30:07.753Z",
+      "integrity": "passed",
+      "durationMs": 68859,
+      "completedAt": "2026-10-15T05:31:16.886Z",
+      "failureCode": null
+    },
+    "lastVerification": {
+      "id": "ca55b0fd-c179-49ae-90b2-aca508c8fa93",
+      "kind": "verification",
+      "state": "verified",
+      "createdAt": "2026-10-15T05:31:17.717Z",
+      "integrity": "passed",
+      "durationMs": 89089,
+      "completedAt": "2026-10-15T05:32:46.899Z",
+      "failureCode": null
+    },
+    "verificationDueAt": "2026-11-14T05:32:46.899Z",
+    "recoverablePointAt": "2026-10-15T05:31:15.169Z",
+    "lastVerifiedRestoreAt": "2026-10-15T05:32:46.899Z"
+  },
+  "crossTenantActorOutcome": "forbidden",
+  "historyBounded": true,
+  "archiveContentsExposed": false
+}

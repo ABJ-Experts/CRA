@@ -1,0 +1,26 @@
+{
+  "image": "public.ecr.aws/supabase/storage-api:v1.77.0",
+  "sourceMount": "encrypted-staging",
+  "scenarios": [
+    {
+      "readonly": false,
+      "exitCode": 0,
+      "safe": [
+        {
+          "ok": false,
+          "code": "ENOTSUP"
+        }
+      ]
+    },
+    {
+      "readonly": true,
+      "exitCode": 0,
+      "safe": [
+        {
+          "ok": false,
+          "code": "ENOTSUP"
+        }
+      ]
+    }
+  ]
+}

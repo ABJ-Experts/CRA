@@ -1,0 +1,11 @@
+{
+  "actualRpc": "m15_03_operator_read",
+  "fixtureActorOnly": true,
+  "roleConfiguredTimeout": "statement_timeout=500ms",
+  "httpStatus": 500,
+  "safeErrorCode": "57014",
+  "blockedReadElapsedMs": 340.254,
+  "auditFailureClosesDisclosure": true,
+  "sourceRowsChanged": 0,
+  "boundedMetadataError": true
+}

@@ -1,3 +1,4 @@
+import { NarrowBackupControlClient } from "./backups/infrastructure/backup-control.client";
 import { loadOperatorRuntime } from "./operator/operator-runtime";
 import { createOperatorApplication } from "./operator/operator-listener";
 import { NarrowRegistryClient } from "./operator/operator-registry.client";
@@ -15,6 +16,13 @@ export async function bootstrapOperator(
       config.credential,
       config.projectApiKey,
     ),
+    config.backupCredential
+      ? new NarrowBackupControlClient(
+          config.databaseUrl,
+          config.backupCredential,
+          config.projectApiKey,
+        )
+      : undefined,
   );
   app.enableShutdownHooks();
   await app.listen(config.listener.port, config.listener.host);

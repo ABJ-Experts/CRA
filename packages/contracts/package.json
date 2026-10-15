@@ -370,6 +370,18 @@
     "./support-diagnostics/types": {
       "types": "./dist/support-diagnostics/types/index.d.ts",
       "default": "./dist/support-diagnostics/types/index.js"
+    },
+    "./backups": {
+      "types": "./dist/backups/index.d.ts",
+      "default": "./dist/backups/index.js"
+    },
+    "./backups/schemas": {
+      "types": "./dist/backups/schemas/index.d.ts",
+      "default": "./dist/backups/schemas/index.js"
+    },
+    "./backups/types": {
+      "types": "./dist/backups/types/index.d.ts",
+      "default": "./dist/backups/types/index.js"
     }
   },
   "files": [

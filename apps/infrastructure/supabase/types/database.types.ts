@@ -642,6 +642,216 @@ export type Database = {
           },
         ]
       }
+      backup_policies: {
+        Row: {
+          alert_state: Json
+          approved_at: string
+          approved_by: string
+          candidate_failed_at: string | null
+          candidate_failure_code: string | null
+          candidate_validated_at: string | null
+          configuration: Json
+          configuration_digest: string
+          configuration_revision: number
+          created_at: string
+          instance_id: string
+          is_approved: boolean
+          last_validated_at: string | null
+          mutation_digest: string
+          mutation_key: string
+          mutation_receipts: Json
+          validated_candidate_digest: string | null
+          validation_candidate: Json | null
+          validation_candidate_digest: string | null
+          validation_digest: string | null
+          version: number
+        }
+        Insert: {
+          alert_state?: Json
+          approved_at?: string
+          approved_by: string
+          candidate_failed_at?: string | null
+          candidate_failure_code?: string | null
+          candidate_validated_at?: string | null
+          configuration: Json
+          configuration_digest: string
+          configuration_revision?: number
+          created_at?: string
+          instance_id: string
+          is_approved?: boolean
+          last_validated_at?: string | null
+          mutation_digest: string
+          mutation_key: string
+          mutation_receipts?: Json
+          validated_candidate_digest?: string | null
+          validation_candidate?: Json | null
+          validation_candidate_digest?: string | null
+          validation_digest?: string | null
+          version?: number
+        }
+        Update: {
+          alert_state?: Json
+          approved_at?: string
+          approved_by?: string
+          candidate_failed_at?: string | null
+          candidate_failure_code?: string | null
+          candidate_validated_at?: string | null
+          configuration?: Json
+          configuration_digest?: string
+          configuration_revision?: number
+          created_at?: string
+          instance_id?: string
+          is_approved?: boolean
+          last_validated_at?: string | null
+          mutation_digest?: string
+          mutation_key?: string
+          mutation_receipts?: Json
+          validated_candidate_digest?: string | null
+          validation_candidate?: Json | null
+          validation_candidate_digest?: string | null
+          validation_digest?: string | null
+          version?: number
+        }
+        Relationships: []
+      }
+      backup_runs: {
+        Row: {
+          actor_id: string
+          attempts: number
+          cancellation_key: string | null
+          certificate: Json | null
+          checkpoint: Json
+          cleanup_actor: string | null
+          cleanup_attempts: number
+          cleanup_lease_expires_at: string | null
+          cleanup_lease_owner: string | null
+          cleanup_request_key: string | null
+          cleanup_review_fingerprint: string | null
+          cleanup_state: string
+          completed_at: string | null
+          configuration: Json
+          configuration_digest: string
+          configuration_revision: number
+          covered_organization_ids: string[]
+          created_at: string
+          deleted_at: string | null
+          failure_code: string | null
+          id: string
+          idempotency_key: string
+          instance_id: string
+          kind: string
+          lease_expires_at: string | null
+          lease_owner: string | null
+          occurrence_key: string | null
+          parent_capture_id: string | null
+          parent_kind: string | null
+          pause_deadline_at: string | null
+          pause_started_at: string | null
+          progress: number
+          request_digest: string
+          stage: string
+          started_at: string | null
+          state: string
+          verification: Json | null
+          version: number
+        }
+        Insert: {
+          actor_id: string
+          attempts?: number
+          cancellation_key?: string | null
+          certificate?: Json | null
+          checkpoint?: Json
+          cleanup_actor?: string | null
+          cleanup_attempts?: number
+          cleanup_lease_expires_at?: string | null
+          cleanup_lease_owner?: string | null
+          cleanup_request_key?: string | null
+          cleanup_review_fingerprint?: string | null
+          cleanup_state?: string
+          completed_at?: string | null
+          configuration: Json
+          configuration_digest: string
+          configuration_revision: number
+          covered_organization_ids?: string[]
+          created_at?: string
+          deleted_at?: string | null
+          failure_code?: string | null
+          id?: string
+          idempotency_key: string
+          instance_id: string
+          kind: string
+          lease_expires_at?: string | null
+          lease_owner?: string | null
+          occurrence_key?: string | null
+          parent_capture_id?: string | null
+          parent_kind?: string | null
+          pause_deadline_at?: string | null
+          pause_started_at?: string | null
+          progress?: number
+          request_digest: string
+          stage?: string
+          started_at?: string | null
+          state?: string
+          verification?: Json | null
+          version?: number
+        }
+        Update: {
+          actor_id?: string
+          attempts?: number
+          cancellation_key?: string | null
+          certificate?: Json | null
+          checkpoint?: Json
+          cleanup_actor?: string | null
+          cleanup_attempts?: number
+          cleanup_lease_expires_at?: string | null
+          cleanup_lease_owner?: string | null
+          cleanup_request_key?: string | null
+          cleanup_review_fingerprint?: string | null
+          cleanup_state?: string
+          completed_at?: string | null
+          configuration?: Json
+          configuration_digest?: string
+          configuration_revision?: number
+          covered_organization_ids?: string[]
+          created_at?: string
+          deleted_at?: string | null
+          failure_code?: string | null
+          id?: string
+          idempotency_key?: string
+          instance_id?: string
+          kind?: string
+          lease_expires_at?: string | null
+          lease_owner?: string | null
+          occurrence_key?: string | null
+          parent_capture_id?: string | null
+          parent_kind?: string | null
+          pause_deadline_at?: string | null
+          pause_started_at?: string | null
+          progress?: number
+          request_digest?: string
+          stage?: string
+          started_at?: string | null
+          state?: string
+          verification?: Json | null
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "backup_runs_instance_id_fkey"
+            columns: ["instance_id"]
+            isOneToOne: false
+            referencedRelation: "backup_policies"
+            referencedColumns: ["instance_id"]
+          },
+          {
+            foreignKeyName: "backup_runs_instance_id_parent_capture_id_parent_kind_fkey"
+            columns: ["instance_id", "parent_capture_id", "parent_kind"]
+            isOneToOne: false
+            referencedRelation: "backup_runs"
+            referencedColumns: ["instance_id", "id", "kind"]
+          },
+        ]
+      }
       base_role_permission_overrides: {
         Row: {
           base_role: string
@@ -35621,6 +35831,89 @@ export type Database = {
           p_job: Database["public"]["Tables"]["support_diagnostic_jobs"]["Row"]
           p_worker_id: string
         }
+        Returns: boolean
+      }
+      m15_05_audit: {
+        Args: {
+          p_action: string
+          p_actor: string
+          p_instance_id: string
+          p_request_id: string
+          p_run_id?: string
+          p_version: number
+        }
+        Returns: undefined
+      }
+      m15_05_audit_receipt_json: {
+        Args: { p_action: string; p_entity_id: string; p_value: Json }
+        Returns: Json
+      }
+      m15_05_backup_assurance: {
+        Args: {
+          p_actor_user_id: string
+          p_cursor?: string
+          p_kind?: string
+          p_limit?: number
+          p_organization_id: string
+        }
+        Returns: Json
+      }
+      m15_05_backup_control: {
+        Args: {
+          p_action: string
+          p_actor: string
+          p_input?: Json
+          p_instance_id: string
+        }
+        Returns: Json
+      }
+      m15_05_backup_write_admission: {
+        Args: { p_instance_id: string }
+        Returns: Json
+      }
+      m15_05_certificate_valid: {
+        Args: { c: Json; r: Database["public"]["Tables"]["backup_runs"]["Row"] }
+        Returns: boolean
+      }
+      m15_05_cleanup_review: {
+        Args: { r: Database["public"]["Tables"]["backup_runs"]["Row"] }
+        Returns: Json
+      }
+      m15_05_configuration_valid: { Args: { c: Json }; Returns: boolean }
+      m15_05_customer_run_json: {
+        Args: { r: Database["public"]["Tables"]["backup_runs"]["Row"] }
+        Returns: Json
+      }
+      m15_05_feed_rows: {
+        Args: { p_actor_user_id: string; p_organization_id: string }
+        Returns: {
+          category: string
+          fingerprint: string
+          notice_kind: string
+          occurred_at: string
+          ref: string
+          severity: string
+          source_created_at: string
+          source_state: string
+          summary: string
+          title: string
+          url: string
+        }[]
+      }
+      m15_05_policy_json: {
+        Args: { p: Database["public"]["Tables"]["backup_policies"]["Row"] }
+        Returns: Json
+      }
+      m15_05_reconcile_alerts: {
+        Args: { p_actor: string; p_instance_id: string }
+        Returns: undefined
+      }
+      m15_05_run_json: {
+        Args: { r: Database["public"]["Tables"]["backup_runs"]["Row"] }
+        Returns: Json
+      }
+      m15_05_verification_valid: {
+        Args: { p_profile: string; v: Json }
         Returns: boolean
       }
       m2_active_member: {

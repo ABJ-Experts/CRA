@@ -3,7 +3,7 @@ import type { CustomerSystemHealthResponse } from "@repo/contracts";
 export const healthOrg = "11111111-1111-4111-8111-111111111111";
 export const healthTime = "2026-10-14T10:00:00.000Z";
 const provenance = { sourceAt: healthTime, observedAt: healthTime };
-export const healthFixture: CustomerSystemHealthResponse = {
+export const legacyHealthFixture: CustomerSystemHealthResponse = {
   schemaVersion: 1,
   organizationId: healthOrg,
   observedAt: healthTime,
@@ -95,4 +95,22 @@ export const healthFixture: CustomerSystemHealthResponse = {
     observedAt: null,
   },
   evidenceExportPreserved: true,
+};
+
+export const healthFixture = {
+  ...legacyHealthFixture,
+  schemaVersion: 2 as const,
+  backup: {
+    status: "unavailable" as const,
+    lastAttempt: null,
+    lastCapture: null,
+    lastVerification: null,
+    lastVerifiedRestoreAt: null,
+    recoverablePointAt: null,
+    verificationDueAt: null,
+    residency: null,
+    sourceAt: null,
+    observedAt: healthTime,
+    reasons: ["not_configured" as const],
+  },
 };

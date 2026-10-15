@@ -964,7 +964,8 @@ async function verifyControllerRoutes(rootDir, errors) {
       );
       if (!controllerDecorator) continue;
       const privateOperator =
-        relativePath === "apps/api/src/operator/operator.controller.ts";
+        relativePath === "apps/api/src/operator/operator.controller.ts" ||
+        relativePath === "apps/api/src/backups/operator-backups.controller.ts";
       const operatorScoped = (node) =>
         decoratorsByName(node).some(
           (decorator) =>

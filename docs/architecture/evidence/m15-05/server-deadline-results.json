@@ -1,0 +1,13 @@
+{
+  "postgresVersion": "17.6",
+  "readOnly": true,
+  "tableLocks": false,
+  "transactionCapMs": 1000,
+  "transactionCapElapsedMs": 1054,
+  "globalDeadlineMs": 2000,
+  "delayedConnectionMs": 500,
+  "elapsedMs": 2104,
+  "lateTransactionTerminated": true,
+  "expiredStartRejected": true,
+  "databaseReachable": true
+}

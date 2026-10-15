@@ -37,6 +37,7 @@ export default tseslint.config(
       "src/audit/worker/verify.mjs",
       "test/m15-03*.mjs",
       "test/m15-04*.mjs",
+      "test/m15-05*.mjs",
     ],
     extends: [tseslint.configs.disableTypeChecked],
     rules: {

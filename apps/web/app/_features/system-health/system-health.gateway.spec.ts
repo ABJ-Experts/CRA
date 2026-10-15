@@ -12,7 +12,7 @@ describe("customer health boundary", () => {
       await new SystemHealthGateway().read(healthOrg, controller.signal),
     ).toEqual(healthFixture);
     expect(fetcher).toHaveBeenCalledWith(
-      "/api/v1/system/health",
+      "/api/v1/system/health?schemaVersion=2",
       expect.objectContaining({
         method: "GET",
         credentials: "same-origin",

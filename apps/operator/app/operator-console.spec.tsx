@@ -7,6 +7,11 @@ import {
   waitFor,
 } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+vi.mock("./backups-workbench", () => ({
+  BackupsWorkbench: () => (
+    <input aria-label="Backup draft" defaultValue="initial" />
+  ),
+}));
 import { OperatorConsole } from "./operator-console";
 import { OperatorRequestError } from "./operator-gateway";
 import {
@@ -25,13 +30,11 @@ function gateway() {
   return {
     session: vi.fn().mockResolvedValue(operatorSession),
     instances: vi.fn().mockResolvedValue(instances),
-    instance: vi
-      .fn()
-      .mockResolvedValue({
-        schemaVersion: 1,
-        observedAt,
-        instance: operatorInstance,
-      }),
+    instance: vi.fn().mockResolvedValue({
+      schemaVersion: 1,
+      observedAt,
+      instance: operatorInstance,
+    }),
     tenants: vi.fn().mockResolvedValue(tenants),
   };
 }
@@ -138,6 +141,88 @@ describe("read-only operator console", () => {
     );
     await screen.findByRole("alert");
     expect(other.instance).not.toHaveBeenCalled();
+  });
+  it("preserves an unsaved backup draft across same-scope polling and transient metadata failures", async () => {
+    const api = gateway();
+    render(<OperatorConsole gateway={api} />);
+    fireEvent.click(
+      await screen.findByRole("button", { name: "View Private deployment" }),
+    );
+    fireEvent.change(await screen.findByLabelText("Backup draft"), {
+      target: { value: "unsaved-mounted-alias" },
+    });
+    let finish!: (value: typeof operatorSession) => void;
+    api.session.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve;
+        }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Refresh metadata" }));
+    expect(
+      (screen.getByLabelText("Backup draft") as HTMLInputElement).value,
+    ).toBe("unsaved-mounted-alias");
+    finish(operatorSession);
+    await waitFor(() => expect(api.tenants).toHaveBeenCalledTimes(2));
+    expect(
+      (screen.getByLabelText("Backup draft") as HTMLInputElement).value,
+    ).toBe("unsaved-mounted-alias");
+    api.tenants.mockRejectedValueOnce(new OperatorRequestError(503));
+    fireEvent.click(screen.getByRole("button", { name: "Refresh metadata" }));
+    await screen.findByRole("alert");
+    expect(
+      (screen.getByLabelText("Backup draft") as HTMLInputElement).value,
+    ).toBe("unsaved-mounted-alias");
+  });
+  it.each(["principalId", "grantRevision"] as const)(
+    "resets the backup draft when %s changes",
+    async (field) => {
+      const api = gateway();
+      render(<OperatorConsole gateway={api} />);
+      fireEvent.click(
+        await screen.findByRole("button", { name: "View Private deployment" }),
+      );
+      fireEvent.change(await screen.findByLabelText("Backup draft"), {
+        target: { value: "private-draft" },
+      });
+      api.session.mockResolvedValue({
+        ...operatorSession,
+        [field]: "replacement",
+      });
+      fireEvent.click(screen.getByRole("button", { name: "Refresh metadata" }));
+      await waitFor(() =>
+        expect(
+          (screen.getByLabelText("Backup draft") as HTMLInputElement).value,
+        ).toBe("initial"),
+      );
+    },
+  );
+  it("clears backup drafts after denied refresh and scope navigation", async () => {
+    const api = gateway();
+    render(<OperatorConsole gateway={api} />);
+    fireEvent.click(
+      await screen.findByRole("button", { name: "View Private deployment" }),
+    );
+    fireEvent.change(await screen.findByLabelText("Backup draft"), {
+      target: { value: "private-draft" },
+    });
+    api.session.mockRejectedValueOnce(new OperatorRequestError(401));
+    fireEvent.click(screen.getByRole("button", { name: "Refresh metadata" }));
+    await screen.findByRole("alert");
+    expect(screen.queryByLabelText("Backup draft")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: "View Private deployment" }),
+    );
+    expect(
+      ((await screen.findByLabelText("Backup draft")) as HTMLInputElement)
+        .value,
+    ).toBe("initial");
+    fireEvent.change(screen.getByLabelText("Backup draft"), {
+      target: { value: "another-draft" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Back to instances" }));
+    expect(screen.queryByLabelText("Backup draft")).toBeNull();
   });
   it("renders empty scopes, unknown metadata and tenant source provenance", () => {
     const view = render(

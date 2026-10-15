@@ -16,6 +16,7 @@ export async function loadOperatorRuntime(env: NodeJS.ProcessEnv): Promise<{
   databaseUrl: string;
   credential: string;
   projectApiKey: string;
+  backupCredential?: string;
 } | null> {
   if (env.OPERATOR_ENABLED !== "true") return null;
   const instanceId = z.uuid().parse(env.LICENSING_INSTANCE_ID);
@@ -49,6 +50,15 @@ export async function loadOperatorRuntime(env: NodeJS.ProcessEnv): Promise<{
     databaseUrl: env.SUPABASE_URL,
     projectApiKey: env.SUPABASE_ANON_KEY,
     credential: credential.toString("utf8").trim(),
+    ...(env.BACKUP_CONTROL_CREDENTIAL_PATH
+      ? {
+          backupCredential: (
+            await requiredMountedFile(env.BACKUP_CONTROL_CREDENTIAL_PATH, true)
+          )
+            .toString("utf8")
+            .trim(),
+        }
+      : {}),
   };
 }
 const targetSchema = z.strictObject({

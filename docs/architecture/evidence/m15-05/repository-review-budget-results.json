@@ -1,0 +1,46 @@
+{
+  "recordedAt": "2026-10-15T05:29:10.783727+00:00",
+  "scope": "In-memory repository review bounds for abandoned partial-part reconciliation and reviewed sealed-backup cleanup",
+  "regression": "A cumulative ciphertext-manifest budget incorrectly rejected sequential valid inventory reads even though loadCertificateInMemory returns only the compact certificate.",
+  "bounds": {
+    "maximumPlaintextManifestBytesPerReceiptBeforeDecryption": 33554432,
+    "maximumCumulativeSerializedCompactCertificateAndReceiptReferenceBytes": 16777216,
+    "maximumCumulativePartReferencesIncludingManifestReferences": 50000,
+    "inventoryRetainedAcrossSequentialReads": false
+  },
+  "red": {
+    "suites": 2,
+    "tests": 31,
+    "failed": 8
+  },
+  "green": {
+    "suites": 3,
+    "tests": 34,
+    "passed": 34
+  },
+  "scenarios": [
+    "Five sequential 11 MiB manifests with small compact certificates permit partial reconciliation",
+    "Three sequential 11 MiB manifests with small compact certificates permit reviewed preparation and rollback",
+    "Manifest above 32 MiB fails before invoking decryption",
+    "Oversized compact certificate metadata fails before physical retirement",
+    "Cumulative compact metadata above 16 MiB fails before physical retirement",
+    "Cumulative references above 50000 fail before physical retirement",
+    "Existing decryption, historical recovery keys, authority checks, minimum recoverable chains and cleanup recovery tests remain passing"
+  ],
+  "coverage": {
+    "backup-partial-parts.ts": {
+      "statements": 91.42,
+      "branches": 85.52,
+      "functions": 100,
+      "lines": 92.24
+    },
+    "reviewed-backup-cleanup.ts": {
+      "statements": 94.23,
+      "branches": 84,
+      "functions": 97.14,
+      "lines": 94.81
+    }
+  },
+  "lint": "Passed ESLint with zero warnings on the four changed source/test files",
+  "limits": "Focused unit regressions; this record does not claim a new full physical recovery drill."
+}

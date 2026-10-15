@@ -4,6 +4,114 @@ import type { LicenceOperation } from "./licence-operation.registry";
 export const licenceRouteOperations: Readonly<
   Record<string, LicenceOperation>
 > = Object.freeze({
+  "OperatorBackupsController.policy": {
+    kind: "security",
+    identity: "operator",
+    mutation: false,
+    authority: "m15_05_backup_control",
+    evidence: "apps/api/src/backups/operator-backups.controller.ts",
+    reason:
+      "Protective recovery assurance preserves current instance action grants and tenant authorization under licence expiry without exposing archives or regulatory effects.",
+  },
+  "OperatorBackupsController.validate": {
+    kind: "security",
+    identity: "operator",
+    mutation: true,
+    authority: "m15_05_backup_control",
+    evidence: "apps/api/src/backups/operator-backups.controller.ts",
+    reason:
+      "Protective recovery assurance preserves current instance action grants and tenant authorization under licence expiry without exposing archives or regulatory effects.",
+  },
+  "OperatorBackupsController.configure": {
+    kind: "security",
+    identity: "operator",
+    mutation: true,
+    authority: "m15_05_backup_control",
+    evidence: "apps/api/src/backups/operator-backups.controller.ts",
+    reason:
+      "Protective recovery assurance preserves current instance action grants and tenant authorization under licence expiry without exposing archives or regulatory effects.",
+  },
+  "OperatorBackupsController.create": {
+    kind: "security",
+    identity: "operator",
+    mutation: true,
+    authority: "m15_05_backup_control",
+    evidence: "apps/api/src/backups/operator-backups.controller.ts",
+    reason:
+      "Protective recovery assurance preserves current instance action grants and tenant authorization under licence expiry without exposing archives or regulatory effects.",
+  },
+  "OperatorBackupsController.history": {
+    kind: "security",
+    identity: "operator",
+    mutation: false,
+    authority: "m15_05_backup_control",
+    evidence: "apps/api/src/backups/operator-backups.controller.ts",
+    reason:
+      "Protective recovery assurance preserves current instance action grants and tenant authorization under licence expiry without exposing archives or regulatory effects.",
+  },
+  "OperatorBackupsController.detail": {
+    kind: "security",
+    identity: "operator",
+    mutation: false,
+    authority: "m15_05_backup_control",
+    evidence: "apps/api/src/backups/operator-backups.controller.ts",
+    reason:
+      "Protective recovery assurance preserves current instance action grants and tenant authorization under licence expiry without exposing archives or regulatory effects.",
+  },
+  "OperatorBackupsController.cancel": {
+    kind: "security",
+    identity: "operator",
+    mutation: true,
+    authority: "m15_05_backup_control",
+    evidence: "apps/api/src/backups/operator-backups.controller.ts",
+    reason:
+      "Protective recovery assurance preserves current instance action grants and tenant authorization under licence expiry without exposing archives or regulatory effects.",
+  },
+  "OperatorBackupsController.verify": {
+    kind: "security",
+    identity: "operator",
+    mutation: true,
+    authority: "m15_05_backup_control",
+    evidence: "apps/api/src/backups/operator-backups.controller.ts",
+    reason:
+      "Protective recovery assurance preserves current instance action grants and tenant authorization under licence expiry without exposing archives or regulatory effects.",
+  },
+  "OperatorBackupsController.cleanupReview": {
+    kind: "security",
+    identity: "operator",
+    mutation: true,
+    authority: "m15_05_backup_control",
+    evidence: "apps/api/src/backups/operator-backups.controller.ts",
+    reason:
+      "Protective recovery assurance preserves current instance action grants and tenant authorization under licence expiry without exposing archives or regulatory effects.",
+  },
+  "OperatorBackupsController.cleanup": {
+    kind: "security",
+    identity: "operator",
+    mutation: true,
+    authority: "m15_05_backup_control",
+    evidence: "apps/api/src/backups/operator-backups.controller.ts",
+    reason:
+      "Protective recovery assurance preserves current instance action grants and tenant authorization under licence expiry without exposing archives or regulatory effects.",
+  },
+  "CustomerBackupsController.summary": {
+    kind: "security",
+    identity: "member",
+    mutation: false,
+    authority: "m15_05_backup_control",
+    evidence: "apps/api/src/backups/customer-backups.controller.ts",
+    reason:
+      "Protective recovery assurance preserves current instance action grants and tenant authorization under licence expiry without exposing archives or regulatory effects.",
+  },
+  "CustomerBackupsController.history": {
+    kind: "security",
+    identity: "member",
+    mutation: false,
+    authority: "m15_05_backup_control",
+    evidence: "apps/api/src/backups/customer-backups.controller.ts",
+    reason:
+      "Protective recovery assurance preserves current instance action grants and tenant authorization under licence expiry without exposing archives or regulatory effects.",
+  },
   "SupportDiagnosticsController.cancel": {
     kind: "security",
     identity: "member",

@@ -38,6 +38,10 @@ export const notificationCategorySchema = z.union([
   notificationCriticalCategorySchema,
   z.literal("scheduled_report"),
 ]);
+export const notificationFeedCategorySchema = z.union([
+  notificationCategorySchema,
+  z.literal("backup_health"),
+]);
 const scheduledReportOptInSchema = z.union([
   z.boolean(),
   z.enum(["true", "false"]).transform((value) => value === "true"),
@@ -273,12 +277,12 @@ export const retryNotificationDeliveryInputSchema = z
   .strict();
 
 const feedRefPattern =
-  /^(?:m2|m5|m6|m8|m9|m14)_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}_(?:event|failure)$/;
+  /^(?:m2|m5|m6|m8|m9|m14|m15)_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}_(?:event|failure)$/;
 const fingerprintSchema = z.string().regex(/^[0-9a-f]{64}$/);
 const feedUuidPattern =
   "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";
 const trustedFeedRoutePattern = new RegExp(
-  `^/(?:products/${feedUuidPattern}(?:/evidence\\?documentId=${feedUuidPattern}&versionId=${feedUuidPattern})?|findings\\?findingId=${feedUuidPattern}(?:&assessmentId=${feedUuidPattern})?|reporting\\?obligationId=${feedUuidPattern}&stageId=${feedUuidPattern}|suppliers/${feedUuidPattern}\\?requestId=${feedUuidPattern}|dashboard/reports/runs/${feedUuidPattern})$`,
+  `^/(?:organization/health|products/${feedUuidPattern}(?:/evidence\\?documentId=${feedUuidPattern}&versionId=${feedUuidPattern})?|findings\\?findingId=${feedUuidPattern}(?:&assessmentId=${feedUuidPattern})?|reporting\\?obligationId=${feedUuidPattern}&stageId=${feedUuidPattern}|suppliers/${feedUuidPattern}\\?requestId=${feedUuidPattern}|dashboard/reports/runs/${feedUuidPattern})$`,
 );
 const localAppUrlSchema = z.string().max(2_048).regex(trustedFeedRoutePattern);
 export const trustedNotificationRouteSchema = localAppUrlSchema;
@@ -316,7 +320,7 @@ export const notificationFeedQuerySchema = z
     batchId: z.uuid().optional(),
     eventClass: notificationBurstEventClassSchema.optional(),
     windowStart: utcZDateTimeSchema.optional(),
-    category: notificationCategorySchema.optional(),
+    category: notificationFeedCategorySchema.optional(),
     severity: notificationFeedSeveritySchema.optional(),
     read: notificationFeedReadFilterSchema.default("all"),
     cursor: notificationFeedCursorSchema.optional(),
@@ -415,7 +419,7 @@ export const notificationFeedDestinationParamsSchema = z
 export const notificationFeedItemSchema = z
   .object({
     ref: notificationFeedRefSchema,
-    category: notificationCategorySchema,
+    category: notificationFeedCategorySchema,
     severity: notificationFeedSeveritySchema,
     occurredAt: utcZDateTimeSchema,
     title: z.string().trim().min(1).max(500),
