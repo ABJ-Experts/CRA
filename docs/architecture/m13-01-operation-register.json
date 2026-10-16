@@ -3808,6 +3808,61 @@
           "symbol": "m15_05_backup_control"
         }
       ]
+    },
+    {
+      "id": "apps/api/src/upgrades/operator-upgrades.controller.ts#OperatorUpgradesController.apply:POST:operator/instances/:instanceId/upgrades/runs/:runId/apply",
+      "authority": [
+        {
+          "kind": "external-intent",
+          "evidence": "apps/api/src/upgrades/application/upgrade-supervisor.ts",
+          "symbol": "flushAudit"
+        }
+      ],
+      "reason": "Authenticated host journal records upgrade command/state/effect intent before effects; awaited replayable M13 projection uses apps/api/src/upgrades/infrastructure/audit/upgrade-audit-runtime.ts (flush) and upgrade-audit.adapter.ts (m13_01_append_audit_event), with durable acknowledgements and fail-closed projection failure."
+    },
+    {
+      "id": "apps/api/src/upgrades/operator-upgrades.controller.ts#OperatorUpgradesController.preflight:POST:operator/instances/:instanceId/upgrades/runs/:runId/preflight",
+      "authority": [
+        {
+          "kind": "external-intent",
+          "evidence": "apps/api/src/upgrades/application/upgrade-supervisor.ts",
+          "symbol": "flushAudit"
+        }
+      ],
+      "reason": "Authenticated host journal records upgrade command/state/effect intent before effects; awaited replayable M13 projection uses apps/api/src/upgrades/infrastructure/audit/upgrade-audit-runtime.ts (flush) and upgrade-audit.adapter.ts (m13_01_append_audit_event), with durable acknowledgements and fail-closed projection failure."
+    },
+    {
+      "id": "apps/api/src/upgrades/operator-upgrades.controller.ts#OperatorUpgradesController.reconcile:POST:operator/instances/:instanceId/upgrades/runs/:runId/reconcile",
+      "authority": [
+        {
+          "kind": "external-intent",
+          "evidence": "apps/api/src/upgrades/application/upgrade-supervisor.ts",
+          "symbol": "flushAudit"
+        }
+      ],
+      "reason": "Authenticated host journal records upgrade command/state/effect intent before effects; awaited replayable M13 projection uses apps/api/src/upgrades/infrastructure/audit/upgrade-audit-runtime.ts (flush) and upgrade-audit.adapter.ts (m13_01_append_audit_event), with durable acknowledgements and fail-closed projection failure."
+    },
+    {
+      "id": "apps/api/src/upgrades/operator-upgrades.controller.ts#OperatorUpgradesController.rollback:POST:operator/instances/:instanceId/upgrades/runs/:runId/rollback",
+      "authority": [
+        {
+          "kind": "external-intent",
+          "evidence": "apps/api/src/upgrades/application/upgrade-supervisor.ts",
+          "symbol": "flushAudit"
+        }
+      ],
+      "reason": "Authenticated host journal records upgrade command/state/effect intent before effects; awaited replayable M13 projection uses apps/api/src/upgrades/infrastructure/audit/upgrade-audit-runtime.ts (flush) and upgrade-audit.adapter.ts (m13_01_append_audit_event), with durable acknowledgements and fail-closed projection failure."
+    },
+    {
+      "id": "apps/api/src/upgrades/operator-upgrades.controller.ts#OperatorUpgradesController.stage:POST:operator/instances/:instanceId/upgrades/stage",
+      "authority": [
+        {
+          "kind": "external-intent",
+          "evidence": "apps/api/src/upgrades/application/upgrade-supervisor.ts",
+          "symbol": "flushAudit"
+        }
+      ],
+      "reason": "Authenticated host journal records upgrade command/state/effect intent before effects; awaited replayable M13 projection uses apps/api/src/upgrades/infrastructure/audit/upgrade-audit-runtime.ts (flush) and upgrade-audit.adapter.ts (m13_01_append_audit_event), with durable acknowledgements and fail-closed projection failure."
     }
   ],
   "workers": [

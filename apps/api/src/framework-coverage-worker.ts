@@ -1,3 +1,7 @@
+import {
+  maintenanceRun,
+  maintenanceStart,
+} from "./upgrades/maintenance/maintenance-gate";
 import { LicensingService } from "./licensing/application/licensing.service";
 import { Logger } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
@@ -11,9 +15,11 @@ const sleep = (milliseconds: number) =>
   new Promise<void>((resolve) => setTimeout(resolve, milliseconds));
 
 async function bootstrap() {
-  const app = await NestFactory.createApplicationContext(AppModule, {
-    bufferLogs: false,
-  });
+  const app = await maintenanceStart(() =>
+    NestFactory.createApplicationContext(AppModule, {
+      bufferLogs: false,
+    }),
+  );
   const logger = new Logger("FrameworkCoverageWorker");
   const worker = new CoverageRecalculationWorker(
     app.get(SupabaseCoverageWorkQueue),
@@ -25,7 +31,7 @@ async function bootstrap() {
     do {
       try {
         for (let count = 0; count < 100; count += 1) {
-          if (!(await worker.runOnce(workerId))) break;
+          if (!(await maintenanceRun(() => worker.runOnce(workerId)))) break;
         }
       } catch {
         logger.error("Framework coverage worker cycle failed safely");

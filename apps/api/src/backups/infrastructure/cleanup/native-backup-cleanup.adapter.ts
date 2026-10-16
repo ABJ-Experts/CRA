@@ -34,6 +34,10 @@ export interface ReviewedBackupCleanupRepository {
     committed: boolean,
     signal: AbortSignal,
   ): Promise<void>;
+  prepareProtection(
+    runId: string,
+    signal: AbortSignal,
+  ): Promise<BackupRepositoryRetirement>;
   prepare(
     request: Readonly<{
       runId: string;
@@ -151,6 +155,10 @@ export class NativeBackupCleanupAdapter {
           bounded,
           assertAuthority,
         );
+      } else {
+        const repository = await this.repositories(request.repositoryAlias);
+        await repository.recover?.(request.runId, false, bounded);
+        retirement = await repository.prepareProtection(request.runId, bounded);
       }
       await assertAuthority();
       const result = await session.execute(

@@ -1,3 +1,7 @@
+import {
+  maintenanceRun,
+  maintenanceStart,
+} from "./upgrades/maintenance/maintenance-gate";
 import { Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { NestFactory } from "@nestjs/core";
@@ -15,9 +19,11 @@ export const sleepForEvidenceValidityAlertWorkerCycle = (
 ): Promise<void> => new Promise((resolve) => setTimeout(resolve, milliseconds));
 
 async function bootstrap() {
-  const app = await NestFactory.createApplicationContext(AppModule, {
-    bufferLogs: false,
-  });
+  const app = await maintenanceStart(() =>
+    NestFactory.createApplicationContext(AppModule, {
+      bufferLogs: false,
+    }),
+  );
   const config = app.get(ConfigService);
   const queue = new SupabaseEvidenceValidityAlertQueue(
     app.get(SupabaseService),
@@ -37,7 +43,7 @@ async function bootstrap() {
   try {
     do {
       try {
-        await worker.runOnce();
+        await maintenanceRun(() => worker.runOnce());
       } catch {
         logger.error("Evidence validity alert worker cycle failed safely");
       }

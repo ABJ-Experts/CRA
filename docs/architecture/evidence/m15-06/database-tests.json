@@ -1,0 +1,38 @@
+{
+  "target": "Separate network-disabled disposable PostgreSQL17 container; no customer data copied",
+  "upgradeAuditAssertions": {
+    "passed": 9,
+    "failed": 0,
+    "rolledBack": true,
+    "covers": [
+      "durable append",
+      "exact replay",
+      "conflicting replay",
+      "one record",
+      "instance actor boundary",
+      "redacted allowlist",
+      "immutable payload after deferred constraints",
+      "service-only grants",
+      "organization-only chain compatibility"
+    ]
+  },
+  "fullSqlSuite": {
+    "status": "passed",
+    "testFiles": 204,
+    "container": "cra_m15_06_sql_20261015b",
+    "rootVerifyExitCode": 0,
+    "resolvedFailure": {
+      "file": "apps/infrastructure/tests/m12-03-triage-supplier-bridge.test.sql",
+      "cause": "Time-relative fixture could be claimed after an older seeded supplier reminder",
+      "fix": "Schedule test delivery before existing reminders and assert exact claimed delivery ID",
+      "redThenGreen": true,
+      "productionSqlChanged": false
+    },
+    "isolatedSetup": "Reconstructed existing migration initialization, global bucket metadata and role settings in task-only clone; synthetic seed data only"
+  },
+  "sourceSchemaMutations": 0,
+  "sourceResets": 0,
+  "sourceRestores": 0,
+  "sourceDeletes": 0,
+  "productionAccessed": false
+}

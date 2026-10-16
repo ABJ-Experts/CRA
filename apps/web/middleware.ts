@@ -93,6 +93,7 @@ const secret = process.env.SUPABASE_JWT_SECRET
  * fetch per Edge isolate rather than one per navigation.
  */
 const SUPABASE_URL = (
+  process.env.SUPABASE_INTERNAL_URL ??
   process.env.NEXT_PUBLIC_SUPABASE_URL ??
   process.env.SUPABASE_URL ??
   "http://127.0.0.1:54321"

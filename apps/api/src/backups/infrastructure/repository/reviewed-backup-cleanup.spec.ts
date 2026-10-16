@@ -1,4 +1,8 @@
 import {
+  AuthenticatedUpgradeBackupHold,
+  type UpgradeHoldAuthority,
+} from "../../../upgrades/infrastructure/backup/authenticated-upgrade-hold";
+import {
   mkdir,
   mkdtemp,
   readFile,
@@ -80,9 +84,10 @@ describe("reviewed repository cleanup", () => {
     retainedCaptureRunIds: ids.slice(1),
     verifiedBaseRunIds: ids.slice(1),
   });
-  function cleanup() {
+  function cleanup(upgradeHoldAuthority?: UpgradeHoldAuthority) {
     return new ReviewedBackupRepositoryCleanup({
       repositoryPath: root,
+      upgradeHoldAuthority,
       keyRepositories: [
         {
           loadCertificateInMemory: async (id: string) => {
@@ -98,6 +103,97 @@ describe("reviewed repository cleanup", () => {
       ],
     });
   }
+  const authority = () => ({
+    instanceId,
+    journalBinding: "upgrade-journal",
+    hostKey: Buffer.alloc(32, 7),
+  });
+  async function hold() {
+    return new AuthenticatedUpgradeBackupHold({
+      ...authority(),
+      repositoryPath: root,
+      loadCertificate: () => Promise.resolve(certificates[0]!),
+      assertVerifiedChild: () => Promise.resolve(undefined),
+      authenticateParts: () => Promise.resolve(undefined),
+    }).acquire(
+      {
+        upgradeRunId: "55555555-5555-4555-8555-555555555555",
+        captureRunId: ids[0]!,
+        verifiedChildRunId: "66666666-6666-4666-8666-666666666666",
+        certificateDigest: certificates[0]!.certificateDigest,
+      },
+      new AbortController().signal,
+    );
+  }
+  it("protects verification metadata through its SQL commit and releases publication authority", async () => {
+    await hold();
+    await expect(
+      cleanup(authority()).prepareProtection(
+        "66666666-6666-4666-8666-666666666666",
+        new AbortController().signal,
+      ),
+    ).rejects.toThrow("required_dependency");
+    const protection = await cleanup(authority()).prepareProtection(
+      "77777777-7777-4777-8777-777777777777",
+      new AbortController().signal,
+    );
+    await expect(hold()).rejects.toThrow("conflict");
+    await protection.commit(new AbortController().signal);
+    await protection.commit(new AbortController().signal);
+    const rolledBack = await cleanup(authority()).prepareProtection(
+      "77777777-7777-4777-8777-777777777777",
+      new AbortController().signal,
+    );
+    await rolledBack.rollback(new AbortController().signal);
+    await rolledBack.rollback(new AbortController().signal);
+    await expect(readFile(join(root, ".publication.lock"))).rejects.toThrow();
+  });
+  it("blocks held capture and unknown hold authority before prepare", async () => {
+    await hold();
+    await expect(
+      cleanup(authority()).prepare(
+        input(),
+        new AbortController().signal,
+        async () => {},
+      ),
+    ).rejects.toThrow("required_dependency");
+    await expect(
+      cleanup().prepare(input(), new AbortController().signal, async () => {}),
+    ).rejects.toThrow("upgrade_hold_authority_unknown");
+    expect(await readFile(join(root, "parts", `${ids[0]}.gpg`), "utf8")).toBe(
+      "x",
+    );
+  });
+  it("refuses a held recovery commit and preserves interrupted staged bytes", async () => {
+    const prepared = await cleanup(authority()).prepare(
+      input(),
+      new AbortController().signal,
+      async () => {},
+    );
+    // Simulates a host restart after staging, followed by an independently authenticated pin.
+    await rm(join(root, ".publication.lock"));
+    await hold();
+    await expect(
+      cleanup(authority()).recover(ids[0]!, true, new AbortController().signal),
+    ).rejects.toThrow("required_dependency");
+    await prepared.rollback(new AbortController().signal);
+    expect(await readFile(join(root, "parts", `${ids[0]}.gpg`), "utf8")).toBe(
+      "x",
+    );
+  });
+  it("rechecks holds immediately before a prepared deletion commits", async () => {
+    const prepared = await cleanup(authority()).prepare(
+      input(),
+      new AbortController().signal,
+      async () => {},
+    );
+    await rm(join(root, ".publication.lock"));
+    await hold();
+    await expect(prepared.commit(new AbortController().signal)).rejects.toThrow(
+      "required_dependency",
+    );
+    await prepared.rollback(new AbortController().signal);
+  });
   it("stages reversible task-owned renames and preserves shared parts", async () => {
     certificates[1] = {
       ...certificates[1]!,

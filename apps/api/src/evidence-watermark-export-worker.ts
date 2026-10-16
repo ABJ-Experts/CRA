@@ -1,3 +1,7 @@
+import {
+  maintenanceRun,
+  maintenanceStart,
+} from "./upgrades/maintenance/maintenance-gate";
 import { ConfigService } from "@nestjs/config";
 import { NestFactory } from "@nestjs/core";
 import { randomUUID } from "node:crypto";
@@ -12,9 +16,11 @@ import { SupabaseEvidenceWatermarkExportStorageAdapter } from "./evidence/infras
 import { EvidenceWatermarkExportWorker } from "./evidence/worker/evidence-watermark-export-worker";
 
 async function bootstrap() {
-  const app = await NestFactory.createApplicationContext(AppModule, {
-    bufferLogs: false,
-  });
+  const app = await maintenanceStart(() =>
+    NestFactory.createApplicationContext(AppModule, {
+      bufferLogs: false,
+    }),
+  );
   try {
     const config = app.get(ConfigService);
     const worker = new EvidenceWatermarkExportWorker({
@@ -27,7 +33,7 @@ async function bootstrap() {
       leaseSeconds:
         config.get<number>("EVIDENCE_WATERMARK_EXPORT_LEASE_SECONDS") ?? 120,
     });
-    await worker.processOne(randomUUID());
+    await maintenanceRun(() => worker.processOne(randomUUID()));
   } finally {
     await app.close();
   }

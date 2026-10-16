@@ -1,3 +1,7 @@
+import {
+  maintenanceRun,
+  maintenanceStart,
+} from "./upgrades/maintenance/maintenance-gate";
 import { LicensingService } from "./licensing/application/licensing.service";
 import { Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
@@ -14,9 +18,11 @@ const delay = (milliseconds: number) =>
   new Promise<void>((resolve) => setTimeout(resolve, milliseconds));
 
 async function bootstrap() {
-  const app = await NestFactory.createApplicationContext(AppModule, {
-    bufferLogs: false,
-  });
+  const app = await maintenanceStart(() =>
+    NestFactory.createApplicationContext(AppModule, {
+      bufferLogs: false,
+    }),
+  );
   const config = app.get(ConfigService);
   const worker = new SupplierDocumentExtractionWorker({
     supabase: app.get(SupabaseService),
@@ -41,7 +47,7 @@ async function bootstrap() {
   try {
     do {
       try {
-        await worker.runOnce();
+        await maintenanceRun(() => worker.runOnce());
       } catch {
         logger.error("Supplier document extraction cycle failed safely");
       }

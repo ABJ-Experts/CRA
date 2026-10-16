@@ -1,4 +1,5 @@
 "use client";
+import { UpgradesWorkbench } from "./upgrades-workbench";
 import { useEffect, useRef, useState } from "react";
 import type {
   OperatorInstancesResponse,
@@ -219,6 +220,11 @@ export function OperatorConsole({
               <OperatorDetailTables
                 instance={current.instance}
                 tenants={current.tenants.tenants}
+              />
+              <UpgradesWorkbench
+                key={`upgrades:${current.session.principalId}:${current.session.grantRevision}:${current.instance.instanceId}`}
+                instanceId={current.instance.instanceId}
+                authorityEpoch={current.session.grantRevision}
               />
               <BackupsWorkbench
                 key={`${current.session.principalId}:${current.session.grantRevision}:${current.instance.instanceId}`}

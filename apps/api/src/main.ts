@@ -1,3 +1,5 @@
+import { maintenanceStart } from "./upgrades/maintenance/maintenance-gate";
+import { httpMaintenance } from "./upgrades/maintenance/http-maintenance";
 import { Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { NestFactory } from "@nestjs/core";
@@ -29,6 +31,7 @@ async function bootstrap(): Promise<void> {
    *     /api/customers and /api/coins. A proxy at /api/* would collide with
    *     them, and the failure would be intermittent and environment-dependent.
    */
+  app.use(httpMaintenance);
   app.setGlobalPrefix(API_PREFIX);
 
   // Customer framework imports are capped at 2 MiB by the shared schema;
@@ -104,4 +107,4 @@ async function bootstrap(): Promise<void> {
   logger.log(`CORS origin: ${webOrigin}`);
 }
 
-void bootstrap();
+void maintenanceStart(bootstrap, { candidateServiceId: "api" });

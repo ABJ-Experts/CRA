@@ -1,3 +1,7 @@
+import {
+  maintenanceRun,
+  maintenanceStart,
+} from "./upgrades/maintenance/maintenance-gate";
 import { Logger } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 import { randomUUID } from "node:crypto";
@@ -26,13 +30,15 @@ export async function bootstrapAuditExportWorker(
     sleep: (milliseconds: number) => Promise<void>;
   }>,
 ): Promise<void> {
-  const context = await options.createApplicationContext();
+  const context = await maintenanceStart(() =>
+    options.createApplicationContext(),
+  );
   const worker = options.createWorker(context);
   const once = options.argv.includes("--once");
   try {
     do {
       try {
-        await worker.runOnce();
+        await maintenanceRun(() => worker.runOnce());
       } catch (error) {
         options.logger.error(
           `Audit export worker cycle failed safely code=${safeWorkerErrorCode(error)}`,

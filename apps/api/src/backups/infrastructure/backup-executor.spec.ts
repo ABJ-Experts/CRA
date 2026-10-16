@@ -11,11 +11,11 @@ jest.mock("./restore/isolated-backup-verifier");
 jest.mock("./restore/native-docker-recovery.adapter", () => ({
   createDockerRecoveryDependencies: jest.fn(),
 }));
-jest.mock(
-  "./probes/recovery-application-probes",
-  () => ({ createRecoveryApplicationProbes: jest.fn() }),
-  { virtual: true },
-);
+// This module exists on disk. A virtual mock would give it a different resolver
+// identity after another suite loads the executor's real dependency metadata.
+jest.mock("./probes/recovery-application-probes", () => ({
+  createRecoveryApplicationProbes: jest.fn(),
+}));
 it("composes inward executor ports with mounted-only pinned profiles and explicit application probes", async () => {
   const capture = jest.fn().mockResolvedValue({});
   const verify = jest.fn().mockResolvedValue({});

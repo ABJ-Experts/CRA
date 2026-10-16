@@ -1,0 +1,436 @@
+name: cra
+x-runtime: &runtime
+  image: ${CRA_API_IMAGE:?immutable API digest required}
+  pull_policy: never
+  restart: unless-stopped
+  init: true
+  read_only: true
+  tmpfs: [/tmp]
+  env_file: [./local/api.env]
+  networks: [backend]
+  volumes: ["${CRA_MAINTENANCE_ROOT:?maintenance root required}/control:/var/lib/cra-maintenance:ro"]
+services:
+  api:
+    <<: *runtime
+    restart: "no"
+    command: [node, apps/api/dist/main.js]
+    environment: {CRA_SERVICE_ID: api, CRA_IMAGE_ID: "${CRA_API_IMAGE_ID:?exact image ID required}", CRA_MAINTENANCE_DIRECTORY: /var/lib/cra-maintenance, CRA_MAINTENANCE_ACK_DIRECTORY: /var/lib/cra-maintenance-ack}
+    volumes:
+      - "${CRA_MAINTENANCE_ROOT}/control:/var/lib/cra-maintenance:ro"
+      - "${CRA_MAINTENANCE_ROOT}/acks/api:/var/lib/cra-maintenance-ack"
+  agent-ingress:
+    <<: *runtime
+    restart: "no"
+    command: [node, apps/api/dist/agent-main.js]
+    environment: {CRA_SERVICE_ID: agent-ingress, CRA_IMAGE_ID: "${CRA_API_IMAGE_ID:?exact image ID required}", CRA_MAINTENANCE_DIRECTORY: /var/lib/cra-maintenance, CRA_MAINTENANCE_ACK_DIRECTORY: /var/lib/cra-maintenance-ack}
+    volumes:
+      - "${CRA_MAINTENANCE_ROOT}/control:/var/lib/cra-maintenance:ro"
+      - "${CRA_MAINTENANCE_ROOT}/acks/agent-ingress:/var/lib/cra-maintenance-ack"
+      - ./local/agent-tls:/run/cra-agent:ro
+  web:
+    image: ${CRA_WEB_IMAGE:?immutable web digest required}
+    pull_policy: never
+    restart: unless-stopped
+    env_file: [./local/web.env]
+    networks: [backend]
+  edge:
+    image: ${CRA_EDGE_IMAGE:?immutable edge digest required}
+    pull_policy: never
+    restart: unless-stopped
+    command: [node, deployment/edge.mjs]
+    environment: {CRA_MAINTENANCE_DIRECTORY: /var/lib/cra-maintenance, CRA_MAINTENANCE_ACK_DIRECTORY: /var/lib/cra-maintenance-ack}
+    ports: ["127.0.0.1:8080:8080", "3443:3444"]
+    volumes:
+      - "${CRA_MAINTENANCE_ROOT}/control:/var/lib/cra-maintenance:ro"
+      - "${CRA_MAINTENANCE_ROOT}/acks/edge:/var/lib/cra-maintenance-ack"
+    networks: [backend]
+  operator-api:
+    <<: *runtime
+    profiles: [control]
+    command: [node, apps/api/dist/operator-main.js]
+    env_file: [./local/operator.env]
+    ports: ["127.0.0.1:3334:3334"]
+  operator-web:
+    image: ${CRA_OPERATOR_IMAGE:?immutable operator digest required}
+    pull_policy: never
+    profiles: [control]
+    ports: ["127.0.0.1:3002:8080"]
+  agent:
+    image: ${CRA_AGENT_IMAGE:?immutable agent digest required}
+    pull_policy: never
+    profiles: [agent]
+    restart: unless-stopped
+    command: [node, apps/agent/dist/main.js, serve, --config, /etc/cra-agent/config.json]
+    environment: {CRA_SERVICE_ID: agent, CRA_IMAGE_ID: "${CRA_AGENT_IMAGE_ID:?exact image ID required}", CRA_MAINTENANCE_DIRECTORY: /var/lib/cra-maintenance, CRA_MAINTENANCE_ACK_DIRECTORY: /var/lib/cra-maintenance-ack}
+    volumes:
+      - ./local/agent:/etc/cra-agent:ro
+      - "${CRA_AGENT_STATE_ROOT:?agent state root}:/var/lib/cra-agent"
+      - "${CRA_MAINTENANCE_ROOT}/control:/var/lib/cra-maintenance:ro"
+      - "${CRA_MAINTENANCE_ROOT}/acks/agent:/var/lib/cra-maintenance-ack"
+    networks: [backend]
+  audit-export-worker:
+    <<: *runtime
+    profiles: [workers]
+    command: [node, apps/api/dist/audit-export-worker.js]
+    environment: {CRA_SERVICE_ID: audit-export-worker, CRA_IMAGE_ID: "${CRA_API_IMAGE_ID:?exact image ID required}", CRA_MAINTENANCE_DIRECTORY: /var/lib/cra-maintenance, CRA_MAINTENANCE_ACK_DIRECTORY: /var/lib/cra-maintenance-ack}
+    volumes:
+      - "${CRA_MAINTENANCE_ROOT}/control:/var/lib/cra-maintenance:ro"
+      - "${CRA_MAINTENANCE_ROOT}/acks/audit-export-worker:/var/lib/cra-maintenance-ack"
+  audit-range-verify-worker:
+    <<: *runtime
+    profiles: [workers]
+    command: [node, apps/api/dist/audit-range-verify-worker.js]
+    environment: {CRA_SERVICE_ID: audit-range-verify-worker, CRA_IMAGE_ID: "${CRA_API_IMAGE_ID:?exact image ID required}", CRA_MAINTENANCE_DIRECTORY: /var/lib/cra-maintenance, CRA_MAINTENANCE_ACK_DIRECTORY: /var/lib/cra-maintenance-ack}
+    volumes:
+      - "${CRA_MAINTENANCE_ROOT}/control:/var/lib/cra-maintenance:ro"
+      - "${CRA_MAINTENANCE_ROOT}/acks/audit-range-verify-worker:/var/lib/cra-maintenance-ack"
+  audit-siem-worker:
+    <<: *runtime
+    profiles: [workers]
+    command: [node, apps/api/dist/audit-siem-worker.js]
+    environment: {CRA_SERVICE_ID: audit-siem-worker, CRA_IMAGE_ID: "${CRA_API_IMAGE_ID:?exact image ID required}", CRA_MAINTENANCE_DIRECTORY: /var/lib/cra-maintenance, CRA_MAINTENANCE_ACK_DIRECTORY: /var/lib/cra-maintenance-ack}
+    volumes:
+      - "${CRA_MAINTENANCE_ROOT}/control:/var/lib/cra-maintenance:ro"
+      - "${CRA_MAINTENANCE_ROOT}/acks/audit-siem-worker:/var/lib/cra-maintenance-ack"
+  backup-worker:
+    <<: *runtime
+    profiles: [backup-control]
+    command: [node, apps/api/dist/backup-worker.js]
+    env_file: [./local/backup-control.env]
+    volumes:
+      - "${CRA_MAINTENANCE_ROOT}/control:/var/lib/cra-maintenance:ro"
+      - "${CRA_MAINTENANCE_ROOT}/acks/backup-worker:/var/lib/cra-maintenance-ack"
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./local/backup-runtime:/run/cra-backup:ro
+    environment: {CRA_SERVICE_ID: backup-worker, CRA_IMAGE_ID: "${CRA_API_IMAGE_ID:?exact image ID required}", CRA_MAINTENANCE_DIRECTORY: /var/lib/cra-maintenance, CRA_MAINTENANCE_ACK_DIRECTORY: /var/lib/cra-maintenance-ack}
+  chat-vault-maintenance:
+    <<: *runtime
+    restart: "no"
+    profiles: [maintenance-tools]
+    command: [node, apps/api/dist/chat-vault-maintenance.js]
+    environment: {CRA_SERVICE_ID: chat-vault-maintenance, CRA_IMAGE_ID: "${CRA_API_IMAGE_ID:?exact image ID required}", CRA_MAINTENANCE_DIRECTORY: /var/lib/cra-maintenance, CRA_MAINTENANCE_ACK_DIRECTORY: /var/lib/cra-maintenance-ack}
+    volumes:
+      - "${CRA_MAINTENANCE_ROOT}/control:/var/lib/cra-maintenance:ro"
+      - "${CRA_MAINTENANCE_ROOT}/acks/chat-vault-maintenance:/var/lib/cra-maintenance-ack"
+  connector-sync-worker:
+    <<: *runtime
+    profiles: [workers]
+    command: [node, apps/api/dist/connector-sync-worker.js]
+    environment: {CRA_SERVICE_ID: connector-sync-worker, CRA_IMAGE_ID: "${CRA_API_IMAGE_ID:?exact image ID required}", CRA_MAINTENANCE_DIRECTORY: /var/lib/cra-maintenance, CRA_MAINTENANCE_ACK_DIRECTORY: /var/lib/cra-maintenance-ack}
+    volumes:
+      - "${CRA_MAINTENANCE_ROOT}/control:/var/lib/cra-maintenance:ro"
+      - "${CRA_MAINTENANCE_ROOT}/acks/connector-sync-worker:/var/lib/cra-maintenance-ack"
+  connector-vault-maintenance:
+    <<: *runtime
+    restart: "no"
+    profiles: [maintenance-tools]
+    command: [node, apps/api/dist/connector-vault-maintenance.js]
+    environment: {CRA_SERVICE_ID: connector-vault-maintenance, CRA_IMAGE_ID: "${CRA_API_IMAGE_ID:?exact image ID required}", CRA_MAINTENANCE_DIRECTORY: /var/lib/cra-maintenance, CRA_MAINTENANCE_ACK_DIRECTORY: /var/lib/cra-maintenance-ack}
+    volumes:
+      - "${CRA_MAINTENANCE_ROOT}/control:/var/lib/cra-maintenance:ro"
+      - "${CRA_MAINTENANCE_ROOT}/acks/connector-vault-maintenance:/var/lib/cra-maintenance-ack"
+  evidence-deletion-cleanup-worker:
+    <<: *runtime
+    profiles: [workers]
+    command: [node, apps/api/dist/evidence-deletion-cleanup-worker.js]
+    environment: {CRA_SERVICE_ID: evidence-deletion-cleanup-worker, CRA_IMAGE_ID: "${CRA_API_IMAGE_ID:?exact image ID required}", CRA_MAINTENANCE_DIRECTORY: /var/lib/cra-maintenance, CRA_MAINTENANCE_ACK_DIRECTORY: /var/lib/cra-maintenance-ack}
+    volumes:
+      - "${CRA_MAINTENANCE_ROOT}/control:/var/lib/cra-maintenance:ro"
+      - "${CRA_MAINTENANCE_ROOT}/acks/evidence-deletion-cleanup-worker:/var/lib/cra-maintenance-ack"
+  evidence-scan-worker:
+    <<: *runtime
+    profiles: [workers]
+    command: [node, apps/api/dist/evidence-scan-worker.js]
+    environment: {CRA_SERVICE_ID: evidence-scan-worker, CRA_IMAGE_ID: "${CRA_API_IMAGE_ID:?exact image ID required}", CRA_MAINTENANCE_DIRECTORY: /var/lib/cra-maintenance, CRA_MAINTENANCE_ACK_DIRECTORY: /var/lib/cra-maintenance-ack}
+    volumes:
+      - "${CRA_MAINTENANCE_ROOT}/control:/var/lib/cra-maintenance:ro"
+      - "${CRA_MAINTENANCE_ROOT}/acks/evidence-scan-worker:/var/lib/cra-maintenance-ack"
+  evidence-text-extraction-worker:
+    <<: *runtime
+    profiles: [workers]
+    command: [node, apps/api/dist/evidence-text-extraction-worker.js]
+    environment: {CRA_SERVICE_ID: evidence-text-extraction-worker, CRA_IMAGE_ID: "${CRA_API_IMAGE_ID:?exact image ID required}", CRA_MAINTENANCE_DIRECTORY: /var/lib/cra-maintenance, CRA_MAINTENANCE_ACK_DIRECTORY: /var/lib/cra-maintenance-ack}
+    volumes:
+      - "${CRA_MAINTENANCE_ROOT}/control:/var/lib/cra-maintenance:ro"
+      - "${CRA_MAINTENANCE_ROOT}/acks/evidence-text-extraction-worker:/var/lib/cra-maintenance-ack"
+  evidence-validity-alert-worker:
+    <<: *runtime
+    profiles: [workers]
+    command: [node, apps/api/dist/evidence-validity-alert-worker.js]
+    environment: {CRA_SERVICE_ID: evidence-validity-alert-worker, CRA_IMAGE_ID: "${CRA_API_IMAGE_ID:?exact image ID required}", CRA_MAINTENANCE_DIRECTORY: /var/lib/cra-maintenance, CRA_MAINTENANCE_ACK_DIRECTORY: /var/lib/cra-maintenance-ack}
+    volumes:
+      - "${CRA_MAINTENANCE_ROOT}/control:/var/lib/cra-maintenance:ro"
+      - "${CRA_MAINTENANCE_ROOT}/acks/evidence-validity-alert-worker:/var/lib/cra-maintenance-ack"
+  evidence-watermark-export-worker:
+    <<: *runtime
+    restart: "no"
+    profiles: [maintenance-tools]
+    command: [node, apps/api/dist/evidence-watermark-export-worker.js]
+    environment: {CRA_SERVICE_ID: evidence-watermark-export-worker, CRA_IMAGE_ID: "${CRA_API_IMAGE_ID:?exact image ID required}", CRA_MAINTENANCE_DIRECTORY: /var/lib/cra-maintenance, CRA_MAINTENANCE_ACK_DIRECTORY: /var/lib/cra-maintenance-ack}
+    volumes:
+      - "${CRA_MAINTENANCE_ROOT}/control:/var/lib/cra-maintenance:ro"
+      - "${CRA_MAINTENANCE_ROOT}/acks/evidence-watermark-export-worker:/var/lib/cra-maintenance-ack"
+  exports-worker:
+    <<: *runtime
+    profiles: [workers]
+    command: [node, apps/api/dist/exports-worker.js]
+    environment: {CRA_SERVICE_ID: exports-worker, CRA_IMAGE_ID: "${CRA_API_IMAGE_ID:?exact image ID required}", CRA_MAINTENANCE_DIRECTORY: /var/lib/cra-maintenance, CRA_MAINTENANCE_ACK_DIRECTORY: /var/lib/cra-maintenance-ack}
+    volumes:
+      - "${CRA_MAINTENANCE_ROOT}/control:/var/lib/cra-maintenance:ro"
+      - "${CRA_MAINTENANCE_ROOT}/acks/exports-worker:/var/lib/cra-maintenance-ack"
+  finding-propagation-worker:
+    <<: *runtime
+    profiles: [workers]
+    command: [node, apps/api/dist/finding-propagation-worker.js]
+    environment: {CRA_SERVICE_ID: finding-propagation-worker, CRA_IMAGE_ID: "${CRA_API_IMAGE_ID:?exact image ID required}", CRA_MAINTENANCE_DIRECTORY: /var/lib/cra-maintenance, CRA_MAINTENANCE_ACK_DIRECTORY: /var/lib/cra-maintenance-ack}
+    volumes:
+      - "${CRA_MAINTENANCE_ROOT}/control:/var/lib/cra-maintenance:ro"
+      - "${CRA_MAINTENANCE_ROOT}/acks/finding-propagation-worker:/var/lib/cra-maintenance-ack"
+  framework-coverage-worker:
+    <<: *runtime
+    profiles: [workers]
+    command: [node, apps/api/dist/framework-coverage-worker.js]
+    environment: {CRA_SERVICE_ID: framework-coverage-worker, CRA_IMAGE_ID: "${CRA_API_IMAGE_ID:?exact image ID required}", CRA_MAINTENANCE_DIRECTORY: /var/lib/cra-maintenance, CRA_MAINTENANCE_ACK_DIRECTORY: /var/lib/cra-maintenance-ack}
+    volumes:
+      - "${CRA_MAINTENANCE_ROOT}/control:/var/lib/cra-maintenance:ro"
+      - "${CRA_MAINTENANCE_ROOT}/acks/framework-coverage-worker:/var/lib/cra-maintenance-ack"
+  notification-dispatch-worker:
+    <<: *runtime
+    profiles: [workers]
+    command: [node, apps/api/dist/notification-dispatch-worker.js]
+    environment: {CRA_SERVICE_ID: notification-dispatch-worker, CRA_IMAGE_ID: "${CRA_API_IMAGE_ID:?exact image ID required}", CRA_MAINTENANCE_DIRECTORY: /var/lib/cra-maintenance, CRA_MAINTENANCE_ACK_DIRECTORY: /var/lib/cra-maintenance-ack}
+    volumes:
+      - "${CRA_MAINTENANCE_ROOT}/control:/var/lib/cra-maintenance:ro"
+      - "${CRA_MAINTENANCE_ROOT}/acks/notification-dispatch-worker:/var/lib/cra-maintenance-ack"
+  operator-registry-worker:
+    <<: *runtime
+    profiles: [workers]
+    command: [node, apps/api/dist/operator-registry-worker.js]
+    environment: {CRA_SERVICE_ID: operator-registry-worker, CRA_IMAGE_ID: "${CRA_API_IMAGE_ID:?exact image ID required}", CRA_MAINTENANCE_DIRECTORY: /var/lib/cra-maintenance, CRA_MAINTENANCE_ACK_DIRECTORY: /var/lib/cra-maintenance-ack}
+    volumes:
+      - "${CRA_MAINTENANCE_ROOT}/control:/var/lib/cra-maintenance:ro"
+      - "${CRA_MAINTENANCE_ROOT}/acks/operator-registry-worker:/var/lib/cra-maintenance-ack"
+  product-compliance-worker:
+    <<: *runtime
+    profiles: [workers]
+    command: [node, apps/api/dist/product-compliance-worker.js]
+    environment: {CRA_SERVICE_ID: product-compliance-worker, CRA_IMAGE_ID: "${CRA_API_IMAGE_ID:?exact image ID required}", CRA_MAINTENANCE_DIRECTORY: /var/lib/cra-maintenance, CRA_MAINTENANCE_ACK_DIRECTORY: /var/lib/cra-maintenance-ack}
+    volumes:
+      - "${CRA_MAINTENANCE_ROOT}/control:/var/lib/cra-maintenance:ro"
+      - "${CRA_MAINTENANCE_ROOT}/acks/product-compliance-worker:/var/lib/cra-maintenance-ack"
+  product-import-worker:
+    <<: *runtime
+    profiles: [workers]
+    command: [node, apps/api/dist/product-import-worker.js]
+    environment: {CRA_SERVICE_ID: product-import-worker, CRA_IMAGE_ID: "${CRA_API_IMAGE_ID:?exact image ID required}", CRA_MAINTENANCE_DIRECTORY: /var/lib/cra-maintenance, CRA_MAINTENANCE_ACK_DIRECTORY: /var/lib/cra-maintenance-ack}
+    volumes:
+      - "${CRA_MAINTENANCE_ROOT}/control:/var/lib/cra-maintenance:ro"
+      - "${CRA_MAINTENANCE_ROOT}/acks/product-import-worker:/var/lib/cra-maintenance-ack"
+  product-retention-worker:
+    <<: *runtime
+    profiles: [workers]
+    command: [node, apps/api/dist/product-retention-worker.js]
+    environment: {CRA_SERVICE_ID: product-retention-worker, CRA_IMAGE_ID: "${CRA_API_IMAGE_ID:?exact image ID required}", CRA_MAINTENANCE_DIRECTORY: /var/lib/cra-maintenance, CRA_MAINTENANCE_ACK_DIRECTORY: /var/lib/cra-maintenance-ack}
+    volumes:
+      - "${CRA_MAINTENANCE_ROOT}/control:/var/lib/cra-maintenance:ro"
+      - "${CRA_MAINTENANCE_ROOT}/acks/product-retention-worker:/var/lib/cra-maintenance-ack"
+  reporting-deadline-monitor-worker:
+    <<: *runtime
+    profiles: [workers]
+    command: [node, apps/api/dist/reporting-deadline-monitor-worker.js]
+    environment: {CRA_SERVICE_ID: reporting-deadline-monitor-worker, CRA_IMAGE_ID: "${CRA_API_IMAGE_ID:?exact image ID required}", CRA_MAINTENANCE_DIRECTORY: /var/lib/cra-maintenance, CRA_MAINTENANCE_ACK_DIRECTORY: /var/lib/cra-maintenance-ack}
+    volumes:
+      - "${CRA_MAINTENANCE_ROOT}/control:/var/lib/cra-maintenance:ro"
+      - "${CRA_MAINTENANCE_ROOT}/acks/reporting-deadline-monitor-worker:/var/lib/cra-maintenance-ack"
+  reports-worker:
+    <<: *runtime
+    profiles: [workers]
+    command: [node, apps/api/dist/reports-worker.js]
+    environment: {CRA_SERVICE_ID: reports-worker, CRA_IMAGE_ID: "${CRA_API_IMAGE_ID:?exact image ID required}", CRA_MAINTENANCE_DIRECTORY: /var/lib/cra-maintenance, CRA_MAINTENANCE_ACK_DIRECTORY: /var/lib/cra-maintenance-ack}
+    volumes:
+      - "${CRA_MAINTENANCE_ROOT}/control:/var/lib/cra-maintenance:ro"
+      - "${CRA_MAINTENANCE_ROOT}/acks/reports-worker:/var/lib/cra-maintenance-ack"
+  sbom-composite-worker:
+    <<: *runtime
+    profiles: [workers]
+    command: [node, apps/api/dist/sbom-composite-worker.js]
+    environment: {CRA_SERVICE_ID: sbom-composite-worker, CRA_IMAGE_ID: "${CRA_API_IMAGE_ID:?exact image ID required}", CRA_MAINTENANCE_DIRECTORY: /var/lib/cra-maintenance, CRA_MAINTENANCE_ACK_DIRECTORY: /var/lib/cra-maintenance-ack}
+    volumes:
+      - "${CRA_MAINTENANCE_ROOT}/control:/var/lib/cra-maintenance:ro"
+      - "${CRA_MAINTENANCE_ROOT}/acks/sbom-composite-worker:/var/lib/cra-maintenance-ack"
+  sbom-diff-worker:
+    <<: *runtime
+    profiles: [workers]
+    command: [node, apps/api/dist/sbom-diff-worker.js]
+    environment: {CRA_SERVICE_ID: sbom-diff-worker, CRA_IMAGE_ID: "${CRA_API_IMAGE_ID:?exact image ID required}", CRA_MAINTENANCE_DIRECTORY: /var/lib/cra-maintenance, CRA_MAINTENANCE_ACK_DIRECTORY: /var/lib/cra-maintenance-ack}
+    volumes:
+      - "${CRA_MAINTENANCE_ROOT}/control:/var/lib/cra-maintenance:ro"
+      - "${CRA_MAINTENANCE_ROOT}/acks/sbom-diff-worker:/var/lib/cra-maintenance-ack"
+  sbom-ingest-worker:
+    <<: *runtime
+    profiles: [workers]
+    command: [node, apps/api/dist/sbom-ingest-worker.js]
+    environment: {CRA_SERVICE_ID: sbom-ingest-worker, CRA_IMAGE_ID: "${CRA_API_IMAGE_ID:?exact image ID required}", CRA_MAINTENANCE_DIRECTORY: /var/lib/cra-maintenance, CRA_MAINTENANCE_ACK_DIRECTORY: /var/lib/cra-maintenance-ack}
+    volumes:
+      - "${CRA_MAINTENANCE_ROOT}/control:/var/lib/cra-maintenance:ro"
+      - "${CRA_MAINTENANCE_ROOT}/acks/sbom-ingest-worker:/var/lib/cra-maintenance-ack"
+  sbom-quality-worker:
+    <<: *runtime
+    profiles: [workers]
+    command: [node, apps/api/dist/sbom-quality-worker.js]
+    environment: {CRA_SERVICE_ID: sbom-quality-worker, CRA_IMAGE_ID: "${CRA_API_IMAGE_ID:?exact image ID required}", CRA_MAINTENANCE_DIRECTORY: /var/lib/cra-maintenance, CRA_MAINTENANCE_ACK_DIRECTORY: /var/lib/cra-maintenance-ack}
+    volumes:
+      - "${CRA_MAINTENANCE_ROOT}/control:/var/lib/cra-maintenance:ro"
+      - "${CRA_MAINTENANCE_ROOT}/acks/sbom-quality-worker:/var/lib/cra-maintenance-ack"
+  siem-vault-maintenance:
+    <<: *runtime
+    restart: "no"
+    profiles: [maintenance-tools]
+    command: [node, apps/api/dist/siem-vault-maintenance.js]
+    environment: {CRA_SERVICE_ID: siem-vault-maintenance, CRA_IMAGE_ID: "${CRA_API_IMAGE_ID:?exact image ID required}", CRA_MAINTENANCE_DIRECTORY: /var/lib/cra-maintenance, CRA_MAINTENANCE_ACK_DIRECTORY: /var/lib/cra-maintenance-ack}
+    volumes:
+      - "${CRA_MAINTENANCE_ROOT}/control:/var/lib/cra-maintenance:ro"
+      - "${CRA_MAINTENANCE_ROOT}/acks/siem-vault-maintenance:/var/lib/cra-maintenance-ack"
+  supplier-document-extraction-worker:
+    <<: *runtime
+    profiles: [workers]
+    command: [node, apps/api/dist/supplier-document-extraction-worker.js]
+    environment: {CRA_SERVICE_ID: supplier-document-extraction-worker, CRA_IMAGE_ID: "${CRA_API_IMAGE_ID:?exact image ID required}", CRA_MAINTENANCE_DIRECTORY: /var/lib/cra-maintenance, CRA_MAINTENANCE_ACK_DIRECTORY: /var/lib/cra-maintenance-ack}
+    volumes:
+      - "${CRA_MAINTENANCE_ROOT}/control:/var/lib/cra-maintenance:ro"
+      - "${CRA_MAINTENANCE_ROOT}/acks/supplier-document-extraction-worker:/var/lib/cra-maintenance-ack"
+  supplier-evidence-reminder-worker:
+    <<: *runtime
+    profiles: [workers]
+    command: [node, apps/api/dist/supplier-evidence-reminder-worker.js]
+    environment: {CRA_SERVICE_ID: supplier-evidence-reminder-worker, CRA_IMAGE_ID: "${CRA_API_IMAGE_ID:?exact image ID required}", CRA_MAINTENANCE_DIRECTORY: /var/lib/cra-maintenance, CRA_MAINTENANCE_ACK_DIRECTORY: /var/lib/cra-maintenance-ack}
+    volumes:
+      - "${CRA_MAINTENANCE_ROOT}/control:/var/lib/cra-maintenance:ro"
+      - "${CRA_MAINTENANCE_ROOT}/acks/supplier-evidence-reminder-worker:/var/lib/cra-maintenance-ack"
+  support-diagnostics-worker:
+    <<: *runtime
+    profiles: [workers]
+    command: [node, apps/api/dist/support-diagnostics-worker.js]
+    environment: {CRA_SERVICE_ID: support-diagnostics-worker, CRA_IMAGE_ID: "${CRA_API_IMAGE_ID:?exact image ID required}", CRA_MAINTENANCE_DIRECTORY: /var/lib/cra-maintenance, CRA_MAINTENANCE_ACK_DIRECTORY: /var/lib/cra-maintenance-ack}
+    volumes:
+      - "${CRA_MAINTENANCE_ROOT}/control:/var/lib/cra-maintenance:ro"
+      - "${CRA_MAINTENANCE_ROOT}/acks/support-diagnostics-worker:/var/lib/cra-maintenance-ack"
+  technical-file-declaration-worker:
+    <<: *runtime
+    restart: "no"
+    profiles: [maintenance-tools]
+    command: [node, apps/api/dist/technical-file-declaration-worker.js]
+    environment: {CRA_SERVICE_ID: technical-file-declaration-worker, CRA_IMAGE_ID: "${CRA_API_IMAGE_ID:?exact image ID required}", CRA_MAINTENANCE_DIRECTORY: /var/lib/cra-maintenance, CRA_MAINTENANCE_ACK_DIRECTORY: /var/lib/cra-maintenance-ack}
+    volumes:
+      - "${CRA_MAINTENANCE_ROOT}/control:/var/lib/cra-maintenance:ro"
+      - "${CRA_MAINTENANCE_ROOT}/acks/technical-file-declaration-worker:/var/lib/cra-maintenance-ack"
+  technical-file-export-worker:
+    <<: *runtime
+    restart: "no"
+    profiles: [maintenance-tools]
+    command: [node, apps/api/dist/technical-file-export-worker.js]
+    environment: {CRA_SERVICE_ID: technical-file-export-worker, CRA_IMAGE_ID: "${CRA_API_IMAGE_ID:?exact image ID required}", CRA_MAINTENANCE_DIRECTORY: /var/lib/cra-maintenance, CRA_MAINTENANCE_ACK_DIRECTORY: /var/lib/cra-maintenance-ack}
+    volumes:
+      - "${CRA_MAINTENANCE_ROOT}/control:/var/lib/cra-maintenance:ro"
+      - "${CRA_MAINTENANCE_ROOT}/acks/technical-file-export-worker:/var/lib/cra-maintenance-ack"
+  tenant-lifecycle-worker:
+    <<: *runtime
+    profiles: [workers]
+    command: [node, apps/api/dist/tenant-lifecycle-worker.js]
+    environment: {CRA_SERVICE_ID: tenant-lifecycle-worker, CRA_IMAGE_ID: "${CRA_API_IMAGE_ID:?exact image ID required}", CRA_MAINTENANCE_DIRECTORY: /var/lib/cra-maintenance, CRA_MAINTENANCE_ACK_DIRECTORY: /var/lib/cra-maintenance-ack}
+    volumes:
+      - "${CRA_MAINTENANCE_ROOT}/control:/var/lib/cra-maintenance:ro"
+      - "${CRA_MAINTENANCE_ROOT}/acks/tenant-lifecycle-worker:/var/lib/cra-maintenance-ack"
+  vulnerability-feed-worker:
+    <<: *runtime
+    profiles: [workers]
+    command: [node, apps/api/dist/vulnerability-feed-worker.js]
+    environment: {CRA_SERVICE_ID: vulnerability-feed-worker, CRA_IMAGE_ID: "${CRA_API_IMAGE_ID:?exact image ID required}", CRA_MAINTENANCE_DIRECTORY: /var/lib/cra-maintenance, CRA_MAINTENANCE_ACK_DIRECTORY: /var/lib/cra-maintenance-ack}
+    volumes:
+      - "${CRA_MAINTENANCE_ROOT}/control:/var/lib/cra-maintenance:ro"
+      - "${CRA_MAINTENANCE_ROOT}/acks/vulnerability-feed-worker:/var/lib/cra-maintenance-ack"
+  vulnerability-finding-review-notification-worker:
+    <<: *runtime
+    profiles: [workers]
+    command: [node, apps/api/dist/vulnerability-finding-review-notification-worker.js]
+    environment: {CRA_SERVICE_ID: vulnerability-finding-review-notification-worker, CRA_IMAGE_ID: "${CRA_API_IMAGE_ID:?exact image ID required}", CRA_MAINTENANCE_DIRECTORY: /var/lib/cra-maintenance, CRA_MAINTENANCE_ACK_DIRECTORY: /var/lib/cra-maintenance-ack}
+    volumes:
+      - "${CRA_MAINTENANCE_ROOT}/control:/var/lib/cra-maintenance:ro"
+      - "${CRA_MAINTENANCE_ROOT}/acks/vulnerability-finding-review-notification-worker:/var/lib/cra-maintenance-ack"
+  vulnerability-kev-alert-worker:
+    <<: *runtime
+    profiles: [workers]
+    command: [node, apps/api/dist/vulnerability-kev-alert-worker.js]
+    environment: {CRA_SERVICE_ID: vulnerability-kev-alert-worker, CRA_IMAGE_ID: "${CRA_API_IMAGE_ID:?exact image ID required}", CRA_MAINTENANCE_DIRECTORY: /var/lib/cra-maintenance, CRA_MAINTENANCE_ACK_DIRECTORY: /var/lib/cra-maintenance-ack}
+    volumes:
+      - "${CRA_MAINTENANCE_ROOT}/control:/var/lib/cra-maintenance:ro"
+      - "${CRA_MAINTENANCE_ROOT}/acks/vulnerability-kev-alert-worker:/var/lib/cra-maintenance-ack"
+  vulnerability-matching-worker:
+    <<: *runtime
+    profiles: [workers]
+    command: [node, apps/api/dist/vulnerability-matching-worker.js]
+    environment: {CRA_SERVICE_ID: vulnerability-matching-worker, CRA_IMAGE_ID: "${CRA_API_IMAGE_ID:?exact image ID required}", CRA_MAINTENANCE_DIRECTORY: /var/lib/cra-maintenance, CRA_MAINTENANCE_ACK_DIRECTORY: /var/lib/cra-maintenance-ack}
+    volumes:
+      - "${CRA_MAINTENANCE_ROOT}/control:/var/lib/cra-maintenance:ro"
+      - "${CRA_MAINTENANCE_ROOT}/acks/vulnerability-matching-worker:/var/lib/cra-maintenance-ack"
+  vulnerability-reevaluation-worker:
+    <<: *runtime
+    profiles: [workers]
+    command: [node, apps/api/dist/vulnerability-reevaluation-worker.js]
+    environment: {CRA_SERVICE_ID: vulnerability-reevaluation-worker, CRA_IMAGE_ID: "${CRA_API_IMAGE_ID:?exact image ID required}", CRA_MAINTENANCE_DIRECTORY: /var/lib/cra-maintenance, CRA_MAINTENANCE_ACK_DIRECTORY: /var/lib/cra-maintenance-ack}
+    volumes:
+      - "${CRA_MAINTENANCE_ROOT}/control:/var/lib/cra-maintenance:ro"
+      - "${CRA_MAINTENANCE_ROOT}/acks/vulnerability-reevaluation-worker:/var/lib/cra-maintenance-ack"
+  vulnerability-remediation-ticket-operation-worker:
+    <<: *runtime
+    profiles: [workers]
+    command: [node, apps/api/dist/vulnerability-remediation-ticket-operation-worker.js]
+    environment: {CRA_SERVICE_ID: vulnerability-remediation-ticket-operation-worker, CRA_IMAGE_ID: "${CRA_API_IMAGE_ID:?exact image ID required}", CRA_MAINTENANCE_DIRECTORY: /var/lib/cra-maintenance, CRA_MAINTENANCE_ACK_DIRECTORY: /var/lib/cra-maintenance-ack}
+    volumes:
+      - "${CRA_MAINTENANCE_ROOT}/control:/var/lib/cra-maintenance:ro"
+      - "${CRA_MAINTENANCE_ROOT}/acks/vulnerability-remediation-ticket-operation-worker:/var/lib/cra-maintenance-ack"
+  vulnerability-triage-alert-worker:
+    <<: *runtime
+    profiles: [workers]
+    command: [node, apps/api/dist/vulnerability-triage-alert-worker.js]
+    environment: {CRA_SERVICE_ID: vulnerability-triage-alert-worker, CRA_IMAGE_ID: "${CRA_API_IMAGE_ID:?exact image ID required}", CRA_MAINTENANCE_DIRECTORY: /var/lib/cra-maintenance, CRA_MAINTENANCE_ACK_DIRECTORY: /var/lib/cra-maintenance-ack}
+    volumes:
+      - "${CRA_MAINTENANCE_ROOT}/control:/var/lib/cra-maintenance:ro"
+      - "${CRA_MAINTENANCE_ROOT}/acks/vulnerability-triage-alert-worker:/var/lib/cra-maintenance-ack"
+  vulnerability-triage-note-mention-worker:
+    <<: *runtime
+    profiles: [workers]
+    command: [node, apps/api/dist/vulnerability-triage-note-mention-worker.js]
+    environment: {CRA_SERVICE_ID: vulnerability-triage-note-mention-worker, CRA_IMAGE_ID: "${CRA_API_IMAGE_ID:?exact image ID required}", CRA_MAINTENANCE_DIRECTORY: /var/lib/cra-maintenance, CRA_MAINTENANCE_ACK_DIRECTORY: /var/lib/cra-maintenance-ack}
+    volumes:
+      - "${CRA_MAINTENANCE_ROOT}/control:/var/lib/cra-maintenance:ro"
+      - "${CRA_MAINTENANCE_ROOT}/acks/vulnerability-triage-note-mention-worker:/var/lib/cra-maintenance-ack"
+  vulnerability-vex-publication-worker:
+    <<: *runtime
+    profiles: [workers]
+    command: [node, apps/api/dist/vulnerability-vex-publication-worker.js]
+    environment: {CRA_SERVICE_ID: vulnerability-vex-publication-worker, CRA_IMAGE_ID: "${CRA_API_IMAGE_ID:?exact image ID required}", CRA_MAINTENANCE_DIRECTORY: /var/lib/cra-maintenance, CRA_MAINTENANCE_ACK_DIRECTORY: /var/lib/cra-maintenance-ack}
+    volumes:
+      - "${CRA_MAINTENANCE_ROOT}/control:/var/lib/cra-maintenance:ro"
+      - "${CRA_MAINTENANCE_ROOT}/acks/vulnerability-vex-publication-worker:/var/lib/cra-maintenance-ack"
+  webhook-delivery-worker:
+    <<: *runtime
+    profiles: [workers]
+    command: [node, apps/api/dist/webhook-delivery-worker.js]
+    environment: {CRA_SERVICE_ID: webhook-delivery-worker, CRA_IMAGE_ID: "${CRA_API_IMAGE_ID:?exact image ID required}", CRA_MAINTENANCE_DIRECTORY: /var/lib/cra-maintenance, CRA_MAINTENANCE_ACK_DIRECTORY: /var/lib/cra-maintenance-ack}
+    volumes:
+      - "${CRA_MAINTENANCE_ROOT}/control:/var/lib/cra-maintenance:ro"
+      - "${CRA_MAINTENANCE_ROOT}/acks/webhook-delivery-worker:/var/lib/cra-maintenance-ack"
+  webhook-vault-maintenance:
+    <<: *runtime
+    restart: "no"
+    profiles: [maintenance-tools]
+    command: [node, apps/api/dist/webhook-vault-maintenance.js]
+    environment: {CRA_SERVICE_ID: webhook-vault-maintenance, CRA_IMAGE_ID: "${CRA_API_IMAGE_ID:?exact image ID required}", CRA_MAINTENANCE_DIRECTORY: /var/lib/cra-maintenance, CRA_MAINTENANCE_ACK_DIRECTORY: /var/lib/cra-maintenance-ack}
+    volumes:
+      - "${CRA_MAINTENANCE_ROOT}/control:/var/lib/cra-maintenance:ro"
+      - "${CRA_MAINTENANCE_ROOT}/acks/webhook-vault-maintenance:/var/lib/cra-maintenance-ack"
+networks:
+  backend:
+    external: true
+    name: ${CRA_BACKEND_NETWORK:?fixed existing infrastructure network required}

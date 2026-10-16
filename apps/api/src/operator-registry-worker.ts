@@ -1,3 +1,4 @@
+import { maintenanceRun } from "./upgrades/maintenance/maintenance-gate";
 import type { OperatorInstanceMetadataResponse } from "@repo/contracts";
 import { setTimeout as workerSleep } from "node:timers/promises";
 import { loadWorkerRuntime } from "./operator/operator-runtime";
@@ -108,23 +109,25 @@ export async function bootstrapOperatorRegistryWorker(
     const started = Date.now();
     try {
       if (config.observeLocal)
-        await runOperatorObserver(
-          config.instanceId,
-          repository,
-          Date.now,
-          enricher,
-          {
-            afterId: observerAfterId,
-            onProgress: (next) => {
-              observerAfterId = next;
+        await maintenanceRun(() =>
+          runOperatorObserver(
+            config.instanceId,
+            repository,
+            Date.now,
+            enricher,
+            {
+              afterId: observerAfterId,
+              onProgress: (next) => {
+                observerAfterId = next;
+              },
             },
-          },
+          ),
         );
     } catch {
       process.stderr.write("Operator observation cycle unavailable\n");
     }
     try {
-      await collector.runOnce();
+      await maintenanceRun(() => collector.runOnce());
     } catch {
       process.stderr.write("Operator registry collection unavailable\n");
     }

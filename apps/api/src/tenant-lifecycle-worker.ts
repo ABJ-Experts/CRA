@@ -1,3 +1,7 @@
+import {
+  maintenanceRun,
+  maintenanceStart,
+} from "./upgrades/maintenance/maintenance-gate";
 import { Logger } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 
@@ -8,9 +12,11 @@ const delay = (milliseconds: number): Promise<void> =>
   new Promise((resolve) => setTimeout(resolve, milliseconds));
 
 async function bootstrap(): Promise<void> {
-  const app = await NestFactory.createApplicationContext(AppModule, {
-    bufferLogs: false,
-  });
+  const app = await maintenanceStart(() =>
+    NestFactory.createApplicationContext(AppModule, {
+      bufferLogs: false,
+    }),
+  );
   const logger = new Logger("TenantLifecycleWorker");
   const worker = app.get(TenantLifecycleWorker);
   const once = process.argv.includes("--once");
@@ -18,7 +24,7 @@ async function bootstrap(): Promise<void> {
   try {
     do {
       try {
-        await worker.runOnce();
+        await maintenanceRun(() => worker.runOnce());
       } catch {
         // Individual jobs persist their own safe code. A scheduler outage gets
         // no provider payload in logs and simply retries on the next cycle.

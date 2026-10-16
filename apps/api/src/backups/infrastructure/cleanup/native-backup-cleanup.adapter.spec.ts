@@ -91,6 +91,10 @@ describe("reviewed native encrypted backup cleanup", () => {
       }),
     };
     const repository = {
+      prepareProtection: jest.fn(async () => {
+        order.push("protect_metadata");
+        return plan;
+      }),
       prepare: jest.fn(
         async (
           _input: unknown,
@@ -196,8 +200,12 @@ describe("reviewed native encrypted backup cleanup", () => {
       });
       await t.adapter.cleanup(request, new AbortController().signal);
       expect(t.repository.prepare).not.toHaveBeenCalled();
+      expect(t.repository.prepareProtection).toHaveBeenCalledWith(
+        request.runId,
+        expect.any(AbortSignal),
+      );
       expect(t.transaction.commit).toHaveBeenCalled();
-      expect(t.plan.commit).not.toHaveBeenCalled();
+      expect(t.plan.commit).toHaveBeenCalled();
     },
   );
   it("rejects forged aliases and malformed versions before database work", async () => {

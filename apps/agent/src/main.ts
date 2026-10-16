@@ -1,3 +1,4 @@
+import { agentMaintenanceClosed } from "./maintenance.js";
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -24,8 +25,12 @@ export async function serve(config: ReturnType<typeof loadAgentConfig>, transpor
   process.once("SIGINT", requestStop);
   stop?.addEventListener("abort", requestStop, { once: true });
   let failures = 0;
+  let lastSuccessfulCycleAt: number | null = null;
   try {
     while (running && !stop?.aborted) {
+      if (agentMaintenanceClosed(process.env, lastSuccessfulCycleAt)) { await new Promise<void>((resolve) => setTimeout(resolve, 250)); continue; }
+      lastSuccessfulCycleAt = null;
+      agentMaintenanceClosed(process.env, null);
       let credentials: AgentCredentials = readCredentials(config);
       let cycleError: ReturnType<typeof safeErrorCode> | null = null;
       try {
@@ -60,6 +65,8 @@ export async function serve(config: ReturnType<typeof loadAgentConfig>, transpor
         failures = Math.min(failures + 1, 6);
         process.stderr.write(JSON.stringify({ event: "agent_contact_failed", code: safeErrorCode(error) }) + "\n");
       }
+      if (failures === 0 && cycleError === null) lastSuccessfulCycleAt = Date.now();
+      agentMaintenanceClosed(process.env, lastSuccessfulCycleAt);
       const delay = failures === 0 ? config.pollIntervalMs : Math.min(60_000, 1000 * 2 ** failures);
       if (running) await new Promise<void>((resolve) => setTimeout(resolve, delay));
     }

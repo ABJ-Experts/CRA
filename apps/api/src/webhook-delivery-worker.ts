@@ -1,3 +1,7 @@
+import {
+  maintenanceRun,
+  maintenanceStart,
+} from "./upgrades/maintenance/maintenance-gate";
 import { Logger } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 import { AppModule } from "./app.module";
@@ -7,9 +11,11 @@ const delay = (milliseconds: number): Promise<void> =>
 export async function runWebhookWorker(
   arguments_: readonly string[] = process.argv.slice(2),
 ): Promise<void> {
-  const app = await NestFactory.createApplicationContext(AppModule, {
-    bufferLogs: false,
-  });
+  const app = await maintenanceStart(() =>
+    NestFactory.createApplicationContext(AppModule, {
+      bufferLogs: false,
+    }),
+  );
   const logger = new Logger("WebhookDeliveryWorker");
   const worker = app.get(WebhookDeliveryWorker);
   const once = arguments_.includes("--once");
@@ -22,7 +28,7 @@ export async function runWebhookWorker(
   try {
     do {
       try {
-        await worker.tick();
+        await maintenanceRun(() => worker.tick());
       } catch {
         logger.error("Webhook delivery cycle failed safely");
       }

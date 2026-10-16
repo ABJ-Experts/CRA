@@ -69,8 +69,9 @@ describe("API bootstrap", () => {
       contentSecurityPolicy: false,
       crossOriginEmbedderPolicy: false,
     });
-    expect(app.use).toHaveBeenNthCalledWith(1, cookieMiddleware);
-    expect(app.use).toHaveBeenNthCalledWith(2, helmetMiddleware);
+    expect(app.use).toHaveBeenNthCalledWith(1, expect.any(Function));
+    expect(app.use).toHaveBeenNthCalledWith(2, cookieMiddleware);
+    expect(app.use).toHaveBeenNthCalledWith(3, helmetMiddleware);
     expect(app.enableCors).toHaveBeenCalledWith({
       origin: ["https://web.cra.test"],
       credentials: true,

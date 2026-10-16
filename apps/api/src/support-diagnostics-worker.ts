@@ -1,3 +1,7 @@
+import {
+  maintenanceRun,
+  maintenanceStart,
+} from "./upgrades/maintenance/maintenance-gate";
 import { Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { NestFactory } from "@nestjs/core";
@@ -23,12 +27,14 @@ export async function bootstrapSupportDiagnosticsWorker(
     sleep: (ms: number) => Promise<void>;
   }>,
 ): Promise<void> {
-  const context = await options.createApplicationContext();
+  const context = await maintenanceStart(() =>
+    options.createApplicationContext(),
+  );
   try {
     const worker = options.createWorker(context);
     do {
       try {
-        await worker.runOnce();
+        await maintenanceRun(() => worker.runOnce());
       } catch (error) {
         options.logger.error(
           `Diagnostic worker cycle failed code=${safeDiagnosticWorkerCode(error)}`,

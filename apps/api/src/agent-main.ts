@@ -1,3 +1,9 @@
+import {
+  pruneAgentNonces,
+  startAgentNonceMaintenance,
+} from "./upgrades/maintenance/agent-nonce-maintenance";
+import { maintenanceStart } from "./upgrades/maintenance/maintenance-gate";
+import { httpMaintenance } from "./upgrades/maintenance/http-maintenance";
 import { readFile, stat } from "node:fs/promises";
 import { constants as cryptoConstants } from "node:crypto";
 import { Logger } from "@nestjs/common";
@@ -49,6 +55,7 @@ async function bootstrap(): Promise<void> {
       },
     },
   );
+  app.use(httpMaintenance);
   app.setGlobalPrefix(API_PREFIX);
   app.useBodyParser("json", { limit: "4100kb" });
   app.set("trust proxy", false);
@@ -62,15 +69,13 @@ async function bootstrap(): Promise<void> {
     throw new Error("AGENT_INGRESS_PORT must be a TCP port");
   await app.listen(port);
   const repository = app.get(SupabaseAgentRepository);
-  const maintenance = setInterval(() => {
-    void repository.pruneExpiredNonces().catch(() => {
-      new Logger("AgentIngress").warn(
-        "Agent nonce maintenance is temporarily unavailable",
-      );
-    });
-  }, 60 * 60_000);
-  maintenance.unref();
+  if (process.env.CRA_MAINTENANCE_DIRECTORY) await pruneAgentNonces(repository);
+  startAgentNonceMaintenance(repository);
   new Logger("AgentIngress").log(`Agent ingress listening on TLS port ${port}`);
 }
 
-void bootstrap();
+export function bootstrapAgentIngress(): Promise<void> {
+  return maintenanceStart(bootstrap);
+}
+/* istanbul ignore next -- executable entry guard */
+if (require.main === module) void bootstrapAgentIngress();

@@ -1,0 +1,362 @@
+{
+  "version": 1,
+  "services": [
+    {
+      "id": "audit-export-worker",
+      "entry": "apps/api/dist/audit-export-worker.js",
+      "imageRole": "api",
+      "drain": "lease",
+      "kind": "worker"
+    },
+    {
+      "id": "audit-range-verify-worker",
+      "entry": "apps/api/dist/audit-range-verify-worker.js",
+      "imageRole": "api",
+      "drain": "lease",
+      "kind": "worker"
+    },
+    {
+      "id": "audit-siem-worker",
+      "entry": "apps/api/dist/audit-siem-worker.js",
+      "imageRole": "api",
+      "drain": "lease",
+      "kind": "worker"
+    },
+    {
+      "id": "backup-worker",
+      "entry": "apps/api/dist/backup-worker.js",
+      "imageRole": "api",
+      "drain": "lease",
+      "kind": "worker"
+    },
+    {
+      "id": "chat-vault-maintenance",
+      "entry": "apps/api/dist/chat-vault-maintenance.js",
+      "imageRole": "api",
+      "drain": "lease",
+      "kind": "worker"
+    },
+    {
+      "id": "connector-sync-worker",
+      "entry": "apps/api/dist/connector-sync-worker.js",
+      "imageRole": "api",
+      "drain": "lease",
+      "kind": "worker"
+    },
+    {
+      "id": "connector-vault-maintenance",
+      "entry": "apps/api/dist/connector-vault-maintenance.js",
+      "imageRole": "api",
+      "drain": "lease",
+      "kind": "worker"
+    },
+    {
+      "id": "evidence-deletion-cleanup-worker",
+      "entry": "apps/api/dist/evidence-deletion-cleanup-worker.js",
+      "imageRole": "api",
+      "drain": "lease",
+      "kind": "worker"
+    },
+    {
+      "id": "evidence-scan-worker",
+      "entry": "apps/api/dist/evidence-scan-worker.js",
+      "imageRole": "api",
+      "drain": "lease",
+      "kind": "worker"
+    },
+    {
+      "id": "evidence-text-extraction-worker",
+      "entry": "apps/api/dist/evidence-text-extraction-worker.js",
+      "imageRole": "api",
+      "drain": "lease",
+      "kind": "worker"
+    },
+    {
+      "id": "evidence-validity-alert-worker",
+      "entry": "apps/api/dist/evidence-validity-alert-worker.js",
+      "imageRole": "api",
+      "drain": "lease",
+      "kind": "worker"
+    },
+    {
+      "id": "evidence-watermark-export-worker",
+      "entry": "apps/api/dist/evidence-watermark-export-worker.js",
+      "imageRole": "api",
+      "drain": "lease",
+      "kind": "worker"
+    },
+    {
+      "id": "exports-worker",
+      "entry": "apps/api/dist/exports-worker.js",
+      "imageRole": "api",
+      "drain": "lease",
+      "kind": "worker"
+    },
+    {
+      "id": "finding-propagation-worker",
+      "entry": "apps/api/dist/finding-propagation-worker.js",
+      "imageRole": "api",
+      "drain": "lease",
+      "kind": "worker"
+    },
+    {
+      "id": "framework-coverage-worker",
+      "entry": "apps/api/dist/framework-coverage-worker.js",
+      "imageRole": "api",
+      "drain": "lease",
+      "kind": "worker"
+    },
+    {
+      "id": "notification-dispatch-worker",
+      "entry": "apps/api/dist/notification-dispatch-worker.js",
+      "imageRole": "api",
+      "drain": "lease",
+      "kind": "worker"
+    },
+    {
+      "id": "operator-registry-worker",
+      "entry": "apps/api/dist/operator-registry-worker.js",
+      "imageRole": "api",
+      "drain": "lease",
+      "kind": "worker"
+    },
+    {
+      "id": "product-compliance-worker",
+      "entry": "apps/api/dist/product-compliance-worker.js",
+      "imageRole": "api",
+      "drain": "lease",
+      "kind": "worker"
+    },
+    {
+      "id": "product-import-worker",
+      "entry": "apps/api/dist/product-import-worker.js",
+      "imageRole": "api",
+      "drain": "lease",
+      "kind": "worker"
+    },
+    {
+      "id": "product-retention-worker",
+      "entry": "apps/api/dist/product-retention-worker.js",
+      "imageRole": "api",
+      "drain": "lease",
+      "kind": "worker"
+    },
+    {
+      "id": "reporting-deadline-monitor-worker",
+      "entry": "apps/api/dist/reporting-deadline-monitor-worker.js",
+      "imageRole": "api",
+      "drain": "lease",
+      "kind": "worker"
+    },
+    {
+      "id": "reports-worker",
+      "entry": "apps/api/dist/reports-worker.js",
+      "imageRole": "api",
+      "drain": "lease",
+      "kind": "worker"
+    },
+    {
+      "id": "sbom-composite-worker",
+      "entry": "apps/api/dist/sbom-composite-worker.js",
+      "imageRole": "api",
+      "drain": "lease",
+      "kind": "worker"
+    },
+    {
+      "id": "sbom-diff-worker",
+      "entry": "apps/api/dist/sbom-diff-worker.js",
+      "imageRole": "api",
+      "drain": "lease",
+      "kind": "worker"
+    },
+    {
+      "id": "sbom-ingest-worker",
+      "entry": "apps/api/dist/sbom-ingest-worker.js",
+      "imageRole": "api",
+      "drain": "lease",
+      "kind": "worker"
+    },
+    {
+      "id": "sbom-quality-worker",
+      "entry": "apps/api/dist/sbom-quality-worker.js",
+      "imageRole": "api",
+      "drain": "lease",
+      "kind": "worker"
+    },
+    {
+      "id": "siem-vault-maintenance",
+      "entry": "apps/api/dist/siem-vault-maintenance.js",
+      "imageRole": "api",
+      "drain": "lease",
+      "kind": "worker"
+    },
+    {
+      "id": "supplier-document-extraction-worker",
+      "entry": "apps/api/dist/supplier-document-extraction-worker.js",
+      "imageRole": "api",
+      "drain": "lease",
+      "kind": "worker"
+    },
+    {
+      "id": "supplier-evidence-reminder-worker",
+      "entry": "apps/api/dist/supplier-evidence-reminder-worker.js",
+      "imageRole": "api",
+      "drain": "lease",
+      "kind": "worker"
+    },
+    {
+      "id": "support-diagnostics-worker",
+      "entry": "apps/api/dist/support-diagnostics-worker.js",
+      "imageRole": "api",
+      "drain": "lease",
+      "kind": "worker"
+    },
+    {
+      "id": "technical-file-declaration-worker",
+      "entry": "apps/api/dist/technical-file-declaration-worker.js",
+      "imageRole": "api",
+      "drain": "lease",
+      "kind": "worker"
+    },
+    {
+      "id": "technical-file-export-worker",
+      "entry": "apps/api/dist/technical-file-export-worker.js",
+      "imageRole": "api",
+      "drain": "lease",
+      "kind": "worker"
+    },
+    {
+      "id": "tenant-lifecycle-worker",
+      "entry": "apps/api/dist/tenant-lifecycle-worker.js",
+      "imageRole": "api",
+      "drain": "lease",
+      "kind": "worker"
+    },
+    {
+      "id": "vulnerability-feed-worker",
+      "entry": "apps/api/dist/vulnerability-feed-worker.js",
+      "imageRole": "api",
+      "drain": "lease",
+      "kind": "worker"
+    },
+    {
+      "id": "vulnerability-finding-review-notification-worker",
+      "entry": "apps/api/dist/vulnerability-finding-review-notification-worker.js",
+      "imageRole": "api",
+      "drain": "lease",
+      "kind": "worker"
+    },
+    {
+      "id": "vulnerability-kev-alert-worker",
+      "entry": "apps/api/dist/vulnerability-kev-alert-worker.js",
+      "imageRole": "api",
+      "drain": "lease",
+      "kind": "worker"
+    },
+    {
+      "id": "vulnerability-matching-worker",
+      "entry": "apps/api/dist/vulnerability-matching-worker.js",
+      "imageRole": "api",
+      "drain": "lease",
+      "kind": "worker"
+    },
+    {
+      "id": "vulnerability-reevaluation-worker",
+      "entry": "apps/api/dist/vulnerability-reevaluation-worker.js",
+      "imageRole": "api",
+      "drain": "lease",
+      "kind": "worker"
+    },
+    {
+      "id": "vulnerability-remediation-ticket-operation-worker",
+      "entry": "apps/api/dist/vulnerability-remediation-ticket-operation-worker.js",
+      "imageRole": "api",
+      "drain": "lease",
+      "kind": "worker"
+    },
+    {
+      "id": "vulnerability-triage-alert-worker",
+      "entry": "apps/api/dist/vulnerability-triage-alert-worker.js",
+      "imageRole": "api",
+      "drain": "lease",
+      "kind": "worker"
+    },
+    {
+      "id": "vulnerability-triage-note-mention-worker",
+      "entry": "apps/api/dist/vulnerability-triage-note-mention-worker.js",
+      "imageRole": "api",
+      "drain": "lease",
+      "kind": "worker"
+    },
+    {
+      "id": "vulnerability-vex-publication-worker",
+      "entry": "apps/api/dist/vulnerability-vex-publication-worker.js",
+      "imageRole": "api",
+      "drain": "lease",
+      "kind": "worker"
+    },
+    {
+      "id": "webhook-delivery-worker",
+      "entry": "apps/api/dist/webhook-delivery-worker.js",
+      "imageRole": "api",
+      "drain": "lease",
+      "kind": "worker"
+    },
+    {
+      "id": "webhook-vault-maintenance",
+      "entry": "apps/api/dist/webhook-vault-maintenance.js",
+      "imageRole": "api",
+      "drain": "lease",
+      "kind": "worker"
+    },
+    {
+      "id": "api",
+      "entry": "apps/api/dist/main.js",
+      "imageRole": "api",
+      "drain": "http",
+      "kind": "ingress"
+    },
+    {
+      "id": "agent-ingress",
+      "entry": "apps/api/dist/agent-main.js",
+      "imageRole": "api",
+      "drain": "http",
+      "kind": "ingress"
+    },
+    {
+      "id": "operator-api",
+      "entry": "apps/api/dist/operator-main.js",
+      "imageRole": "api",
+      "drain": "private",
+      "kind": "control"
+    },
+    {
+      "id": "web",
+      "entry": "apps/web",
+      "imageRole": "web",
+      "drain": "edge",
+      "kind": "ingress"
+    },
+    {
+      "id": "operator-web",
+      "entry": "apps/operator/out",
+      "imageRole": "operator",
+      "drain": "private",
+      "kind": "control"
+    },
+    {
+      "id": "agent",
+      "entry": "apps/agent/dist/main.js",
+      "imageRole": "agent",
+      "drain": "cycle",
+      "kind": "worker"
+    },
+    {
+      "id": "edge",
+      "entry": "deployment/edge.mjs",
+      "imageRole": "edge",
+      "drain": "edge",
+      "kind": "ingress"
+    }
+  ]
+}

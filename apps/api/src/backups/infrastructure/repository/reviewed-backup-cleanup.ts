@@ -1,3 +1,7 @@
+import {
+  assertUpgradeCleanupAllowed,
+  type UpgradeHoldAuthority,
+} from "../../../upgrades/infrastructure/backup/authenticated-upgrade-hold";
 import { constants } from "node:fs";
 import {
   lstat,
@@ -43,9 +47,58 @@ export class ReviewedBackupRepositoryCleanup {
   constructor(
     private readonly configuration: {
       readonly repositoryPath: string;
+      readonly upgradeHoldAuthority?: UpgradeHoldAuthority;
       readonly keyRepositories: readonly EncryptedBackupRepository[];
     },
   ) {}
+
+  /** Metadata-only retirements still share publication authority with upgrade pins. */
+  async prepareProtection(
+    runId: string,
+    signal: AbortSignal,
+  ): Promise<PreparedBackupRepositoryCleanup> {
+    this.requireId(runId);
+    signal.throwIfAborted();
+    const path = join(this.configuration.repositoryPath, ".publication.lock");
+    const lock = await open(path, "wx", 0o600).catch(() => {
+      throw new BackupExecutionError("conflict");
+    });
+    const check = () =>
+      assertUpgradeCleanupAllowed(
+        this.configuration.repositoryPath,
+        runId,
+        [],
+        this.configuration.upgradeHoldAuthority,
+      );
+    const release = async () => {
+      await lock.close();
+      await rm(path, { force: true });
+    };
+    try {
+      await lock.writeFile(JSON.stringify({ runId, kind: "cleanup" }));
+      await lock.sync();
+      await check();
+      let finished = false;
+      return {
+        commit: async (commitSignal) => {
+          if (finished) return;
+          commitSignal.throwIfAborted();
+          await check();
+          await release();
+          finished = true;
+        },
+        rollback: async (rollbackSignal) => {
+          if (finished) return;
+          rollbackSignal.throwIfAborted();
+          await release();
+          finished = true;
+        },
+      };
+    } catch (error) {
+      await release();
+      throw error;
+    }
+  }
 
   async prepare(
     request: BackupRepositoryCleanupRequest,
@@ -78,6 +131,12 @@ export class ReviewedBackupRepositoryCleanup {
     };
     try {
       await assertAuthority();
+      await assertUpgradeCleanupAllowed(
+        this.configuration.repositoryPath,
+        request.runId,
+        [],
+        this.configuration.upgradeHoldAuthority,
+      );
       const names = (
         await readdir(join(this.configuration.repositoryPath, "certificates"))
       ).filter((name) => /^[a-f0-9-]{36}\.json$/.test(name));
@@ -155,6 +214,12 @@ export class ReviewedBackupRepositoryCleanup {
       );
       if (!referenced.has(receipt.part.id)) deletable.push(receipt.part.id);
       const parts = [...new Set(deletable)];
+      await assertUpgradeCleanupAllowed(
+        this.configuration.repositoryPath,
+        request.runId,
+        parts,
+        this.configuration.upgradeHoldAuthority,
+      );
       for (const id of parts) this.requireId(id);
       await assertAuthority();
       signal.throwIfAborted();
@@ -189,6 +254,12 @@ export class ReviewedBackupRepositoryCleanup {
         commit: async (commitSignal) => {
           if (finished) return;
           commitSignal.throwIfAborted();
+          await assertUpgradeCleanupAllowed(
+            this.configuration.repositoryPath,
+            intent.runId,
+            intent.parts,
+            this.configuration.upgradeHoldAuthority,
+          );
           await this.commit(transaction, intent);
           finished = true;
           await release();
@@ -220,6 +291,36 @@ export class ReviewedBackupRepositoryCleanup {
     signal: AbortSignal,
   ): Promise<void> {
     this.requireId(runId);
+    const path = join(this.configuration.repositoryPath, ".publication.lock");
+    const lock = await open(path, "wx", 0o600).catch(
+      async (error: NodeJS.ErrnoException) => {
+        if (error.code !== "EEXIST") throw error;
+        const owner = JSON.parse(await readFile(path, "utf8")) as {
+          runId?: string;
+          kind?: string;
+        };
+        if (owner.kind !== "cleanup" || owner.runId !== runId)
+          throw new BackupExecutionError("conflict");
+        return null;
+      },
+    );
+    try {
+      if (lock) {
+        await lock.writeFile(JSON.stringify({ runId, kind: "cleanup" }));
+        await lock.sync();
+      }
+      await this.recoverLocked(runId, committed, signal);
+    } finally {
+      if (lock) await lock.close();
+      await rm(path, { force: true });
+    }
+  }
+
+  private async recoverLocked(
+    runId: string,
+    committed: boolean,
+    signal: AbortSignal,
+  ): Promise<void> {
     const root = join(this.configuration.repositoryPath, "cleanup");
     const names = await readdir(root).catch((error: NodeJS.ErrnoException) => {
       if (error.code === "ENOENT") return [];
@@ -234,23 +335,15 @@ export class ReviewedBackupRepositoryCleanup {
         await readFile(join(transaction, "intent.json"), "utf8"),
       ) as CleanupIntent;
       this.validateIntent(intent, runId);
-      if (committed) await this.commit(transaction, intent);
-      else await this.rollback(transaction, intent);
-    }
-    const lockPath = join(
-      this.configuration.repositoryPath,
-      ".publication.lock",
-    );
-    const marker = await readFile(lockPath, "utf8").catch(
-      (error: NodeJS.ErrnoException) => {
-        if (error.code === "ENOENT") return null;
-        throw error;
-      },
-    );
-    if (marker) {
-      const owner = JSON.parse(marker) as { runId: string; kind: string };
-      if (owner.runId === runId && owner.kind === "cleanup")
-        await rm(lockPath, { force: true });
+      if (committed) {
+        await assertUpgradeCleanupAllowed(
+          this.configuration.repositoryPath,
+          intent.runId,
+          intent.parts,
+          this.configuration.upgradeHoldAuthority,
+        );
+        await this.commit(transaction, intent);
+      } else await this.rollback(transaction, intent);
     }
   }
 

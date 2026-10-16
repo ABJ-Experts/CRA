@@ -1,3 +1,7 @@
+import {
+  maintenanceRun,
+  maintenanceStart,
+} from "./upgrades/maintenance/maintenance-gate";
 import { Logger } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 import { AppModule } from "./app.module";
@@ -17,14 +21,14 @@ export async function bootstrapAuditRangeWorker(
     sleep: (ms: number) => Promise<void>;
   }>,
 ): Promise<void> {
-  const context = await options.createContext();
+  const context = await maintenanceStart(() => options.createContext());
   const once = options.argv.includes("--once");
   try {
     const worker = options.createWorker(context);
     do {
       let delay = 1000;
       try {
-        const outcome = await worker.runOnce();
+        const outcome = await maintenanceRun(() => worker.runOnce());
         delay = outcome === "processed" ? 0 : 1000;
       } catch {
         options.logger.error("Audit range worker cycle unavailable");

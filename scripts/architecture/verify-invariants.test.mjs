@@ -1006,6 +1006,51 @@ test("rejects tenant role decorators as operator authorization", async (t) => {
   assert.ok(hasRule(await verifyInvariants(root), RULE.routeAuthorization));
 });
 
+test("accepts deployment execution only on its isolated private upgrade controller", async (t) => {
+  const root = await temporaryRoot(t);
+  await writePassingFixture(root);
+  await write(root, "apps/api/src/upgrades/operator-upgrades.controller.ts", [
+    'import { upgradeHistorySchema } from "@repo/contracts/upgrades/schemas";',
+    '@Controller("operator/instances/:instanceId/upgrades")',
+    '@OperatorScoped("Fresh instance-bound mTLS deployment action grant")',
+    'export class OperatorUpgradesController {',
+    ' @Get("history") @ZodResponse(upgradeHistorySchema)',
+    ' history() { return {}; }',
+    '}',
+  ].join("\n"));
+  assert.deepEqual(await verifyInvariants(root), []);
+});
+
+test("rejects tenant role authority on private deployment execution", async (t) => {
+  const root = await temporaryRoot(t);
+  await writePassingFixture(root);
+  await write(root, "apps/api/src/upgrades/operator-upgrades.controller.ts", [
+    'import { upgradeHistorySchema } from "@repo/contracts/upgrades/schemas";',
+    '@Controller("operator/instances/:instanceId/upgrades")',
+    '@RequireRole("owner")',
+    'export class OperatorUpgradesController {',
+    ' @Get("history") @ZodResponse(upgradeHistorySchema)',
+    ' history() { return {}; }',
+    '}',
+  ].join("\n"));
+  assert.ok(hasRule(await verifyInvariants(root), RULE.routeAuthorization));
+});
+
+test("rejects deployment scope on tenant-facing upgrade controllers", async (t) => {
+  const root = await temporaryRoot(t);
+  await writePassingFixture(root);
+  await write(root, "apps/api/src/upgrades/tenant-upgrades.controller.ts", [
+    'import { upgradeHistorySchema } from "@repo/contracts/upgrades/schemas";',
+    '@Controller("upgrades")',
+    '@OperatorScoped("Attempted tenant deployment authority")',
+    'export class TenantUpgradesController {',
+    ' @Get("history") @ZodResponse(upgradeHistorySchema)',
+    ' history() { return {}; }',
+    '}',
+  ].join("\n"));
+  assert.ok(hasRule(await verifyInvariants(root), RULE.routeAuthorization));
+});
+
 test("accepts the repository invariants", async () => {
   assert.deepEqual(await verifyInvariants(process.cwd()), []);
 });

@@ -1,9 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-node --test tests/prepare-legacy-sql.test.mjs
+container_name="${CRA_SQL_TEST_CONTAINER:-supabase_db_cra}"
+if [[ ! "$container_name" =~ ^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,127}$ ]]; then
+  echo "CRA_SQL_TEST_CONTAINER must be a Docker container name" >&2
+  exit 1
+fi
 
-container_name="supabase_db_cra"
+node --test tests/prepare-legacy-sql.test.mjs
 test_files=(tests/*.test.sql)
 tap_output=$(mktemp)
 suite_input=$(mktemp)

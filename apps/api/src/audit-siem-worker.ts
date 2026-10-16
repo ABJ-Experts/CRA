@@ -1,3 +1,7 @@
+import {
+  maintenanceRun,
+  maintenanceStart,
+} from "./upgrades/maintenance/maintenance-gate";
 import { Logger } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 import { AppModule } from "./app.module";
@@ -18,14 +22,17 @@ export async function bootstrapSiemWorker(
     sleep: (milliseconds: number) => Promise<void>;
   }>,
 ) {
-  const context = await options.createContext();
+  const context = await maintenanceStart(() => options.createContext());
   try {
     const worker = options.createWorker(context);
     const once = options.argv.includes("--once");
     do {
       let delay = 1000;
       try {
-        delay = (await worker.runOnce()) === "processed" ? 0 : 1000;
+        delay =
+          (await maintenanceRun(() => worker.runOnce())) === "processed"
+            ? 0
+            : 1000;
       } catch {
         options.logger.error("SIEM worker cycle unavailable");
       }

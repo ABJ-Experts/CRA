@@ -1,3 +1,6 @@
+import { UpgradeUseCases } from "../upgrades/application/upgrade-use-cases";
+import type { UpgradeControlPort } from "../upgrades/application/upgrade-control.port";
+import { OperatorUpgradesController } from "../upgrades/operator-upgrades.controller";
 import {
   Module,
   type INestApplication,
@@ -41,12 +44,19 @@ export interface OperatorListenerConfig {
   grantsPath: string;
   staticRoot: string;
 }
-@Module({ controllers: [OperatorController, OperatorBackupsController] })
+@Module({
+  controllers: [
+    OperatorController,
+    OperatorBackupsController,
+    OperatorUpgradesController,
+  ],
+})
 export class OperatorIngressModule {}
 export async function createOperatorApplication(
   config: OperatorListenerConfig,
   reader: RegistryReader,
   backupControl?: BackupControlPort,
+  upgradeControl?: UpgradeControlPort,
 ): Promise<INestApplication> {
   z.uuid().parse(config.instanceId);
   if (!privateAddress(config.host))
@@ -65,6 +75,20 @@ export async function createOperatorApplication(
     {
       module: OperatorIngressModule,
       providers: [
+        {
+          provide: UpgradeUseCases,
+          useValue: new UpgradeUseCases(
+            config.instanceId,
+            upgradeControl ?? {
+              execute: () =>
+                Promise.reject(
+                  new ServiceUnavailableException(
+                    "Upgrade control unavailable",
+                  ),
+                ),
+            },
+          ),
+        },
         { provide: OperatorRegistry, useValue: new OperatorRegistry(reader) },
         { provide: OPERATOR_INSTANCE_ID, useValue: config.instanceId },
         {

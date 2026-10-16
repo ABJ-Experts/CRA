@@ -38,6 +38,8 @@ export default tseslint.config(
       "test/m15-03*.mjs",
       "test/m15-04*.mjs",
       "test/m15-05*.mjs",
+      "test/m15-06-operator-browser-server.mjs",
+      "test/m15-06-operator-browser-server.spec.mjs",
     ],
     extends: [tseslint.configs.disableTypeChecked],
     rules: {

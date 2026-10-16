@@ -19,6 +19,8 @@ docs/architecture/*
 !docs/architecture/m15-01*.json
 !docs/architecture/m15-02*.md
 !docs/architecture/m15-02*.json
+!docs/architecture/m15-06*.md
+!docs/architecture/m15-06*.json
 !docs/architecture/m15-02-evidence/
 docs/architecture/m15-02-evidence/*
 !docs/architecture/m15-02-evidence/*.png
@@ -32,6 +34,7 @@ docs/superpowers/plans/*
 !docs/superpowers/plans/2026-10-09-m14-03*.md
 !docs/superpowers/plans/2026-10-13-m15-01*.md
 !docs/superpowers/plans/2026-10-13-m15-02*.md
+!docs/superpowers/plans/2026-10-15-m15-06*.md
 !docs/superpowers/plans/2026-10-13-local-storage-export-recovery.md
 
 # Local env files
@@ -123,4 +126,9 @@ docs/architecture/evidence/m15-05/*
 !docs/architecture/evidence/m15-05/*.png
 !docs/architecture/evidence/m15-05/*.json
 !docs/architecture/evidence/m15-05/*.md
+!docs/architecture/evidence/m15-06/
+docs/architecture/evidence/m15-06/*
+!docs/architecture/evidence/m15-06/*.png
+!docs/architecture/evidence/m15-06/*.json
+!docs/architecture/evidence/m15-06/*.md
 !docs/superpowers/plans/2026-10-14-m15-05-encrypted-backups.md

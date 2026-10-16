@@ -1,3 +1,8 @@
+import {
+  maintenanceRun,
+  maintenanceStart,
+  configureMaintenanceLanes,
+} from "./upgrades/maintenance/maintenance-gate";
 import { Logger } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 import { randomUUID } from "node:crypto";
@@ -45,7 +50,15 @@ export async function bootstrapNotificationDispatchWorker(
     sleep: (milliseconds: number) => Promise<void>;
   }>,
 ): Promise<void> {
-  const context = await options.createApplicationContext();
+  configureMaintenanceLanes([
+    "dispatch",
+    ...(options.createDigestWorker ? ["digest"] : []),
+    ...(options.createBurstWorker ? ["burst"] : []),
+    ...(options.createChatWorker ? ["chat"] : []),
+  ]);
+  const context = await maintenanceStart(() =>
+    options.createApplicationContext(),
+  );
   const once = options.argv.includes("--once");
   try {
     const worker = options.createWorker(context);
@@ -62,10 +75,14 @@ export async function bootstrapNotificationDispatchWorker(
     } catch {
       options.logger.error("Chat notification worker unavailable");
     }
-    const runLoop = async (runOnce: () => Promise<void>, error: string) => {
+    const runLoop = async (
+      laneId: string,
+      runOnce: () => Promise<void>,
+      error: string,
+    ) => {
       do {
         try {
-          await runOnce();
+          await maintenanceRun(() => runOnce(), laneId);
         } catch {
           options.logger.error(error);
         }
@@ -74,23 +91,27 @@ export async function bootstrapNotificationDispatchWorker(
     };
     await Promise.all([
       runLoop(
+        "dispatch",
         () => worker.runOnce(),
         "Notification dispatch cycle failed safely",
       ),
       digestWorker
         ? runLoop(
+            "digest",
             () => digestWorker.runOnce(),
             "Notification digest cycle failed safely",
           )
         : undefined,
       burstWorker
         ? runLoop(
+            "burst",
             () => burstWorker.runOnce(),
             "Notification burst cycle failed safely",
           )
         : undefined,
       chatWorker
         ? runLoop(
+            "chat",
             () => chatWorker.runOnce(),
             "Chat notification cycle failed safely",
           )

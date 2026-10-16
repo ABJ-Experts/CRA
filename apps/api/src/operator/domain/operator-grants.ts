@@ -1,5 +1,13 @@
 import { z } from "zod";
 import { backupActionSchema } from "@repo/contracts/backups/schemas";
+import { upgradeActionSchema } from "@repo/contracts/upgrades/schemas";
+const upgradeScopeSchema = z.strictObject({
+  instanceId: z.uuid(),
+  actions: z
+    .array(upgradeActionSchema)
+    .max(4)
+    .refine((actions) => new Set(actions).size === actions.length),
+});
 const tenantScopeSchema = z.strictObject({
   instanceId: z.uuid(),
   tenantIds: z
@@ -25,9 +33,15 @@ const grantSchema = z
       .refine((ids) => new Set(ids).size === ids.length),
     tenantScopes: z.array(tenantScopeSchema).max(500),
     backupScopes: z.array(backupScopeSchema).max(500).default([]),
+    upgradeScopes: z.array(upgradeScopeSchema).max(500).default([]),
   })
   .refine(
     (grant) =>
+      new Set(grant.upgradeScopes.map((scope) => scope.instanceId)).size ===
+        grant.upgradeScopes.length &&
+      grant.upgradeScopes.every((scope) =>
+        grant.instanceIds.includes(scope.instanceId),
+      ) &&
       new Set(grant.tenantScopes.map((scope) => scope.instanceId)).size ===
         grant.tenantScopes.length &&
       new Set(grant.backupScopes.map((scope) => scope.instanceId)).size ===
@@ -51,9 +65,10 @@ export const grantsSchema = z
   );
 export type OperatorIdentity = Omit<
   z.output<typeof grantSchema>,
-  "backupScopes"
+  "backupScopes" | "upgradeScopes"
 > & {
   backupScopes?: z.output<typeof grantSchema>["backupScopes"];
+  upgradeScopes?: z.output<typeof grantSchema>["upgradeScopes"];
   revision: string;
 };
 export function operatorTenantIds(

@@ -150,6 +150,27 @@ Never commit `.temp/`, `.branches/`, or any `.env` file. `config.toml` is
 committed, so provider secrets there must use `env(VAR_NAME)` indirection —
 never a literal value.
 
+## Selecting an isolated SQL test database
+
+`tests/run-sql-tests.sh` accepts `CRA_SQL_TEST_CONTAINER` as an optional Docker
+container **name**, never a command. The default remains `supabase_db_cra`.
+Use a separately provisioned schema-only disposable clone for verification that
+must not touch the original stack:
+
+```bash
+CRA_SQL_TEST_CONTAINER=cra_m15_06_sql_20261015b pnpm --filter infrastructure test
+```
+
+The selector rejects whitespace, shell syntax, leading flags and path separators
+before invoking tools. It changes only the selected container; all SQL test files,
+TAP failure checks and SQL assertions still run. The runner does not provision,
+reset, clone or clean up a database. The selection tests use a local fake Docker
+executable and never connect to a database:
+
+```bash
+node --test apps/infrastructure/tests/sql-test-container.test.mjs
+```
+
 ## Terraform
 
 See `terraform/README.md`. Nothing there yet.

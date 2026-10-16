@@ -1,3 +1,7 @@
+import {
+  maintenanceRun,
+  maintenanceStart,
+} from "./upgrades/maintenance/maintenance-gate";
 import { LicensingService } from "./licensing/application/licensing.service";
 import { Logger } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
@@ -29,12 +33,12 @@ export async function bootstrapReportsWorker(
     logger: Pick<Logger, "error">;
   }>,
 ): Promise<void> {
-  const context = await options.context();
+  const context = await maintenanceStart(() => options.context());
   try {
     const worker = options.worker(context);
     do {
       try {
-        await worker.runOnce();
+        await maintenanceRun(() => worker.runOnce());
       } catch (error) {
         options.logger.error(
           `Scheduled reports worker failed code=${safeReportWorkerFailure(error)}`,

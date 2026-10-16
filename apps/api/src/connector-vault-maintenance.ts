@@ -1,3 +1,4 @@
+import { maintenanceRun } from "./upgrades/maintenance/maintenance-gate";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 
@@ -53,21 +54,24 @@ export async function runConnectorVaultMaintenance(
   process.once("SIGTERM", interrupt);
   try {
     const legacyKey = environment.CONNECTOR_SECRET_ENCRYPTION_KEY;
-    const result = await maintainConnectorVault(
-      new SupabaseConnectorVaultMaintenanceStore(client),
-      vault,
-      { ...options, signal: abort.signal },
-      legacyKey
-        ? (ciphertext) =>
-            decryptLegacyConnectorPgp(ciphertext, legacyKey, {
-              binary: environment.CONNECTOR_VAULT_GPG_BINARY,
-              signal: abort.signal,
-            })
-        : undefined,
+    const result = await maintenanceRun(() =>
+      maintainConnectorVault(
+        new SupabaseConnectorVaultMaintenanceStore(client),
+        vault,
+        { ...options, signal: abort.signal },
+        legacyKey
+          ? (ciphertext) =>
+              decryptLegacyConnectorPgp(ciphertext, legacyKey, {
+                binary: environment.CONNECTOR_VAULT_GPG_BINARY,
+                signal: abort.signal,
+              })
+          : undefined,
+      ),
     );
     process.stdout.write(
       `${JSON.stringify({ ...result, keyReferenceScope: "active_ciphertext_before_rotation", retentionWarning: "Retain keys referenced by command fingerprints and backups; this report does not authorize key retirement." })}\n`,
     );
+    if (!result) return;
     if (
       result.failed ||
       result.conflicts ||

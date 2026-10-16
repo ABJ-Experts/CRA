@@ -1,3 +1,4 @@
+import { loadUpgradeControlRuntime } from "./upgrades/infrastructure/control/upgrade-control-runtime";
 import { NarrowBackupControlClient } from "./backups/infrastructure/backup-control.client";
 import { loadOperatorRuntime } from "./operator/operator-runtime";
 import { createOperatorApplication } from "./operator/operator-listener";
@@ -23,6 +24,7 @@ export async function bootstrapOperator(
           config.projectApiKey,
         )
       : undefined,
+    await loadUpgradeControlRuntime(env),
   );
   app.enableShutdownHooks();
   await app.listen(config.listener.port, config.listener.host);

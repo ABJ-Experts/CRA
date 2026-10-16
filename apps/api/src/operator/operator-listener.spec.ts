@@ -1,3 +1,4 @@
+import { UpgradeControlError } from "../upgrades/application/upgrade-supervisor.port";
 import { mkdtemp, readFile, writeFile, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
@@ -13,16 +14,19 @@ import { TLSSocket } from "node:tls";
 import type { INestApplication } from "@nestjs/common";
 const instanceId = "20000000-0000-4000-8000-000000000001";
 const principalId = "10000000-0000-4000-8000-000000000001";
+import { OperatorUpgradesController } from "../upgrades/operator-upgrades.controller";
 import { OperatorBackupsController } from "../backups/operator-backups.controller";
 import { OperatorController } from "./operator.controller";
 it("exposes the private controller through only its dedicated static module graph", () => {
   expect(Reflect.getMetadata("controllers", OperatorIngressModule)).toEqual([
     OperatorController,
     OperatorBackupsController,
+    OperatorUpgradesController,
   ]);
 });
 describe("real mTLS private operator composition", () => {
   let successfulReads = false;
+  let upgradeStatus: 401 | 403 | 409 | 503 = 503;
   let directory: string;
   let app: INestApplication;
   let ca: Buffer;
@@ -151,6 +155,8 @@ describe("real mTLS private operator composition", () => {
           );
         },
       },
+      undefined,
+      { execute: () => Promise.reject(new UpgradeControlError(upgradeStatus)) },
     );
     await app.listen(0, "127.0.0.1");
     url = await app.getUrl();
@@ -204,6 +210,58 @@ describe("real mTLS private operator composition", () => {
       }),
     ).rejects.toThrow();
     anonymous.destroy();
+  });
+  it("denies deployment authority to metadata-only certificates and validates upgrade queries", async () => {
+    expect(
+      (
+        await get(
+          `/api/v1/operator/instances/${instanceId}/upgrades/capabilities`,
+        )
+      ).status,
+    ).toBe(404);
+    expect(
+      (
+        await get(
+          `/api/v1/operator/instances/${instanceId}/upgrades/media?path=forged`,
+        )
+      ).status,
+    ).toBe(400);
+  });
+  it("preserves private control conflict and unavailable statuses through real mTLS ingress", async () => {
+    const path = join(directory, "grants.json");
+    const original = await readFile(path);
+    const mount = JSON.parse(original.toString()) as {
+      revision: string;
+      grants: Record<string, unknown>[];
+    };
+    await writeFile(
+      path,
+      JSON.stringify({
+        ...mount,
+        grants: mount.grants.map((grant) => ({
+          ...grant,
+          upgradeScopes: [{ instanceId, actions: ["upgrades.view"] }],
+        })),
+      }),
+    );
+    try {
+      for (const status of [401, 403, 409, 503] as const) {
+        upgradeStatus = status;
+        const response = await get(
+          `/api/v1/operator/instances/${instanceId}/upgrades/capabilities`,
+        );
+        expect(response.status).toBe(status);
+        expect(JSON.parse(response.body)).toMatchObject({
+          message:
+            status === 503
+              ? "Something went wrong. Please try again."
+              : "Upgrade control unavailable",
+        });
+        expect(response.body).not.toContain("stack");
+      }
+    } finally {
+      await writeFile(path, original);
+    }
   });
   it("serves only scoped operator routes and redacts audit failures", async () => {
     expect(

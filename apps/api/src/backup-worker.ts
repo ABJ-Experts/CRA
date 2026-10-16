@@ -1,3 +1,4 @@
+import { maintenanceRun } from "./upgrades/maintenance/maintenance-gate";
 import { z } from "zod";
 import { backupFailure } from "./backups/domain/backup-failure";
 import { createHash, randomUUID } from "node:crypto";
@@ -92,7 +93,7 @@ export async function bootstrapBackupWorker(
   let verificationLane: Promise<void> | null = null;
   const tick = async () => {
     if (stopped || ticking) return;
-    ticking = (async () => {
+    ticking = maintenanceRun(async () => {
       if (Date.now() - reconciledAt > 60_000) {
         const reconciliationSignal = AbortSignal.any([
           shutdown.signal,
@@ -279,8 +280,8 @@ export async function bootstrapBackupWorker(
         }
       }
       if (!cleanupLane)
-        cleanupLane = cleanup
-          .runOnce(shutdown.signal)
+        cleanupLane = maintenanceRun(() => cleanup.runOnce(shutdown.signal))
+          .then(() => undefined)
           .catch(() => {
             process.stderr.write(
               "Reviewed backup cleanup unavailable; retained intent requires review\n",
@@ -290,20 +291,25 @@ export async function bootstrapBackupWorker(
             cleanupLane = null;
           });
       if (!captureLane)
-        captureLane = worker
-          .runOnce("capture", shutdown.signal)
+        captureLane = maintenanceRun(() =>
+          worker.runOnce("capture", shutdown.signal),
+        )
+          .then(() => undefined)
           .catch(report)
           .finally(() => {
             captureLane = null;
           });
       if (!verificationLane)
-        verificationLane = worker
-          .runOnce("verification", shutdown.signal)
+        verificationLane = maintenanceRun(() =>
+          worker.runOnce("verification", shutdown.signal),
+        )
+          .then(() => undefined)
           .catch(report)
           .finally(() => {
             verificationLane = null;
           });
-    })()
+    })
+      .then(() => undefined)
       .catch(report)
       .finally(() => {
         ticking = null;

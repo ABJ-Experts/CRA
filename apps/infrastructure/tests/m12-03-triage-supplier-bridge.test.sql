@@ -39,6 +39,7 @@ declare
   v_m9_revoked uuid := gen_random_uuid();
   v_m9_unavailable uuid := gen_random_uuid();
   v_supplier_delivery uuid := gen_random_uuid();
+  v_supplier_scheduled_for timestamptz;
   v_m9 record;
   v_m9_again record;
   v_m9_dispatch uuid;
@@ -145,11 +146,16 @@ begin
     owner_user_id,scheduled_for,next_attempt_at)
   values(v_m9_delivery,v_org,v_request.request_id,v_request.revision_id,v_request.due_at,48,'owner','owner_escalation',
     v_request.internal_owner_user_id,clock_timestamp()-interval '3 days',clock_timestamp()-interval '1 minute');
+  -- Claim this fixture before older seeded reminders without changing their state.
+  select least(clock_timestamp(),min(d.scheduled_for))-interval '1 second'
+    into v_supplier_scheduled_for
+    from public.supplier_evidence_reminder_deliveries d
+    where d.organization_id=v_org and d.recipient_kind='supplier';
   insert into public.supplier_evidence_reminder_deliveries(
     id,organization_id,request_id,revision_id,due_at_snapshot,offset_hours,recipient_kind,event_kind,
     scheduled_for,next_attempt_at)
   values(v_supplier_delivery,v_org,v_request.request_id,v_request.revision_id,v_request.due_at,-25,'supplier','supplier_reminder',
-    clock_timestamp()-interval '2 days',clock_timestamp()-interval '1 minute');
+    v_supplier_scheduled_for,clock_timestamp()-interval '1 minute');
   select * into v_m9 from public.bridge_supplier_owner_notification_dispatches_atomic(v_org,100);
   perform pg_temp.check('M9 internal owner bridges without supplier recipient',v_m9.outcome='bridged'
     and exists(select 1 from public.notification_dispatches d where d.organization_id=v_org
@@ -160,6 +166,7 @@ begin
   select public.claim_supplier_evidence_reminder_delivery_atomic(v_org,gen_random_uuid(),120) into v_legacy_m9;
   perform pg_temp.check('unified M9 retains external supplier legacy delivery',
     v_legacy_m9->>'outcome'='claimed' and v_legacy_m9->>'eventKind'='supplier_reminder'
+    and v_legacy_m9->>'deliveryId'=v_supplier_delivery::text
     and not exists(select 1 from public.supplier_evidence_reminder_deliveries d
       where d.organization_id=v_org and d.id=v_m9_delivery and d.state='leased'));
   select * into v_m9_again from public.bridge_supplier_owner_notification_dispatches_atomic(v_org,100);

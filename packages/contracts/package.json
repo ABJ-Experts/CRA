@@ -382,6 +382,18 @@
     "./backups/types": {
       "types": "./dist/backups/types/index.d.ts",
       "default": "./dist/backups/types/index.js"
+    },
+    "./upgrades": {
+      "types": "./dist/upgrades/index.d.ts",
+      "default": "./dist/upgrades/index.js"
+    },
+    "./upgrades/schemas": {
+      "types": "./dist/upgrades/schemas/index.d.ts",
+      "default": "./dist/upgrades/schemas/index.js"
+    },
+    "./upgrades/types": {
+      "types": "./dist/upgrades/types/index.d.ts",
+      "default": "./dist/upgrades/types/index.js"
     }
   },
   "files": [

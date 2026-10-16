@@ -1,3 +1,4 @@
+import { maintenanceRun } from "./upgrades/maintenance/maintenance-gate";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { parseConnectorVaultMaintenanceArguments } from "./connector-vault-maintenance";
@@ -24,14 +25,17 @@ export async function runWebhookVaultMaintenance(
   process.once("SIGINT", interrupt);
   process.once("SIGTERM", interrupt);
   try {
-    const result = await maintainConnectorVault(
-      new SupabaseWebhookVaultMaintenanceStore(client),
-      vault,
-      { ...options, signal: abort.signal },
+    const result = await maintenanceRun(() =>
+      maintainConnectorVault(
+        new SupabaseWebhookVaultMaintenanceStore(client),
+        vault,
+        { ...options, signal: abort.signal },
+      ),
     );
     process.stdout.write(
       `${JSON.stringify({ ...result, keyReferenceScope: "active_and_previous_ciphertext_before_rotation", retentionWarning: "Retain keys referenced by command fingerprints and backups; this report does not authorize key retirement." })}\n`,
     );
+    if (!result) return;
     if (
       result.failed ||
       result.conflicts ||

@@ -340,3 +340,36 @@ it("protects the SIEM integration route through the existing connector prefix", 
   );
   expect(result.headers.get("location")).toContain("/sign-in");
 });
+
+describe("runtime Supabase trust origin", () => {
+  it("uses the server runtime internal origin for JWKS and issuer across deployments", async () => {
+    vi.stubEnv("SUPABASE_INTERNAL_URL", "http://gateway:8000///");
+    vi.stubEnv(
+      "NEXT_PUBLIC_SUPABASE_URL",
+      "https://build-origin.example.invalid",
+    );
+    vi.stubEnv("SUPABASE_URL", "http://other-runtime:8000");
+    jose.decodeProtectedHeader.mockReturnValue({ alg: "ES256" });
+    const { inspectToken } = await loadMiddleware();
+    const token = tokenWithExpiry(Math.floor(Date.now() / 1000) + 60, "ES256");
+    await expect(inspectToken(token)).resolves.toBe("valid");
+    expect(jose.createRemoteJWKSet).toHaveBeenCalledWith(
+      new URL("http://gateway:8000/auth/v1/.well-known/jwks.json"),
+    );
+    expect(jose.jwtVerify).toHaveBeenCalledWith(token, "test-jwks", {
+      issuer: "http://gateway:8000/auth/v1",
+    });
+  });
+  it("preserves the public development origin when no internal origin is configured", async () => {
+    vi.stubEnv("SUPABASE_INTERNAL_URL", undefined);
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "http://127.0.0.1:55421/");
+    vi.stubEnv("SUPABASE_URL", "http://other-runtime:8000");
+    jose.decodeProtectedHeader.mockReturnValue({ alg: "RS256" });
+    const { inspectToken } = await loadMiddleware();
+    const token = tokenWithExpiry(Math.floor(Date.now() / 1000) + 60, "RS256");
+    await expect(inspectToken(token)).resolves.toBe("valid");
+    expect(jose.jwtVerify).toHaveBeenCalledWith(token, "test-jwks", {
+      issuer: "http://127.0.0.1:55421/auth/v1",
+    });
+  });
+});

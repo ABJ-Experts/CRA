@@ -381,3 +381,131 @@ describe("notification dispatch process", () => {
     );
   });
 });
+describe("managed notification lane readiness", () => {
+  it.each(["burst", "chat"] as const)(
+    "retains a configured %s factory failure as unhealthy",
+    async (lane) => {
+      jest.resetModules();
+      jest.useFakeTimers();
+      const fs = jest.requireActual<typeof import("node:fs")>("node:fs"),
+        path = jest.requireActual<typeof import("node:path")>("node:path"),
+        os = jest.requireActual<typeof import("node:os")>("node:os");
+      const directory = fs.mkdtempSync(
+        path.join(os.tmpdir(), "cra-notification-lanes-"),
+      );
+      const original = { ...process.env };
+      try {
+        Object.assign(process.env, {
+          CRA_MAINTENANCE_DIRECTORY: directory,
+          CRA_MAINTENANCE_ACK_DIRECTORY: directory,
+          CRA_SERVICE_ID: "notification-dispatch-worker",
+          CRA_IMAGE_ID: `sha256:${"a".repeat(64)}`,
+        });
+        fs.writeFileSync(
+          path.join(directory, "request.json"),
+          JSON.stringify({
+            version: 1,
+            generation: "12345678-1234-4234-8234-123456789abc",
+            closed: false,
+          }),
+        );
+        const module = jest.requireActual<
+            typeof import("./notification-dispatch-worker")
+          >("./notification-dispatch-worker"),
+          error = jest.fn(),
+          dispatch = jest.fn().mockResolvedValue(undefined),
+          digest = jest.fn().mockResolvedValue(undefined);
+        await module.bootstrapNotificationDispatchWorker({
+          argv: ["--once"],
+          createApplicationContext: () =>
+            Promise.resolve({
+              get: jest.fn(),
+              close: jest.fn().mockResolvedValue(undefined),
+            }),
+          createWorker: () => ({ runOnce: dispatch }) as never,
+          createDigestWorker: () => ({ runOnce: digest }) as never,
+          ...(lane === "burst"
+            ? {
+                createBurstWorker: () => {
+                  throw new Error("configured burst unavailable");
+                },
+              }
+            : {
+                createChatWorker: () => {
+                  throw new Error("configured chat unavailable");
+                },
+              }),
+          logger: { error },
+          sleep: jest.fn(),
+        });
+        expect(dispatch).toHaveBeenCalledTimes(1);
+        expect(digest).toHaveBeenCalledTimes(1);
+        expect(error).toHaveBeenCalledWith(
+          lane === "burst"
+            ? "Notification burst worker unavailable"
+            : "Chat notification worker unavailable",
+        );
+        expect(
+          JSON.parse(
+            fs.readFileSync(path.join(directory, "live.json"), "utf8"),
+          ),
+        ).toMatchObject({ dependenciesReady: false });
+      } finally {
+        process.env = original;
+        jest.useRealTimers();
+        jest.resetModules();
+        fs.rmSync(directory, { recursive: true, force: true });
+      }
+    },
+  );
+  it("counts only provided lane factories and allows a healthy dispatch-only installation", async () => {
+    jest.resetModules();
+    jest.useFakeTimers();
+    const fs = jest.requireActual<typeof import("node:fs")>("node:fs"),
+      path = jest.requireActual<typeof import("node:path")>("node:path"),
+      os = jest.requireActual<typeof import("node:os")>("node:os");
+    const directory = fs.mkdtempSync(
+      path.join(os.tmpdir(), "cra-notification-single-"),
+    );
+    const original = { ...process.env };
+    try {
+      Object.assign(process.env, {
+        CRA_MAINTENANCE_DIRECTORY: directory,
+        CRA_MAINTENANCE_ACK_DIRECTORY: directory,
+        CRA_SERVICE_ID: "notification-dispatch-worker",
+        CRA_IMAGE_ID: `sha256:${"a".repeat(64)}`,
+      });
+      fs.writeFileSync(
+        path.join(directory, "request.json"),
+        JSON.stringify({
+          version: 1,
+          generation: "12345678-1234-4234-8234-123456789abc",
+          closed: false,
+        }),
+      );
+      const module = jest.requireActual<
+        typeof import("./notification-dispatch-worker")
+      >("./notification-dispatch-worker");
+      await module.bootstrapNotificationDispatchWorker({
+        argv: ["--once"],
+        createApplicationContext: () =>
+          Promise.resolve({
+            get: jest.fn(),
+            close: jest.fn().mockResolvedValue(undefined),
+          }),
+        createWorker: () =>
+          ({ runOnce: jest.fn().mockResolvedValue(undefined) }) as never,
+        logger: { error: jest.fn() },
+        sleep: jest.fn(),
+      });
+      expect(
+        JSON.parse(fs.readFileSync(path.join(directory, "live.json"), "utf8")),
+      ).toMatchObject({ dependenciesReady: true });
+    } finally {
+      process.env = original;
+      jest.useRealTimers();
+      jest.resetModules();
+      fs.rmSync(directory, { recursive: true, force: true });
+    }
+  });
+});

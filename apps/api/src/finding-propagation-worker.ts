@@ -1,3 +1,7 @@
+import {
+  maintenanceRun,
+  maintenanceStart,
+} from "./upgrades/maintenance/maintenance-gate";
 import { Logger } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 
@@ -8,9 +12,11 @@ const delay = (milliseconds: number): Promise<void> =>
   new Promise((resolve) => setTimeout(resolve, milliseconds));
 
 async function bootstrap(): Promise<void> {
-  const app = await NestFactory.createApplicationContext(AppModule, {
-    bufferLogs: false,
-  });
+  const app = await maintenanceStart(() =>
+    NestFactory.createApplicationContext(AppModule, {
+      bufferLogs: false,
+    }),
+  );
   const logger = new Logger("FindingPropagationWorker");
   const worker = app.get(FindingPropagationWorker);
   const once = process.argv.includes("--once");
@@ -18,7 +24,7 @@ async function bootstrap(): Promise<void> {
   try {
     do {
       try {
-        await worker.runOnce();
+        await maintenanceRun(() => worker.runOnce());
       } catch {
         // Job leases and graph-event leases remain durable. Keep logs free of
         // finding identifiers, evidence, and confidential product structure.
