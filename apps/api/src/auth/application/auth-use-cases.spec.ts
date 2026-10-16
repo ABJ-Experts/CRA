@@ -324,7 +324,7 @@ describe("RecoverMfaUseCase", () => {
       }),
     ).resolves.toEqual({
       ok: false,
-      error: { code: "auth_unavailable" },
+      error: { code: "mfa_recovery_uncertain" },
     });
     expect(repository.fail).toHaveBeenCalledWith(
       OPERATION_ID,
@@ -333,6 +333,26 @@ describe("RecoverMfaUseCase", () => {
     );
     expect(repository.markFactorsRemoved).not.toHaveBeenCalled();
     expect(repository.complete).not.toHaveBeenCalled();
+  });
+
+  it("reports uncertainty when a malformed later factor follows deletion", async () => {
+    const repository = recoveryRepository();
+    const identity = identityProvider({
+      listMfaFactors: jest
+        .fn()
+        .mockResolvedValue([{ id: "factor-1" }, { id: "" }]),
+    });
+    await expect(
+      new RecoverMfaUseCase(repository, identity, hasher, delay).execute({
+        userId: USER_ID,
+        authUserId: AUTH_USER_ID,
+        code: "ABCD-EF12",
+      }),
+    ).resolves.toEqual({
+      ok: false,
+      error: { code: "mfa_recovery_uncertain" },
+    });
+    expect(identity.deleteMfaFactor).toHaveBeenCalledTimes(1);
   });
 
   it("resumes after failure and skips provider work after factors were removed", async () => {
@@ -422,8 +442,72 @@ describe("RecoverMfaUseCase", () => {
       }),
     ).resolves.toEqual({
       ok: false,
-      error: { code: "auth_unavailable" },
+      error: { code: "mfa_recovery_uncertain" },
     });
+  });
+
+  it("treats an in-progress failed status as uncertain after another worker", async () => {
+    const repository = recoveryRepository({
+      claim: jest.fn().mockResolvedValue({
+        outcome: "in_progress",
+        operationId: OPERATION_ID,
+        authUserId: AUTH_USER_ID,
+        status: "claimed",
+      }),
+      status: jest.fn().mockResolvedValue("failed"),
+    });
+    await expect(
+      new RecoverMfaUseCase(
+        repository,
+        identityProvider(),
+        hasher,
+        delay,
+      ).execute({
+        userId: USER_ID,
+        authUserId: AUTH_USER_ID,
+        code: "ABCD-EF12",
+      }),
+    ).resolves.toEqual({
+      ok: false,
+      error: { code: "mfa_recovery_uncertain" },
+    });
+  });
+
+  it.each(["markFactorsRemoved", "complete"])(
+    "reports an uncertain outcome when %s fails after provider work",
+    async (method) => {
+      const repository = recoveryRepository({
+        [method]: jest.fn().mockRejectedValue(new Error("database down")),
+      });
+      const result = await new RecoverMfaUseCase(
+        repository,
+        identityProvider({
+          listMfaFactors: jest.fn().mockResolvedValue([{ id: "factor-1" }]),
+        }),
+        hasher,
+        delay,
+      ).execute({
+        userId: USER_ID,
+        authUserId: AUTH_USER_ID,
+        code: "ABCD-EF12",
+      });
+      expect(result).toEqual({
+        ok: false,
+        error: { code: "mfa_recovery_uncertain" },
+      });
+    },
+  );
+
+  it("keeps a definite pre-provider lookup failure distinguishable", async () => {
+    const result = await new RecoverMfaUseCase(
+      recoveryRepository(),
+      identityProvider({
+        listMfaFactors: jest.fn().mockRejectedValue(new Error("provider down")),
+      }),
+      hasher,
+      delay,
+    ).execute({ userId: USER_ID, authUserId: AUTH_USER_ID, code: "ABCD-EF12" });
+    expect(result).toEqual({ ok: false, error: { code: "auth_unavailable" } });
   });
 
   it.each([

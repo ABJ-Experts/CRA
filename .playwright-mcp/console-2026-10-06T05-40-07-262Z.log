@@ -1,0 +1,106 @@
+[       5ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:3002/_next/hmr?id=ct0RxjM-rQbYSlLzzoIUB' failed: Error during WebSocket handshake: net::ERR_INVALID_HTTP_RESPONSE @ http://127.0.0.1:3002/_next/static/chunks/21a3_next_dist_client_0z1fr-x._.js:16256
+[     413ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3002/_next/static/chunks/21a3_next_dist_1zk8tkg._.js:776
+[     477ms] [LOG] [HMR] connected @ http://localhost:3002/_next/static/chunks/21a3_next_dist_1zk8tkg._.js:776
+[     688ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3002/_next/static/chunks/21a3_next_dist_1zk8tkg._.js:776
+[     776ms] [LOG] [Fast Refresh] done in 189ms @ http://localhost:3002/_next/static/chunks/21a3_next_dist_1zk8tkg._.js:776
+[   37094ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3002/_next/static/chunks/21a3_next_dist_1zk8tkg._.js:776
+[   37401ms] [LOG] [Fast Refresh] done in 411ms @ http://localhost:3002/_next/static/chunks/21a3_next_dist_1zk8tkg._.js:776
+[  143571ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3002/_next/static/chunks/21a3_next_dist_1zk8tkg._.js:776
+[  144499ms] [LOG] [Fast Refresh] done in 929ms @ http://localhost:3002/_next/static/chunks/21a3_next_dist_1zk8tkg._.js:776
+[  196351ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3002/_next/static/chunks/21a3_next_dist_1zk8tkg._.js:776
+[  196394ms] [LOG] [Fast Refresh] done in 145ms @ http://localhost:3002/_next/static/chunks/21a3_next_dist_1zk8tkg._.js:776
+[  209704ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3002/_next/static/chunks/21a3_next_dist_1zk8tkg._.js:776
+[  211650ms] [WARNING] [Fast Refresh] performing full reload
+
+Fast Refresh will perform a full reload when you edit a file that's imported by modules outside of the React rendering tree.
+You might have a file which exports a React component but also exports a value that is imported by a non-React component file.
+Consider migrating the non-React component export to a separate file and importing it into both files.
+
+It is also possible the parent component of the component you edited is a class component, which disables Fast Refresh.
+Fast Refresh requires at least one parent function component in your React tree. @ http://localhost:3002/_next/static/chunks/21a3_next_dist_1zk8tkg._.js:776
+[  211988ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3002/_next/static/chunks/21a3_next_dist_1zk8tkg._.js:776
+[  212026ms] [LOG] [HMR] connected @ http://localhost:3002/_next/static/chunks/21a3_next_dist_1zk8tkg._.js:776
+[  212035ms] [ERROR] Can't perform a React state update on a component that hasn't mounted yet. This indicates that you have a side-effect in your render function that asynchronously tries to update the component. Move this work to useEffect instead. @ http://localhost:3002/_next/static/chunks/21a3_next_dist_1zk8tkg._.js:1052
+[  212204ms] [ERROR] Encountered a script tag while rendering React component. Scripts inside React components are never executed when rendering on the client. Consider using template tag instead (https://developer.mozilla.org/en-US/docs/Web/HTML/Element/template). @ http://localhost:3002/_next/static/chunks/21a3_next_dist_1zk8tkg._.js:1052
+[  212234ms] Error: Hydration failed because the server rendered HTML didn't match the client. As a result this tree will be regenerated on the client. This can happen if a SSR-ed Client Component used:
+
+- A server/client branch `if (typeof window !== 'undefined')`.
+- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.
+- Date formatting in a user's locale which doesn't match the server.
+- External changing data without sending a snapshot of it along with the HTML.
+- Invalid HTML tag nesting.
+
+It can also happen if the client has a browser extension installed which messes with the HTML before React loaded.
+
+https://react.dev/link/hydration-mismatch
+
+  ...
+    <ErrorBoundary errorComponent={undefined} errorStyles={undefined} errorScripts={undefined}>
+      <LoadingBoundary name="/" loading={null}>
+        <HTTPAccessFallbackBoundary notFound={<SegmentViewNode>} forbidden={undefined} unauthorized={undefined}>
+          <HTTPAccessFallbackErrorBoundary pathname="/account" notFound={<SegmentViewNode>} forbidden={undefined} ...>
+            <RedirectBoundary>
+              <RedirectErrorBoundary router={{...}}>
+                <InnerLayoutRouter url="/account" tree={[...]} params={{}} cacheNode={{rsc:Promise, ...}} ...>
+                  <SegmentViewNode type="layout" pagePath="(workspace...">
+                    <SegmentTrieNode>
+                    <script>
+                    <script>
+                    <script>
+                    <WorkspaceLayout>
+                      <SessionProvider>
+                        <WorkspaceShell>
+                          <OrganizationThemeProvider>
+                            <div
++                             className="block"
+-                             className={null}
+                              data-organization-theme={undefined}
+                              style={undefined}
+-                             hidden=""
+                            >
++                             <div className="flex min-h-dvh bg-canvas">
+-                             <Suspense>
+                ...
+
+    at throwOnHydrationMismatch (http://localhost:3002/_next/static/chunks/21a3_next_dist_compiled_react-dom_1vyr2qo._.js:3120:56)
+    at beginWork (http://localhost:3002/_next/static/chunks/21a3_next_dist_compiled_react-dom_1vyr2qo._.js:6585:918)
+    at runWithFiberInDEV (http://localhost:3002/_next/static/chunks/21a3_next_dist_compiled_react-dom_1vyr2qo._.js:761:74)
+    at performUnitOfWork (http://localhost:3002/_next/static/chunks/21a3_next_dist_compiled_react-dom_1vyr2qo._.js:9385:97)
+    at workLoopConcurrentByScheduler (http://localhost:3002/_next/static/chunks/21a3_next_dist_compiled_react-dom_1vyr2qo._.js:9381:58)
+    at renderRootConcurrent (http://localhost:3002/_next/static/chunks/21a3_next_dist_compiled_react-dom_1vyr2qo._.js:9364:71)
+    at performWorkOnRoot (http://localhost:3002/_next/static/chunks/21a3_next_dist_compiled_react-dom_1vyr2qo._.js:8891:150)
+    at performWorkOnRootViaSchedulerTask (http://localhost:3002/_next/static/chunks/21a3_next_dist_compiled_react-dom_1vyr2qo._.js:10085:9)
+    at MessagePort.performWorkUntilDeadline (http://localhost:3002/_next/static/chunks/21a3_next_dist_compiled_0o_9xgi._.js:2647:64)
+[  212587ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3002/_next/static/chunks/21a3_next_dist_1zk8tkg._.js:776
+[  212746ms] [LOG] [Fast Refresh] done in 259ms @ http://localhost:3002/_next/static/chunks/21a3_next_dist_1zk8tkg._.js:776
+[  242673ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3002/api/v1/reporting/obligations/deadline-summary:0
+[  272694ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3002/api/v1/reporting/obligations/deadline-summary:0
+[  286241ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3002/_next/static/chunks/21a3_next_dist_1zk8tkg._.js:776
+[  286257ms] [LOG] [Fast Refresh] done in 118ms @ http://localhost:3002/_next/static/chunks/21a3_next_dist_1zk8tkg._.js:776
+[  302701ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3002/api/v1/reporting/obligations/deadline-summary:0
+[  332713ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3002/api/v1/reporting/obligations/deadline-summary:0
+[  362719ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3002/api/v1/reporting/obligations/deadline-summary:0
+[  392735ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3002/api/v1/reporting/obligations/deadline-summary:0
+[  422765ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3002/api/v1/reporting/obligations/deadline-summary:0
+[  452798ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3002/api/v1/reporting/obligations/deadline-summary:0
+[  482830ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3002/api/v1/reporting/obligations/deadline-summary:0
+[  512851ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3002/api/v1/reporting/obligations/deadline-summary:0
+[  542858ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3002/api/v1/reporting/obligations/deadline-summary:0
+[  544030ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3002/_next/static/chunks/21a3_next_dist_1zk8tkg._.js:776
+[  544334ms] [LOG] [Fast Refresh] done in 405ms @ http://localhost:3002/_next/static/chunks/21a3_next_dist_1zk8tkg._.js:776
+[  544536ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3002/_next/static/chunks/21a3_next_dist_1zk8tkg._.js:776
+[  544633ms] [LOG] [Fast Refresh] done in 199ms @ http://localhost:3002/_next/static/chunks/21a3_next_dist_1zk8tkg._.js:776
+[  572865ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3002/api/v1/reporting/obligations/deadline-summary:0
+[  574720ms] [ERROR] WebSocket connection to 'ws://localhost:3002/_next/hmr?id=nttibsWHi36hNI5aG1cqN' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:3002/_next/static/chunks/21a3_next_dist_client_0z1fr-x._.js:16256
+[  575724ms] [ERROR] WebSocket connection to 'ws://localhost:3002/_next/hmr?id=nttibsWHi36hNI5aG1cqN' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:3002/_next/static/chunks/21a3_next_dist_client_0z1fr-x._.js:16256
+[  576727ms] [ERROR] WebSocket connection to 'ws://localhost:3002/_next/hmr?id=nttibsWHi36hNI5aG1cqN' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:3002/_next/static/chunks/21a3_next_dist_client_0z1fr-x._.js:16256
+[  577731ms] [ERROR] WebSocket connection to 'ws://localhost:3002/_next/hmr?id=nttibsWHi36hNI5aG1cqN' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:3002/_next/static/chunks/21a3_next_dist_client_0z1fr-x._.js:16256
+[  578734ms] [ERROR] WebSocket connection to 'ws://localhost:3002/_next/hmr?id=nttibsWHi36hNI5aG1cqN' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:3002/_next/static/chunks/21a3_next_dist_client_0z1fr-x._.js:16256
+[  583741ms] [ERROR] WebSocket connection to 'ws://localhost:3002/_next/hmr?id=nttibsWHi36hNI5aG1cqN' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:3002/_next/static/chunks/21a3_next_dist_client_0z1fr-x._.js:16256
+[  588749ms] [ERROR] WebSocket connection to 'ws://localhost:3002/_next/hmr?id=nttibsWHi36hNI5aG1cqN' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:3002/_next/static/chunks/21a3_next_dist_client_0z1fr-x._.js:16256
+[  593757ms] [ERROR] WebSocket connection to 'ws://localhost:3002/_next/hmr?id=nttibsWHi36hNI5aG1cqN' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:3002/_next/static/chunks/21a3_next_dist_client_0z1fr-x._.js:16256
+[  598786ms] [ERROR] WebSocket connection to 'ws://localhost:3002/_next/hmr?id=nttibsWHi36hNI5aG1cqN' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:3002/_next/static/chunks/21a3_next_dist_client_0z1fr-x._.js:16256
+[  602871ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3002/api/v1/reporting/obligations/deadline-summary:0
+[  603844ms] [ERROR] WebSocket connection to 'ws://localhost:3002/_next/hmr?id=nttibsWHi36hNI5aG1cqN' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:3002/_next/static/chunks/21a3_next_dist_client_0z1fr-x._.js:16256
+[  608915ms] [ERROR] WebSocket connection to 'ws://localhost:3002/_next/hmr?id=nttibsWHi36hNI5aG1cqN' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:3002/_next/static/chunks/21a3_next_dist_client_0z1fr-x._.js:16256
+[  614106ms] [ERROR] WebSocket connection to 'ws://localhost:3002/_next/hmr?id=nttibsWHi36hNI5aG1cqN' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:3002/_next/static/chunks/21a3_next_dist_client_0z1fr-x._.js:16256

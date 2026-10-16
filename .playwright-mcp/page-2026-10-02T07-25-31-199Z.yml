@@ -1,0 +1,103 @@
+- generic [active] [ref=f2e1]:
+  - generic [ref=f2e3]:
+    - complementary [ref=f2e4]:
+      - generic [ref=f2e5]:
+        - generic [ref=f2e6]:
+          - link "CRA Sentinel" [ref=f2e7] [cursor=pointer]:
+            - /url: /dashboard
+            - generic [aria-hidden] [ref=f2e8]: C
+            - text: CRA Sentinel
+          - button "Collapse sidebar" [ref=f2e9] [cursor=pointer]
+        - navigation "Main" [ref=f2e12]:
+          - generic [ref=f2e13]:
+            - list [ref=f2e15]:
+              - listitem [ref=f2e16]:
+                - link "Dashboard" [ref=f2e17] [cursor=pointer]:
+                  - /url: /dashboard
+              - listitem [ref=f2e25]:
+                - link "Management" [ref=f2e26] [cursor=pointer]:
+                  - /url: /management
+              - listitem [ref=f2e32]:
+                - link "Organization" [ref=f2e33] [cursor=pointer]:
+                  - /url: /organization
+              - listitem [ref=f2e40]:
+                - link "Products" [ref=f2e41] [cursor=pointer]:
+                  - /url: /products
+              - listitem [ref=f2e48]:
+                - link "Suppliers" [ref=f2e49] [cursor=pointer]:
+                  - /url: /suppliers
+              - listitem [ref=f2e54]:
+                - link "Frameworks" [ref=f2e55] [cursor=pointer]:
+                  - /url: /frameworks
+              - listitem [ref=f2e60]:
+                - link "Findings" [ref=f2e61] [cursor=pointer]:
+                  - /url: /findings
+              - listitem [ref=f2e66]:
+                - link "Reporting" [ref=f2e67] [cursor=pointer]:
+                  - /url: /reporting
+              - listitem [ref=f2e73]:
+                - link "Tasks" [ref=f2e74] [cursor=pointer]:
+                  - /url: /tasks
+              - listitem [ref=f2e80]:
+                - link "Connectors" [ref=f2e81] [cursor=pointer]:
+                  - /url: /connectors
+            - generic [ref=f2e88]:
+              - paragraph [ref=f2e89]: Account & access
+              - list [ref=f2e90]:
+                - listitem [ref=f2e91]:
+                  - button "Profile" [expanded] [ref=f2e92] [cursor=pointer]
+                  - list [ref=f2e101]:
+                    - listitem [ref=f2e102]:
+                      - link "Account" [ref=f2e103] [cursor=pointer]:
+                        - /url: /account
+                    - listitem [ref=f2e105]:
+                      - link "Security" [ref=f2e106] [cursor=pointer]:
+                        - /url: /security
+                - listitem [ref=f2e108]:
+                  - button "Authorization" [ref=f2e109] [cursor=pointer]
+                  - generic:
+                    - list:
+                      - listitem [ref=f2e117]:
+                        - link "Roles" [ref=f2e118] [cursor=pointer]:
+                          - /url: /roles
+                      - listitem [ref=f2e120]:
+                        - link "Permissions" [ref=f2e121] [cursor=pointer]:
+                          - /url: /permissions
+        - button "Sign out" [ref=f2e125] [cursor=pointer]
+    - generic [ref=f2e130]:
+      - banner [ref=f2e131]:
+        - navigation "Breadcrumb" [ref=f2e133]:
+          - list [ref=f2e134]:
+            - listitem [ref=f2e135]:
+              - link "Dashboard" [ref=f2e136] [cursor=pointer]:
+                - /url: /dashboard
+            - listitem [aria-hidden] [ref=f2e137]
+            - listitem [ref=f2e140]:
+              - generic [ref=f2e141]: Account
+        - generic [ref=f2e142]:
+          - button "Search" [ref=f2e143] [cursor=pointer]
+          - button "Notifications" [ref=f2e147] [cursor=pointer]
+          - 'img "Ada Foster: online" [ref=f2e153]'
+      - main [ref=f2e154]:
+        - generic [ref=f2e155]:
+          - generic [ref=f2e156]:
+            - heading "Account" [level=1] [ref=f2e157]
+            - paragraph [ref=f2e158]: Your name and details, visible to others in your organization.
+          - generic [ref=f2e161]:
+            - generic [ref=f2e165]:
+              - paragraph [ref=f2e166]: —
+              - paragraph [ref=f2e167]: Loading…
+            - generic [ref=f2e168]:
+              - generic [ref=f2e169]:
+                - generic [ref=f2e170]: First name
+                - textbox "First name" [ref=f2e172]
+              - generic [ref=f2e173]:
+                - generic [ref=f2e174]: Last name
+                - textbox "Last name" [ref=f2e176]
+            - generic [ref=f2e177]:
+              - generic [ref=f2e178]: Job title
+              - textbox "Job title" [ref=f2e180]
+              - paragraph [ref=f2e181]: Shown next to your name in the member list.
+            - button "Save changes" [ref=f2e183] [cursor=pointer]
+          - paragraph [ref=f2e187]: Notification preferences are unavailable.
+  - button "Open Next.js Dev Tools" [ref=f2e193] [cursor=pointer]

@@ -1,0 +1,88 @@
+- generic [active] [ref=f5e1]:
+  - generic [ref=f5e3]:
+    - complementary [ref=f5e4]:
+      - generic [ref=f5e5]:
+        - generic [ref=f5e6]:
+          - link "CRA Sentinel" [ref=f5e7] [cursor=pointer]:
+            - /url: /dashboard
+            - generic [aria-hidden] [ref=f5e8]: C
+            - text: CRA Sentinel
+          - button "Collapse sidebar" [ref=f5e9] [cursor=pointer]
+        - navigation "Main" [ref=f5e12]:
+          - generic [ref=f5e13]:
+            - list [ref=f5e15]:
+              - listitem [ref=f5e16]:
+                - link "Dashboard" [ref=f5e17] [cursor=pointer]:
+                  - /url: /dashboard
+              - listitem [ref=f5e25]:
+                - link "Management" [ref=f5e26] [cursor=pointer]:
+                  - /url: /management
+              - listitem [ref=f5e32]:
+                - link "Organization" [ref=f5e33] [cursor=pointer]:
+                  - /url: /organization
+              - listitem [ref=f5e40]:
+                - link "Products" [ref=f5e41] [cursor=pointer]:
+                  - /url: /products
+              - listitem [ref=f5e48]:
+                - link "Suppliers" [ref=f5e49] [cursor=pointer]:
+                  - /url: /suppliers
+              - listitem [ref=f5e54]:
+                - link "Frameworks" [ref=f5e55] [cursor=pointer]:
+                  - /url: /frameworks
+              - listitem [ref=f5e60]:
+                - link "Findings" [ref=f5e61] [cursor=pointer]:
+                  - /url: /findings
+              - listitem [ref=f5e66]:
+                - link "Reporting" [ref=f5e67] [cursor=pointer]:
+                  - /url: /reporting
+              - listitem [ref=f5e73]:
+                - link "Tasks" [ref=f5e74] [cursor=pointer]:
+                  - /url: /tasks
+              - listitem [ref=f5e80]:
+                - link "Connectors" [ref=f5e81] [cursor=pointer]:
+                  - /url: /connectors
+            - generic [ref=f5e88]:
+              - paragraph [ref=f5e89]: Account & access
+              - list [ref=f5e90]:
+                - listitem [ref=f5e91]:
+                  - button "Profile" [ref=f5e92] [cursor=pointer]
+                  - generic:
+                    - list:
+                      - listitem [ref=f5e100]:
+                        - link "Account" [ref=f5e101] [cursor=pointer]:
+                          - /url: /account
+                      - listitem [ref=f5e103]:
+                        - link "Security" [ref=f5e104] [cursor=pointer]:
+                          - /url: /security
+                - listitem [ref=f5e106]:
+                  - button "Authorization" [ref=f5e107] [cursor=pointer]
+                  - generic:
+                    - list:
+                      - listitem [ref=f5e115]:
+                        - link "Roles" [ref=f5e116] [cursor=pointer]:
+                          - /url: /roles
+                      - listitem [ref=f5e118]:
+                        - link "Permissions" [ref=f5e119] [cursor=pointer]:
+                          - /url: /permissions
+        - button "Sign out" [ref=f5e123] [cursor=pointer]
+    - generic [ref=f5e128]:
+      - banner [ref=f5e129]:
+        - navigation "Breadcrumb" [ref=f5e131]:
+          - list [ref=f5e132]:
+            - listitem [ref=f5e133]:
+              - link "Dashboard" [ref=f5e134] [cursor=pointer]:
+                - /url: /dashboard
+            - listitem [aria-hidden] [ref=f5e135]
+            - listitem [ref=f5e138]:
+              - generic [ref=f5e139]: Organization
+        - generic [ref=f5e140]:
+          - button "Search" [ref=f5e141] [cursor=pointer]
+          - button "Notifications" [ref=f5e145] [cursor=pointer]
+          - 'img "Ada Foster: online" [ref=f5e151]'
+      - main [ref=f5e152]:
+        - generic [ref=f5e153]:
+          - generic [ref=f5e155]:
+            - heading "Organization administration" [level=1] [ref=f5e156]
+            - paragraph [ref=f5e157]: Settings, retention, export, and tenant data lifecycle controls.
+          - paragraph [ref=f5e159]: Create or join an organization before managing tenant settings.
+  - button "Open Next.js Dev Tools" [ref=f5e165] [cursor=pointer]

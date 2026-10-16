@@ -1,0 +1,42 @@
+{
+  "measuredAt": "2026-09-29T10:01:51.606Z",
+  "environment": "Local CRA Supabase; API localhost:3334; installed connector worker polling; pnpm verify running concurrently",
+  "dataset": {
+    "syntheticRuns": 1000,
+    "syntheticRecords": 3000,
+    "syntheticAttempts": 1000,
+    "activeDeadLetters": 500
+  },
+  "concurrency": 5,
+  "requestsPerEndpoint": 40,
+  "pageSize": 100,
+  "results": {
+    "history": {
+      "http200": 40,
+      "p50Ms": 159,
+      "p95Ms": 284,
+      "p99Ms": 293,
+      "returnedRows": 100
+    },
+    "detail": {
+      "http200": 40,
+      "p50Ms": 99,
+      "p95Ms": 122,
+      "p99Ms": 123,
+      "returnedRecords": 3
+    },
+    "deadLetters": {
+      "http200": 40,
+      "p50Ms": 98,
+      "p95Ms": 107,
+      "p99Ms": 110,
+      "returnedRows": 100
+    }
+  },
+  "notes": [
+    "Dead-letter row count independently checked on the same dataset after measurement; response wrapper is records.rows.",
+    "Preliminary attempts hit the unchanged per-handler rate limit; those 429 responses were excluded from this clean rerun.",
+    "Empirical p99 is the maximum of 40 samples. This establishes local bounded-read performance only, not production SLOs or sustained vendor workload performance.",
+    "Exact correlation-scoped synthetic dataset cleanup verified zero runs, records, attempts and dead letters. No configuration, credentials or cursor changed."
+  ]
+}

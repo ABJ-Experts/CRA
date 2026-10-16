@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "project": "__CRA_PROJECT__",
+  "instanceId": "PROVISION_DISPOSABLE_INSTANCE_UUID",
+  "composePath": "__CRA_ROOT__/compose.yml",
+  "supervisorConfigPath": "__CRA_ROOT__/supervisor.json",
+  "actor": {
+    "principalId": "PROVISION_GRANTED_OPERATOR_UUID",
+    "fingerprint256": "PROVISION_MTLS_CLIENT_FINGERPRINT",
+    "grantRevision": "fixture-v1"
+  },
+  "metadata": {
+    "origin": "https://127.0.0.1:24000",
+    "caPath": "__CRA_ROOT__/tls/ca.pem",
+    "certPath": "__CRA_ROOT__/tls/operator.pem",
+    "keyPath": "__CRA_ROOT__/tls/operator.key"
+  },
+  "customer": {
+    "origin": "https://127.0.0.1:24001",
+    "caPath": "__CRA_ROOT__/tls/ca.pem"
+  },
+  "ownerCredentialsPath": "__CRA_ROOT__/owner.json",
+  "sourceImageIds": {
+    "api": "sha256:PROVISION_SIGNED_SOURCE_CONFIG_IMAGE_ID",
+    "web": "sha256:PROVISION_SIGNED_SOURCE_CONFIG_IMAGE_ID"
+  },
+  "targetImageIds": {
+    "api": "sha256:PROVISION_SIGNED_TARGET_CONFIG_IMAGE_ID",
+    "web": "sha256:PROVISION_SIGNED_TARGET_CONFIG_IMAGE_ID"
+  },
+  "environment": {
+    "PATH": "/usr/local/bin:/usr/bin:/bin"
+  }
+}

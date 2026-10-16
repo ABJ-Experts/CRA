@@ -1,0 +1,55 @@
+{
+  "results": [
+    {
+      "rows": 10000,
+      "scale": 10000,
+      "rejected": false,
+      "capture_ms": 407.5,
+      "payload_bytes": 1318894,
+      "status_p95_ms": 17.36735,
+      "status_p99_ms": 19.03824
+    },
+    {
+      "rows": 100000,
+      "scale": 100000,
+      "rejected": false,
+      "capture_ms": 3921.928,
+      "payload_bytes": 13288895,
+      "status_p95_ms": 486.0521,
+      "status_p99_ms": 692.47647
+    },
+    {
+      "rows": 0,
+      "scale": 1000000,
+      "rejected": true,
+      "capture_ms": 576.03,
+      "payload_bytes": 0,
+      "status_p95_ms": 0.8471,
+      "status_p99_ms": 1.37096
+    }
+  ],
+  "classification": "Native products registry capture in isolated cloned database; synthetic rows, rollback-only; sequential SQL metadata latency with frozen rows, Docker RSS/CPU sampled separately; no HTTP/rendering/tenant fairness measured",
+  "date": "2026-10-09",
+  "runDurationSeconds": 58.927,
+  "resourceLimits": {
+    "databaseContainer": "3.826GiB",
+    "workMem": "16MiB",
+    "guardThreshold": "3.2GiB",
+    "statementTimeout": "10min"
+  },
+  "resourceSamples": {
+    "count": 26,
+    "peakMemory": "468.8MiB / 3.826GiB",
+    "peakCpuPercent": 115.85,
+    "memoryGuardTriggered": false
+  },
+  "rollbackConfirmed": {
+    "products": 11,
+    "snapshotRows": 0,
+    "ownedConnections": 0,
+    "existingTimeoutFixturePreserved": true
+  },
+  "limitsPassed": true,
+  "readTargetMet": false,
+  "readTargetGap": "100k frozen job status SQL p95 486.0521ms exceeds400ms; p99 692.47647ms is below1000ms. HTTP/rendering and sustained tenant fairness not measured."
+}

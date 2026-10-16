@@ -1,2 +1,6 @@
 [mcp_servers.supabase]
 url = "http://localhost:54321/mcp"
+
+[mcp_servers.playwright]
+command = "pnpm"
+args = ["dlx", "@playwright/mcp@0.0.82"]

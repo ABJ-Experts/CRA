@@ -20,6 +20,7 @@ function fixture() {
     }),
   };
   const accept = { execute: jest.fn() };
+  const resend = { execute: jest.fn() };
   const revoke = { execute: jest.fn() };
   const list = {
     execute: jest.fn().mockResolvedValue({ ok: true, value: [] }),
@@ -27,47 +28,50 @@ function fixture() {
   const auditLog = jest.fn();
   const service = new InvitationsService(
     create as never,
+    resend as never,
     accept as never,
     revoke as never,
     list as never,
-    { log: auditLog } as never,
   );
 
   return { accept, auditLog, create, list, revoke, service };
 }
 
 describe("InvitationsService create facade", () => {
-  it("delegates and records the existing audit payload after notification", async () => {
+  it("delegates without duplicating the transactionally persisted creation event", async () => {
     const { auditLog, create, service } = fixture();
 
     await expect(
-      service.create("organization-1", actor, {
-        ...input,
-        firstName: "New",
-        lastName: "Member",
-      }),
+      service.create(
+        "organization-1",
+        actor,
+        {
+          ...input,
+          firstName: "New",
+          lastName: "Member",
+        },
+        "203.0.113.7",
+      ),
     ).resolves.toEqual({ id: "invitation-1" });
-    expect(create.execute).toHaveBeenCalledWith({
+    const createCalls = create.execute.mock
+      .calls as readonly (readonly unknown[])[];
+    const createCommand = createCalls[0]?.[0];
+    expect(createCommand).toMatchObject({
       orgId: "organization-1",
       actor,
+      sourceIp: "203.0.113.7",
       input: {
         ...input,
         firstName: "New",
         lastName: "Member",
       },
     });
-    expect(auditLog).toHaveBeenCalledWith({
-      organizationId: "organization-1",
-      userId: "owner-1",
-      actorEmail: "owner@cra.test",
-      action: "invitation.created",
-      entityType: "invitation",
-      entityId: "invitation-1",
-      changes: { email: "new.member@cra.test", role: "member" },
-    });
-    expect(create.execute.mock.invocationCallOrder[0]).toBeLessThan(
-      auditLog.mock.invocationCallOrder[0] ?? 0,
-    );
+    expect(
+      typeof createCommand === "object" && createCommand !== null
+        ? (createCommand as { correlationId?: unknown }).correlationId
+        : undefined,
+    ).toEqual(expect.stringMatching(/^[0-9a-f-]{36}$/));
+    expect(auditLog).not.toHaveBeenCalled();
   });
 
   it.each([
@@ -130,7 +134,11 @@ describe("InvitationsService create facade", () => {
     const { auditLog, create, service } = fixture();
     create.execute.mockResolvedValueOnce({
       ok: false,
-      error: { code: "notification_failed", invitationId: "invitation-1" },
+      error: {
+        code: "notification_failed",
+        invitationId: "invitation-1",
+        recovery: "cancelled",
+      },
     });
 
     const promise = service.create("organization-1", actor, input);
@@ -139,6 +147,21 @@ describe("InvitationsService create facade", () => {
       response: { statusCode: 500, message: "Internal server error" },
     });
     await expect(promise).rejects.not.toThrow("SMTP credentials rejected");
+    expect(auditLog).not.toHaveBeenCalled();
+  });
+
+  it("does not expose onboarding evidence failures after email delivery", async () => {
+    const { auditLog, create, service } = fixture();
+    create.execute.mockResolvedValueOnce({
+      ok: false,
+      error: { code: "evidence_failed", invitationId: "invitation-1" },
+    });
+
+    const promise = service.create("organization-1", actor, input);
+    await expect(promise).rejects.toBeInstanceOf(InternalServerErrorException);
+    await expect(promise).rejects.toMatchObject({
+      response: { statusCode: 500, message: "Internal server error" },
+    });
     expect(auditLog).not.toHaveBeenCalled();
   });
 });

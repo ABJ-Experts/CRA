@@ -1,0 +1,14 @@
+[
+  {
+    "format": "csv",
+    "bytes": 14950,
+    "hashMatched": true,
+    "verification": "audit export verified {\"artifactHashesChecked\":true,\"eventProofsChecked\":1,\"proofsUnavailable\":0,\"legacyUnchained\":0,\"completenessProven\":false,\"authenticityProven\":false}"
+  },
+  {
+    "format": "json",
+    "bytes": 14986,
+    "hashMatched": true,
+    "verification": "audit export verified {\"artifactHashesChecked\":true,\"eventProofsChecked\":1,\"proofsUnavailable\":0,\"legacyUnchained\":0,\"completenessProven\":false,\"authenticityProven\":false}"
+  }
+]

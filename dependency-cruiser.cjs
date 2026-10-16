@@ -8,7 +8,10 @@ module.exports = {
       severity: "error",
       from: { path: "^packages/" },
       to: {
-        path: ["^apps/", "^@repo/(api|docs|infrastructure|web)(?:/|$)"],
+        path: [
+          "^apps/",
+          "^@repo/(api|docs|infrastructure|web|operator)(?:/|$)",
+        ],
       },
     },
     {
@@ -26,7 +29,18 @@ module.exports = {
       name: "no-api-to-web",
       severity: "error",
       from: { path: "^apps/api/" },
-      to: { path: ["^apps/web/", "^@repo/web(?:/|$)"] },
+      to: { path: ["^apps/(web|operator)/", "^@repo/(web|operator)(?:/|$)"] },
+    },
+    {
+      name: "no-operator-ui-to-tenant-or-backend",
+      severity: "error",
+      from: { path: "^apps/operator/" },
+      to: {
+        path: [
+          "^apps/(web|api|infrastructure)/",
+          "^@repo/(web|api|infrastructure)(?:/|$)",
+        ],
+      },
     },
     {
       name: "domain-does-not-depend-outward",
@@ -68,7 +82,7 @@ module.exports = {
   options: {
     doNotFollow: { path: "node_modules" },
     exclude:
-      "(^|/)(dist|build|coverage|\\.docusaurus|\\.next|\\.turbo|node_modules)/",
+      "(^|/)(dist|build|coverage|\\.docusaurus|\\.next|\\.next-[^/]+|\\.turbo|node_modules)/",
     tsConfig: { fileName: join(__dirname, "tsconfig.architecture.json") },
     tsPreCompilationDeps: true,
   },

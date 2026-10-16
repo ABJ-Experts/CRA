@@ -251,3 +251,96 @@ test("generated build directories do not enter the dependency graph", async (t) 
     JSON.stringify(sources),
   );
 });
+
+test("isolated Next build output is excluded while source boundaries stay enforced", async (t) => {
+  const root = await mkdtemp(
+    join(tmpdir(), "cra-isolated-build-dependencies-"),
+  );
+  t.after(() => rm(root, { recursive: true, force: true }));
+  await symlink(join(projectRoot, "node_modules"), join(root, "node_modules"));
+  await Promise.all([
+    write(root, "apps/api/provider.ts", "export const api = true;\n"),
+    write(root, "apps/web/source.ts", "export const web = true;\n"),
+    write(
+      root,
+      "apps/web/.next-m15-02/server/bundle.ts",
+      'export { api } from "../../../api/provider";\n',
+    ),
+    write(
+      root,
+      "apps/web/.next-m15-02-clone/server/bundle.ts",
+      'export { api } from "../../../api/provider";\n',
+    ),
+  ]);
+  const cruise = () =>
+    spawnSync(
+      process.execPath,
+      [cli, "--config", config, "--output-type", "json", "apps"],
+      { cwd: root, encoding: "utf8" },
+    );
+  const generatedOnly = cruise();
+  assert.equal(
+    generatedOnly.status,
+    0,
+    generatedOnly.stdout + generatedOnly.stderr,
+  );
+  const modules = JSON.parse(generatedOnly.stdout).modules;
+  assert.equal(
+    modules.some((module) => module.source.includes("/.next-")),
+    false,
+  );
+  await write(
+    root,
+    "apps/web/to-api.ts",
+    'export { api } from "../api/provider";\n',
+  );
+  const sourceViolation = cruise();
+  assert.equal(sourceViolation.status, 0, sourceViolation.stderr);
+  const violations = JSON.parse(sourceViolation.stdout).summary.violations.map(
+    (violation) => violation.rule.name,
+  );
+  assert.ok(
+    violations.includes("no-web-to-api-or-infrastructure"),
+    JSON.stringify(violations),
+  );
+  assert.doesNotMatch(sourceViolation.stdout, /\.next-m15-02/);
+});
+
+test("private operator UI cannot import tenant runtime or backend providers", async (t) => {
+  const root = await mkdtemp(join(tmpdir(), "cra-operator-boundaries-"));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  await symlink(join(projectRoot, "node_modules"), join(root, "node_modules"));
+  await Promise.all([
+    write(root, "apps/api/provider.ts", "export const provider = true;\n"),
+    write(root, "apps/web/provider.ts", "export const provider = true;\n"),
+    write(
+      root,
+      "apps/operator/to-api.ts",
+      'export { provider } from "../api/provider";\n',
+    ),
+    write(
+      root,
+      "apps/operator/to-web.ts",
+      'export { provider } from "../web/provider";\n',
+    ),
+    write(
+      root,
+      "apps/api/to-operator.ts",
+      'export { provider } from "../operator/provider";\n',
+    ),
+    write(root, "apps/operator/provider.ts", "export const provider = true;\n"),
+  ]);
+  const result = spawnSync(
+    process.execPath,
+    [cli, "--config", config, "--output-type", "json", "apps"],
+    { cwd: root, encoding: "utf8" },
+  );
+  const violations = JSON.parse(result.stdout).summary.violations.map(
+    (v) => v.rule.name,
+  );
+  assert.ok(
+    violations.includes("no-operator-ui-to-tenant-or-backend"),
+    JSON.stringify(violations),
+  );
+  assert.ok(violations.includes("no-api-to-web"), JSON.stringify(violations));
+});

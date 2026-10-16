@@ -1,0 +1,9 @@
+{
+  "samples": 20,
+  "blockedStatus": null,
+  "p50_ms": 85.2172500000006,
+  "p95_ms": 219.94104199999992,
+  "p99_ms": 244.88925000000017,
+  "max_ms": 244.88925000000017,
+  "scope": "Current retained small tenant; HTTP Next proxy, Nest, Supabase, durable receipt. Not 10k full HTTP load."
+}

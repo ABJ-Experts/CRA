@@ -24,7 +24,21 @@ export type { TokenState } from "./app/_features/session/route-session-state";
  *   its failure mode is signing everyone out when the API hiccups.
  */
 
-const PROTECTED = ["/dashboard"];
+const PROTECTED = [
+  "/dashboard",
+  "/management",
+  "/organization",
+  "/products",
+  "/frameworks",
+  "/connectors",
+  "/account",
+  "/security",
+  "/roles",
+  "/permissions",
+  "/notifications",
+  "/audit",
+  "/onboarding",
+];
 
 const AUTH_PAGES = [
   "/sign-in",
@@ -79,6 +93,7 @@ const secret = process.env.SUPABASE_JWT_SECRET
  * fetch per Edge isolate rather than one per navigation.
  */
 const SUPABASE_URL = (
+  process.env.SUPABASE_INTERNAL_URL ??
   process.env.NEXT_PUBLIC_SUPABASE_URL ??
   process.env.SUPABASE_URL ??
   "http://127.0.0.1:54321"

@@ -1,0 +1,48 @@
+[
+  {
+    "file": "apps/web/app/(workspace)/products/sbom-composite-review-section.tsx",
+    "addedExecutableLines": 31,
+    "covered": 31,
+    "uncovered": []
+  },
+  {
+    "file": "apps/web/app/(workspace)/products/sbom-intake-section.tsx",
+    "addedExecutableLines": 75,
+    "covered": 75,
+    "uncovered": []
+  },
+  {
+    "file": "apps/web/app/(workspace)/products/sbom-quality-report.tsx",
+    "addedExecutableLines": 2,
+    "covered": 2,
+    "uncovered": []
+  },
+  {
+    "file": "apps/web/app/(workspace)/products/sbom-supplier-review-section.tsx",
+    "addedExecutableLines": 31,
+    "covered": 28,
+    "uncovered": [
+      198,
+      199,
+      498
+    ]
+  },
+  {
+    "file": "apps/web/app/_features/sboms/sboms.api.ts",
+    "addedExecutableLines": 31,
+    "covered": 31,
+    "uncovered": []
+  },
+  {
+    "file": "apps/web/app/_features/sboms/sboms.keys.ts",
+    "addedExecutableLines": 191,
+    "covered": 191,
+    "uncovered": []
+  },
+  {
+    "file": "apps/web/app/_features/sboms/sboms.queries.ts",
+    "addedExecutableLines": 59,
+    "covered": 59,
+    "uncovered": []
+  }
+]

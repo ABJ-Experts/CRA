@@ -1,0 +1,34 @@
+begin;
+create extension if not exists pgtap with schema extensions;
+set search_path=public,extensions;
+select plan(13);
+create function pg_temp.m15_05_prepare_configuration(instance_id uuid,configuration jsonb) returns void language plpgsql as $$declare validation jsonb;begin
+ validation:=public.m15_05_backup_control(instance_id,'backup-sql-fixture','policy/validate',jsonb_build_object('configuration',configuration));
+ perform public.m15_05_backup_control(instance_id,'backup-sql-fixture','policy/validated',jsonb_build_object('configurationDigest',validation->'result'->>'configurationDigest'));
+end $$;
+create temporary table m15_05_verification_values(k text primary key,v jsonb);
+insert into m15_05_verification_values values('configuration','{"sourceAlias":"source","repositoryAlias":"off-host","stagingAlias":"private-ram","keyAlias":"backup-key","targetProfile":"isolated-saas","residency":"eu","schedulingEnabled":false,"checkpointIntervalMinutes":30,"baseIntervalHours":24,"verificationIntervalDays":30,"retentionDays":30,"pauseLimitSeconds":120}');
+select is(public.m15_05_backup_control('15000000-0000-4000-8000-000000000070','15000000-0000-4000-8000-000000000071','policy/validate',jsonb_build_object('configuration',v))->'result'->>'valid','false','syntactic config alone cannot claim native validation') from m15_05_verification_values where k='configuration';
+select pg_temp.m15_05_prepare_configuration('15000000-0000-4000-8000-000000000070',(select v from m15_05_verification_values where k='configuration'));
+select public.m15_05_backup_control('15000000-0000-4000-8000-000000000070','15000000-0000-4000-8000-000000000071','policy/update',jsonb_build_object('expectedVersion',0,'idempotencyKey','15000000-0000-4000-8000-000000000072','configuration',v)) from m15_05_verification_values where k='configuration';
+-- A direct SQL fixture models a finished parent's optimistic version. It is not restore proof.
+insert into public.backup_runs(id,instance_id,kind,state,stage,progress,version,configuration_revision,configuration,configuration_digest,idempotency_key,request_digest,actor_id,certificate,completed_at)
+ select '15000000-0000-4000-8000-000000000073','15000000-0000-4000-8000-000000000070','capture','certified','completed',100,7,1,v,repeat('a',64),'15000000-0000-4000-8000-000000000074',repeat('a',64),'sql-fixture','{"fixture":true}',clock_timestamp() from m15_05_verification_values where k='configuration';
+select is(public.m15_05_backup_control('15000000-0000-4000-8000-000000000070','15000000-0000-4000-8000-000000000071','run/create','{"kind":"verification","parentRunId":"15000000-0000-4000-8000-000000000073","expectedVersion":1,"idempotencyKey":"15000000-0000-4000-8000-000000000075","targetProfile":"isolated-saas"}')->>'outcome','conflict','verification compares capture version, not policy version');
+select is(public.m15_05_backup_control('15000000-0000-4000-8000-000000000070','15000000-0000-4000-8000-000000000071','run/create','{"kind":"verification","parentRunId":"15000000-0000-4000-8000-000000000073","expectedVersion":7,"idempotencyKey":"15000000-0000-4000-8000-000000000076","targetProfile":"isolated-saas"}')->>'outcome','ok','fresh capture version enqueues isolated verification');
+select is(public.m15_05_backup_control('15000000-0000-4000-8000-000000000070','15000000-0000-4000-8000-000000000071','run/create','{"kind":"capture","expectedVersion":1,"idempotencyKey":"15000000-0000-4000-8000-000000000077"}')->>'outcome','ok','capture lane independent from verification lane');
+select is(public.m15_05_backup_control('15000000-0000-4000-8000-000000000070','backup-worker','run/claim','{}')->>'outcome','invalid','missing worker and lane fail closed');
+select ok(not public.m15_05_certificate_valid('{"checkpointId":null}',r),'malformed certificate fails closed') from public.backup_runs r where id='15000000-0000-4000-8000-000000000073';
+select is(public.m15_05_backup_control('15000000-0000-4000-8000-000000000070','backup-worker','run/reconcile','{"runId":"15000000-0000-4000-8000-000000000099"}')->'result'->>'eligible','false','unknown restoration target cannot authorize cleanup');
+select is(public.m15_05_backup_control('15000000-0000-4000-8000-000000000070','backup-worker','run/reconcile',jsonb_build_object('runId',(select id from public.backup_runs where instance_id='15000000-0000-4000-8000-000000000070' and kind='verification' limit 1)))->'result'->>'eligible','false','queued restoration cannot be reconciled');
+select public.m15_05_backup_control('15000000-0000-4000-8000-000000000070','backup-worker','run/claim','{"workerId":"worker","kind":"verification"}');
+select is(public.m15_05_backup_control('15000000-0000-4000-8000-000000000070','backup-worker','run/reconcile',jsonb_build_object('runId',(select id from public.backup_runs where instance_id='15000000-0000-4000-8000-000000000070' and kind='verification' limit 1)))->'result'->>'eligible','false','live restoration lease cannot authorize cleanup');
+update public.backup_runs set lease_expires_at=clock_timestamp()-interval '1 second' where instance_id='15000000-0000-4000-8000-000000000070' and kind='verification';
+select is(public.m15_05_backup_control('15000000-0000-4000-8000-000000000070','backup-worker','run/reconcile',jsonb_build_object('runId',(select id from public.backup_runs where instance_id='15000000-0000-4000-8000-000000000070' and kind='verification' limit 1)))->'result'->>'eligible','true','expired restoration lease is terminally fenced before cleanup');
+select is((select state from public.backup_runs where instance_id='15000000-0000-4000-8000-000000000070' and kind='verification' limit 1),'failed','reconciled job cannot later resume');
+select pg_temp.m15_05_prepare_configuration('15000000-0000-4000-8000-000000000070',(select v||'{"keyAlias":"rotated-key"}' from m15_05_verification_values where k='configuration'));
+select public.m15_05_backup_control('15000000-0000-4000-8000-000000000070','backup-sql-fixture','policy/update',jsonb_build_object('expectedVersion',1,'idempotencyKey','15000000-0000-4000-8000-000000000078','configuration',(select v||'{"keyAlias":"rotated-key"}' from m15_05_verification_values where k='configuration')));
+select is(public.m15_05_backup_control('15000000-0000-4000-8000-000000000070','backup-sql-fixture','run/create','{"kind":"verification","parentRunId":"15000000-0000-4000-8000-000000000073","expectedVersion":7,"idempotencyKey":"15000000-0000-4000-8000-000000000079","targetProfile":"isolated-saas"}')->'result'->>'configurationRevision','1','historical verification retains parent configuration revision');
+select is((select configuration->>'keyAlias' from public.backup_runs where instance_id='15000000-0000-4000-8000-000000000070' and kind='verification' and state='queued'),'backup-key','historical verification retains old mounted key alias after rotation');
+select * from finish();
+rollback;

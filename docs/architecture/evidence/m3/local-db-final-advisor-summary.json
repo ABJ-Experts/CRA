@@ -1,0 +1,49 @@
+{
+  "checkedAt": "2026-09-28T10:56:26.397Z",
+  "projectUrl": "http://127.0.0.1:54321",
+  "publicTables": 247,
+  "sbomTables": 22,
+  "sbomRlsBoundaryFailures": 0,
+  "advisors": {
+    "security": {
+      "total": 242,
+      "levels": {
+        "INFO": 211,
+        "WARN": 31
+      },
+      "names": {
+        "rls_enabled_no_policy": 211,
+        "anon_security_definer_function_executable": 13,
+        "authenticated_security_definer_function_executable": 18
+      },
+      "sbom": {
+        "rls_enabled_no_policy": 13
+      }
+    },
+    "performance": {
+      "total": 723,
+      "levels": {
+        "INFO": 715,
+        "WARN": 8
+      },
+      "names": {
+        "unindexed_foreign_keys": 376,
+        "auth_rls_initplan": 2,
+        "unused_index": 339,
+        "multiple_permissive_policies": 6
+      },
+      "sbom": {
+        "unindexed_foreign_keys": 50,
+        "unused_index": 28
+      }
+    }
+  },
+  "notes": [
+    "Read-only local Supabase MCP metadata and advisors; no remote project accessed.",
+    "Existing advisor notices are retained; no indiscriminate index or policy changes.",
+    "Database lint exited 0; warnings are preserved in db-lint-final.log.",
+    "Graph finalization concurrency fixture passed and its exact private tenant was removed."
+  ],
+  "migrationCount": 12,
+  "dbLintAfterFinalMigrationExitCode": 0
+}

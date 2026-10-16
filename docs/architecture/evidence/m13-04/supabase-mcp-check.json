@@ -1,0 +1,24 @@
+[
+  {
+    "tool": "get_project_url-metadata",
+    "response_bytes": 118,
+    "isError": false
+  },
+  {
+    "tool": "execute_sql-metadata",
+    "response_bytes": 846,
+    "isError": false
+  },
+  {
+    "tool": "get_advisors-security",
+    "error": "HTTP Error 502: Bad Gateway"
+  },
+  {
+    "tool": "get_advisors-performance",
+    "error": "HTTP Error 502: Bad Gateway"
+  },
+  {
+    "tool": "get_logs-postgres",
+    "error": "HTTP Error 502: Bad Gateway"
+  }
+]

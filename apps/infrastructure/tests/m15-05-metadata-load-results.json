@@ -1,0 +1,38 @@
+{
+  "rows": 10000,
+  "concurrentClients": 6,
+  "durationSeconds": 5,
+  "measurement": "PostgreSQL RPC only; excludes HTTP/TLS",
+  "results": [
+    {
+      "traffic": "operator_history",
+      "clients": 2,
+      "transactions": 5740,
+      "p95Ms": 3.328,
+      "p99Ms": 6.452,
+      "maxMs": 16.447,
+      "p95TargetMet": true,
+      "p99TargetMet": true
+    },
+    {
+      "traffic": "tenant_large",
+      "clients": 2,
+      "transactions": 2908,
+      "p95Ms": 6.596,
+      "p99Ms": 11.24,
+      "maxMs": 35.415,
+      "p95TargetMet": true,
+      "p99TargetMet": true
+    },
+    {
+      "traffic": "tenant_small",
+      "clients": 2,
+      "transactions": 3197,
+      "p95Ms": 6.045,
+      "p99Ms": 11.16,
+      "maxMs": 26.665,
+      "p95TargetMet": true,
+      "p99TargetMet": true
+    }
+  ]
+}

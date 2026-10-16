@@ -1,0 +1,7 @@
+- generic [active] [ref=f8e1]:
+  - main [ref=f8e2]:
+    - generic [ref=f8e3]:
+      - heading "This supplier link is unavailable" [level=1] [ref=f8e9]
+      - alert [ref=f8e10]: Ask the request owner to issue a new invitation.
+  - button "Open Next.js Dev Tools" [ref=f8e16] [cursor=pointer]
+  - alert [ref=f8e20]

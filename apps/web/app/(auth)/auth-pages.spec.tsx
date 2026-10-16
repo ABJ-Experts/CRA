@@ -12,7 +12,11 @@ import {
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const navigation = vi.hoisted(() => ({ query: "", push: vi.fn() }));
+const navigation = vi.hoisted(() => ({
+  dashboard: vi.fn(),
+  push: vi.fn(),
+  query: "",
+}));
 const actions = vi.hoisted(() => ({
   requestPasswordReset: vi.fn(),
   resendCode: vi.fn(),
@@ -28,6 +32,9 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: navigation.push }),
   useSearchParams: () => new URLSearchParams(navigation.query),
   usePathname: () => "/sign-in",
+}));
+vi.mock("./_components/auth-navigation", () => ({
+  navigateToDashboard: navigation.dashboard,
 }));
 vi.mock("./_components/auth-actions", () => ({
   ...actions,
@@ -168,6 +175,11 @@ describe("auth pages", () => {
   it("submits sign-in credentials and routes to the dashboard", async () => {
     render(<SignInPage />);
 
+    expect(screen.getByTestId("sign-in-form")).toHaveAttribute(
+      "method",
+      "post",
+    );
+
     fireEvent.change(screen.getByTestId("si-identifier"), {
       target: { value: "ada@example.com" },
     });
@@ -183,7 +195,8 @@ describe("auth pages", () => {
         remember: true,
       }),
     );
-    expect(navigation.push).toHaveBeenCalledWith("/dashboard");
+    await waitFor(() => expect(navigation.dashboard).toHaveBeenCalledOnce());
+    expect(navigation.push).not.toHaveBeenCalled();
   });
 
   it("rejects a whitespace-only sign-in identifier at the field boundary", async () => {

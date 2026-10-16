@@ -1,0 +1,13 @@
+{
+  "postgresqlVersion": "17.6",
+  "measurement": "Real local PostgREST HTTP RPC; task-owned source only",
+  "fixtureRoleTimeout": "30ms",
+  "fixtureSleepMs": 200,
+  "fixtureErrorCode": "57014",
+  "fixtureElapsedMs": 32.669,
+  "controlRoleTimeout": "35s",
+  "controlSleepElapsedMs": 203.934,
+  "deadlineAppliedBeforeStatement": true,
+  "fixtureRoleAndRpcRemoved": true,
+  "limitation": "Does not itself prove the full cancellation journey; native fence and worker cancellation require their own integration test."
+}

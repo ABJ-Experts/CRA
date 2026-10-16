@@ -8,6 +8,28 @@ import test from "node:test";
 
 const root = process.cwd();
 
+test("live browser verification can isolate Next output without changing its default", () => {
+  for (const [directory, expected] of [
+    [undefined, ".next"],
+    ["node_modules/.cache/cra-siem-next", "node_modules/.cache/cra-siem-next"],
+  ]) {
+    const env = { ...process.env };
+    delete env.CRA_E2E_DIST_DIR;
+    if (directory) env.CRA_E2E_DIST_DIR = directory;
+    const result = spawnSync(
+      process.execPath,
+      [
+        "--input-type=module",
+        "-e",
+        "import c from './apps/web/next.config.js'; console.log(c.distDir)",
+      ],
+      { cwd: root, env, encoding: "utf8" },
+    );
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(result.stdout.trim(), expected);
+  }
+});
+
 test("defines fast and live verification lanes", async () => {
   const [packageJson, infrastructurePackageJson] = await Promise.all([
     readFile(join(root, "package.json"), "utf8").then(JSON.parse),

@@ -1,0 +1,93 @@
+{
+  "storageEndpoint": "http://127.0.0.1:54321/storage/v1",
+  "runtime": "1.77.0",
+  "imageId": "sha256:3999cfa4f3286f945fa68069fc9b8b6bf3929a6bd53916dcf2e8c209801173c0",
+  "status": 200,
+  "objectsPreservedUnchanged": 401,
+  "bucketsPreservedUnchanged": 14,
+  "physicalFilesPreservedUnchanged": 298,
+  "migrationsUnchanged": true,
+  "storageVolumeUnchanged": true,
+  "databaseBackupBytes": 13028669,
+  "storageBackupBytes": 3832832,
+  "diagnosticJourney": {
+    "jobId": "05760f51-20c8-475d-8cc9-d466061ff956",
+    "categories": ["logs", "configuration", "metrics"],
+    "attempts": 1,
+    "byteSize": 9961,
+    "sha256": "59986aa9f75aaf76e9feb4da1e66437ed2ce753076947ab87842c6f18280a2a7",
+    "inspectionStatuses": [200, 200, 200, 200],
+    "actualBrowserDownload": true,
+    "grantReplayStatus": 404,
+    "withdrawalStatus": 200,
+    "inspectionAfterWithdrawal": 404,
+    "downloadAfterWithdrawal": 404,
+    "artifactRetained": true,
+    "durableReceipts": {
+      "consented": 1,
+      "ready": 1,
+      "accessed": 9,
+      "grant_issued": 2,
+      "downloaded": 1,
+      "cancelled": 1
+    },
+    "mobileWidth": 390,
+    "mobileFits": true
+  },
+  "afterFullBrowserSuite": {
+    "browserTestsPassed": 9,
+    "engines": ["Chromium", "Firefox", "WebKit"],
+    "existingObjectRowsUnchanged": 401,
+    "existingBucketsUnchanged": 14,
+    "existingPhysicalFilesUnchanged": 298,
+    "storageMigrationsUnchanged": true,
+    "newDiagnosticObjectRows": 5,
+    "newPhysicalFiles": 5
+  },
+  "existingObjectDownloadChecks": [
+    {
+      "status": 200,
+      "byteSize": 62262,
+      "hashMatchesOriginalFile": true
+    },
+    {
+      "status": 200,
+      "byteSize": 625,
+      "hashMatchesOriginalFile": true
+    },
+    {
+      "status": 200,
+      "byteSize": 6703,
+      "hashMatchesOriginalFile": true
+    }
+  ],
+  "managedService": {
+    "cliStatusExitCode": 0,
+    "cliReportsStorageStopped": false,
+    "storageRuntime": "public.ecr.aws/supabase/storage-api:v1.77.0",
+    "cliProjectLabel": "cra",
+    "containerHealth": "healthy",
+    "oldContainersRetainedStoppedDetached": true,
+    "runningStorageOnOriginalNetwork": 1
+  },
+  "finalPreservation": {
+    "browserTestsPassed": 9,
+    "existingObjectRowsUnchanged": 401,
+    "existingBucketsUnchanged": 14,
+    "existingPhysicalFilesUnchanged": 298,
+    "storageMigrationsUnchanged": true,
+    "newDiagnosticObjectRows": 10,
+    "newPhysicalFiles": 10,
+    "sqlSuitesPassed": 6,
+    "cleanupRaceOrderingsPassed": 2
+  },
+  "finalManagedRuntimeJourney": {
+    "jobId": "a211640e-3af5-4a24-8ae2-720a9f54bc05",
+    "state": "ready",
+    "byteSize": 9961,
+    "sha256": "e97570db6087fed1c864709ca0fabe2d9e8fe8adba30706d9574ec31a7f703ec",
+    "allSectionStatuses": [200, 200, 200, 200],
+    "actualBrowserDownload": true,
+    "newExplicitConsent": true
+  }
+}

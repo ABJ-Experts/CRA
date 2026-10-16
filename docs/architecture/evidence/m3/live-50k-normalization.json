@@ -1,0 +1,29 @@
+{
+  "projectUrl": "http://127.0.0.1:54321",
+  "scope": "Local real normalizer/repository/PostgREST/SQL; no original upload, Nest/browser read transport or production-load claim",
+  "normalizerVersion": "m3-03.3",
+  "components": 50000,
+  "corpusBytes": 5805632,
+  "batches": 200,
+  "maximumBatchRows": 250,
+  "normalizationMs": 11820.460084,
+  "finalizeMs": 3459.395917,
+  "readSamples": 30,
+  "readPageSize": 100,
+  "duplicateNames": true,
+  "walkedPages": 501,
+  "uniqueWalkedComponents": 50000,
+  "rootTreeP95Ms": 19.393167000000176,
+  "rootTreeP99Ms": 26.721290999999837,
+  "readP95Ms": 10.19391700000051,
+  "readP99Ms": 15.010833000000275,
+  "writeBatchP95Ms": 132.09945899999957,
+  "writeBatchP99Ms": 183.0982079999999,
+  "retainedResultComponents": 0,
+  "pageKeys": [
+    "components",
+    "nextCursor"
+  ],
+  "cleanupMs": 2344.6481669999994,
+  "cleanupVerified": true
+}

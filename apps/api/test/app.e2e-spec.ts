@@ -52,7 +52,7 @@ describe("App (e2e)", () => {
     const res = await request(app.getHttpServer())
       .get(`/${API_PREFIX}/health/ready`)
       .expect(200);
-    expect(res.body).toEqual({ status: "ok", database: true });
+    expect(res.body).toEqual({ status: "ok", database: true, audit: true });
   });
 
   it("serves nothing outside the prefix", async () => {

@@ -1,0 +1,34 @@
+begin;
+create extension if not exists pgtap with schema extensions;
+set search_path=public,extensions;
+select plan(12);
+create function pg_temp.m15_05_prepare_configuration(instance_id uuid,configuration jsonb) returns void language plpgsql as $$declare validation jsonb;begin
+ validation:=public.m15_05_backup_control(instance_id,'backup-sql-fixture','policy/validate',jsonb_build_object('configuration',configuration));
+ perform public.m15_05_backup_control(instance_id,'backup-sql-fixture','policy/validated',jsonb_build_object('configurationDigest',validation->'result'->>'configurationDigest'));
+end $$;
+create temporary table m15_05_fence_values(k text primary key,v jsonb);
+insert into m15_05_fence_values values('configuration','{"sourceAlias":"source","repositoryAlias":"off-host","stagingAlias":"private-ram","keyAlias":"backup-key","targetProfile":"isolated-saas","residency":"eu","schedulingEnabled":false,"checkpointIntervalMinutes":30,"baseIntervalHours":24,"verificationIntervalDays":30,"retentionDays":30,"pauseLimitSeconds":1}');
+select pg_temp.m15_05_prepare_configuration('15000000-0000-4000-8000-000000000050',(select v from m15_05_fence_values where k='configuration'));
+select public.m15_05_backup_control('15000000-0000-4000-8000-000000000050','15000000-0000-4000-8000-000000000051','policy/update',jsonb_build_object('expectedVersion',0,'idempotencyKey','15000000-0000-4000-8000-000000000052','configuration',v)) from m15_05_fence_values where k='configuration';
+select public.m15_05_backup_control('15000000-0000-4000-8000-000000000050','15000000-0000-4000-8000-000000000051','run/create','{"expectedVersion":1,"idempotencyKey":"15000000-0000-4000-8000-000000000053"}');
+insert into m15_05_fence_values values('claim',public.m15_05_backup_control('15000000-0000-4000-8000-000000000050','backup-worker','run/claim','{"workerId":"worker","kind":"capture"}'));
+select is(public.m15_05_backup_control('15000000-0000-4000-8000-000000000050','backup-worker','run/pause',jsonb_build_object('runId',(select v->'result'->>'id' from m15_05_fence_values where k='claim'),'workerId','worker','expectedVersion',2))->>'outcome','ok','pause starts once');
+select is(public.m15_05_backup_control('15000000-0000-4000-8000-000000000050','backup-worker','run/pause',jsonb_build_object('runId',(select v->'result'->>'id' from m15_05_fence_values where k='claim'),'workerId','worker','expectedVersion',3))->>'outcome','conflict','cannot reset fence deadline');
+update public.backup_runs set pause_started_at=clock_timestamp()-interval '2 seconds',pause_deadline_at=clock_timestamp()-interval '1 second' where instance_id='15000000-0000-4000-8000-000000000050';
+select is(public.m15_05_backup_control('15000000-0000-4000-8000-000000000050','backup-worker','run/heartbeat',jsonb_build_object('runId',(select v->'result'->>'id' from m15_05_fence_values where k='claim'),'workerId','worker','expectedVersion',3))->>'outcome','conflict','expired fence rejects worker');
+select is((select state from public.backup_runs where instance_id='15000000-0000-4000-8000-000000000050'),'failed','expired fence terminally fails');
+select is((select failure_code from public.backup_runs where instance_id='15000000-0000-4000-8000-000000000050'),'fence_expired','safe failure code');
+select ok((select after_redacted->>'sha256'~'^[a-f0-9]{64}$' from public.audit_logs where event_key='backup.configured:15000000-0000-4000-8000-000000000052'),'durable config hash bound');
+select ok(not public.m15_05_verification_valid('{"integrity":"passed","targetProfile":"isolated-saas","checks":[{"code":"schema_migrations","status":"passed","failureCode":null}]}','isolated-saas'),'passing command alone cannot verify');
+select is(public.m15_05_backup_control('15000000-0000-4000-8000-000000000050','15000000-0000-4000-8000-000000000051','policy/update',jsonb_build_object('expectedVersion',1,'idempotencyKey','15000000-0000-4000-8000-000000000054','configuration',(select v||'{"schedulingEnabled":true}' from m15_05_fence_values where k='configuration')))->>'outcome','blocked','scheduler requires first drill');
+select is(public.m15_05_backup_control('15000000-0000-4000-8000-000000000050','backup-worker','policy/validated','{"configurationDigest":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}')->>'outcome','conflict','validation binds exact config');
+select pg_temp.m15_05_prepare_configuration('15000000-0000-4000-8000-000000000050',(select v||'{"residency":"us"}' from m15_05_fence_values where k='configuration'));
+select is(public.m15_05_backup_control('15000000-0000-4000-8000-000000000050','15000000-0000-4000-8000-000000000051','policy/update',jsonb_build_object('expectedVersion',1,'idempotencyKey','15000000-0000-4000-8000-000000000055','configuration',(select v||'{"residency":"us"}' from m15_05_fence_values where k='configuration')))->'result'->>'version','2','optimistic revision updates');
+select is(public.m15_05_backup_control('15000000-0000-4000-8000-000000000050','15000000-0000-4000-8000-000000000051','policy/update',jsonb_build_object('expectedVersion',0,'idempotencyKey','15000000-0000-4000-8000-000000000052','configuration',(select v from m15_05_fence_values where k='configuration')))->'result'->>'version','1','historical config key retains original result');
+-- Audit append failure must roll back the policy mutation, not merely warn.
+select pg_temp.m15_05_prepare_configuration('15000000-0000-4000-8000-000000000050',(select v||'{"residency":"ca"}' from m15_05_fence_values where k='configuration'));
+create function pg_temp.m15_05_reject_backup_audit() returns trigger language plpgsql as $$begin if new.entity_type='backup' then raise exception 'fixture_audit_rejected' using errcode='P0001';end if;return new;end $$;
+create trigger m15_05_fixture_audit_rejection before insert on public.audit_logs for each row execute function pg_temp.m15_05_reject_backup_audit();
+select throws_ok($$select public.m15_05_backup_control('15000000-0000-4000-8000-000000000050','15000000-0000-4000-8000-000000000051','policy/update',jsonb_build_object('expectedVersion',2,'idempotencyKey','15000000-0000-4000-8000-000000000056','configuration',(select v||'{"residency":"ca"}' from m15_05_fence_values where k='configuration')))$$,'P0001','fixture_audit_rejected','audit failure aborts policy transaction');
+select * from finish();
+rollback;

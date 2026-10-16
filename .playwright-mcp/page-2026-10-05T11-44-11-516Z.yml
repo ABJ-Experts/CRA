@@ -1,0 +1,44 @@
+- generic [active] [ref=f11e1]:
+  - button "Open Next.js Dev Tools" [ref=f11e58] [cursor=pointer]
+  - alert [ref=f11e240]: Welcome Back
+  - generic [ref=f11e383]:
+    - banner [ref=f11e384]:
+      - link "CRA" [ref=f11e385] [cursor=pointer]:
+        - /url: /
+        - generic [aria-hidden] [ref=f11e386]: C
+    - main [ref=f11e388]:
+      - generic [ref=f11e390]:
+        - generic [ref=f11e391]:
+          - heading "Welcome Back" [level=1] [ref=f11e392]
+          - paragraph [ref=f11e393]: Please, sign in to continue
+        - generic [ref=f11e394]:
+          - generic [ref=f11e395]:
+            - generic [ref=f11e396]:
+              - generic [ref=f11e397]:
+                - generic [ref=f11e398]:
+                  - text: Email or User Name
+                  - generic [aria-hidden] [ref=f11e399]: "*"
+                - textbox "Email or User Name" [ref=f11e405]
+              - generic [ref=f11e406]:
+                - generic [ref=f11e407]:
+                  - text: Password
+                  - generic [aria-hidden] [ref=f11e408]: "*"
+                - generic [ref=f11e409]:
+                  - textbox "Password" [ref=f11e414]
+                  - button "Show password" [ref=f11e416] [cursor=pointer]
+            - generic [ref=f11e422]:
+              - generic [ref=f11e424]:
+                - checkbox "Remember me" [checked] [ref=f11e425] [cursor=pointer]
+                - checkbox [checked] [aria-hidden]
+                - generic [ref=f11e426] [cursor=pointer]: Remember me
+              - link "Forgot Password?" [ref=f11e427] [cursor=pointer]:
+                - /url: /forgot-password
+          - button "Sign In" [ref=f11e428] [cursor=pointer]
+          - generic [ref=f11e429]: or sign in with
+          - generic [ref=f11e433]:
+            - button "Sign In with Google" [ref=f11e434] [cursor=pointer]
+            - button "Sign In with SSO" [ref=f11e442] [cursor=pointer]
+    - generic [ref=f11e449]:
+      - generic [ref=f11e450]: Don’t have an account?
+      - link "Sign Up" [ref=f11e451] [cursor=pointer]:
+        - /url: /sign-up

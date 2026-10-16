@@ -2,13 +2,17 @@ import { expect, test } from "@playwright/test";
 
 import { RunScopedAccounts, signIn } from "./helpers/accounts";
 
+/* eslint-disable turbo/no-undeclared-env-vars -- Playwright runs outside Turbo's cached task graph. */
+
+const WEB_ORIGIN = process.env.E2E_WEB_ORIGIN ?? "http://127.0.0.1:3000";
+
 test("revocation is immediate, outages stay visible, and restored checks do not reuse a grant", async ({
   browser,
   page,
 }, testInfo) => {
   const fixtures = new RunScopedAccounts(testInfo);
   const memberContext = await browser.newContext({
-    baseURL: "http://127.0.0.1:3000",
+    baseURL: WEB_ORIGIN,
   });
   try {
     expect((await signIn(page.request, "owner@cra.test")).status()).toBe(200);
@@ -63,7 +67,7 @@ test("revocation is immediate, outages stay visible, and restored checks do not 
     const unavailable = memberPage.waitForResponse((response) =>
       response.url().includes("/api/v1/users?"),
     );
-    await memberPage.goto("/dashboard/management");
+    await memberPage.goto("/management");
     const outage = await unavailable;
     expect(outage.status()).toBe(503);
     expect(await outage.json()).toMatchObject({

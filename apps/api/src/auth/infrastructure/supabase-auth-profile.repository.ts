@@ -25,6 +25,7 @@ const userRowSchema = z.object({
   username: z.string().nullable(),
   first_name: z.string().nullable(),
   last_name: z.string().nullable(),
+  job_title: z.string().nullable(),
   avatar_url: z.string().nullable(),
   is_active: z.boolean(),
   email_verified_at: z.string().nullable(),
@@ -51,6 +52,7 @@ export class SupabaseAuthProfileRepository implements AuthProfileRepository {
       username: value.username,
       firstName: value.first_name,
       lastName: value.last_name,
+      jobTitle: value.job_title,
       avatarUrl: value.avatar_url,
       isActive: value.is_active,
       emailVerifiedAt: value.email_verified_at,
@@ -72,7 +74,7 @@ export class SupabaseAuthProfileRepository implements AuthProfileRepository {
       .admin()
       .from("users")
       .select(
-        "id, auth_user_id, email, username, first_name, last_name, avatar_url, is_active, email_verified_at",
+        "id, auth_user_id, email, username, first_name, last_name, job_title, avatar_url, is_active, email_verified_at",
       )
       .eq("auth_user_id", authUserId)
       .maybeSingle();
@@ -84,7 +86,7 @@ export class SupabaseAuthProfileRepository implements AuthProfileRepository {
       .admin()
       .from("users")
       .select(
-        "id, auth_user_id, email, username, first_name, last_name, avatar_url, is_active, email_verified_at",
+        "id, auth_user_id, email, username, first_name, last_name, job_title, avatar_url, is_active, email_verified_at",
       )
       .eq("id", userId)
       .maybeSingle();
@@ -96,7 +98,7 @@ export class SupabaseAuthProfileRepository implements AuthProfileRepository {
       .admin()
       .from("users")
       .select(
-        "id, auth_user_id, email, username, first_name, last_name, avatar_url, is_active, email_verified_at",
+        "id, auth_user_id, email, username, first_name, last_name, job_title, avatar_url, is_active, email_verified_at",
       )
       .eq("email", email.trim().toLowerCase())
       .maybeSingle();

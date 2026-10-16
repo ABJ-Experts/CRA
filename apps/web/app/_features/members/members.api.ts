@@ -6,15 +6,25 @@ import {
 } from "@repo/contracts/users/schemas";
 
 import { apiClient, requestJson } from "../../_lib/http/api-client";
+import {
+  mutationIdentityHeaders,
+  type MutationIdentity,
+} from "../../_lib/http/mutation-request-identity";
 
 export class MembersApi {
-  async changeRole(userId: string, role: BaseRole, signal?: AbortSignal) {
+  async changeRole(
+    userId: string,
+    role: BaseRole,
+    identity: MutationIdentity,
+    signal?: AbortSignal,
+  ) {
     const { id } = apiClient.parseInput(memberIdParamSchema, { id: userId });
     return requestJson({
       path: `/api/v1/users/${id}/role`,
       method: "PATCH",
       body: { role },
       inputSchema: changeMemberRoleInputSchema,
+      headers: mutationIdentityHeaders(identity),
       signal,
       schema: okResponseSchema,
     });

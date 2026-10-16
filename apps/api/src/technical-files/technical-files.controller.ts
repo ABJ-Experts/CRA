@@ -1,0 +1,1028 @@
+import {
+  Body,
+  ConflictException,
+  Controller,
+  Get,
+  NotFoundException,
+  Param,
+  Patch,
+  Post,
+  Delete,
+  HttpException,
+  Logger,
+  Query,
+  ServiceUnavailableException,
+} from "@nestjs/common";
+import {
+  addTechnicalFileSourceRequestSchema,
+  createTechnicalFileRequestSchema,
+  recalculateTechnicalFileReadinessRequestSchema,
+  removeTechnicalFileSourceParamsSchema,
+  removeTechnicalFileSourceRequestSchema,
+  reviewTechnicalFileSourceRequestSchema,
+  signalTechnicalFileSourceMaterialChangeRequestSchema,
+  technicalFileEvidenceLinkResponseSchema,
+  technicalFileEvidenceReviewResponseSchema,
+  technicalFileProductParamsSchema,
+  technicalFileReadinessParamsSchema,
+  technicalFileReadinessResponseSchema,
+  technicalFileReadinessSourceParamsSchema,
+  technicalFileWorkspaceResponseSchema,
+  cancelTechnicalFileSnapshotExportRequestSchema,
+  createTechnicalFileSnapshotExportRequestSchema,
+  createTechnicalFileSnapshotRequestSchema,
+  technicalFileSnapshotDownloadQuerySchema,
+  technicalFileSnapshotDownloadResponseSchema,
+  technicalFileSnapshotExportParamsSchema,
+  technicalFileSnapshotExportResponseSchema,
+  technicalFileSnapshotParamsSchema,
+  technicalFileSnapshotResponseSchema,
+  technicalFileSnapshotsResponseSchema,
+  createTechnicalFileDeclarationDraftRequestSchema,
+  updateTechnicalFileDeclarationDraftRequestSchema,
+  issueTechnicalFileDeclarationRequestSchema,
+  reissueTechnicalFileDeclarationRequestSchema,
+  technicalFileDeclarationParamsSchema,
+  technicalFileDeclarationPreviewResponseSchema,
+  technicalFileDeclarationResponseSchema,
+  technicalFileDeclarationsResponseSchema,
+  technicalFileDeclarationDownloadResponseSchema,
+  technicalFileSectionParamsSchema,
+  technicalFileSectionResponseSchema,
+  updateTechnicalFileSectionRequestSchema,
+  type AddTechnicalFileSourceRequest,
+  type CreateTechnicalFileRequest,
+  type RecalculateTechnicalFileReadinessRequest,
+  type ReviewTechnicalFileSourceRequest,
+  type SignalTechnicalFileSourceMaterialChangeRequest,
+  type UpdateTechnicalFileSectionRequest,
+  type CancelTechnicalFileSnapshotExportRequest,
+  type CreateTechnicalFileSnapshotExportRequest,
+  type CreateTechnicalFileSnapshotRequest,
+  type TechnicalFileSnapshotDownloadQuery,
+  type CreateTechnicalFileDeclarationDraftRequest,
+  type UpdateTechnicalFileDeclarationDraftRequest,
+  type IssueTechnicalFileDeclarationRequest,
+  type ReissueTechnicalFileDeclarationRequest,
+} from "@repo/contracts/technical-files";
+import {
+  acceptResidualRiskRequestSchema,
+  archiveRiskRegisterRiskRequestSchema,
+  createRiskRegisterRiskRequestSchema,
+  riskRegisterProductParamsSchema,
+  riskRegisterRiskParamsSchema,
+  riskRegisterRiskResponseSchema,
+  riskRegisterWorkspaceResponseSchema,
+  updateRiskRegisterRiskRequestSchema,
+  type AcceptResidualRiskRequest,
+  type ArchiveRiskRegisterRiskRequest,
+  type CreateRiskRegisterRiskRequest,
+  type UpdateRiskRegisterRiskRequest,
+} from "@repo/contracts/risk-registers";
+
+import {
+  CurrentUser,
+  RequirePermissions,
+  type RequestUser,
+} from "../auth/auth.types";
+import { ZodResponse } from "../common/http/zod-response.interceptor";
+import {
+  zodBody,
+  zodParams,
+  zodQuery,
+} from "../common/pipes/zod-validation.pipe";
+import {
+  TechnicalFileConflictError,
+  TechnicalFileInvalidRequestError,
+  TechnicalFileProductUnavailableError,
+} from "./application/technical-file.port";
+import { TechnicalFileUseCases } from "./application/technical-file-use-cases";
+import {
+  RiskRegisterConflictError,
+  RiskRegisterInvalidRequestError,
+} from "./application/risk-register.port";
+import { RiskRegisterUseCases } from "./application/risk-register-use-cases";
+import {
+  TechnicalFileReadinessConflictError,
+  TechnicalFileReadinessInvalidRequestError,
+} from "./application/technical-file-readiness.port";
+import { TechnicalFileReadinessUseCases } from "./application/technical-file-readiness-use-cases";
+import { TechnicalFileSnapshotUseCases } from "./application/technical-file-snapshot-use-cases";
+import {
+  TechnicalFileSnapshotConflictError,
+  TechnicalFileSnapshotInvalidRequestError,
+} from "./application/technical-file-snapshot.port";
+import { TechnicalFileDeclarationUseCases } from "./application/technical-file-declaration-use-cases";
+import {
+  TechnicalFileDeclarationConflictError,
+  TechnicalFileDeclarationInvalidRequestError,
+} from "./application/technical-file-declaration.port";
+
+@Controller("products/:productId/technical-file")
+export class TechnicalFilesController {
+  private readonly logger = new Logger(TechnicalFilesController.name);
+
+  constructor(
+    private readonly technicalFiles: TechnicalFileUseCases,
+    private readonly riskRegisters: RiskRegisterUseCases,
+    private readonly readiness: TechnicalFileReadinessUseCases,
+    private readonly snapshots: TechnicalFileSnapshotUseCases,
+    private readonly declarations: TechnicalFileDeclarationUseCases,
+  ) {}
+
+  @Get()
+  @RequirePermissions("can_view_technical_files")
+  @ZodResponse(technicalFileWorkspaceResponseSchema)
+  async get(
+    @Param(zodParams(technicalFileProductParamsSchema))
+    params: { productId: string },
+    @CurrentUser() user: RequestUser,
+  ) {
+    try {
+      return this.require(
+        await this.technicalFiles.get(organizationId(user), {
+          actorId: user.id,
+          ...params,
+        }),
+      );
+    } catch (error) {
+      this.logUnexpected(error);
+      throw readFailure(error);
+    }
+  }
+
+  private logUnexpected(error: unknown) {
+    if (
+      error instanceof HttpException ||
+      error instanceof TechnicalFileProductUnavailableError ||
+      error instanceof TechnicalFileInvalidRequestError ||
+      error instanceof RiskRegisterInvalidRequestError ||
+      error instanceof RiskRegisterConflictError ||
+      error instanceof TechnicalFileReadinessInvalidRequestError ||
+      error instanceof TechnicalFileReadinessConflictError
+    ) {
+      return;
+    }
+    this.logger.error(
+      error instanceof Error ? error.message : "technical-file request failed",
+    );
+  }
+
+  @Post()
+  @RequirePermissions("can_edit_technical_files")
+  @ZodResponse(technicalFileWorkspaceResponseSchema)
+  async create(
+    @Param(zodParams(technicalFileProductParamsSchema))
+    params: { productId: string },
+    @Body(zodBody(createTechnicalFileRequestSchema))
+    input: CreateTechnicalFileRequest,
+    @CurrentUser() user: RequestUser,
+  ) {
+    try {
+      return this.require(
+        await this.technicalFiles.create(organizationId(user), {
+          actorId: user.id,
+          ...params,
+          ...input,
+        }),
+      );
+    } catch (error) {
+      throw mutationFailure(error);
+    }
+  }
+
+  @Get("sections/:sectionKey")
+  @RequirePermissions("can_view_technical_files")
+  @ZodResponse(technicalFileSectionResponseSchema)
+  async section(
+    @Param(zodParams(technicalFileSectionParamsSchema))
+    params: { productId: string; sectionKey: string },
+    @CurrentUser() user: RequestUser,
+  ) {
+    try {
+      return this.requireSection(
+        await this.technicalFiles.section(organizationId(user), {
+          actorId: user.id,
+          ...params,
+        }),
+      );
+    } catch (error) {
+      throw readFailure(error);
+    }
+  }
+
+  @Patch("sections/:sectionKey")
+  @RequirePermissions("can_edit_technical_files")
+  @ZodResponse(technicalFileSectionResponseSchema)
+  async updateSection(
+    @Param(zodParams(technicalFileSectionParamsSchema))
+    params: { productId: string; sectionKey: string },
+    @Body(zodBody(updateTechnicalFileSectionRequestSchema))
+    input: UpdateTechnicalFileSectionRequest,
+    @CurrentUser() user: RequestUser,
+  ) {
+    try {
+      return this.requireSection(
+        await this.technicalFiles.updateSection(organizationId(user), {
+          actorId: user.id,
+          ...params,
+          ...input,
+        }),
+      );
+    } catch (error) {
+      throw mutationFailure(error);
+    }
+  }
+
+  @Post("sections/:sectionKey/sources")
+  @RequirePermissions("can_edit_technical_files")
+  @ZodResponse(technicalFileSectionResponseSchema)
+  async addSource(
+    @Param(zodParams(technicalFileSectionParamsSchema))
+    params: { productId: string; sectionKey: string },
+    @Body(zodBody(addTechnicalFileSourceRequestSchema))
+    input: AddTechnicalFileSourceRequest,
+    @CurrentUser() user: RequestUser,
+  ) {
+    try {
+      return this.requireSection(
+        await this.technicalFiles.addSource(organizationId(user), {
+          actorId: user.id,
+          ...params,
+          ...input,
+        }),
+      );
+    } catch (error) {
+      throw mutationFailure(error);
+    }
+  }
+
+  @Delete("sections/:sectionKey/sources/:sourceId")
+  @RequirePermissions("can_edit_technical_files")
+  @ZodResponse(technicalFileSectionResponseSchema)
+  async removeSource(
+    @Param(zodParams(removeTechnicalFileSourceParamsSchema))
+    params: { productId: string; sectionKey: string; sourceId: string },
+    @Body(zodBody(removeTechnicalFileSourceRequestSchema))
+    input: { expectedVersion: number; idempotencyKey: string },
+    @CurrentUser() user: RequestUser,
+  ) {
+    try {
+      return this.requireSection(
+        await this.technicalFiles.removeSource(organizationId(user), {
+          actorId: user.id,
+          ...params,
+          ...input,
+        }),
+      );
+    } catch (error) {
+      throw mutationFailure(error);
+    }
+  }
+
+  @Get("readiness")
+  @RequirePermissions("can_view_technical_files")
+  @ZodResponse(technicalFileReadinessResponseSchema)
+  async readinessOverview(
+    @Param(zodParams(technicalFileReadinessParamsSchema))
+    params: { productId: string },
+    @CurrentUser() user: RequestUser,
+  ) {
+    try {
+      return {
+        readiness: this.require(
+          await this.readiness.get(organizationId(user), {
+            actorId: user.id,
+            ...params,
+          }),
+        ),
+      };
+    } catch (error) {
+      this.logUnexpected(error);
+      throw readinessReadFailure(error);
+    }
+  }
+
+  @Post("readiness/recalculate")
+  @RequirePermissions("can_edit_technical_files")
+  @ZodResponse(technicalFileReadinessResponseSchema)
+  async recalculateReadiness(
+    @Param(zodParams(technicalFileReadinessParamsSchema))
+    params: { productId: string },
+    @Body(zodBody(recalculateTechnicalFileReadinessRequestSchema))
+    input: RecalculateTechnicalFileReadinessRequest,
+    @CurrentUser() user: RequestUser,
+  ) {
+    try {
+      return {
+        readiness: this.require(
+          await this.readiness.recalculate(organizationId(user), {
+            actorId: user.id,
+            ...params,
+            ...input,
+          }),
+        ),
+      };
+    } catch (error) {
+      throw readinessMutationFailure(error);
+    }
+  }
+
+  @Post("sections/:sectionKey/sources/:sourceId/review")
+  @RequirePermissions("can_edit_technical_files")
+  @ZodResponse(technicalFileEvidenceReviewResponseSchema)
+  async reviewSource(
+    @Param(zodParams(technicalFileReadinessSourceParamsSchema))
+    params: { productId: string; sectionKey: string; sourceId: string },
+    @Body(zodBody(reviewTechnicalFileSourceRequestSchema))
+    input: ReviewTechnicalFileSourceRequest,
+    @CurrentUser() user: RequestUser,
+  ) {
+    try {
+      return this.require(
+        await this.readiness.reviewSource(organizationId(user), {
+          actorId: user.id,
+          ...params,
+          ...input,
+        }),
+      );
+    } catch (error) {
+      throw readinessMutationFailure(error);
+    }
+  }
+
+  @Post("sections/:sectionKey/sources/:sourceId/material-change")
+  @RequirePermissions("can_edit_technical_files")
+  @ZodResponse(technicalFileEvidenceLinkResponseSchema)
+  async signalMaterialChange(
+    @Param(zodParams(technicalFileReadinessSourceParamsSchema))
+    params: { productId: string; sectionKey: string; sourceId: string },
+    @Body(zodBody(signalTechnicalFileSourceMaterialChangeRequestSchema))
+    input: SignalTechnicalFileSourceMaterialChangeRequest,
+    @CurrentUser() user: RequestUser,
+  ) {
+    try {
+      return {
+        source: this.require(
+          await this.readiness.signalMaterialChange(organizationId(user), {
+            actorId: user.id,
+            ...params,
+            ...input,
+          }),
+        ),
+      };
+    } catch (error) {
+      throw readinessMutationFailure(error);
+    }
+  }
+
+  @Get("snapshots")
+  @RequirePermissions("can_view_technical_files")
+  @ZodResponse(technicalFileSnapshotsResponseSchema)
+  async snapshotsList(
+    @Param(zodParams(technicalFileProductParamsSchema))
+    params: { productId: string },
+    @CurrentUser() user: RequestUser,
+  ) {
+    try {
+      return {
+        snapshots: this.require(
+          await this.snapshots.list(organizationId(user), {
+            actorId: user.id,
+            ...params,
+          }),
+        ),
+      };
+    } catch (error) {
+      throw snapshotReadFailure(error);
+    }
+  }
+
+  @Post("snapshots")
+  @RequirePermissions("can_snapshot_technical_files")
+  @ZodResponse(technicalFileSnapshotResponseSchema)
+  async createSnapshot(
+    @Param(zodParams(technicalFileProductParamsSchema))
+    params: { productId: string },
+    @Body(zodBody(createTechnicalFileSnapshotRequestSchema))
+    input: CreateTechnicalFileSnapshotRequest,
+    @CurrentUser() user: RequestUser,
+  ) {
+    try {
+      return {
+        snapshot: this.require(
+          await this.snapshots.create(organizationId(user), {
+            actorId: user.id,
+            ...params,
+            ...input,
+          }),
+        ),
+      };
+    } catch (error) {
+      throw snapshotMutationFailure(error);
+    }
+  }
+
+  @Get("snapshots/:snapshotId")
+  @RequirePermissions("can_view_technical_files")
+  @ZodResponse(technicalFileSnapshotResponseSchema)
+  async snapshot(
+    @Param(zodParams(technicalFileSnapshotParamsSchema))
+    params: { productId: string; snapshotId: string },
+    @CurrentUser() user: RequestUser,
+  ) {
+    try {
+      return {
+        snapshot: this.require(
+          await this.snapshots.get(organizationId(user), {
+            actorId: user.id,
+            ...params,
+          }),
+        ),
+      };
+    } catch (error) {
+      throw snapshotReadFailure(error);
+    }
+  }
+
+  @Post("snapshots/:snapshotId/exports")
+  @RequirePermissions("can_snapshot_technical_files")
+  @ZodResponse(technicalFileSnapshotExportResponseSchema)
+  async createSnapshotExport(
+    @Param(zodParams(technicalFileSnapshotParamsSchema))
+    params: { productId: string; snapshotId: string },
+    @Body(zodBody(createTechnicalFileSnapshotExportRequestSchema))
+    input: CreateTechnicalFileSnapshotExportRequest,
+    @CurrentUser() user: RequestUser,
+  ) {
+    try {
+      return {
+        export: this.require(
+          await this.snapshots.requestExport(organizationId(user), {
+            actorId: user.id,
+            ...params,
+            ...input,
+          }),
+        ),
+      };
+    } catch (error) {
+      throw snapshotMutationFailure(error);
+    }
+  }
+
+  @Get("snapshots/:snapshotId/exports/:exportId")
+  @RequirePermissions("can_view_technical_files")
+  @ZodResponse(technicalFileSnapshotExportResponseSchema)
+  async snapshotExport(
+    @Param(zodParams(technicalFileSnapshotExportParamsSchema))
+    params: { productId: string; snapshotId: string; exportId: string },
+    @CurrentUser() user: RequestUser,
+  ) {
+    try {
+      return {
+        export: this.require(
+          await this.snapshots.export(organizationId(user), {
+            actorId: user.id,
+            ...params,
+          }),
+        ),
+      };
+    } catch (error) {
+      throw snapshotReadFailure(error);
+    }
+  }
+
+  @Get("snapshots/:snapshotId/exports/:exportId/download")
+  @RequirePermissions("can_snapshot_technical_files")
+  @ZodResponse(technicalFileSnapshotDownloadResponseSchema)
+  async downloadSnapshotExport(
+    @Param(zodParams(technicalFileSnapshotExportParamsSchema))
+    params: { productId: string; snapshotId: string; exportId: string },
+    @Query(zodQuery(technicalFileSnapshotDownloadQuerySchema))
+    query: TechnicalFileSnapshotDownloadQuery,
+    @CurrentUser() user: RequestUser,
+  ) {
+    try {
+      return this.require(
+        await this.snapshots.download(organizationId(user), {
+          actorId: user.id,
+          ...params,
+          ...query,
+        }),
+      );
+    } catch (error) {
+      throw snapshotReadFailure(error);
+    }
+  }
+
+  @Delete("snapshots/:snapshotId/exports/:exportId")
+  @RequirePermissions("can_snapshot_technical_files")
+  @ZodResponse(technicalFileSnapshotExportResponseSchema)
+  async cancelSnapshotExport(
+    @Param(zodParams(technicalFileSnapshotExportParamsSchema))
+    params: { productId: string; snapshotId: string; exportId: string },
+    @Body(zodBody(cancelTechnicalFileSnapshotExportRequestSchema))
+    input: CancelTechnicalFileSnapshotExportRequest,
+    @CurrentUser() user: RequestUser,
+  ) {
+    try {
+      return {
+        export: this.require(
+          await this.snapshots.cancelExport(organizationId(user), {
+            actorId: user.id,
+            ...params,
+            ...input,
+          }),
+        ),
+      };
+    } catch (error) {
+      throw snapshotMutationFailure(error);
+    }
+  }
+
+  @Get("declarations")
+  @RequirePermissions("can_view_technical_files")
+  @ZodResponse(technicalFileDeclarationsResponseSchema)
+  async declarationsList(
+    @Param(zodParams(technicalFileProductParamsSchema))
+    params: { productId: string },
+    @CurrentUser() user: RequestUser,
+  ) {
+    try {
+      return {
+        declarations: this.require(
+          await this.declarations.list(organizationId(user), {
+            actorId: user.id,
+            ...params,
+          }),
+        ),
+      };
+    } catch (error) {
+      throw declarationReadFailure(error);
+    }
+  }
+
+  @Get("declarations/preview/:snapshotId")
+  @RequirePermissions("can_view_technical_files")
+  @ZodResponse(technicalFileDeclarationPreviewResponseSchema)
+  async declarationPreview(
+    @Param(zodParams(technicalFileSnapshotParamsSchema))
+    params: { productId: string; snapshotId: string },
+    @CurrentUser() user: RequestUser,
+  ) {
+    try {
+      return {
+        preview: this.require(
+          await this.declarations.preview(organizationId(user), {
+            actorId: user.id,
+            ...params,
+          }),
+        ),
+      };
+    } catch (error) {
+      throw declarationReadFailure(error);
+    }
+  }
+
+  @Post("declarations")
+  @RequirePermissions("can_issue_technical_files")
+  @ZodResponse(technicalFileDeclarationResponseSchema)
+  async saveDeclarationDraft(
+    @Param(zodParams(technicalFileProductParamsSchema))
+    params: { productId: string },
+    @Body(zodBody(createTechnicalFileDeclarationDraftRequestSchema))
+    input: CreateTechnicalFileDeclarationDraftRequest,
+    @CurrentUser() user: RequestUser,
+  ) {
+    try {
+      return {
+        declaration: this.require(
+          await this.declarations.saveDraft(organizationId(user), {
+            actorId: user.id,
+            ...params,
+            ...input,
+          }),
+        ),
+      };
+    } catch (error) {
+      throw declarationMutationFailure(error);
+    }
+  }
+
+  @Patch("declarations/:declarationId")
+  @RequirePermissions("can_issue_technical_files")
+  @ZodResponse(technicalFileDeclarationResponseSchema)
+  async updateDeclarationDraft(
+    @Param(zodParams(technicalFileDeclarationParamsSchema))
+    params: { productId: string; declarationId: string },
+    @Body(zodBody(updateTechnicalFileDeclarationDraftRequestSchema))
+    input: UpdateTechnicalFileDeclarationDraftRequest,
+    @CurrentUser() user: RequestUser,
+  ) {
+    try {
+      return {
+        declaration: this.require(
+          await this.declarations.saveDraft(organizationId(user), {
+            actorId: user.id,
+            ...params,
+            ...input,
+          }),
+        ),
+      };
+    } catch (error) {
+      throw declarationMutationFailure(error);
+    }
+  }
+
+  @Post("declarations/:declarationId/issue")
+  @RequirePermissions("can_issue_technical_files")
+  @ZodResponse(technicalFileDeclarationResponseSchema)
+  async issueDeclaration(
+    @Param(zodParams(technicalFileDeclarationParamsSchema))
+    params: { productId: string; declarationId: string },
+    @Body(zodBody(issueTechnicalFileDeclarationRequestSchema))
+    input: IssueTechnicalFileDeclarationRequest,
+    @CurrentUser() user: RequestUser,
+  ) {
+    try {
+      return {
+        declaration: this.require(
+          await this.declarations.issue(organizationId(user), {
+            actorId: user.id,
+            ...params,
+            ...input,
+          }),
+        ),
+      };
+    } catch (error) {
+      throw declarationMutationFailure(error);
+    }
+  }
+
+  @Post("declarations/:declarationId/reissue")
+  @RequirePermissions("can_issue_technical_files")
+  @ZodResponse(technicalFileDeclarationResponseSchema)
+  async reissueDeclaration(
+    @Param(zodParams(technicalFileDeclarationParamsSchema))
+    params: { productId: string; declarationId: string },
+    @Body(zodBody(reissueTechnicalFileDeclarationRequestSchema))
+    input: ReissueTechnicalFileDeclarationRequest,
+    @CurrentUser() user: RequestUser,
+  ) {
+    try {
+      return {
+        declaration: this.require(
+          await this.declarations.reissue(organizationId(user), {
+            actorId: user.id,
+            ...params,
+            ...input,
+          }),
+        ),
+      };
+    } catch (error) {
+      throw declarationMutationFailure(error);
+    }
+  }
+
+  @Get("declarations/:declarationId/download")
+  @RequirePermissions("can_view_technical_files")
+  @ZodResponse(technicalFileDeclarationDownloadResponseSchema)
+  async downloadDeclaration(
+    @Param(zodParams(technicalFileDeclarationParamsSchema))
+    params: { productId: string; declarationId: string },
+    @CurrentUser() user: RequestUser,
+  ) {
+    try {
+      return this.require(
+        await this.declarations.download(organizationId(user), {
+          actorId: user.id,
+          ...params,
+        }),
+      );
+    } catch (error) {
+      throw declarationReadFailure(error);
+    }
+  }
+
+  @Get("risk-register")
+  @RequirePermissions("can_view_technical_files")
+  @ZodResponse(riskRegisterWorkspaceResponseSchema)
+  async riskRegister(
+    @Param(zodParams(riskRegisterProductParamsSchema))
+    params: { productId: string },
+    @CurrentUser() user: RequestUser,
+  ) {
+    try {
+      return {
+        riskRegister: await this.riskRegisters.get(organizationId(user), {
+          actorId: user.id,
+          ...params,
+        }),
+      };
+    } catch (error) {
+      this.logUnexpected(error);
+      throw riskReadFailure(error);
+    }
+  }
+
+  @Get("risk-register/risks/:riskId")
+  @RequirePermissions("can_view_technical_files")
+  @ZodResponse(riskRegisterRiskResponseSchema)
+  async risk(
+    @Param(zodParams(riskRegisterRiskParamsSchema))
+    params: { productId: string; riskId: string },
+    @CurrentUser() user: RequestUser,
+  ) {
+    try {
+      return this.requireRisk(
+        await this.riskRegisters.risk(organizationId(user), {
+          actorId: user.id,
+          ...params,
+        }),
+      );
+    } catch (error) {
+      this.logUnexpected(error);
+      throw riskReadFailure(error);
+    }
+  }
+
+  @Post("risk-register/risks")
+  @RequirePermissions("can_edit_technical_files")
+  @ZodResponse(riskRegisterRiskResponseSchema)
+  async createRisk(
+    @Param(zodParams(riskRegisterProductParamsSchema))
+    params: { productId: string },
+    @Body(zodBody(createRiskRegisterRiskRequestSchema))
+    input: CreateRiskRegisterRiskRequest,
+    @CurrentUser() user: RequestUser,
+  ) {
+    try {
+      return this.requireRisk(
+        await this.riskRegisters.createRisk(organizationId(user), {
+          actorId: user.id,
+          ...params,
+          ...input,
+        }),
+      );
+    } catch (error) {
+      throw riskMutationFailure(error);
+    }
+  }
+
+  @Patch("risk-register/risks/:riskId")
+  @RequirePermissions("can_edit_technical_files")
+  @ZodResponse(riskRegisterRiskResponseSchema)
+  async updateRisk(
+    @Param(zodParams(riskRegisterRiskParamsSchema))
+    params: { productId: string; riskId: string },
+    @Body(zodBody(updateRiskRegisterRiskRequestSchema))
+    input: UpdateRiskRegisterRiskRequest,
+    @CurrentUser() user: RequestUser,
+  ) {
+    try {
+      return this.requireRisk(
+        await this.riskRegisters.updateRisk(organizationId(user), {
+          actorId: user.id,
+          ...params,
+          ...input,
+        }),
+      );
+    } catch (error) {
+      throw riskMutationFailure(error);
+    }
+  }
+
+  @Post("risk-register/risks/:riskId/accept-residual-risk")
+  @RequirePermissions("can_edit_technical_files")
+  @ZodResponse(riskRegisterRiskResponseSchema)
+  async acceptResidualRisk(
+    @Param(zodParams(riskRegisterRiskParamsSchema))
+    params: { productId: string; riskId: string },
+    @Body(zodBody(acceptResidualRiskRequestSchema))
+    input: AcceptResidualRiskRequest,
+    @CurrentUser() user: RequestUser,
+  ) {
+    try {
+      return this.requireRisk(
+        await this.riskRegisters.acceptResidualRisk(organizationId(user), {
+          actorId: user.id,
+          ...params,
+          ...input,
+        }),
+      );
+    } catch (error) {
+      throw riskMutationFailure(error);
+    }
+  }
+
+  @Delete("risk-register/risks/:riskId")
+  @RequirePermissions("can_edit_technical_files")
+  @ZodResponse(riskRegisterRiskResponseSchema)
+  async archiveRisk(
+    @Param(zodParams(riskRegisterRiskParamsSchema))
+    params: { productId: string; riskId: string },
+    @Body(zodBody(archiveRiskRegisterRiskRequestSchema))
+    input: ArchiveRiskRegisterRiskRequest,
+    @CurrentUser() user: RequestUser,
+  ) {
+    try {
+      return this.requireRisk(
+        await this.riskRegisters.archiveRisk(organizationId(user), {
+          actorId: user.id,
+          ...params,
+          ...input,
+        }),
+      );
+    } catch (error) {
+      throw riskMutationFailure(error);
+    }
+  }
+
+  private require<T>(value: T | null): T {
+    if (value) return value;
+    throw notFound();
+  }
+
+  private requireSection<T>(value: T | null): { section: T } {
+    if (value) return { section: value };
+    throw notFound();
+  }
+
+  private requireRisk<T>(value: T | null): { risk: T } {
+    if (value) return { risk: value };
+    throw notFound();
+  }
+}
+
+function organizationId(user: RequestUser): string {
+  if (user.organizationId) return user.organizationId;
+  throw notFound();
+}
+
+function notFound() {
+  return new NotFoundException({
+    code: "not_found",
+    message: "The technical file is unavailable.",
+  });
+}
+
+function mutationFailure(error: unknown): Error {
+  if (error instanceof HttpException) return error;
+  if (error instanceof TechnicalFileProductUnavailableError) return notFound();
+  if (error instanceof TechnicalFileConflictError) {
+    return new ConflictException({
+      code: "stale_version",
+      message: "This section changed. Reload before saving.",
+      ...(error.section ? { currentSection: error.section } : {}),
+    });
+  }
+  if (error instanceof TechnicalFileInvalidRequestError) {
+    return new NotFoundException({
+      code: "not_found",
+      message: "The requested source is unavailable.",
+    });
+  }
+  return new ServiceUnavailableException({
+    code: "technical_file_unavailable",
+    message: "The technical file is temporarily unavailable.",
+  });
+}
+
+function readFailure(error: unknown): Error {
+  if (error instanceof HttpException) return error;
+  if (
+    error instanceof TechnicalFileProductUnavailableError ||
+    error instanceof TechnicalFileInvalidRequestError
+  ) {
+    return notFound();
+  }
+  return new ServiceUnavailableException({
+    code: "technical_file_unavailable",
+    message: "The technical file is temporarily unavailable.",
+  });
+}
+
+function riskMutationFailure(error: unknown): Error {
+  if (error instanceof HttpException) return error;
+  if (error instanceof TechnicalFileProductUnavailableError) return notFound();
+  if (error instanceof RiskRegisterConflictError) {
+    return new ConflictException({
+      code: "version_conflict",
+      message: "This risk changed. Reload before saving.",
+      ...(error.currentVersion ? { currentVersion: error.currentVersion } : {}),
+    });
+  }
+  if (error instanceof RiskRegisterInvalidRequestError) return notFound();
+  return new ServiceUnavailableException({
+    code: "risk_register_unavailable",
+    message: "The risk register is temporarily unavailable.",
+  });
+}
+
+function riskReadFailure(error: unknown): Error {
+  if (error instanceof HttpException) return error;
+  if (
+    error instanceof TechnicalFileProductUnavailableError ||
+    error instanceof RiskRegisterInvalidRequestError
+  ) {
+    return notFound();
+  }
+  return new ServiceUnavailableException({
+    code: "risk_register_unavailable",
+    message: "The risk register is temporarily unavailable.",
+  });
+}
+
+function readinessMutationFailure(error: unknown): Error {
+  if (error instanceof HttpException) return error;
+  if (error instanceof TechnicalFileProductUnavailableError) return notFound();
+  if (error instanceof TechnicalFileReadinessConflictError) {
+    return new ConflictException({
+      code: "version_conflict",
+      message: "This evidence link changed. Reload before saving.",
+      ...(error.currentVersion ? { currentVersion: error.currentVersion } : {}),
+    });
+  }
+  if (error instanceof TechnicalFileReadinessInvalidRequestError)
+    return notFound();
+  return new ServiceUnavailableException({
+    code: "technical_file_readiness_unavailable",
+    message: "Technical-file readiness is temporarily unavailable.",
+  });
+}
+
+function readinessReadFailure(error: unknown): Error {
+  if (error instanceof HttpException) return error;
+  if (
+    error instanceof TechnicalFileProductUnavailableError ||
+    error instanceof TechnicalFileReadinessInvalidRequestError
+  ) {
+    return notFound();
+  }
+  return new ServiceUnavailableException({
+    code: "technical_file_readiness_unavailable",
+    message: "Technical-file readiness is temporarily unavailable.",
+  });
+}
+
+function snapshotMutationFailure(error: unknown): Error {
+  if (error instanceof HttpException) return error;
+  if (error instanceof TechnicalFileProductUnavailableError) return notFound();
+  if (error instanceof TechnicalFileSnapshotConflictError) {
+    return new ConflictException({
+      code: "version_conflict",
+      message: "The technical file changed. Reload before creating a snapshot.",
+      ...(error.currentVersion ? { currentVersion: error.currentVersion } : {}),
+    });
+  }
+  if (error instanceof TechnicalFileSnapshotInvalidRequestError)
+    return notFound();
+  return new ServiceUnavailableException({
+    code: "technical_file_snapshot_unavailable",
+    message: "Technical-file snapshots are temporarily unavailable.",
+  });
+}
+
+function snapshotReadFailure(error: unknown): Error {
+  if (error instanceof HttpException) return error;
+  if (
+    error instanceof TechnicalFileProductUnavailableError ||
+    error instanceof TechnicalFileSnapshotInvalidRequestError
+  )
+    return notFound();
+  return new ServiceUnavailableException({
+    code: "technical_file_snapshot_unavailable",
+    message: "Technical-file snapshots are temporarily unavailable.",
+  });
+}
+
+function declarationMutationFailure(error: unknown): Error {
+  if (error instanceof HttpException) return error;
+  if (error instanceof TechnicalFileProductUnavailableError) return notFound();
+  if (error instanceof TechnicalFileDeclarationConflictError) {
+    return new ConflictException({
+      code: "version_conflict",
+      message: "The declaration changed. Reload before issuing.",
+      ...(error.currentVersion ? { currentVersion: error.currentVersion } : {}),
+    });
+  }
+  if (error instanceof TechnicalFileDeclarationInvalidRequestError)
+    return notFound();
+  return new ServiceUnavailableException({
+    code: "technical_file_declaration_unavailable",
+    message: "Declarations are temporarily unavailable.",
+  });
+}
+
+function declarationReadFailure(error: unknown): Error {
+  if (error instanceof HttpException) return error;
+  if (
+    error instanceof TechnicalFileProductUnavailableError ||
+    error instanceof TechnicalFileDeclarationInvalidRequestError
+  )
+    return notFound();
+  return new ServiceUnavailableException({
+    code: "technical_file_declaration_unavailable",
+    message: "Declarations are temporarily unavailable.",
+  });
+}

@@ -32,12 +32,17 @@ class RoleRepositoryFake implements RoleRepository {
     Readonly<{ operation: string; args: readonly unknown[] }>
   > = [];
   roles: readonly CustomRole[] = [role];
-  identity: CustomRoleIdentity | null = { id: role.id, isSystem: false };
+  identity: CustomRoleIdentity | null = {
+    id: role.id,
+    isSystem: false,
+    version: 1,
+  };
   overridesValue: Readonly<Record<string, PermissionSet>> = {
     member: { can_view_users: true },
   };
   createdId = role.id;
   failure: Error | null = null;
+  replayMissing = false;
 
   list(orgId: string): Promise<readonly CustomRole[]> {
     this.record("list", orgId);
@@ -70,6 +75,8 @@ class RoleRepositoryFake implements RoleRepository {
   softDelete(orgId: string, roleId: string, actorId: string): Promise<void> {
     this.record("softDelete", orgId, roleId, actorId);
     this.fail();
+    if (!this.identity && !this.replayMissing)
+      throw new RoleRepositoryError("role_not_found");
     return Promise.resolve();
   }
 
@@ -125,6 +132,21 @@ function assertTenantArgumentPosition(repository: RoleRepository): void {
 void assertTenantArgumentPosition;
 
 describe("RoleUseCases", () => {
+  it("does not emit a second best-effort event after an audited role creation", async () => {
+    const { audit, useCases } = fixture();
+
+    await useCases.create({
+      orgId: "org-a",
+      actor,
+      input: {
+        name: "Support",
+        baseRole: "member",
+        permissions: {},
+      },
+    });
+
+    expect(audit.entries).toEqual([]);
+  });
   it("returns a detached and deeply frozen list snapshot", async () => {
     const { repository, useCases } = fixture();
     const mutablePermissions = { can_view_users: true };
@@ -193,20 +215,12 @@ describe("RoleUseCases", () => {
       },
     ]);
     expect(Object.isFrozen(repository.calls[0]?.args[1])).toBe(true);
-    expect(audit.entries).toEqual([
-      {
-        organizationId: "org-a",
-        userId: actor.id,
-        actorEmail: actor.email,
-        action: "role.created",
-        entityType: "custom_role",
-        entityId: role.id,
-      },
-    ]);
+    expect(audit.entries).toEqual([]);
   });
 
   it.each([
     [new RoleRepositoryError("role_name_taken"), "role_name_taken"],
+    [new RoleRepositoryError("conflict"), "conflict"],
     [new Error("offline"), "role_create_failed"],
   ] as const)(
     "maps create persistence failures to %s",
@@ -243,7 +257,7 @@ describe("RoleUseCases", () => {
     ).resolves.toEqual({ ok: false, error: { code: "role_not_found" } });
 
     const system = fixture();
-    system.repository.identity = { id: role.id, isSystem: true };
+    system.repository.identity = { id: role.id, isSystem: true, version: 1 };
     await expect(
       system.useCases.update({
         orgId: "org-a",
@@ -299,16 +313,7 @@ describe("RoleUseCases", () => {
         (repository.calls[1]?.args[2] as UpdateRoleRecord).permissions,
       ),
     ).toBe(true);
-    expect(audit.entries).toEqual([
-      {
-        organizationId: "org-a",
-        userId: actor.id,
-        actorEmail: actor.email,
-        action: "role.updated",
-        entityType: "custom_role",
-        entityId: role.id,
-      },
-    ]);
+    expect(audit.entries).toEqual([]);
   });
 
   it("preserves an empty update patch without inventing fields", async () => {
@@ -339,17 +344,10 @@ describe("RoleUseCases", () => {
       operation: "softDelete",
       args: ["org-a", role.id, actor.id],
     });
-    expect(audit.entries[0]).toEqual({
-      organizationId: "org-a",
-      userId: actor.id,
-      actorEmail: actor.email,
-      action: "role.deleted",
-      entityType: "custom_role",
-      entityId: role.id,
-    });
+    expect(audit.entries).toEqual([]);
 
     const system = fixture();
-    system.repository.identity = { id: role.id, isSystem: true };
+    system.repository.identity = { id: role.id, isSystem: true, version: 1 };
     await expect(
       system.useCases.remove({ orgId: "org-a", actor, roleId: role.id }),
     ).resolves.toEqual({
@@ -361,6 +359,29 @@ describe("RoleUseCases", () => {
     ]);
   });
 
+  it("allows a same-key delete retry to reach audited persistence after soft deletion", async () => {
+    const { repository, useCases } = fixture();
+    const context = Object.freeze({
+      eventKey: "11111111-1111-4111-8111-111111111111",
+      correlationId: "22222222-2222-4222-8222-222222222222",
+      sourceIp: null,
+    });
+    const command = { orgId: "org-a", actor, roleId: role.id, context };
+    await expect(useCases.remove(command)).resolves.toEqual({
+      ok: true,
+      value: undefined,
+    });
+    repository.identity = null;
+    repository.replayMissing = true;
+    await expect(useCases.remove(command)).resolves.toEqual({
+      ok: true,
+      value: undefined,
+    });
+    expect(
+      repository.calls.filter(({ operation }) => operation === "softDelete"),
+    ).toHaveLength(2);
+  });
+
   it("reports a missing role during removal without deleting", async () => {
     const { repository, useCases } = fixture();
     repository.identity = null;
@@ -370,6 +391,7 @@ describe("RoleUseCases", () => {
     ).resolves.toEqual({ ok: false, error: { code: "role_not_found" } });
     expect(repository.calls.map(({ operation }) => operation)).toEqual([
       "find",
+      "softDelete",
     ]);
   });
 
@@ -423,16 +445,7 @@ describe("RoleUseCases", () => {
       args: ["org-a", "viewer", { can_view_users: true }],
     });
     expect(Object.isFrozen(repository.calls[0]?.args[2])).toBe(true);
-    expect(audit.entries).toEqual([
-      {
-        organizationId: "org-a",
-        userId: actor.id,
-        actorEmail: actor.email,
-        action: "permissions.override_updated",
-        entityType: "base_role",
-        entityId: "viewer",
-      },
-    ]);
+    expect(audit.entries).toEqual([]);
   });
 
   it.each([
@@ -463,4 +476,50 @@ describe("RoleUseCases", () => {
     expect(result).toEqual({ ok: false, error: { code } });
     expect(audit.entries).toEqual([]);
   });
+
+  it.each([
+    ["update", "role_not_found", "role_not_found"],
+    ["update", "role_is_system", "role_is_system"],
+    ["update", "conflict", "conflict"],
+    ["remove", "role_is_system", "role_is_system"],
+    ["remove", "conflict", "conflict"],
+    ["setOverride", "conflict", "conflict"],
+  ] as const)(
+    "maps %s audited repository %s to %s",
+    async (operation, repositoryCode, expectedCode) => {
+      const { repository, useCases } = fixture();
+      const repositoryError = new RoleRepositoryError(repositoryCode);
+      if (operation === "update") {
+        jest.spyOn(repository, "update").mockRejectedValue(repositoryError);
+      } else if (operation === "remove") {
+        jest.spyOn(repository, "softDelete").mockRejectedValue(repositoryError);
+      } else {
+        jest
+          .spyOn(repository, "setOverride")
+          .mockRejectedValue(repositoryError);
+      }
+
+      const result =
+        operation === "update"
+          ? await useCases.update({
+              orgId: "org-a",
+              actor,
+              roleId: role.id,
+              patch: { name: "Updated" },
+            })
+          : operation === "remove"
+            ? await useCases.remove({ orgId: "org-a", actor, roleId: role.id })
+            : await useCases.setOverride({
+                orgId: "org-a",
+                actor,
+                baseRole: "member",
+                permissions: {},
+              });
+
+      expect(result).toMatchObject({
+        ok: false,
+        error: { code: expectedCode },
+      });
+    },
+  );
 });

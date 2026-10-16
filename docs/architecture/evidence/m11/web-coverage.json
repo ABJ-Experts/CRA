@@ -1,0 +1,56 @@
+{
+  "total": {
+    "lines": { "total": 2149, "covered": 2138, "skipped": 0, "pct": 99.48 },
+    "statements": {
+      "total": 2149,
+      "covered": 2138,
+      "skipped": 0,
+      "pct": 99.48
+    },
+    "functions": { "total": 197, "covered": 192, "skipped": 0, "pct": 97.46 },
+    "branches": { "total": 445, "covered": 427, "skipped": 0, "pct": 95.95 },
+    "branchesTrue": { "total": 0, "covered": 0, "skipped": 0, "pct": 100 }
+  },
+  "/Users/abjmac003/Documents/GitHub/CRA/apps/web/app/(workspace)/connectors/connector-catalogue-section.tsx": {
+    "lines": { "total": 85, "covered": 84, "skipped": 0, "pct": 98.82 },
+    "functions": { "total": 1, "covered": 1, "skipped": 0, "pct": 100 },
+    "statements": { "total": 85, "covered": 84, "skipped": 0, "pct": 98.82 },
+    "branches": { "total": 12, "covered": 11, "skipped": 0, "pct": 91.66 }
+  },
+  "/Users/abjmac003/Documents/GitHub/CRA/apps/web/app/(workspace)/connectors/connector-connection-section.tsx": {
+    "lines": { "total": 472, "covered": 469, "skipped": 0, "pct": 99.36 },
+    "functions": { "total": 22, "covered": 22, "skipped": 0, "pct": 100 },
+    "statements": { "total": 472, "covered": 469, "skipped": 0, "pct": 99.36 },
+    "branches": { "total": 118, "covered": 114, "skipped": 0, "pct": 96.61 }
+  },
+  "/Users/abjmac003/Documents/GitHub/CRA/apps/web/app/(workspace)/connectors/connector-detail-content.tsx": {
+    "lines": { "total": 232, "covered": 232, "skipped": 0, "pct": 100 },
+    "functions": { "total": 11, "covered": 10, "skipped": 0, "pct": 90.9 },
+    "statements": { "total": 232, "covered": 232, "skipped": 0, "pct": 100 },
+    "branches": { "total": 47, "covered": 45, "skipped": 0, "pct": 95.74 }
+  },
+  "/Users/abjmac003/Documents/GitHub/CRA/apps/web/app/(workspace)/connectors/connectors-registry-content.tsx": {
+    "lines": { "total": 363, "covered": 358, "skipped": 0, "pct": 98.62 },
+    "functions": { "total": 22, "covered": 19, "skipped": 0, "pct": 86.36 },
+    "statements": { "total": 363, "covered": 358, "skipped": 0, "pct": 98.62 },
+    "branches": { "total": 82, "covered": 73, "skipped": 0, "pct": 89.02 }
+  },
+  "/Users/abjmac003/Documents/GitHub/CRA/apps/web/app/_features/connectors/connectors.api.ts": {
+    "lines": { "total": 459, "covered": 459, "skipped": 0, "pct": 100 },
+    "functions": { "total": 38, "covered": 38, "skipped": 0, "pct": 100 },
+    "statements": { "total": 459, "covered": 459, "skipped": 0, "pct": 100 },
+    "branches": { "total": 49, "covered": 49, "skipped": 0, "pct": 100 }
+  },
+  "/Users/abjmac003/Documents/GitHub/CRA/apps/web/app/_features/connectors/connectors.keys.ts": {
+    "lines": { "total": 70, "covered": 69, "skipped": 0, "pct": 98.57 },
+    "functions": { "total": 2, "covered": 2, "skipped": 0, "pct": 100 },
+    "statements": { "total": 70, "covered": 69, "skipped": 0, "pct": 98.57 },
+    "branches": { "total": 12, "covered": 12, "skipped": 0, "pct": 100 }
+  },
+  "/Users/abjmac003/Documents/GitHub/CRA/apps/web/app/_features/connectors/connectors.queries.ts": {
+    "lines": { "total": 468, "covered": 467, "skipped": 0, "pct": 99.78 },
+    "functions": { "total": 101, "covered": 100, "skipped": 0, "pct": 99 },
+    "statements": { "total": 468, "covered": 467, "skipped": 0, "pct": 99.78 },
+    "branches": { "total": 125, "covered": 123, "skipped": 0, "pct": 98.4 }
+  }
+}

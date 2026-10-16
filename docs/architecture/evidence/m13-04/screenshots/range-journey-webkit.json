@@ -1,0 +1,21 @@
+{
+  "browserEngine": "webkit",
+  "browserVersion": "26.5",
+  "developmentOrigin": "http://localhost:3100",
+  "driver": "installed Playwright CLI",
+  "sourceAuthorizedFixture": true,
+  "compactCheckpointMatched": true,
+  "keyboardFocusAndSubmit": true,
+  "keyboardNavigationKey": "Alt+Tab",
+  "cancellationAndResume": true,
+  "actualWorkerConsistent": true,
+  "cookieRefreshNetworkSequence": [
+    401,
+    200,
+    200
+  ],
+  "organizationSwitchExercised": true,
+  "integrityScreenshotIsInjectedFixture": true,
+  "externalRequests": 0,
+  "limitations": []
+}

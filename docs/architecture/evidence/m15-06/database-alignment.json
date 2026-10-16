@@ -1,0 +1,29 @@
+{
+  "project": "local CRA; cloud MCP has no matching project",
+  "sourceDatabase": "supabase_db_cra",
+  "newApplicationMigrations": 0,
+  "localMigrationFiles": 687,
+  "liveLedgerEntries": 236,
+  "localVersionsAbsentFromLedger": 452,
+  "liveVersionsWithoutLocalFile": ["20261008114010"],
+  "latestLiveVersion": "20261015052219",
+  "catalog": {
+    "public_tables": 296,
+    "columns": 4572,
+    "constraints": 6825,
+    "indexes": 1311,
+    "rls_policies": 47,
+    "public_functions": 1764,
+    "user_triggers": 432,
+    "extensions": 6,
+    "audit_rpc": [
+      {
+        "security_definer": true,
+        "settings": ["search_path=public, pg_temp"],
+        "service_execute": true,
+        "authenticated_execute": false
+      }
+    ]
+  },
+  "qualification": "blocked: existing ledger difference requires reviewed source qualification; no repair attempted"
+}

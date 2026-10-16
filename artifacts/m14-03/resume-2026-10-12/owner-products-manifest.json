@@ -1,0 +1,49 @@
+{
+  "version": "m14_03_v1",
+  "jobId": "b723c321-8209-4f4e-877a-64a9a8d2af29",
+  "source": "products.registry",
+  "requestedAt": "2026-10-12T05:26:56.614536+00:00",
+  "snapshotAsOf": "2026-10-12T05:26:57.471618+00:00",
+  "scope": "all_filtered",
+  "requestDigest": "e719f1878b32ad6dc4ecdf447055f1113ceb6089a11fcceafdb2849246389e75",
+  "rowCount": 18,
+  "columns": [
+    {
+      "key": "name",
+      "label": "name",
+      "type": "text"
+    },
+    {
+      "key": "internalCode",
+      "label": "internal Code",
+      "type": "text"
+    },
+    {
+      "key": "productType",
+      "label": "product Type",
+      "type": "text"
+    },
+    {
+      "key": "responsibleOwnerId",
+      "label": "responsible Owner Id",
+      "type": "text"
+    },
+    {
+      "key": "legalEntity.id",
+      "label": "legal Entity.id",
+      "type": "text"
+    }
+  ],
+  "artifacts": [
+    {
+      "id": "94eea40f-213b-4e16-8d57-c51f67d8ab29",
+      "name": "part-0001.xlsx",
+      "mediaType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "byteLength": 6763,
+      "sha256": "a89dec81a4f8e0959bfb907f665e6e08156f52ddd82e9804a111785a3f2ed567",
+      "rowCount": 18
+    }
+  ],
+  "sourceVersionsDigest": "d1949882171515dedd811d899b4ac899a3a8fb5c535445c2f8fd17f0d5621417",
+  "documentationReadinessOnly": false
+}

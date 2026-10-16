@@ -1,0 +1,56 @@
+{
+  "scope": "Playwright MCP; development customer server and task-only mTLS operator fixture. Real UI/contracts/controller/signature verifier/host journal; simulated native Docker/migration/backup/resource ports. Not Linux qualification.",
+  "maxOpenTaskTabs": 2,
+  "unrelatedSiteDataCleared": false,
+  "operator": {
+    "explicitAcknowledgement": true,
+    "success": true,
+    "compatibleImageRollback": true,
+    "rollbackMaintenanceRetained": true,
+    "postExposureRollbackProhibitedByPolicies": true,
+    "insufficientResourcesBlockInitiation": true,
+    "actionableRemediation": true,
+    "localeDates": true,
+    "keyboardFocus": true,
+    "desktopViewport": {
+      "width": 1440,
+      "height": 1000
+    },
+    "mobileViewport": {
+      "width": 390,
+      "height": 844
+    },
+    "horizontalOverflow": false,
+    "ungrantedCertificateStatus": 401,
+    "resultExport": "simulated-upgrade-result.json",
+    "postExposureRollbackDisabled": true,
+    "postExposureRollbackApiStatus": 409,
+    "rejectedRollbackPreservesHistory": true,
+    "missingOriginMutationStatus": 403
+  },
+  "customer": {
+    "seededOwnerSignIn": true,
+    "dashboard": true,
+    "productsNavigation": true,
+    "refreshStatus": 200,
+    "refreshCookie": {
+      "httpOnly": true,
+      "path": "/api/v1/auth/refresh"
+    },
+    "accessCookie": {
+      "httpOnly": true,
+      "path": "/"
+    },
+    "privateUpgradeRouteStatus": 404,
+    "finalProductRegistryVisible": true
+  },
+  "notExecuted": [
+    "native Linux N/N-1/N-2 compatibility qualification",
+    "real image upgrade or rollback",
+    "migration fault injection on reference host",
+    "30-minute benchmark",
+    "current/previous browser-version matrix",
+    "automated WCAG audit"
+  ],
+  "recordedAt": "2026-10-15T08:50:01.015Z"
+}

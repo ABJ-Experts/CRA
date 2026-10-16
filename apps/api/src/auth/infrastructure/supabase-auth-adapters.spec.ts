@@ -1,3 +1,5 @@
+import { AuthSessionMissingError } from "@supabase/supabase-js";
+import { AuthIdentitySessionInvalidError } from "../application/auth-identity-provider.port";
 import { createHash } from "node:crypto";
 
 import { SupabaseAuthIdentityAdapter } from "./supabase-auth-identity.adapter";
@@ -466,5 +468,26 @@ describe("SystemDelayAdapter", () => {
 
     await expect(work).resolves.toBeUndefined();
     expect(Object.keys(adapter)).toEqual([]);
+  });
+});
+
+describe("revoked GoTrue session during MFA lookup", () => {
+  it("distinguishes missing identity session from provider outage", async () => {
+    const adapter = new SupabaseAuthIdentityAdapter({
+      asUser: () => ({
+        auth: {
+          mfa: {
+            listFactors: () =>
+              Promise.resolve({
+                data: null,
+                error: new AuthSessionMissingError(),
+              }),
+          },
+        },
+      }),
+    } as never);
+    await expect(
+      adapter.listUserMfaFactors("isolated revoked token"),
+    ).rejects.toBeInstanceOf(AuthIdentitySessionInvalidError);
   });
 });

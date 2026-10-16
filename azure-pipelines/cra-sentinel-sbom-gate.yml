@@ -1,0 +1,40 @@
+parameters:
+  sbomPath: ''
+  apiOrigin: ''
+  bindingId: ''
+  ciTokenVariable: CRA_SENTINEL_CI_TOKEN
+  declaredFormat: ''
+  declaredSpecVersion: ''
+
+steps:
+  - task: NodeTool@0
+    inputs:
+      versionSpec: '20.x'
+    displayName: Use Node 20
+  - script: |
+      case "$BUILD_REASON" in
+        IndividualCI|BatchedCI|Manual) ;;
+        *) echo "CRA Sentinel CI upload is unavailable for this build reason" >&2; exit 1 ;;
+      esac
+      node tools/ci/cra-sentinel-sbom-gate.mjs
+    displayName: Upload SBOM to CRA Sentinel
+    env:
+      BUILD_REASON: $(Build.Reason)
+      CRA_SENTINEL_MODE: upload
+      CRA_SENTINEL_API_ORIGIN: ${{ parameters.apiOrigin }}
+      CRA_SENTINEL_CI_TOKEN: $(${{ parameters.ciTokenVariable }})
+      CRA_SENTINEL_BINDING_ID: ${{ parameters.bindingId }}
+      CRA_SENTINEL_SBOM_PATH: ${{ parameters.sbomPath }}
+      CRA_SENTINEL_RUN_ID: $(Build.BuildId)
+      CRA_SENTINEL_RUN_ATTEMPT: 1
+      CRA_SENTINEL_DECLARED_FORMAT: ${{ parameters.declaredFormat }}
+      CRA_SENTINEL_DECLARED_SPEC_VERSION: ${{ parameters.declaredSpecVersion }}
+  - script: node tools/ci/cra-sentinel-sbom-gate.mjs
+    displayName: Check CRA Sentinel build status
+    env:
+      CRA_SENTINEL_MODE: gate
+      CRA_SENTINEL_API_ORIGIN: ${{ parameters.apiOrigin }}
+      CRA_SENTINEL_CI_TOKEN: $(${{ parameters.ciTokenVariable }})
+      CRA_SENTINEL_BINDING_ID: ${{ parameters.bindingId }}
+      CRA_SENTINEL_RUN_ID: $(Build.BuildId)
+      CRA_SENTINEL_RUN_ATTEMPT: 1

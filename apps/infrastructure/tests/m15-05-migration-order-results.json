@@ -1,0 +1,11 @@
+{
+  "target": "cra-m15-05-ordered-e7091e85-fc0d-45de-bab8-32fe9e0f5e9d",
+  "network": "none",
+  "sourceRowsCopied": 0,
+  "migrationsAppliedInOrder": 3,
+  "sqlSuites": 10,
+  "assertions": 128,
+  "canonicalFunctionDigest": "7ed923b377713b49957711544740886e",
+  "canonicalParity": true,
+  "syntheticFixtureOnly": true
+}

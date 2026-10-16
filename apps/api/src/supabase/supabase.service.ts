@@ -71,6 +71,27 @@ export class SupabaseService {
     return this.adminClient;
   }
 
+  /** Request-scoped cancellation reaches RPC, upload and download fetches. */
+  adminWithSignal(signal: AbortSignal): CraSupabaseClient {
+    return createClient<Database>(this.url, this.serviceKey, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+        detectSessionInUrl: false,
+      },
+      global: {
+        fetch: (input, init) =>
+          fetch(input, {
+            ...init,
+            signal: AbortSignal.any([
+              signal,
+              ...(init?.signal ? [init.signal] : []),
+            ]),
+          }),
+      },
+    });
+  }
+
   /**
    * A FRESH client every call, never a singleton.
    *
@@ -102,11 +123,9 @@ export class SupabaseService {
   }
 
   /** Cheap liveness probe used by GET /api/v1/health. */
-  async ping(): Promise<boolean> {
-    const { error } = await this.admin()
-      .from("organizations")
-      .select("id")
-      .limit(1);
+  async ping(signal?: AbortSignal): Promise<boolean> {
+    const query = this.admin().from("organizations").select("id").limit(1);
+    const { error } = await (signal ? query.abortSignal(signal) : query);
 
     if (error) {
       this.logger.error(`Supabase ping failed: ${error.message}`);

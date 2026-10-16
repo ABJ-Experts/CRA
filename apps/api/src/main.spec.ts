@@ -23,15 +23,17 @@ describe("API bootstrap", () => {
     jest.mocked(helmet).mockReturnValue(helmetMiddleware);
 
     const getOrThrow = jest.fn((key: string) => {
-      const values: Record<string, string | number> = {
+      const values: Record<string, string | number | string[]> = {
         WEB_ORIGIN: "https://web.cra.test",
         PORT: 3333,
+        TRUSTED_PROXY_ADDRESSES: [],
       };
       return values[key];
     });
     const app = {
       get: jest.fn().mockReturnValue({ getOrThrow }),
       setGlobalPrefix: jest.fn(),
+      useBodyParser: jest.fn(),
       set: jest.fn(),
       use: jest.fn(),
       enableCors: jest.fn(),
@@ -49,26 +51,43 @@ describe("API bootstrap", () => {
 
     expect(create).toHaveBeenCalledWith(expect.any(Function), {
       bufferLogs: false,
+      rawBody: true,
+      bodyParser: false,
     });
     expect(app.setGlobalPrefix).toHaveBeenCalledWith("api/v1");
-    expect(app.set).toHaveBeenCalledWith("trust proxy", 1);
+    expect(app.useBodyParser).toHaveBeenNthCalledWith(1, "json", {
+      limit: "2200kb",
+      type: expect.any(Function) as unknown,
+    });
+    expect(app.useBodyParser).toHaveBeenNthCalledWith(2, "urlencoded", {
+      extended: true,
+      type: expect.any(Function) as unknown,
+    });
+    expect(app.set).toHaveBeenCalledWith("trust proxy", false);
     expect(cookieParser).toHaveBeenCalledWith();
     expect(helmet).toHaveBeenCalledWith({
       contentSecurityPolicy: false,
       crossOriginEmbedderPolicy: false,
     });
-    expect(app.use).toHaveBeenNthCalledWith(1, cookieMiddleware);
-    expect(app.use).toHaveBeenNthCalledWith(2, helmetMiddleware);
+    expect(app.use).toHaveBeenNthCalledWith(1, expect.any(Function));
+    expect(app.use).toHaveBeenNthCalledWith(2, cookieMiddleware);
+    expect(app.use).toHaveBeenNthCalledWith(3, helmetMiddleware);
     expect(app.enableCors).toHaveBeenCalledWith({
       origin: ["https://web.cra.test"],
       credentials: true,
       methods: ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
-      allowedHeaders: ["Content-Type", "Authorization"],
+      allowedHeaders: [
+        "Content-Type",
+        "Authorization",
+        "Idempotency-Key",
+        "X-Correlation-Id",
+      ],
     });
     expect(app.useGlobalFilters).toHaveBeenCalledTimes(1);
     expect(app.enableShutdownHooks).toHaveBeenCalledWith();
-    expect(getOrThrow).toHaveBeenNthCalledWith(1, "WEB_ORIGIN");
-    expect(getOrThrow).toHaveBeenNthCalledWith(2, "PORT");
+    expect(getOrThrow).toHaveBeenNthCalledWith(1, "TRUSTED_PROXY_ADDRESSES");
+    expect(getOrThrow).toHaveBeenNthCalledWith(2, "WEB_ORIGIN");
+    expect(getOrThrow).toHaveBeenNthCalledWith(3, "PORT");
     expect(app.listen).toHaveBeenCalledWith(3333);
     expect(loggerLog).toHaveBeenCalledWith(
       "API listening on http://localhost:3333/api/v1",

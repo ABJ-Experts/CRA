@@ -1,0 +1,50 @@
+{
+  "records": [
+    {
+      "engine": "chromium",
+      "browserVersion": "151.0.7922.34",
+      "explicitNonLocalFetchBlocked": true,
+      "blockedHosts": [
+        "m15-isolated-egress.invalid"
+      ],
+      "signInStatus": 200,
+      "healthStatus": 200,
+      "customerCannotEnterOperatorStatus": 404,
+      "healthUiRendered": true,
+      "backendProcessNonLoopbackBlocked": true,
+      "privateMtlsOperatorUiRendered": true,
+      "scope": "Browser non-loopback HTTP(S) blocked and test-only API process non-loopback Socket.connect/dns.lookup blocked; host firewall unchanged"
+    },
+    {
+      "engine": "firefox",
+      "browserVersion": "153.0",
+      "explicitNonLocalFetchBlocked": true,
+      "blockedHosts": [
+        "m15-isolated-egress.invalid"
+      ],
+      "signInStatus": 200,
+      "healthStatus": 200,
+      "customerCannotEnterOperatorStatus": 404,
+      "healthUiRendered": true,
+      "backendProcessNonLoopbackBlocked": true,
+      "privateMtlsOperatorUiRendered": true,
+      "scope": "Browser non-loopback HTTP(S) blocked and test-only API process non-loopback Socket.connect/dns.lookup blocked; host firewall unchanged"
+    },
+    {
+      "engine": "webkit",
+      "browserVersion": "26.5",
+      "explicitNonLocalFetchBlocked": true,
+      "blockedHosts": [
+        "m15-isolated-egress.invalid"
+      ],
+      "signInStatus": 200,
+      "healthStatus": 200,
+      "customerCannotEnterOperatorStatus": 404,
+      "healthUiRendered": true,
+      "backendProcessNonLoopbackBlocked": true,
+      "privateMtlsOperatorUiRendered": true,
+      "scope": "Browser non-loopback HTTP(S) blocked and test-only API process non-loopback Socket.connect/dns.lookup blocked; host firewall unchanged"
+    }
+  ],
+  "completedAt": "2026-10-14T08:09:29.335Z"
+}

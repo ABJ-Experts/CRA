@@ -22,6 +22,8 @@ jobs:
           node-version: 20
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Install the streaming XML schema validator
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libxml2-utils
       - run: pnpm verify
 
   live:
@@ -37,6 +39,8 @@ jobs:
           node-version: 20
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Install the streaming XML schema validator
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libxml2-utils
       - run: pnpm --filter infrastructure run db:start
       - run: pnpm --filter infrastructure run db:reset
       - run: pnpm --filter infrastructure run db:lint
@@ -61,6 +65,7 @@ jobs:
             echo "SMTP_FROM=CRA <no-reply@cra.test>"
           } >> "$GITHUB_ENV"
       - run: pnpm --filter api run build
+      - run: pnpm --filter api run verify:vulnerability-matching-accuracy
       - name: Start API and wait for readiness
         shell: bash
         run: |

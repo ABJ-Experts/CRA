@@ -1,0 +1,26 @@
+{
+  "projectUrl": "http://127.0.0.1:54321",
+  "m3MigrationCount": 12,
+  "migrations": [
+    "20260928081853_m3_completed_graph_immutability.sql",
+    "20260928082452_m3_immutable_graph_derived_identity_compatibility.sql",
+    "20260928082659_m3_graph_explicit_service_role_privileges.sql",
+    "20260928084351_m3_lineage_installed_version_comparators.sql",
+    "20260928084512_m3_ingest_exhausted_lease_dead_letter.sql",
+    "20260928084800_m3_component_parent_lookup_index.sql",
+    "20260928084819_m3_scoped_live_finding_deltas.sql",
+    "20260928090751_m3_independent_feed_epoch_readiness.sql",
+    "20260928091109_m3_strict_active_feed_epoch_readiness.sql",
+    "20260928093431_m3_source_supplier_pagination_boundaries.sql",
+    "20260928095456_m3_verified_alias_validation_projection.sql",
+    "20260928110739_m3_quality_terminal_predecessor_progress.sql"
+  ],
+  "newTables": 0,
+  "newColumns": 0,
+  "publicTableCount": 247,
+  "sbomTableCount": 22,
+  "generatedTypeCopiesAligned": true,
+  "apiGeneratedHeaderLines": 2,
+  "note": "All twelve migration versions confirmed in local history by read-only MCP; schema-only DDL reviewed. Production untouched.",
+  "verifiedAt": "2026-09-28T11:25:53.285271+00:00"
+}

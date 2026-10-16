@@ -1,0 +1,296 @@
+{
+  "schemaVersion": 1,
+  "description": "Synthetic adversarial canaries only; never real credentials or customer data. Each vector must remain absent from projected/inspected data, individual ZIP entry bytes, manifests, safe source omissions, and safe client errors.",
+  "vectors": [
+    {
+      "name": "nested",
+      "canary": "M15_04_CANARY::nested::secret@example.invalid",
+      "forbiddenRepresentations": [
+        "M15_04_CANARY::nested::secret@example.invalid",
+        "TTE1XzA0X0NBTkFSWTo6bmVzdGVkOjpzZWNyZXRAZXhhbXBsZS5pbnZhbGlk",
+        "M15_04_CANARY%3A%3Anested%3A%3Asecret%40example.invalid",
+        "M15_04_CANARY%253A%253Anested%253A%253Asecret%2540example.invalid",
+        "\\u004d\\u0031\\u0035\\u005f\\u0030\\u0034\\u005f\\u0043\\u0041\\u004e\\u0041\\u0052\\u0059\\u003a\\u003a\\u006e\\u0065\\u0073\\u0074\\u0065\\u0064\\u003a\\u003a\\u0073\\u0065\\u0063\\u0072\\u0065\\u0074\\u0040\\u0065\\u0078\\u0061\\u006d\\u0070\\u006c\\u0065\\u002e\\u0069\\u006e\\u0076\\u0061\\u006c\\u0069\\u0064"
+      ],
+      "unknownFields": {
+        "metadata": {
+          "request": {
+            "actor": {
+              "email": "M15_04_CANARY::nested::secret@example.invalid"
+            }
+          },
+          "payload": [
+            {
+              "credentials": "M15_04_CANARY::nested::secret@example.invalid"
+            }
+          ]
+        }
+      },
+      "trustedSubstitution": {
+        "envelope": [
+          "M15_04_CANARY::nested::secret@example.invalid",
+          "TTE1XzA0X0NBTkFSWTo6bmVzdGVkOjpzZWNyZXRAZXhhbXBsZS5pbnZhbGlk",
+          "M15_04_CANARY%3A%3Anested%3A%3Asecret%40example.invalid"
+        ]
+      }
+    },
+    {
+      "name": "base64",
+      "canary": "M15_04_CANARY::base64::secret@example.invalid",
+      "forbiddenRepresentations": [
+        "M15_04_CANARY::base64::secret@example.invalid",
+        "TTE1XzA0X0NBTkFSWTo6YmFzZTY0OjpzZWNyZXRAZXhhbXBsZS5pbnZhbGlk",
+        "M15_04_CANARY%3A%3Abase64%3A%3Asecret%40example.invalid",
+        "M15_04_CANARY%253A%253Abase64%253A%253Asecret%2540example.invalid",
+        "\\u004d\\u0031\\u0035\\u005f\\u0030\\u0034\\u005f\\u0043\\u0041\\u004e\\u0041\\u0052\\u0059\\u003a\\u003a\\u0062\\u0061\\u0073\\u0065\\u0036\\u0034\\u003a\\u003a\\u0073\\u0065\\u0063\\u0072\\u0065\\u0074\\u0040\\u0065\\u0078\\u0061\\u006d\\u0070\\u006c\\u0065\\u002e\\u0069\\u006e\\u0076\\u0061\\u006c\\u0069\\u0064"
+      ],
+      "unknownFields": {
+        "encoded": "TTE1XzA0X0NBTkFSWTo6YmFzZTY0OjpzZWNyZXRAZXhhbXBsZS5pbnZhbGlk",
+        "authorization": "Basic TTE1XzA0X0NBTkFSWTo6YmFzZTY0OjpzZWNyZXRAZXhhbXBsZS5pbnZhbGlk",
+        "attachment": {
+          "content": "TTE1XzA0X0NBTkFSWTo6YmFzZTY0OjpzZWNyZXRAZXhhbXBsZS5pbnZhbGlk"
+        }
+      },
+      "trustedSubstitution": "TTE1XzA0X0NBTkFSWTo6YmFzZTY0OjpzZWNyZXRAZXhhbXBsZS5pbnZhbGlk"
+    },
+    {
+      "name": "percent",
+      "canary": "M15_04_CANARY::percent::secret@example.invalid",
+      "forbiddenRepresentations": [
+        "M15_04_CANARY::percent::secret@example.invalid",
+        "TTE1XzA0X0NBTkFSWTo6cGVyY2VudDo6c2VjcmV0QGV4YW1wbGUuaW52YWxpZA==",
+        "M15_04_CANARY%3A%3Apercent%3A%3Asecret%40example.invalid",
+        "M15_04_CANARY%253A%253Apercent%253A%253Asecret%2540example.invalid",
+        "\\u004d\\u0031\\u0035\\u005f\\u0030\\u0034\\u005f\\u0043\\u0041\\u004e\\u0041\\u0052\\u0059\\u003a\\u003a\\u0070\\u0065\\u0072\\u0063\\u0065\\u006e\\u0074\\u003a\\u003a\\u0073\\u0065\\u0063\\u0072\\u0065\\u0074\\u0040\\u0065\\u0078\\u0061\\u006d\\u0070\\u006c\\u0065\\u002e\\u0069\\u006e\\u0076\\u0061\\u006c\\u0069\\u0064"
+      ],
+      "unknownFields": {
+        "encoded": "M15_04_CANARY%3A%3Apercent%3A%3Asecret%40example.invalid",
+        "path": "/private/M15_04_CANARY%3A%3Apercent%3A%3Asecret%40example.invalid",
+        "query": "token=M15_04_CANARY%3A%3Apercent%3A%3Asecret%40example.invalid"
+      },
+      "trustedSubstitution": "M15_04_CANARY%3A%3Apercent%3A%3Asecret%40example.invalid"
+    },
+    {
+      "name": "double_percent",
+      "canary": "M15_04_CANARY::double_percent::secret@example.invalid",
+      "forbiddenRepresentations": [
+        "M15_04_CANARY::double_percent::secret@example.invalid",
+        "TTE1XzA0X0NBTkFSWTo6ZG91YmxlX3BlcmNlbnQ6OnNlY3JldEBleGFtcGxlLmludmFsaWQ=",
+        "M15_04_CANARY%3A%3Adouble_percent%3A%3Asecret%40example.invalid",
+        "M15_04_CANARY%253A%253Adouble_percent%253A%253Asecret%2540example.invalid",
+        "\\u004d\\u0031\\u0035\\u005f\\u0030\\u0034\\u005f\\u0043\\u0041\\u004e\\u0041\\u0052\\u0059\\u003a\\u003a\\u0064\\u006f\\u0075\\u0062\\u006c\\u0065\\u005f\\u0070\\u0065\\u0072\\u0063\\u0065\\u006e\\u0074\\u003a\\u003a\\u0073\\u0065\\u0063\\u0072\\u0065\\u0074\\u0040\\u0065\\u0078\\u0061\\u006d\\u0070\\u006c\\u0065\\u002e\\u0069\\u006e\\u0076\\u0061\\u006c\\u0069\\u0064"
+      ],
+      "unknownFields": {
+        "encoded": "M15_04_CANARY%253A%253Adouble_percent%253A%253Asecret%2540example.invalid",
+        "redirect": "https://example.invalid/?token=M15_04_CANARY%253A%253Adouble_percent%253A%253Asecret%2540example.invalid"
+      },
+      "trustedSubstitution": "M15_04_CANARY%253A%253Adouble_percent%253A%253Asecret%2540example.invalid"
+    },
+    {
+      "name": "json_encoded",
+      "canary": "M15_04_CANARY::json_encoded::secret@example.invalid",
+      "forbiddenRepresentations": [
+        "M15_04_CANARY::json_encoded::secret@example.invalid",
+        "TTE1XzA0X0NBTkFSWTo6anNvbl9lbmNvZGVkOjpzZWNyZXRAZXhhbXBsZS5pbnZhbGlk",
+        "M15_04_CANARY%3A%3Ajson_encoded%3A%3Asecret%40example.invalid",
+        "M15_04_CANARY%253A%253Ajson_encoded%253A%253Asecret%2540example.invalid",
+        "\\u004d\\u0031\\u0035\\u005f\\u0030\\u0034\\u005f\\u0043\\u0041\\u004e\\u0041\\u0052\\u0059\\u003a\\u003a\\u006a\\u0073\\u006f\\u006e\\u005f\\u0065\\u006e\\u0063\\u006f\\u0064\\u0065\\u0064\\u003a\\u003a\\u0073\\u0065\\u0063\\u0072\\u0065\\u0074\\u0040\\u0065\\u0078\\u0061\\u006d\\u0070\\u006c\\u0065\\u002e\\u0069\\u006e\\u0076\\u0061\\u006c\\u0069\\u0064"
+      ],
+      "unknownFields": {
+        "serialized": "{\"secret\":\"M15_04_CANARY::json_encoded::secret@example.invalid\"}",
+        "body": "{\"body\":\"{\\\"secret\\\":\\\"M15_04_CANARY::json_encoded::secret@example.invalid\\\"}\"}"
+      },
+      "trustedSubstitution": "{\"secret\":\"M15_04_CANARY::json_encoded::secret@example.invalid\"}"
+    },
+    {
+      "name": "stack_trace",
+      "canary": "M15_04_CANARY::stack_trace::secret@example.invalid",
+      "forbiddenRepresentations": [
+        "M15_04_CANARY::stack_trace::secret@example.invalid",
+        "TTE1XzA0X0NBTkFSWTo6c3RhY2tfdHJhY2U6OnNlY3JldEBleGFtcGxlLmludmFsaWQ=",
+        "M15_04_CANARY%3A%3Astack_trace%3A%3Asecret%40example.invalid",
+        "M15_04_CANARY%253A%253Astack_trace%253A%253Asecret%2540example.invalid",
+        "\\u004d\\u0031\\u0035\\u005f\\u0030\\u0034\\u005f\\u0043\\u0041\\u004e\\u0041\\u0052\\u0059\\u003a\\u003a\\u0073\\u0074\\u0061\\u0063\\u006b\\u005f\\u0074\\u0072\\u0061\\u0063\\u0065\\u003a\\u003a\\u0073\\u0065\\u0063\\u0072\\u0065\\u0074\\u0040\\u0065\\u0078\\u0061\\u006d\\u0070\\u006c\\u0065\\u002e\\u0069\\u006e\\u0076\\u0061\\u006c\\u0069\\u0064"
+      ],
+      "unknownFields": {
+        "stack": "Error: M15_04_CANARY::stack_trace::secret@example.invalid\n    at authenticate (/private/M15_04_CANARY::stack_trace::secret@example.invalid:1:2)\nCaused by: M15_04_CANARY::stack_trace::secret@example.invalid",
+        "cause": {
+          "message": "M15_04_CANARY::stack_trace::secret@example.invalid"
+        }
+      },
+      "trustedSubstitution": "Error: M15_04_CANARY::stack_trace::secret@example.invalid\n    at authenticate (/private/M15_04_CANARY::stack_trace::secret@example.invalid:1:2)\nCaused by: M15_04_CANARY::stack_trace::secret@example.invalid"
+    },
+    {
+      "name": "signed_url",
+      "canary": "M15_04_CANARY::signed_url::secret@example.invalid",
+      "forbiddenRepresentations": [
+        "M15_04_CANARY::signed_url::secret@example.invalid",
+        "TTE1XzA0X0NBTkFSWTo6c2lnbmVkX3VybDo6c2VjcmV0QGV4YW1wbGUuaW52YWxpZA==",
+        "M15_04_CANARY%3A%3Asigned_url%3A%3Asecret%40example.invalid",
+        "M15_04_CANARY%253A%253Asigned_url%253A%253Asecret%2540example.invalid",
+        "\\u004d\\u0031\\u0035\\u005f\\u0030\\u0034\\u005f\\u0043\\u0041\\u004e\\u0041\\u0052\\u0059\\u003a\\u003a\\u0073\\u0069\\u0067\\u006e\\u0065\\u0064\\u005f\\u0075\\u0072\\u006c\\u003a\\u003a\\u0073\\u0065\\u0063\\u0072\\u0065\\u0074\\u0040\\u0065\\u0078\\u0061\\u006d\\u0070\\u006c\\u0065\\u002e\\u0069\\u006e\\u0076\\u0061\\u006c\\u0069\\u0064"
+      ],
+      "unknownFields": {
+        "signedUrl": "https://storage.example.invalid/private/M15_04_CANARY%3A%3Asigned_url%3A%3Asecret%40example.invalid?X-Amz-Credential=M15_04_CANARY%3A%3Asigned_url%3A%3Asecret%40example.invalid&X-Amz-Signature=TTE1XzA0X0NBTkFSWTo6c2lnbmVkX3VybDo6c2VjcmV0QGV4YW1wbGUuaW52YWxpZA==",
+        "url": "https://user:M15_04_CANARY%3A%3Asigned_url%3A%3Asecret%40example.invalid@private.example.invalid/M15_04_CANARY%3A%3Asigned_url%3A%3Asecret%40example.invalid"
+      },
+      "trustedSubstitution": "https://storage.example.invalid/private/M15_04_CANARY%3A%3Asigned_url%3A%3Asecret%40example.invalid?X-Amz-Credential=M15_04_CANARY%3A%3Asigned_url%3A%3Asecret%40example.invalid&X-Amz-Signature=TTE1XzA0X0NBTkFSWTo6c2lnbmVkX3VybDo6c2VjcmV0QGV4YW1wbGUuaW52YWxpZA=="
+    },
+    {
+      "name": "credentials",
+      "canary": "M15_04_CANARY::credentials::secret@example.invalid",
+      "forbiddenRepresentations": [
+        "M15_04_CANARY::credentials::secret@example.invalid",
+        "TTE1XzA0X0NBTkFSWTo6Y3JlZGVudGlhbHM6OnNlY3JldEBleGFtcGxlLmludmFsaWQ=",
+        "M15_04_CANARY%3A%3Acredentials%3A%3Asecret%40example.invalid",
+        "M15_04_CANARY%253A%253Acredentials%253A%253Asecret%2540example.invalid",
+        "\\u004d\\u0031\\u0035\\u005f\\u0030\\u0034\\u005f\\u0043\\u0041\\u004e\\u0041\\u0052\\u0059\\u003a\\u003a\\u0063\\u0072\\u0065\\u0064\\u0065\\u006e\\u0074\\u0069\\u0061\\u006c\\u0073\\u003a\\u003a\\u0073\\u0065\\u0063\\u0072\\u0065\\u0074\\u0040\\u0065\\u0078\\u0061\\u006d\\u0070\\u006c\\u0065\\u002e\\u0069\\u006e\\u0076\\u0061\\u006c\\u0069\\u0064"
+      ],
+      "unknownFields": {
+        "password": "M15_04_CANARY::credentials::secret@example.invalid",
+        "SMTP_PASS": "M15_04_CANARY::credentials::secret@example.invalid",
+        "dsn": "postgresql://user:M15_04_CANARY%3A%3Acredentials%3A%3Asecret%40example.invalid@database.example.invalid/private",
+        "authorization": "Basic TTE1XzA0X0NBTkFSWTo6Y3JlZGVudGlhbHM6OnNlY3JldEBleGFtcGxlLmludmFsaWQ="
+      },
+      "trustedSubstitution": "M15_04_CANARY::credentials::secret@example.invalid"
+    },
+    {
+      "name": "tokens",
+      "canary": "M15_04_CANARY::tokens::secret@example.invalid",
+      "forbiddenRepresentations": [
+        "M15_04_CANARY::tokens::secret@example.invalid",
+        "TTE1XzA0X0NBTkFSWTo6dG9rZW5zOjpzZWNyZXRAZXhhbXBsZS5pbnZhbGlk",
+        "M15_04_CANARY%3A%3Atokens%3A%3Asecret%40example.invalid",
+        "M15_04_CANARY%253A%253Atokens%253A%253Asecret%2540example.invalid",
+        "\\u004d\\u0031\\u0035\\u005f\\u0030\\u0034\\u005f\\u0043\\u0041\\u004e\\u0041\\u0052\\u0059\\u003a\\u003a\\u0074\\u006f\\u006b\\u0065\\u006e\\u0073\\u003a\\u003a\\u0073\\u0065\\u0063\\u0072\\u0065\\u0074\\u0040\\u0065\\u0078\\u0061\\u006d\\u0070\\u006c\\u0065\\u002e\\u0069\\u006e\\u0076\\u0061\\u006c\\u0069\\u0064"
+      ],
+      "unknownFields": {
+        "access_token": "M15_04_CANARY::tokens::secret@example.invalid",
+        "refresh_token": "M15_04_CANARY::tokens::secret@example.invalid",
+        "jwt": "eyJhbGciOiJIUzI1NiJ9.TTE1XzA0X0NBTkFSWTo6dG9rZW5zOjpzZWNyZXRAZXhhbXBsZS5pbnZhbGlk.synthetic",
+        "authorization": "Bearer M15_04_CANARY::tokens::secret@example.invalid"
+      },
+      "trustedSubstitution": "M15_04_CANARY::tokens::secret@example.invalid"
+    },
+    {
+      "name": "cookies",
+      "canary": "M15_04_CANARY::cookies::secret@example.invalid",
+      "forbiddenRepresentations": [
+        "M15_04_CANARY::cookies::secret@example.invalid",
+        "TTE1XzA0X0NBTkFSWTo6Y29va2llczo6c2VjcmV0QGV4YW1wbGUuaW52YWxpZA==",
+        "M15_04_CANARY%3A%3Acookies%3A%3Asecret%40example.invalid",
+        "M15_04_CANARY%253A%253Acookies%253A%253Asecret%2540example.invalid",
+        "\\u004d\\u0031\\u0035\\u005f\\u0030\\u0034\\u005f\\u0043\\u0041\\u004e\\u0041\\u0052\\u0059\\u003a\\u003a\\u0063\\u006f\\u006f\\u006b\\u0069\\u0065\\u0073\\u003a\\u003a\\u0073\\u0065\\u0063\\u0072\\u0065\\u0074\\u0040\\u0065\\u0078\\u0061\\u006d\\u0070\\u006c\\u0065\\u002e\\u0069\\u006e\\u0076\\u0061\\u006c\\u0069\\u0064"
+      ],
+      "unknownFields": {
+        "cookie": "cra_at=M15_04_CANARY%3A%3Acookies%3A%3Asecret%40example.invalid; cra_rt=TTE1XzA0X0NBTkFSWTo6Y29va2llczo6c2VjcmV0QGV4YW1wbGUuaW52YWxpZA==",
+        "setCookie": "cra_rt=M15_04_CANARY%3A%3Acookies%3A%3Asecret%40example.invalid; HttpOnly; SameSite=Strict",
+        "cookies": {
+          "cra_at": "M15_04_CANARY::cookies::secret@example.invalid"
+        }
+      },
+      "trustedSubstitution": "cra_at=M15_04_CANARY%3A%3Acookies%3A%3Asecret%40example.invalid; cra_rt=TTE1XzA0X0NBTkFSWTo6Y29va2llczo6c2VjcmV0QGV4YW1wbGUuaW52YWxpZA=="
+    },
+    {
+      "name": "control_characters",
+      "canary": "M15_04_CANARY::control_characters::secret@example.invalid",
+      "forbiddenRepresentations": [
+        "M15_04_CANARY::control_characters::secret@example.invalid",
+        "TTE1XzA0X0NBTkFSWTo6Y29udHJvbF9jaGFyYWN0ZXJzOjpzZWNyZXRAZXhhbXBsZS5pbnZhbGlk",
+        "M15_04_CANARY%3A%3Acontrol_characters%3A%3Asecret%40example.invalid",
+        "M15_04_CANARY%253A%253Acontrol_characters%253A%253Asecret%2540example.invalid",
+        "\\u004d\\u0031\\u0035\\u005f\\u0030\\u0034\\u005f\\u0043\\u0041\\u004e\\u0041\\u0052\\u0059\\u003a\\u003a\\u0063\\u006f\\u006e\\u0074\\u0072\\u006f\\u006c\\u005f\\u0063\\u0068\\u0061\\u0072\\u0061\\u0063\\u0074\\u0065\\u0072\\u0073\\u003a\\u003a\\u0073\\u0065\\u0063\\u0072\\u0065\\u0074\\u0040\\u0065\\u0078\\u0061\\u006d\\u0070\\u006c\\u0065\\u002e\\u0069\\u006e\\u0076\\u0061\\u006c\\u0069\\u0064"
+      ],
+      "unknownFields": {
+        "message": "\u0000\r\n\u001b[31mM15_04_CANARY::control_characters::secret@example.invalid\u001b[0m\u202e\t",
+        "header": "safe\r\nAuthorization: Bearer M15_04_CANARY::control_characters::secret@example.invalid"
+      },
+      "trustedSubstitution": "\u0000\r\n\u001b[31mM15_04_CANARY::control_characters::secret@example.invalid\u001b[0m\u202e\t"
+    },
+    {
+      "name": "prototype_keys",
+      "canary": "M15_04_CANARY::prototype_keys::secret@example.invalid",
+      "forbiddenRepresentations": [
+        "M15_04_CANARY::prototype_keys::secret@example.invalid",
+        "TTE1XzA0X0NBTkFSWTo6cHJvdG90eXBlX2tleXM6OnNlY3JldEBleGFtcGxlLmludmFsaWQ=",
+        "M15_04_CANARY%3A%3Aprototype_keys%3A%3Asecret%40example.invalid",
+        "M15_04_CANARY%253A%253Aprototype_keys%253A%253Asecret%2540example.invalid",
+        "\\u004d\\u0031\\u0035\\u005f\\u0030\\u0034\\u005f\\u0043\\u0041\\u004e\\u0041\\u0052\\u0059\\u003a\\u003a\\u0070\\u0072\\u006f\\u0074\\u006f\\u0074\\u0079\\u0070\\u0065\\u005f\\u006b\\u0065\\u0079\\u0073\\u003a\\u003a\\u0073\\u0065\\u0063\\u0072\\u0065\\u0074\\u0040\\u0065\\u0078\\u0061\\u006d\\u0070\\u006c\\u0065\\u002e\\u0069\\u006e\\u0076\\u0061\\u006c\\u0069\\u0064"
+      ],
+      "unknownFields": {
+        "__proto__": {
+          "polluted": "M15_04_CANARY::prototype_keys::secret@example.invalid",
+          "source": "M15_04_CANARY::prototype_keys::secret@example.invalid"
+        },
+        "constructor": {
+          "prototype": {
+            "polluted": "M15_04_CANARY::prototype_keys::secret@example.invalid"
+          }
+        },
+        "prototype": {
+          "token": "M15_04_CANARY::prototype_keys::secret@example.invalid"
+        }
+      },
+      "trustedSubstitution": {
+        "envelope": [
+          "M15_04_CANARY::prototype_keys::secret@example.invalid",
+          "TTE1XzA0X0NBTkFSWTo6cHJvdG90eXBlX2tleXM6OnNlY3JldEBleGFtcGxlLmludmFsaWQ=",
+          "M15_04_CANARY%3A%3Aprototype_keys%3A%3Asecret%40example.invalid"
+        ]
+      }
+    },
+    {
+      "name": "unicode_escapes",
+      "canary": "M15_04_CANARY::unicode_escapes::secret@example.invalid",
+      "forbiddenRepresentations": [
+        "M15_04_CANARY::unicode_escapes::secret@example.invalid",
+        "TTE1XzA0X0NBTkFSWTo6dW5pY29kZV9lc2NhcGVzOjpzZWNyZXRAZXhhbXBsZS5pbnZhbGlk",
+        "M15_04_CANARY%3A%3Aunicode_escapes%3A%3Asecret%40example.invalid",
+        "M15_04_CANARY%253A%253Aunicode_escapes%253A%253Asecret%2540example.invalid",
+        "\\u004d\\u0031\\u0035\\u005f\\u0030\\u0034\\u005f\\u0043\\u0041\\u004e\\u0041\\u0052\\u0059\\u003a\\u003a\\u0075\\u006e\\u0069\\u0063\\u006f\\u0064\\u0065\\u005f\\u0065\\u0073\\u0063\\u0061\\u0070\\u0065\\u0073\\u003a\\u003a\\u0073\\u0065\\u0063\\u0072\\u0065\\u0074\\u0040\\u0065\\u0078\\u0061\\u006d\\u0070\\u006c\\u0065\\u002e\\u0069\\u006e\\u0076\\u0061\\u006c\\u0069\\u0064"
+      ],
+      "unknownFields": {
+        "escaped": "\\u004d\\u0031\\u0035\\u005f\\u0030\\u0034\\u005f\\u0043\\u0041\\u004e\\u0041\\u0052\\u0059\\u003a\\u003a\\u0075\\u006e\\u0069\\u0063\\u006f\\u0064\\u0065\\u005f\\u0065\\u0073\\u0063\\u0061\\u0070\\u0065\\u0073\\u003a\\u003a\\u0073\\u0065\\u0063\\u0072\\u0065\\u0074\\u0040\\u0065\\u0078\\u0061\\u006d\\u0070\\u006c\\u0065\\u002e\\u0069\\u006e\\u0076\\u0061\\u006c\\u0069\\u0064",
+        "serialized": "{\"secret\":\"\\u004d\\u0031\\u0035\\u005f\\u0030\\u0034\\u005f\\u0043\\u0041\\u004e\\u0041\\u0052\\u0059\\u003a\\u003a\\u0075\\u006e\\u0069\\u0063\\u006f\\u0064\\u0065\\u005f\\u0065\\u0073\\u0063\\u0061\\u0070\\u0065\\u0073\\u003a\\u003a\\u0073\\u0065\\u0063\\u0072\\u0065\\u0074\\u0040\\u0065\\u0078\\u0061\\u006d\\u0070\\u006c\\u0065\\u002e\\u0069\\u006e\\u0076\\u0061\\u006c\\u0069\\u0064\"}"
+      },
+      "trustedSubstitution": "\\u004d\\u0031\\u0035\\u005f\\u0030\\u0034\\u005f\\u0043\\u0041\\u004e\\u0041\\u0052\\u0059\\u003a\\u003a\\u0075\\u006e\\u0069\\u0063\\u006f\\u0064\\u0065\\u005f\\u0065\\u0073\\u0063\\u0061\\u0070\\u0065\\u0073\\u003a\\u003a\\u0073\\u0065\\u0063\\u0072\\u0065\\u0074\\u0040\\u0065\\u0078\\u0061\\u006d\\u0070\\u006c\\u0065\\u002e\\u0069\\u006e\\u0076\\u0061\\u006c\\u0069\\u0064"
+    },
+    {
+      "name": "mixed_arrays",
+      "canary": "M15_04_CANARY::mixed_arrays::secret@example.invalid",
+      "forbiddenRepresentations": [
+        "M15_04_CANARY::mixed_arrays::secret@example.invalid",
+        "TTE1XzA0X0NBTkFSWTo6bWl4ZWRfYXJyYXlzOjpzZWNyZXRAZXhhbXBsZS5pbnZhbGlk",
+        "M15_04_CANARY%3A%3Amixed_arrays%3A%3Asecret%40example.invalid",
+        "M15_04_CANARY%253A%253Amixed_arrays%253A%253Asecret%2540example.invalid",
+        "\\u004d\\u0031\\u0035\\u005f\\u0030\\u0034\\u005f\\u0043\\u0041\\u004e\\u0041\\u0052\\u0059\\u003a\\u003a\\u006d\\u0069\\u0078\\u0065\\u0064\\u005f\\u0061\\u0072\\u0072\\u0061\\u0079\\u0073\\u003a\\u003a\\u0073\\u0065\\u0063\\u0072\\u0065\\u0074\\u0040\\u0065\\u0078\\u0061\\u006d\\u0070\\u006c\\u0065\\u002e\\u0069\\u006e\\u0076\\u0061\\u006c\\u0069\\u0064"
+      ],
+      "unknownFields": {
+        "details": [
+          null,
+          true,
+          42,
+          {
+            "nested": [
+              "M15_04_CANARY::mixed_arrays::secret@example.invalid",
+              "TTE1XzA0X0NBTkFSWTo6bWl4ZWRfYXJyYXlzOjpzZWNyZXRAZXhhbXBsZS5pbnZhbGlk",
+              "M15_04_CANARY%3A%3Amixed_arrays%3A%3Asecret%40example.invalid",
+              "M15_04_CANARY%253A%253Amixed_arrays%253A%253Asecret%2540example.invalid",
+              {
+                "cookie": "M15_04_CANARY::mixed_arrays::secret@example.invalid"
+              }
+            ]
+          }
+        ],
+        "raw": ["M15_04_CANARY::mixed_arrays::secret@example.invalid"]
+      },
+      "trustedSubstitution": {
+        "envelope": [
+          "M15_04_CANARY::mixed_arrays::secret@example.invalid",
+          "TTE1XzA0X0NBTkFSWTo6bWl4ZWRfYXJyYXlzOjpzZWNyZXRAZXhhbXBsZS5pbnZhbGlk",
+          "M15_04_CANARY%3A%3Amixed_arrays%3A%3Asecret%40example.invalid"
+        ]
+      }
+    }
+  ]
+}

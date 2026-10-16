@@ -8,6 +8,10 @@ import { okResponseSchema } from "@repo/contracts/shared/schemas";
 
 import { authenticatedRequestJson } from "../../_lib/http/authenticated-request";
 import { requestJson } from "../../_lib/http/api-client";
+import {
+  mutationIdentityHeaders,
+  type MutationIdentity,
+} from "../../_lib/http/mutation-request-identity";
 
 export const rolesQueryKeys = Object.freeze({
   list: Object.freeze(["roles"] as const),
@@ -36,6 +40,7 @@ export class RolesApi {
   setOverride(
     baseRole: BaseRole,
     permissions: PermissionSet,
+    identity: MutationIdentity,
     signal?: AbortSignal,
   ) {
     return requestJson({
@@ -43,6 +48,7 @@ export class RolesApi {
       method: "PUT",
       body: { baseRole, permissions },
       inputSchema: setRoleOverrideInputSchema,
+      headers: mutationIdentityHeaders(identity),
       signal,
       schema: okResponseSchema,
     });

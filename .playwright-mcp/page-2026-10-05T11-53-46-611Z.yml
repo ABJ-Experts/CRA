@@ -1,0 +1,104 @@
+- generic [active] [ref=f12e1]:
+  - button "Open Next.js Dev Tools" [ref=f12e58] [cursor=pointer]
+  - alert [ref=f12e240]
+  - generic [ref=f12e499]:
+    - button "Open navigation" [ref=f12e500] [cursor=pointer]
+    - generic [ref=f12e503]:
+      - banner [ref=f12e504]:
+        - generic [ref=f12e506]:
+          - generic [ref=f12e507]: Welcome, Robert Fox
+          - generic [ref=f12e508]: Overview your store
+        - generic [ref=f12e509]:
+          - button "Search" [ref=f12e510] [cursor=pointer]
+          - button "Notifications, 1 unread" [ref=f12e514] [cursor=pointer]
+          - generic [ref=f12e519]:
+            - generic [ref=f12e520]: AF
+            - 'img "Ada Foster: online" [ref=f12e522]'
+      - main [ref=f12e523]:
+        - generic [ref=f12e525]:
+          - region "Organization onboarding" [ref=f12e527]:
+            - generic [ref=f12e528]:
+              - paragraph [ref=f12e529]: Continue organization onboarding
+              - paragraph [ref=f12e530]: "Next required action: Organization details."
+            - link "Resume onboarding" [ref=f12e531] [cursor=pointer]:
+              - /url: /onboarding
+          - generic [ref=f12e532]:
+            - generic [ref=f12e533]:
+              - generic [ref=f12e534]: $902.008K
+              - generic [ref=f12e536]:
+                - generic [ref=f12e537]: Total revenue
+                - generic [ref=f12e538]: +8.24%
+            - generic [ref=f12e539]:
+              - generic [ref=f12e540]: $61.108K
+              - generic [ref=f12e542]:
+                - generic [ref=f12e543]: Total profit
+                - generic [ref=f12e544]: +3.11%
+            - generic [ref=f12e545]:
+              - generic [ref=f12e546]: 12,029
+              - generic [ref=f12e548]:
+                - generic [ref=f12e549]: Total orders
+                - generic [ref=f12e550]: +5.40%
+            - generic [ref=f12e551]:
+              - generic [ref=f12e552]: 8,292
+              - generic [ref=f12e554]:
+                - generic [ref=f12e555]: Total customers
+                - generic [ref=f12e556]: +2.18%
+            - generic [ref=f12e557]:
+              - generic [ref=f12e558]: 1,209
+              - generic [ref=f12e560]:
+                - generic [ref=f12e561]: Total products
+                - generic [ref=f12e562]: "-1.20%"
+          - generic [ref=f12e564]:
+            - heading "Revenue & Summary" [level=2] [ref=f12e566]
+            - img "Revenue and order volume by month" [ref=f12e568]
+          - generic [ref=f12e573]:
+            - heading "Latest Orders" [level=2] [ref=f12e575]
+            - table "Latest orders" [ref=f12e579]:
+              - rowgroup [ref=f12e580]:
+                - row [ref=f12e581]:
+                  - columnheader "No." [ref=f12e582]
+                  - columnheader [ref=f12e583] [cursor=pointer]:
+                    - button "Order No & Tracking ID" [ref=f12e584]
+                  - columnheader [ref=f12e588] [cursor=pointer]:
+                    - button "Created & Source" [ref=f12e589]
+                  - columnheader [ref=f12e593] [cursor=pointer]:
+                    - button "Status" [ref=f12e594]
+                  - columnheader [ref=f12e598] [cursor=pointer]:
+                    - button "Quantity & Price" [ref=f12e599]
+                  - columnheader [ref=f12e603]
+              - rowgroup [ref=f12e604]:
+                - row [ref=f12e605]:
+                  - cell [ref=f12e606]
+                  - cell [ref=f12e608]
+                  - cell [ref=f12e610]
+                  - cell [ref=f12e612]
+                  - cell [ref=f12e614]
+                  - cell [ref=f12e616]
+                - row [ref=f12e618]:
+                  - cell [ref=f12e619]
+                  - cell [ref=f12e621]
+                  - cell [ref=f12e623]
+                  - cell [ref=f12e625]
+                  - cell [ref=f12e627]
+                  - cell [ref=f12e629]
+                - row [ref=f12e631]:
+                  - cell [ref=f12e632]
+                  - cell [ref=f12e634]
+                  - cell [ref=f12e636]
+                  - cell [ref=f12e638]
+                  - cell [ref=f12e640]
+                  - cell [ref=f12e642]
+                - row [ref=f12e644]:
+                  - cell [ref=f12e645]
+                  - cell [ref=f12e647]
+                  - cell [ref=f12e649]
+                  - cell [ref=f12e651]
+                  - cell [ref=f12e653]
+                  - cell [ref=f12e655]
+                - row [ref=f12e657]:
+                  - cell [ref=f12e658]
+                  - cell [ref=f12e660]
+                  - cell [ref=f12e662]
+                  - cell [ref=f12e664]
+                  - cell [ref=f12e666]
+                  - cell [ref=f12e668]

@@ -1,0 +1,123 @@
+{
+  "baseline": "8bad168",
+  "branch": "milestone-1",
+  "environment": "local CRA only",
+  "pnpmVerify": "passed: TURBO_CONCURRENCY=1 pnpm verify, exit 0",
+  "unitTests": {
+    "contracts": 533,
+    "api": 2430,
+    "web": 866,
+    "ui": 98,
+    "docs": 5,
+    "designSystem": 9
+  },
+  "ownerCoverage": {
+    "lines": 100,
+    "statements": 100,
+    "functions": 100,
+    "branches": 94.11
+  },
+  "database": {
+    "sqlRlsSuite": "passed: 72 files",
+    "connectorAssertions": 77,
+    "types": "both CLI-generated copies aligned",
+    "lint": "passed error gate; existing warnings",
+    "tablesAdded": 1,
+    "columnsAdded": 0,
+    "localDiffOlderFunctions": [
+      "retry_supplier_evidence_reminder_delivery_atomic",
+      "m7_declaration_json",
+      "m8_evidence_validity_status",
+      "retry_evidence_text_extraction_atomic"
+    ],
+    "sessionParallelRegistrations": 128,
+    "classificationAtomicAssertions": 49,
+    "classificationHistoryAuthorizationAssertions": 15
+  },
+  "browser": {
+    "chromium": {
+      "status": "passed",
+      "seconds": 14.0
+    },
+    "firefox": {
+      "status": "passed",
+      "seconds": 20.7
+    },
+    "webkitKeyboard": {
+      "status": "passed",
+      "seconds": 21.6
+    },
+    "import": {
+      "status": "passed",
+      "seconds": 23.6
+    },
+    "connector": {
+      "status": "passed",
+      "approxSeconds": 78
+    },
+    "relationships": {
+      "status": "passed",
+      "seconds": 10.6,
+      "screenshots": "relationships-kong-fixed"
+    },
+    "classification": {
+      "chromium": {
+        "status": "passed",
+        "seconds": 12.6
+      },
+      "firefox": {
+        "status": "passed",
+        "seconds": 13.7
+      },
+      "webkit": {
+        "status": "passed",
+        "seconds": 33.0
+      },
+      "screenshotsPerEngine": 8
+    },
+    "scopedAuth": {
+      "status": "passed",
+      "seconds": 4.8
+    }
+  },
+  "mcp": "Fresh isolated pinned Playwright MCP passed owner UI two immutable runs and viewer denied scope; local Supabase MCP confirmed 2 runs/2 audits/hash/predecessor, grants/RLS/indexes/constraints/functions/migrations/advisors.",
+  "openGates": [],
+  "cleanup": "Exact task-created tenants/accounts/session IDs cleaned; seed owner scope restored. No production database access, reset, global sign-out or unrelated data removal.",
+  "committed": false,
+  "pushed": false,
+  "engineeringClosure": "closed",
+  "liveApiIntegration": {
+    "passed": 4,
+    "failed": 0
+  },
+  "releaseConditions": [
+    "Qualified legal review before live regulatory use: engineering provisional declaration policy is not legal approval."
+  ],
+  "verificationLimits": [
+    "Realistic production load and previous browser releases not established",
+    "WebKit onboarding pointer path remains unverified; keyboard/typeahead journey passes",
+    "Reference conformance connector engine only, not turnkey vendor integrations",
+    "Full legacy products.queries.ts coverage is not 80%; changed relationship statements17/17, new modules>=80%"
+  ],
+  "performance": {
+    "localDatabaseLatest100Products": {
+      "p95Ms": 0.779,
+      "p99Ms": 1.452
+    },
+    "localDatabaseHistory15Rows": {
+      "p95Ms": 0.533,
+      "p99Ms": 1.051
+    },
+    "localHttpRead50Concurrency4": {
+      "p95Ms": 157,
+      "p99Ms": 162
+    },
+    "productionSloProven": false
+  },
+  "architectureChecks": 58,
+  "initialFinalGateFailure": {
+    "m2": "TypeScript export registry omitted classification history; added to existing product_registry source. SQL lock declaration aligned with architecture recognizer; actual lock unchanged. RED to 12 focused tests GREEN.",
+    "preExistingLoad": "SBOM worker exceeded 5s during parallel suite; focused and serial full reruns passed without changing timeout."
+  },
+  "localStack": "All temporarily stopped local CRA services restored. Analytics memory pressure and stale Kong Auth DNS caused earlier failures; no data resets."
+}

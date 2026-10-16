@@ -1,13 +1,12 @@
 import { Logger } from "@nestjs/common";
 import type { PageParams } from "@repo/contracts/pagination";
 
-import { MemberRepositoryError } from "../application/member-repository.port";
 import { SupabaseMemberRepository } from "./supabase-member.repository";
 
 interface QueryResult {
   readonly data: unknown;
   readonly count?: number | null;
-  readonly error: { readonly message: string } | null;
+  readonly error: { readonly message: string; readonly code?: string } | null;
 }
 
 function query(result: QueryResult) {
@@ -39,7 +38,10 @@ function query(result: QueryResult) {
   return chain;
 }
 
-function harness(results: readonly QueryResult[]) {
+function harness(
+  results: readonly QueryResult[],
+  rpcResult: QueryResult = { data: { status: "updated" }, error: null },
+) {
   const queries: Array<ReturnType<typeof query>> = [];
   const from = jest.fn(() => {
     const result = results[queries.length];
@@ -48,10 +50,13 @@ function harness(results: readonly QueryResult[]) {
     queries.push(current);
     return current;
   });
+  const rpc = jest.fn((name: string) =>
+    name === "m14_03_member_list_rows" ? from() : Promise.resolve(rpcResult),
+  );
   const repository = new SupabaseMemberRepository({
-    admin: () => ({ from }),
+    admin: () => ({ from, rpc }),
   } as never);
-  return { from, queries, repository };
+  return { from, queries, repository, rpc };
 }
 
 const params = Object.freeze<PageParams>({
@@ -76,7 +81,7 @@ describe("SupabaseMemberRepository", () => {
         is_active: true,
       },
     };
-    const { queries, repository } = harness([
+    const { queries, repository, rpc } = harness([
       { data: null, count: 1, error: null },
       { data: [row, { ...row, users: null }], count: 1, error: null },
     ]);
@@ -102,9 +107,21 @@ describe("SupabaseMemberRepository", () => {
       pageSize: 2,
       pageCount: 1,
     });
-    for (const current of queries) {
-      expect(current.eq).toHaveBeenCalledWith("organization_id", "org-a");
-    }
+    expect(rpc).toHaveBeenNthCalledWith(
+      1,
+      "m14_03_member_list_rows",
+      { p_organization_id: "org-a", p_q: null },
+      { count: "exact", head: true },
+    );
+    expect(rpc).toHaveBeenNthCalledWith(
+      2,
+      "m14_03_member_list_rows",
+      { p_organization_id: "org-a", p_q: null },
+      { count: "exact" },
+    );
+    expect(queries[-1 + queries.length]?.order).toHaveBeenCalledWith("id", {
+      ascending: true,
+    });
     expect(queries[1]?.order).toHaveBeenCalledWith("created_at", {
       ascending: false,
     });
@@ -112,23 +129,23 @@ describe("SupabaseMemberRepository", () => {
   });
 
   it("applies the same embedded-user search to count and row queries", async () => {
-    const { queries, repository } = harness([
+    const { queries, repository, rpc } = harness([
       { data: null, count: 0, error: null },
       { data: [], count: 0, error: null },
     ]);
 
     await repository.list("org-a", { ...params, q: "Ada" });
 
-    for (const current of queries) {
-      expect(current.or).toHaveBeenCalledWith(
-        "email.ilike.%Ada%,first_name.ilike.%Ada%,last_name.ilike.%Ada%,username.ilike.%Ada%",
-        { referencedTable: "users" },
-      );
-    }
+    expect(rpc).toHaveBeenCalledWith(
+      "m14_03_member_list_rows",
+      { p_organization_id: "org-a", p_q: "Ada" },
+      expect.anything(),
+    );
+    expect(queries).toHaveLength(2);
   });
 
   it("drops PostgREST structural characters instead of emitting raw filters", async () => {
-    const { queries, repository } = harness([
+    const { queries, repository, rpc } = harness([
       { data: null, count: null, error: null },
       { data: null, count: null, error: null },
     ]);
@@ -142,12 +159,16 @@ describe("SupabaseMemberRepository", () => {
       pageSize: 2,
       pageCount: 1,
     });
-    expect(queries[0]?.or).not.toHaveBeenCalled();
-    expect(queries[1]?.or).not.toHaveBeenCalled();
+    expect(rpc).toHaveBeenCalledWith(
+      "m14_03_member_list_rows",
+      { p_organization_id: "org-a", p_q: ',()\\"' },
+      expect.anything(),
+    );
+    expect(queries).toHaveLength(2);
   });
 
   it("preserves dots in email searches while removing filter separators", async () => {
-    const { queries, repository } = harness([
+    const { queries, repository, rpc } = harness([
       { data: null, count: 0, error: null },
       { data: [], count: 0, error: null },
     ]);
@@ -157,11 +178,38 @@ describe("SupabaseMemberRepository", () => {
       q: "ada@example.com,()",
     });
 
-    expect(queries[0]?.or).toHaveBeenCalledWith(
-      "email.ilike.%ada@example.com%,first_name.ilike.%ada@example.com%,last_name.ilike.%ada@example.com%,username.ilike.%ada@example.com%",
-      { referencedTable: "users" },
+    expect(rpc).toHaveBeenCalledWith(
+      "m14_03_member_list_rows",
+      { p_organization_id: "org-a", p_q: "ada@example.com,()" },
+      expect.anything(),
     );
+    expect(queries).toHaveLength(2);
   });
+
+  it.each([
+    [{ data: null, count: 0, error: { message: "count unavailable" } }],
+    [
+      { data: null, count: 0, error: null },
+      { data: null, error: { message: "rows unavailable" } },
+    ],
+    [
+      { data: null, count: 1, error: null },
+      {
+        data: [
+          { role: "member", created_at: "now", users: { id: "malformed" } },
+        ],
+        error: null,
+      },
+    ],
+  ] as const)(
+    "rejects unavailable or malformed shared member projections",
+    async (...results) => {
+      const { repository } = harness(results);
+      await expect(repository.list("org-a", params)).rejects.toMatchObject({
+        code: "unavailable",
+      });
+    },
+  );
 
   it("scopes membership lookup to organization and user", async () => {
     const { queries, repository } = harness([
@@ -179,156 +227,150 @@ describe("SupabaseMemberRepository", () => {
     expect(queries[0]?.eq).toHaveBeenNthCalledWith(2, "user_id", "user-a");
   });
 
-  it("scopes role changes and removals to the organization", async () => {
-    const role = harness([{ data: null, error: null }]);
-    await role.repository.changeRole("org-a", "user-a", "viewer");
-    expect(role.queries[0]?.update).toHaveBeenCalledWith({ role: "viewer" });
-    expect(role.queries[0]?.eq).toHaveBeenCalledWith(
-      "organization_id",
-      "org-a",
-    );
-    expect(role.queries[0]?.eq).toHaveBeenCalledWith("user_id", "user-a");
-
-    const removal = harness([{ data: null, error: null }]);
-    await removal.repository.remove("org-b", "user-b");
-    expect(removal.queries[0]?.delete).toHaveBeenCalledTimes(1);
-    expect(removal.queries[0]?.eq).toHaveBeenCalledWith(
-      "organization_id",
-      "org-b",
-    );
-    expect(removal.queries[0]?.eq).toHaveBeenCalledWith("user_id", "user-b");
-  });
-
-  it("proves membership scope before activation touches the user table", async () => {
-    const { from, queries, repository } = harness([
-      { data: { role: "member" }, error: null },
-      { data: null, error: null },
-    ]);
-
-    await repository.setActive("org-a", "user-a", false);
-
-    expect(from).toHaveBeenNthCalledWith(1, "organization_members");
-    expect(queries[0]?.eq).toHaveBeenCalledWith("organization_id", "org-a");
-    expect(queries[0]?.eq).toHaveBeenCalledWith("user_id", "user-a");
-    expect(from).toHaveBeenNthCalledWith(2, "users");
-    expect(queries[1]?.update).toHaveBeenCalledWith({ is_active: false });
-    expect(queries[1]?.eq).toHaveBeenCalledWith("id", "user-a");
-  });
-
-  it("does not activate a user without an organization membership", async () => {
-    const { from, repository } = harness([{ data: null, error: null }]);
-
-    await expect(
-      repository.setActive("org-a", "user-a", true),
-    ).rejects.toMatchObject({ code: "member_not_found" });
-    expect(from).toHaveBeenCalledTimes(1);
-  });
-
-  it("maps profile fields without inventing tenant scope", async () => {
-    const { queries, repository } = harness([{ data: null, error: null }]);
-
-    await repository.updateOwnProfile("user-a", {
-      firstName: "Ada",
-      lastName: "Lovelace",
-      jobTitle: "Engineer",
-      language: "en",
-    });
-
-    expect(queries[0]?.update).toHaveBeenCalledWith({
-      first_name: "Ada",
-      last_name: "Lovelace",
-      job_title: "Engineer",
-      language: "en",
-    });
-    expect(queries[0]?.eq).toHaveBeenCalledWith("id", "user-a");
-  });
-
-  it("supports an empty profile patch without writing undefined fields", async () => {
-    const { queries, repository } = harness([{ data: null, error: null }]);
-
-    await repository.updateOwnProfile("user-a", {});
-
-    expect(queries[0]?.update).toHaveBeenCalledWith({});
-  });
-
-  it("fails closed on an invalid persisted base role", async () => {
+  it("fails closed when persisted membership has an unknown base role", async () => {
     const errorSpy = jest
       .spyOn(Logger.prototype, "error")
       .mockImplementation(() => undefined);
     const { repository } = harness([
-      { data: { role: "future-super-admin" }, error: null },
+      { data: { role: "operator" }, error: null },
     ]);
 
     await expect(
       repository.findMembership("org-a", "user-a"),
-    ).rejects.toMatchObject({ code: "unavailable" });
+    ).rejects.toMatchObject({
+      code: "unavailable",
+    });
     expect(errorSpy).toHaveBeenCalledWith(
       "Member query returned an invalid base role",
     );
     errorSpy.mockRestore();
   });
 
-  it("recognizes last-owner failures without leaking Postgres details", async () => {
-    const errorSpy = jest
-      .spyOn(Logger.prototype, "error")
-      .mockImplementation(() => undefined);
-    const { repository } = harness([
-      {
-        data: null,
-        error: {
-          message: "organization org-secret must retain at least one owner",
-        },
-      },
-    ]);
+  const context = {
+    eventKey: "11111111-1111-4111-8111-111111111111",
+    correlationId: "22222222-2222-4222-8222-222222222222",
+    sourceIp: "127.0.0.1",
+  };
 
+  it("preserves the active-member source quota denial", async () => {
+    const { repository } = harness([], {
+      data: null,
+      error: { code: "42501", message: "licensing_seat_limit" },
+    });
     await expect(
-      repository.changeRole("org-a", "user-a", "viewer"),
-    ).rejects.toEqual(new MemberRepositoryError("last_owner"));
-    expect(errorSpy).not.toHaveBeenCalledWith(
-      expect.stringContaining("org-secret"),
-    );
-    errorSpy.mockRestore();
+      repository.setActive("org-a", "user-a", true, "actor-a", context),
+    ).rejects.toMatchObject({ code: "license_seat_limit", status: 409 });
   });
 
-  it("logs generic persistence failures and exposes only a stable code", async () => {
-    const errorSpy = jest
-      .spyOn(Logger.prototype, "error")
-      .mockImplementation(() => undefined);
-    const { repository } = harness([
-      { data: null, error: { message: "connection unavailable" } },
-    ]);
+  it("uses one scoped RPC for each audited member mutation", async () => {
+    const { repository, rpc, from } = harness([]);
+    await repository.changeRole(
+      "org-a",
+      "user-a",
+      "viewer",
+      "actor-a",
+      context,
+      "member",
+    );
+    await repository.remove("org-a", "user-a", "actor-a", context);
+    await repository.setActive("org-a", "user-a", false, "actor-a", context);
 
-    await expect(repository.remove("org-a", "user-a")).rejects.toEqual(
-      new MemberRepositoryError("unavailable"),
+    expect(rpc).toHaveBeenNthCalledWith(1, "m13_01_mutate_member_atomic", {
+      p_organization_id: "org-a",
+      p_actor_user_id: "actor-a",
+      p_target_user_id: "user-a",
+      p_operation: "role",
+      p_payload: { role: "viewer" },
+      p_expected_role: "member",
+      p_event_key: context.eventKey,
+      p_correlation_id: context.correlationId,
+      p_source_ip: context.sourceIp,
+    });
+    expect(rpc).toHaveBeenNthCalledWith(
+      2,
+      "m13_01_mutate_member_atomic",
+      expect.objectContaining({
+        p_organization_id: "org-a",
+        p_operation: "remove",
+        p_payload: {},
+      }),
     );
-    expect(errorSpy).toHaveBeenCalledWith(
-      "Member persistence failed: connection unavailable",
+    expect(rpc).toHaveBeenNthCalledWith(
+      3,
+      "m13_01_mutate_member_atomic",
+      expect.objectContaining({
+        p_organization_id: "org-a",
+        p_operation: "active",
+        p_payload: { isActive: false },
+      }),
     );
-    errorSpy.mockRestore();
+    expect(from).not.toHaveBeenCalled();
   });
 
   it.each([
-    ["count", [{ data: null, count: null, error: { message: "offline" } }]],
-    [
-      "rows",
-      [
-        { data: null, count: 1, error: null },
-        { data: null, count: null, error: { message: "offline" } },
-      ],
-    ],
-  ] as const)(
-    "fails closed when the list %s query fails",
-    async (_name, results) => {
-      const errorSpy = jest
-        .spyOn(Logger.prototype, "error")
-        .mockImplementation(() => undefined);
-      const { repository } = harness(results);
+    ["not_found", "member_not_found"],
+    ["conflict", "conflict"],
+  ])("maps audited %s outcome to %s", async (status, code) => {
+    const { repository } = harness([], { data: { status }, error: null });
+    await expect(
+      repository.remove("org-a", "user-a", "actor-a", context),
+    ).rejects.toMatchObject({ code });
+  });
 
-      await expect(repository.list("org-a", params)).rejects.toMatchObject({
-        code: "unavailable",
-      });
-      expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining("offline"));
-      errorSpy.mockRestore();
-    },
-  );
+  it("fails closed if the audit RPC fails or returns malformed data", async () => {
+    const errorSpy = jest
+      .spyOn(Logger.prototype, "error")
+      .mockImplementation(() => undefined);
+    const failure = harness([], {
+      data: null,
+      error: { message: "connection unavailable" },
+    });
+    await expect(
+      failure.repository.setActive("org-a", "user-a", true, "actor-a", context),
+    ).rejects.toMatchObject({ code: "unavailable" });
+    const malformed = harness([], { data: { status: "mystery" }, error: null });
+    await expect(
+      malformed.repository.remove("org-a", "user-a", "actor-a", context),
+    ).rejects.toMatchObject({ code: "unavailable" });
+    expect(errorSpy).toHaveBeenCalledTimes(2);
+    errorSpy.mockRestore();
+  });
+
+  it("preserves the last-owner protection reported by the atomic RPC", async () => {
+    const { repository } = harness([], {
+      data: null,
+      error: { message: "organization must retain at least one owner" },
+    });
+
+    await expect(
+      repository.remove("org-a", "owner-a", "actor-a", context),
+    ).rejects.toMatchObject({ code: "last_owner" });
+  });
+
+  it("updates only the verified actor profile through the atomic RPC", async () => {
+    const { repository, rpc, from } = harness([]);
+    await repository.updateOwnProfile(
+      "org-a",
+      "user-a",
+      { firstName: "Ada", language: "en" },
+      context,
+    );
+    expect(rpc).toHaveBeenCalledWith("m13_01_update_profile_atomic", {
+      p_organization_id: "org-a",
+      p_actor_user_id: "user-a",
+      p_patch: { first_name: "Ada", language: "en" },
+      p_event_key: context.eventKey,
+      p_correlation_id: context.correlationId,
+      p_source_ip: context.sourceIp,
+    });
+    expect(from).not.toHaveBeenCalled();
+  });
+
+  it("requires actor and identity context before using service role", async () => {
+    const { repository, rpc } = harness([]);
+    await expect(
+      repository.changeRole("org-a", "user-a", "viewer"),
+    ).rejects.toMatchObject({ code: "unavailable" });
+    expect(rpc).not.toHaveBeenCalled();
+  });
 });

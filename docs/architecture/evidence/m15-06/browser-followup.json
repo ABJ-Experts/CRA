@@ -1,0 +1,88 @@
+{
+  "recordedAt": "2026-10-15T13:16:44.436649+00:00",
+  "scope": "Additional sequential browser journeys adapted from repository E2E scenarios; not execution of the complete Playwright CLI suite",
+  "tools": {
+    "playwrightMcp": "Transport closed on tab-list attempt; no new tab created",
+    "browser": "Chrome DevTools MCP; reused existing page 1 for every journey",
+    "newTabs": 0,
+    "maximumObservedManagedTabs": 1,
+    "siteDataCleared": false
+  },
+  "isolation": {
+    "customerOrigin": "http://127.0.0.1:3112",
+    "apiOrigin": "http://127.0.0.1:3342",
+    "supabaseOrigin": "http://127.0.0.1:55551",
+    "operatorOrigin": "http://127.0.0.1:3449",
+    "operatorTransport": "Loopback-only task certificate bridge to task-only HTTPS listener3448; server mTLS checked separately. This is not a browser client-certificate provisioning test.",
+    "originalDevelopmentDataModified": false,
+    "productionAccessed": false,
+    "taskFixtureRecordsRetained": true,
+    "nativeDeploymentEffects": "Simulated; signature verification, strict contracts, controller and host journal are real"
+  },
+  "upgradeBrowserChecksPassed": [
+    "Empty initial history and disabled apply before verification/review",
+    "Signed media verification and explicit status refresh",
+    "Sixteen passed preflight checks; expected outage and rollback effects displayed",
+    "Apply disabled until explicit acknowledgement",
+    "Stale fingerprint409 and stale optimistic version409 without state change",
+    "Explicit initiation reaches recorded success",
+    "Duplicate initiation409",
+    "Injected candidate health failure reaches rolled-back; maintenance retained, exposure false, no data restore or migration reversal",
+    "Changing media invalidates review/acknowledgement",
+    "Disk/memory preflight failure blocks initiation and shows remediation",
+    "Malformed successful capabilities response rejected; selection retained, actions disabled, single request and explicit recovery",
+    "Post-exposure rollback409 leaves exact history unchanged",
+    "UI redacted result download matches recorded successful run",
+    "Success and rollback history persist after page reload; approval not restored",
+    "390px rollback workbench has no horizontal page overflow"
+  ],
+  "customerBrowserChecksPassed": [
+    "Owner notification administration loads with delivery filters and critical-route explanation",
+    "Health shows tenant-bound provenance, unknown backup assurance and preserved evidence export guarantee",
+    "390px health layout has no horizontal page overflow",
+    "Health-to-usage navigation works",
+    "Usage reconciliation preserves unsaved licence draft",
+    "Durable usage reconciliation replay200 and changed-intent409",
+    "JSON and CSV usage exports include definition provenance",
+    "Dashboard trend filters apply America/New_York and weekly bucket; five accessible tables",
+    "Trend CSV and source details share dataset revision; forged organization parameter400",
+    "Audit snapshot search/page200 and redacted detail dialog opens",
+    "Viewer audit UI denied; usage, health and users403; private operator route404",
+    "Owner restored through sign-in UI; dashboard loads"
+  ],
+  "tlsAndApiSecurityChecksPassed": [
+    "missing client certificate rejected by TLS",
+    "ungranted certificate401",
+    "forged instance404 (concealed outside scope)",
+    "missing origin403",
+    "cross-site mutation403",
+    "unbounded history400"
+  ],
+  "supportingRegressionRuns": {
+    "upgradeApi": {
+      "suites": 31,
+      "tests": 373,
+      "exitCode": 0
+    },
+    "operator": {
+      "files": 6,
+      "tests": 68,
+      "exitCode": 0
+    },
+    "releaseAndBrowserFixture": {
+      "tests": 22,
+      "exitCode": 0
+    }
+  },
+  "screenshots": [
+    "browser-followup-rollback-desktop.png",
+    "browser-followup-rollback-mobile.png"
+  ],
+  "limitations": [
+    "Complete existing Playwright CLI suite not run: suites create new contexts/pages and some launch global workers; these adapted journeys preserve the requested tab reuse",
+    "Firefox/WebKit and previous-major browser matrix not run",
+    "Native Linux N/N-1/N-2 images, migration atomicity, crash/restart/drain, zero-egress and 30-minute qualification not run; no real upgrade/restore performed",
+    "Task-only health remains degraded for unavailable storage-byte/worker/build observations; unknown assurance is displayed truthfully",
+    "No new product code changes were made for this verification follow-up"
+  ]
+}

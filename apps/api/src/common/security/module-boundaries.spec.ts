@@ -9,9 +9,11 @@ import { AuditModule } from "../../audit/audit.module";
 import { AuthModule } from "../../auth/auth.module";
 import { InvitationsModule } from "../../invitations/invitations.module";
 import { MailModule } from "../../mail/mail.module";
+import { OrganizationsModule } from "../../organizations/organizations.module";
 import { PermissionsModule } from "../../permissions/permissions.module";
 import { SupabaseModule } from "../../supabase/supabase.module";
 import { UsersModule } from "../../users/users.module";
+import { VulnerabilitiesModule } from "../../vulnerabilities/vulnerabilities.module";
 import { SecurityModule } from "./security.module";
 
 const importsOf = (module: object): readonly unknown[] =>
@@ -35,9 +37,10 @@ describe("explicit module boundaries", () => {
   it.each([
     [AuditModule, [SupabaseModule]],
     [AuthModule, [AuditModule, SupabaseModule, MailModule]],
-    [InvitationsModule, [AuditModule, SupabaseModule, MailModule]],
+    [InvitationsModule, [SupabaseModule, MailModule, OrganizationsModule]],
     [PermissionsModule, [AuditModule, SupabaseModule]],
     [UsersModule, [AuditModule, SupabaseModule]],
+    [VulnerabilitiesModule, [SupabaseModule, MailModule]],
   ] as const)(
     "%p imports its provider dependencies",
     (module, dependencies) => {

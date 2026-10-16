@@ -64,14 +64,18 @@ export function deriveSessionState({
   const permissionSnapshot = Object.freeze({
     ...(permissions?.permissions ?? {}),
   });
-  const menuSnapshot = loading || error || menu === null ? null : [...menu];
+  // `/permissions/menu` is independently authenticated and runtime-parsed.
+  // Keep a successful server decision even when optional identity enrichment
+  // is still loading or temporarily unavailable; otherwise a transient
+  // `/auth/session` outage collapses the rail after a valid sign-in.
+  const menuSnapshot = menu === null ? null : [...menu];
   if (menuSnapshot !== null) Object.freeze(menuSnapshot);
 
   return Object.freeze({
     session: copySession(session),
     permissions: permissionSnapshot,
-    // Never turn a partial or failed fetch into an authoritative menu. `null`
-    // is the deliberate fail-open signal consumed by `useCanViewMenu`.
+    // `null` is the deliberate fail-open signal consumed by `useCanViewMenu`.
+    // A non-null value has already passed the authenticated menu boundary.
     menu: menuSnapshot,
     role: permissions?.role ?? null,
     isLoading: loading,

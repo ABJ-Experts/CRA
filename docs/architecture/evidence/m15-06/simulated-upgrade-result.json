@@ -1,0 +1,103 @@
+{
+  "instanceId": "11111111-1111-4111-8111-111111111111",
+  "fromVersion": "1.0.0",
+  "toVersion": "1.1.0",
+  "manifestDigest": "82b048978251f16455c506bbf207bd4274fa25a2f610c20c0fcf2e7805a5d65e",
+  "startedAt": "2026-10-15T08:46:03.754Z",
+  "checkedAt": "2026-10-15T08:46:12.958Z",
+  "checks": [
+    {
+      "code": "signature",
+      "status": "passed",
+      "detail": "verified"
+    },
+    {
+      "code": "inventory",
+      "status": "passed",
+      "detail": "verified"
+    },
+    {
+      "code": "platform",
+      "status": "passed",
+      "detail": "verified"
+    },
+    {
+      "code": "compatibility",
+      "status": "passed",
+      "detail": "verified"
+    },
+    {
+      "code": "infrastructure",
+      "status": "passed",
+      "detail": "verified"
+    },
+    {
+      "code": "supervisor",
+      "status": "passed",
+      "detail": "verified"
+    },
+    {
+      "code": "schema",
+      "status": "passed",
+      "detail": "verified"
+    },
+    {
+      "code": "migration-ledger",
+      "status": "passed",
+      "detail": "verified"
+    },
+    {
+      "code": "backup",
+      "status": "passed",
+      "detail": "verified"
+    },
+    {
+      "code": "key",
+      "status": "passed",
+      "detail": "verified"
+    },
+    {
+      "code": "disk",
+      "status": "passed",
+      "detail": "verified"
+    },
+    {
+      "code": "memory",
+      "status": "passed",
+      "detail": "verified"
+    },
+    {
+      "code": "maintenance",
+      "status": "passed",
+      "detail": "verified"
+    },
+    {
+      "code": "writers",
+      "status": "passed",
+      "detail": "verified"
+    },
+    {
+      "code": "license",
+      "status": "passed",
+      "detail": "verified"
+    },
+    {
+      "code": "rollback",
+      "status": "passed",
+      "detail": "verified"
+    }
+  ],
+  "safeRemediation": [],
+  "imageDigests": [
+    "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  ],
+  "runId": "925ee260-fb53-47cb-8643-1d6596f4d5d2",
+  "outcome": "success",
+  "completedAt": "2026-10-15T08:46:42.152Z",
+  "failureCode": null,
+  "maintenanceRetained": false,
+  "exposurePossible": true,
+  "dataRestored": false,
+  "migrationsReversed": false,
+  "evidenceId": "86ac4cf4-958e-43cb-8dc0-5ca8df5f7e9e"
+}

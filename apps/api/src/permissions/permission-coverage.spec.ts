@@ -1,3 +1,4 @@
+import { SupabaseLicensingRepository } from "../licensing/infrastructure/supabase-licensing.repository";
 import { Test } from "@nestjs/testing";
 import type { INestApplication } from "@nestjs/common";
 import { METHOD_METADATA, PATH_METADATA } from "@nestjs/common/constants";
@@ -67,7 +68,8 @@ function collect(app: INestApplication): RouteInfo[] {
       if (!instance || !controllerClass) continue;
 
       const controllerPath =
-        (Reflect.getMetadata(PATH_METADATA, controllerClass) as string) ?? "";
+        (Reflect.getMetadata(PATH_METADATA, controllerClass) as
+          string | string[]) ?? "";
       const prototype = Object.getPrototypeOf(instance) as object;
 
       for (const name of scanner.getAllMethodNames(prototype)) {
@@ -75,31 +77,38 @@ function collect(app: INestApplication): RouteInfo[] {
         if (typeof handler !== "function") continue;
 
         const methodPath = Reflect.getMetadata(PATH_METADATA, handler) as
-          string | undefined;
+          string | string[] | undefined;
         if (methodPath === undefined) continue;
 
         const verb = Reflect.getMetadata(METHOD_METADATA, handler) as
           number | undefined;
         const targets = [handler as never, controllerClass as never];
 
-        routes.push({
-          key: `${VERBS[verb ?? 0] ?? "GET"} ${[controllerPath, methodPath]
-            .map((p) => p.replace(/^\/|\/$/g, ""))
-            .filter(Boolean)
-            .join("/")}`,
-          isPublic:
-            reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, targets) ===
-            true,
-          permissions: reflector.getAllAndOverride<string[]>(
-            REQUIRE_PERMISSIONS_KEY,
-            targets,
-          ),
-          role: reflector.getAllAndOverride<string>(REQUIRE_ROLE_KEY, targets),
-          selfScoped: reflector.getAllAndOverride<string>(
-            SELF_SCOPED_KEY,
-            targets,
-          ),
-        });
+        for (const base of [controllerPath].flat()) {
+          for (const suffix of [methodPath].flat()) {
+            routes.push({
+              key: `${VERBS[verb ?? 0] ?? "GET"} ${[base, suffix]
+                .map((p) => p.replace(/^\/|\/$/g, ""))
+                .filter(Boolean)
+                .join("/")}`,
+              isPublic:
+                reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, targets) ===
+                true,
+              permissions: reflector.getAllAndOverride<string[]>(
+                REQUIRE_PERMISSIONS_KEY,
+                targets,
+              ),
+              role: reflector.getAllAndOverride<string>(
+                REQUIRE_ROLE_KEY,
+                targets,
+              ),
+              selfScoped: reflector.getAllAndOverride<string>(
+                SELF_SCOPED_KEY,
+                targets,
+              ),
+            });
+          }
+        }
       }
     }
   }
@@ -114,7 +123,14 @@ describe("permission coverage", () => {
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({
       imports: [AppModule],
-    }).compile();
+    })
+      // Metadata/guard ordering tests have no persisted licence tenants.
+      .overrideProvider(SupabaseLicensingRepository)
+      .useValue({
+        listPolicyTenants: () =>
+          Promise.resolve({ organizationIds: [], nextCursor: null }),
+      })
+      .compile();
     app = moduleRef.createNestApplication();
     await app.init();
     routes = collect(app);
@@ -166,5 +182,66 @@ describe("permission coverage", () => {
     for (const route of routes.filter((r) => r.selfScoped)) {
       expect(route.selfScoped!.length).toBeGreaterThan(15);
     }
+  });
+
+  it("keeps SBOM upload/report/replay routes on explicit permission or role gates", () => {
+    const sbomRoutes = new Map(
+      routes.filter((r) => r.key.includes("sbom")).map((r) => [r.key, r]),
+    );
+
+    expect(
+      sbomRoutes.get(
+        "POST products/:productId/releases/:releaseId/sbom-uploads",
+      )?.permissions,
+    ).toEqual(["can_upload_sboms"]);
+    expect(
+      sbomRoutes.get("GET products/:productId/releases/:releaseId/sbom-sources")
+        ?.permissions,
+    ).toEqual(["can_view_sboms"]);
+    expect(
+      sbomRoutes.get(
+        "GET products/:productId/releases/:releaseId/sbom-documents",
+      )?.permissions,
+    ).toEqual(["can_view_sboms"]);
+    expect(
+      sbomRoutes.get("POST sbom-uploads/:sourceId/complete")?.permissions,
+    ).toEqual(["can_upload_sboms"]);
+    expect(sbomRoutes.get("GET sbom-jobs/:jobId")?.permissions).toEqual([
+      "can_view_sboms",
+    ]);
+    expect(sbomRoutes.get("POST sbom-jobs/:jobId/replay")?.role).toBe("owner");
+    expect(
+      sbomRoutes.get("GET sbom-sources/:sourceId/download")?.permissions,
+    ).toEqual(["can_view_sboms"]);
+    expect(
+      sbomRoutes.get("GET sbom-sources/:sourceId/validation-report")
+        ?.permissions,
+    ).toEqual(["can_view_sboms"]);
+    expect(
+      sbomRoutes.get("GET sbom-documents/:documentId")?.permissions,
+    ).toEqual(["can_view_sboms"]);
+    expect(
+      sbomRoutes.get("GET sbom-documents/:documentId/components")?.permissions,
+    ).toEqual(["can_view_sboms"]);
+    expect(
+      sbomRoutes.get("GET sbom-documents/:documentId/dependency-tree")
+        ?.permissions,
+    ).toEqual(["can_view_sboms"]);
+    expect(
+      sbomRoutes.get("POST sbom-sources/:sourceId/diff")?.permissions,
+    ).toEqual(["can_upload_sboms"]);
+    expect(
+      sbomRoutes.get("GET sbom-sources/:sourceId/diff")?.permissions,
+    ).toEqual(["can_view_sboms"]);
+    expect(sbomRoutes.get("GET sbom-diffs/:diffId")?.permissions).toEqual([
+      "can_view_sboms",
+    ]);
+    expect(
+      sbomRoutes.get("GET sbom-diffs/:diffId/components")?.permissions,
+    ).toEqual(["can_view_sboms"]);
+    expect(
+      sbomRoutes.get("GET sbom-diffs/:diffId/findings")?.permissions,
+    ).toEqual(["can_view_sboms", "can_view_findings"]);
+    expect(sbomRoutes.get("POST sbom-diffs/:diffId/retry")?.role).toBe("owner");
   });
 });

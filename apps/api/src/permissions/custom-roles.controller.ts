@@ -1,16 +1,22 @@
+import { randomUUID } from "node:crypto";
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
   ForbiddenException,
   Get,
+  Headers,
   HttpCode,
   HttpStatus,
   Param,
   Patch,
   Post,
   Put,
+  Req,
 } from "@nestjs/common";
+import type { Request } from "express";
+import { auditRequestIdSchema } from "@repo/contracts/audit/schemas";
 import {
   createRoleInputSchema,
   roleListResponseSchema,
@@ -41,6 +47,32 @@ import {
   type RequestUser,
 } from "../auth/auth.types";
 import { CustomRolesService } from "./custom-roles.service";
+import type { AuditMutationContext } from "./application/role-repository.port";
+
+function auditContext(
+  eventHeader: string | undefined,
+  correlationHeader: string | undefined,
+  request?: Request,
+): AuditMutationContext {
+  const event =
+    eventHeader === undefined
+      ? randomUUID()
+      : auditRequestIdSchema.safeParse(eventHeader).data;
+  const correlation =
+    correlationHeader === undefined
+      ? event
+      : auditRequestIdSchema.safeParse(correlationHeader).data;
+  if (!event || !correlation)
+    throw new BadRequestException({
+      code: "invalid_audit_identity",
+      message: "Invalid request identity header.",
+    });
+  return Object.freeze({
+    eventKey: event,
+    correlationId: correlation,
+    sourceIp: request?.ip ?? null,
+  });
+}
 
 @Controller("roles")
 export class CustomRolesController {
@@ -70,6 +102,9 @@ export class CustomRolesController {
   async create(
     @Body(zodBody(createRoleInputSchema)) dto: CreateRoleInput,
     @CurrentUser() user: RequestUser,
+    @Headers("idempotency-key") eventKey?: string,
+    @Headers("x-correlation-id") correlationId?: string,
+    @Req() request?: Request,
   ): Promise<IdResponse> {
     return this.roles.create(
       this.orgOf(user),
@@ -81,6 +116,7 @@ export class CustomRolesController {
         baseRole: dto.baseRole,
         permissions: dto.permissions,
       },
+      auditContext(eventKey, correlationId, request),
     );
   }
 
@@ -92,12 +128,16 @@ export class CustomRolesController {
     @Param(zodParams(roleIdParamSchema)) { id }: RoleIdParam,
     @Body(zodBody(updateRoleInputSchema)) dto: UpdateRoleInput,
     @CurrentUser() user: RequestUser,
+    @Headers("idempotency-key") eventKey?: string,
+    @Headers("x-correlation-id") correlationId?: string,
+    @Req() request?: Request,
   ): Promise<OkResponse> {
     await this.roles.update(
       this.orgOf(user),
       { id: user.id, email: user.email },
       id,
       dto,
+      auditContext(eventKey, correlationId, request),
     );
     return { ok: true };
   }
@@ -109,11 +149,15 @@ export class CustomRolesController {
   async remove(
     @Param(zodParams(roleIdParamSchema)) { id }: RoleIdParam,
     @CurrentUser() user: RequestUser,
+    @Headers("idempotency-key") eventKey?: string,
+    @Headers("x-correlation-id") correlationId?: string,
+    @Req() request?: Request,
   ): Promise<OkResponse> {
     await this.roles.remove(
       this.orgOf(user),
       { id: user.id, email: user.email },
       id,
+      auditContext(eventKey, correlationId, request),
     );
     return { ok: true };
   }
@@ -144,12 +188,16 @@ export class CustomRolesController {
   async setOverride(
     @Body(zodBody(setRoleOverrideInputSchema)) dto: SetRoleOverrideInput,
     @CurrentUser() user: RequestUser,
+    @Headers("idempotency-key") eventKey?: string,
+    @Headers("x-correlation-id") correlationId?: string,
+    @Req() request?: Request,
   ): Promise<OkResponse> {
     await this.roles.setOverride(
       this.orgOf(user),
       { id: user.id, email: user.email },
       dto.baseRole,
       dto.permissions,
+      auditContext(eventKey, correlationId, request),
     );
     return { ok: true };
   }

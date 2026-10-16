@@ -5,6 +5,38 @@ node_modules
 .pnp
 .pnp.js
 
+# Repository documentation
+docs/
+
+# M14-03 implementation and verification documents are reviewable source.
+!docs/
+docs/*
+!docs/architecture/
+docs/architecture/*
+!docs/architecture/m14-03*.md
+!docs/architecture/m14-03*.json
+!docs/architecture/m15-01*.md
+!docs/architecture/m15-01*.json
+!docs/architecture/m15-02*.md
+!docs/architecture/m15-02*.json
+!docs/architecture/m15-06*.md
+!docs/architecture/m15-06*.json
+!docs/architecture/m15-02-evidence/
+docs/architecture/m15-02-evidence/*
+!docs/architecture/m15-02-evidence/*.png
+!docs/architecture/m15-01-evidence/
+docs/architecture/m15-01-evidence/*
+!docs/architecture/m15-01-evidence/*.png
+!docs/superpowers/
+docs/superpowers/*
+!docs/superpowers/plans/
+docs/superpowers/plans/*
+!docs/superpowers/plans/2026-10-09-m14-03*.md
+!docs/superpowers/plans/2026-10-13-m15-01*.md
+!docs/superpowers/plans/2026-10-13-m15-02*.md
+!docs/superpowers/plans/2026-10-15-m15-06*.md
+!docs/superpowers/plans/2026-10-13-local-storage-export-recovery.md
+
 # Local env files
 # NOTE: `.env` alone is an EXACT-match pattern, so `.env.production` and
 # `.env.staging` were committable. `.env*` closes that, with example files
@@ -15,6 +47,14 @@ node_modules
 
 # Testing
 coverage
+**/test-results/
+**/playwright-report/
+/artifacts/**/*.png
+/artifacts/**/*.log
+/artifacts/**/*.zip
+/artifacts/**/extract-*/
+/artifacts/**/corrupt-*/
+/docs/architecture/evidence/**/*.png
 
 # Turbo
 .turbo
@@ -47,6 +87,7 @@ crash.log
 crash.*.log
 
 # Debug
+.superpowers/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
@@ -54,3 +95,40 @@ yarn-error.log*
 # Misc
 .DS_Store
 *.pem
+
+*.playwright-mcp
+
+# M15-03 reviewed source and nonsecret verification artifacts.
+!docs/architecture/m15-03*.md
+!docs/architecture/m15-03*.json
+!docs/architecture/m15-03-evidence/
+docs/architecture/m15-03-evidence/*
+!docs/architecture/m15-03-evidence/*.png
+!docs/architecture/m15-03-evidence/*.json
+!docs/superpowers/plans/2026-10-14-m15-03*.md
+
+# M15-04 reviewed design, plan, and nonsecret verification evidence.
+!docs/architecture/m15-04*.md
+!docs/architecture/evidence/
+docs/architecture/evidence/*
+!docs/architecture/evidence/m15-04/
+docs/architecture/evidence/m15-04/*
+!docs/architecture/evidence/m15-04/*.png
+!docs/architecture/evidence/m15-04/*.json
+!docs/architecture/evidence/m15-04/*.md
+!docs/superpowers/plans/2026-10-14-m15-04-support-diagnostics.md
+
+# M15-05 reviewed design and nonsecret recovery verification evidence.
+!docs/architecture/m15-05*.md
+!docs/architecture/m15-05*.json
+!docs/architecture/evidence/m15-05/
+docs/architecture/evidence/m15-05/*
+!docs/architecture/evidence/m15-05/*.png
+!docs/architecture/evidence/m15-05/*.json
+!docs/architecture/evidence/m15-05/*.md
+!docs/architecture/evidence/m15-06/
+docs/architecture/evidence/m15-06/*
+!docs/architecture/evidence/m15-06/*.png
+!docs/architecture/evidence/m15-06/*.json
+!docs/architecture/evidence/m15-06/*.md
+!docs/superpowers/plans/2026-10-14-m15-05-encrypted-backups.md

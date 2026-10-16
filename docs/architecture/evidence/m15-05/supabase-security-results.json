@@ -1,0 +1,41 @@
+{
+  "projectUrl": "http://127.0.0.1:54321",
+  "postgresVersion": "17.6",
+  "originalPolicies": 0,
+  "originalRuns": 0,
+  "featureAdvisories": [
+    {
+      "name": "rls_enabled_no_policy",
+      "title": "RLS Enabled No Policy",
+      "level": "INFO",
+      "facing": "EXTERNAL",
+      "categories": ["SECURITY"],
+      "description": "Detects cases where row level security (RLS) has been enabled on a table but no RLS policies have been created.",
+      "detail": "Table `public.backup_policies` has RLS enabled, but no policies exist",
+      "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy",
+      "metadata": {
+        "name": "backup_policies",
+        "type": "table",
+        "schema": "public"
+      },
+      "cache_key": "rls_enabled_no_policy_public_backup_policies"
+    },
+    {
+      "name": "rls_enabled_no_policy",
+      "title": "RLS Enabled No Policy",
+      "level": "INFO",
+      "facing": "EXTERNAL",
+      "categories": ["SECURITY"],
+      "description": "Detects cases where row level security (RLS) has been enabled on a table but no RLS policies have been created.",
+      "detail": "Table `public.backup_runs` has RLS enabled, but no policies exist",
+      "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy",
+      "metadata": {
+        "name": "backup_runs",
+        "type": "table",
+        "schema": "public"
+      },
+      "cache_key": "rls_enabled_no_policy_public_backup_runs"
+    }
+  ],
+  "interpretation": "Intentional deny-all browser table boundary: non-forced RLS enabled, no browser policies or table grants; narrow service RPCs enforce instance and actor scope. Existing unrelated advisories were not changed."
+}

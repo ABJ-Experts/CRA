@@ -1,0 +1,188 @@
+{
+  "recordedAt": "2026-10-15T06:25:01.014518+00:00",
+  "source": {
+    "environment": "original local development",
+    "project": "cra",
+    "apiOrigin": "http://127.0.0.1:54321",
+    "databaseContainer": "supabase_db_cra",
+    "storageRuntime": "1.77.0",
+    "storageVolume": "supabase_storage_cra"
+  },
+  "before": {
+    "metadataRows": 411,
+    "physicalFiles": 308,
+    "missingVersions": 103,
+    "presentSizeAndMd5Verified": 308
+  },
+  "recovery": {
+    "restoredVersions": 98,
+    "restoredBytes": 388032,
+    "byBucket": {
+      "evidence-documents": 5,
+      "sbom-originals": 23,
+      "technical-file-declarations": 1,
+      "technical-file-snapshot-exports": 69
+    },
+    "acceptance": "Exact retained source SHA-256, Storage MD5 ETag and byte length, pinned identity and version; no approximate regeneration",
+    "provenance": [
+      "docs/examples/product-release-import-v1.csv",
+      "apps/api/scripts/m9-05/seed-local-fixture.mjs",
+      "apps/web/e2e/m9-06-supplier-sbom-portal.spec.ts",
+      "Immutable M7 snapshots and source export hashes",
+      "Retained declaration immutable payload and artifact hash"
+    ],
+    "publication": "Directory-fd O_NOFOLLOW; exclusive temporary file; no-replace hardlink; fsync and Storage xattrs; no SQL object-row mutation",
+    "authenticatedDownloadsBefore": {
+      "500_InternalError": 98
+    },
+    "authenticatedDownloadsAfter": {
+      "200": 98,
+      "sha256AndLengthVerified": 98
+    },
+    "anonymousAccess": [
+      {
+        "bucket": "sbom-originals",
+        "status": 400,
+        "anonymousDenied": true
+      },
+      {
+        "bucket": "evidence-documents",
+        "status": 400,
+        "anonymousDenied": true
+      },
+      {
+        "bucket": "technical-file-declarations",
+        "status": 400,
+        "anonymousDenied": true
+      },
+      {
+        "bucket": "technical-file-snapshot-exports",
+        "status": 400,
+        "anonymousDenied": true
+      }
+    ],
+    "safetyTests": {
+      "redObserved": true,
+      "greenTests": 12,
+      "criticalOrHighReviewFindings": 0
+    }
+  },
+  "preservation": {
+    "existingMetadataRowsUnchanged": 411,
+    "existingPhysicalFilesUnchanged": 308,
+    "existingBucketsDeletedOrChanged": 0,
+    "existingSourceDataDeletedOrOverwritten": false,
+    "resetPerformed": false,
+    "migrationsApplied": 0,
+    "applicationCodeChanged": false,
+    "bucketRowsComparedUnchanged": 14
+  },
+  "after": {
+    "metadataRows": 411,
+    "physicalFiles": 406,
+    "missingVersions": 5,
+    "byBucket": {
+      "evidence-documents": 1,
+      "technical-file-declarations": 4
+    }
+  },
+  "unresolved": [
+    {
+      "bucket": "evidence-documents",
+      "objectReferenceDigest": "f3ac430a2778f01b075dbccb4e5e8e61dcc6744d774897b668deef43327253a8",
+      "bytes": 123,
+      "storageMd5": "3a09a8d9a143976f4f5049d59bfd7e78",
+      "reason": "No matching retained bytes or exact reproducible original in inspected sources",
+      "retainedSourceSha256": "367b78649c0ebb6a1412f6899f3b1acc7fc9140aeacb240eb7ecc8be78c85877"
+    },
+    {
+      "bucket": "technical-file-declarations",
+      "objectReferenceDigest": "7f80dc0c5381093fe9576ff9e805906ea1e4580347b5636cd8fa513cff6099c9",
+      "bytes": 1574,
+      "storageMd5": "c590addb7fb33245bf9fc5eb3a2583e8",
+      "reason": "No matching retained bytes or exact reproducible original in inspected sources",
+      "retainedSourceSha256": "f7a969bff55c3f22c0cb3c6b70fffdfdb87ff326d12263483718623db9a288d7"
+    },
+    {
+      "bucket": "technical-file-declarations",
+      "objectReferenceDigest": "c520ac533838b3d993f5892794c7912cd70370e20255ad73701923abff7584fd",
+      "bytes": 1574,
+      "storageMd5": "47509931eb5981b312c0f03ee47eb24c",
+      "reason": "No matching retained bytes or exact reproducible original in inspected sources",
+      "retainedSourceSha256": null
+    },
+    {
+      "bucket": "technical-file-declarations",
+      "objectReferenceDigest": "c197976482546289d42333be9e3bed8a9849f009bb118dd7ff83c35a6db9ed2c",
+      "bytes": 1574,
+      "storageMd5": "6cadcffbe3ebd5bfeb562c5ebe137aa0",
+      "reason": "No matching retained bytes or exact reproducible original in inspected sources",
+      "retainedSourceSha256": "24c5d79bd51be793a80b98cd699ef92615681ba6a5973f8ad19ab518edcdcde9"
+    },
+    {
+      "bucket": "technical-file-declarations",
+      "objectReferenceDigest": "751553b946f831b0177be2a1dc4ccfdd6cbe08cc7b12a02ea7aa6c557b807c44",
+      "bytes": 1574,
+      "storageMd5": "95d49cfc7abd379b234498a7f03b55cc",
+      "reason": "No matching retained bytes or exact reproducible original in inspected sources",
+      "retainedSourceSha256": "2c3395ab23e53b28315cd0da10a080275f08586af3d3c5d409ec7258187dd47e"
+    }
+  ],
+  "search": {
+    "repositoryAndRelevantWorktreeFiles": 25430,
+    "retainedZipArchives": 10,
+    "originalPreRepairStorageTarExactMatches": 0,
+    "otherTaskStorageVolumesExactMatches": 0
+  },
+  "backupRetest": {
+    "originalInstance": "15555555-5555-4555-8555-555555555555",
+    "wholeClusterDatabaseBytes": 17838982528,
+    "encryptedStagingCapacityBytes": 8589934592,
+    "nativeValidationFailure": "insufficient_capacity",
+    "approved": false,
+    "schedulingEnabled": false,
+    "policyRows": 1,
+    "policyRowState": "unapproved validation candidate",
+    "runRows": 0,
+    "certificatesCreated": 0,
+    "restoresStarted": 0,
+    "replicationSlots": 0,
+    "writeFences": 0,
+    "runBypassStatus": 404,
+    "durableReceipts": {
+      "backup.validation_requested": 1,
+      "backup.validation_failed": 1
+    },
+    "workerStopped": true,
+    "customerAssurance": "unavailable/not configured",
+    "limitations": [
+      "Whole cluster includes retained benchmark and internal databases; they were not omitted or deleted.",
+      "Encrypted staging and current repository free space do not meet whole-cluster capacity requirements.",
+      "Five missing committed objects independently prevent a complete certificate.",
+      "No original backup/restore success or new RPO/RTO claim is made."
+    ],
+    "writePauseStarted": false,
+    "originalWorkerStillRunning": false
+  },
+  "playwright": {
+    "maximumPages": 2,
+    "operatorDesktopAndMobileScreenshots": true,
+    "customerDesktopAndMobileScreenshots": true,
+    "mobile390pxNoOverflow": true,
+    "unrelatedSiteDataCleared": false,
+    "ownerSession": "Fresh seeded-owner sign-in after browser context switch; no site-data clearing"
+  },
+  "supabaseMcp": {
+    "matchingLocalProjectAvailableNow": false,
+    "currentDiscoveryOnlyUnrelatedCloudProjects": true,
+    "unrelatedProjectsQueried": false,
+    "verification": "Matching local PostgreSQL and Storage APIs; earlier matching local MCP evidence retained"
+  },
+  "regressions": {
+    "command": "pnpm --filter api exec jest --runInBand --testPathPatterns='backups|backup-worker'",
+    "suites": 50,
+    "tests": 369,
+    "exitCode": 0
+  },
+  "repositoryGateNote": "No application code changed in this operational recovery. Prior final pnpm verify passed before this follow-up; it is not claimed as a newly rerun command."
+}

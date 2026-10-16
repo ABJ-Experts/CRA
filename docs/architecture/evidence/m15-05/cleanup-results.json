@@ -1,0 +1,56 @@
+{
+  "fixtureOnly": true,
+  "physicalRecoveryClaim": false,
+  "postgresVersion": "17.6",
+  "sourceRowsCopied": 0,
+  "scenarios": [
+    {
+      "scenario": "retained_verification_blocks_capture",
+      "status": "passed"
+    },
+    {
+      "scenario": "unknown_authority_blocks_cleanup",
+      "status": "passed"
+    },
+    {
+      "scenario": "active_hold_blocks_cleanup",
+      "status": "passed"
+    },
+    {
+      "scenario": "verification_cleanup_is_metadata_only",
+      "status": "passed"
+    },
+    {
+      "scenario": "corrupt_remaining_chain_blocks_deletion",
+      "status": "passed"
+    },
+    {
+      "scenario": "missing_historical_key_blocks_deletion",
+      "status": "passed"
+    },
+    {
+      "scenario": "wrong_historical_key_blocks_deletion",
+      "status": "passed"
+    },
+    {
+      "scenario": "concurrent_hold_writer_waits_for_cleanup_commit",
+      "status": "passed"
+    },
+    {
+      "scenario": "audited_native_cleanup_deletes_only_reviewed_ciphertext",
+      "status": "passed"
+    },
+    {
+      "scenario": "two_remaining_independent_chains_preserved",
+      "status": "passed"
+    },
+    {
+      "scenario": "last_two_verified_chains_cannot_be_cleaned",
+      "status": "passed"
+    },
+    {
+      "scenario": "critical_cleanup_receipts_are_durable_and_hash_bound",
+      "status": "passed"
+    }
+  ]
+}

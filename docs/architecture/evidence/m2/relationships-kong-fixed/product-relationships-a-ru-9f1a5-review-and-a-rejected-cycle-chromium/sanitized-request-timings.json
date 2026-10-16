@@ -1,0 +1,663 @@
+{
+  "requests": [
+    {
+      "method": "GET",
+      "path": "/api/v1/auth/session",
+      "failure": "net::ERR_ABORTED",
+      "elapsedMs": 2
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/auth/session",
+      "status": 200,
+      "elapsedMs": 263
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/auth/session",
+      "status": 200,
+      "elapsedMs": 84
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/organizations/current/legal-entities",
+      "status": 200,
+      "elapsedMs": 98
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/auth/session",
+      "failure": "net::ERR_ABORTED",
+      "elapsedMs": 10
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/auth/session",
+      "status": 200,
+      "elapsedMs": 193
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products/<fixture-id>",
+      "status": 200,
+      "elapsedMs": 195
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products/<fixture-id>/releases",
+      "status": 200,
+      "elapsedMs": 216
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products/classifications",
+      "status": 200,
+      "elapsedMs": 216
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products/owner-options",
+      "failure": "net::ERR_ABORTED",
+      "elapsedMs": 2
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products/<fixture-id>/finding-impact-summary",
+      "failure": "net::ERR_ABORTED",
+      "elapsedMs": 2
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products/<fixture-id>/finding-impact-summary",
+      "status": 200,
+      "elapsedMs": 302
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products/<fixture-id>/releases/<fixture-id>/sbom-documents",
+      "status": 200,
+      "elapsedMs": 231
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products/<fixture-id>/releases/<fixture-id>/sbom-sources",
+      "status": 200,
+      "elapsedMs": 240
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products/owner-options",
+      "status": 200,
+      "elapsedMs": 333
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products/<fixture-id>/releases/<fixture-id>/sbom-sources",
+      "status": 200,
+      "elapsedMs": 250
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products/<fixture-id>/baseline-memberships",
+      "failure": "net::ERR_ABORTED",
+      "elapsedMs": 26
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products/<fixture-id>/variant-relationships",
+      "failure": "net::ERR_ABORTED",
+      "elapsedMs": 26
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products/<fixture-id>/component-links",
+      "failure": "net::ERR_ABORTED",
+      "elapsedMs": 26
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products/<fixture-id>/relationship-graph",
+      "failure": "net::ERR_ABORTED",
+      "elapsedMs": 26
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products/<fixture-id>/relationship-propagation-events",
+      "failure": "net::ERR_ABORTED",
+      "elapsedMs": 24
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products/<fixture-id>/component-links",
+      "status": 200,
+      "elapsedMs": 315
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products/<fixture-id>/variant-relationships",
+      "status": 200,
+      "elapsedMs": 350
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products/<fixture-id>/baseline-memberships",
+      "status": 200,
+      "elapsedMs": 350
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products/<fixture-id>/relationship-graph",
+      "status": 200,
+      "elapsedMs": 349
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products/<fixture-id>/relationship-propagation-events",
+      "status": 200,
+      "elapsedMs": 366
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/products/baselines",
+      "status": 201,
+      "elapsedMs": 85
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products/baselines/<fixture-id>/revisions",
+      "status": 200,
+      "elapsedMs": 76
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products/baselines",
+      "status": 200,
+      "elapsedMs": 82
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/products/<fixture-id>/baseline-memberships",
+      "status": 201,
+      "elapsedMs": 78
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products/baselines",
+      "status": 200,
+      "elapsedMs": 110
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products/<fixture-id>/releases",
+      "status": 200,
+      "elapsedMs": 118
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products/<fixture-id>/baseline-memberships",
+      "status": 200,
+      "elapsedMs": 118
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products/<fixture-id>/variant-relationships",
+      "status": 200,
+      "elapsedMs": 124
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products/<fixture-id>/component-links",
+      "status": 200,
+      "elapsedMs": 124
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products/<fixture-id>",
+      "status": 200,
+      "elapsedMs": 131
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products/<fixture-id>/relationship-propagation-events",
+      "status": 200,
+      "elapsedMs": 204
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products/<fixture-id>/relationship-graph",
+      "status": 200,
+      "elapsedMs": 210
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products",
+      "status": 200,
+      "elapsedMs": 78
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products/<fixture-id>/releases",
+      "status": 200,
+      "elapsedMs": 60
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/products/<fixture-id>/variant-relationships",
+      "status": 201,
+      "elapsedMs": 135
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products",
+      "status": 200,
+      "elapsedMs": 149
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products/<fixture-id>",
+      "status": 200,
+      "elapsedMs": 166
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products/baselines",
+      "status": 200,
+      "elapsedMs": 175
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products/<fixture-id>/baseline-memberships",
+      "status": 200,
+      "elapsedMs": 176
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products/<fixture-id>/variant-relationships",
+      "status": 200,
+      "elapsedMs": 190
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products/<fixture-id>/releases",
+      "status": 200,
+      "elapsedMs": 204
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products/<fixture-id>/component-links",
+      "status": 200,
+      "elapsedMs": 367
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products/<fixture-id>/relationship-graph",
+      "status": 200,
+      "elapsedMs": 384
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products/<fixture-id>/relationship-propagation-events",
+      "status": 200,
+      "elapsedMs": 394
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products",
+      "status": 200,
+      "elapsedMs": 217
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products/<fixture-id>/releases",
+      "status": 200,
+      "elapsedMs": 410
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products/<fixture-id>/releases",
+      "status": 200,
+      "elapsedMs": 150
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/products/<fixture-id>/component-links/preview",
+      "status": 201,
+      "elapsedMs": 147
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/products/<fixture-id>/component-links",
+      "status": 201,
+      "elapsedMs": 124
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products/<fixture-id>",
+      "status": 200,
+      "elapsedMs": 231
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products/baselines",
+      "status": 200,
+      "elapsedMs": 236
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products/<fixture-id>/baseline-memberships",
+      "status": 200,
+      "elapsedMs": 242
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products",
+      "status": 200,
+      "elapsedMs": 243
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products",
+      "status": 200,
+      "elapsedMs": 243
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products/<fixture-id>/releases",
+      "status": 200,
+      "elapsedMs": 250
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/auth/session",
+      "failure": "net::ERR_ABORTED",
+      "elapsedMs": 0
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/auth/session",
+      "status": 200,
+      "elapsedMs": 158
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products/<fixture-id>",
+      "status": 200,
+      "elapsedMs": 127
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products/<fixture-id>/releases",
+      "status": 200,
+      "elapsedMs": 138
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products/owner-options",
+      "failure": "net::ERR_ABORTED",
+      "elapsedMs": 2
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products/<fixture-id>/finding-impact-summary",
+      "failure": "net::ERR_ABORTED",
+      "elapsedMs": 2
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products/classifications",
+      "status": 200,
+      "elapsedMs": 186
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products/<fixture-id>/finding-impact-summary",
+      "status": 200,
+      "elapsedMs": 143
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products/owner-options",
+      "status": 200,
+      "elapsedMs": 151
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products/<fixture-id>/releases/<fixture-id>/sbom-documents",
+      "status": 200,
+      "elapsedMs": 110
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products/<fixture-id>/releases/<fixture-id>/sbom-sources",
+      "status": 200,
+      "elapsedMs": 110
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products/<fixture-id>/releases/<fixture-id>/sbom-sources",
+      "status": 200,
+      "elapsedMs": 120
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products/<fixture-id>/baseline-memberships",
+      "failure": "net::ERR_ABORTED",
+      "elapsedMs": 7
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products/<fixture-id>/variant-relationships",
+      "failure": "net::ERR_ABORTED",
+      "elapsedMs": 18
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products/<fixture-id>/component-links",
+      "failure": "net::ERR_ABORTED",
+      "elapsedMs": 20
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products/<fixture-id>/relationship-graph",
+      "failure": "net::ERR_ABORTED",
+      "elapsedMs": 20
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products/<fixture-id>/relationship-propagation-events",
+      "failure": "net::ERR_ABORTED",
+      "elapsedMs": 24
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products/<fixture-id>/baseline-memberships",
+      "status": 200,
+      "elapsedMs": 307
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products/<fixture-id>/relationship-propagation-events",
+      "status": 200,
+      "elapsedMs": 318
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products/<fixture-id>/component-links",
+      "status": 200,
+      "elapsedMs": 322
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products/<fixture-id>/variant-relationships",
+      "status": 200,
+      "elapsedMs": 325
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products/<fixture-id>/relationship-graph",
+      "status": 200,
+      "elapsedMs": 333
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products/baselines/<fixture-id>/revisions",
+      "status": 200,
+      "elapsedMs": 85
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/auth/session",
+      "failure": "net::ERR_ABORTED",
+      "elapsedMs": 0
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/auth/session",
+      "status": 200,
+      "elapsedMs": 108
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products/<fixture-id>",
+      "status": 200,
+      "elapsedMs": 121
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products/owner-options",
+      "failure": "net::ERR_ABORTED",
+      "elapsedMs": 2
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products/<fixture-id>/finding-impact-summary",
+      "failure": "net::ERR_ABORTED",
+      "elapsedMs": 2
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products/<fixture-id>/releases",
+      "status": 200,
+      "elapsedMs": 131
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products/classifications",
+      "status": 200,
+      "elapsedMs": 138
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products/<fixture-id>/baseline-memberships",
+      "failure": "net::ERR_ABORTED",
+      "elapsedMs": 5
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products/<fixture-id>/variant-relationships",
+      "failure": "net::ERR_ABORTED",
+      "elapsedMs": 3
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products/<fixture-id>/component-links",
+      "failure": "net::ERR_ABORTED",
+      "elapsedMs": 3
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products/<fixture-id>/relationship-graph",
+      "failure": "net::ERR_ABORTED",
+      "elapsedMs": 3
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products/<fixture-id>/relationship-propagation-events",
+      "failure": "net::ERR_ABORTED",
+      "elapsedMs": 0
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products/<fixture-id>/finding-impact-summary",
+      "status": 200,
+      "elapsedMs": 115
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products/owner-options",
+      "status": 200,
+      "elapsedMs": 138
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products/<fixture-id>/variant-relationships",
+      "status": 200,
+      "elapsedMs": 269
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products/<fixture-id>/component-links",
+      "status": 200,
+      "elapsedMs": 275
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products/<fixture-id>/baseline-memberships",
+      "status": 200,
+      "elapsedMs": 278
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products/<fixture-id>/relationship-propagation-events",
+      "status": 200,
+      "elapsedMs": 279
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products/<fixture-id>/relationship-graph",
+      "status": 200,
+      "elapsedMs": 283
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products",
+      "status": 200,
+      "elapsedMs": 60
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products/<fixture-id>/releases",
+      "status": 200,
+      "elapsedMs": 73
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/products/<fixture-id>/component-links/preview",
+      "status": 409,
+      "elapsedMs": 72
+    }
+  ],
+  "pending": [
+    {
+      "method": "GET",
+      "path": "/api/v1/products/<fixture-id>/variant-relationships",
+      "elapsedMs": 3263
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products/<fixture-id>/component-links",
+      "elapsedMs": 3263
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products/<fixture-id>/relationship-graph",
+      "elapsedMs": 3263
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products/<fixture-id>/relationship-propagation-events",
+      "elapsedMs": 3263
+    }
+  ],
+  "fixtureOrganizationId": "b78188e5-79ea-480b-a07d-639341d52d5e"
+}

@@ -1,0 +1,95 @@
+- generic [active] [ref=f15e1]:
+  - generic [ref=f15e3]:
+    - button "Open navigation" [ref=f15e4] [cursor=pointer]
+    - generic [ref=f15e7]:
+      - banner [ref=f15e8]:
+        - navigation "Breadcrumb" [ref=f15e10]:
+          - list [ref=f15e11]:
+            - listitem [ref=f15e12]:
+              - link "Dashboard" [ref=f15e13] [cursor=pointer]:
+                - /url: /dashboard
+            - listitem [aria-hidden] [ref=f15e14]
+            - listitem [ref=f15e17]:
+              - generic [ref=f15e18]: Account
+        - generic [ref=f15e19]:
+          - button "Search" [ref=f15e20] [cursor=pointer]
+          - button "Notifications, 1 unread" [ref=f15e74] [cursor=pointer]
+          - generic [ref=f15e28]:
+            - generic [ref=f15e29]: AF
+            - 'img "Ada Foster: online" [ref=f15e30]'
+      - main [ref=f15e31]:
+        - generic [ref=f15e32]:
+          - generic [ref=f15e33]:
+            - heading "Account" [level=1] [ref=f15e34]
+            - paragraph [ref=f15e35]: Your name and details, visible to others in your organization.
+          - generic [ref=f15e38]:
+            - generic [ref=f15e39]:
+              - generic [ref=f15e40]: OA
+              - generic [ref=f15e42]:
+                - paragraph [ref=f15e43]: Owner Account
+                - paragraph [ref=f15e44]: owner@cra.test
+            - generic [ref=f15e45]:
+              - generic [ref=f15e46]:
+                - generic [ref=f15e47]: First name
+                - textbox "First name" [ref=f15e49]: Owner
+              - generic [ref=f15e50]:
+                - generic [ref=f15e51]: Last name
+                - textbox "Last name" [ref=f15e53]: Account
+            - generic [ref=f15e54]:
+              - generic [ref=f15e55]: Job title
+              - textbox "Job title" [ref=f15e57]
+              - paragraph [ref=f15e58]: Shown next to your name in the member list.
+            - generic [ref=f15e59]:
+              - button "Save changes" [ref=f15e60] [cursor=pointer]
+              - status [ref=f15e111]: Saved.
+          - generic [ref=f15e78]:
+            - generic [ref=f15e79]:
+              - heading "Notification preferences" [level=2] [ref=f15e80]
+              - paragraph [ref=f15e81]: Optional categories can use immediate delivery, digest delivery, or be turned off. Critical regulatory alerts bypass these settings.
+            - generic [ref=f15e82]:
+              - generic [ref=f15e83]:
+                - text: Finding triage
+                - combobox "Finding triage" [ref=f15e84] [cursor=pointer]:
+                  - option "Immediate" [selected]
+                  - option "Daily digest"
+                  - option "Weekly digest"
+                  - option "Off"
+              - generic [ref=f15e85]:
+                - text: Evidence
+                - combobox "Evidence" [ref=f15e86] [cursor=pointer]:
+                  - option "Immediate" [selected]
+                  - option "Daily digest"
+                  - option "Weekly digest"
+                  - option "Off"
+              - generic [ref=f15e87]:
+                - text: Supplier owner requests
+                - combobox "Supplier owner requests" [ref=f15e88] [cursor=pointer]:
+                  - option "Immediate" [selected]
+                  - option "Daily digest"
+                  - option "Weekly digest"
+                  - option "Off"
+            - generic [ref=f15e89]:
+              - generic [ref=f15e90]:
+                - generic [ref=f15e91]: Digest timezone
+                - textbox "Digest timezone" [ref=f15e93]: Etc/UTC
+              - generic [ref=f15e94]:
+                - generic [ref=f15e95]: Digest time
+                - textbox "Digest time" [ref=f15e97]: 09:00
+              - generic [ref=f15e98]:
+                - text: Weekly digest day
+                - combobox "Weekly digest day" [ref=f15e99] [cursor=pointer]:
+                  - option "Monday" [selected]
+                  - option "Tuesday"
+                  - option "Wednesday"
+                  - option "Thursday"
+                  - option "Friday"
+                  - option "Saturday"
+                  - option "Sunday"
+              - generic [ref=f15e100]:
+                - generic [ref=f15e101]: Quiet hours
+                - textbox "Quiet hours" [ref=f15e103]
+                - paragraph [ref=f15e104]: Use HH:MM-HH:MM, or leave blank.
+            - paragraph [ref=f15e105]: Critical regulatory alerts remain immediate and cannot be muted, digested, or suppressed by quiet hours.
+            - button "Save notification preferences" [disabled] [ref=f15e107]
+  - button "Open Next.js Dev Tools" [ref=f15e70] [cursor=pointer]
+  - alert [ref=f15e108]

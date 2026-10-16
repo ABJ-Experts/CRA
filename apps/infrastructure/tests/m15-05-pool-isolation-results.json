@@ -1,0 +1,12 @@
+{
+  "fixtureOnly": true,
+  "concurrentMetadataReaders": 20,
+  "metadataTimeouts": 20,
+  "metadataMaxElapsedMs": 616,
+  "nativePolicyAndHeartbeatElapsedMs": 106,
+  "nativeHeartbeatVersion": 2,
+  "metadataDisclosures": 0,
+  "protectedCaptureRecordsChanged": 0,
+  "existingSourceRowsChanged": 0,
+  "retainedFixtureRows": 0
+}

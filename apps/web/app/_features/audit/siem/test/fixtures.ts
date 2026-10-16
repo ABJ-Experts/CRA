@@ -1,0 +1,56 @@
+import type {
+  SiemDestination,
+  SiemDelivery,
+} from "@repo/contracts/audit/types";
+export const id = "11111111-1111-4111-8111-111111111111";
+export const deliveryId = "22222222-2222-4222-8222-222222222222";
+export const destination: SiemDestination = {
+  id,
+  version: 1,
+  name: "Security collector",
+  transport: "https",
+  format: "json",
+  endpoint: "https://collector.example.com/events",
+  eventClasses: ["access_control"],
+  productIds: [],
+  state: "draft",
+  credentialState: "active",
+  authorityUserId: id,
+  createdAt: "2026-10-07T00:00:00Z",
+  updatedAt: "2026-10-07T00:00:00Z",
+  health: {
+    pendingCount: 1,
+    failedCount: 0,
+    oldestPendingAt: "2026-10-07T00:00:00Z",
+    lastAcceptedAt: null,
+    safeFailureCode: null,
+  },
+};
+export const delivery: SiemDelivery = {
+  id: deliveryId,
+  destinationId: id,
+  eventId: deliveryId,
+  destinationRevision: 1,
+  state: "sent_unacknowledged",
+  attemptCount: 1,
+  createdAt: "2026-10-07T00:00:00Z",
+  updatedAt: "2026-10-07T00:00:00Z",
+  nextAttemptAt: null,
+  safeFailureCode: "network_unavailable",
+  parentDeliveryId: null,
+  event: {
+    schemaVersion: 1,
+    eventId: deliveryId,
+    organizationId: id,
+    occurredAt: "2026-10-07T00:00:00Z",
+    eventClass: "access_control",
+    action: "user.role_changed",
+    outcome: "completed",
+    actorType: "user",
+    actorId: id,
+    resourceType: "user",
+    resourceId: id,
+    correlationId: null,
+    chainSequence: "3",
+  },
+};

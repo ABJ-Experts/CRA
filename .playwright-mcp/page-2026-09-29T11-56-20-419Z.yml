@@ -1,0 +1,91 @@
+- generic [active] [ref=f2e1]:
+  - generic [ref=f2e3]:
+    - complementary [ref=f2e4]:
+      - generic [ref=f2e5]:
+        - generic [ref=f2e6]:
+          - link "CRA Sentinel" [ref=f2e7] [cursor=pointer]:
+            - /url: /dashboard
+            - generic [aria-hidden] [ref=f2e8]: C
+            - text: CRA Sentinel
+          - button "Collapse sidebar" [ref=f2e9] [cursor=pointer]
+        - navigation "Main" [ref=f2e12]:
+          - generic [ref=f2e13]:
+            - list [ref=f2e15]:
+              - listitem [ref=f2e16]:
+                - link "Dashboard" [ref=f2e17] [cursor=pointer]:
+                  - /url: /dashboard
+              - listitem [ref=f2e25]:
+                - link "Management" [ref=f2e26] [cursor=pointer]:
+                  - /url: /management
+              - listitem [ref=f2e32]:
+                - link "Organization" [ref=f2e33] [cursor=pointer]:
+                  - /url: /organization
+              - listitem [ref=f2e40]:
+                - link "Products" [ref=f2e41] [cursor=pointer]:
+                  - /url: /products
+              - listitem [ref=f2e48]:
+                - link "Suppliers" [ref=f2e49] [cursor=pointer]:
+                  - /url: /suppliers
+              - listitem [ref=f2e54]:
+                - link "Frameworks" [ref=f2e55] [cursor=pointer]:
+                  - /url: /frameworks
+              - listitem [ref=f2e60]:
+                - link "Findings" [ref=f2e61] [cursor=pointer]:
+                  - /url: /findings
+              - listitem [ref=f2e66]:
+                - link "Reporting" [ref=f2e67] [cursor=pointer]:
+                  - /url: /reporting
+              - listitem [ref=f2e73]:
+                - link "Connectors" [ref=f2e74] [cursor=pointer]:
+                  - /url: /connectors
+            - generic [ref=f2e81]:
+              - paragraph [ref=f2e82]: Account & access
+              - list [ref=f2e83]:
+                - listitem [ref=f2e84]:
+                  - button "Profile" [ref=f2e85] [cursor=pointer]
+                  - generic:
+                    - list:
+                      - listitem [ref=f2e93]:
+                        - link "Account" [ref=f2e94] [cursor=pointer]:
+                          - /url: /account
+                      - listitem [ref=f2e96]:
+                        - link "Security" [ref=f2e97] [cursor=pointer]:
+                          - /url: /security
+                - listitem [ref=f2e99]:
+                  - button "Authorization" [ref=f2e100] [cursor=pointer]
+                  - generic:
+                    - list:
+                      - listitem [ref=f2e108]:
+                        - link "Roles" [ref=f2e109] [cursor=pointer]:
+                          - /url: /roles
+                      - listitem [ref=f2e111]:
+                        - link "Permissions" [ref=f2e112] [cursor=pointer]:
+                          - /url: /permissions
+        - button "Sign out" [ref=f2e116] [cursor=pointer]
+    - generic [ref=f2e121]:
+      - banner [ref=f2e122]:
+        - navigation "Breadcrumb" [ref=f2e124]:
+          - list [ref=f2e125]:
+            - listitem [ref=f2e126]:
+              - link "Dashboard" [ref=f2e127] [cursor=pointer]:
+                - /url: /dashboard
+            - listitem [aria-hidden] [ref=f2e128]
+            - listitem [ref=f2e131]:
+              - generic [ref=f2e132]: Webhooks
+        - generic [ref=f2e133]:
+          - button "Search" [ref=f2e134] [cursor=pointer]
+          - button "Notifications" [ref=f2e138] [cursor=pointer]
+          - generic [ref=f2e142]:
+            - generic [ref=f2e143]: AF
+            - 'img "Ada Foster: online" [ref=f2e145]'
+      - main [ref=f2e146]:
+        - generic [ref=f2e147]:
+          - generic [ref=f2e148]:
+            - generic [ref=f2e149]:
+              - heading "Outbound webhooks" [level=1] [ref=f2e150]
+              - paragraph [ref=f2e151]: Signed resource events, controlled receivers and auditable delivery attempts.
+            - link "Integration hub" [ref=f2e153] [cursor=pointer]:
+              - /url: /connectors
+          - status [ref=f2e154]: Loading workspace…
+  - button "Open Next.js Dev Tools" [ref=f2e160] [cursor=pointer]
+  - alert [ref=f2e164]

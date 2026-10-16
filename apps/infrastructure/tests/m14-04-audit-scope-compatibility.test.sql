@@ -1,0 +1,45 @@
+begin;
+set local statement_timeout='60s';
+create or replace function pg_temp.check(p_name text,p_ok boolean) returns void language plpgsql as $$begin if not coalesce(p_ok,false) then raise exception 'check failed: %',p_name;end if;end$$;
+do $$
+declare org uuid:=gen_random_uuid();actor uuid;event public.audit_logs;created jsonb;claimed jsonb;authorized jsonb;old_job public.audit_verification_jobs;fresh_job public.audit_verification_jobs;
+begin
+ select id into strict actor from public.users where email='owner@cra.test';
+ insert into public.organizations(id,name,slug) values(org,'Report audit scope rollback fixture','m14-audit-scope-'||org);
+ insert into public.organization_members(organization_id,user_id,role) values(org,actor,'owner');
+ perform public.m14_04_audit(org,actor,gen_random_uuid(),'archive',gen_random_uuid(),jsonb_build_object('version',1,'recipientEligibility',jsonb_build_array(jsonb_build_object('userId',actor,'state','eligible'))));
+ set constraints all immediate;
+ insert into public.audit_logs(organization_id,action,entity_type,entity_id) values(org,'organization.audit_range_test','organization',org::text);
+ set constraints all immediate;
+ select * into strict event from public.audit_logs where organization_id=org and entity_type='scheduled_report';
+ perform pg_temp.check('bounded canonical catchup metadata retained',public.m13_01_project_v2_audit_json('{"coalescedWithinWindow":25,"skippedBeforeCutoff":true,"scheduledFor":"2026-10-12T09:00:00+00:00"}')='{"coalescedWithinWindow":25,"skippedBeforeCutoff":true,"scheduledFor":"2026-10-12T09:00:00+00:00"}'::jsonb);
+ perform pg_temp.check('invalid or unrelated values stay redacted',public.m13_01_project_v2_audit_json('{"coalescedWithinWindow":26,"skippedBeforeCutoff":"true","scheduledFor":"private text","recipientEligibility":[],"rowCount":100,"filters":{}}')='{"coalescedWithinWindow":"[REDACTED]","skippedBeforeCutoff":"[REDACTED]","scheduledFor":"[REDACTED]","recipientEligibility":"[REDACTED]","rowCount":"[REDACTED]","filters":"[REDACTED]"}'::jsonb);
+ perform pg_temp.check('audit read projection does not expose catchup details',public.m13_03_read_projection('{"coalescedWithinWindow":2,"skippedBeforeCutoff":true,"scheduledFor":"2026-10-12T09:00:00Z"}')='{}'::jsonb);
+ perform pg_temp.check('report safe audit metadata visible',public.m13_03_event_visible(org,actor,event));
+ perform pg_temp.check('forged audit tenant denied',not public.m13_03_event_visible(gen_random_uuid(),actor,event));
+ perform pg_temp.check('eligibility omitted before durable audit projection',event.after_redacted='{"version":1}'::jsonb);
+ created:=public.m13_04_create_verification(org,actor,gen_random_uuid(),'2','2',null,repeat('a',64));
+ update public.audit_verification_jobs set scheduled_at='-infinity' where organization_id=org and id=(created->>'id')::uuid;
+ claimed:=public.m13_04_claim_verification('report-predecessor-regression');
+ perform pg_temp.check('only fixture verification claimed',claimed->>'id'=created->>'id');
+ authorized:=public.m13_04_authorize_verification(org,(created->>'id')::uuid,'report-predecessor-regression',(claimed->>'lease_token')::uuid,(claimed->>'version')::int,250,16777216);
+ perform pg_temp.check('report predecessor permits full range authorization',(authorized->>'complete')::boolean and (authorized->>'scopeAvailable')::boolean and authorized->'job'->'predecessor'->>'id'=event.id::text);
+ perform pg_temp.check('authorized bounded page available',jsonb_array_length(public.m13_04_page_verification(org,(created->>'id')::uuid,'report-predecessor-regression',(claimed->>'lease_token')::uuid,(authorized->'job'->>'version')::int,'1','2',250,16777216)->'rows')=1);
+ select * into old_job from public.audit_verification_jobs where id=(created->>'id')::uuid;
+ -- Freeze both fields as one prior authorization: the committed predecessor
+ -- stays visible and the exclusive upper bound excludes the rollout XID.
+ select xmin::text::xid8 into old_job.authorization_xid from public.users where id=actor;
+ old_job.authorization_snapshot:=format('%s:%s:',old_job.authorization_xid,pg_current_xact_id())::pg_snapshot;
+ perform public.m13_04_security_receipt(org,null,gen_random_uuid(),'audit.range.scope_changed',null,repeat('b',64),jsonb_build_object('epoch',old_job.dataset_epoch,'xid',pg_current_xact_id()::text,'policyVersion',1));
+ perform pg_temp.check('old authorization fails closed after scope rollout',public.m13_04_current_scope(old_job)='access_changed');
+ created:=public.m13_04_create_verification(org,actor,gen_random_uuid(),'2','2',null,repeat('c',64));
+ select * into fresh_job from public.audit_verification_jobs where id=(created->>'id')::uuid;
+ perform pg_temp.check('fresh scope keeps original dataset marker',public.m13_04_current_scope(fresh_job) is null and fresh_job.dataset_epoch=old_job.dataset_epoch);
+ perform pg_temp.check('static reviewed fingerprints match',not exists(select 1 from jsonb_each_text(public.m13_04_dependency_fingerprints()) e where md5(pg_get_functiondef(('public.'||e.key)::regprocedure))<>e.value));
+ insert into public.base_role_permission_overrides(organization_id,base_role,permissions) values(org,'owner','{"can_view_audit":false}');
+ perform pg_temp.check('current audit permission loss denies',not public.m13_03_event_visible(org,actor,event));
+ perform public.m14_04_audit(org,actor,gen_random_uuid(),'scheduled',gen_random_uuid(),'{"coalescedWithinWindow":2,"skippedBeforeCutoff":true,"scheduledFor":"2026-10-12T09:00:00Z","catchUpCutoff":"2026-10-11T09:00:00Z"}');
+ perform pg_temp.check('scheduling count survives actual chained audit append',exists(select 1 from public.audit_logs where organization_id=org and action='reports.scheduled' and after_redacted->'coalescedWithinWindow'='2'::jsonb and after_redacted->'skippedBeforeCutoff'='true'::jsonb and after_redacted->>'scheduledFor'='2026-10-12T09:00:00Z' and chain_sequence is not null));
+ perform pg_temp.check('private cached helper grants preserved',not has_function_privilege('service_role','public.m13_03_event_visible_cached(uuid,uuid,public.audit_logs,jsonb)','EXECUTE'));
+end $$;
+rollback;

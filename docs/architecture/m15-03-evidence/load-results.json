@@ -1,0 +1,146 @@
+{
+  "transport": "actual customer Nest HTTP3339 and private mTLS Nest3446",
+  "fixtureRows": {
+    "registryTenants": 10000,
+    "sourceQueueRows": 100000
+  },
+  "concurrency": {
+    "operator": 4,
+    "customer": 2
+  },
+  "roundPacingMs": 2200,
+  "unchangedLimits": {
+    "operatorRequestsPerMinute": 120,
+    "customerRequestsPerMinute": 60
+  },
+  "warmupSamples": 0,
+  "measurementParts": {
+    "previousPersistedRounds": 0,
+    "additionalRounds": 200,
+    "splitRun": false
+  },
+  "partialProbeAvailability": {
+    "customer_large_health": {
+      "ready": 199,
+      "unavailable": 1,
+      "total": 200,
+      "readyPercent": 99.5
+    },
+    "customer_small_health": {
+      "ready": 200,
+      "unavailable": 0,
+      "total": 200,
+      "readyPercent": 100
+    }
+  },
+  "buildBaselineFile": "../measurement-baseline.json",
+  "endpointAvailability": {
+    "/api/v1/operator/instances?limit=100": {
+      "attempts": 200,
+      "http200": 200,
+      "http503": 0,
+      "transportErrors": 0,
+      "semanticInvalid": 0,
+      "http200Percent": 100
+    },
+    "/api/v1/operator/instances/15555555-5555-4555-8555-555555555555": {
+      "attempts": 200,
+      "http200": 200,
+      "http503": 0,
+      "transportErrors": 0,
+      "semanticInvalid": 0,
+      "http200Percent": 100
+    },
+    "/api/v1/operator/instances/15555555-5555-4555-8555-555555555555/tenants?limit=100": {
+      "attempts": 200,
+      "http200": 200,
+      "http503": 0,
+      "transportErrors": 0,
+      "semanticInvalid": 0,
+      "http200Percent": 100
+    },
+    "/api/v1/operator/instance-metadata?limit=100": {
+      "attempts": 200,
+      "http200": 200,
+      "http503": 0,
+      "transportErrors": 0,
+      "semanticInvalid": 0,
+      "http200Percent": 100
+    },
+    "customer_large_health": {
+      "attempts": 200,
+      "http200": 200,
+      "http503": 0,
+      "transportErrors": 0,
+      "semanticInvalid": 0,
+      "http200Percent": 100
+    },
+    "customer_small_health": {
+      "attempts": 200,
+      "http200": 200,
+      "http503": 0,
+      "transportErrors": 0,
+      "semanticInvalid": 0,
+      "http200Percent": 100
+    }
+  },
+  "measuredSamplesPerRead": 200,
+  "startedAt": "2026-10-14T07:58:45.529Z",
+  "completedAt": "2026-10-14T08:06:05.630Z",
+  "records": {
+    "/api/v1/operator/instances?limit=100": {
+      "samples": 200,
+      "minMs": 14.97779200001969,
+      "p50Ms": 37.51766700000735,
+      "p95Ms": 99.17679199999839,
+      "p99Ms": 224.31900000000314,
+      "maxMs": 432.94112499999756,
+      "meanMs": 46.02751505500091
+    },
+    "/api/v1/operator/instances/15555555-5555-4555-8555-555555555555": {
+      "samples": 200,
+      "minMs": 28.65804099998786,
+      "p50Ms": 54.0211249999702,
+      "p95Ms": 146.6156670000055,
+      "p99Ms": 299.26154099999985,
+      "maxMs": 563.5616670000018,
+      "meanMs": 67.92031898999856
+    },
+    "/api/v1/operator/instances/15555555-5555-4555-8555-555555555555/tenants?limit=100": {
+      "samples": 200,
+      "minMs": 36.80112499999814,
+      "p50Ms": 66.69937500002561,
+      "p95Ms": 168.45749999996042,
+      "p99Ms": 347.9178749999992,
+      "maxMs": 609.7174170000071,
+      "meanMs": 82.10079001500111
+    },
+    "/api/v1/operator/instance-metadata?limit=100": {
+      "samples": 200,
+      "minMs": 38.78041700000176,
+      "p50Ms": 65.53424999996787,
+      "p95Ms": 177.96762500004843,
+      "p99Ms": 360.61633400000574,
+      "maxMs": 633.3914170000062,
+      "meanMs": 82.89196187499954
+    },
+    "customer_large_health": {
+      "samples": 200,
+      "minMs": 72.32850000000326,
+      "p50Ms": 101.21924999996554,
+      "p95Ms": 285.9016670000128,
+      "p99Ms": 521.1335419999959,
+      "maxMs": 1462.1994580000028,
+      "meanMs": 135.8195499699985
+    },
+    "customer_small_health": {
+      "samples": 200,
+      "minMs": 72.11891600000672,
+      "p50Ms": 99.94491699995706,
+      "p95Ms": 286.4640420000069,
+      "p99Ms": 518.6259169999976,
+      "maxMs": 1456.7445000000007,
+      "meanMs": 134.40915477999872
+    }
+  }
+}

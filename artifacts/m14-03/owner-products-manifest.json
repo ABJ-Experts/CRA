@@ -1,0 +1,49 @@
+{
+  "version": "m14_03_v1",
+  "jobId": "0ed0abd4-69f7-471b-b186-3d2aac054604",
+  "source": "products.registry",
+  "requestedAt": "2026-10-09T12:38:52.373669+00:00",
+  "snapshotAsOf": "2026-10-09T12:38:53.113311+00:00",
+  "scope": "all_filtered",
+  "requestDigest": "3e862d8b65b305acdea642bde476286a9713827a3a3c75846493def0d57e6a47",
+  "rowCount": 18,
+  "columns": [
+    {
+      "key": "name",
+      "label": "name",
+      "type": "text"
+    },
+    {
+      "key": "internalCode",
+      "label": "internal Code",
+      "type": "text"
+    },
+    {
+      "key": "productType",
+      "label": "product Type",
+      "type": "text"
+    },
+    {
+      "key": "responsibleOwnerId",
+      "label": "responsible Owner Id",
+      "type": "text"
+    },
+    {
+      "key": "legalEntity.id",
+      "label": "legal Entity.id",
+      "type": "text"
+    }
+  ],
+  "artifacts": [
+    {
+      "id": "96e9d7e1-d451-417b-9adf-e06cea103836",
+      "name": "part-0001.csv",
+      "mediaType": "text/csv",
+      "byteLength": 2883,
+      "sha256": "5b2e452e4cd49894bbc2d013fabb3c8d32cf08ac382afd01f8037718d36918f3",
+      "rowCount": 18
+    }
+  ],
+  "sourceVersionsDigest": "d1949882171515dedd811d899b4ac899a3a8fb5c535445c2f8fd17f0d5621417",
+  "documentationReadinessOnly": false
+}

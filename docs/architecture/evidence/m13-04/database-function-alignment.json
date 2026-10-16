@@ -1,0 +1,11 @@
+{
+  "migrationFiles": [
+    "apps/infrastructure/supabase/migrations/20261007090257_m13_04_audit_range_verification.sql",
+    "apps/infrastructure/supabase/migrations/20261007092500_m13_04_checkpoint_revalidation.sql",
+    "apps/infrastructure/supabase/migrations/20261007093222_m13_04_operation_conflict_replay.sql",
+    "apps/infrastructure/supabase/migrations/20261007093757_m13_04_resume_anchor_guards.sql",
+    "apps/infrastructure/supabase/migrations/20261007094302_m13_04_private_dataset_export_projection.sql"
+  ],
+  "functionCount": 26,
+  "mismatches": []
+}

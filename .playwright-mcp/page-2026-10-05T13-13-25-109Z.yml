@@ -1,0 +1,92 @@
+- generic [active] [ref=f14e1]:
+  - generic [ref=f14e3]:
+    - button "Open navigation" [ref=f14e4] [cursor=pointer]
+    - generic [ref=f14e7]:
+      - banner [ref=f14e8]:
+        - navigation "Breadcrumb" [ref=f14e10]:
+          - list [ref=f14e11]:
+            - listitem [ref=f14e12]:
+              - link "Dashboard" [ref=f14e13] [cursor=pointer]:
+                - /url: /dashboard
+            - listitem [aria-hidden] [ref=f14e14]
+            - listitem [ref=f14e17]:
+              - generic [ref=f14e18]: Management
+        - generic [ref=f14e19]:
+          - button "Search" [ref=f14e20] [cursor=pointer]
+          - button "Notifications" [ref=f14e24] [cursor=pointer]
+          - 'img "Ada Foster: online" [ref=f14e30]'
+      - main [ref=f14e31]:
+        - generic [ref=f14e32]:
+          - generic [ref=f14e33]:
+            - searchbox "Search members" [ref=f14e38]
+            - button "Filters" [ref=f14e40] [cursor=pointer]
+          - generic [ref=f14e42]:
+            - table "Organization members" [ref=f14e44]:
+              - rowgroup [ref=f14e45]:
+                - row [ref=f14e46]:
+                  - columnheader "Member" [ref=f14e47]
+                  - columnheader "Job title" [ref=f14e48]
+                  - columnheader "Role" [ref=f14e49]
+                  - columnheader "Status" [ref=f14e50]
+              - rowgroup [ref=f14e51]:
+                - row [ref=f14e52]:
+                  - cell [ref=f14e53]
+                  - cell [ref=f14e55]
+                  - cell [ref=f14e57]
+                  - cell [ref=f14e59]
+                - row [ref=f14e61]:
+                  - cell [ref=f14e62]
+                  - cell [ref=f14e64]
+                  - cell [ref=f14e66]
+                  - cell [ref=f14e68]
+                - row [ref=f14e70]:
+                  - cell [ref=f14e71]
+                  - cell [ref=f14e73]
+                  - cell [ref=f14e75]
+                  - cell [ref=f14e77]
+                - row [ref=f14e79]:
+                  - cell [ref=f14e80]
+                  - cell [ref=f14e82]
+                  - cell [ref=f14e84]
+                  - cell [ref=f14e86]
+                - row [ref=f14e88]:
+                  - cell [ref=f14e89]
+                  - cell [ref=f14e91]
+                  - cell [ref=f14e93]
+                  - cell [ref=f14e95]
+                - row [ref=f14e97]:
+                  - cell [ref=f14e98]
+                  - cell [ref=f14e100]
+                  - cell [ref=f14e102]
+                  - cell [ref=f14e104]
+                - row [ref=f14e106]:
+                  - cell [ref=f14e107]
+                  - cell [ref=f14e109]
+                  - cell [ref=f14e111]
+                  - cell [ref=f14e113]
+                - row [ref=f14e115]:
+                  - cell [ref=f14e116]
+                  - cell [ref=f14e118]
+                  - cell [ref=f14e120]
+                  - cell [ref=f14e122]
+                - row [ref=f14e124]:
+                  - cell [ref=f14e125]
+                  - cell [ref=f14e127]
+                  - cell [ref=f14e129]
+                  - cell [ref=f14e131]
+                - row [ref=f14e133]:
+                  - cell [ref=f14e134]
+                  - cell [ref=f14e136]
+                  - cell [ref=f14e138]
+                  - cell [ref=f14e140]
+            - navigation "Pagination" [ref=f14e142]:
+              - generic [ref=f14e143]:
+                - generic [ref=f14e144]:
+                  - combobox "Rows per page" [ref=f14e145] [cursor=pointer]
+                  - combobox [aria-hidden] [ref=f14e148] [cursor=pointer]
+                - generic [ref=f14e149]: 0-0 of 0
+              - generic [ref=f14e150]:
+                - button "Previous page" [disabled] [ref=f14e151]
+                - generic [ref=f14e154]: Page 1
+                - button "Next page" [disabled] [ref=f14e155]
+  - button "Open Next.js Dev Tools" [ref=f14e163] [cursor=pointer]

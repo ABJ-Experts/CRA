@@ -1,0 +1,15 @@
+begin;
+create extension if not exists pgtap;
+select plan(10);
+select ok(to_regclass('public.vulnerability_finding_lifecycle_facts') is not null,'source finding history exists');
+select ok(to_regclass('public.sbom_release_coverage_facts') is not null,'source coverage history exists');
+select ok(to_regprocedure('public.get_dashboard_trends(uuid,uuid,jsonb,jsonb)') is not null,'trends facade exists');
+select ok(to_regprocedure('public.get_dashboard_trend_sources(uuid,uuid,jsonb,jsonb)') is not null,'source facade exists');
+select ok(not has_table_privilege('authenticated','public.vulnerability_finding_lifecycle_facts','select'),'browser cannot bypass authorization');
+select ok(not has_function_privilege('authenticated','public.get_dashboard_trends(uuid,uuid,jsonb,jsonb)','execute'),'private trends facade');
+select ok(has_function_privilege('service_role','public.get_dashboard_trends(uuid,uuid,jsonb,jsonb)','execute'),'service facade granted');
+select is(public.get_dashboard_trends(gen_random_uuid(),gen_random_uuid(),'{}',null)->>'outcome','not_found','foreign identity indistinguishable');
+select ok((select bool_and(relrowsecurity and not relforcerowsecurity) from pg_class where oid in ('public.vulnerability_finding_lifecycle_facts'::regclass,'public.sbom_release_coverage_facts'::regclass)),'non-forced defense in depth');
+select ok((select count(*)=2 from information_schema.columns where table_schema='public' and table_name='technical_file_snapshots' and column_name in ('trend_sequence','recorded_transaction_id')),'existing immutable snapshots reused');
+select *from finish();
+rollback;

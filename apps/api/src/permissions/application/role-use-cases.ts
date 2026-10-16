@@ -10,6 +10,7 @@ import type { Result } from "../../common/domain/result";
 import { failure, success } from "../../common/domain/result";
 import type {
   CreateRoleRecord,
+  AuditMutationContext,
   RoleRepository,
   UpdateRoleRecord,
 } from "./role-repository.port";
@@ -52,6 +53,7 @@ export type CreateRoleCommand = Readonly<{
   orgId: string;
   actor: RoleActor;
   input: CreateRoleInput;
+  context?: AuditMutationContext;
 }>;
 
 export type UpdateRoleCommand = Readonly<{
@@ -59,12 +61,14 @@ export type UpdateRoleCommand = Readonly<{
   actor: RoleActor;
   roleId: string;
   patch: UpdateRoleInput;
+  context?: AuditMutationContext;
 }>;
 
 export type RemoveRoleCommand = Readonly<{
   orgId: string;
   actor: RoleActor;
   roleId: string;
+  context?: AuditMutationContext;
 }>;
 
 export type SetOverrideCommand = Readonly<{
@@ -72,6 +76,7 @@ export type SetOverrideCommand = Readonly<{
   actor: RoleActor;
   baseRole: BaseRole;
   permissions: unknown;
+  context?: AuditMutationContext;
 }>;
 
 export type RoleUseCaseError =
@@ -85,7 +90,8 @@ export type RoleUseCaseError =
     }>
   | Readonly<{ code: "role_update_failed" }>
   | Readonly<{ code: "role_delete_failed" }>
-  | Readonly<{ code: "override_failed" }>;
+  | Readonly<{ code: "override_failed" }>
+  | Readonly<{ code: "conflict" }>;
 
 type RoleResult<T> = Result<T, RoleUseCaseError>;
 
@@ -93,8 +99,11 @@ type RoleResult<T> = Result<T, RoleUseCaseError>;
 export class RoleUseCases {
   constructor(
     private readonly repository: RoleRepository,
-    private readonly audit: RoleAuditPort,
-  ) {}
+    _audit: RoleAuditPort,
+  ) {
+    // Kept for constructor compatibility; audited writes now occur in SQL.
+    void _audit;
+  }
 
   async list(
     query: Readonly<{ orgId: string }>,
@@ -111,14 +120,11 @@ export class RoleUseCases {
   ): Promise<RoleResult<Readonly<{ id: string }>>> {
     const record = this.createRecord(command.input);
     try {
-      const created = await this.repository.create(command.orgId, record);
-      this.audit.log(
-        this.auditEntry(
-          command.orgId,
-          command.actor,
-          "role.created",
-          created.id,
-        ),
+      const created = await this.repository.create(
+        command.orgId,
+        record,
+        command.actor.id,
+        this.context(command.context),
       );
       return success(Object.freeze({ id: created.id }));
     } catch (error) {
@@ -127,6 +133,9 @@ export class RoleUseCases {
         error.code === "role_name_taken"
       ) {
         return failure(Object.freeze({ code: "role_name_taken" as const }));
+      }
+      if (error instanceof RoleRepositoryError && error.code === "conflict") {
+        return failure(Object.freeze({ code: "conflict" as const }));
       }
       return failure(Object.freeze({ code: "role_create_failed" as const }));
     }
@@ -153,17 +162,32 @@ export class RoleUseCases {
         command.orgId,
         command.roleId,
         this.updateRecord(command.patch),
-      );
-      this.audit.log(
-        this.auditEntry(
-          command.orgId,
-          command.actor,
-          "role.updated",
-          command.roleId,
-        ),
+        command.actor.id,
+        this.context(command.context),
+        existing.version,
       );
       return success(undefined);
-    } catch {
+    } catch (error) {
+      if (
+        error instanceof RoleRepositoryError &&
+        error.code === "role_not_found"
+      ) {
+        return failure(Object.freeze({ code: "role_not_found" as const }));
+      }
+      if (
+        error instanceof RoleRepositoryError &&
+        error.code === "role_is_system"
+      ) {
+        return failure(
+          Object.freeze({
+            code: "role_is_system" as const,
+            operation: "update" as const,
+          }),
+        );
+      }
+      if (error instanceof RoleRepositoryError && error.code === "conflict") {
+        return failure(Object.freeze({ code: "conflict" as const }));
+      }
       return failure(Object.freeze({ code: "role_update_failed" as const }));
     }
   }
@@ -174,10 +198,7 @@ export class RoleUseCases {
         command.orgId,
         command.roleId,
       );
-      if (!existing) {
-        return failure(Object.freeze({ code: "role_not_found" as const }));
-      }
-      if (existing.isSystem) {
+      if (existing?.isSystem) {
         return failure(
           Object.freeze({
             code: "role_is_system" as const,
@@ -189,17 +210,31 @@ export class RoleUseCases {
         command.orgId,
         command.roleId,
         command.actor.id,
-      );
-      this.audit.log(
-        this.auditEntry(
-          command.orgId,
-          command.actor,
-          "role.deleted",
-          command.roleId,
-        ),
+        this.context(command.context),
+        existing?.version,
       );
       return success(undefined);
-    } catch {
+    } catch (error) {
+      if (
+        error instanceof RoleRepositoryError &&
+        error.code === "role_not_found"
+      ) {
+        return failure(Object.freeze({ code: "role_not_found" as const }));
+      }
+      if (
+        error instanceof RoleRepositoryError &&
+        error.code === "role_is_system"
+      ) {
+        return failure(
+          Object.freeze({
+            code: "role_is_system" as const,
+            operation: "remove" as const,
+          }),
+        );
+      }
+      if (error instanceof RoleRepositoryError && error.code === "conflict") {
+        return failure(Object.freeze({ code: "conflict" as const }));
+      }
       return failure(Object.freeze({ code: "role_delete_failed" as const }));
     }
   }
@@ -222,19 +257,14 @@ export class RoleUseCases {
         command.orgId,
         command.baseRole,
         permissions,
-      );
-      this.audit.log(
-        Object.freeze({
-          organizationId: command.orgId,
-          userId: command.actor.id,
-          actorEmail: command.actor.email,
-          action: "permissions.override_updated",
-          entityType: "base_role",
-          entityId: command.baseRole,
-        }),
+        command.actor.id,
+        this.context(command.context),
       );
       return success(undefined);
-    } catch {
+    } catch (error) {
+      if (error instanceof RoleRepositoryError && error.code === "conflict") {
+        return failure(Object.freeze({ code: "conflict" as const }));
+      }
       return failure(Object.freeze({ code: "override_failed" as const }));
     }
   }
@@ -293,19 +323,13 @@ export class RoleUseCases {
     );
   }
 
-  private auditEntry(
-    orgId: string,
-    actor: RoleActor,
-    action: string,
-    entityId: string,
-  ): RoleAuditEntry {
-    return Object.freeze({
-      organizationId: orgId,
-      userId: actor.id,
-      actorEmail: actor.email,
-      action,
-      entityType: "custom_role",
-      entityId,
-    });
+  private context(
+    value: AuditMutationContext | undefined,
+  ): AuditMutationContext {
+    const eventKey = randomUUID();
+    return Object.freeze(
+      value ?? { eventKey, correlationId: eventKey, sourceIp: null },
+    );
   }
 }
+import { randomUUID } from "node:crypto";

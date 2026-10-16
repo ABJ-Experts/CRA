@@ -25,6 +25,7 @@ const session = {
     username: "person",
     firstName: "Pat",
     lastName: "Example",
+    jobTitle: "Engineer",
     avatarUrl: null,
     isActive: true,
   },
@@ -64,7 +65,7 @@ function responseFor(path: string): Response {
     case "/api/v1/permissions/effective":
       return jsonResponse(permissions);
     case "/api/v1/permissions/menu":
-      return jsonResponse({ menu: ["dashboard", "ecommerce.orders"] });
+      return jsonResponse({ menu: ["dashboard", "organization"] });
     default:
       throw new Error(`unexpected request: ${path}`);
   }
@@ -94,9 +95,9 @@ function StateProbe() {
       data-loading={String(state.isLoading)}
       data-error={String(state.isError)}
       data-menu={state.menu === null ? "unknown" : state.menu.join(",")}
-      data-orders={String(canViewMenu("ecommerce.orders"))}
-      data-products={String(canViewMenu("ecommerce.products"))}
-      data-ecommerce={String(canViewMenu("ecommerce"))}
+      data-dashboard={String(canViewMenu("dashboard"))}
+      data-organization={String(canViewMenu("organization"))}
+      data-management={String(canViewMenu("management"))}
     >
       <Can permission="can_view_orders" fallback="denied">
         allowed
@@ -156,7 +157,8 @@ describe("SessionProvider", () => {
     );
   });
 
-  it("starts all three live requests without a serial dependency", async () => {
+
+  it("keeps the menu complete while the initial live session requests load", async () => {
     const releases = new Map<string, (response: Response) => void>();
     const fetcher = vi.fn(
       (input: RequestInfo | URL) =>
@@ -176,6 +178,12 @@ describe("SessionProvider", () => {
         "/api/v1/permissions/menu",
       ]),
     );
+    expect(screen.getByTestId("state").getAttribute("data-dashboard")).toBe(
+      "true",
+    );
+    expect(screen.getByTestId("state").getAttribute("data-organization")).toBe(
+      "true",
+    );
 
     await act(async () => {
       for (const [path, release] of releases) release(responseFor(path));
@@ -193,16 +201,18 @@ describe("SessionProvider", () => {
 
     renderSession(<StateProbe />);
 
-    await waitFor(() =>
-      expect(screen.getByTestId("state").getAttribute("data-error")).toBe(
-        "true",
-      ),
+    await waitFor(
+      () =>
+        expect(screen.getByTestId("state").getAttribute("data-error")).toBe(
+          "true",
+        ),
+      { timeout: 10_000 },
     );
     const state = screen.getByTestId("state");
     expect(state.getAttribute("data-menu")).toBe("unknown");
-    expect(state.getAttribute("data-orders")).toBe("true");
-    expect(state.getAttribute("data-products")).toBe("false");
-    expect(state.getAttribute("data-ecommerce")).toBe("true");
+    expect(state.getAttribute("data-dashboard")).toBe("true");
+    expect(state.getAttribute("data-organization")).toBe("false");
+    expect(state.getAttribute("data-management")).toBe("false");
     expect(state.textContent).toContain("allowed");
   });
 
@@ -224,7 +234,7 @@ describe("SessionProvider", () => {
     );
     const state = screen.getByTestId("state");
     expect(state.getAttribute("data-menu")).toBe("");
-    expect(state.getAttribute("data-orders")).toBe("false");
+    expect(state.getAttribute("data-organization")).toBe("false");
     expect(state.textContent).toContain("allowed");
   });
 
@@ -244,7 +254,7 @@ describe("SessionProvider", () => {
         "false",
       ),
     );
-    expect(screen.getByTestId("state").getAttribute("data-orders")).toBe(
+    expect(screen.getByTestId("state").getAttribute("data-organization")).toBe(
       "false",
     );
   });

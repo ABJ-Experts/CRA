@@ -1,0 +1,12 @@
+{
+  "command": "pnpm --filter infrastructure exec supabase db diff --local --schema public --use-migra",
+  "exitCode": 0,
+  "m2Drift": false,
+  "unrelatedFunctionDifferences": [
+    "retry_supplier_evidence_reminder_delivery_atomic",
+    "m7_declaration_json",
+    "m8_evidence_validity_status",
+    "retry_evidence_text_extraction_atomic"
+  ],
+  "note": "Comparison completed with optional local services temporarily stopped to fit Docker memory. No diff applied."
+}

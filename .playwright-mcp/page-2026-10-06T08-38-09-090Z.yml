@@ -1,0 +1,89 @@
+- generic [active] [ref=f4e1]:
+  - generic [ref=f4e3]:
+    - complementary [ref=f4e4]:
+      - generic [ref=f4e5]:
+        - generic [ref=f4e6]:
+          - link "CRA Sentinel" [ref=f4e7] [cursor=pointer]:
+            - /url: /dashboard
+            - generic [aria-hidden] [ref=f4e8]: C
+            - text: CRA Sentinel
+          - button "Collapse sidebar" [ref=f4e9] [cursor=pointer]
+        - navigation "Main" [ref=f4e12]:
+          - generic [ref=f4e13]:
+            - list [ref=f4e15]:
+              - listitem [ref=f4e16]:
+                - link "Dashboard" [ref=f4e17] [cursor=pointer]:
+                  - /url: /dashboard
+              - listitem [ref=f4e25]:
+                - link "Management" [ref=f4e26] [cursor=pointer]:
+                  - /url: /management
+              - listitem [ref=f4e32]:
+                - link "Organization" [ref=f4e33] [cursor=pointer]:
+                  - /url: /organization
+              - listitem [ref=f4e40]:
+                - link "Products" [ref=f4e41] [cursor=pointer]:
+                  - /url: /products
+              - listitem [ref=f4e48]:
+                - link "Suppliers" [ref=f4e49] [cursor=pointer]:
+                  - /url: /suppliers
+              - listitem [ref=f4e54]:
+                - link "Frameworks" [ref=f4e55] [cursor=pointer]:
+                  - /url: /frameworks
+              - listitem [ref=f4e60]:
+                - link "Findings" [ref=f4e61] [cursor=pointer]:
+                  - /url: /findings
+              - listitem [ref=f4e66]:
+                - link "Reporting" [ref=f4e67] [cursor=pointer]:
+                  - /url: /reporting
+              - listitem [ref=f4e73]:
+                - link "Tasks" [ref=f4e74] [cursor=pointer]:
+                  - /url: /tasks
+              - listitem [ref=f4e80]:
+                - link "Connectors" [ref=f4e81] [cursor=pointer]:
+                  - /url: /connectors
+            - generic [ref=f4e88]:
+              - paragraph [ref=f4e89]: Account & access
+              - list [ref=f4e90]:
+                - listitem [ref=f4e91]:
+                  - button "Profile" [ref=f4e92] [cursor=pointer]
+                  - generic:
+                    - list:
+                      - listitem [ref=f4e100]:
+                        - link "Account" [ref=f4e101] [cursor=pointer]:
+                          - /url: /account
+                      - listitem [ref=f4e103]:
+                        - link "Security" [ref=f4e104] [cursor=pointer]:
+                          - /url: /security
+                - listitem [ref=f4e106]:
+                  - button "Authorization" [ref=f4e107] [cursor=pointer]
+                  - generic:
+                    - list:
+                      - listitem [ref=f4e115]:
+                        - link "Roles" [ref=f4e116] [cursor=pointer]:
+                          - /url: /roles
+                      - listitem [ref=f4e118]:
+                        - link "Permissions" [ref=f4e119] [cursor=pointer]:
+                          - /url: /permissions
+        - button "Sign out" [ref=f4e123] [cursor=pointer]
+    - generic [ref=f4e128]:
+      - banner [ref=f4e129]:
+        - navigation "Breadcrumb" [ref=f4e131]:
+          - list [ref=f4e132]:
+            - listitem [ref=f4e133]:
+              - link "Dashboard" [ref=f4e134] [cursor=pointer]:
+                - /url: /dashboard
+            - listitem [aria-hidden] [ref=f4e135]
+            - listitem [ref=f4e138]:
+              - generic [ref=f4e139]: Onboarding
+        - generic [ref=f4e140]:
+          - button "Search" [ref=f4e141] [cursor=pointer]
+          - button "Notifications" [ref=f4e145] [cursor=pointer]
+          - 'img "Ada Foster: online" [ref=f4e151]'
+      - main [ref=f4e152]:
+        - generic [ref=f4e153]:
+          - generic [ref=f4e155]:
+            - heading "Organization onboarding" [level=1] [ref=f4e156]
+            - paragraph [ref=f4e157]: Your progress is confirmed by the server and resumes across devices.
+          - status [ref=f4e160]: Loading organization setup…
+  - button "Open Next.js Dev Tools" [ref=f4e166] [cursor=pointer]
+  - alert [ref=f4e170]

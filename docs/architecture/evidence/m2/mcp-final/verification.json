@@ -1,0 +1,30 @@
+{
+  "transport": "Fresh pinned @playwright/mcp@0.0.82, isolated local browser; registered transport was closed",
+  "seededOwnerUi": {
+    "signIn": "passed",
+    "scope": "new private test organization",
+    "firstRun": "out_of_scope",
+    "secondRun": "critical",
+    "immutableHistory": "Latest revision 2, superseded revision 1; original saved answers visible",
+    "desktopMobileScreenshots": true
+  },
+  "localSupabaseMcp": {
+    "runCount": 2,
+    "auditCount": 2,
+    "policyHash": "5941925c5f13b71bb98a1b9f109c359844b8ac531ad5b9ad0ce072333f6237b3",
+    "predecessorLinkPresent": true
+  },
+  "accessChecks": {
+    "ownerOriginalScopeRestored": 200,
+    "viewerSignIn": 200,
+    "foreignHistory": 404,
+    "viewerWrite": 403,
+    "viewerPolicyRead": 200
+  },
+  "cleanup": {
+    "exactPrivateOrganizationRemaining": 0,
+    "globalSignOutUsed": false,
+    "otherSiteDataRemoved": false,
+    "productionTouched": false
+  }
+}

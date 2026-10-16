@@ -1,0 +1,122 @@
+- generic:
+  - generic [aria-hidden]:
+    - generic:
+      - button
+      - generic:
+        - banner:
+          - generic:
+            - navigation:
+              - list:
+                - listitem:
+                  - link:
+                    - /url: /dashboard
+                    - text: Dashboard
+                - listitem [aria-hidden]
+                - listitem:
+                  - generic: Management
+          - generic:
+            - button
+            - button
+            - generic: AF
+        - main:
+          - generic:
+            - generic:
+              - generic:
+                - searchbox
+              - generic:
+                - button: Filters
+            - generic:
+              - generic:
+                - table:
+                  - rowgroup:
+                    - row:
+                      - columnheader: Member
+                      - columnheader: Job title
+                      - columnheader: Role
+                      - columnheader: Status
+                  - rowgroup:
+                    - row:
+                      - cell:
+                        - generic:
+                          - generic: OA
+                          - generic:
+                            - generic: Owner Account
+                            - generic: owner@cra.test
+                      - cell:
+                        - generic:
+                          - generic: —
+                          - generic: owner
+                      - cell:
+                        - generic:
+                          - combobox:
+                            - generic: Owner
+                      - cell:
+                        - generic: Active
+                    - row:
+                      - cell:
+                        - generic:
+                          - generic: AA
+                          - generic:
+                            - generic: Admin Account
+                            - generic: admin@cra.test
+                      - cell:
+                        - generic:
+                          - generic: —
+                          - generic: admin
+                      - cell:
+                        - generic:
+                          - combobox:
+                            - generic: Admin
+                      - cell:
+                        - generic: Active
+                    - row:
+                      - cell:
+                        - generic:
+                          - generic: VA
+                          - generic:
+                            - generic: Viewer Account
+                            - generic: viewer@cra.test
+                      - cell:
+                        - generic:
+                          - generic: —
+                          - generic: viewer
+                      - cell:
+                        - generic:
+                          - combobox:
+                            - generic: Viewer
+                      - cell:
+                        - generic: Active
+                    - row:
+                      - cell:
+                        - generic:
+                          - generic: MA
+                          - generic:
+                            - generic: Member Account
+                            - generic: member@cra.test
+                      - cell:
+                        - generic:
+                          - generic: —
+                          - generic: member
+                      - cell:
+                        - generic:
+                          - combobox [expanded]:
+                            - generic: Admin
+                      - cell:
+                        - generic: Active
+              - navigation:
+                - generic:
+                  - generic:
+                    - combobox:
+                      - generic: "15"
+                  - generic: 1-4 of 4
+                - generic:
+                  - button [disabled]
+                  - generic: Page 1
+                  - button [disabled]
+  - button "Open Next.js Dev Tools" [ref=f14e163] [cursor=pointer]
+  - alert
+  - listbox [ref=f14e348]:
+    - option "Owner" [ref=f14e349] [cursor=pointer]
+    - option "Admin" [active] [selected] [ref=f14e351] [cursor=pointer]
+    - option "Member" [ref=f14e356] [cursor=pointer]
+    - option "Viewer" [ref=f14e358] [cursor=pointer]

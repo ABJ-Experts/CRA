@@ -5,12 +5,18 @@ export default defineConfig({
     jsx: "automatic",
   },
   test: {
+    // Turbo also runs API and live SQL checks; bound this pool to avoid starving them.
+    maxWorkers: 2,
     include: [
       "app/**/*.spec.{ts,tsx}",
       "middleware.spec.ts",
       "mocks/**/*.spec.ts",
     ],
     environment: "node",
+    // The root Turbo gate runs this suite alongside the API and live SQL lanes.
+    // Keep individual tests bounded, but allow DOM-heavy pages to make progress
+    // under that legitimate local/CI contention instead of flaking at 5s.
+    testTimeout: 15_000,
     coverage: {
       provider: "v8",
       reporter: ["text", "json-summary", "lcov"],

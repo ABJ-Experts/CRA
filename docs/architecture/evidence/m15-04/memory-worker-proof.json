@@ -1,0 +1,254 @@
+{
+  "jobId": "871c621f-c7f6-4b24-ae4b-4fdb119fade1",
+  "sourceRows": 5001,
+  "outputLogRows": 5000,
+  "rowLimitOmission": true,
+  "categories": ["logs", "configuration", "metrics"],
+  "artifact": {
+    "byteSize": 559593,
+    "sha256": "af6afd59b358292aea81f5c25fee008aca89d3d6c36804bb167f9c639b7e4823"
+  },
+  "generationDurationMs": 246.2784590000001,
+  "samplingIntervalMs": 10,
+  "sampleCount": 57,
+  "baseline": {
+    "rss": 347127808,
+    "heapTotal": 238632960,
+    "heapUsed": 181192832,
+    "external": 6283892,
+    "arrayBuffers": 2604317
+  },
+  "peak": {
+    "rss": 349323264,
+    "heapTotal": 238895104,
+    "heapUsed": 189630184,
+    "external": 11259052,
+    "arrayBuffers": 7540078,
+    "managed": 198449916
+  },
+  "increment": {
+    "rss": 2195456,
+    "heapTotal": 262144,
+    "heapUsed": 8437352,
+    "external": 4975160,
+    "arrayBuffers": 4935761,
+    "managed": 10973192
+  },
+  "workingLimitBytes": 67108864,
+  "incrementalRssWithinLimit": true,
+  "incrementalManagedWithinLimit": true,
+  "warmContext": true,
+  "forcedGcBeforeBaseline": true,
+  "stages": [
+    {
+      "stage": "storage.reconcileTemporaryFiles:before",
+      "heapUsed": 181215848,
+      "external": 6250275,
+      "rss": 347127808
+    },
+    {
+      "stage": "storage.reconcileTemporaryFiles:after",
+      "heapUsed": 183125376,
+      "external": 6250275,
+      "rss": 347144192
+    },
+    {
+      "stage": "repository.claimCleanup:before",
+      "heapUsed": 183130960,
+      "external": 6250275,
+      "rss": 347144192
+    },
+    {
+      "stage": "repository.claimCleanup:after",
+      "heapUsed": 183392760,
+      "external": 6250744,
+      "rss": 347144192
+    },
+    {
+      "stage": "repository.claim:before",
+      "heapUsed": 183395696,
+      "external": 6250744,
+      "rss": 347144192
+    },
+    {
+      "stage": "repository.claim:after",
+      "heapUsed": 183923680,
+      "external": 6253144,
+      "rss": 347176960
+    },
+    {
+      "stage": "repository.authorize:before",
+      "heapUsed": 183929376,
+      "external": 6253144,
+      "rss": 347176960
+    },
+    {
+      "stage": "repository.authorize:after",
+      "heapUsed": 184102528,
+      "external": 6255808,
+      "rss": 347176960
+    },
+    {
+      "stage": "checkpoint.collecting:before",
+      "heapUsed": 184107000,
+      "external": 6255808,
+      "rss": 347176960
+    },
+    {
+      "stage": "checkpoint.collecting:after",
+      "heapUsed": 184287104,
+      "external": 6258630,
+      "rss": 347176960
+    },
+    {
+      "stage": "sources.collect:before",
+      "heapUsed": 184288432,
+      "external": 6258630,
+      "rss": 347176960
+    },
+    {
+      "stage": "repository.authorize:before",
+      "heapUsed": 184293304,
+      "external": 6258630,
+      "rss": 347176960
+    },
+    {
+      "stage": "repository.authorize:after",
+      "heapUsed": 184475760,
+      "external": 6261294,
+      "rss": 347176960
+    },
+    {
+      "stage": "repository.authorize:before",
+      "heapUsed": 183475936,
+      "external": 8112820,
+      "rss": 347701248
+    },
+    {
+      "stage": "repository.authorize:after",
+      "heapUsed": 183642880,
+      "external": 6345694,
+      "rss": 347701248
+    },
+    {
+      "stage": "repository.authorize:before",
+      "heapUsed": 183728896,
+      "external": 6345694,
+      "rss": 347701248
+    },
+    {
+      "stage": "repository.authorize:after",
+      "heapUsed": 184006440,
+      "external": 6348358,
+      "rss": 347766784
+    },
+    {
+      "stage": "repository.authorize:before",
+      "heapUsed": 186139200,
+      "external": 6374703,
+      "rss": 347799552
+    },
+    {
+      "stage": "repository.authorize:after",
+      "heapUsed": 186330992,
+      "external": 6377367,
+      "rss": 347815936
+    },
+    {
+      "stage": "sources.collect:after",
+      "heapUsed": 189453944,
+      "external": 6377367,
+      "rss": 347832320
+    },
+    {
+      "stage": "checkpoint.redacting:before",
+      "heapUsed": 189456528,
+      "external": 6377367,
+      "rss": 347832320
+    },
+    {
+      "stage": "checkpoint.redacting:after",
+      "heapUsed": 189628848,
+      "external": 6380344,
+      "rss": 347832320
+    },
+    {
+      "stage": "archive.pack:before",
+      "heapUsed": 189630184,
+      "external": 6380344,
+      "rss": 347832320
+    },
+    {
+      "stage": "archive.pack:after",
+      "heapUsed": 185959928,
+      "external": 8016488,
+      "rss": 348585984
+    },
+    {
+      "stage": "checkpoint.packaging:before",
+      "heapUsed": 185962328,
+      "external": 8016488,
+      "rss": 348585984
+    },
+    {
+      "stage": "checkpoint.packaging:after",
+      "heapUsed": 186176032,
+      "external": 8019465,
+      "rss": 348618752
+    },
+    {
+      "stage": "storage.put:before",
+      "heapUsed": 186177504,
+      "external": 8019465,
+      "rss": 348618752
+    },
+    {
+      "stage": "storage.put:after",
+      "heapUsed": 186363160,
+      "external": 9139237,
+      "rss": 348651520
+    },
+    {
+      "stage": "storage.read:before",
+      "heapUsed": 186364536,
+      "external": 9139237,
+      "rss": 348651520
+    },
+    {
+      "stage": "storage.read:after",
+      "heapUsed": 186717584,
+      "external": 11243797,
+      "rss": 349274112
+    },
+    {
+      "stage": "repository.authorize:before",
+      "heapUsed": 186720432,
+      "external": 11243797,
+      "rss": 349274112
+    },
+    {
+      "stage": "repository.authorize:after",
+      "heapUsed": 186886320,
+      "external": 11254734,
+      "rss": 349290496
+    },
+    {
+      "stage": "repository.complete:before",
+      "heapUsed": 186887664,
+      "external": 11254734,
+      "rss": 349290496
+    },
+    {
+      "stage": "repository.complete:after",
+      "heapUsed": 187097640,
+      "external": 11259052,
+      "rss": 349290496
+    },
+    {
+      "stage": "generation.complete",
+      "heapUsed": 187190864,
+      "external": 11259052,
+      "rss": 349323264
+    }
+  ]
+}

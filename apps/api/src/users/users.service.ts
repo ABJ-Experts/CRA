@@ -1,3 +1,4 @@
+import { licensingHttp } from "../licensing/infrastructure/licensing-http";
 import {
   BadRequestException,
   ConflictException,
@@ -18,6 +19,7 @@ import {
   type MemberUseCaseError,
 } from "./application/member-use-cases";
 import type { ProfilePatch } from "./application/member-repository.port";
+import type { AuditMutationContext } from "./application/member-repository.port";
 
 /** @deprecated Import `Member` from `@repo/contracts/users` directly. */
 export type MemberRow = Member;
@@ -38,7 +40,7 @@ export class UsersService {
     orgId: string,
     params: PageParams,
   ): Promise<Paged<MemberRow>> {
-    return this.unwrap(await this.useCases.list({ orgId, params }));
+    return this.unwrap(this.useCases.list({ orgId, params }));
   }
 
   async changeRole(
@@ -46,9 +48,16 @@ export class UsersService {
     actor: MemberActor,
     targetUserId: string,
     role: BaseRole,
+    context?: AuditMutationContext,
   ): Promise<void> {
-    this.unwrap(
-      await this.useCases.changeRole({ orgId, actor, targetUserId, role }),
+    await this.unwrap(
+      this.useCases.changeRole({
+        orgId,
+        actor,
+        targetUserId,
+        role,
+        context,
+      }),
     );
   }
 
@@ -56,8 +65,11 @@ export class UsersService {
     orgId: string,
     actor: MemberActor,
     targetUserId: string,
+    context?: AuditMutationContext,
   ): Promise<void> {
-    this.unwrap(await this.useCases.remove({ orgId, actor, targetUserId }));
+    await this.unwrap(
+      this.useCases.remove({ orgId, actor, targetUserId, context }),
+    );
   }
 
   async setActive(
@@ -65,28 +77,40 @@ export class UsersService {
     actor: MemberActor,
     targetUserId: string,
     isActive: boolean,
+    context?: AuditMutationContext,
   ): Promise<void> {
-    this.unwrap(
-      await this.useCases.setActive({
+    await this.unwrap(
+      this.useCases.setActive({
         orgId,
         actor,
         targetUserId,
         isActive,
+        context,
       }),
     );
   }
 
-  async updateProfile(userId: string, patch: ProfilePatch): Promise<void> {
-    this.unwrap(
-      await this.useCases.updateOwnProfile({
+  async updateProfile(
+    userId: string,
+    patch: ProfilePatch,
+    orgId?: string | null,
+    context?: AuditMutationContext,
+  ): Promise<void> {
+    await this.unwrap(
+      this.useCases.updateOwnProfile({
         actorUserId: userId,
         targetUserId: userId,
         patch,
+        orgId,
+        context,
       }),
     );
   }
 
-  private unwrap<T>(result: Result<T, MemberUseCaseError>): T {
+  private async unwrap<T>(
+    pending: Promise<Result<T, MemberUseCaseError>>,
+  ): Promise<T> {
+    const result = await licensingHttp(() => pending);
     if (result.ok) return result.value;
     throw this.httpFailure(result.error);
   }
@@ -122,6 +146,12 @@ export class UsersService {
         return new ConflictException({
           message:
             "This organization needs at least one owner. Promote someone else first.",
+          code: error.code,
+        });
+      case "conflict":
+        return new ConflictException({
+          message:
+            "This change conflicts with a newer request. Refresh and try again.",
           code: error.code,
         });
       case "member_list_failed":

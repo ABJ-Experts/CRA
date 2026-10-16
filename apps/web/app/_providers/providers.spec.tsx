@@ -3,17 +3,11 @@
 import "@testing-library/jest-dom/vitest";
 
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
-import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 const worker = vi.hoisted(() => ({ start: vi.fn() }));
 
 vi.mock("../../mocks/browser", () => ({ worker }));
-vi.mock("./session-provider", () => ({
-  SessionProvider: ({ children }: { children: ReactNode }) => (
-    <section data-testid="session-provider">{children}</section>
-  ),
-}));
 
 afterEach(() => {
   cleanup();
@@ -89,7 +83,6 @@ describe("Providers", () => {
     );
 
     expect(screen.getByText("ready")).toBeVisible();
-    expect(screen.getByTestId("session-provider")).toBeVisible();
     expect(worker.start).not.toHaveBeenCalled();
   });
 

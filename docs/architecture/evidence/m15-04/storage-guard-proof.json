@@ -1,0 +1,13 @@
+{
+  "jobId": "8cd60b23-9230-4af3-abec-4a91d0b1f662",
+  "unauthorizedStatus": 400,
+  "unauthorizedRetainedHash": true,
+  "changedPolicyStatus": 400,
+  "policyChangeAfterPrecheckRetainedHash": true,
+  "authorizedStatus": 200,
+  "postDeleteDownloadStatus": 400,
+  "finalCleanupState": "deleted",
+  "objectDeleteReceipts": 1,
+  "image": "public.ecr.aws/supabase/storage-api:v1.77.0",
+  "fixtureOnly": true
+}

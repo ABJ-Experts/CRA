@@ -1,0 +1,51 @@
+- generic [active] [ref=f4e1]:
+  - generic [ref=f4e2]:
+    - generic [ref=f4e3]:
+      - banner [ref=f4e4]:
+        - link "CRA" [ref=f4e5] [cursor=pointer]:
+          - /url: /
+          - generic [aria-hidden] [ref=f4e6]: C
+      - main [ref=f4e8]:
+        - generic [ref=f4e10]:
+          - generic [ref=f4e11]:
+            - heading "Welcome Back" [level=1] [ref=f4e12]
+            - paragraph [ref=f4e13]: Please, sign in to continue
+          - generic [ref=f4e14]:
+            - generic [ref=f4e15]:
+              - generic [ref=f4e16]:
+                - generic [ref=f4e17]:
+                  - generic [ref=f4e18]:
+                    - text: Email or User Name
+                    - generic [aria-hidden] [ref=f4e19]: "*"
+                  - textbox "Email or User Name" [ref=f4e25]
+                - generic [ref=f4e26]:
+                  - generic [ref=f4e27]:
+                    - text: Password
+                    - generic [aria-hidden] [ref=f4e28]: "*"
+                  - generic [ref=f4e29]:
+                    - textbox "Password" [ref=f4e34]
+                    - button "Show password" [ref=f4e36] [cursor=pointer]
+              - generic [ref=f4e42]:
+                - generic [ref=f4e44]:
+                  - checkbox "Remember me" [checked] [ref=f4e45] [cursor=pointer]
+                  - checkbox [checked] [aria-hidden]
+                  - generic [ref=f4e46] [cursor=pointer]: Remember me
+                - link "Forgot Password?" [ref=f4e47] [cursor=pointer]:
+                  - /url: /forgot-password
+            - button "Sign In" [ref=f4e48] [cursor=pointer]
+            - generic [ref=f4e49]: or sign in with
+            - generic [ref=f4e53]:
+              - button "Sign In with Google" [ref=f4e54] [cursor=pointer]
+              - button "Sign In with SSO" [ref=f4e62] [cursor=pointer]
+      - generic [ref=f4e69]:
+        - generic [ref=f4e70]: Don’t have an account?
+        - link "Sign Up" [ref=f4e71] [cursor=pointer]:
+          - /url: /sign-up
+    - figure [ref=f4e75]:
+      - blockquote [ref=f4e79]: CRA is Premium UI kits. Super a lot of layouts designed with the atomic system, to help us improve quickly our products
+      - generic [ref=f4e80]:
+        - button "Show quote 1 of 3" [ref=f4e81] [cursor=pointer]
+        - button "Show quote 2 of 3" [ref=f4e82] [cursor=pointer]
+        - button "Show quote 3 of 3" [ref=f4e83] [cursor=pointer]
+  - button "Open Next.js Dev Tools" [ref=f4e89] [cursor=pointer]
+  - alert [ref=f4e93]

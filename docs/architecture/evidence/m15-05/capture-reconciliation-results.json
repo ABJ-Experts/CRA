@@ -1,0 +1,12 @@
+{
+  "activeLocalOwnerPreserved": true,
+  "unavailableAuthorityPreserved": true,
+  "freshNarrowCaptureReceipts": 5,
+  "deadOwnedToolRemoved": true,
+  "temporarySlotsRemoved": 2,
+  "encryptedScratchRemoved": true,
+  "ownershipMarkerRemoved": true,
+  "permanentWalSlotsUntouched": true,
+  "removed": 1,
+  "at": "2026-10-15T05:38:42.874Z"
+}

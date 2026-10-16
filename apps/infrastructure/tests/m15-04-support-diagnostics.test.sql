@@ -1,0 +1,15 @@
+begin;
+create extension if not exists pgtap with schema extensions;
+set search_path=public,extensions;
+select plan(9);
+select has_table('public','support_diagnostic_jobs','one diagnostic job persistence boundary');
+select has_function('public','m15_04_authority',array['uuid','uuid','uuid'],'live session authority');
+select has_function('public','m15_04_create',array['uuid','uuid','uuid','text','jsonb','uuid'],'atomic consent creation');
+select has_function('public','m15_04_claim',array['text'],'bounded fair claim');
+select has_function('public','m15_04_logs',array['uuid','uuid','text','integer'],'source-owned finite logs');
+select has_function('public','m15_04_redeem_grant',array['uuid','uuid','uuid','uuid','uuid','text','uuid'],'single-use session grant');
+select has_function('public','m15_04_authorize_cleanup',array['uuid','uuid','text','integer'],'cleanup reauthorization');
+select ok(exists(select 1 from storage.buckets where id='support-diagnostics' and not public),'diagnostic bucket private');
+select ok(not exists(select 1 from jsonb_each_text(public.m13_04_dependency_fingerprints()) expected where md5(pg_get_functiondef(('public.'||expected.key)::regprocedure))<>expected.value),'reviewed audit predicate fingerprint parity');
+select * from finish();
+rollback;

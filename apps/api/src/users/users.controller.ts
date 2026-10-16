@@ -1,15 +1,21 @@
+import { randomUUID } from "node:crypto";
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
   ForbiddenException,
   Get,
+  Headers,
   HttpCode,
   HttpStatus,
   Param,
   Patch,
   Query,
+  Req,
 } from "@nestjs/common";
+import type { Request } from "express";
+import { auditRequestIdSchema } from "@repo/contracts/audit/schemas";
 import { pageParamsSchema } from "@repo/contracts/pagination/schemas";
 import type { PageParams } from "@repo/contracts/pagination/types";
 import { okResponseSchema } from "@repo/contracts/shared/schemas";
@@ -42,6 +48,32 @@ import {
   type RequestUser,
 } from "../auth/auth.types";
 import { UsersService } from "./users.service";
+import type { AuditMutationContext } from "./application/member-repository.port";
+
+function auditContext(
+  eventHeader: string | undefined,
+  correlationHeader: string | undefined,
+  request?: Request,
+): AuditMutationContext {
+  const event =
+    eventHeader === undefined
+      ? randomUUID()
+      : auditRequestIdSchema.safeParse(eventHeader).data;
+  const correlation =
+    correlationHeader === undefined
+      ? event
+      : auditRequestIdSchema.safeParse(correlationHeader).data;
+  if (!event || !correlation)
+    throw new BadRequestException({
+      code: "invalid_audit_identity",
+      message: "Invalid request identity header.",
+    });
+  return Object.freeze({
+    eventKey: event,
+    correlationId: correlation,
+    sourceIp: request?.ip ?? null,
+  });
+}
 
 @Controller("users")
 export class UsersController {
@@ -74,9 +106,17 @@ export class UsersController {
   @ZodResponse(okResponseSchema)
   async updateMe(
     @Body(zodBody(updateProfileInputSchema)) dto: UpdateProfileInput,
-    @CurrentUser("id") userId: string,
+    @CurrentUser() user: RequestUser,
+    @Headers("idempotency-key") eventKey?: string,
+    @Headers("x-correlation-id") correlationId?: string,
+    @Req() request?: Request,
   ): Promise<OkResponse> {
-    await this.users.updateProfile(userId, dto);
+    await this.users.updateProfile(
+      user.id,
+      dto,
+      user.organizationId,
+      auditContext(eventKey, correlationId, request),
+    );
     return { ok: true };
   }
 
@@ -88,12 +128,16 @@ export class UsersController {
     @Param(zodParams(memberIdParamSchema)) { id }: MemberIdParam,
     @Body(zodBody(changeMemberRoleInputSchema)) dto: ChangeMemberRoleInput,
     @CurrentUser() user: RequestUser,
+    @Headers("idempotency-key") eventKey?: string,
+    @Headers("x-correlation-id") correlationId?: string,
+    @Req() request?: Request,
   ): Promise<OkResponse> {
     await this.users.changeRole(
       this.orgOf(user),
       { id: user.id, email: user.email },
       id,
       dto.role,
+      auditContext(eventKey, correlationId, request),
     );
     return { ok: true };
   }
@@ -106,12 +150,16 @@ export class UsersController {
     @Param(zodParams(memberIdParamSchema)) { id }: MemberIdParam,
     @Body(zodBody(setMemberActiveInputSchema)) dto: SetMemberActiveInput,
     @CurrentUser() user: RequestUser,
+    @Headers("idempotency-key") eventKey?: string,
+    @Headers("x-correlation-id") correlationId?: string,
+    @Req() request?: Request,
   ): Promise<OkResponse> {
     await this.users.setActive(
       this.orgOf(user),
       { id: user.id, email: user.email },
       id,
       dto.isActive,
+      auditContext(eventKey, correlationId, request),
     );
     return { ok: true };
   }
@@ -123,11 +171,15 @@ export class UsersController {
   async remove(
     @Param(zodParams(memberIdParamSchema)) { id }: MemberIdParam,
     @CurrentUser() user: RequestUser,
+    @Headers("idempotency-key") eventKey?: string,
+    @Headers("x-correlation-id") correlationId?: string,
+    @Req() request?: Request,
   ): Promise<OkResponse> {
     await this.users.removeMember(
       this.orgOf(user),
       { id: user.id, email: user.email },
       id,
+      auditContext(eventKey, correlationId, request),
     );
     return { ok: true };
   }

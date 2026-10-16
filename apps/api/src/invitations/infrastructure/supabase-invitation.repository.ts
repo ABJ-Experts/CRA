@@ -1,3 +1,5 @@
+import { sourceLicenseError } from "../../licensing/infrastructure/source-license-error";
+import { SourceLicenseAdmission } from "../../licensing/infrastructure/source-license-admission";
 import { Injectable } from "@nestjs/common";
 import {
   invitationSchema,
@@ -5,13 +7,16 @@ import {
   type Invitation,
   type OrganizationSummary,
 } from "@repo/contracts/invitations";
+import { z } from "zod";
 
 import { SupabaseService } from "../../supabase/supabase.service";
 import type {
   AcceptInvitationAtomicOutcome,
+  CreateInvitationAtomicOutcome,
   InsertInvitationInput,
   InvitationActor,
   InvitationRepository,
+  ResendInvitationAtomicOutcome,
   RevokeInvitationAtomicOutcome,
 } from "../application/invitation-repository.port";
 
@@ -31,6 +36,24 @@ const REVOCATION_OUTCOMES = new Set([
   "not_pending",
   "actor_not_found",
   "actor_email_mismatch",
+] as const);
+
+const RESEND_FAILURES = new Set([
+  "not_found",
+  "expired",
+  "accepted",
+  "not_pending",
+  "already_member",
+  "actor_not_found",
+  "actor_email_mismatch",
+] as const);
+
+const CREATE_FAILURES = new Set([
+  "cannot_invite_self",
+  "already_member",
+  "invitation_pending",
+  "organization_not_found",
+  "forbidden",
 ] as const);
 
 function providerFailure(): Error {
@@ -58,9 +81,65 @@ function requiredString(
   return candidate;
 }
 
+function requiredEmail(
+  value: Readonly<Record<string, unknown>>,
+  key: string,
+): string {
+  const email = requiredString(value, key);
+  if (!z.email().safeParse(email).success) throw malformedData();
+  return email;
+}
+
+type ResendInvitationRpcClient = Readonly<{
+  rpc: (
+    name: "resend_invitation_atomic",
+    args: Readonly<{
+      p_organization_id: string;
+      p_invitation_id: string;
+      p_actor_user_id: string;
+      p_actor_email: string;
+      p_token_hash: string;
+      p_expires_at: string;
+    }>,
+  ) => Promise<Readonly<{ data: unknown; error: unknown }>>;
+}>;
+
+type CreateInvitationRpcClient = Readonly<{
+  rpc: (
+    name: "m13_01_create_invitation_atomic",
+    args: Readonly<{
+      p_organization_id: string;
+      p_actor_user_id: string;
+      p_email: string;
+      p_role: string;
+      p_first_name: string | null;
+      p_last_name: string | null;
+      p_token_hash: string;
+      p_expires_at: string;
+      p_correlation_id: string;
+      p_source_ip: string | null;
+    }>,
+  ) => Promise<Readonly<{ data: unknown; error: unknown }>>;
+}>;
+
+type CancelFailedDeliveryRpcClient = Readonly<{
+  rpc: (
+    name: "m13_01_cancel_failed_invitation_delivery_atomic",
+    args: Readonly<{
+      p_organization_id: string;
+      p_invitation_id: string;
+      p_actor_user_id: string;
+      p_token_hash: string;
+    }>,
+  ) => Promise<Readonly<{ data: unknown; error: unknown }>>;
+}>;
+
 @Injectable()
 export class SupabaseInvitationRepository implements InvitationRepository {
-  constructor(private readonly supabase: SupabaseService) {}
+  constructor(
+    private readonly supabase: SupabaseService,
+    private readonly admission?: SourceLicenseAdmission,
+  ) {}
 
   async findExistingUser(
     email: string,
@@ -72,7 +151,7 @@ export class SupabaseInvitationRepository implements InvitationRepository {
       .eq("email", email)
       .maybeSingle();
 
-    if (error) throw providerFailure();
+    if (error) throw sourceLicenseError(error) ?? providerFailure();
     if (!data) return null;
     const row = record(data);
     if (!row) throw malformedData();
@@ -88,7 +167,7 @@ export class SupabaseInvitationRepository implements InvitationRepository {
       .eq("user_id", userId)
       .maybeSingle();
 
-    if (error) throw providerFailure();
+    if (error) throw sourceLicenseError(error) ?? providerFailure();
     if (!data) return false;
     const row = record(data);
     if (!row) throw malformedData();
@@ -106,7 +185,7 @@ export class SupabaseInvitationRepository implements InvitationRepository {
       .eq("status", "pending")
       .maybeSingle();
 
-    if (error) throw providerFailure();
+    if (error) throw sourceLicenseError(error) ?? providerFailure();
     if (!data) return false;
     const row = record(data);
     if (!row) throw malformedData();
@@ -117,33 +196,75 @@ export class SupabaseInvitationRepository implements InvitationRepository {
   async insert(
     orgId: string,
     input: InsertInvitationInput,
-  ): Promise<Readonly<{ id: string }>> {
-    const { data, error } = await this.supabase
-      .admin()
-      .from("invitations")
-      .insert({
-        organization_id: orgId,
-        invited_by: input.invitedBy,
-        email: input.email,
-        role: input.role,
-        first_name: input.firstName,
-        last_name: input.lastName,
-        token_hash: input.tokenHash,
-        expires_at: input.expiresAt,
-      })
-      .select("id")
-      .single();
+  ): Promise<CreateInvitationAtomicOutcome> {
+    // The migration's generated RPC type is supplied by the infrastructure
+    // type-generation step; validate its untrusted result at this boundary.
+    const client =
+      this.supabase.admin() as unknown as CreateInvitationRpcClient;
+    const { data, error } = await client.rpc(
+      "m13_01_create_invitation_atomic",
+      {
+        p_organization_id: orgId,
+        p_actor_user_id: input.invitedBy,
+        p_email: input.email,
+        p_role: input.role,
+        p_first_name: input.firstName,
+        p_last_name: input.lastName,
+        p_token_hash: input.tokenHash,
+        p_expires_at: input.expiresAt,
+        p_correlation_id: input.correlationId,
+        p_source_ip: input.sourceIp,
+      },
+    );
 
-    if (error) throw providerFailure();
-    const row = record(data);
+    if (error) throw sourceLicenseError(error) ?? providerFailure();
+    if (!Array.isArray(data) || data.length !== 1) throw malformedData();
+    const row = record(data[0]);
     if (!row) throw malformedData();
-    return Object.freeze({ id: requiredString(row, "id") });
+    const outcome = requiredString(row, "outcome");
+    if (CREATE_FAILURES.has(outcome as never)) {
+      return Object.freeze({
+        outcome: outcome as Extract<
+          CreateInvitationAtomicOutcome,
+          { outcome: string }
+        >["outcome"],
+      }) as CreateInvitationAtomicOutcome;
+    }
+    if (outcome !== "created") throw malformedData();
+    const invitationId = requiredString(row, "invitation_id");
+    if (!z.uuid().safeParse(invitationId).success) throw malformedData();
+    return Object.freeze({ outcome, invitationId });
+  }
+
+  async cancelFailedDeliveryAtomic(
+    orgId: string,
+    invitationId: string,
+    actorId: string,
+    tokenHash: string,
+  ): Promise<"cancelled" | "changed" | "not_found"> {
+    const client =
+      this.supabase.admin() as unknown as CancelFailedDeliveryRpcClient;
+    const { data, error } = await client.rpc(
+      "m13_01_cancel_failed_invitation_delivery_atomic",
+      {
+        p_organization_id: orgId,
+        p_invitation_id: invitationId,
+        p_actor_user_id: actorId,
+        p_token_hash: tokenHash,
+      },
+    );
+    if (error) throw sourceLicenseError(error) ?? providerFailure();
+    if (data !== "cancelled" && data !== "changed" && data !== "not_found") {
+      throw malformedData();
+    }
+    return data;
   }
 
   async acceptAtomic(
     tokenHash: string,
     user: InvitationActor,
   ): Promise<AcceptInvitationAtomicOutcome> {
+    await this.admission?.invitation(tokenHash, user.email);
     const { data, error } = await this.supabase
       .admin()
       .rpc("accept_invitation_atomic", {
@@ -152,7 +273,7 @@ export class SupabaseInvitationRepository implements InvitationRepository {
         p_email: user.email,
       });
 
-    if (error) throw providerFailure();
+    if (error) throw sourceLicenseError(error) ?? providerFailure();
     if (!Array.isArray(data) || data.length !== 1) throw malformedData();
     const row = record(data[0]);
     if (!row) throw malformedData();
@@ -198,11 +319,58 @@ export class SupabaseInvitationRepository implements InvitationRepository {
         p_actor_email: actor.email,
       });
 
-    if (error) throw providerFailure();
+    if (error) throw sourceLicenseError(error) ?? providerFailure();
     if (typeof data !== "string" || !REVOCATION_OUTCOMES.has(data as never)) {
       throw malformedData();
     }
     return data as RevokeInvitationAtomicOutcome;
+  }
+
+  async resendAtomic(
+    orgId: string,
+    invitationId: string,
+    actor: InvitationActor,
+    tokenHash: string,
+    expiresAt: string,
+  ): Promise<ResendInvitationAtomicOutcome> {
+    /*
+     * The new RPC is deliberately typed at this provider boundary until the
+     * database-generated declarations are refreshed by their owning workflow.
+     * Its output is still validated below before domain code can consume it.
+     */
+    const client =
+      this.supabase.admin() as unknown as ResendInvitationRpcClient;
+    const { data, error } = await client.rpc("resend_invitation_atomic", {
+      p_organization_id: orgId,
+      p_invitation_id: invitationId,
+      p_actor_user_id: actor.id,
+      p_actor_email: actor.email,
+      p_token_hash: tokenHash,
+      p_expires_at: expiresAt,
+    });
+
+    if (error) throw sourceLicenseError(error) ?? providerFailure();
+    if (!Array.isArray(data) || data.length !== 1) throw malformedData();
+    const row = record(data[0]);
+    if (!row) throw malformedData();
+    const outcome = requiredString(row, "outcome");
+
+    if (RESEND_FAILURES.has(outcome as never)) {
+      return Object.freeze({
+        outcome: outcome as Extract<
+          ResendInvitationAtomicOutcome,
+          { outcome: string }
+        >["outcome"],
+      }) as ResendInvitationAtomicOutcome;
+    }
+    if (outcome !== "resent") throw malformedData();
+
+    return Object.freeze({
+      outcome,
+      invitationId: requiredString(row, "invitation_id"),
+      email: requiredEmail(row, "email"),
+      organizationName: requiredString(row, "organization_name"),
+    });
   }
 
   async list(orgId: string): Promise<readonly Readonly<Invitation>[]> {
@@ -213,12 +381,11 @@ export class SupabaseInvitationRepository implements InvitationRepository {
 
     const { data, error } = await this.supabase
       .admin()
-      .from("invitations")
-      .select("id, email, role, status, expires_at")
-      .eq("organization_id", orgId)
-      .order("created_at", { ascending: false });
+      .rpc("m14_03_invitation_list_rows", { p_organization_id: orgId })
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: true });
 
-    if (error) throw providerFailure();
+    if (error) throw sourceLicenseError(error) ?? providerFailure();
     if (!data) return Object.freeze([]);
     if (!Array.isArray(data)) throw malformedData();
 
@@ -247,7 +414,7 @@ export class SupabaseInvitationRepository implements InvitationRepository {
       .eq("id", orgId)
       .maybeSingle();
 
-    if (error) throw providerFailure();
+    if (error) throw sourceLicenseError(error) ?? providerFailure();
     if (!data) return null;
     const parsed = organizationSummarySchema.safeParse(data);
     if (!parsed.success) throw malformedData();

@@ -1,0 +1,212 @@
+- generic:
+  - generic [aria-hidden]:
+    - generic:
+      - complementary:
+        - generic:
+          - generic:
+            - link:
+              - /url: /dashboard
+              - generic [aria-hidden]: C
+              - text: CRA Sentinel
+            - button
+          - navigation:
+            - generic:
+              - generic:
+                - list:
+                  - listitem:
+                    - link:
+                      - /url: /dashboard
+                      - generic: Dashboard
+                  - listitem:
+                    - link:
+                      - /url: /management
+                      - generic: Management
+                  - listitem:
+                    - link:
+                      - /url: /organization
+                      - generic: Organization
+                  - listitem:
+                    - link:
+                      - /url: /products
+                      - generic: Products
+                  - listitem:
+                    - link:
+                      - /url: /suppliers
+                      - generic: Suppliers
+                  - listitem:
+                    - link:
+                      - /url: /frameworks
+                      - generic: Frameworks
+                  - listitem:
+                    - link:
+                      - /url: /findings
+                      - generic: Findings
+                  - listitem:
+                    - link:
+                      - /url: /reporting
+                      - generic: Reporting
+                  - listitem:
+                    - link:
+                      - /url: /tasks
+                      - generic: Tasks
+                  - listitem:
+                    - link:
+                      - /url: /connectors
+                      - generic: Connectors
+              - generic:
+                - paragraph: Account & access
+                - list:
+                  - listitem:
+                    - button:
+                      - generic: Profile
+                    - listitem:
+                      - link:
+                        - /url: /account
+                        - generic: Account
+                    - listitem:
+                      - link:
+                        - /url: /security
+                        - generic: Security
+                  - listitem:
+                    - button:
+                      - generic: Authorization
+                    - listitem:
+                      - link:
+                        - /url: /roles
+                        - generic: Roles
+                    - listitem:
+                      - link:
+                        - /url: /permissions
+                        - generic: Permissions
+          - generic:
+            - generic:
+              - button:
+                - generic: Sign out
+      - generic:
+        - banner:
+          - generic:
+            - navigation:
+              - list:
+                - listitem:
+                  - link:
+                    - /url: /dashboard
+                    - text: Dashboard
+                - listitem [aria-hidden]
+                - listitem:
+                  - generic: Organization
+          - generic:
+            - button
+            - button
+            - generic: AF
+        - main:
+          - generic:
+            - generic:
+              - generic:
+                - heading [level=1]: Organization administration
+                - paragraph: Settings, retention, export, and tenant data lifecycle controls.
+            - region:
+              - generic:
+                - heading [level=2]: CRA
+                - paragraph: Server-owned tenant configuration, legal identity, and data-lifecycle controls. Browser locale, local storage, and deployment region never select operational policy.
+                - paragraph: "Organization identifier: cra"
+              - generic:
+                - generic:
+                  - term: Settings
+                  - definition: Needs setup
+                - generic:
+                  - term: Legal entities
+                  - definition: 1 recorded
+                - generic:
+                  - term: Tenant lifecycle
+                  - definition: Active
+            - generic:
+              - generic:
+                - heading [level=2]: Organization workbench
+              - generic:
+                - paragraph: Open one focused workspace at a time. Tenant policy and audit-backed controls remain available while you work.
+                - generic:
+                  - button:
+                    - generic: Organization settings
+                    - generic: Set operational policy, retention, and exports.
+                  - button:
+                    - generic: Organization identity
+                    - generic: Manage legal entities and workspace branding.
+                  - button:
+                    - generic: Tenant lifecycle
+                    - generic: Review protected deactivation and recovery controls.
+            - region:
+              - heading [level=2]: SBOM CI credentials
+              - paragraph: Create narrowly scoped credentials for automated SBOM intake. Credentials cannot access product data or organization administration.
+              - generic:
+                - generic:
+                  - generic:
+                    - text: Credential label
+                    - textbox
+                  - button [disabled]: Create credential
+                - paragraph: No CI credentials have been issued.
+  - button "Open Next.js Dev Tools" [ref=f2e165] [cursor=pointer]
+  - alert
+  - dialog [active] [ref=f2e222]:
+    - generic [ref=f2e223]:
+      - heading "Organization identity" [level=2] [ref=f2e224]
+      - paragraph [ref=f2e225]: Manage legal entities and workspace branding.
+      - tablist "Organization identity sections" [ref=f2e226]:
+        - tab "Legal entities" [ref=f2e227] [cursor=pointer]
+        - tab "Branding" [selected] [ref=f2e230] [cursor=pointer]
+      - button "Close" [ref=f2e233] [cursor=pointer]
+    - tabpanel "Branding" [ref=f2e305]:
+      - generic [ref=f2e306]:
+        - generic [ref=f2e307]:
+          - heading "Organization branding" [level=2] [ref=f2e308]
+          - generic [ref=f2e309]: CRA Sentinel fallback active
+        - generic [ref=f2e311]:
+          - generic [ref=f2e312]:
+            - generic [ref=f2e313]:
+              - generic [ref=f2e314]:
+                - paragraph [ref=f2e315]: CRA Sentinel
+                - paragraph [ref=f2e316]: Resolved brand snapshot
+              - paragraph [ref=f2e318]: CRA Sentinel
+            - generic [ref=f2e319]:
+              - generic [ref=f2e320]:
+                - term [ref=f2e321]: Resolved version
+                - definition [ref=f2e322]: "0"
+              - generic [ref=f2e323]:
+                - term [ref=f2e324]: Published
+                - definition [ref=f2e325]: Not published
+              - generic [ref=f2e326]:
+                - term [ref=f2e327]: Draft preview version
+                - definition [ref=f2e328]: "1"
+              - generic [ref=f2e329]:
+                - term [ref=f2e330]: Logo asset
+                - definition [ref=f2e331]: No organization logo
+          - generic [ref=f2e333]:
+            - paragraph [ref=f2e334]: CRA Sentinel
+            - paragraph [ref=f2e335]: CRA Sentinel
+          - generic [ref=f2e336]:
+            - generic [ref=f2e337]:
+              - text: Brand display name
+              - textbox "Brand display name" [ref=f2e338]: CRA Sentinel
+            - generic [ref=f2e339]:
+              - text: Primary brand color
+              - textbox "Primary brand color" [ref=f2e340]: "#595FE5"
+            - generic [ref=f2e341]:
+              - text: Secondary brand color
+              - textbox "Secondary brand color" [ref=f2e342]: "#ADB0ED"
+            - generic [ref=f2e343]:
+              - text: Logo alt text
+              - textbox "Logo alt text" [ref=f2e344]
+            - generic [ref=f2e345]:
+              - text: Footer text
+              - textbox "Footer text" [ref=f2e346]: CRA Sentinel
+            - generic [ref=f2e347]:
+              - text: Contact text
+              - textbox "Contact text" [ref=f2e348]
+            - generic [ref=f2e349]:
+              - button "Save branding draft" [ref=f2e350] [cursor=pointer]
+              - button "Publish branding" [ref=f2e351] [cursor=pointer]
+          - generic [ref=f2e352]:
+            - generic [ref=f2e353]:
+              - text: Logo image
+              - button "Logo image" [ref=f2e354] [cursor=pointer]
+            - button "Upload logo" [disabled] [ref=f2e356]
+          - alert [ref=f2e357]: Branding draft saved.

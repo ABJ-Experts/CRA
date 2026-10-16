@@ -3,6 +3,7 @@
 import "@testing-library/jest-dom/vitest";
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { StrictMode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { invitationsApi } from "../../_features/invitations/invitations.api";
@@ -44,6 +45,26 @@ describe("AcceptInvitationPage", () => {
       screen.getByText("You now have access to Analytical Engines."),
     ).toBeTruthy();
     expect(invitationsApi.accept).toHaveBeenCalledWith("invitation-token");
+  });
+
+  it("accepts a token only once when Strict Mode repeats effects", async () => {
+    vi.mocked(invitationsApi.accept).mockResolvedValue({
+      ok: true,
+      alreadyAccepted: false,
+      organization: {
+        id: "a05570d6-aa75-4b6a-9688-b5a82eb3a774",
+        name: "Analytical Engines",
+        slug: "analytical-engines",
+      },
+    });
+    render(
+      <StrictMode>
+        <AcceptInvitationPage />
+      </StrictMode>,
+    );
+
+    expect(await screen.findByText("You are in")).toBeTruthy();
+    expect(invitationsApi.accept).toHaveBeenCalledTimes(1);
   });
 
   it("rejects a link without a token before calling the API", async () => {

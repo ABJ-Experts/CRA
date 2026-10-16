@@ -1,0 +1,26 @@
+name: M15-06 dedicated Linux reference qualification
+on:
+  workflow_dispatch:
+    inputs:
+      request_path:
+        description: Absolute path to locally provisioned N/N-1/N-2 artifact request
+        required: true
+        type: string
+permissions:
+  contents: read
+jobs:
+  qualification:
+    runs-on: [self-hosted, linux, cra-dedicated-qualification]
+    environment: cra-reference-qualification
+    timeout-minutes: 780
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify only local provisioned artifact inputs and run fixed scenarios
+        env:
+          REQUEST_PATH: ${{ inputs.request_path }}
+          CRA_DEDICATED_QUALIFICATION_RUNNER: "true"
+          CRA_QUALIFICATION_RUNNER_ID: ${{ vars.CRA_QUALIFICATION_RUNNER_ID }}
+          CRA_QUALIFICATION_ROOT: /var/lib/cra-qualification
+        run: node tools/upgrades/reference-runner.mjs "$REQUEST_PATH" "/var/lib/cra-qualification/result-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}.json"
+# Dispatch is explicit/manual. No download, remote Docker, paid provisioning or
+# original-source connection is configured by this workflow.

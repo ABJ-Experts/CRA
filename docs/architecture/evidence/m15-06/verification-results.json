@@ -1,0 +1,219 @@
+{
+  "recordedAt": "2026-10-15T12:57:36.818763+00:00",
+  "baseline": "618f26c9bf870298f1fcb39248af44351c69cec7",
+  "branch": "milestone-1",
+  "committed": false,
+  "commands": {
+    "api": {
+      "command": "pnpm --filter api run test --runInBand",
+      "exitCode": 0,
+      "suites": 610,
+      "tests": 6399
+    },
+    "web": {
+      "command": "pnpm --filter web run test",
+      "exitCode": 0,
+      "files": 249,
+      "tests": 1761
+    },
+    "contracts": {
+      "command": "pnpm --filter @repo/contracts run test",
+      "exitCode": 0,
+      "files": 93,
+      "tests": 1050
+    },
+    "operator": {
+      "command": "pnpm --filter operator run test:coverage",
+      "exitCode": 0,
+      "files": 6,
+      "tests": 68
+    },
+    "agent": {
+      "command": "pnpm --filter agent run test",
+      "exitCode": 0,
+      "files": 11,
+      "tests": 25
+    },
+    "releaseAndArchitectureFixtures": {
+      "command": "node --experimental-test-coverage --test tools/upgrades/*.test.mjs scripts/architecture/m15-06-packaging.test.mjs apps/infrastructure/tests/sql-test-container.test.mjs apps/api/test/m15-06-operator-browser-server.spec.mjs",
+      "exitCode": 0,
+      "tests": 33
+    },
+    "lint": {
+      "status": "passed in root gate; final changed API files and operator checked separately"
+    },
+    "types": {
+      "status": "passed in root gate; final API and operator checked separately"
+    },
+    "architecture": {
+      "status": "passed",
+      "tests": 160,
+      "modules": 3411,
+      "dependencies": 9217
+    },
+    "workspaceBuild": {
+      "command": "pnpm build",
+      "exitCode": 0,
+      "tasks": 6
+    },
+    "diffCheck": {
+      "command": "git diff --check",
+      "exitCode": 0
+    },
+    "rootVerify": {
+      "command": "CRA_SQL_TEST_CONTAINER=cra_m15_06_sql_20261015b pnpm verify",
+      "exitCode": 0,
+      "status": "passed",
+      "sqlTestFiles": 204,
+      "target": "Task-only isolated PostgreSQL fixture; original development database not selected"
+    },
+    "liveApiE2e": {
+      "command": "Jest test/jest-e2e.json --runInBand with isolated stack configuration",
+      "exitCode": 0,
+      "suites": 9,
+      "tests": 30
+    },
+    "liveAuthE2e": {
+      "command": "bash apps/api/test/auth-flow.e2e.sh with isolated stack configuration",
+      "exitCode": 0,
+      "passed": 33,
+      "failed": 0
+    }
+  },
+  "coverage": {
+    "upgradeRuntime": {
+      "command": "focused Jest with upgrades/**/*.ts and upgrade-supervisor.ts",
+      "tests": 392,
+      "suites": 34,
+      "modules": 34,
+      "percent": {
+        "statements": 94.09,
+        "branches": 89.46,
+        "functions": 94.8,
+        "lines": 95.55
+      },
+      "minimumPerFilePercent": {
+        "statements": 85.71,
+        "branches": 80,
+        "functions": 80,
+        "lines": 85.71
+      }
+    },
+    "contractsUpgrade": {
+      "tests": 28,
+      "statements": 100,
+      "branches": 100,
+      "functions": 100,
+      "lines": 100
+    },
+    "operator": {
+      "statements": 99.63,
+      "branches": 94.86,
+      "functions": 100,
+      "lines": 99.63
+    },
+    "finalWorkerFixes": {
+      "maintenanceGate": {
+        "statements": 97.71,
+        "branches": 92.78,
+        "functions": 93.54,
+        "lines": 98.17
+      },
+      "notificationBootstrap": {
+        "statements": 95.23,
+        "branches": 93.75,
+        "functions": 87.5,
+        "lines": 94.91
+      },
+      "agentIngress": {
+        "statements": 100,
+        "branches": 95.23,
+        "functions": 100,
+        "lines": 100
+      }
+    },
+    "nodeHarness": {
+      "metrics": ["lines", "branches", "functions"],
+      "allProductionModulesAtLeast80": true,
+      "statementMetricAvailable": false
+    }
+  },
+  "browser": {
+    "tool": "Playwright MCP",
+    "maxTaskTabs": 2,
+    "unrelatedSiteDataCleared": false,
+    "realUiMtlsContractsMediaAndJournal": true,
+    "nativeDeploymentPorts": "simulated; not artifact qualification",
+    "freshFinalJourneys": [
+      "explicit acknowledgement",
+      "success",
+      "pre-exposure image rollback with maintenance",
+      "resource-blocked preflight",
+      "redacted result export",
+      "post-exposure rollback UI disabled",
+      "post-exposure rollback API409 leaves history unchanged",
+      "missing-origin mutation403",
+      "ungranted certificate401",
+      "seeded owner product registry",
+      "session refresh200",
+      "private tenant route404"
+    ],
+    "m12Followup": {
+      "tools": [
+        "Playwright MCP",
+        "Chrome DevTools MCP after Playwright transport closed"
+      ],
+      "reusedExistingTabs": true,
+      "siteDataCleared": false,
+      "target": "Separate synthetic development stack on 127.0.0.1:3112",
+      "passed": [
+        "seeded owner sign-in and product registry",
+        "notification preference client validation",
+        "transient save failure preserves draft",
+        "no automatic mutation replay; explicit retry succeeds",
+        "saved preferences persist after reload",
+        "session refresh200",
+        "private operator route404 for tenant session",
+        "desktop and mobile layout without horizontal overflow"
+      ],
+      "screenshots": [
+        "m12-followup-preferences-desktop.png",
+        "m12-followup-preferences-mobile.png"
+      ],
+      "limitations": [
+        "Full browser matrix and full web CLI E2E suite not run; Playwright MCP transport became unavailable"
+      ]
+    },
+    "additionalFollowup": "browser-followup.json"
+  },
+  "database": {
+    "newTables": 0,
+    "newColumns": 0,
+    "newForeignKeys": 0,
+    "newMigrations": 0,
+    "originalStackUpgraded": false,
+    "originalStackRestored": false,
+    "originalStackReset": false,
+    "newAuditSqlAssertions": 9,
+    "supabaseMcp": "no matched CRA cloud project; local endpoint unavailable; identified local read-only catalogs used",
+    "m12Followup": {
+      "productionAccessed": false,
+      "originalDevelopmentDataChanged": false,
+      "fixtureOnlyFix": true,
+      "fullSqlTestFilesPassed": 204
+    }
+  },
+  "notExecuted": [
+    "Docker image build/import",
+    "native Linux N/N-1/N-2 qualification",
+    "real deployment upgrade or rollback",
+    "reference migration/rollback fault injection",
+    "native zero-egress qualification",
+    "30-minute upgrade/rollback benchmark",
+    "full current/previous browser matrix",
+    "full WCAG audit",
+    "full disposable live Auth/Storage/RLS lifecycle qualification"
+  ],
+  "productionPathsQualified": false,
+  "executionDisabledByDefault": true
+}

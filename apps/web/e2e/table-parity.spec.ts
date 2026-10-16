@@ -3,11 +3,14 @@ import { setupServer } from "msw/node";
 
 import { handlers } from "../mocks/handlers";
 
-const mockServer = setupServer(...handlers);
+/* eslint-disable turbo/no-undeclared-env-vars -- Playwright runs outside Turbo's cached task graph. */
 
-test.beforeAll(() => mockServer.listen({ onUnhandledRequest: "error" }));
-test.afterEach(() => mockServer.resetHandlers());
-test.afterAll(() => mockServer.close());
+const WEB_ORIGIN = process.env.E2E_WEB_ORIGIN ?? "http://127.0.0.1:3000";
+
+// The API passthrough handler is for browser/Next mocks. In this Node-side
+// Playwright process it intercepts Playwright's API client too, so let those
+// requests bypass while retaining the dashboard mock handlers under test.
+const mockServer = setupServer(...handlers.slice(1));
 
 function pagedKeys(value: unknown): string[] {
   if (!value || typeof value !== "object") return [];
@@ -26,22 +29,30 @@ test("mock and real responses share Paged shape and filtering resets a late page
   });
   expect(signedIn.status()).toBe(200);
 
-  const mockResponse = await fetch(
-    "http://127.0.0.1:3000/api/products?page=1&pageSize=15",
+  const realResponse = await page.request.get(
+    "/api/v1/users?page=1&pageSize=15",
   );
-  expect(mockResponse.status).toBe(200);
-  const mockPage = (await mockResponse.json()) as {
+  expect(realResponse.status()).toBe(200);
+  const realPage = await realResponse.json();
+
+  mockServer.listen({ onUnhandledRequest: "error" });
+  let mockPage: {
     rows: unknown[];
     total: number;
     page: number;
     pageSize: number;
     pageCount: number;
   };
-  const realResponse = await page.request.get(
-    "/api/v1/users?page=1&pageSize=15",
-  );
-  expect(realResponse.status()).toBe(200);
-  const realPage = await realResponse.json();
+  try {
+    const mockResponse = await fetch(
+      `${WEB_ORIGIN}/api/products?page=1&pageSize=15`,
+    );
+    expect(mockResponse.status).toBe(200);
+    mockPage = (await mockResponse.json()) as typeof mockPage;
+  } finally {
+    mockServer.close();
+  }
+
   expect(pagedKeys(mockPage)).toEqual([
     "page",
     "pageCount",

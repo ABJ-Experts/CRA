@@ -1,0 +1,10 @@
+172.20.0.3 2026-09-28 10:57:31.355 UTC [2075] authenticator@postgres ERROR:  ON CONFLICT DO UPDATE command cannot affect row a second time
+172.20.0.3 2026-09-28 10:57:31.355 UTC [2075] authenticator@postgres HINT:  Ensure that no rows proposed for insertion within the same command have duplicate constrained values.
+172.20.0.3 2026-09-28 10:57:31.418 UTC [2269] authenticator@postgres ERROR:  ON CONFLICT DO UPDATE command cannot affect row a second time
+172.20.0.3 2026-09-28 10:57:31.418 UTC [2269] authenticator@postgres HINT:  Ensure that no rows proposed for insertion within the same command have duplicate constrained values.
+172.20.0.3 2026-09-28 10:57:31.524 UTC [2137] authenticator@postgres ERROR:  ON CONFLICT DO UPDATE command cannot affect row a second time
+172.20.0.3 2026-09-28 10:57:31.524 UTC [2137] authenticator@postgres HINT:  Ensure that no rows proposed for insertion within the same command have duplicate constrained values.
+172.20.0.3 2026-09-28 10:57:31.619 UTC [2138] authenticator@postgres ERROR:  ON CONFLICT DO UPDATE command cannot affect row a second time
+172.20.0.3 2026-09-28 10:57:31.619 UTC [2138] authenticator@postgres HINT:  Ensure that no rows proposed for insertion within the same command have duplicate constrained values.
+172.20.0.3 2026-09-28 10:57:31.673 UTC [2080] authenticator@postgres ERROR:  ON CONFLICT DO UPDATE command cannot affect row a second time
+172.20.0.3 2026-09-28 10:57:31.673 UTC [2080] authenticator@postgres HINT:  Ensure that no rows proposed for insertion within the same command have duplicate constrained values.

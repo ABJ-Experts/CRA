@@ -1,0 +1,14 @@
+{
+  "verificationRunId": "0165853e-b198-4aa8-8011-b2da8adad112",
+  "activeOwnerPreserved": true,
+  "unavailableAuthorityPreserved": true,
+  "actualNarrowRpcAuthorized": true,
+  "deadOwnerContainerRemoved": true,
+  "deadOwnerNetworkRemoved": true,
+  "encryptedScratchRemoved": true,
+  "removed": 1,
+  "retained": 0,
+  "activeRetained": 1,
+  "unknownRetained": 1,
+  "at": "2026-10-14T12:54:09.448Z"
+}

@@ -1,0 +1,10 @@
+{
+  "instanceId": "456e6445-0094-4cde-a745-721c77cc3e96",
+  "slot": "cra_backup_wal_456e644500944cdea745721c77cc3e96",
+  "firstParts": 1,
+  "resumedParts": 1,
+  "secondParts": 2,
+  "durationMs": 3463,
+  "restartIntegrity": true,
+  "ownFixtureSlotRetired": true
+}

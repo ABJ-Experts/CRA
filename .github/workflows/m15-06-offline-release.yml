@@ -1,0 +1,25 @@
+name: M15-06 offline release packaging verification
+on:
+  pull_request:
+    paths: ["deployment/**", "tools/upgrades/**", "apps/api/src/upgrades/maintenance/**", "scripts/architecture/m15-06-*"]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @repo/contracts build
+      - run: node --test tools/upgrades/*.test.mjs scripts/architecture/m15-06-packaging.test.mjs
+      - run: pnpm --filter api test -- --runInBand maintenance-gate.spec.ts
+# Full qualification is deliberately absent from hosted CI: invoke the tool on a
+# provisioned Linux reference runner with actual signed N/N-1/N-2 archives.

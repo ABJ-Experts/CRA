@@ -32,6 +32,10 @@ export interface TablePageProps<T> {
   searchPlaceholder: string;
   getRowId: (row: T) => string;
   toolbarActions?: ReactNode;
+  renderExport?: (
+    filters: Readonly<Record<string, string>>,
+    selectedIds: readonly string[],
+  ) => ReactNode;
 }
 
 export function TablePage<T>({
@@ -43,6 +47,7 @@ export function TablePage<T>({
   searchPlaceholder,
   getRowId,
   toolbarActions,
+  renderExport,
 }: TablePageProps<T>) {
   const [selection, setSelection] = useState<RowSelectionState>({});
   const t = useTableQuery<T>({ endpoint, rowSchema });
@@ -56,6 +61,11 @@ export function TablePage<T>({
         resultCount={t.total}
         actions={toolbarActions}
       />
+
+      {renderExport?.(
+        t.queryFilters,
+        Object.keys(selection).filter((key) => selection[key]),
+      )}
 
       <DataTable
         variant={variant}

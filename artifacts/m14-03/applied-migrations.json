@@ -1,0 +1,106 @@
+[
+  {
+    "name": "20261009110804_m14_03_filtered_export_persistence.sql",
+    "sha256": "4a38cb2ac6d93b2526eb9a9ca671731afa779dd8781f907fb1f062fd7b35b689"
+  },
+  {
+    "name": "20261009111214_m14_03_operational_sources.sql",
+    "sha256": "6ed2c00ee45f140ba35623c8da8d0446fb6c43b8d46dc8a2b703b8ff1f397ed5"
+  },
+  {
+    "name": "20261009111440_m14_03_sbom_portal_sources.sql",
+    "sha256": "e9a67712e01b7cda62b35050f05c10f23a31c90afb7f90ddf53276545a511d3b"
+  },
+  {
+    "name": "20261009111722_m14_03_domain_source_projections.sql",
+    "sha256": "d6a1cad15279db730bcf5da7a22fd59cabe68bff6575a16bf57596472b7346ec"
+  },
+  {
+    "name": "20261009112740_m14_03_portal_export_delivery.sql",
+    "sha256": "958df3a49dd69ddbddf1e98e02c1067ca2c92441640f40cfe143a19aa86f2dee"
+  },
+  {
+    "name": "20261009113438_m14_03_operational_static_sources.sql",
+    "sha256": "1ae4567f1cb60d88a703502f1e5801fb88e21ffd33e17ca8ff7e8fe703559aca"
+  },
+  {
+    "name": "20261009114930_m14_03_registry_policy_alignment.sql",
+    "sha256": "d901a8414620d8c9d34fa32c1d79835d7d1977a80dcdba35d4463eec968e68aa"
+  },
+  {
+    "name": "20261009120148_m14_03_export_retention_dependency.sql",
+    "sha256": "c9b46065adb5a68d08f6f6b5452aa0d6b6a387b8989041af2411001182918edb"
+  },
+  {
+    "name": "20261009121119_m14_03_domain_projection_compatibility.sql",
+    "sha256": "9e125e56f30cbad5936174d1a188212cb76a6c889e78b2028a1ab3821b99e484"
+  },
+  {
+    "name": "20261009122555_m14_03_export_service_grant_alignment.sql",
+    "sha256": "d4364aa6d3ef339a460ae768c5f1863b3ba1b7758a769b072a546d7e2421e335"
+  },
+  {
+    "name": "20261009123239_m14_03_modification_history_parity.sql",
+    "sha256": "063bb69e455096c303c686a77bb5eab82d3d603e75ec392372aa2dff05a7fc7b"
+  },
+  {
+    "name": "20261009123619_m14_03_registry_capture_preflight.sql",
+    "sha256": "168157790107b381f6360b36f861a1023ca11cec98f68295421ce5faeffbdf29"
+  },
+  {
+    "name": "20261009124047_m14_03_chat_cursor_compatibility.sql",
+    "sha256": "072a50ab4cc8053d48b1a9a3e1f845490a3fa87771e4a49c8dc30ae7dd8d6e70"
+  },
+  {
+    "name": "20261009124543_m14_03_final_source_policy_alignment.sql",
+    "sha256": "f6221adf4b1b70acf8ff6f0dd11b075eb33fb9fe42bbfa752aeab0ac947d5ec4"
+  },
+  {
+    "name": "20261009124700_m14_03_portal_projection_parity.sql",
+    "sha256": "6ebd4bcf4c38e9462bad3eb0b8151344bba0f112a41225a1cf35ff7177dedf34"
+  },
+  {
+    "name": "20261009124846_m14_03_administration_list_sources.sql",
+    "sha256": "fdf53629673ce86706959ef03d63a51f87965f1becb953bb4d9967f8d6918ddf"
+  },
+  {
+    "name": "20261009125122_m14_03_webhook_export_projection_parity.sql",
+    "sha256": "a5568e29e00c0e6a92b9dcb5f0df902ef172c29a192e37d5f137dc0fea9cb24b"
+  },
+  {
+    "name": "20261009125326_m14_03_registry_snapshot_authorization.sql",
+    "sha256": "8419683891be34ff04e6d856bf37de16abfbab95feb197c79055b6b1f3b1036b"
+  },
+  {
+    "name": "20261009125440_m14_03_coverage_export_status_parity.sql",
+    "sha256": "b3b15c2e69918cc61542400fc5fb90e7b59c5708cd76e85637f812fe235bc9ce"
+  },
+  {
+    "name": "20261009130409_m14_03_retention_export_field_alignment.sql",
+    "sha256": "8c3c943ad5ab0bebb8a2a898a9897d9dfe6be3411230826bd3037d2663e57693"
+  },
+  {
+    "name": "20261009130614_m14_03_trend_bucket_projection.sql",
+    "sha256": "a4f044076c11e469f00c7df50884faa190ee83c29a91e6bc7fea907d3e0eadfc"
+  },
+  {
+    "name": "20261009130837_m14_03_export_audit_visibility.sql",
+    "sha256": "9c7ca79d6bb72757fb09978d3d0263c56c2539bce34d8ab9b683b1ea3fb10781"
+  },
+  {
+    "name": "20261009131040_m14_03_trend_approved_fields.sql",
+    "sha256": "cfe8aab32da7fdacbb3f65c62fb5bb465867c5e20152c740a879b8f129bdc4c3"
+  },
+  {
+    "name": "20261009131552_m14_03_registry_single_access_pass.sql",
+    "sha256": "a6a383fead50d2b268c75bd453a4e3b7e944610d05d0329fec4e3541c5d66562"
+  },
+  {
+    "name": "20261009132508_m14_03_audit_range_scope_compatibility.sql",
+    "sha256": "e54ff987d61d05f8a6fa604d2d352baf551eca77980124eda82f76dc1e33c637"
+  },
+  {
+    "name": "20261009133421_m14_03_export_jobs_timestamp_trigger.sql",
+    "sha256": "356edb6f8301f69c6d8f8002ef3c62b5c04cdad47d65461c72f3b345292993e2"
+  }
+]

@@ -1,0 +1,51 @@
+{
+  "milestone": "M3",
+  "status": "engineering_complete",
+  "branch": "milestone-1",
+  "baseline": "d5d1d05",
+  "productionTouched": false,
+  "committed": false,
+  "verify": {
+    "command": "TURBO_CONCURRENCY=1 pnpm verify",
+    "exitCode": 0,
+    "apiSuites": 303,
+    "apiTests": 2884,
+    "webFiles": 148,
+    "webTests": 947,
+    "contractTests": 544,
+    "architectureTests": 58
+  },
+  "database": {
+    "sqlFilesPassed": 78,
+    "migrations": 12,
+    "newTables": 0,
+    "newColumns": 0,
+    "newIndexes": 1,
+    "m3Drift": false,
+    "preExistingM2DriftFunctions": 4
+  },
+  "browser": {
+    "runnerEngines": ["chromium", "firefox", "webkit"],
+    "mainPassed": 3,
+    "regressionsPassed": 3,
+    "actualPlaywrightMcpPassed": true,
+    "finalBsiEdgesPassed": true,
+    "screenshots": "mcp/",
+    "fixtureCleanupVerified": true
+  },
+  "scale": {
+    "normalizerVersion": "m3-03.3",
+    "components": 50000,
+    "exactCountVerified": true,
+    "cleanupVerified": true
+  },
+  "residualLimits": [
+    "Human review for conditional BSI/build/inventory/linked-BOM/license/edition facts",
+    "SPDX 3 tag-value explicitly unsupported",
+    "Historical graphs/reports remain pinned; no automatic backfill",
+    "Bounded export memory and process-death spool cleanup",
+    "Local bounded latency only; no production SLO certification",
+    "Current bundled browser engines; no previous-version or full WCAG certification"
+  ],
+  "nextMilestoneStarted": false
+}

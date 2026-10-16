@@ -1,0 +1,87 @@
+- generic [active] [ref=f6e1]:
+  - generic [ref=f6e3]:
+    - complementary [ref=f6e4]:
+      - generic [ref=f6e5]:
+        - generic [ref=f6e6]:
+          - link "CRA Sentinel" [ref=f6e7] [cursor=pointer]:
+            - /url: /dashboard
+            - generic [aria-hidden] [ref=f6e8]: C
+            - text: CRA Sentinel
+          - button "Collapse sidebar" [ref=f6e9] [cursor=pointer]
+        - navigation "Main" [ref=f6e12]:
+          - generic [ref=f6e13]:
+            - list [ref=f6e15]:
+              - listitem [ref=f6e16]:
+                - link "Dashboard" [ref=f6e17] [cursor=pointer]:
+                  - /url: /dashboard
+              - listitem [ref=f6e25]:
+                - link "Management" [ref=f6e26] [cursor=pointer]:
+                  - /url: /management
+              - listitem [ref=f6e32]:
+                - link "Organization" [ref=f6e33] [cursor=pointer]:
+                  - /url: /organization
+              - listitem [ref=f6e40]:
+                - link "Products" [ref=f6e41] [cursor=pointer]:
+                  - /url: /products
+              - listitem [ref=f6e48]:
+                - link "Suppliers" [ref=f6e49] [cursor=pointer]:
+                  - /url: /suppliers
+              - listitem [ref=f6e54]:
+                - link "Frameworks" [ref=f6e55] [cursor=pointer]:
+                  - /url: /frameworks
+              - listitem [ref=f6e60]:
+                - link "Findings" [ref=f6e61] [cursor=pointer]:
+                  - /url: /findings
+              - listitem [ref=f6e66]:
+                - link "Reporting" [ref=f6e67] [cursor=pointer]:
+                  - /url: /reporting
+              - listitem [ref=f6e73]:
+                - link "Tasks" [ref=f6e74] [cursor=pointer]:
+                  - /url: /tasks
+              - listitem [ref=f6e80]:
+                - link "Connectors" [ref=f6e81] [cursor=pointer]:
+                  - /url: /connectors
+            - generic [ref=f6e88]:
+              - paragraph [ref=f6e89]: Account & access
+              - list [ref=f6e90]:
+                - listitem [ref=f6e91]:
+                  - button "Profile" [ref=f6e92] [cursor=pointer]
+                  - generic:
+                    - list:
+                      - listitem [ref=f6e100]:
+                        - link "Account" [ref=f6e101] [cursor=pointer]:
+                          - /url: /account
+                      - listitem [ref=f6e103]:
+                        - link "Security" [ref=f6e104] [cursor=pointer]:
+                          - /url: /security
+                - listitem [ref=f6e106]:
+                  - button "Authorization" [expanded] [ref=f6e107] [cursor=pointer]
+                  - list [ref=f6e116]:
+                    - listitem [ref=f6e117]:
+                      - link "Roles" [ref=f6e118] [cursor=pointer]:
+                        - /url: /roles
+                    - listitem [ref=f6e120]:
+                      - link "Permissions" [ref=f6e121] [cursor=pointer]:
+                        - /url: /permissions
+        - button "Sign out" [ref=f6e125] [cursor=pointer]
+    - generic [ref=f6e130]:
+      - banner [ref=f6e131]:
+        - navigation "Breadcrumb" [ref=f6e133]:
+          - list [ref=f6e134]:
+            - listitem [ref=f6e135]:
+              - link "Dashboard" [ref=f6e136] [cursor=pointer]:
+                - /url: /dashboard
+            - listitem [aria-hidden] [ref=f6e137]
+            - listitem [ref=f6e140]:
+              - generic [ref=f6e141]: Roles
+        - generic [ref=f6e142]:
+          - button "Search" [ref=f6e143] [cursor=pointer]
+          - button "Notifications" [ref=f6e147] [cursor=pointer]
+          - 'img "Ada Foster: online" [ref=f6e153]'
+      - main [ref=f6e154]:
+        - generic [ref=f6e155]:
+          - generic [ref=f6e157]:
+            - heading "Roles" [level=1] [ref=f6e158]
+            - paragraph [ref=f6e159]: Named bundles of extra permissions. A role can only add to what a member’s base role already allows.
+          - paragraph [ref=f6e162]: Loading roles…
+  - button "Open Next.js Dev Tools" [ref=f6e168] [cursor=pointer]

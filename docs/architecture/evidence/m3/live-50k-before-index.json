@@ -1,0 +1,29 @@
+{
+  "projectUrl": "http://127.0.0.1:54321",
+  "scope": "Local real normalizer/repository/PostgREST/SQL; no original upload, Nest/browser read transport or production-load claim",
+  "normalizerVersion": "m3-03.2",
+  "components": 50000,
+  "corpusBytes": 5805632,
+  "batches": 200,
+  "maximumBatchRows": 250,
+  "normalizationMs": 13860.781541,
+  "finalizeMs": 4258.206457999999,
+  "readSamples": 30,
+  "readPageSize": 100,
+  "duplicateNames": true,
+  "walkedPages": 501,
+  "uniqueWalkedComponents": 50000,
+  "rootTreeP95Ms": 2966.0678750000006,
+  "rootTreeP99Ms": 2989.1724999999933,
+  "readP95Ms": 72.55087500000081,
+  "readP99Ms": 91.62487500000134,
+  "writeBatchP95Ms": 116.9559589999999,
+  "writeBatchP99Ms": 171.03541600000062,
+  "retainedResultComponents": 0,
+  "pageKeys": [
+    "components",
+    "nextCursor"
+  ],
+  "note": "Observed before component-parent covering-index repair. Subsequent exact fixture cleanup completed successfully in 171495.28ms. Not production SLO evidence.",
+  "cleanupMs": 171495.28
+}

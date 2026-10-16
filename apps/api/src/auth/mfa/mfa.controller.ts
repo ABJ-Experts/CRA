@@ -50,6 +50,7 @@ import {
   type CookieConfig,
 } from "../cookies.util";
 import { MfaService } from "./mfa.service";
+import { authRequestAuditContext } from "../auth-request-audit-context";
 
 /**
  * Two-factor authentication.
@@ -88,8 +89,13 @@ export class MfaController {
   @ZodResponse(mfaEnrollmentResponseSchema)
   async enroll(
     @CurrentUser() user: RequestUser,
+    @Req() req: AuthedRequest,
   ): Promise<MfaEnrollmentResponse> {
-    return this.mfa.enroll(user.accessToken);
+    return this.mfa.enroll(
+      user.accessToken,
+      user.id,
+      authRequestAuditContext(req),
+    );
   }
 
   @SelfScoped("Confirms enrolment of the caller's own factor.")
@@ -110,6 +116,7 @@ export class MfaController {
       user.id,
       dto.factorId,
       dto.code,
+      authRequestAuditContext(req),
     );
     const cookies = req.cookies as Record<string, string> | undefined;
     setSessionCookies(res, tokens, this.cookieConfig, {
@@ -132,8 +139,14 @@ export class MfaController {
   async unenroll(
     @Param(zodParams(mfaFactorParamSchema)) { id }: MfaFactorParam,
     @CurrentUser() user: RequestUser,
+    @Req() req: AuthedRequest,
   ): Promise<OkResponse> {
-    await this.mfa.unenroll(user.accessToken, user.id, id);
+    await this.mfa.unenroll(
+      user.accessToken,
+      user.id,
+      id,
+      authRequestAuditContext(req),
+    );
     return { ok: true };
   }
 
@@ -156,9 +169,19 @@ export class MfaController {
     @Res({ passthrough: true }) res: Response,
   ): Promise<AuthNextResponse> {
     if (dto.recovery) {
-      await this.mfa.redeemRecoveryCode(user.id, user.authUserId, dto.code);
+      await this.mfa.redeemRecoveryCode(
+        user.id,
+        user.authUserId,
+        dto.code,
+        authRequestAuditContext(req),
+      );
     } else {
-      const tokens = await this.mfa.verify(user.accessToken, user.id, dto.code);
+      const tokens = await this.mfa.verify(
+        user.accessToken,
+        user.id,
+        dto.code,
+        authRequestAuditContext(req),
+      );
       const cookies = req.cookies as Record<string, string> | undefined;
       setSessionCookies(res, tokens, this.cookieConfig, {
         rememberMe: readRememberMeCookie(cookies, this.cookieConfig),

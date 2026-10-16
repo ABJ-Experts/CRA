@@ -10,9 +10,16 @@ const execute = (result: unknown) => ({
 const create = (index: number, result: unknown) => {
   const dependencies = Array.from({ length: 10 }, () => execute(success()));
   dependencies[index] = execute(result);
+  const securityAudit = {
+    beginCritical: jest.fn().mockResolvedValue({}),
+    finishCritical: jest.fn().mockResolvedValue(undefined),
+    recordBestEffort: jest.fn().mockResolvedValue(true),
+  };
   return {
     service: new AuthService(
-      ...(dependencies as unknown as ConstructorParameters<typeof AuthService>),
+      ...([...dependencies, securityAudit] as unknown as ConstructorParameters<
+        typeof AuthService
+      >),
     ),
     dependency: dependencies[index],
   };

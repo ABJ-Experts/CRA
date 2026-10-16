@@ -930,6 +930,127 @@ test("requires rationale, trigger, and counterexample for every pattern", async 
   );
 });
 
+test("accepts explicit operator scope only on the isolated private controller", async (t) => {
+  const root = await temporaryRoot(t);
+  await writePassingFixture(root);
+  await write(root, "apps/api/src/operator/operator.controller.ts", [
+    'import { operatorSessionResponseSchema } from "@repo/contracts/operator/schemas";',
+    '@Controller("operator")',
+    '@OperatorScoped("Verified private mTLS metadata scope")',
+    'export class OperatorController {',
+    ' @Get("session") @ZodResponse(operatorSessionResponseSchema)',
+    ' session() { return {}; }',
+    '}',
+  ].join("\n"));
+  assert.deepEqual(await verifyInvariants(root), []);
+});
+
+test("rejects operator scope metadata on ordinary tenant controllers", async (t) => {
+  const root = await temporaryRoot(t);
+  await writePassingFixture(root);
+  await write(root, "apps/api/src/orders/orders.controller.ts", [
+    'import { orderResponseSchema } from "@repo/contracts/orders/schemas";',
+    '@Controller("orders")',
+    '@RequireRole("owner")',
+    '@OperatorScoped("Attempted tenant-to-platform escalation")',
+    'export class OrdersController {',
+    ' @Get() @ZodResponse(orderResponseSchema)',
+    ' list() { return []; }',
+    '}',
+  ].join("\n"));
+  assert.ok(hasRule(await verifyInvariants(root), RULE.routeAuthorization));
+});
+
+test("accepts backup execution scope only on its isolated private controller", async (t) => {
+  const root = await temporaryRoot(t);
+  await writePassingFixture(root);
+  await write(root, "apps/api/src/backups/operator-backups.controller.ts", [
+    'import { backupHistorySchema } from "@repo/contracts/backups/schemas";',
+    '@Controller("operator/instances/:instanceId/backups")',
+    '@OperatorScoped("Fresh instance-bound mTLS backup action grant")',
+    'export class OperatorBackupsController {',
+    ' @Get("runs") @ZodResponse(backupHistorySchema)',
+    ' list() { return {}; }',
+    '}',
+  ].join("\n"));
+  assert.deepEqual(await verifyInvariants(root), []);
+});
+
+test("rejects tenant role authority on private backup execution", async (t) => {
+  const root = await temporaryRoot(t);
+  await writePassingFixture(root);
+  await write(root, "apps/api/src/backups/operator-backups.controller.ts", [
+    'import { backupHistorySchema } from "@repo/contracts/backups/schemas";',
+    '@Controller("operator/instances/:instanceId/backups")',
+    '@RequireRole("owner")',
+    'export class OperatorBackupsController {',
+    ' @Get("runs") @ZodResponse(backupHistorySchema)',
+    ' list() { return {}; }',
+    '}',
+  ].join("\n"));
+  assert.ok(hasRule(await verifyInvariants(root), RULE.routeAuthorization));
+});
+
+test("rejects tenant role decorators as operator authorization", async (t) => {
+  const root = await temporaryRoot(t);
+  await writePassingFixture(root);
+  await write(root, "apps/api/src/operator/operator.controller.ts", [
+    'import { operatorSessionResponseSchema } from "@repo/contracts/operator/schemas";',
+    '@Controller("operator")',
+    '@RequireRole("owner")',
+    'export class OperatorController {',
+    ' @Get("session") @ZodResponse(operatorSessionResponseSchema)',
+    ' session() { return {}; }',
+    '}',
+  ].join("\n"));
+  assert.ok(hasRule(await verifyInvariants(root), RULE.routeAuthorization));
+});
+
+test("accepts deployment execution only on its isolated private upgrade controller", async (t) => {
+  const root = await temporaryRoot(t);
+  await writePassingFixture(root);
+  await write(root, "apps/api/src/upgrades/operator-upgrades.controller.ts", [
+    'import { upgradeHistorySchema } from "@repo/contracts/upgrades/schemas";',
+    '@Controller("operator/instances/:instanceId/upgrades")',
+    '@OperatorScoped("Fresh instance-bound mTLS deployment action grant")',
+    'export class OperatorUpgradesController {',
+    ' @Get("history") @ZodResponse(upgradeHistorySchema)',
+    ' history() { return {}; }',
+    '}',
+  ].join("\n"));
+  assert.deepEqual(await verifyInvariants(root), []);
+});
+
+test("rejects tenant role authority on private deployment execution", async (t) => {
+  const root = await temporaryRoot(t);
+  await writePassingFixture(root);
+  await write(root, "apps/api/src/upgrades/operator-upgrades.controller.ts", [
+    'import { upgradeHistorySchema } from "@repo/contracts/upgrades/schemas";',
+    '@Controller("operator/instances/:instanceId/upgrades")',
+    '@RequireRole("owner")',
+    'export class OperatorUpgradesController {',
+    ' @Get("history") @ZodResponse(upgradeHistorySchema)',
+    ' history() { return {}; }',
+    '}',
+  ].join("\n"));
+  assert.ok(hasRule(await verifyInvariants(root), RULE.routeAuthorization));
+});
+
+test("rejects deployment scope on tenant-facing upgrade controllers", async (t) => {
+  const root = await temporaryRoot(t);
+  await writePassingFixture(root);
+  await write(root, "apps/api/src/upgrades/tenant-upgrades.controller.ts", [
+    'import { upgradeHistorySchema } from "@repo/contracts/upgrades/schemas";',
+    '@Controller("upgrades")',
+    '@OperatorScoped("Attempted tenant deployment authority")',
+    'export class TenantUpgradesController {',
+    ' @Get("history") @ZodResponse(upgradeHistorySchema)',
+    ' history() { return {}; }',
+    '}',
+  ].join("\n"));
+  assert.ok(hasRule(await verifyInvariants(root), RULE.routeAuthorization));
+});
+
 test("accepts the repository invariants", async () => {
   assert.deepEqual(await verifyInvariants(process.cwd()), []);
 });

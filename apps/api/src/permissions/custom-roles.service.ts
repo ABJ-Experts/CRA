@@ -9,6 +9,7 @@ import type { BaseRole, PermissionSet } from "@repo/contracts/permissions";
 import type { CustomRole } from "@repo/contracts/roles";
 
 import type { Result } from "../common/domain/result";
+import type { AuditMutationContext } from "./application/role-repository.port";
 import {
   RoleUseCases,
   type CreateRoleInput,
@@ -33,8 +34,11 @@ export class CustomRolesService {
     orgId: string,
     actor: RoleActor,
     input: CreateRoleInput,
+    context?: AuditMutationContext,
   ): Promise<{ id: string }> {
-    return this.unwrap(await this.useCases.create({ orgId, actor, input }));
+    return this.unwrap(
+      await this.useCases.create({ orgId, actor, input, context }),
+    );
   }
 
   async update(
@@ -42,12 +46,20 @@ export class CustomRolesService {
     actor: RoleActor,
     roleId: string,
     patch: UpdateRoleInput,
+    context?: AuditMutationContext,
   ): Promise<void> {
-    this.unwrap(await this.useCases.update({ orgId, actor, roleId, patch }));
+    this.unwrap(
+      await this.useCases.update({ orgId, actor, roleId, patch, context }),
+    );
   }
 
-  async remove(orgId: string, actor: RoleActor, roleId: string): Promise<void> {
-    this.unwrap(await this.useCases.remove({ orgId, actor, roleId }));
+  async remove(
+    orgId: string,
+    actor: RoleActor,
+    roleId: string,
+    context?: AuditMutationContext,
+  ): Promise<void> {
+    this.unwrap(await this.useCases.remove({ orgId, actor, roleId, context }));
   }
 
   async overrides(orgId: string): Promise<Record<string, PermissionSet>> {
@@ -59,6 +71,7 @@ export class CustomRolesService {
     actor: RoleActor,
     baseRole: BaseRole,
     permissions: unknown,
+    context?: AuditMutationContext,
   ): Promise<void> {
     this.unwrap(
       await this.useCases.setOverride({
@@ -66,6 +79,7 @@ export class CustomRolesService {
         actor,
         baseRole,
         permissions,
+        context,
       }),
     );
   }
@@ -119,6 +133,12 @@ export class CustomRolesService {
       case "override_failed":
         return new BadRequestException({
           message: "We could not save those permissions.",
+          code: error.code,
+        });
+      case "conflict":
+        return new ConflictException({
+          message:
+            "This change conflicts with a newer request. Refresh and try again.",
           code: error.code,
         });
     }

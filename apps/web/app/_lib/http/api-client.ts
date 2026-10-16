@@ -15,6 +15,8 @@ export class ApiClientError extends Error {
     readonly status?: number,
     readonly code?: string,
     readonly fieldErrors?: Readonly<Record<string, string>>,
+    /** Structured API error details for feature-specific, schema-validated recovery. */
+    readonly payload?: unknown,
   ) {
     super(message);
     this.name = "ApiClientError";
@@ -30,6 +32,43 @@ export interface RequestJsonOptions<
   readonly inputSchema?: TInputSchema;
   readonly method?: HttpMethod;
   readonly body?: z.input<TInputSchema>;
+  readonly signal?: AbortSignal;
+  readonly fetcher?: typeof fetch;
+  /** Feature-scoped headers, e.g. an opaque external portal session bearer. */
+  readonly headers?: HeadersInit;
+  /** External bearer flows must not attach CRA's internal cookies. */
+  readonly credentials?: RequestCredentials;
+}
+
+export interface RequestTextOptions<TSchema extends z.ZodTypeAny> {
+  readonly path: `/${string}`;
+  readonly schema: TSchema;
+  readonly contentType: string;
+  readonly maxBytes: number;
+  readonly signal?: AbortSignal;
+  readonly fetcher?: typeof fetch;
+}
+
+export interface RequestMultipartOptions<
+  TResponseSchema extends z.ZodTypeAny,
+  TFieldsSchema extends z.ZodTypeAny,
+> {
+  readonly path: `/${string}`;
+  readonly schema: TResponseSchema;
+  readonly fieldsSchema: TFieldsSchema;
+  readonly fields: z.input<TFieldsSchema>;
+  /**
+   * Kept for existing single-file callers. New multipart commands may submit a
+   * fixed, validated set of file parts through `files` instead.
+   */
+  readonly file?: Readonly<{ name: string; value: File | Blob }>;
+  readonly files?: readonly Readonly<{
+    name: string;
+    value: File | Blob;
+    /** Preserves a manifest-declared filename for Blob values. */
+    filename?: string;
+  }>[];
+  readonly method?: Extract<HttpMethod, "POST" | "PATCH" | "PUT">;
   readonly signal?: AbortSignal;
   readonly fetcher?: typeof fetch;
 }
@@ -79,6 +118,60 @@ function parsePayload(text: string): unknown {
   }
 }
 
+async function parseResponse<TResponseSchema extends z.ZodTypeAny>(
+  response: Response,
+  schema: TResponseSchema,
+): Promise<z.output<TResponseSchema>> {
+  const payload = parsePayload(await readResponseText(response));
+
+  if (!response.ok) {
+    const parsed = apiErrorSchema.safeParse(payload);
+    throw new ApiClientError(
+      "api",
+      parsed.success ? parsed.data.message : GENERIC_API_ERROR,
+      response.status,
+      parsed.success ? parsed.data.code : undefined,
+      parsed.success ? parsed.data.fieldErrors : undefined,
+      payload,
+    );
+  }
+
+  const parsed = schema.safeParse(payload);
+  if (!parsed.success) {
+    throw new ApiClientError(
+      "invalid_response",
+      INVALID_RESPONSE_ERROR,
+      response.status,
+    );
+  }
+
+  return parsed.data;
+}
+
+function appendFormField(
+  formData: FormData,
+  name: string,
+  value: unknown,
+): void {
+  if (value === undefined || value === null) return;
+  if (typeof value === "string" || value instanceof Blob) {
+    formData.append(name, value);
+    return;
+  }
+  formData.append(name, String(value));
+}
+
+function appendMultipartFile(
+  formData: FormData,
+  file: Readonly<{ name: string; value: File | Blob; filename?: string }>,
+): void {
+  if (file.filename === undefined) {
+    formData.append(file.name, file.value);
+    return;
+  }
+  formData.append(file.name, file.value, file.filename);
+}
+
 /** Stateful transport boundary; rendering code depends on this class via facades. */
 export class ApiClient {
   async request<
@@ -92,6 +185,8 @@ export class ApiClient {
     body,
     signal,
     fetcher = fetch,
+    headers,
+    credentials = "same-origin",
   }: RequestJsonOptions<TResponseSchema, TInputSchema>): Promise<
     z.output<TResponseSchema>
   > {
@@ -103,40 +198,128 @@ export class ApiClient {
       ? this.parseInput(inputSchema, body)
       : undefined;
 
+    const requestHeaders: Record<string, string> = {};
+    new Headers(headers).forEach((value, key) => {
+      requestHeaders[key] = value;
+    });
+    if (parsedBody !== undefined)
+      requestHeaders["content-type"] = "application/json";
+    const response = await fetchResponse(fetcher, path, {
+      method,
+      credentials,
+      cache: "no-store",
+      signal,
+      headers:
+        Object.keys(requestHeaders).length === 0 ? undefined : requestHeaders,
+      body: parsedBody === undefined ? undefined : JSON.stringify(parsedBody),
+    });
+
+    return parseResponse(response, schema);
+  }
+
+  async requestText<TSchema extends z.ZodTypeAny>({
+    path,
+    schema,
+    contentType,
+    maxBytes,
+    signal,
+    fetcher = fetch,
+  }: RequestTextOptions<TSchema>): Promise<z.output<TSchema>> {
+    assertLocalPath(path);
+    if (
+      !Number.isSafeInteger(maxBytes) ||
+      maxBytes < 1 ||
+      maxBytes > 4 * 1024 * 1024
+    )
+      throw new ApiClientError("invalid_request", INVALID_REQUEST_ERROR);
+    const response = await fetchResponse(fetcher, path, {
+      method: "GET",
+      credentials: "same-origin",
+      cache: "no-store",
+      signal,
+    });
+    if (!response.ok) return parseResponse(response, schema);
+    if (
+      response.headers.get("content-type")?.split(";")[0]?.trim() !==
+      contentType
+    )
+      throw new ApiClientError("invalid_response", INVALID_RESPONSE_ERROR);
+    const reader = response.body?.getReader();
+    if (!reader)
+      throw new ApiClientError("invalid_response", INVALID_RESPONSE_ERROR);
+    const decoder = new TextDecoder();
+    let total = 0;
+    let text = "";
+    try {
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        total += value.byteLength;
+        if (total > maxBytes) {
+          await reader.cancel();
+          throw new ApiClientError("invalid_response", INVALID_RESPONSE_ERROR);
+        }
+        text += decoder.decode(value, { stream: true });
+      }
+      text += decoder.decode();
+    } catch (error) {
+      if (error instanceof ApiClientError || isAbortError(error)) throw error;
+      throw new ApiClientError("network", NETWORK_ERROR);
+    } finally {
+      reader.releaseLock();
+    }
+    const parsed = schema.safeParse(text);
+    if (!parsed.success)
+      throw new ApiClientError("invalid_response", INVALID_RESPONSE_ERROR);
+    return parsed.data;
+  }
+
+  async requestMultipart<
+    TResponseSchema extends z.ZodTypeAny,
+    TFieldsSchema extends z.ZodTypeAny,
+  >({
+    path,
+    schema,
+    fieldsSchema,
+    fields,
+    file,
+    files,
+    method = "POST",
+    signal,
+    fetcher = fetch,
+  }: RequestMultipartOptions<TResponseSchema, TFieldsSchema>): Promise<
+    z.output<TResponseSchema>
+  > {
+    assertLocalPath(path);
+    const parsedFields = this.parseInput(fieldsSchema, fields) as Record<
+      string,
+      unknown
+    >;
+    const multipartFiles = files ?? (file === undefined ? [] : [file]);
+    if (
+      multipartFiles.length === 0 ||
+      (file !== undefined && files !== undefined)
+    ) {
+      throw new ApiClientError("invalid_request", INVALID_REQUEST_ERROR);
+    }
+    const formData = new FormData();
+    for (const [key, value] of Object.entries(parsedFields)) {
+      appendFormField(formData, key, value);
+    }
+    for (const file of multipartFiles) {
+      appendMultipartFile(formData, file);
+    }
+
     const response = await fetchResponse(fetcher, path, {
       method,
       credentials: "same-origin",
       cache: "no-store",
       signal,
-      headers:
-        parsedBody === undefined
-          ? undefined
-          : { "content-type": "application/json" },
-      body: parsedBody === undefined ? undefined : JSON.stringify(parsedBody),
+      headers: undefined,
+      body: formData,
     });
-    const payload = parsePayload(await readResponseText(response));
 
-    if (!response.ok) {
-      const parsed = apiErrorSchema.safeParse(payload);
-      throw new ApiClientError(
-        "api",
-        parsed.success ? parsed.data.message : GENERIC_API_ERROR,
-        response.status,
-        parsed.success ? parsed.data.code : undefined,
-        parsed.success ? parsed.data.fieldErrors : undefined,
-      );
-    }
-
-    const parsed = schema.safeParse(payload);
-    if (!parsed.success) {
-      throw new ApiClientError(
-        "invalid_response",
-        INVALID_RESPONSE_ERROR,
-        response.status,
-      );
-    }
-
-    return parsed.data;
+    return parseResponse(response, schema);
   }
 
   parseInput<TSchema extends z.ZodTypeAny>(
@@ -161,4 +344,13 @@ export function requestJson<
   options: RequestJsonOptions<TResponseSchema, TInputSchema>,
 ): Promise<z.output<TResponseSchema>> {
   return apiClient.request(options);
+}
+
+export function requestMultipart<
+  TResponseSchema extends z.ZodTypeAny,
+  TFieldsSchema extends z.ZodTypeAny,
+>(
+  options: RequestMultipartOptions<TResponseSchema, TFieldsSchema>,
+): Promise<z.output<TResponseSchema>> {
+  return apiClient.requestMultipart(options);
 }

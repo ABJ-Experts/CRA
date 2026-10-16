@@ -1,0 +1,23 @@
+{
+  "date": "2026-10-12",
+  "baseline": "86afce5238f4704ee8ac237d41ba3b98429a6440",
+  "rootVerifyExit": 0,
+  "turboCacheUsed": true,
+  "uncachedDatabaseSuiteExit": 0,
+  "databaseFixtureFilesRun": 158,
+  "liveApiSuites": 3,
+  "liveApiTests": 9,
+  "liveApiExit": 0,
+  "playwrightJourneysPassed": 12,
+  "playwrightJourneysSkipped": 0,
+  "productionBuildPassed": true,
+  "publicM14SchemaDrift": false,
+  "storageCompatibilityMigrationProvenance": "identified review-agent experiment; retired before publication and corrected via CLI",
+  "currentDataPreserved": true,
+  "featureMigrations": 28,
+  "legacyGlobalStorageIndexRemoved": true,
+  "nativeStorageVersioningVerified": true,
+  "finalNativeStorageChromiumJourneysPassed": 6,
+  "finalUncachedDatabaseExit": 0,
+  "finalDatabaseFixtureFilesRun": 159
+}
